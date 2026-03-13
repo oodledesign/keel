@@ -4,7 +4,7 @@
   "private": true,
   "sideEffects": false,
   "engines": {
-    "node": ">=20.10.0"
+    "node": ">=20.10.0 <22"
   },
   "author": {
     "url": "https://keel.oodle.design",
