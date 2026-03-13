@@ -402,7 +402,11 @@ export function ClientDetailSidebar({
                       {activeTab === 'tasks' && (
                         <ClientTasksBlock
                           clientId={client.id}
-                          clientName={client.display_name ?? [client.first_name, client.last_name].filter(Boolean).join(' ').trim() || 'Client'}
+                          clientName={
+                            (client.display_name ??
+                              [client.first_name, client.last_name].filter(Boolean).join(' ').trim()) ||
+                            'Client'
+                          }
                           canEditClients={canEditClients}
                           tasksHref={pathsConfig.app.home + '/tasks'}
                         />
