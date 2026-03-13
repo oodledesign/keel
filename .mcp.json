@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "makerkit": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["packages/mcp-server/build/index.cjs"]
+    }
+  }
+}

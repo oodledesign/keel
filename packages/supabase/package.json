@@ -1,0 +1,47 @@
+{
+  "name": "@kit/supabase",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "clean": "git clean -xdf .turbo node_modules",
+    "format": "prettier --check \"**/*.{ts,tsx}\"",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "prettier": "@kit/prettier-config",
+  "exports": {
+    "./server-client": "./src/clients/server-client.ts",
+    "./server-admin-client": "./src/clients/server-admin-client.ts",
+    "./middleware-client": "./src/clients/middleware-client.ts",
+    "./browser-client": "./src/clients/browser-client.ts",
+    "./check-requires-mfa": "./src/check-requires-mfa.ts",
+    "./require-user": "./src/require-user.ts",
+    "./hooks/*": "./src/hooks/*.ts",
+    "./database": "./src/database.types.ts",
+    "./auth": "./src/auth.ts",
+    "./types": "./src/types.ts"
+  },
+  "dependencies": {
+    "@kit/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@kit/eslint-config": "workspace:*",
+    "@kit/prettier-config": "workspace:*",
+    "@kit/tsconfig": "workspace:*",
+    "@supabase/ssr": "^0.8.0",
+    "@supabase/supabase-js": "catalog:",
+    "@tanstack/react-query": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "next": "catalog:",
+    "react": "catalog:",
+    "zod": "catalog:"
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "src/*"
+      ]
+    }
+  }
+}

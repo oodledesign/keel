@@ -1,0 +1,61 @@
+# Makerkit SaaS Starter
+
+## Tech Stack
+
+- **Next.js 16** (App Router) + **React 19** + **TypeScript**
+- **Supabase** (Postgres, Auth, Storage)
+- **Tailwind CSS 4** + Shadcn UI
+- **Turborepo** monorepo
+
+## Monorepo Structure
+
+| Directory | Purpose | Details |
+|-----------|---------|---------|
+| `apps/web` | Main Next.js app | See `apps/web/AGENTS.md` |
+| `apps/web/supabase` | Database schemas & migrations | See `apps/web/supabase/AGENTS.md` |
+| `apps/e2e` | Playwright E2E tests | See `apps/e2e/AGENTS.md` |
+| `packages/ui` | UI components (@kit/ui) | See `packages/ui/AGENTS.md` |
+| `packages/supabase` | Supabase clients | See `packages/supabase/AGENTS.md` |
+| `packages/next` | Next.js utilities | See `packages/next/AGENTS.md` |
+| `packages/features` | Feature packages | See `packages/features/AGENTS.md` |
+
+## Multi-Tenant Architecture
+
+- **Personal Accounts**: `auth.users.id = accounts.id`
+- **Team Accounts**: Shared workspaces with members, roles, permissions
+- Data links to accounts via `account_id` foreign key
+
+## Essential Commands
+
+```bash
+pnpm dev                          # Start development
+pnpm supabase:web:start           # Start local Supabase
+pnpm supabase:web:reset           # Reset database
+pnpm supabase:web:typegen         # Generate TypeScript types
+pnpm typecheck                    # Type check
+pnpm lint:fix                     # Fix linting
+pnpm format:fix                   # Format code
+```
+
+## Key Patterns (Quick Reference)
+
+| Pattern | Import | Details |
+|---------|--------|---------|
+| Server Actions | `enhanceAction` from `@kit/next/actions` | `packages/next/AGENTS.md` |
+| Route Handlers | `enhanceRouteHandler` from `@kit/next/routes` | `packages/next/AGENTS.md` |
+| Server Client | `getSupabaseServerClient` from `@kit/supabase/server-client` | `packages/supabase/AGENTS.md` |
+| UI Components | `@kit/ui/{component}` | `packages/ui/AGENTS.md` |
+| Translations | `Trans` from `@kit/ui/trans` | `packages/ui/AGENTS.md` |
+
+## Authorization
+
+- **RLS enforces access control** - no manual auth checks needed with standard client
+- **Admin client** (`getSupabaseServerAdminClient`) bypasses RLS - use sparingly with manual validation
+
+## Verification
+
+After implementation, always run:
+1. `pnpm typecheck`
+2. `pnpm lint:fix`
+3. `pnpm format:fix`
+4. Run code quality reviewer agent

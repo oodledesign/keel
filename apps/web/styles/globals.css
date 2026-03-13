@@ -1,0 +1,100 @@
+/*
+* global.css
+*
+* Global styles for the entire application
+ */
+
+/* Tailwind CSS */
+@import 'tailwindcss';
+
+/* local styles - update the below if you add a new style */
+@import './theme.css';
+@import './theme.utilities.css';
+@import './shadcn-ui.css';
+@import './markdoc.css';
+@import './makerkit.css';
+@import 'tw-animate-css';
+
+/* content sources - update the below if you add a new path */
+@source '../../../packages/*/src/**/*.{ts,tsx}';
+@source '../../../packages/features/*/src/**/*.{ts,tsx}';
+@source '../../../packages/billing/*/src/**/*.{ts,tsx}';
+@source '../../../packages/plugins/*/src/**/*.{ts,tsx}';
+@source '../../../packages/cms/*/src/**/*.{ts,tsx}';
+@source '../{app,components,config,lib}/**/*.{ts,tsx}';
+
+/* variants - update the below if you add a new variant */
+@variant dark (&:where(.dark, .dark *));
+
+/* Accessibility: dyslexia-friendly font (local file) */
+@font-face {
+  font-family: 'OpenDyslexic Mono';
+  src: url('/fonts/OpenDyslexicMono-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  /* Accessibility: text size (uses rem so all text scales) */
+  html.text-size-small {
+    font-size: 87.5%; /* 14px if browser default is 16px */
+  }
+  html.text-size-standard {
+    font-size: 100%;
+  }
+  html.text-size-large {
+    font-size: 112.5%; /* 18px if browser default is 16px */
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1;
+  }
+
+  html,
+  body {
+    scroll-padding-top: 56px;
+  }
+
+  [id] {
+    scroll-margin-top: 56px;
+  }
+
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--border, currentColor);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: theme(--color-muted-foreground);
+  }
+}
+
+/* Accessibility: dyslexia-friendly font (unlayered so it wins; data-attr so React doesn't overwrite) */
+html[data-dyslexia-font='true'],
+html[data-dyslexia-font='true'] body,
+html[data-dyslexia-font='true'] * {
+  font-family: 'OpenDyslexic Mono', var(--font-sans-fallback, ui-sans-serif, system-ui, sans-serif) !important;
+}
+
+/* Accessibility: enhanced focus – show ring on every focused element (tab and click) */
+html[data-enhanced-focus='true'] *:focus {
+  outline: 3px solid var(--focus-ring, var(--ring)) !important;
+  outline-offset: 2px !important;
+}
+
+/*
+ * Dev only: hide Next.js error overlay for the known metadata-boundary hydration mismatch.
+ * Server renders div with hidden={true}, client (or a browser extension) has hidden={null} + id="contentOverview".
+ * Remove this block when Next.js 16 fixes it or when testing without extensions (e.g. incognito).
+ */
+nextjs-portal {
+  display: none !important;
+}

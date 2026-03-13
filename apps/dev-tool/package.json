@@ -1,0 +1,50 @@
+{
+  "name": "dev-tool",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "clean": "git clean -xdf .next .turbo node_modules",
+    "dev": "next dev --port=3010 | pino-pretty -c",
+    "format": "prettier --check --write \"**/*.{ts,tsx}\" --ignore-path=\"../../.prettierignore\""
+  },
+  "dependencies": {
+    "@faker-js/faker": "^10.2.0",
+    "@hookform/resolvers": "^5.2.2",
+    "@tanstack/react-query": "catalog:",
+    "lucide-react": "catalog:",
+    "next": "catalog:",
+    "nodemailer": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@kit/email-templates": "workspace:*",
+    "@kit/i18n": "workspace:*",
+    "@kit/mcp-server": "workspace:*",
+    "@kit/next": "workspace:*",
+    "@kit/prettier-config": "workspace:*",
+    "@kit/shared": "workspace:*",
+    "@kit/tsconfig": "workspace:*",
+    "@kit/ui": "workspace:*",
+    "@tailwindcss/postcss": "^4.1.18",
+    "@types/node": "catalog:",
+    "@types/nodemailer": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "babel-plugin-react-compiler": "1.0.0",
+    "pino-pretty": "13.0.0",
+    "react-hook-form": "catalog:",
+    "recharts": "2.15.3",
+    "tailwindcss": "catalog:",
+    "tw-animate-css": "catalog:",
+    "typescript": "^5.9.3",
+    "zod": "catalog:"
+  },
+  "prettier": "@kit/prettier-config",
+  "browserslist": [
+    "last 1 versions",
+    "> 0.7%",
+    "not dead"
+  ]
+}

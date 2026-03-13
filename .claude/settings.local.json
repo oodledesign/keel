@@ -1,0 +1,6 @@
+{
+  "enabledMcpjsonServers": [
+    "makerkit"
+  ],
+  "enableAllProjectMcpServers": true
+}

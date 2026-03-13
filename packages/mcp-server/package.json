@@ -1,0 +1,49 @@
+{
+  "name": "@kit/mcp-server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./build/index.cjs",
+  "bin": {
+    "makerkit-mcp-server": "./build/index.cjs"
+  },
+  "exports": {
+    "./database": "./src/tools/database.ts",
+    "./components": "./src/tools/components.ts",
+    "./migrations": "./src/tools/migrations.ts",
+    "./prd-manager": "./src/tools/prd-manager.ts",
+    "./prompts": "./src/tools/prompts.ts",
+    "./scripts": "./src/tools/scripts.ts",
+    "./status": "./src/tools/status/index.ts",
+    "./prerequisites": "./src/tools/prerequisites/index.ts",
+    "./env": "./src/tools/env/index.ts",
+    "./env/model": "./src/tools/env/model.ts",
+    "./env/types": "./src/tools/env/types.ts",
+    "./dev": "./src/tools/dev/index.ts",
+    "./db": "./src/tools/db/index.ts",
+    "./emails": "./src/tools/emails/index.ts",
+    "./translations": "./src/tools/translations/index.ts",
+    "./run-checks": "./src/tools/run-checks/index.ts",
+    "./deps-upgrade-advisor": "./src/tools/deps-upgrade-advisor/index.ts"
+  },
+  "scripts": {
+    "clean": "rm -rf .turbo node_modules",
+    "format": "prettier --check \"**/*.{mjs,ts,md,json}\"",
+    "build": "tsup",
+    "build:watch": "tsup --watch",
+    "test:unit": "vitest run"
+  },
+  "devDependencies": {
+    "@kit/email-templates": "workspace:*",
+    "@kit/prettier-config": "workspace:*",
+    "@kit/tsconfig": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.26.0",
+    "@types/node": "catalog:",
+    "postgres": "3.4.8",
+    "tsup": "catalog:",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18",
+    "zod": "catalog:"
+  },
+  "prettier": "@kit/prettier-config"
+}
