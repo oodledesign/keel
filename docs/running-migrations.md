@@ -120,3 +120,15 @@ If you also use **projects** and **clients** tables and RLS, run the next migrat
 - `apps/web/supabase/migrations/20260216000002_projects_clients_assignments.sql`
 
 After that, the **Contractor** option will appear in the Members invite role dropdown (and in the permission matrix).
+
+---
+
+## "Could not find the 'client_id' column of 'tasks' in the schema cache"
+
+This means the `tasks` table doesn’t have the `client_id` column yet (or PostgREST’s schema cache is stale).
+
+1. **Apply migrations** so the column exists:
+   - **Local:** from repo root run `pnpm supabase:web:reset`, or from `apps/web` run `supabase db push` (or `supabase migration up`) with Supabase running.
+   - **Hosted:** from `apps/web` run `supabase link --project-ref YOUR_REF` then `supabase db push`, or run the SQL from `apps/web/supabase/migrations/20260312120000_tasks_client_id.sql` in the Supabase Dashboard → SQL Editor.
+2. **Regenerate types:** from `apps/web` run `pnpm run supabase:typegen` (or `pnpm --filter web supabase:typegen` from repo root) so `lib/database.types.ts` includes `client_id` on `tasks`.
+3. For a **hosted** project, the schema cache usually refreshes when you push; if you ran SQL manually, reload it in Dashboard → Settings → API → “Reload schema cache” (if available).

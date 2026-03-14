@@ -75,10 +75,16 @@ export function ClientsPageContent({
         page,
         pageSize,
       });
-      if (result?.data !== undefined) {
-        setClients((result.data ?? []) as unknown as ClientRow[]);
-        setTotal(result.total ?? 0);
-      }
+      // Server returns { data: ClientRow[], total: number }
+      const list = Array.isArray((result as { data?: unknown })?.data)
+        ? ((result as { data: ClientRow[] }).data ?? [])
+        : [];
+      const count =
+        typeof (result as { total?: number })?.total === 'number'
+          ? (result as { total: number }).total
+          : 0;
+      setClients(list);
+      setTotal(count);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to load clients');
       setClients([]);

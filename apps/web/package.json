@@ -31,6 +31,9 @@
     "supabase:typegen": "pnpm run supabase:typegen:packages && pnpm run supabase:typegen:app",
     "supabase:typegen:packages": "supabase gen types typescript --local > ../../packages/supabase/src/database.types.ts",
     "supabase:typegen:app": "supabase gen types typescript --local > ./lib/database.types.ts",
+    "supabase:typegen:linked": "pnpm run supabase:typegen:packages:linked && pnpm run supabase:typegen:app:linked",
+    "supabase:typegen:packages:linked": "supabase gen types typescript --linked > ../../packages/supabase/src/database.types.ts",
+    "supabase:typegen:app:linked": "supabase gen types typescript --linked > ./lib/database.types.ts",
     "supabase:db:dump:local": "supabase db dump --local --data-only"
   },
   "dependencies": {

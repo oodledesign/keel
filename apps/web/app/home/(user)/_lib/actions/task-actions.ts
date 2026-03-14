@@ -38,7 +38,12 @@ export async function createTask(input: CreateTaskInput) {
     .single();
 
   if (error) {
-    return { success: false, error: error.message, id: null };
+    const msg =
+      error.message?.includes("'client_id'") &&
+      error.message?.toLowerCase().includes('schema cache')
+        ? "Tasks table is missing the client_id column. Run migrations (e.g. pnpm supabase:web:reset or supabase db push from apps/web) then pnpm --filter web supabase:typegen."
+        : error.message;
+    return { success: false, error: msg, id: null };
   }
 
   revalidatePath('/home');
@@ -84,7 +89,12 @@ export async function updateTask(taskId: string, input: UpdateTaskInput) {
   const { error } = await client.from('tasks').update(updates).eq('id', taskId);
 
   if (error) {
-    return { success: false, error: error.message };
+    const msg =
+      error.message?.includes("'client_id'") &&
+      error.message?.toLowerCase().includes('schema cache')
+        ? "Tasks table is missing the client_id column. Run migrations (e.g. pnpm supabase:web:reset or supabase db push from apps/web) then pnpm --filter web supabase:typegen."
+        : error.message;
+    return { success: false, error: msg };
   }
 
   revalidatePath('/home');
