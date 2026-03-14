@@ -15,6 +15,13 @@ When starting a session:
    pnpm dev
    ```
 
+Push to github:
+git add -A
+git commit -m "tasks and client fix"
+git push
+
+
+
 
 cd /Users/danjamespotter/projects/keel/apps/web
    supabase status --output json

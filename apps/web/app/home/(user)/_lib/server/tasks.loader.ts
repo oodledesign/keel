@@ -50,13 +50,18 @@ export const loadTasksForUser = cache(async (): Promise<TasksPageTask[]> => {
   const client = getSupabaseServerClient();
   const user = await requireUserInServerComponent();
 
-  const { data } = await client
+  const { data, error } = await client
     .from('tasks')
     .select(
       'id, title, status, priority, due_date, project_id, client_id, projects(name, businesses(name, colour)), areas(name, colour, groups(name, type)), clients(display_name)',
     )
     .eq('user_id', user.id)
     .order('due_date', { ascending: true, nullsLast: true });
+
+  if (error) {
+    console.error('[tasks.loader] loadTasksForUser error:', error.message);
+    return [];
+  }
 
   return (data ?? []).map((row: any) => {
     const isWork = !!row.project_id;
@@ -96,7 +101,7 @@ export const loadTasksForClient = cache(
     const client = getSupabaseServerClient();
     const user = await requireUserInServerComponent();
 
-    const { data } = await client
+    const { data, error } = await client
       .from('tasks')
       .select(
         'id, title, status, priority, due_date, project_id, client_id, projects(name, businesses(name, colour)), areas(name, colour, groups(name, type)), clients(display_name)',
@@ -104,6 +109,11 @@ export const loadTasksForClient = cache(
       .eq('user_id', user.id)
       .eq('client_id', clientId)
       .order('due_date', { ascending: true, nullsLast: true });
+
+    if (error) {
+      console.error('[tasks.loader] loadTasksForClient error:', error.message);
+      return [];
+    }
 
     return (data ?? []).map((row: any) => {
       const isWork = !!row.project_id;

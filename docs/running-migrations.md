@@ -132,3 +132,12 @@ This means the `tasks` table doesn’t have the `client_id` column yet (or Postg
    - **Hosted:** from `apps/web` run `supabase link --project-ref YOUR_REF` then `supabase db push`, or run the SQL from `apps/web/supabase/migrations/20260312120000_tasks_client_id.sql` in the Supabase Dashboard → SQL Editor.
 2. **Regenerate types:** from `apps/web` run `pnpm run supabase:typegen` (or `pnpm --filter web supabase:typegen` from repo root) so `lib/database.types.ts` includes `client_id` on `tasks`.
 3. For a **hosted** project, the schema cache usually refreshes when you push; if you ran SQL manually, reload it in Dashboard → Settings → API → “Reload schema cache” (if available).
+
+---
+
+## No accounts table (businesses only)
+
+If your schema has **no `accounts` table** and uses **`businesses`** for team/workspace:
+
+- The **clients** migration `20260314000000_clients_table_for_keel.sql` uses only `businesses`: `clients.account_id` and `client_notes.account_id` reference `businesses(id)`. Run that migration in the SQL Editor if you do not have a `clients` table.
+- The app still uses "account" in the URL and in code (e.g. `accountId`). For the clients list to work, the workspace loader must resolve the `[account]` slug to a **business** and expose it as `account` (so `account.id` is the business id). That usually means your DB has an RPC or view that returns the business row for the given slug, or you customize the workspace loader in `app/home/[account]/_lib/server/team-account-workspace.loader.ts` to load from `businesses` by slug and return it as `account`.

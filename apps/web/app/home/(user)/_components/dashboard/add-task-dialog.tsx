@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 
 import {
@@ -37,6 +38,7 @@ const PRIORITIES = [
 ];
 
 export function AddTaskDialog() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -89,6 +91,7 @@ export function AddTaskDialog() {
       setPriority('medium');
       setAssignTo('none');
       formRef.current?.reset();
+      router.refresh();
     });
   }
 
