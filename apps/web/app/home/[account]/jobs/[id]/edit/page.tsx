@@ -9,6 +9,9 @@ import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
+import { isWorkModuleEnabled } from '../../../_lib/server/account-modules';
+import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
+import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard';
 import { JobEditContent } from '../../_components/job-edit-content';
 import { createJobsService } from '../../_lib/server/jobs.service';
 import { loadJobsPageData } from '../../_lib/server/jobs-page.loader';
@@ -22,7 +25,7 @@ export const generateMetadata = async ({
 }: {
   params: Promise<{ account: string; id: string }>;
 }) => {
-  const { id } = await params;
+  await params;
   const i18n = await createI18nServerInstance();
   const title = i18n.t('common:routes.jobs');
   return { title: `Edit job – ${title}` };
@@ -30,6 +33,12 @@ export const generateMetadata = async ({
 
 async function JobEditPage({ params }: JobEditPageProps) {
   const { account: accountSlug, id } = await params;
+  const workspace = await loadTeamWorkspace(accountSlug);
+  redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
+  if (!isWorkModuleEnabled(workspace.moduleSettings, 'jobs')) {
+    notFound();
+  }
+
   const { accountId, canViewJobs, canEditJobs, canDeleteJobs } = await loadJobsPageData(accountSlug);
 
   if (!id) notFound();

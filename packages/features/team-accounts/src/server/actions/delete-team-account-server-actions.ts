@@ -57,7 +57,7 @@ export const deleteTeamAccountAction = enhanceAction(
 
     logger.info(ctx, `Team account request successfully sent`);
 
-    return redirect('/home');
+    return redirect('/app');
   },
   {
     auth: true,

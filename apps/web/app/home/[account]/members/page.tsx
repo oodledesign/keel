@@ -26,6 +26,7 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 // local imports
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
 import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access';
+import { isWorkModuleEnabled } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import { loadMembersPageData } from './_lib/server/members-page.loader';
 
@@ -54,7 +55,10 @@ async function TeamAccountMembersPage({ params }: TeamAccountMembersPageProps) {
     },
   );
 
-  if (!access.canViewMembers) {
+  if (
+    !access.canViewMembers ||
+    !isWorkModuleEnabled(workspace.moduleSettings, 'team')
+  ) {
     redirect(getDefaultAccountPath(slug, workspace.account));
   }
 

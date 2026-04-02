@@ -12,23 +12,37 @@ export interface StepDef {
 }
 
 const ADMIN_STEPS: StepDef[] = [
-  { step: 1, title: 'Company Role', key: 'create_business' },
-  { step: 2, title: 'Trade Role', key: 'trade' },
-  { step: 3, title: 'Personal Details', key: 'personal' },
-  { step: 4, title: 'Accessibility', key: 'accessibility' },
-  { step: 5, title: 'Subscription', key: 'subscription', canSkip: false },
-  { step: 6, title: 'Invite team', key: 'invite', canSkip: true },
+  {
+    step: 1,
+    title: 'How you use Keel',
+    key: 'keel_contexts',
+    canSkip: true,
+  },
+  { step: 2, title: 'Personal Details', key: 'personal' },
+  { step: 3, title: 'Subscription', key: 'subscription', canSkip: false },
 ];
 
 const STAFF_STEPS: StepDef[] = [
-  { step: 1, title: 'Trade Role', key: 'trade' },
-  { step: 2, title: 'Personal Details', key: 'personal' },
-  { step: 3, title: 'Accessibility', key: 'accessibility' },
+  {
+    step: 1,
+    title: 'How you use Keel',
+    key: 'keel_contexts',
+    canSkip: true,
+  },
+  { step: 2, title: 'Trade Role', key: 'trade' },
+  { step: 3, title: 'Personal Details', key: 'personal' },
+  { step: 4, title: 'Accessibility', key: 'accessibility' },
 ];
 
 const CLIENT_STEPS: StepDef[] = [
-  { step: 1, title: 'Personal Details', key: 'personal' },
-  { step: 2, title: 'Accessibility', key: 'accessibility' },
+  {
+    step: 1,
+    title: 'How you use Keel',
+    key: 'keel_contexts',
+    canSkip: true,
+  },
+  { step: 2, title: 'Personal Details', key: 'personal' },
+  { step: 3, title: 'Accessibility', key: 'accessibility' },
 ];
 
 export function getStepsForPersona(

@@ -4,6 +4,9 @@ import { AppBreadcrumbs } from '@kit/ui/app-breadcrumbs';
 import { PageBody } from '@kit/ui/page';
 
 import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
+import { isWorkModuleEnabled } from '../../../_lib/server/account-modules';
+import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
+import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard';
 import { loadInvoicesPageData } from '../../_lib/server/invoices-page.loader';
 import { getInvoice } from '../../_lib/server/server-actions';
 import { InvoiceEditContent } from '../../_components/invoice-edit-content';
@@ -17,12 +20,18 @@ export const generateMetadata = async ({
 }: {
   params: Promise<{ account: string; id: string }>;
 }) => {
-  const { id } = await params;
+  await params;
   return { title: `Edit invoice` };
 };
 
 async function InvoiceEditPage({ params }: InvoiceEditPageProps) {
   const { account: accountSlug, id } = await params;
+  const workspace = await loadTeamWorkspace(accountSlug);
+  redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
+  if (!isWorkModuleEnabled(workspace.moduleSettings, 'invoices')) {
+    notFound();
+  }
+
   const { accountId, canViewInvoices, canEditInvoices, canManageInvoiceStatus } =
     await loadInvoicesPageData(accountSlug);
 

@@ -15,9 +15,15 @@ When starting a session:
    pnpm dev
    ```
 
+
+cd /Users/danjamespotter/projects/keel/apps/web
+pnpm supabase db push
+
+
+
 Push to github:
 git add -A
-git commit -m "tasks and client fix"
+git commit -m "update 2nd april 2026"
 git push
 
 

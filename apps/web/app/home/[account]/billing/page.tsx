@@ -24,6 +24,7 @@ import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
 import { loadTeamAccountBillingPage } from '../_lib/server/team-account-billing-page.loader';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
+import { redirectIfSpaceNotIn } from '../_lib/server/workspace-route-guard';
 import { TeamAccountCheckoutForm } from './_components/team-account-checkout-form';
 import { createBillingPortalSession } from './_lib/server/server-actions';
 
@@ -43,6 +44,7 @@ export const generateMetadata = async () => {
 async function TeamAccountBillingPage({ params }: TeamAccountBillingPageProps) {
   const account = (await params).account;
   const workspace = await loadTeamWorkspace(account);
+  redirectIfSpaceNotIn(workspace, account, ['work']);
   const access = getTeamAccountAccess(
     workspace.account as {
       permissions?: string[] | null;

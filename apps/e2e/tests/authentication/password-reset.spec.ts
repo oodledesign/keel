@@ -44,7 +44,7 @@ test.describe('Password Reset Flow', () => {
     });
 
     await auth.updatePassword(newPassword);
-    await page.waitForURL('/home');
+    await page.waitForURL('/app');
 
     await page.context().clearCookies();
     await page.reload();
@@ -54,7 +54,7 @@ test.describe('Password Reset Flow', () => {
     await auth.loginAsUser({
       email,
       password: newPassword,
-      next: '/home',
+      next: '/app',
     });
   });
 });

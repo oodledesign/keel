@@ -11,7 +11,7 @@ import { useSupabase } from './use-supabase';
  * @description A list of private path prefixes
  */
 const PRIVATE_PATH_PREFIXES = [
-  '/home',
+  '/app',
   '/admin',
   '/join',
   '/identities',

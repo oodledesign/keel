@@ -4,6 +4,7 @@ import { PageBody } from '@kit/ui/page';
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
 import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access';
+import { isWorkModuleEnabled } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import { loadInvoicesPageData } from './_lib/server/invoices-page.loader';
 import { InvoicesPageContent } from './_components/invoices-page-content';
@@ -27,7 +28,10 @@ async function InvoicesPage({ params }: InvoicesPageProps) {
     },
   );
 
-  if (!access.canViewInvoices) {
+  if (
+    !access.canViewInvoices ||
+    !isWorkModuleEnabled(workspace.moduleSettings, 'invoices')
+  ) {
     redirect(getDefaultAccountPath(accountSlug, workspace.account));
   }
 

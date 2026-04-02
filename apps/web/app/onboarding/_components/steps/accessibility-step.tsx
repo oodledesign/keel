@@ -4,6 +4,8 @@ import { useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
+import pathsConfig from '~/config/paths.config';
+
 import {
   completeOnboarding,
   updateOnboardingStep,
@@ -81,7 +83,9 @@ export function AccessibilityStep({
           setLoading(false);
           return;
         }
-        router.push(`/home/${accountSlug}`);
+        router.push(
+          pathsConfig.app.accountHome.replace('[account]', accountSlug),
+        );
       } else {
         await updateOnboardingStep(accountId, nextStep);
         router.push(`/onboarding?account_id=${accountId}&step=${nextStep}`);

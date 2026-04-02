@@ -14,6 +14,7 @@ class CreateTeamAccountService {
     name: string;
     userId: string;
     slug?: string;
+    spaceType?: 'work' | 'family' | 'community';
   }) {
     const client = getSupabaseServerAdminClient();
     const logger = await getLogger();
@@ -28,7 +29,9 @@ class CreateTeamAccountService {
     const { error, data } = await client.rpc('create_team_account', {
       account_name: params.name,
       user_id: params.userId,
-      account_slug: params.slug,
+      // Explicit null so PostgREST matches a text, uuid, text signature.
+      account_slug: params.slug ?? null,
+      account_space_type: params.spaceType ?? 'work',
     });
 
     if (error) {

@@ -9,6 +9,7 @@ import {
 
 import { ProfileAccountDropdownContainer } from '~/components//personal-account-dropdown-container';
 import { getTeamAccountSidebarConfig } from '~/config/team-account-navigation.config';
+import type { WorkspaceSpaceType } from '~/home/[account]/_lib/server/account-modules';
 
 import { TeamAccountAccountsSelector } from '../_components/team-account-accounts-selector';
 import { TeamAccountLayoutSidebarNavigation } from './team-account-layout-sidebar-navigation';
@@ -31,6 +32,8 @@ export function TeamAccountLayoutSidebar(props: {
   accounts: AccountModel[];
   user: JWTUserData;
   accountAccess?: TeamAccountAccessSource;
+  moduleSettings?: Record<string, boolean>;
+  spaceType: WorkspaceSpaceType;
 }) {
   return (
     <SidebarContainer
@@ -39,6 +42,8 @@ export function TeamAccountLayoutSidebar(props: {
       accounts={props.accounts}
       user={props.user}
       accountAccess={props.accountAccess}
+      moduleSettings={props.moduleSettings}
+      spaceType={props.spaceType}
     />
   );
 }
@@ -49,11 +54,19 @@ function SidebarContainer(props: {
   accounts: AccountModel[];
   user: JWTUserData;
   accountAccess?: TeamAccountAccessSource;
+  moduleSettings?: Record<string, boolean>;
+  spaceType: WorkspaceSpaceType;
 }) {
-  const { account, accounts, user, accountAccess } = props;
+  const { account, accounts, user, accountAccess, moduleSettings, spaceType } =
+    props;
   const userId = user.id;
 
-  const config = getTeamAccountSidebarConfig(account, accountAccess);
+  const config = getTeamAccountSidebarConfig(
+    account,
+    accountAccess,
+    moduleSettings,
+    spaceType,
+  );
   const collapsible = config.sidebarCollapsedStyle;
 
   return (

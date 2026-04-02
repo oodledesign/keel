@@ -91,13 +91,14 @@ grant usage on schema public to service_role;
 - The permissions are 'roles.manage', 'billing.manage', 'settings.manage', 'members.manage', and 'invites.manage'.
 - You can add more permissions as needed.
 */
+do $$ begin if not exists (select 1 from pg_type where typname = 'app_permissions') then
 create type public.app_permissions as enum(
   'roles.manage',
   'billing.manage',
   'settings.manage',
   'members.manage',
   'invites.manage'
-);
+); end if; end $$;
 
 /*
 * Subscription Status
@@ -105,6 +106,7 @@ create type public.app_permissions as enum(
 - The statuses are 'active', 'trialing', 'past_due', 'canceled', 'unpaid', 'incomplete', 'incomplete_expired', and 'paused'.
 - You can add more statuses as needed.
 */
+do $$ begin if not exists (select 1 from pg_type where typname = 'subscription_status') then
 create type public.subscription_status as ENUM(
   'active',
   'trialing',
@@ -114,13 +116,14 @@ create type public.subscription_status as ENUM(
   'incomplete',
   'incomplete_expired',
   'paused'
-);
+); end if; end $$;
 
 /*
 Payment Status
 - We create the payment status for the Supabase MakerKit. These statuses are used to manage the status of the payments
 */
-create type public.payment_status as ENUM('pending', 'succeeded', 'failed');
+do $$ begin if not exists (select 1 from pg_type where typname = 'payment_status') then
+create type public.payment_status as ENUM('pending', 'succeeded', 'failed'); end if; end $$;
 
 /*
 * Billing Provider
@@ -128,7 +131,8 @@ create type public.payment_status as ENUM('pending', 'succeeded', 'failed');
 - The providers are 'stripe', 'lemon-squeezy', and 'paddle'.
 - You can add more providers as needed.
 */
-create type public.billing_provider as ENUM('stripe', 'lemon-squeezy', 'paddle');
+do $$ begin if not exists (select 1 from pg_type where typname = 'billing_provider') then
+create type public.billing_provider as ENUM('stripe', 'lemon-squeezy', 'paddle'); end if; end $$;
 
 /*
 * Subscription Item Type
@@ -136,13 +140,15 @@ create type public.billing_provider as ENUM('stripe', 'lemon-squeezy', 'paddle')
 - The types are 'flat', 'per_seat', and 'metered'.
 - You can add more types as needed.
 */
-create type public.subscription_item_type as ENUM('flat', 'per_seat', 'metered');
+do $$ begin if not exists (select 1 from pg_type where typname = 'subscription_item_type') then
+create type public.subscription_item_type as ENUM('flat', 'per_seat', 'metered'); end if; end $$;
 
 /*
 * Invitation Type
 - We create the invitation type for the Supabase MakerKit. These types are used to manage the type of the invitation
 */
-create type public.invitation as (email text, role varchar(50));
+do $$ begin if not exists (select 1 from pg_type where typname = 'invitation') then
+create type public.invitation as (email text, role varchar(50)); end if; end $$;
 
 /*
  * -------------------------------------------------------
@@ -345,17 +351,16 @@ service_role;
 
 -- constraint that conditionally allows nulls on the slug ONLY if
 --  personal_account is true
-alter table public.accounts
-add constraint accounts_slug_null_if_personal_account_true check (
-  (
-    is_personal_account = true
-    and slug is null
-  )
-  or (
-    is_personal_account = false
-    and slug is not null
-  )
-);
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'accounts_slug_null_if_personal_account_true') then
+    alter table public.accounts
+    add constraint accounts_slug_null_if_personal_account_true check (
+      (is_personal_account = true and slug is null)
+      or (is_personal_account = false and slug is not null)
+    );
+  end if;
+end $$;
 
 -- Indexes
 create index if not exists ix_accounts_primary_owner_user_id on public.accounts (primary_owner_user_id);
@@ -633,11 +638,11 @@ delete on table public.accounts_memberships to authenticated,
 service_role;
 
 -- Indexes on the accounts_memberships table
-create index ix_accounts_memberships_account_id on public.accounts_memberships (account_id);
+create index if not exists ix_accounts_memberships_account_id on public.accounts_memberships (account_id);
 
-create index ix_accounts_memberships_user_id on public.accounts_memberships (user_id);
+create index if not exists ix_accounts_memberships_user_id on public.accounts_memberships (user_id);
 
-create index ix_accounts_memberships_account_role on public.accounts_memberships (account_role);
+create index if not exists ix_accounts_memberships_account_role on public.accounts_memberships (account_role);
 
 -- Enable RLS on the accounts_memberships table
 alter table public.accounts_memberships enable row level security;
@@ -741,6 +746,7 @@ service_role;
 -- RLS
 -- SELECT(roles)
 -- authenticated users can query roles
+drop policy if exists roles_read on public.roles;
 create policy roles_read on public.roles for
 select
   to authenticated using (
@@ -846,6 +852,7 @@ service_role;
 -- RLS
 -- SELECT(accounts_memberships):
 -- Users can read their team members account memberships
+drop policy if exists accounts_memberships_read on public.accounts_memberships;
 create policy accounts_memberships_read on public.accounts_memberships for
 select
   to authenticated using (
@@ -879,6 +886,7 @@ service_role;
 --   - they are the primary owner of the account
 --   - they have a role on the account
 --   - they are reading an account of the same team
+drop policy if exists accounts_read on public.accounts;
 create policy accounts_read on public.accounts for
 select
   to authenticated using (
@@ -894,6 +902,7 @@ select
 
 -- DELETE(accounts_memberships):
 -- Users with the required role can remove members from an account or remove their own
+drop policy if exists accounts_memberships_delete on public.accounts_memberships;
 create policy accounts_memberships_delete on public.accounts_memberships for delete to authenticated using (
   (
     user_id = (
@@ -2057,9 +2066,11 @@ execute on function public.upsert_order (
  * We create the schema for the notifications. Notifications are the notifications for an account.
  * -------------------------------------------------------
  */
-create type public.notification_channel as enum('in_app', 'email');
+do $$ begin if not exists (select 1 from pg_type where typname = 'notification_channel') then
+create type public.notification_channel as enum('in_app', 'email'); end if; end $$;
 
-create type public.notification_type as enum('info', 'warning', 'error');
+do $$ begin if not exists (select 1 from pg_type where typname = 'notification_type') then
+create type public.notification_type as enum('info', 'warning', 'error'); end if; end $$;
 
 create table if not exists
   public.notifications (

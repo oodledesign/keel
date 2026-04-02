@@ -80,7 +80,7 @@ export function OtpSignInContainer(props: OtpSignInContainerProps) {
     recordAuthMethod('otp', { email });
 
     // on sign ups we redirect to the app home
-    const next = params.get('next') ?? '/home';
+    const next = params.get('next') ?? '/app';
 
     router.replace(next);
   };

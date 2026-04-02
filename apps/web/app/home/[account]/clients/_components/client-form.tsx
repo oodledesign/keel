@@ -125,7 +125,13 @@ export function ClientForm({
         onSaved();
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to save');
+      const message =
+        e instanceof Error
+          ? e.message
+          : typeof (e as { message?: string })?.message === 'string'
+            ? (e as { message: string }).message
+            : 'Failed to save';
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -139,7 +145,13 @@ export function ClientForm({
       toast.success('Client deleted');
       onDeleted();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to delete');
+      const message =
+        e instanceof Error
+          ? e.message
+          : typeof (e as { message?: string })?.message === 'string'
+            ? (e as { message: string }).message
+            : 'Failed to delete';
+      toast.error(message);
     } finally {
       setDeleting(false);
     }

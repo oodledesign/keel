@@ -72,7 +72,7 @@ export class InvitationsPageObject {
         })
         .click();
 
-      await this.page.waitForURL('**/home/*/members');
+      await this.page.waitForURL('**/app/work/*/members');
     }).toPass();
   }
 
@@ -167,7 +167,7 @@ export class InvitationsPageObject {
     }
 
     // wait for redirect to account home
-    await this.page.waitForURL(new RegExp('/home/[a-z0-9-]+'));
+    await this.page.waitForURL(new RegExp('/app/work/[a-z0-9-]+'));
   }
 
   private getInviteForm() {

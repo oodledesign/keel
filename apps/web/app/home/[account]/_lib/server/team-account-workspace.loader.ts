@@ -40,42 +40,19 @@ async function workspaceLoader(accountSlug: string) {
     return redirect(pathsConfig.app.home);
   }
 
-  const account = workspace.data.account as {
-    id: string;
-    onboarding_completed?: boolean;
-    company_role?: string | null;
-    subscription_status?: string | null;
-  };
-  const onboardingCompleted = account.onboarding_completed !== false;
-  const isAdminPersona = account.company_role === 'admin';
-  const hasActiveSubscription =
-    account.subscription_status === 'active' ||
-    account.subscription_status === 'trialing';
+  const accountId = workspace.data.account.id as string;
+  const { data: moduleSettingsRows } = await client
+    .from('account_module_settings')
+    .select('module_key, enabled')
+    .eq('account_id', accountId);
 
-  // If onboarding not completed, redirect to onboarding for this account at their current step (saves progress)
-  if (!onboardingCompleted) {
-    const { data: membership } = await client
-      .from('accounts_memberships')
-      .select('onboarding_step')
-      .eq('account_id', account.id)
-      .eq('user_id', user.id)
-      .maybeSingle();
-    // Never send to step 1 (Create business) when they already have an account
-    const step = Math.max(2, membership?.onboarding_step ?? 2);
-    redirect(
-      `${pathsConfig.app.onboarding}?account_id=${account.id}&step=${step}`,
-    );
-  }
-
-  // Admin persona must have active subscription to access dashboard
-  if (isAdminPersona && !hasActiveSubscription) {
-    redirect(
-      `${pathsConfig.app.onboarding}?account_id=${account.id}&step=5`,
-    );
-  }
+  const moduleSettings = Object.fromEntries(
+    (moduleSettingsRows ?? []).map((row) => [row.module_key, row.enabled]),
+  ) as Record<string, boolean>;
 
   return {
     ...workspace.data,
+    moduleSettings,
     user,
   };
 }

@@ -29,7 +29,7 @@ test.describe('Auth flow', () => {
 
     await auth.visitConfirmEmailLink(email);
 
-    await page.waitForURL('**/home', {
+    await page.waitForURL('**/app', {
       timeout: 5_000,
     });
   });
@@ -45,20 +45,20 @@ test.describe('Auth flow', () => {
       password: 'password',
     });
 
-    await page.waitForURL('**/home');
+    await page.waitForURL('**/app');
   });
 
   test('will sign out using the dropdown', async ({ page }) => {
     const auth = new AuthPageObject(page);
 
-    await page.goto('/home/settings');
+    await page.goto('/app/settings');
 
     await auth.signIn({
       email: 'test@makerkit.dev',
       password: 'testingpassword',
     });
 
-    await page.waitForURL('/home/settings', {
+    await page.waitForURL('/app/settings', {
       timeout: 5_000,
     });
 
@@ -73,7 +73,7 @@ test.describe('Protected routes', () => {
     page,
   }) => {
     const auth = new AuthPageObject(page);
-    const path = '/home/settings';
+    const path = '/app/settings';
 
     await page.goto(path);
 
@@ -86,8 +86,8 @@ test.describe('Protected routes', () => {
   test('will redirect to the sign-in page if not authenticated', async ({
     page,
   }) => {
-    await page.goto('/home/settings');
+    await page.goto('/app/settings');
 
-    expect(page.url()).toContain('/auth/sign-in?next=/home/settings');
+    expect(page.url()).toContain('/auth/sign-in?next=/app/settings');
   });
 });

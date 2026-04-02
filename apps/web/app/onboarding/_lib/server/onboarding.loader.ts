@@ -29,6 +29,9 @@ export interface OnboardingContext {
     first_name: string | null;
     last_name: string | null;
     mobile: string | null;
+    use_keel_for_work: boolean;
+    use_keel_for_family: boolean;
+    use_keel_for_community: boolean;
     accessibility_text_size: string;
     accessibility_high_contrast: boolean;
     accessibility_simplified_mode: boolean;
@@ -102,6 +105,9 @@ export const getOnboardingContext = cache(
             first_name: userSettings.first_name ?? null,
             last_name: userSettings.last_name ?? null,
             mobile: userSettings.mobile ?? null,
+            use_keel_for_work: userSettings.use_keel_for_work === true,
+            use_keel_for_family: userSettings.use_keel_for_family === true,
+            use_keel_for_community: userSettings.use_keel_for_community === true,
             accessibility_text_size:
               userSettings.accessibility_text_size ?? 'standard',
             accessibility_high_contrast:
@@ -124,36 +130,6 @@ export async function requireOnboardingContext(
   const ctx = await getOnboardingContext(accountId ?? null);
   if (!ctx) redirect(pathsConfig.app.home);
   return ctx;
-}
-
-/**
- * If the user has any team account with incomplete onboarding, return its account_id and step
- * so we can redirect them to continue (instead of showing Create Business again).
- */
-export async function getFirstIncompleteOnboarding(): Promise<{
-  accountId: string;
-  step: number;
-} | null> {
-  const client = getSupabaseServerClient();
-  const user = await requireUserInServerComponent();
-
-  const { data: row } = await client
-    .from('accounts_memberships')
-    .select('account_id, onboarding_step, company_role')
-    .eq('user_id', user.id)
-    .eq('onboarding_completed', false)
-    .limit(1)
-    .maybeSingle();
-
-  if (!row?.account_id) return null;
-  // For admins/staff/contractors, never return step 1 when they already have a business
-  // (would show Create business again). Clients don't have the "Create business" step,
-  // so we can safely resume from whatever step they were on.
-  const isClient = row.company_role === 'client';
-  const step = isClient
-    ? row.onboarding_step ?? 1
-    : Math.max(2, row.onboarding_step ?? 2);
-  return { accountId: row.account_id, step };
 }
 
 /**

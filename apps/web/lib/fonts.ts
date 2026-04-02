@@ -1,8 +1,8 @@
-import { Poppins } from 'next/font/google';
+import { Space_Grotesk, Work_Sans } from 'next/font/google';
 
 import { cn } from '@kit/ui/utils';
 
-const sans = Poppins({
+const sans = Work_Sans({
   subsets: ['latin'],
   variable: '--font-sans-fallback',
   fallback: ['system-ui', 'Helvetica Neue', 'Helvetica', 'Arial'],
@@ -10,12 +10,12 @@ const sans = Poppins({
   weight: ['400', '500', '600', '700', '800'],
 });
 
-const heading = Poppins({
+const heading = Space_Grotesk({
   subsets: ['latin'],
   variable: '--font-heading-fallback',
   fallback: ['system-ui', 'Helvetica Neue', 'Helvetica', 'Arial'],
   preload: true,
-  weight: ['400', '500', '600', '700', '800'],
+  weight: ['400', '500', '600', '700'],
 });
 
 // we export these fonts into the root layout

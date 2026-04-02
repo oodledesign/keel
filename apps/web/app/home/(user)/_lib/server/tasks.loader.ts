@@ -50,11 +50,11 @@ export const loadTasksForUser = cache(async (): Promise<TasksPageTask[]> => {
   const client = getSupabaseServerClient();
   const user = await requireUserInServerComponent();
 
+  // Minimal select first (no joins) so tasks show even if projects/areas/clients have RLS or missing tables.
+  // If your Cloud DB uses a different owner column (e.g. owner_id), add .eq('owner_id', user.id) and ensure insert sets it.
   const { data, error } = await client
     .from('tasks')
-    .select(
-      'id, title, status, priority, due_date, project_id, client_id, projects(name, businesses(name, colour)), areas(name, colour, groups(name, type)), clients(display_name)',
-    )
+    .select('id, title, status, priority, due_date, project_id, client_id')
     .eq('user_id', user.id)
     .order('due_date', { ascending: true, nullsLast: true });
 
@@ -66,31 +66,20 @@ export const loadTasksForUser = cache(async (): Promise<TasksPageTask[]> => {
   return (data ?? []).map((row: any) => {
     const isWork = !!row.project_id;
     const context: 'work' | 'life' = isWork ? 'work' : 'life';
-
-    const projectName: string | null = row.projects?.name ?? null;
-    const lifeAreaName: string | null =
-      row.areas?.groups?.name ?? row.areas?.name ?? null;
-
-    const areaLabel = isWork ? projectName : lifeAreaName;
-
-    const accentColor: string | null = isWork
-      ? row.projects?.businesses?.colour ?? null
-      : row.areas?.colour ?? null;
-
     const dueDateRaw = row.due_date ?? null;
     return {
       id: row.id as string,
       title: (row.title as string) ?? 'Untitled',
-      projectName,
-      areaLabel,
+      projectName: null,
+      areaLabel: null,
       context,
       status: mapTaskStatus(row.status),
       priority: (row.priority as TasksPageTask['priority']) ?? 'medium',
       dueDateLabel: formatDueDateLabel(dueDateRaw),
       dueDate: dueDateRaw ? String(dueDateRaw).slice(0, 10) : null,
-      accentColor,
+      accentColor: null,
       clientId: row.client_id ?? null,
-      clientName: row.clients?.display_name ?? null,
+      clientName: null,
     };
   });
 });
@@ -103,9 +92,7 @@ export const loadTasksForClient = cache(
 
     const { data, error } = await client
       .from('tasks')
-      .select(
-        'id, title, status, priority, due_date, project_id, client_id, projects(name, businesses(name, colour)), areas(name, colour, groups(name, type)), clients(display_name)',
-      )
+      .select('id, title, status, priority, due_date, project_id, client_id')
       .eq('user_id', user.id)
       .eq('client_id', clientId)
       .order('due_date', { ascending: true, nullsLast: true });
@@ -118,27 +105,20 @@ export const loadTasksForClient = cache(
     return (data ?? []).map((row: any) => {
       const isWork = !!row.project_id;
       const context: 'work' | 'life' = isWork ? 'work' : 'life';
-      const projectName: string | null = row.projects?.name ?? null;
-      const lifeAreaName: string | null =
-        row.areas?.groups?.name ?? row.areas?.name ?? null;
-      const areaLabel = isWork ? projectName : lifeAreaName;
-      const accentColor: string | null = isWork
-        ? row.projects?.businesses?.colour ?? null
-        : row.areas?.colour ?? null;
       const dueDateRaw = row.due_date ?? null;
       return {
         id: row.id as string,
         title: (row.title as string) ?? 'Untitled',
-        projectName,
-        areaLabel,
+        projectName: null,
+        areaLabel: null,
         context,
         status: mapTaskStatus(row.status),
         priority: (row.priority as TasksPageTask['priority']) ?? 'medium',
         dueDateLabel: formatDueDateLabel(dueDateRaw),
         dueDate: dueDateRaw ? String(dueDateRaw).slice(0, 10) : null,
-        accentColor,
+        accentColor: null,
         clientId: row.client_id ?? null,
-        clientName: row.clients?.display_name ?? null,
+        clientName: null,
       };
     });
   },

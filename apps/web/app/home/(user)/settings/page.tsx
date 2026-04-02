@@ -1,4 +1,4 @@
-import { use } from 'react';
+import { Suspense, use } from 'react';
 
 import { PersonalAccountSettingsContainer } from '@kit/accounts/personal-account-settings';
 import { PageBody } from '@kit/ui/page';
@@ -9,6 +9,8 @@ import pathsConfig from '~/config/paths.config';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
+
+import { KeelUsePreferencesSection } from './_components/keel-use-preferences-section';
 
 // Show email option if password, magic link, or OTP is enabled
 const showEmailOption =
@@ -54,6 +56,12 @@ function PersonalAccountSettingsPage() {
             paths={paths}
             providers={providers}
           />
+        </div>
+
+        <div className="mt-6 rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+          <Suspense fallback={<p className="text-sm text-[var(--workspace-shell-text-muted)]">Loading…</p>}>
+            <KeelUsePreferencesSection />
+          </Suspense>
         </div>
       </div>
     </PageBody>

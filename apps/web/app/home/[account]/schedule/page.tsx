@@ -8,7 +8,9 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
 import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access';
+import { isWorkModuleEnabled } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
+import { redirectIfSpaceNotIn } from '../_lib/server/workspace-route-guard';
 import { loadJobsPageData } from '../jobs/_lib/server/jobs-page.loader';
 import { OrgSchedulePageContent } from './_components/org-schedule-page-content';
 
@@ -25,6 +27,7 @@ export const generateMetadata = async () => {
 async function OrgSchedulePage({ params }: OrgSchedulePageProps) {
   const { account: accountSlug } = await params;
   const workspace = await loadTeamWorkspace(accountSlug);
+  redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
   const access = getTeamAccountAccess(
     workspace.account as {
       permissions?: string[] | null;
@@ -33,7 +36,10 @@ async function OrgSchedulePage({ params }: OrgSchedulePageProps) {
     },
   );
 
-  if (!access.canViewSchedule) {
+  if (
+    !access.canViewSchedule ||
+    !isWorkModuleEnabled(workspace.moduleSettings, 'schedule')
+  ) {
     return redirect(getDefaultAccountPath(accountSlug, workspace.account));
   }
 

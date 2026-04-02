@@ -26,7 +26,6 @@ import { requireUserInServerComponent } from '~/lib/server/require-user-in-serve
 
 import {
   getFirstCompletedOnboardingAccount,
-  getFirstIncompleteOnboarding,
   isCurrentUserAccountOwner,
   requireOnboardingContext,
   type OnboardingContext,
@@ -37,13 +36,11 @@ import {
   getStepsForPersona,
 } from './_lib/onboarding-steps.config';
 import { OnboardingShell } from './_components/onboarding-shell';
-import { BusinessSummaryStep } from './_components/steps/business-summary-step';
-import { CreateBusinessStep } from './_components/steps/create-business-step';
+import { KeelContextsStep } from './_components/steps/keel-contexts-step';
 import { TradeStep } from './_components/steps/trade-step';
 import { PersonalDetailsStep } from './_components/steps/personal-details-step';
 import { AccessibilityStep } from './_components/steps/accessibility-step';
 import { SubscriptionStep } from './_components/steps/subscription-step';
-import { InviteStep } from './_components/steps/invite-step';
 
 interface OnboardingPageProps {
   searchParams: Promise<{ account_id?: string; step?: string }>;
@@ -59,31 +56,8 @@ export default async function OnboardingPage({
     await searchParams;
   const stepNum = stepParam ? Math.max(1, parseInt(stepParam, 10)) : 1;
 
-  // No account_id: if user already has a business with incomplete onboarding, send them there
   if (!accountIdParam) {
-    const existing = await getFirstIncompleteOnboarding();
-    if (existing) {
-      redirect(
-        `${pathsConfig.app.onboarding}?account_id=${existing.accountId}&step=${existing.step}`,
-      );
-    }
-    const completedAccount = await getFirstCompletedOnboardingAccount();
-    const dashboardHref = completedAccount
-      ? `/home/${completedAccount.accountSlug}`
-      : null;
-    return (
-      <OnboardingShell
-        companyRole="admin"
-        currentStep={1}
-        accountId=""
-        backHref={pathsConfig.app.home}
-        dashboardHref={dashboardHref}
-        dashboardAccountName={completedAccount?.accountName ?? null}
-        isOwner={false}
-      >
-        <CreateBusinessStep />
-      </OnboardingShell>
-    );
+    redirect(pathsConfig.app.home);
   }
 
   const ctx = await requireOnboardingContext(accountIdParam);
@@ -104,7 +78,9 @@ export default async function OnboardingPage({
 
   // If already completed, redirect to account home
   if (ctx.onboardingCompleted) {
-    redirect(`/home/${ctx.accountSlug}`);
+    redirect(
+      pathsConfig.app.accountHome.replace('[account]', ctx.accountSlug),
+    );
   }
 
   const [completedAccount, isOwner] = await Promise.all([
@@ -112,7 +88,10 @@ export default async function OnboardingPage({
     isCurrentUserAccountOwner(ctx.accountId),
   ]);
   const dashboardHref = completedAccount
-    ? `/home/${completedAccount.accountSlug}`
+    ? pathsConfig.app.accountHome.replace(
+        '[account]',
+        completedAccount.accountSlug,
+      )
     : null;
 
   return (
@@ -127,11 +106,19 @@ export default async function OnboardingPage({
       dashboardAccountName={completedAccount?.accountName ?? null}
       isOwner={isOwner}
     >
-      {stepDef?.key === 'create_business' && (
-        <BusinessSummaryStep
-          accountName={ctx.accountName}
-          accountSlug={ctx.accountSlug}
-          nextStepHref={`/onboarding?account_id=${ctx.accountId}&step=2`}
+      {stepDef?.key === 'keel_contexts' && (
+        <KeelContextsStep
+          accountId={ctx.accountId}
+          nextStep={nextStep}
+          initial={
+            ctx.userSettings
+              ? {
+                  use_keel_for_work: ctx.userSettings.use_keel_for_work,
+                  use_keel_for_family: ctx.userSettings.use_keel_for_family,
+                  use_keel_for_community: ctx.userSettings.use_keel_for_community,
+                }
+              : undefined
+          }
         />
       )}
       {stepDef?.key === 'trade' && (
@@ -166,12 +153,7 @@ export default async function OnboardingPage({
           accountId={ctx.accountId}
           accountSlug={ctx.accountSlug}
           hasActiveSubscription={ctx.hasActiveSubscription}
-        />
-      )}
-      {stepDef?.key === 'invite' && (
-        <InviteStep
-          accountId={ctx.accountId}
-          accountSlug={ctx.accountSlug}
+          isLastStep={currentIndex === maxStep - 1}
         />
       )}
     </OnboardingShell>

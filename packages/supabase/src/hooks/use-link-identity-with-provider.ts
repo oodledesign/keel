@@ -20,7 +20,7 @@ export function useLinkIdentityWithProvider(
     // Validate the redirect path to prevent open redirect attacks
     const redirectToPath = getSafeRedirectPath(
       props.redirectToPath,
-      '/home/settings',
+      '/app/settings',
     );
 
     const url = new URL('/auth/callback', origin);

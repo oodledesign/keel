@@ -27,6 +27,13 @@ import {
 } from '@kit/ui/form';
 import { If } from '@kit/ui/if';
 import { Input } from '@kit/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@kit/ui/select';
 import { Trans } from '@kit/ui/trans';
 
 import {
@@ -71,6 +78,7 @@ function CreateOrganizationAccountForm(props: { onClose: () => void }) {
     defaultValues: {
       name: '',
       slug: '',
+      spaceType: 'work',
     },
     resolver: zodResolver(CreateTeamSchema),
   });
@@ -106,6 +114,36 @@ function CreateOrganizationAccountForm(props: { onClose: () => void }) {
           <If condition={error}>
             <CreateOrganizationErrorAlert message={error?.message} />
           </If>
+
+          <FormField
+            name={'spaceType'}
+            render={({ field }) => {
+              return (
+                <FormItem>
+                  <FormLabel>Space type</FormLabel>
+
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger data-test={'team-space-type-input'}>
+                        <SelectValue placeholder={'Select space type'} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value={'work'}>Work</SelectItem>
+                      <SelectItem value={'family'}>Family</SelectItem>
+                      <SelectItem value={'community'}>Community</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <FormDescription>
+                    Choose where this shared space should appear.
+                  </FormDescription>
+
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
+          />
 
           <FormField
             name={'name'}

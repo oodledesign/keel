@@ -7,6 +7,22 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import pathsConfig from '~/config/paths.config';
 
 import { loadTeamWorkspace } from './team-account-workspace.loader';
+import { redirectIfSpaceNotIn } from './workspace-route-guard';
+
+/** PostgREST returns 404 / schema-cache errors when the table is missing from the API (migrations not applied). */
+function isTableMissingFromApi(error: {
+  message?: string;
+  code?: string;
+} | null): boolean {
+  if (!error) return false;
+  const m = (error.message ?? '').toLowerCase();
+  return (
+    m.includes('schema cache') ||
+    m.includes('does not exist') ||
+    error.code === 'PGRST205' ||
+    error.code === '42P01'
+  );
+}
 
 export type DashboardStatusSummary = {
   completed: number;
@@ -64,6 +80,8 @@ export async function loadDashboardPageData(
   if (!workspace?.account) {
     redirect(pathsConfig.app.home);
   }
+
+  redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
 
   const account = workspace.account as {
     id: string;
@@ -159,13 +177,34 @@ export async function loadDashboardPageData(
       .limit(5),
   ]);
 
-  if (activeJobsResult.error) {
+  const jobsUnavailable = isTableMissingFromApi(activeJobsResult.error);
+  const invoicesUnavailable = isTableMissingFromApi(
+    recentInvoicesResult.error,
+  );
+
+  if (activeJobsResult.error && !jobsUnavailable) {
     throw activeJobsResult.error;
   }
+  if (recentInvoicesResult.error && !invoicesUnavailable) {
+    throw recentInvoicesResult.error;
+  }
 
-  const activeJobsCount = activeJobsResult.count ?? 0;
-  const activeJobsList: DashboardJobSummary[] = (activeJobsResult.data ??
-    []
+  if (process.env.NODE_ENV === 'development' && jobsUnavailable) {
+    console.warn(
+      '[loadDashboardPageData] jobs table unavailable in PostgREST; showing empty job metrics. Run migrations (e.g. 20260216000005_jobs_v1_tables.sql chain) or supabase db push.',
+    );
+  }
+  if (process.env.NODE_ENV === 'development' && invoicesUnavailable) {
+    console.warn(
+      '[loadDashboardPageData] invoices table unavailable in PostgREST; showing empty invoices. Run migrations (e.g. 20260228120000_invoices_v1_tables.sql chain) or supabase db push.',
+    );
+  }
+
+  const activeJobsCount = jobsUnavailable
+    ? 0
+    : (activeJobsResult.count ?? 0);
+  const activeJobsList: DashboardJobSummary[] = (
+    jobsUnavailable ? [] : (activeJobsResult.data ?? [])
   ).map((row: any) => ({
     id: row.id as string,
     title: (row.title as string) ?? 'Untitled job',
@@ -175,10 +214,18 @@ export async function loadDashboardPageData(
     dueDate: (row.due_date as string | null) ?? null,
   }));
 
-  const completed = completedJobsCountResult.count ?? 0;
-  const inProgress = inProgressJobsCountResult.count ?? 0;
-  const pending = pendingJobsCountResult.count ?? 0;
-  const overdue = overdueJobsCountResult.count ?? 0;
+  const completed = jobsUnavailable
+    ? 0
+    : (completedJobsCountResult.count ?? 0);
+  const inProgress = jobsUnavailable
+    ? 0
+    : (inProgressJobsCountResult.count ?? 0);
+  const pending = jobsUnavailable
+    ? 0
+    : (pendingJobsCountResult.count ?? 0);
+  const overdue = jobsUnavailable
+    ? 0
+    : (overdueJobsCountResult.count ?? 0);
   const totalClients = clientsCountResult.count ?? 0;
 
   const metrics: DashboardMetrics = {
@@ -220,7 +267,7 @@ export async function loadDashboardPageData(
   });
 
   const recentInvoices: DashboardInvoiceSummary[] = (
-    recentInvoicesResult.data ?? []
+    invoicesUnavailable ? [] : (recentInvoicesResult.data ?? [])
   ).map((row: any) => ({
     id: (row.invoice_number as string) ?? (row.id as string),
     invoiceNumber: (row.invoice_number as string) ?? (row.id as string),

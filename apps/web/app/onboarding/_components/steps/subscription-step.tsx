@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import pathsConfig from '~/config/paths.config';
 
 import {
+  completeOnboarding,
   createTestSubscription,
   updateOnboardingStep,
 } from '../../_lib/server/onboarding.actions';
@@ -21,12 +22,15 @@ interface SubscriptionStepProps {
   accountId: string;
   accountSlug: string;
   hasActiveSubscription: boolean;
+  /** When true, finishing subscription completes onboarding (no further steps). */
+  isLastStep?: boolean;
 }
 
 export function SubscriptionStep({
   accountId,
   accountSlug,
   hasActiveSubscription,
+  isLastStep = false,
 }: SubscriptionStepProps) {
   const router = useRouter();
   const billingPath = pathsConfig.app.accountBilling.replace(
@@ -35,6 +39,18 @@ export function SubscriptionStep({
   );
 
   const handleContinue = async () => {
+    if (isLastStep) {
+      const result = await completeOnboarding(accountId);
+      if (result.error) {
+        alert(result.error);
+        return;
+      }
+      router.push(
+        pathsConfig.app.accountHome.replace('[account]', accountSlug),
+      );
+      router.refresh();
+      return;
+    }
     await updateOnboardingStep(accountId, 6);
     router.push(`/onboarding?account_id=${accountId}&step=6`);
     router.refresh();

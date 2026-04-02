@@ -269,7 +269,7 @@ export function LinkAccountsList(props: LinkAccountsListProps) {
             <If condition={canLinkPassword}>
               <UpdatePasswordDialog
                 userEmail={userEmail}
-                redirectTo={props.redirectTo || '/home'}
+                redirectTo={props.redirectTo || '/app'}
                 onPasswordSet={props.onPasswordSet}
                 isSelected={props.selectedMethod === 'password'}
               />

@@ -238,7 +238,7 @@ test.describe('Admin', () => {
       await page.getByRole('button', { name: 'Impersonate User' }).click();
 
       // Should redirect to home and be logged in as the user
-      await page.waitForURL('/home');
+      await page.waitForURL('/app');
     });
   });
 });

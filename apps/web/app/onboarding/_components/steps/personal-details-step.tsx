@@ -8,7 +8,6 @@ import {
   updateOnboardingStep,
   upsertUserSettings,
 } from '../../_lib/server/onboarding.actions';
-import type { StepDef } from '../../_lib/onboarding-steps.config';
 import { PrimaryButton } from '../primary-button';
 
 interface PersonalDetailsStepProps {

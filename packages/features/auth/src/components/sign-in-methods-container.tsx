@@ -41,7 +41,7 @@ export function SignInMethodsContainer(props: {
     : '';
 
   const onSignIn = useCallback(() => {
-    const returnPath = props.paths.returnPath || '/home';
+    const returnPath = props.paths.returnPath || '/app';
 
     router.replace(returnPath);
   }, [props.paths.returnPath, router]);

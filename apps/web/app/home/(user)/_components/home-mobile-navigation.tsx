@@ -10,24 +10,29 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
-import { If } from '@kit/ui/if';
 import { Trans } from '@kit/ui/trans';
 
-import featuresFlagConfig from '~/config/feature-flags.config';
-import { personalAccountNavigationConfig } from '~/config/personal-account-navigation.config';
+import {
+  buildPersonalAccountRoutes,
+  parsePersonalAccountNavigationConfig,
+} from '~/config/personal-account-navigation.config';
 
 // home imports
-import { HomeAccountSelector } from '../_components/home-account-selector';
 import type { UserWorkspace } from '../_lib/server/load-user-workspace';
 
 export function HomeMobileNavigation(props: { workspace: UserWorkspace }) {
   const signOut = useSignOut();
+  const teamAccounts = Array.isArray(props.workspace.accounts)
+    ? props.workspace.accounts
+    : [];
+  const navConfig = parsePersonalAccountNavigationConfig(
+    buildPersonalAccountRoutes(teamAccounts),
+  );
 
-  const Links = personalAccountNavigationConfig.routes.map((item, index) => {
+  const Links = navConfig.routes.map((item, index) => {
     if ('children' in item) {
       return item.children.map((child) => {
         return (
@@ -53,22 +58,6 @@ export function HomeMobileNavigation(props: { workspace: UserWorkspace }) {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent sideOffset={10} className={'w-screen rounded-none'}>
-        <If condition={featuresFlagConfig.enableTeamAccounts}>
-          <DropdownMenuGroup>
-            <DropdownMenuLabel>
-              <Trans i18nKey={'common:yourAccounts'} />
-            </DropdownMenuLabel>
-
-            <HomeAccountSelector
-              userId={props.workspace.user.id}
-              accounts={props.workspace.accounts}
-              collisionPadding={0}
-            />
-          </DropdownMenuGroup>
-
-          <DropdownMenuSeparator />
-        </If>
-
         <DropdownMenuGroup>{Links}</DropdownMenuGroup>
 
         <DropdownMenuSeparator />

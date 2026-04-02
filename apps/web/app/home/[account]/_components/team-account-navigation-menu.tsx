@@ -4,10 +4,12 @@ import {
 } from '@kit/ui/bordered-navigation-menu';
 
 import { AppLogo } from '~/components/app-logo';
+import { APP_LOGO_SHELL_CLASSNAME } from '~/lib/app-logo-shell';
 import { ProfileAccountDropdownContainer } from '~/components/personal-account-dropdown-container';
 import { getTeamAccountSidebarConfig } from '~/config/team-account-navigation.config';
 import pathsConfig from '~/config/paths.config';
 import { TeamAccountAccountsSelector } from '~/home/[account]/_components/team-account-accounts-selector';
+import { getSpaceTypeFromAccount } from '~/home/[account]/_lib/server/account-modules';
 
 // local imports
 import { TeamAccountWorkspace } from '../_lib/server/team-account-workspace.loader';
@@ -17,6 +19,10 @@ export function TeamAccountNavigationMenu(props: {
 }) {
   const { account, user, accounts } = props.workspace;
 
+  const spaceType = getSpaceTypeFromAccount(
+    account as { space_type?: string | null },
+  );
+
   const routes = getTeamAccountSidebarConfig(
     account.slug,
     account as {
@@ -24,6 +30,8 @@ export function TeamAccountNavigationMenu(props: {
       role?: string | null;
       company_role?: string | null;
     },
+    props.workspace.moduleSettings,
+    spaceType,
   ).routes.reduce<
     Array<{
       path: string;
@@ -47,6 +55,7 @@ export function TeamAccountNavigationMenu(props: {
     <div className={'flex w-full flex-1 justify-between text-[#d7deee]'}>
       <div className="flex items-center space-x-8">
         <AppLogo
+          className={APP_LOGO_SHELL_CLASSNAME}
           href={
             account?.slug
               ? pathsConfig.app.accountHome.replace('[account]', account.slug)

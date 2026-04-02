@@ -1,5 +1,3 @@
-import { use } from 'react';
-
 import { redirect } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
@@ -10,6 +8,7 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
 import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access';
+import { isWorkModuleEnabled } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import { loadClientsPageData } from './_lib/server/clients-page.loader';
 import { ClientsPageContent } from './_components/clients-page-content';
@@ -35,12 +34,21 @@ async function ClientsPage({ params }: ClientsPageProps) {
     },
   );
 
-  if (!access.canViewClients) {
+  if (
+    !access.canViewClients ||
+    !isWorkModuleEnabled(workspace.moduleSettings, 'clients')
+  ) {
     redirect(getDefaultAccountPath(accountSlug, workspace.account));
   }
 
-  const { accountId, canViewClients, canEditClients, isContractorView } =
-    await loadClientsPageData(accountSlug);
+  const {
+    accountId,
+    canViewClients,
+    canEditClients,
+    isContractorView,
+    initialClients,
+    initialTotal,
+  } = await loadClientsPageData(accountSlug);
 
   return (
     <>
@@ -57,6 +65,8 @@ async function ClientsPage({ params }: ClientsPageProps) {
           canViewClients={canViewClients}
           canEditClients={canEditClients}
           isContractorView={isContractorView}
+          initialClients={initialClients}
+          initialTotal={initialTotal}
         />
       </PageBody>
     </>

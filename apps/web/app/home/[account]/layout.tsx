@@ -10,6 +10,7 @@ import { Page, PageMobileNavigation, PageNavigation } from '@kit/ui/page';
 import { SidebarProvider } from '@kit/ui/shadcn-sidebar';
 
 import { AppLogo } from '~/components/app-logo';
+import { APP_LOGO_SHELL_CLASSNAME } from '~/lib/app-logo-shell';
 import { ProfileAccountDropdownContainer } from '~/components/personal-account-dropdown-container';
 import { getTeamAccountSidebarConfig } from '~/config/team-account-navigation.config';
 import pathsConfig from '~/config/paths.config';
@@ -19,6 +20,7 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 import { TeamAccountLayoutMobileNavigation } from './_components/team-account-layout-mobile-navigation';
 import { TeamAccountLayoutSidebar } from './_components/team-account-layout-sidebar';
 import { TeamAccountNavigationMenu } from './_components/team-account-navigation-menu';
+import { getSpaceTypeFromAccount } from './_lib/server/account-modules';
 import { loadTeamWorkspace } from './_lib/server/team-account-workspace.loader';
 
 type TeamWorkspaceLayoutProps = React.PropsWithChildren<{
@@ -60,6 +62,10 @@ async function SidebarLayout({
     }),
   );
 
+  const spaceType = getSpaceTypeFromAccount(
+    data.account as { space_type?: string | null },
+  );
+
   return (
     <TeamAccountWorkspaceContextProvider value={data}>
       <SidebarProvider defaultOpen={state.open}>
@@ -70,6 +76,8 @@ async function SidebarLayout({
               accountId={data.account.id}
               accounts={accounts}
               user={data.user}
+              moduleSettings={data.moduleSettings}
+              spaceType={spaceType}
               accountAccess={
                 data.account as {
                   permissions?: string[] | null;
@@ -81,13 +89,18 @@ async function SidebarLayout({
           </PageNavigation>
 
           <PageMobileNavigation className="flex items-center justify-between bg-[var(--workspace-shell-header)] px-4 py-2 text-[var(--workspace-shell-text)] border-b border-white/6 lg:px-0">
-            <AppLogo href={pathsConfig.app.accountHome.replace('[account]', account)} />
+            <AppLogo
+              className={APP_LOGO_SHELL_CLASSNAME}
+              href={pathsConfig.app.accountHome.replace('[account]', account)}
+            />
 
             <div className={'flex items-center gap-x-3'}>
               <TeamAccountLayoutMobileNavigation
                 userId={data.user.id}
                 accounts={accounts}
                 account={account}
+                spaceType={spaceType}
+                moduleSettings={data.moduleSettings}
                 accountAccess={
                   data.account as {
                     permissions?: string[] | null;
@@ -127,6 +140,10 @@ function HeaderLayout({
     }),
   );
 
+  const spaceType = getSpaceTypeFromAccount(
+    data.account as { space_type?: string | null },
+  );
+
   return (
     <TeamAccountWorkspaceContextProvider value={data}>
       <Page style={'header'}>
@@ -135,13 +152,18 @@ function HeaderLayout({
         </PageNavigation>
 
         <PageMobileNavigation className="flex items-center justify-between bg-[var(--workspace-shell-header)] px-4 py-2 text-[var(--workspace-shell-text)] border-b border-white/6 lg:px-0">
-          <AppLogo href={pathsConfig.app.accountHome.replace('[account]', account)} />
+          <AppLogo
+            className={APP_LOGO_SHELL_CLASSNAME}
+            href={pathsConfig.app.accountHome.replace('[account]', account)}
+          />
 
           <div className={'flex items-center gap-x-3 group-data-[mobile:hidden]'}>
             <TeamAccountLayoutMobileNavigation
               userId={data.user.id}
               accounts={accounts}
               account={account}
+              spaceType={spaceType}
+              moduleSettings={data.moduleSettings}
               accountAccess={
                 data.account as {
                   permissions?: string[] | null;

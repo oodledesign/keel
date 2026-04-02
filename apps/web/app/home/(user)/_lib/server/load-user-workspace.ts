@@ -7,12 +7,88 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { createAccountCreationPolicyEvaluator } from '@kit/team-accounts/policies';
 
 import featureFlagsConfig from '~/config/feature-flags.config';
-import pathsConfig from '~/config/paths.config';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 const shouldLoadAccounts = featureFlagsConfig.enableTeamAccounts;
 
 export type UserWorkspace = Awaited<ReturnType<typeof loadUserWorkspace>>;
+
+type TeamAccountOption = {
+  label: string;
+  value: string;
+  image: string | null;
+};
+
+/**
+ * When `user_accounts` returns nothing (view/RLS drift) but the user is still a
+ * member of team accounts, load slugs from `accounts_memberships` + `accounts`.
+ */
+async function loadTeamAccountsFromMemberships(
+  client: ReturnType<typeof getSupabaseServerClient>,
+  userId: string,
+): Promise<TeamAccountOption[]> {
+  const { data: memberships, error: memErr } = await client
+    .from('accounts_memberships')
+    .select('account_id')
+    .eq('user_id', userId);
+
+  if (memErr) {
+    console.error(
+      '[loadUserWorkspace] loadTeamAccountsFromMemberships memberships:',
+      memErr.message,
+    );
+    return [];
+  }
+
+  const ids = [
+    ...new Set(
+      (memberships ?? [])
+        .map((m: { account_id: string }) => m.account_id)
+        .filter(Boolean),
+    ),
+  ];
+
+  if (ids.length === 0) {
+    return [];
+  }
+
+  const { data: rows, error: accErr } = await client
+    .from('accounts')
+    .select('id, name, slug, picture_url, is_personal_account')
+    .in('id', ids)
+    .eq('is_personal_account', false);
+
+  if (accErr) {
+    console.error(
+      '[loadUserWorkspace] loadTeamAccountsFromMemberships accounts:',
+      accErr.message,
+    );
+    return [];
+  }
+
+  const seen = new Set<string>();
+  const out: TeamAccountOption[] = [];
+
+  for (const row of rows ?? []) {
+    const r = row as {
+      name: string | null;
+      slug: string | null;
+      picture_url: string | null;
+      is_personal_account: boolean | null;
+    };
+    if (r.is_personal_account) continue;
+    const slug = r.slug?.trim();
+    if (!slug || seen.has(slug)) continue;
+    seen.add(slug);
+    out.push({
+      label: r.name?.trim() || slug,
+      value: slug,
+      image: r.picture_url ?? null,
+    });
+  }
+
+  return out;
+}
 
 /**
  * @name loadUserWorkspace
@@ -36,8 +112,21 @@ async function workspaceLoader() {
   if (shouldLoadAccounts) {
     try {
       accounts = await api.loadUserAccounts();
-    } catch {
+    } catch (err) {
+      console.error(
+        '[loadUserWorkspace] loadUserAccounts failed:',
+        err instanceof Error ? err.message : err,
+      );
       accounts = [];
+    }
+
+    accounts = (Array.isArray(accounts) ? accounts : []).filter(
+      (a): a is { label: string; value: string; image: string | null } =>
+        typeof a.value === 'string' && a.value.length > 0,
+    );
+
+    if (accounts.length === 0) {
+      accounts = await loadTeamAccountsFromMemberships(client, user.id);
     }
   }
 
@@ -52,39 +141,7 @@ async function workspaceLoader() {
     redirect('/');
   }
 
-  // If user has at least one completed team, send them to /home (they can continue incomplete onboarding from there if needed).
-  // Only redirect to onboarding when they have zero completed teams and either in-progress or no accounts.
-  if (shouldLoadAccounts) {
-    const { data: hasCompleted } = await client
-      .from('accounts_memberships')
-      .select('account_id')
-      .eq('user_id', user.id)
-      .eq('onboarding_completed', true)
-      .limit(1)
-      .maybeSingle();
-    if (hasCompleted?.account_id) {
-      // User has a completed team — do not redirect to onboarding; let them land on /home
-    } else {
-      const { data: incomplete } = await client
-        .from('accounts_memberships')
-        .select('account_id, onboarding_step')
-        .eq('user_id', user.id)
-        .eq('onboarding_completed', false)
-        .limit(1)
-        .maybeSingle();
-      if (incomplete?.account_id) {
-        const step = Math.max(2, incomplete.onboarding_step ?? 2);
-        redirect(
-          `${pathsConfig.app.onboarding}?account_id=${incomplete.account_id}&step=${step}`,
-        );
-      }
-      if (Array.isArray(accounts) && accounts.length === 0) {
-        redirect(pathsConfig.app.onboarding);
-      }
-    }
-    // Single-team redirect is done only on the root /home page (see (user)/page.tsx), not here,
-    // so that /home/settings and other personal routes remain accessible.
-  }
+  // Onboarding is optional: users reach /home without being sent to /onboarding (create workspaces from the dashboard).
 
   // Check if user can create team accounts (policy check)
   const canCreateTeamAccount = shouldLoadAccounts

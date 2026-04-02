@@ -25,7 +25,7 @@ export const leaveTeamAccountAction = enhanceAction(
 
     revalidatePath('/home/[account]', 'layout');
 
-    return redirect('/home');
+    return redirect('/app');
   },
   {},
 );

@@ -41,7 +41,7 @@ export function SiteNavigation() {
     <>
       <div className={'hidden items-center justify-center md:flex'}>
         <NavigationMenu>
-          <NavigationMenuList className={'gap-x-2.5'}>
+          <NavigationMenuList className={'gap-x-2 rounded-full border border-violet-200/10 bg-white/[0.03] p-1'}>
             {NavItems}
           </NavigationMenuList>
         </NavigationMenu>
@@ -57,13 +57,17 @@ export function SiteNavigation() {
 function MobileDropdown() {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger aria-label={'Open Menu'}>
-        <Menu className={'h-8 w-8'} />
+      <DropdownMenuTrigger
+        aria-label={'Open Menu'}
+        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-violet-200/20 bg-violet-500/10 text-violet-100 transition-colors hover:bg-violet-500/20"
+      >
+        <Menu className={'h-5 w-5'} />
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent className={'w-full'}>
+      <DropdownMenuContent className={'w-full border-violet-200/20 bg-[#100d1f]/95 text-violet-100'}>
         {Object.values(links).map((item) => {
-          const className = 'flex w-full h-full items-center';
+          const className =
+            'flex h-full w-full items-center rounded-md px-2 py-1.5 text-violet-100/85 transition-colors hover:bg-violet-500/15 hover:text-violet-50';
 
           return (
             <DropdownMenuItem key={item.path} asChild>

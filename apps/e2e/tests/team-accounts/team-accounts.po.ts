@@ -53,7 +53,7 @@ export class TeamAccountsPageObject {
         })
         .click();
 
-      await this.page.waitForURL('**/home/*/settings');
+      await this.page.waitForURL('**/app/work/*/settings');
     }).toPass();
   }
 
@@ -65,7 +65,7 @@ export class TeamAccountsPageObject {
         })
         .click();
 
-      await this.page.waitForURL('**/home/*/members');
+      await this.page.waitForURL('**/app/work/*/members');
     }).toPass();
   }
 
@@ -77,7 +77,7 @@ export class TeamAccountsPageObject {
         })
         .click();
 
-      return await this.page.waitForURL('**/home/*/billing');
+      return await this.page.waitForURL('**/app/work/*/billing');
     }).toPass();
   }
 
@@ -129,12 +129,12 @@ export class TeamAccountsPageObject {
       '[data-test="create-team-form"] button:last-child',
     );
 
-    const response = this.page.waitForURL(`/home/${slug}`);
+    const response = this.page.waitForURL(`/app/work/${slug}`);
 
     await Promise.all([click, response]);
 
     // Verify user landed on the team page
-    await expect(this.page).toHaveURL(`/home/${slug}`);
+    await expect(this.page).toHaveURL(`/app/work/${slug}`);
 
     // Verify the team was created and appears in the selector
     await this.openAccountsSelector();
@@ -166,12 +166,12 @@ export class TeamAccountsPageObject {
       '[data-test="create-team-form"] button:last-child',
     );
 
-    const response = this.page.waitForURL(`/home/${slug}`);
+    const response = this.page.waitForURL(`/app/work/${slug}`);
 
     await Promise.all([click, response]);
 
     // Verify user landed on the team page
-    await expect(this.page).toHaveURL(`/home/${slug}`);
+    await expect(this.page).toHaveURL(`/app/work/${slug}`);
 
     // Verify the team was created and appears in the selector
     await this.openAccountsSelector();
@@ -216,7 +216,7 @@ export class TeamAccountsPageObject {
         '[data-test="delete-team-form-confirm-button"]',
       );
 
-      const response = this.page.waitForURL('**/home');
+      const response = this.page.waitForURL('**/app');
 
       return Promise.all([click, response]);
     }).toPass();

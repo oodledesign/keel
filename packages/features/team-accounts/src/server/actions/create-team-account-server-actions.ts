@@ -12,7 +12,7 @@ import { createAccountCreationPolicyEvaluator } from '../policies';
 import { createCreateTeamAccountService } from '../services/create-team-account.service';
 
 export const createTeamAccountAction = enhanceAction(
-  async ({ name, slug }, user) => {
+  async ({ name, slug, spaceType }, user) => {
     const logger = await getLogger();
     const service = createCreateTeamAccountService();
 
@@ -56,6 +56,7 @@ export const createTeamAccountAction = enhanceAction(
       name,
       userId: user.id,
       slug,
+      spaceType,
     });
 
     if (error === 'duplicate_slug') {
@@ -67,7 +68,12 @@ export const createTeamAccountAction = enhanceAction(
 
     logger.info(ctx, `Team account created`);
 
-    const accountHomePath = '/home/' + data.slug;
+    const accountHomePath =
+      spaceType === 'work'
+        ? '/app/work/' + data.slug
+        : spaceType === 'family'
+          ? '/app/family'
+          : '/app/community';
 
     redirect(accountHomePath);
   },

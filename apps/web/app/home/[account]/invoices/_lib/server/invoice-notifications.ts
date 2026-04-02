@@ -3,6 +3,8 @@ import 'server-only';
 import { getMailer } from '@kit/mailers';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import pathsConfig from '~/config/paths.config';
+
 type PaymentMethod = 'stripe' | 'cash' | 'bank_transfer';
 
 function formatPence(pence: number) {
@@ -94,10 +96,10 @@ export async function sendInvoicePaidNotifications(params: {
     ? new Date(invoice.paid_at).toLocaleString('en-GB')
     : new Date().toLocaleString('en-GB');
   const methodLabel = getMethodLabel(params.paymentMethod);
-  const adminInvoiceUrl = new URL(
-    `/home/${account.slug}/invoices/${invoice.id}/edit`,
-    siteUrl,
-  ).href;
+  const adminInvoicePath = pathsConfig.app.accountInvoiceEdit
+    .replace('[account]', account.slug)
+    .replace('[id]', invoice.id);
+  const adminInvoiceUrl = new URL(adminInvoicePath, siteUrl).href;
   const portalInvoiceUrl = invoice.public_token
     ? new URL(`/portal/invoices/${invoice.public_token}`, siteUrl).href
     : null;

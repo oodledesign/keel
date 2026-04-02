@@ -26,6 +26,7 @@ import { Trans } from '@kit/ui/trans';
 import featureFlagsConfig from '~/config/feature-flags.config';
 import pathsConfig from '~/config/paths.config';
 import { getTeamAccountSidebarConfig } from '~/config/team-account-navigation.config';
+import type { WorkspaceSpaceType } from '~/home/[account]/_lib/server/account-modules';
 
 type Accounts = Array<{
   label: string | null;
@@ -50,6 +51,8 @@ export const TeamAccountLayoutMobileNavigation = (
     userId: string;
     accounts: Accounts;
     accountAccess?: TeamAccountAccessSource;
+    moduleSettings?: Record<string, boolean>;
+    spaceType: WorkspaceSpaceType;
   }>,
 ) => {
   const signOut = useSignOut();
@@ -57,6 +60,8 @@ export const TeamAccountLayoutMobileNavigation = (
   const Links = getTeamAccountSidebarConfig(
     props.account,
     props.accountAccess,
+    props.moduleSettings,
+    props.spaceType,
   ).routes.map(
     (item, index) => {
       if ('children' in item) {

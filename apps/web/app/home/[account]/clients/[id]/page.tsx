@@ -5,7 +5,9 @@ import { PageBody } from '@kit/ui/page';
 import pathsConfig from '~/config/paths.config';
 
 import { getTeamAccountAccess } from '../../_lib/role-access';
+import { isWorkModuleEnabled } from '../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
+import { redirectIfSpaceNotIn } from '../../_lib/server/workspace-route-guard';
 import { loadClientsPageData } from '../_lib/server/clients-page.loader';
 import { getClient } from '../_lib/server/server-actions';
 import { ClientDetailPageContent } from '../_components/client-detail-page-content';
@@ -21,6 +23,8 @@ export default async function ClientDetailPage({ params }: Props) {
   const workspace = await loadTeamWorkspace(accountSlug);
   if (!workspace?.account) notFound();
 
+  redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
+
   const access = getTeamAccountAccess(
     workspace.account as {
       permissions?: string[] | null;
@@ -28,7 +32,10 @@ export default async function ClientDetailPage({ params }: Props) {
       company_role?: string | null;
     },
   );
-  if (!access.canViewClients) {
+  if (
+    !access.canViewClients ||
+    !isWorkModuleEnabled(workspace.moduleSettings, 'clients')
+  ) {
     notFound();
   }
 

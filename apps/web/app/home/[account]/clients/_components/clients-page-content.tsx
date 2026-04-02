@@ -41,19 +41,25 @@ export function ClientsPageContent({
   canViewClients,
   canEditClients,
   isContractorView,
+  initialClients = [],
+  initialTotal = 0,
 }: {
   accountSlug: string;
   accountId: string;
   canViewClients: boolean;
   canEditClients: boolean;
   isContractorView: boolean;
+  initialClients?: ClientRow[];
+  initialTotal?: number;
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [clients, setClients] = useState<ClientRow[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [clients, setClients] = useState<ClientRow[]>(
+    Array.isArray(initialClients) ? (initialClients as ClientRow[]) : [],
+  );
+  const [total, setTotal] = useState(Number(initialTotal) || 0);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [searchDebounced, setSearchDebounced] = useState('');
   const [page, setPage] = useState(1);

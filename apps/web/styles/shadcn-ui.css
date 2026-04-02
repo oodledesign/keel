@@ -20,7 +20,7 @@
     --popover: var(--color-white);
     --popover-foreground: var(--color-neutral-950);
 
-    --primary: #3D4E5D; /* Keel Slate */
+    --primary: #8b5cf6;
     --primary-foreground: var(--color-white);
 
     --secondary: oklch(96.76% 0.0013 286.38);
@@ -29,7 +29,7 @@
     --muted: oklch(96.71% 0.0029 264.54);
     --muted-foreground: oklch(55.13% 0.0233 264.36);
 
-    --accent: #57C87F; /* Keel Green */
+    --accent: #a855f7;
     --accent-foreground: var(--color-white);
 
     --destructive: var(--color-red-500);
@@ -57,17 +57,17 @@
     --sidebar-border: var(--border);
     --sidebar-ring: var(--color-blue-500);
 
-    --workspace-shell-header: #1f2b3a;
-    --workspace-shell-sidebar: #161f2b;
-    --workspace-shell-canvas: #0c141f;
-    --workspace-shell-panel: #171f2c;
-    --workspace-shell-panel-hover: #202a38;
-    --workspace-shell-sidebar-active: #3e5366;
-    --workspace-shell-sidebar-accent: #273341;
-    --workspace-shell-text: #D7DEEE;
+    --workspace-shell-header: #0f0a1f;
+    --workspace-shell-sidebar: #0a0916;
+    --workspace-shell-canvas: #05050b;
+    --workspace-shell-panel: #141225;
+    --workspace-shell-panel-hover: #1a1730;
+    --workspace-shell-sidebar-active: #2f2453;
+    --workspace-shell-sidebar-accent: #1c1832;
+    --workspace-shell-text: #e9e4ff;
 
-    --workspace-control-surface: #101723;
-    --workspace-control-border: rgba(148, 163, 184, 0.35);
+    --workspace-control-surface: #110f20;
+    --workspace-control-border: rgba(167, 139, 250, 0.35);
   }
 
   .dark {
@@ -80,8 +80,8 @@
     --popover: var(--color-neutral-900);
     --popover-foreground: var(--color-white);
 
-    --primary: #57C87F; /* Keel Green for dark mode */
-    --primary-foreground: var(--color-neutral-900);
+    --primary: #a855f7;
+    --primary-foreground: #09090f;
 
     --secondary: var(--color-neutral-800);
     --secondary-foreground: oklch(98.43% 0.0017 247.84);
@@ -115,16 +115,16 @@
     --sidebar-border: var(--border);
     --sidebar-ring: var(--color-blue-500);
 
-    --workspace-shell-header: #1f2b3a;
-    --workspace-shell-sidebar: #161f2b;
-    --workspace-shell-canvas: #0c141f;
-    --workspace-shell-panel: #171f2c;
-    --workspace-shell-panel-hover: #202a38;
-    --workspace-shell-sidebar-active: #3e5366;
-    --workspace-shell-sidebar-accent: #273341;
-    --workspace-shell-text: #D7DEEE;
+    --workspace-shell-header: #0f0a1f;
+    --workspace-shell-sidebar: #0a0916;
+    --workspace-shell-canvas: #05050b;
+    --workspace-shell-panel: #141225;
+    --workspace-shell-panel-hover: #1a1730;
+    --workspace-shell-sidebar-active: #2f2453;
+    --workspace-shell-sidebar-accent: #1c1832;
+    --workspace-shell-text: #e9e4ff;
 
-    --workspace-control-surface: #101723;
-    --workspace-control-border: rgba(148, 163, 184, 0.35);
+    --workspace-control-surface: #110f20;
+    --workspace-control-border: rgba(167, 139, 250, 0.35);
   }
 }

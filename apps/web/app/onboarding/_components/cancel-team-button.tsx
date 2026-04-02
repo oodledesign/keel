@@ -39,7 +39,7 @@ export function CancelTeamButton({
         return;
       }
       setOpen(false);
-      router.push('/home');
+      router.push('/app');
       router.refresh();
     } finally {
       setLoading(false);

@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "dev": "node ./src/dev.mjs",
+    "dev": "MAKERKIT_ALLOW_PUBLIC_REPO=true node ./src/dev.mjs",
     "checks": "node ./src/checks.mjs",
     "requirements": "node ./src/requirements.mjs",
     "license": "node ./src/license.mjs"

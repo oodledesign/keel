@@ -15,6 +15,8 @@ import {
 } from '@kit/ui/empty-state';
 import { Trans } from '@kit/ui/trans';
 
+import pathsConfig from '~/config/paths.config';
+
 import { loadUserWorkspace } from '../_lib/server/load-user-workspace';
 import { HomeAddAccountButton } from './home-add-account-button';
 
@@ -32,7 +34,12 @@ export function HomeAccountsList() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {accounts.map((account) => (
           <CardButton key={account.value} asChild>
-            <Link href={`/home/${account.value}`}>
+            <Link
+              href={pathsConfig.app.accountHome.replace(
+                '[account]',
+                account.value,
+              )}
+            >
               <CardButtonHeader>
                 <CardButtonTitle>{account.label}</CardButtonTitle>
               </CardButtonHeader>

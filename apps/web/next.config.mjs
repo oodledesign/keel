@@ -40,6 +40,7 @@ const config = {
     '/*': ['./content/**/*'],
   },
   redirects: getRedirects,
+  rewrites: getRewrites,
   turbopack: {
     resolveExtensions: ['.ts', '.tsx', '.js', '.jsx'],
     resolveAlias: getModulesAliases(),
@@ -114,7 +115,142 @@ function getImagesConfig() {
   };
 }
 
+/**
+ * Public URLs live under /app; existing handlers stay under app/home/** via rewrites.
+ * Do not rewrite /app/family, /app/community, or /app/settings/areas — those are real routes.
+ */
+async function getRewrites() {
+  return {
+    beforeFiles: [
+      {
+        source: '/app/work/:account/:path*',
+        destination: '/home/:account/:path*',
+      },
+      {
+        source: '/app/work/:account',
+        destination: '/home/:account',
+      },
+      {
+        source: '/app/life/:path*',
+        destination: '/home/life/:path*',
+      },
+      {
+        source: '/app/billing/return',
+        destination: '/home/billing/return',
+      },
+      {
+        source: '/app/billing',
+        destination: '/home/billing',
+      },
+      {
+        source: '/app/billing/:path*',
+        destination: '/home/billing/:path*',
+      },
+      {
+        source: '/app/settings/accessibility',
+        destination: '/home/settings/accessibility',
+      },
+      {
+        source: '/app/settings',
+        destination: '/home/settings',
+      },
+      {
+        source: '/app/accessibility',
+        destination: '/home/accessibility',
+      },
+      {
+        source: '/app/pipeline',
+        destination: '/home/pipeline',
+      },
+      {
+        source: '/app/clients',
+        destination: '/home/clients',
+      },
+      {
+        source: '/app/tasks',
+        destination: '/home/tasks',
+      },
+      {
+        source: '/app/support',
+        destination: '/home/support',
+      },
+      {
+        source: '/app',
+        destination: '/home',
+      },
+    ],
+  };
+}
+
 async function getRedirects() {
+  const legacyHomeRedirects = [
+    {
+      source: '/home/settings/accessibility',
+      destination: '/app/settings/accessibility',
+      permanent: false,
+    },
+    {
+      source: '/home/settings',
+      destination: '/app/settings',
+      permanent: false,
+    },
+    {
+      source: '/home/accessibility',
+      destination: '/app/accessibility',
+      permanent: false,
+    },
+    {
+      source: '/home/billing/return',
+      destination: '/app/billing/return',
+      permanent: false,
+    },
+    {
+      source: '/home/billing',
+      destination: '/app/billing',
+      permanent: false,
+    },
+    {
+      source: '/home/pipeline',
+      destination: '/app/pipeline',
+      permanent: false,
+    },
+    {
+      source: '/home/clients',
+      destination: '/app/clients',
+      permanent: false,
+    },
+    {
+      source: '/home/tasks',
+      destination: '/app/tasks',
+      permanent: false,
+    },
+    {
+      source: '/home/support',
+      destination: '/app/support',
+      permanent: false,
+    },
+    {
+      source: '/home/life/:path*',
+      destination: '/app/life/:path*',
+      permanent: false,
+    },
+    {
+      source: '/home/:account/:path*',
+      destination: '/app/work/:account/:path*',
+      permanent: false,
+    },
+    {
+      source: '/home/:account',
+      destination: '/app/work/:account',
+      permanent: false,
+    },
+    {
+      source: '/home',
+      destination: '/app',
+      permanent: false,
+    },
+  ];
+
   // Temporarily redirect all marketing pages to home (remove when re-enabling)
   const marketingRedirects = [
     '/faq',
@@ -138,6 +274,7 @@ async function getRedirects() {
   }));
 
   return [
+    ...legacyHomeRedirects,
     {
       source: '/server-sitemap.xml',
       destination: '/sitemap.xml',

@@ -113,9 +113,9 @@
   "needsReauthenticationDescription": "You need to reauthenticate to change your password. Please sign out and sign in again to change your password.",
   "language": "Language",
   "languageDescription": "Choose your preferred language",
-  "noTeamsYet": "You don't have any teams yet.",
-  "createTeam": "Create a team to get started.",
-  "createTeamButtonLabel": "Create a Team",
+  "noTeamsYet": "You don't have any shared spaces yet.",
+  "createTeam": "Add a shared space when you organise with others — work, family, or a group.",
+  "createTeamButtonLabel": "Add a shared space",
   "linkedAccounts": "Linked Accounts",
   "linkedAccountsDescription": "Connect other authentication providers",
   "unlinkAccountButton": "Unlink {{provider}}",
@@ -151,5 +151,9 @@
   "setEmailSuccessMessage": "We sent you an email to confirm your email address. Please check your inbox and click on the link to confirm your email address.",
   "setEmailLoading": "Setting your email...",
   "setEmailError": "Email not set. Please try again",
-  "emailNotChanged": "Your email address has not changed"
+  "emailNotChanged": "Your email address has not changed",
+  "clientsSelectTeam": "Clients are managed per team. Select a team from the menu above to view and add clients.",
+  "clientsNeedTeam": "Clients are tied to a shared space for your crew or business. Create or join one to manage clients, then open it from Home.",
+  "goSelectTeam": "Go to Home",
+  "goToHome": "Go to Home"
 }

@@ -23,7 +23,7 @@ test.describe('Account Settings', () => {
     await auth.loginAsUser({
       email,
       password: 'testingpassword',
-      next: '/home/settings',
+      next: '/app/settings',
     });
   });
 
@@ -78,7 +78,7 @@ test.describe('Account Deletion', () => {
       name: 'Test User',
     });
 
-    await auth.loginAsUser({ email, next: '/home/settings' });
+    await auth.loginAsUser({ email, next: '/app/settings' });
 
     await account.deleteAccount(email);
 

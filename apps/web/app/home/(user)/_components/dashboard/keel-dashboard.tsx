@@ -82,7 +82,7 @@ function formatCurrency(value: number) {
 }
 
 const panelClass =
-  'rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)] shadow-[0_12px_36px_rgba(4,10,24,0.18)]';
+  'rounded-2xl border border-violet-300/10 bg-[var(--workspace-shell-panel)] shadow-[0_12px_36px_rgba(4,10,24,0.18)]';
 
 export function KeelDashboard({ data }: Props) {
   const greeting = useMemo(() => getGreeting(), []);
@@ -97,7 +97,7 @@ export function KeelDashboard({ data }: Props) {
   const hasActivity = data.recentActivity.length > 0;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-8 bg-transparent px-4 pb-12 pt-6 text-white md:px-6 lg:px-8">
+    <div className="flex min-h-0 flex-1 flex-col gap-8 bg-[radial-gradient(circle_at_15%_0%,rgba(167,139,250,0.12),transparent_35%),radial-gradient(circle_at_85%_8%,rgba(192,132,252,0.12),transparent_40%)] px-4 pb-12 pt-6 text-white md:px-6 lg:px-8">
       {/* ─── 1. Header / greeting ─────────────────────────────── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -184,20 +184,20 @@ export function KeelDashboard({ data }: Props) {
                   <button
                     key={stage.stage}
                     type="button"
-                    className="group flex min-w-[120px] flex-1 flex-col items-center gap-2 border-r border-white/6 px-4 py-5 transition-colors last:border-r-0 hover:bg-white/[0.03]"
+                    className="group flex min-w-[120px] flex-1 flex-col items-center gap-2 border-r border-violet-300/10 px-4 py-5 transition-colors last:border-r-0 hover:bg-white/[0.03]"
                   >
                     <span
                       className={`text-2xl font-bold ${
                         isWon
-                          ? 'text-emerald-400'
+                          ? 'text-violet-300'
                           : isLost
-                            ? 'text-zinc-500'
+                            ? 'text-violet-300/60'
                             : 'text-white'
                       }`}
                     >
                       {stage.count}
                     </span>
-                    <span className="text-xs font-medium text-zinc-400 group-hover:text-zinc-300">
+                    <span className="text-xs font-medium text-violet-200/70 group-hover:text-violet-100/80">
                       {STAGE_LABELS[stage.stage] ?? stage.stage}
                     </span>
                   </button>
@@ -262,12 +262,12 @@ export function KeelDashboard({ data }: Props) {
                   key={item.id}
                   className="flex items-start gap-3 px-5 py-4"
                 >
-                  <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/[0.05] text-zinc-400">
+                  <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-400/10 text-violet-200/70">
                     <ActivityIcon type={item.type} />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm text-zinc-200">{item.description}</p>
-                    <p className="mt-0.5 text-xs text-zinc-500">
+                    <p className="text-sm text-violet-100/90">{item.description}</p>
+                    <p className="mt-0.5 text-xs text-violet-300/60">
                       {item.timestamp}
                     </p>
                   </div>
@@ -310,10 +310,10 @@ function EmptyState({
 }) {
   return (
     <div className={`${panelClass} flex flex-col items-center gap-3 px-6 py-10`}>
-      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.05] text-zinc-500">
+      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-400/10 text-violet-300/60">
         <Icon className="h-5 w-5" />
       </span>
-      <p className="max-w-xs text-center text-sm text-zinc-500">{message}</p>
+      <p className="max-w-xs text-center text-sm text-violet-300/60">{message}</p>
     </div>
   );
 }
@@ -359,13 +359,13 @@ function MiniStat({
   subtitle?: string;
 }) {
   return (
-    <div className="rounded-xl border border-white/6 bg-[var(--workspace-shell-canvas)] px-3 py-2.5">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+    <div className="rounded-xl border border-violet-300/10 bg-[var(--workspace-shell-canvas)] px-3 py-2.5">
+      <p className="text-[11px] font-medium uppercase tracking-wide text-violet-300/60">
         {label}
       </p>
       <p className="mt-1 text-lg font-semibold text-white">{value}</p>
       {subtitle && (
-        <p className="text-xs text-emerald-400">{subtitle}</p>
+        <p className="text-xs text-violet-300">{subtitle}</p>
       )}
     </div>
   );
@@ -393,13 +393,13 @@ function LifeGroup({
             <Icon className="h-3.5 w-3.5" />
           </span>
           <h3 className="text-sm font-semibold">{title}</h3>
-          <span className="ml-auto rounded-full bg-white/[0.06] px-2 py-0.5 text-xs text-zinc-400">
+          <span className="ml-auto rounded-full bg-violet-400/12 px-2 py-0.5 text-xs text-violet-200/70">
             {tasks.length}
           </span>
         </div>
 
         {tasks.length === 0 ? (
-          <p className="text-xs text-zinc-500">Nothing this week</p>
+          <p className="text-xs text-violet-300/60">Nothing this week</p>
         ) : (
           <div className="space-y-2">
             {tasks.map((task) => (

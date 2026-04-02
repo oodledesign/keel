@@ -133,6 +133,28 @@ async function adminMiddleware(request: NextRequest, response: NextResponse) {
   return response;
 }
 
+async function personalAppAuthHandler(req: NextRequest, res: NextResponse) {
+  const { data } = await getUser(req, res);
+  const { origin, pathname: next } = req.nextUrl;
+
+  if (!data?.claims) {
+    const signIn = pathsConfig.auth.signIn;
+    const redirectPath = `${signIn}?next=${next}`;
+
+    return NextResponse.redirect(new URL(redirectPath, origin).href);
+  }
+
+  const supabase = createMiddlewareClient(req, res);
+  const requiresMultiFactorAuthentication =
+    await checkRequiresMultiFactorAuthentication(supabase);
+
+  if (requiresMultiFactorAuthentication) {
+    return NextResponse.redirect(
+      new URL(pathsConfig.auth.verifyMfa, origin).href,
+    );
+  }
+}
+
 /**
  * Define URL patterns and their corresponding handlers.
  */
@@ -178,30 +200,11 @@ async function getPatterns() {
     },
     {
       pattern: new URLPattern({ pathname: '/home/*?' }),
-      handler: async (req: NextRequest, res: NextResponse) => {
-        const { data } = await getUser(req, res);
-        const { origin, pathname: next } = req.nextUrl;
-
-        // If user is not logged in, redirect to sign in page.
-        if (!data?.claims) {
-          const signIn = pathsConfig.auth.signIn;
-          const redirectPath = `${signIn}?next=${next}`;
-
-          return NextResponse.redirect(new URL(redirectPath, origin).href);
-        }
-
-        const supabase = createMiddlewareClient(req, res);
-
-        const requiresMultiFactorAuthentication =
-          await checkRequiresMultiFactorAuthentication(supabase);
-
-        // If user requires multi-factor authentication, redirect to MFA page.
-        if (requiresMultiFactorAuthentication) {
-          return NextResponse.redirect(
-            new URL(pathsConfig.auth.verifyMfa, origin).href,
-          );
-        }
-      },
+      handler: personalAppAuthHandler,
+    },
+    {
+      pattern: new URLPattern({ pathname: '/app/*?' }),
+      handler: personalAppAuthHandler,
     },
   ];
 }

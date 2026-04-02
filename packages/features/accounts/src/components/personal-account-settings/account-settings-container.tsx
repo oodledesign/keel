@@ -174,7 +174,7 @@ export function PersonalAccountSettingsContainer(
             enabled={props.features.enableAccountLinking}
             showEmailOption={props.features.showLinkEmailOption}
             showPasswordOption={props.features.enablePasswordUpdate}
-            redirectTo={'/home/settings'}
+            redirectTo={'/app/settings'}
           />
         </CardContent>
       </Card>

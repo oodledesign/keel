@@ -110,7 +110,7 @@ export function DashboardPageContent({
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 bg-transparent px-4 pb-10 pt-5 text-white md:px-6 lg:px-8">
+    <div className="flex min-h-0 flex-1 flex-col gap-6 bg-[radial-gradient(circle_at_18%_0%,rgba(167,139,250,0.12),transparent_35%),radial-gradient(circle_at_82%_6%,rgba(192,132,252,0.11),transparent_40%)] px-4 pb-10 pt-5 text-white md:px-6 lg:px-8">
       {/* Top stats */}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
@@ -151,7 +151,7 @@ export function DashboardPageContent({
               <CardTitle className="text-base font-semibold text-white">
                 Project Status Overview
               </CardTitle>
-              <p className="mt-1 text-xs text-zinc-400">
+              <p className="mt-1 text-xs text-violet-200/70">
                 Current distribution of all active projects
               </p>
             </div>
@@ -170,28 +170,28 @@ export function DashboardPageContent({
             <TabsList className="mb-6 grid h-11 w-full grid-cols-4 rounded-xl border border-white/6 bg-[var(--workspace-control-surface)]/80 p-1 text-xs md:w-auto md:grid-cols-4">
               <TabsTrigger
                 value="overview"
-                className="gap-2 text-zinc-300 data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-200 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-emerald-400/40"
+                className="gap-2 text-violet-100/80 data-[state=active]:bg-violet-500/15 data-[state=active]:text-violet-200 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-violet-400/40"
               >
                 <BarChart3 className="h-3.5 w-3.5" />
                 Overview
               </TabsTrigger>
               <TabsTrigger
                 value="projects"
-                className="gap-2 text-zinc-300 data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-200 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-emerald-400/40"
+                className="gap-2 text-violet-100/80 data-[state=active]:bg-violet-500/15 data-[state=active]:text-violet-200 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-violet-400/40"
               >
                 <BriefcaseBusiness className="h-3.5 w-3.5" />
                 Projects
               </TabsTrigger>
               <TabsTrigger
                 value="team"
-                className="gap-2 text-zinc-300 data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-200 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-emerald-400/40"
+                className="gap-2 text-violet-100/80 data-[state=active]:bg-violet-500/15 data-[state=active]:text-violet-200 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-violet-400/40"
               >
                 <Users className="h-3.5 w-3.5" />
                 Team
               </TabsTrigger>
               <TabsTrigger
                 value="invoices"
-                className="gap-2 text-zinc-300 data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-200 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-emerald-400/40"
+                className="gap-2 text-violet-100/80 data-[state=active]:bg-violet-500/15 data-[state=active]:text-violet-200 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-violet-400/40"
               >
                 <FileText className="h-3.5 w-3.5" />
                 Invoices
@@ -241,14 +241,14 @@ function StatCard({
   icon: React.ComponentType<{ className?: string }>;
 }) {
   const toneBg: Record<typeof tone, string> = {
-    emerald: 'bg-emerald-500/10',
+    emerald: 'bg-violet-500/12',
     sky: 'bg-sky-500/10',
     violet: 'bg-violet-500/10',
     amber: 'bg-amber-500/10',
   } as const;
 
   const toneAccent: Record<typeof tone, string> = {
-    emerald: 'text-emerald-400',
+    emerald: 'text-violet-300',
     sky: 'text-sky-400',
     violet: 'text-violet-400',
     amber: 'text-amber-400',
@@ -262,7 +262,7 @@ function StatCard({
             <span className={`flex h-8 w-8 items-center justify-center rounded-xl ${toneBg[tone]} ${toneAccent[tone]}`}>
               <Icon className="h-4.5 w-4.5" />
             </span>
-            <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+            <p className="text-xs font-medium uppercase tracking-wide text-violet-200/70">
               {label}
             </p>
           </div>
@@ -288,7 +288,7 @@ function StatusLegend({
   const items = [
     {
       label: 'Completed',
-      color: 'bg-emerald-500',
+      color: 'bg-violet-500',
       value: statusSummary.completed,
     },
     {
@@ -309,14 +309,14 @@ function StatusLegend({
   ];
 
   return (
-    <div className="flex flex-wrap gap-3 text-xs text-zinc-300">
+    <div className="flex flex-wrap gap-3 text-xs text-violet-100/80">
       {items.map((item) => (
         <div key={item.label} className="flex items-center gap-2">
           <span
             className={`h-2 w-2 rounded-full ${item.color}`}
           />
           <span>{item.label}</span>
-          <span className="text-zinc-500">
+          <span className="text-violet-300/55">
             {item.value.toString()}
           </span>
         </div>
@@ -336,8 +336,8 @@ function StatusSummaryGrid({
       label: 'Completed',
       value: statusSummary.completed,
       Icon: CheckCircle2,
-      iconClass: 'text-emerald-300',
-      bgClass: 'bg-emerald-500/12',
+      iconClass: 'text-violet-300',
+      bgClass: 'bg-violet-500/15',
     },
     {
       key: 'progress',
@@ -382,7 +382,7 @@ function StatusSummaryGrid({
               {card.value}
             </span>
           </div>
-          <p className="mt-3 text-xs font-medium text-zinc-300">
+          <p className="mt-3 text-xs font-medium text-violet-100/80">
             {card.label}
           </p>
         </div>
@@ -405,7 +405,7 @@ function StatusBar({
     {
       key: 'completed',
       width: statusPercent.completed,
-      color: 'bg-emerald-500',
+      color: 'bg-violet-500',
     },
     {
       key: 'inProgress',
@@ -425,7 +425,7 @@ function StatusBar({
   ];
 
   return (
-    <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+    <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-violet-950/50">
       <div className="flex h-full w-full">
         {segments.map((seg) =>
           seg.width > 0 ? (
@@ -468,14 +468,14 @@ function OverviewTab({
             <CardTitle className="text-sm font-semibold text-white">
               Revenue Trend
             </CardTitle>
-            <p className="mt-1 text-xs text-zinc-400">
+            <p className="mt-1 text-xs text-violet-200/70">
               Monthly revenue overview for the last 6 months
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-300">
+          <div className="flex flex-wrap items-center gap-4 text-xs text-violet-100/80">
             <div className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#57C87F]" />
+              <span className="h-2.5 w-2.5 rounded-full bg-violet-400" />
               <span>Profit</span>
             </div>
             <div className="flex items-center gap-2">
@@ -538,7 +538,7 @@ function OverviewTab({
                   {revenueTrendData.map((entry) => (
                     <Cell
                       key={`${entry.month}-profit`}
-                      fill={entry.isCurrent ? '#57C87F' : '#2FA8A7'}
+                      fill={entry.isCurrent ? '#A78BFA' : '#7C3AED'}
                     />
                   ))}
                 </Bar>
@@ -552,27 +552,27 @@ function OverviewTab({
                 key={month.month}
                 className={`rounded-2xl border px-4 py-4 ${
                   month.isCurrent || index === 0
-                    ? 'border-[#57C87F]/70 bg-[var(--workspace-shell-panel)] shadow-[0_0_0_1px_rgba(87,200,127,0.12)]'
+                    ? 'border-violet-400/60 bg-[var(--workspace-shell-panel)] shadow-[0_0_0_1px_rgba(167,139,250,0.16)]'
                     : 'border-white/6 bg-[var(--workspace-shell-panel)]'
                 }`}
               >
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-semibold text-white">{month.month}</p>
-                  <span className="text-sm font-semibold text-[#57C87F]">
+                  <span className="text-sm font-semibold text-violet-300">
                     {formatCurrency(month.revenue)}
                   </span>
                 </div>
-                <div className="mt-4 grid gap-2 text-xs text-zinc-300">
+                <div className="mt-4 grid gap-2 text-xs text-violet-100/80">
                   <div className="flex items-center justify-between">
-                    <span className="text-zinc-400">Revenue</span>
+                    <span className="text-violet-200/70">Revenue</span>
                     <span>{formatCurrency(month.revenue)}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-zinc-400">Jobs Completed</span>
+                    <span className="text-violet-200/70">Jobs Completed</span>
                     <span>{month.jobsCompleted}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-zinc-400">Hours Worked</span>
+                    <span className="text-violet-200/70">Hours Worked</span>
                     <span>{month.hoursWorked}h</span>
                   </div>
                 </div>
@@ -593,20 +593,20 @@ function ProjectsTab({ activeJobs }: { activeJobs: DashboardJobSummary[] }) {
       </h3>
       <div className="space-y-2">
         {activeJobs.length === 0 ? (
-          <p className="text-sm text-zinc-400">
+          <p className="text-sm text-violet-200/70">
             No active jobs yet. Create a job to get started.
           </p>
         ) : (
           activeJobs.map((job) => (
             <div
               key={job.id}
-              className="flex flex-col gap-1 rounded-xl border border-zinc-800 bg-[var(--workspace-shell-panel)] px-4 py-3 text-sm md:flex-row md:items-center md:justify-between"
+              className="flex flex-col gap-1 rounded-xl border border-violet-300/10 bg-[var(--workspace-shell-panel)] px-4 py-3 text-sm md:flex-row md:items-center md:justify-between"
             >
               <div>
                 <p className="font-medium text-white">
                   {job.title}
                 </p>
-                <p className="text-xs text-zinc-400">
+                <p className="text-xs text-violet-200/70">
                   {job.clientName ?? 'No client'} ·{' '}
                   {job.dueDate
                     ? `Due ${new Date(job.dueDate).toLocaleDateString('en-GB', {
@@ -619,13 +619,13 @@ function ProjectsTab({ activeJobs }: { activeJobs: DashboardJobSummary[] }) {
               </div>
               <div className="mt-2 flex items-center gap-2 md:mt-0">
                 <Badge
-                  className="bg-zinc-800 text-[11px] font-medium text-zinc-200"
+                  className="bg-violet-950/50 text-[11px] font-medium text-zinc-200"
                   variant="outline"
                 >
                   {formatJobStatus(job.status)}
                 </Badge>
                 <Badge
-                  className="bg-zinc-800 text-[11px] font-medium text-zinc-300"
+                  className="bg-violet-950/50 text-[11px] font-medium text-violet-100/80"
                   variant="outline"
                 >
                   {formatJobPriority(job.priority)}
@@ -682,8 +682,8 @@ function TeamTab({
           onClick={() => onFilterChange('staff')}
           className={`rounded-full px-3 py-1 font-medium ${
             filter === 'staff'
-              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/50'
-              : 'border border-zinc-700 bg-[var(--workspace-shell-panel)] text-zinc-400 hover:text-white'
+              ? 'bg-violet-500/20 text-violet-200 border border-violet-400/50'
+              : 'border border-violet-300/20 bg-[var(--workspace-shell-panel)] text-violet-200/70 hover:text-white'
           }`}
         >
           Staff
@@ -693,8 +693,8 @@ function TeamTab({
           onClick={() => onFilterChange('contractors')}
           className={`rounded-full px-3 py-1 font-medium ${
             filter === 'contractors'
-              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/50'
-              : 'border border-zinc-700 bg-[var(--workspace-shell-panel)] text-zinc-400 hover:text-white'
+              ? 'bg-violet-500/20 text-violet-200 border border-violet-400/50'
+              : 'border border-violet-300/20 bg-[var(--workspace-shell-panel)] text-violet-200/70 hover:text-white'
           }`}
         >
           Contractors
@@ -702,7 +702,7 @@ function TeamTab({
       </div>
       <div className="space-y-3">
         {filtered.length === 0 ? (
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-violet-200/70">
             No {filter === 'staff' ? 'staff' : 'contractors'} for this
             account yet.
           </p>
@@ -711,31 +711,31 @@ function TeamTab({
             return (
               <div
                 key={member.userId}
-                className="flex flex-col justify-between gap-2 rounded-xl border border-zinc-800 bg-[var(--workspace-shell-panel)] px-4 py-3 text-sm md:flex-row md:items-center"
+                className="flex flex-col justify-between gap-2 rounded-xl border border-violet-300/10 bg-[var(--workspace-shell-panel)] px-4 py-3 text-sm md:flex-row md:items-center"
               >
                 <div>
                   <p className="font-medium text-white">
                     {member.name ?? 'Unnamed member'}
                   </p>
-                  <p className="text-xs text-zinc-400">
+                  <p className="text-xs text-violet-200/70">
                     {formatMemberRole(member.role)}
                   </p>
                 </div>
-                <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-300">
+                <div className="flex flex-wrap items-center gap-3 text-xs text-violet-100/80">
                   <span>
-                    <span className="font-semibold text-emerald-400">
+                    <span className="font-semibold text-violet-300">
                       {mockMetric(member.userId, 'tasks')}
                     </span>{' '}
                     active tasks
                   </span>
                   <span>
-                    <span className="font-semibold text-emerald-400">
+                    <span className="font-semibold text-violet-300">
                       {mockMetric(member.userId, 'hours')}h
                     </span>{' '}
                     this week
                   </span>
                   <span>
-                    <span className="font-semibold text-emerald-400">
+                    <span className="font-semibold text-violet-300">
                       {mockMetric(member.userId, 'completion')}%
                     </span>{' '}
                     completion
@@ -760,14 +760,14 @@ function InvoicesTab({
       <h3 className="text-sm font-semibold text-white">
         Recent Invoices
       </h3>
-      <div className="overflow-hidden rounded-xl border border-zinc-800 bg-[var(--workspace-shell-panel)]">
+      <div className="overflow-hidden rounded-xl border border-violet-300/10 bg-[var(--workspace-shell-panel)]">
         {invoices.length === 0 ? (
-          <div className="px-4 py-6 text-xs text-zinc-400">
+          <div className="px-4 py-6 text-xs text-violet-200/70">
             No invoices yet. Create an invoice to see it here.
           </div>
         ) : (
-          <table className="w-full text-left text-xs text-zinc-300">
-            <thead className="border-b border-zinc-800 bg-[var(--workspace-shell-panel)] text-[11px] uppercase tracking-wide text-zinc-500">
+          <table className="w-full text-left text-xs text-violet-100/80">
+            <thead className="border-b border-violet-300/10 bg-[var(--workspace-shell-panel)] text-[11px] uppercase tracking-wide text-violet-300/55">
               <tr>
                 <th className="px-4 py-3 font-medium">Invoice</th>
                 <th className="px-4 py-3 font-medium">Client</th>
@@ -787,7 +787,7 @@ function InvoicesTab({
                 return (
                   <tr
                     key={inv.id}
-                    className="border-b border-zinc-800/80 last:border-0"
+                    className="border-b border-violet-300/10/80 last:border-0"
                   >
                     <td className="px-4 py-3 font-medium text-white">
                       {inv.invoiceNumber}
@@ -821,7 +821,7 @@ function StatusPill({
   status: 'Paid' | 'Pending' | 'Overdue';
 }) {
   const map = {
-    Paid: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40',
+    Paid: 'bg-violet-500/15 text-violet-300 border-violet-400/40',
     Pending: 'bg-amber-500/15 text-amber-400 border-amber-500/40',
     Overdue: 'bg-rose-500/15 text-rose-400 border-rose-500/40',
   } as const;

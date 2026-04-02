@@ -15,7 +15,7 @@ function LogoImage({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        'relative block h-8 w-[100px] lg:h-9 lg:w-[120px]',
+        'relative flex h-8 w-[100px] shrink-0 items-center overflow-hidden lg:h-9 lg:w-[120px]',
         className,
       )}
     >
@@ -24,7 +24,7 @@ function LogoImage({ className }: { className?: string }) {
         viewBox="0 0 321 131"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="h-auto w-full dark:hidden"
+        className="h-full w-auto max-w-full dark:hidden"
         aria-hidden
       >
         <path d={pathD} fill="#1a1a1a" />
@@ -34,7 +34,7 @@ function LogoImage({ className }: { className?: string }) {
         viewBox="0 0 321 131"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="absolute inset-0 hidden h-auto w-full dark:block"
+        className="absolute inset-y-0 left-0 hidden h-full w-auto max-w-full dark:block"
         aria-hidden
       >
         <path d={pathD} fill="white" />
@@ -57,7 +57,12 @@ export function AppLogo({
   }
 
   return (
-    <Link aria-label={label ?? 'Home Page'} href={href ?? '/'} prefetch={true}>
+    <Link
+      aria-label={label ?? 'Home Page'}
+      href={href ?? '/'}
+      prefetch={true}
+      className="inline-flex shrink-0"
+    >
       <LogoImage className={className} />
     </Link>
   );

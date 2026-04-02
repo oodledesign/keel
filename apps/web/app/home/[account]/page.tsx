@@ -1,17 +1,15 @@
-import { use } from 'react';
-
 import { redirect } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
-import { Trans } from '@kit/ui/trans';
 
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { DashboardPageContent } from './_components/dashboard-page-content';
 import { TeamAccountLayoutPageHeader } from './_components/team-account-layout-page-header';
-import { loadDashboardPageData } from './_lib/server/dashboard-page.loader';
 import { getDefaultAccountPath, getTeamAccountAccess } from './_lib/role-access';
+import { getSpaceTypeFromAccount } from './_lib/server/account-modules';
+import { loadDashboardPageData } from './_lib/server/dashboard-page.loader';
 import { loadTeamWorkspace } from './_lib/server/team-account-workspace.loader';
 
 interface TeamAccountHomePageProps {
@@ -27,9 +25,9 @@ export const generateMetadata = async () => {
   };
 };
 
-function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
-  const { account } = use(params);
-  const workspace = use(loadTeamWorkspace(account));
+async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
+  const { account } = await params;
+  const workspace = await loadTeamWorkspace(account);
   const access = getTeamAccountAccess(
     workspace.account as {
       permissions?: string[] | null;
@@ -42,7 +40,50 @@ function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
     redirect(getDefaultAccountPath(account, workspace.account));
   }
 
-  const data = use(loadDashboardPageData(account));
+  const spaceType = getSpaceTypeFromAccount(
+    workspace.account as { space_type?: string | null },
+  );
+  const accountLabel =
+    (workspace.account as { name?: string | null }).name?.trim() ||
+    account;
+
+  if (spaceType === 'family') {
+    return (
+      <>
+        <TeamAccountLayoutPageHeader
+          account={account}
+          title={accountLabel}
+          description="Shared calendar, shopping, and meal planning for your household."
+        />
+        <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-8 text-[var(--workspace-shell-text)] lg:px-6">
+          <p className="text-muted-foreground max-w-xl text-sm">
+            Use the sidebar to open Calendar, Shopping, or Meal plan. Work tools
+            (jobs, invoices, clients) are only available in business spaces.
+          </p>
+        </PageBody>
+      </>
+    );
+  }
+
+  if (spaceType === 'community') {
+    return (
+      <>
+        <TeamAccountLayoutPageHeader
+          account={account}
+          title={accountLabel}
+          description="Schedule, tasks, and notes for your group."
+        />
+        <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-8 text-[var(--workspace-shell-text)] lg:px-6">
+          <p className="text-muted-foreground max-w-xl text-sm">
+            Open Schedule, Tasks, or Notes from the sidebar. Business modules
+            stay in work spaces.
+          </p>
+        </PageBody>
+      </>
+    );
+  }
+
+  const data = await loadDashboardPageData(account);
 
   return (
     <>

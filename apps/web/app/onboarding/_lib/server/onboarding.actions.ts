@@ -11,6 +11,11 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import pathsConfig from '~/config/paths.config';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
+import {
+  getMaxStepForPersona,
+  type CompanyRole,
+} from '../onboarding-steps.config';
+
 const ACCESSIBILITY_TEXT_SIZE_COOKIE = 'accessibility_text_size';
 const ACCESSIBILITY_DYSLEXIA_FONT_COOKIE = 'accessibility_dyslexia_font';
 const ACCESSIBILITY_ENHANCED_FOCUS_COOKIE = 'accessibility_enhanced_focus';
@@ -92,11 +97,26 @@ export async function completeOnboarding(
   const client = getSupabaseServerClient();
   const user = await requireUserInServerComponent();
 
+  const { data: membership, error: memErr } = await client
+    .from('accounts_memberships')
+    .select('company_role')
+    .eq('user_id', user.id)
+    .eq('account_id', accountId)
+    .single();
+
+  if (memErr || !membership) {
+    return { error: memErr?.message ?? 'Membership not found' };
+  }
+
+  const finalStep = getMaxStepForPersona(
+    membership.company_role as CompanyRole | null,
+  );
+
   const { error } = await client
     .from('accounts_memberships')
     .update({
       onboarding_completed: true,
-      onboarding_step: 6,
+      onboarding_step: finalStep,
     })
     .eq('user_id', user.id)
     .eq('account_id', accountId);
@@ -111,6 +131,9 @@ export async function upsertUserSettings(settings: {
   first_name?: string | null;
   last_name?: string | null;
   mobile?: string | null;
+  use_keel_for_work?: boolean;
+  use_keel_for_family?: boolean;
+  use_keel_for_community?: boolean;
   accessibility_text_size?: 'small' | 'standard' | 'large';
   accessibility_high_contrast?: boolean;
   accessibility_simplified_mode?: boolean;
@@ -179,6 +202,13 @@ export async function upsertUserSettings(settings: {
   }
 
   revalidatePath(pathsConfig.app.onboarding);
+  if (
+    settings.use_keel_for_work !== undefined ||
+    settings.use_keel_for_family !== undefined ||
+    settings.use_keel_for_community !== undefined
+  ) {
+    revalidatePath(pathsConfig.app.personalAccountSettings);
+  }
   return {};
 }
 
@@ -274,56 +304,3 @@ export async function deleteTeamAccountFromOnboarding(
   redirect(pathsConfig.app.home);
 }
 
-export async function createTeamAndContinueOnboarding(
-  accountName: string,
-  accountSlug: string | null,
-): Promise<{ error?: string; accountId?: string }> {
-  try {
-    const user = await requireUserInServerComponent();
-    const client = getSupabaseServerClient();
-
-    // One business only: if user already has a team account, send them to continue that onboarding
-    const { data: existing } = await client
-      .from('accounts_memberships')
-      .select('account_id')
-      .eq('user_id', user.id)
-      .limit(1)
-      .maybeSingle();
-    if (existing?.account_id) {
-      return {
-        error: 'already_has_business',
-        accountId: existing.account_id,
-      };
-    }
-
-    const admin = getSupabaseServerAdminClient();
-
-    const { data: account, error } = await admin.rpc('create_team_account', {
-      account_name: accountName,
-      user_id: user.id,
-      account_slug: accountSlug ?? undefined,
-    });
-
-    if (error) {
-      if (error.code === '23505') return { error: 'duplicate_slug' };
-      return { error: error.message };
-    }
-
-    // RPC returns single row (accounts); Supabase may return object or array
-    const row = Array.isArray(account) ? account[0] : account;
-    const accountId =
-      row && typeof row === 'object' && 'id' in row
-        ? (row as { id: string }).id
-        : null;
-    if (!accountId) {
-      return { error: 'Failed to create business. Please try again.' };
-    }
-    revalidatePath(pathsConfig.app.onboarding);
-    revalidatePath(pathsConfig.app.home);
-    return { accountId };
-  } catch (e) {
-    const message =
-      e instanceof Error ? e.message : 'Failed to create business. Please try again.';
-    return { error: message };
-  }
-}

@@ -17,7 +17,7 @@ test.describe('User Billing', () => {
 
     await auth.loginAsUser({
       email,
-      next: '/home/billing',
+      next: '/app/billing',
     });
 
     await po.billing.selectPlan(0);
