@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 
+import { Building2, User } from 'lucide-react';
+
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
@@ -16,6 +18,7 @@ import {
 type Client = {
   id: string;
   account_id: string;
+  client_type?: string | null;
   first_name: string | null;
   last_name: string | null;
   display_name: string | null;
@@ -35,6 +38,8 @@ export type CreateInitialValues = {
   company_name?: string;
 };
 
+type ClientType = 'individual' | 'business';
+
 export function ClientForm({
   accountId,
   mode,
@@ -48,7 +53,6 @@ export function ClientForm({
   accountId: string;
   mode: 'create' | 'edit';
   client?: Client | null;
-  /** Prefill when mode is create (e.g. from pipeline deal won). */
   initialValues?: CreateInitialValues;
   canEdit?: boolean;
   onSaved: () => void;
@@ -57,6 +61,15 @@ export function ClientForm({
 }) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const inferredType: ClientType =
+    (client?.client_type as ClientType | undefined) ??
+    (initialValues?.company_name ? 'business' : 'individual');
+
+  const [clientType, setClientType] = useState<ClientType>(
+    mode === 'edit' ? inferredType : 'business',
+  );
+
   const [first_name, setFirstName] = useState(
     mode === 'create' && initialValues?.first_name !== undefined
       ? initialValues.first_name
@@ -70,22 +83,23 @@ export function ClientForm({
   );
   const [email, setEmail] = useState(client?.email ?? '');
   const [phone, setPhone] = useState(client?.phone ?? '');
-  const [address_line_1, setAddressLine1] = useState(
-    client?.address_line_1 ?? '',
-  );
-  const [address_line_2, setAddressLine2] = useState(
-    client?.address_line_2 ?? '',
-  );
+  const [address_line_1, setAddressLine1] = useState(client?.address_line_1 ?? '');
+  const [address_line_2, setAddressLine2] = useState(client?.address_line_2 ?? '');
   const [city, setCity] = useState(client?.city ?? '');
   const [postcode, setPostcode] = useState(client?.postcode ?? '');
   const [country, setCountry] = useState(client?.country ?? '');
 
   const isReadOnly = mode === 'edit' && !canEdit;
+  const isIndividual = clientType === 'individual';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!first_name.trim()) {
+    if (isIndividual && !first_name.trim()) {
       toast.error('First name is required');
+      return;
+    }
+    if (!isIndividual && !company_name.trim() && !first_name.trim()) {
+      toast.error('Company name is required for a business client');
       return;
     }
     setSaving(true);
@@ -93,7 +107,8 @@ export function ClientForm({
       if (mode === 'create') {
         await createClient({
           accountId,
-          first_name: first_name.trim(),
+          client_type: clientType,
+          first_name: first_name.trim() || company_name.trim(),
           last_name: last_name.trim() || undefined,
           company_name: company_name.trim() || undefined,
           email: email.trim() || undefined,
@@ -104,13 +119,13 @@ export function ClientForm({
           postcode: postcode.trim() || undefined,
           country: country.trim() || undefined,
         });
-        toast.success('Client created');
+        toast.success(isIndividual ? 'Individual client created' : 'Business client created');
         onSaved();
       } else if (client) {
         await updateClient({
           accountId,
           clientId: client.id,
-          first_name: first_name.trim(),
+          first_name: first_name.trim() || undefined,
           last_name: last_name.trim() || null,
           company_name: company_name.trim() || null,
           email: email.trim() || null,
@@ -158,40 +173,111 @@ export function ClientForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Individual / Business toggle — only shown on create */}
+      {mode === 'create' && (
         <div className="space-y-2">
-          <Label htmlFor="first_name">First name *</Label>
+          <Label>Client type</Label>
+          <div className="flex rounded-lg border border-zinc-700 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setClientType('individual')}
+              className={`flex flex-1 items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                isIndividual
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white'
+              }`}
+            >
+              <User className="h-4 w-4" />
+              Individual
+            </button>
+            <button
+              type="button"
+              onClick={() => setClientType('business')}
+              className={`flex flex-1 items-center justify-center gap-2 border-l border-zinc-700 px-4 py-2.5 text-sm font-medium transition-colors ${
+                !isIndividual
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white'
+              }`}
+            >
+              <Building2 className="h-4 w-4" />
+              Business
+            </button>
+          </div>
+          {isIndividual && (
+            <p className="text-xs text-zinc-500">
+              A single person client. A contact record is created automatically.
+            </p>
+          )}
+          {!isIndividual && (
+            <p className="text-xs text-zinc-500">
+              A company client. Add multiple contacts after creation via the Contacts tab.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Business: company name is primary */}
+      {!isIndividual && (
+        <div className="space-y-2">
+          <Label htmlFor="company_name">
+            Company name {mode === 'create' ? '*' : ''}
+          </Label>
           <Input
-            id="first_name"
-            value={first_name}
-            onChange={(e) => setFirstName(e.target.value)}
-            placeholder="e.g. John"
-            required
+            id="company_name"
+            value={company_name}
+            onChange={(e) => setCompanyName(e.target.value)}
+            placeholder="e.g. Acme Ltd"
+            required={!isIndividual && mode === 'create'}
             readOnly={isReadOnly}
           />
         </div>
+      )}
+
+      {/* Individual OR edit mode: show name fields */}
+      {(isIndividual || mode === 'edit') && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="first_name">
+              First name {isIndividual ? '*' : ''}
+            </Label>
+            <Input
+              id="first_name"
+              value={first_name}
+              onChange={(e) => setFirstName(e.target.value)}
+              placeholder="e.g. John"
+              required={isIndividual}
+              readOnly={isReadOnly}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="last_name">Last name</Label>
+            <Input
+              id="last_name"
+              value={last_name}
+              onChange={(e) => setLastName(e.target.value)}
+              placeholder="e.g. Smith"
+              readOnly={isReadOnly}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Business edit: also show company field */}
+      {!isIndividual && mode === 'edit' && (
         <div className="space-y-2">
-          <Label htmlFor="last_name">Last name</Label>
+          <Label htmlFor="company_name_edit">Company name</Label>
           <Input
-            id="last_name"
-            value={last_name}
-            onChange={(e) => setLastName(e.target.value)}
-            placeholder="e.g. Smith"
+            id="company_name_edit"
+            value={company_name}
+            onChange={(e) => setCompanyName(e.target.value)}
+            placeholder="Company name"
             readOnly={isReadOnly}
           />
         </div>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="company_name">Company</Label>
-        <Input
-          id="company_name"
-          value={company_name}
-          onChange={(e) => setCompanyName(e.target.value)}
-          placeholder="Company name"
-          readOnly={isReadOnly}
-        />
-      </div>
+      )}
+
+      {/* Contact details — shown for both types */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
@@ -215,6 +301,7 @@ export function ClientForm({
           />
         </div>
       </div>
+
       <div className="space-y-2">
         <Label htmlFor="address_line_1">Address line 1</Label>
         <Input
@@ -264,6 +351,7 @@ export function ClientForm({
           readOnly={isReadOnly}
         />
       </div>
+
       <div className="flex flex-wrap gap-2 pt-2">
         {!isReadOnly && (
           <Button type="submit" disabled={saving}>

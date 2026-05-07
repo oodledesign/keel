@@ -17,6 +17,7 @@ export const GetClientSchema = z.object({
 
 export const CreateClientSchema = z.object({
   accountId: z.string().uuid(),
+  client_type: z.enum(['individual', 'business']).default('business'),
   first_name: z.string().min(1, 'First name is required'),
   last_name: optionalString,
   company_name: optionalString,
@@ -75,6 +76,25 @@ export const ListClientInvoicesSchema = z.object({
   clientId: z.string().uuid(),
 });
 
+// ─── Contact schemas ──────────────────────────────────────────────────────────
+export const ListContactsSchema = z.object({
+  clientId: z.string().uuid(),
+});
+
+export const CreateContactSchema = z.object({
+  clientId: z.string().uuid(),
+  userId: z.string().uuid(),
+  fullName: z.string().min(1, 'Name is required'),
+  email: z.string().email().optional(),
+  phone: z.string().optional(),
+  role: z.string().optional(),
+  isPrimary: z.boolean().optional().default(false),
+});
+
+export const DeleteContactSchema = z.object({
+  contactId: z.string().uuid(),
+});
+
 export type ListClientsInput = z.infer<typeof ListClientsSchema>;
 export type GetClientInput = z.infer<typeof GetClientSchema>;
 export type CreateClientInput = z.infer<typeof CreateClientSchema>;
@@ -85,3 +105,6 @@ export type CreateNoteInput = z.infer<typeof CreateNoteSchema>;
 export type DeleteNoteInput = z.infer<typeof DeleteNoteSchema>;
 export type GetJobHistoryInput = z.infer<typeof GetJobHistorySchema>;
 export type ListClientInvoicesInput = z.infer<typeof ListClientInvoicesSchema>;
+export type ListContactsInput = z.infer<typeof ListContactsSchema>;
+export type CreateContactInput = z.infer<typeof CreateContactSchema>;
+export type DeleteContactInput = z.infer<typeof DeleteContactSchema>;

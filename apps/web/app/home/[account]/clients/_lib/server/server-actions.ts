@@ -9,13 +9,16 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { createClientsService } from './clients.service';
 import {
   CreateClientSchema,
+  CreateContactSchema,
   CreateNoteSchema,
   DeleteClientSchema,
+  DeleteContactSchema,
   DeleteNoteSchema,
   GetClientSchema,
   GetJobHistorySchema,
   ListClientInvoicesSchema,
   ListClientsSchema,
+  ListContactsSchema,
   ListNotesSchema,
   UpdateClientSchema,
 } from '../schema/clients.schema';
@@ -102,6 +105,30 @@ export const listClientInvoices = enhanceAction(
     return service.listClientInvoices(input);
   },
   { schema: ListClientInvoicesSchema },
+);
+
+export const listContacts = enhanceAction(
+  async (input) => {
+    const service = getService();
+    return service.listContacts(input);
+  },
+  { schema: ListContactsSchema },
+);
+
+export const createContact = enhanceAction(
+  async (input) => {
+    const service = getService();
+    return service.createContact(input);
+  },
+  { schema: CreateContactSchema },
+);
+
+export const deleteContact = enhanceAction(
+  async (input) => {
+    const service = getService();
+    return service.deleteContact(input);
+  },
+  { schema: DeleteContactSchema },
 );
 
 const GetClientPortalStatusSchema = z.object({

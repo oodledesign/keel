@@ -193,6 +193,30 @@ export const loadKeelDashboard = cache(async (): Promise<KeelDashboardData> => {
 
   const pipelineOr = buildPipelineOrFilter(workspaceIds, [...allBizIds]);
 
+  // Fetch project IDs for life workspaces (family + community) so we can
+  // include project-linked tasks in the Life This Week section.
+  const lifeWorkspaces = workspaces.filter(
+    (w) => w.space_type === 'family' || w.space_type === 'community',
+  );
+  const lifeProjectToSpaceType = new Map<string, string>();
+  if (lifeWorkspaces.length > 0) {
+    const lifeWsIds = lifeWorkspaces.map((w) => w.id);
+    const { data: lifeProjRows } = await client
+      .from('projects')
+      .select('id, account_id')
+      .in('account_id', lifeWsIds);
+    for (const proj of (lifeProjRows ?? []) as Array<{
+      id: string;
+      account_id: string;
+    }>) {
+      const ws = lifeWorkspaces.find((w) => w.id === proj.account_id);
+      if (ws?.space_type) {
+        lifeProjectToSpaceType.set(proj.id, ws.space_type);
+      }
+    }
+  }
+  const lifeProjectIds = [...lifeProjectToSpaceType.keys()];
+
   const todayTasksQuery = client
     .from('tasks')
     .select(
@@ -242,18 +266,29 @@ export const loadKeelDashboard = cache(async (): Promise<KeelDashboardData> => {
     pipelineDealsTodayQuery,
     pipelineSnapshotQuery,
     activeDealsQuery,
-    client
-      .from('tasks')
-      .select(
-        'id, title, status, priority, due_date, areas(name, colour, group_id, groups(name, type))',
-      )
-      .eq('user_id', userId)
-      .is('project_id', null)
-      .is('client_id', null)
-      .lte('due_date', weekEnd)
-      .not('status', 'eq', 'done')
-      .order('due_date', { ascending: true })
-      .limit(30),
+    (() => {
+      // Include personal tasks (no project) and tasks in family/community workspace projects.
+      // Do NOT require project_id IS NULL — family/homegroup tasks are project-linked.
+      let q = client
+        .from('tasks')
+        .select(
+          'id, title, status, priority, due_date, project_id, areas(name, colour, group_id, groups(name, type))',
+        )
+        .eq('user_id', userId)
+        .is('client_id', null)
+        .lte('due_date', weekEnd)
+        .not('status', 'eq', 'done')
+        .order('due_date', { ascending: true })
+        .limit(50);
+      if (lifeProjectIds.length > 0) {
+        q = q.or(
+          `project_id.is.null,project_id.in.(${lifeProjectIds.join(',')})`,
+        );
+      } else {
+        q = q.is('project_id', null);
+      }
+      return q;
+    })(),
     client
       .from('tasks')
       .select('id, title, status, updated_at')
@@ -407,16 +442,32 @@ export const loadKeelDashboard = cache(async (): Promise<KeelDashboardData> => {
     status?: string | null;
     priority?: string | null;
     due_date?: string | null;
+    project_id?: string | null;
     areas?: {
       name?: string | null;
       colour?: string | null;
-      groups?: { name?: string | null } | null;
+      groups?: { name?: string | null; type?: string | null } | null;
     } | null;
   };
 
+  function lifeBucket(r: LifeTaskRow): string {
+    // Project-based tasks: use the life workspace's space_type
+    if (r.project_id) {
+      const spaceType = lifeProjectToSpaceType.get(r.project_id);
+      if (spaceType === 'family') return 'Family';
+      if (spaceType === 'community') return 'Homegroup';
+    }
+    // Area-based tasks: use the group type field if available
+    const groupType = r.areas?.groups?.type;
+    if (groupType === 'family') return 'Family';
+    if (groupType === 'community') return 'Homegroup';
+    // Fall back to area name (personal areas)
+    return r.areas?.name ?? 'Personal';
+  }
+
   for (const row of lifeTasksResult.data ?? []) {
     const r = row as LifeTaskRow;
-    const areaName = r.areas?.groups?.name ?? r.areas?.name ?? 'Personal';
+    const areaName = lifeBucket(r);
     const color = r.areas?.colour ?? null;
 
     if (!lifeMap.has(areaName)) {

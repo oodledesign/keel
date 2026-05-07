@@ -17,6 +17,7 @@ import {
   getClientPortalStatus,
   getJobHistory,
 } from '../_lib/server/server-actions';
+import { ClientContactsBlock } from './client-contacts-block';
 import { ClientForm } from './client-form';
 import { ClientImageUploader } from './client-image-uploader';
 import { ClientInvoicesBlock } from './client-invoices-block';
@@ -29,6 +30,7 @@ import pathsConfig from '~/config/paths.config';
 type Client = {
   id: string;
   account_id: string;
+  client_type?: string | null;
   first_name: string | null;
   last_name: string | null;
   display_name: string | null;
@@ -53,7 +55,7 @@ type PortalStatus = {
   isMember: boolean;
 };
 
-type DetailTab = 'activity' | 'jobs' | 'invoices' | 'notes' | 'tasks';
+type DetailTab = 'activity' | 'contacts' | 'jobs' | 'invoices' | 'notes' | 'tasks';
 
 type ClientJobSummary = {
   id: string;
@@ -333,15 +335,16 @@ export function ClientDetailSidebar({
                   />
                 ) : (
                   <>
-                    <div className="flex gap-1 border-b border-zinc-700">
+                    <div className="flex gap-1 overflow-x-auto border-b border-zinc-700">
                       {(
                         [
                           ['activity', 'Activity'],
+                          ...(client.client_type === 'business' ? [['contacts', 'Contacts']] : []),
                           ['jobs', 'Jobs'],
                           ['invoices', 'Invoices'],
                           ['notes', 'Notes'],
                           ['tasks', 'Tasks'],
-                        ] as const
+                        ] as [DetailTab, string][]
                       ).map(([key, label]) => (
                         <button
                           key={key}
@@ -376,6 +379,13 @@ export function ClientDetailSidebar({
                           </div>
                           <p className="text-xs text-zinc-500">No other activity yet.</p>
                         </div>
+                      )}
+                      {activeTab === 'contacts' && (
+                        <ClientContactsBlock
+                          clientId={client.id}
+                          userId={client.account_id}
+                          canEdit={canEditClients}
+                        />
                       )}
                       {activeTab === 'jobs' && (
                         <ClientJobHistoryBlock

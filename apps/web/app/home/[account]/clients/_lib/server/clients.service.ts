@@ -10,13 +10,16 @@ import { Database } from '~/lib/database.types';
 
 import type {
   CreateClientInput,
+  CreateContactInput,
   CreateNoteInput,
   DeleteClientInput,
+  DeleteContactInput,
   DeleteNoteInput,
   GetClientInput,
   GetJobHistoryInput,
   ListClientInvoicesInput,
   ListClientsInput,
+  ListContactsInput,
   ListNotesInput,
   UpdateClientInput,
 } from '../schema/clients.schema';
@@ -198,12 +201,17 @@ class ClientsService {
 
   async createClient(input: CreateClientInput) {
     const user = await this.ensureUserAndPermission(input.accountId, 'clients.edit');
-    const displayName = [input.first_name, input.last_name].filter(Boolean).join(' ').trim() || input.first_name;
+    const clientType = input.client_type ?? 'business';
+    const displayName =
+      clientType === 'individual'
+        ? [input.first_name, input.last_name].filter(Boolean).join(' ').trim() || input.first_name
+        : input.company_name?.trim() || [input.first_name, input.last_name].filter(Boolean).join(' ').trim() || input.first_name;
 
     const { data, error } = await this.adminDb
       .from('clients')
       .insert({
         account_id: input.accountId,
+        client_type: clientType,
         first_name: input.first_name,
         last_name: input.last_name ?? null,
         display_name: displayName,
@@ -221,6 +229,20 @@ class ClientsService {
       .single();
 
     if (error) throw mapClientWriteError(error);
+
+    // For individual clients, auto-create the primary contact record
+    if (clientType === 'individual' && data?.id) {
+      const contactName = [input.first_name, input.last_name].filter(Boolean).join(' ').trim();
+      await this.adminDb.from('contacts').insert({
+        user_id: user.id,
+        client_id: data.id,
+        full_name: contactName || input.first_name,
+        email: input.email ?? null,
+        phone: input.phone ?? null,
+        is_primary: true,
+      });
+    }
+
     return data;
   }
 
@@ -343,5 +365,50 @@ class ClientsService {
 
     if (error) throw error;
     return data ?? [];
+  }
+
+  // ─── Contacts ──────────────────────────────────────────────────────────────
+
+  async listContacts(params: ListContactsInput) {
+    await this.ensureUser();
+    const { data, error } = await this.adminDb
+      .from('contacts')
+      .select('id, full_name, email, phone, role, is_primary, created_at')
+      .eq('client_id', params.clientId)
+      .order('is_primary', { ascending: false })
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    return { data: data ?? [] };
+  }
+
+  async createContact(input: CreateContactInput) {
+    await this.ensureUser();
+    const { data, error } = await this.adminDb
+      .from('contacts')
+      .insert({
+        client_id: input.clientId,
+        user_id: input.userId,
+        full_name: input.fullName,
+        email: input.email ?? null,
+        phone: input.phone ?? null,
+        role: input.role ?? null,
+        is_primary: input.isPrimary ?? false,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async deleteContact(params: DeleteContactInput) {
+    await this.ensureUser();
+    const { error } = await this.adminDb
+      .from('contacts')
+      .delete()
+      .eq('id', params.contactId);
+
+    if (error) throw error;
   }
 }

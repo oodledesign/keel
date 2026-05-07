@@ -1,15 +1,17 @@
 import { redirect } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
+import { Trans } from '@kit/ui/trans';
 
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { loadTasksForTeamAccount } from '~/home/(user)/_lib/server/tasks.loader';
+import { TasksPageClient } from '~/home/(user)/tasks/_components/tasks-page-client';
 
 import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
 import { getDefaultAccountPath, getTeamAccountAccess } from '../../_lib/role-access';
-import { isAccountModuleEnabled } from '../../_lib/server/account-modules';
+import { getSpaceTypeFromAccount } from '../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../../_lib/server/workspace-route-guard';
 
 interface CommunityTasksPageProps {
   params: Promise<{ account: string }>;
@@ -24,7 +26,15 @@ export const generateMetadata = async () => {
 async function CommunityTasksPage({ params }: CommunityTasksPageProps) {
   const { account: slug } = await params;
   const workspace = await loadTeamWorkspace(slug);
-  redirectIfSpaceNotIn(workspace, slug, ['community']);
+
+  // Validate space type — only family and community workspaces use this route
+  const spaceType = getSpaceTypeFromAccount(
+    workspace.account as { space_type?: string | null },
+  );
+  if (spaceType !== 'family' && spaceType !== 'community') {
+    redirect(getDefaultAccountPath(slug, workspace.account));
+  }
+
   const access = getTeamAccountAccess(
     workspace.account as {
       permissions?: string[] | null;
@@ -33,24 +43,31 @@ async function CommunityTasksPage({ params }: CommunityTasksPageProps) {
     },
   );
 
-  if (
-    !access.canViewDashboard ||
-    !isAccountModuleEnabled(workspace.moduleSettings, 'tasks')
-  ) {
+  if (!access.canViewDashboard) {
     redirect(getDefaultAccountPath(slug, workspace.account));
   }
+
+  const accountId = workspace.account.id as string;
+  const tasks = await loadTasksForTeamAccount(accountId);
+
+  const description =
+    spaceType === 'family'
+      ? 'Shared tasks for your family workspace.'
+      : 'Shared tasks for your community space.';
 
   return (
     <>
       <TeamAccountLayoutPageHeader
         account={slug}
-        title="Tasks"
-        description="Shared tasks for your community space."
+        title={<Trans i18nKey="common:routes.tasks" />}
+        description={description}
       />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-8 text-[var(--workspace-shell-text)] lg:px-6">
-        <p className="text-muted-foreground max-w-xl text-sm">
-          Community tasks are coming soon.
-        </p>
+      <PageBody className="bg-[var(--workspace-shell-canvas)] p-0 md:p-0">
+        <TasksPageClient
+          initialTasks={tasks}
+          variant="workspace"
+          workspaceAccountId={accountId}
+        />
       </PageBody>
     </>
   );

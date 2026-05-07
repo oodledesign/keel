@@ -1,6 +1,13 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"/Users/danjamespotter/projects/keel/.claude/worktrees/nostalgic-pike-21ec04/apps/web/app/home/[account]/properties/_components\" \"/Users/danjamespotter/projects/keel/.claude/worktrees/nostalgic-pike-21ec04/apps/web/app/home/[account]/properties/_lib/server\" \"/Users/danjamespotter/projects/keel/.claude/worktrees/nostalgic-pike-21ec04/apps/web/app/home/[account]/properties/[id]\")",
+      "Read(//Users/danjamespotter/projects/keel/**)",
+      "Bash(npx turbo *)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "makerkit"
-  ],
-  "enableAllProjectMcpServers": true
+  ]
 }

@@ -8,7 +8,12 @@ export type AccountModuleKey =
   | 'pipeline'
   | 'feedflow'
   | 'rankly'
-  | 'signatures';
+  | 'signatures'
+  | 'properties'
+  | 'calendar'
+  | 'shopping'
+  | 'meal_plan'
+  | 'notes';
 
 export type AccountModuleSettingsMap = Partial<Record<AccountModuleKey, boolean>>;
 

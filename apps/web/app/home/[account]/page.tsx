@@ -6,10 +6,13 @@ import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { DashboardPageContent } from './_components/dashboard-page-content';
+import { FamilyDashboard } from './_components/family-dashboard';
+import { HomegroupDashboard } from './_components/homegroup-dashboard';
 import { TeamAccountLayoutPageHeader } from './_components/team-account-layout-page-header';
 import { getDefaultAccountPath, getTeamAccountAccess } from './_lib/role-access';
 import { getSpaceTypeFromAccount } from './_lib/server/account-modules';
 import { loadDashboardPageData } from './_lib/server/dashboard-page.loader';
+import { loadGroupDashboardData } from './_lib/server/group-dashboard.loader';
 import { loadTeamWorkspace } from './_lib/server/team-account-workspace.loader';
 
 interface TeamAccountHomePageProps {
@@ -48,36 +51,44 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
     account;
 
   if (spaceType === 'family') {
+    const groupData = await loadGroupDashboardData(account);
     return (
       <>
         <TeamAccountLayoutPageHeader
           account={account}
           title={accountLabel}
-          description="Shared calendar, shopping, and meal planning for your household."
+          description="Overview of your family workspace."
         />
-        <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-8 text-[var(--workspace-shell-text)] lg:px-6">
-          <p className="text-muted-foreground max-w-xl text-sm">
-            Use the sidebar to open Calendar, Shopping, or Meal plan. Work tools
-            (jobs, invoices, clients) are only available in business spaces.
-          </p>
+        <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
+          <FamilyDashboard
+            accountSlug={account}
+            accountId={workspace.account.id as string}
+            projects={groupData.projects}
+            members={groupData.members}
+            recentTasks={groupData.recentTasks}
+          />
         </PageBody>
       </>
     );
   }
 
   if (spaceType === 'community') {
+    const groupData = await loadGroupDashboardData(account);
     return (
       <>
         <TeamAccountLayoutPageHeader
           account={account}
           title={accountLabel}
-          description="Schedule, tasks, and notes for your group."
+          description="Overview of your group workspace."
         />
-        <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-8 text-[var(--workspace-shell-text)] lg:px-6">
-          <p className="text-muted-foreground max-w-xl text-sm">
-            Open Schedule, Tasks, or Notes from the sidebar. Business modules
-            stay in work spaces.
-          </p>
+        <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
+          <HomegroupDashboard
+            accountSlug={account}
+            accountId={workspace.account.id as string}
+            projects={groupData.projects}
+            members={groupData.members}
+            recentTasks={groupData.recentTasks}
+          />
         </PageBody>
       </>
     );

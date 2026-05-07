@@ -1,6 +1,7 @@
 import {
   Briefcase,
   BarChart3,
+  Building2,
   Calendar,
   ClipboardList,
   CreditCard,
@@ -136,11 +137,25 @@ const getRoutes = (
             },
           ]
         : []),
+      ...(access.canViewDashboard && isWorkModuleEnabled(ms, 'properties')
+        ? [
+            {
+              label: 'Properties',
+              path: createPath(pathsConfig.app.accountProperties, account),
+              Icon: <Building2 className={iconClasses} />,
+            },
+          ]
+        : []),
       ...buildWorkAppsCollapsible(account, ms),
     ];
   } else if (spaceType === 'family') {
     applicationChildren = [
       ...dashboardItem,
+      {
+        label: 'Tasks',
+        path: createPath(pathsConfig.app.accountCommunityTasks, account),
+        Icon: <CheckSquare className={iconClasses} />,
+      },
       ...(isAccountModuleEnabled(ms, 'calendar')
         ? [
             {
@@ -168,10 +183,15 @@ const getRoutes = (
             },
           ]
         : []),
-      ...(access.canViewMembers && isAccountModuleEnabled(ms, 'team')
+      {
+        label: 'Notes',
+        path: createPath(pathsConfig.app.accountCommunityNotes, account),
+        Icon: <StickyNote className={iconClasses} />,
+      },
+      ...(access.canViewMembers
         ? [
             {
-              label: 'common:routes.team',
+              label: 'Members',
               path: createPath(pathsConfig.app.accountMembers, account),
               Icon: <Users className={iconClasses} />,
             },
