@@ -1,18 +1,15 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 
-import {
-  AlertTriangle,
-  CheckCircle2,
-  Circle,
-  Clock,
-  Pencil,
-  Plus,
-  Search,
-} from 'lucide-react';
+import { useRouter } from 'next/navigation';
+
+import { AlertTriangle, Pencil, Search } from 'lucide-react';
+
+import { Checkbox } from '@kit/ui/checkbox';
 
 import type { TasksPageTask } from '../../_lib/server/tasks.loader';
+import { updateTask } from '../../_lib/actions/task-actions';
 import { AddTaskDialog } from '../../_components/dashboard/add-task-dialog';
 import { EditTaskDialog } from './edit-task-dialog';
 
@@ -23,18 +20,22 @@ const priorityConfig = {
   urgent: { label: 'Urgent', className: 'text-rose-400' },
 } as const;
 
-const statusIcons = {
-  pending: Circle,
-  in_progress: Clock,
-  completed: CheckCircle2,
-} as const;
-
 type Props = {
   initialTasks: TasksPageTask[];
+  /** Team workspace: only tasks linked to this account’s projects/clients; hides life/work scope toggle. */
+  variant?: 'personal' | 'workspace';
+  /** Required when `variant="workspace"` — enables Add Task for this team account. */
+  workspaceAccountId?: string;
 };
 
-export function TasksPageClient({ initialTasks }: Props) {
-  const [filter, setFilter] = useState<'all' | 'work' | 'life'>('all');
+export function TasksPageClient({
+  initialTasks,
+  variant = 'personal',
+  workspaceAccountId,
+}: Props) {
+  const [filter, setFilter] = useState<'all' | 'work' | 'life'>(
+    variant === 'workspace' ? 'work' : 'all',
+  );
   const [statusFilter, setStatusFilter] = useState<'active' | 'completed'>(
     'active',
   );
@@ -44,16 +45,24 @@ export function TasksPageClient({ initialTasks }: Props) {
     return initialTasks.filter((t) => {
       if (statusFilter === 'active' && t.status === 'completed') return false;
       if (statusFilter === 'completed' && t.status !== 'completed') return false;
-      if (filter !== 'all' && t.context !== filter) return false;
       if (
-        search &&
-        !t.title.toLowerCase().includes(search.trim().toLowerCase())
+        variant !== 'workspace' &&
+        filter !== 'all' &&
+        t.context !== filter
       ) {
         return false;
       }
+      if (search) {
+        const q = search.trim().toLowerCase();
+        const inTitle = t.title.toLowerCase().includes(q);
+        const inWorkspace = (t.workspaceName ?? '').toLowerCase().includes(q);
+        if (!inTitle && !inWorkspace) {
+          return false;
+        }
+      }
       return true;
     });
-  }, [initialTasks, filter, statusFilter, search]);
+  }, [initialTasks, filter, statusFilter, search, variant]);
 
   const urgent = filtered.filter(
     (t) => t.priority === 'urgent' || t.priority === 'high',
@@ -75,10 +84,16 @@ export function TasksPageClient({ initialTasks }: Props) {
             Tasks
           </h1>
           <p className="mt-1 text-sm text-zinc-400">
-            {activeCount} active tasks across work and life
+            {variant === 'workspace'
+              ? `${activeCount} active tasks linked to this workspace`
+              : `${activeCount} active tasks across work and life`}
           </p>
         </div>
-        <AddTaskDialog />
+        {variant === 'personal' ? (
+          <AddTaskDialog />
+        ) : workspaceAccountId ? (
+          <AddTaskDialog workspaceAccountId={workspaceAccountId} />
+        ) : null}
       </div>
 
       {/* Filters */}
@@ -94,22 +109,24 @@ export function TasksPageClient({ initialTasks }: Props) {
           />
         </div>
         <div className="flex gap-2">
-          <div className="flex rounded-xl border border-white/8 bg-[var(--workspace-shell-panel)] p-1 text-xs">
-            {(['all', 'work', 'life'] as const).map((f) => (
-              <button
-                key={f}
-                type="button"
-                onClick={() => setFilter(f)}
-                className={`rounded-lg px-3 py-1.5 font-medium capitalize transition-colors ${
-                  filter === f
-                    ? 'bg-white/10 text-white'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
+          {variant === 'personal' ? (
+            <div className="flex rounded-xl border border-white/8 bg-[var(--workspace-shell-panel)] p-1 text-xs">
+              {(['all', 'work', 'life'] as const).map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => setFilter(f)}
+                  className={`rounded-lg px-3 py-1.5 font-medium capitalize transition-colors ${
+                    filter === f
+                      ? 'bg-white/10 text-white'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+          ) : null}
           <div className="flex rounded-xl border border-white/8 bg-[var(--workspace-shell-panel)] p-1 text-xs">
             {(['active', 'completed'] as const).map((s) => (
               <button
@@ -138,7 +155,12 @@ export function TasksPageClient({ initialTasks }: Props) {
           </h2>
           <div className="space-y-2">
             {urgent.map((task) => (
-              <TaskRow key={task.id} task={task} />
+              <TaskRow
+                key={task.id}
+                task={task}
+                showWorkspaceTag={variant === 'personal'}
+                workspaceAccountId={workspaceAccountId}
+              />
             ))}
           </div>
         </section>
@@ -156,10 +178,19 @@ export function TasksPageClient({ initialTasks }: Props) {
             <div className="rounded-xl border border-dashed border-white/8 px-6 py-12 text-center text-sm text-zinc-500">
               {statusFilter === 'completed'
                 ? 'No completed tasks yet'
-                : 'No tasks match your filters'}
+                : variant === 'workspace' && initialTasks.length === 0
+                  ? 'No tasks linked to this workspace yet. Use Add Task and choose a project or client, or open a client record.'
+                  : 'No tasks match your filters'}
             </div>
           ) : (
-            rest.map((task) => <TaskRow key={task.id} task={task} />)
+            rest.map((task) => (
+              <TaskRow
+                key={task.id}
+                task={task}
+                showWorkspaceTag={variant === 'personal'}
+                workspaceAccountId={workspaceAccountId}
+              />
+            ))
           )}
         </div>
       </section>
@@ -167,21 +198,47 @@ export function TasksPageClient({ initialTasks }: Props) {
   );
 }
 
-function TaskRow({ task }: { task: TasksPageTask }) {
+function TaskRow({
+  task,
+  showWorkspaceTag,
+  workspaceAccountId,
+}: {
+  task: TasksPageTask;
+  showWorkspaceTag?: boolean;
+  workspaceAccountId?: string;
+}) {
   const [editOpen, setEditOpen] = useState(false);
-  const StatusIcon = statusIcons[task.status];
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
   const priorityCfg = priorityConfig[task.priority];
+  const isDone = task.status === 'completed';
+
+  const handleCheckedChange = (checked: boolean) => {
+    startTransition(async () => {
+      const result = await updateTask(task.id, {
+        status: checked ? 'completed' : 'pending',
+      });
+      if (result.success) {
+        router.refresh();
+      }
+    });
+  };
 
   return (
     <>
       <div className="group flex items-start gap-3 rounded-xl border border-white/6 bg-[var(--workspace-shell-panel)] px-4 py-3 transition-colors hover:border-white/10">
-        <span className="mt-0.5 shrink-0">
-          {task.status === 'completed' ? (
-            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-          ) : (
-            <StatusIcon className="h-4 w-4 text-zinc-500" />
-          )}
-        </span>
+        <Checkbox
+          checked={isDone}
+          disabled={isPending}
+          onCheckedChange={(value) => {
+            if (value === 'indeterminate') return;
+            handleCheckedChange(Boolean(value));
+          }}
+          aria-label={
+            isDone ? 'Mark task as not done' : 'Mark task as done'
+          }
+          className="mt-0.5 h-5 w-5 shrink-0 rounded-full border-white/25 shadow-none data-[state=checked]:border-[#57C87F] data-[state=checked]:bg-[#57C87F]/20 data-[state=checked]:text-[#57C87F]"
+        />
         <div className="min-w-0 flex-1">
           <p
             className={`text-sm font-medium leading-snug ${
@@ -193,6 +250,11 @@ function TaskRow({ task }: { task: TasksPageTask }) {
             {task.title}
           </p>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+            {showWorkspaceTag && task.workspaceName && (
+              <span className="rounded-md border border-violet-400/20 bg-violet-500/10 px-1.5 py-0.5 font-medium text-violet-200">
+                {task.workspaceName}
+              </span>
+            )}
             {task.clientName && (
               <span className="rounded bg-white/5 px-1.5 py-0.5 font-medium text-zinc-300">
                 {task.clientName}
@@ -234,6 +296,7 @@ function TaskRow({ task }: { task: TasksPageTask }) {
         task={task}
         open={editOpen}
         onOpenChange={setEditOpen}
+        workspaceAccountId={workspaceAccountId}
       />
     </>
   );

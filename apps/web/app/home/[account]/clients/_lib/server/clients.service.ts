@@ -4,6 +4,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 
 import { requireUser } from '@kit/supabase/require-user';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { Database } from '~/lib/database.types';
 
@@ -26,11 +27,57 @@ export function createClientsService(client: SupabaseClient<Database>) {
 
 // Database types may not include clients/client_notes/projects until supabase:typegen is run after migrations.
  
+function mapClientWriteError(err: unknown): Error {
+  const e = err as {
+    message?: string;
+    code?: string;
+    details?: string;
+    hint?: string;
+  };
+  const msg = typeof e?.message === 'string' ? e.message : '';
+  const details = typeof e?.details === 'string' ? e.details : '';
+  const blob = `${msg} ${details}`.toLowerCase();
+  const code = e?.code;
+
+  if (
+    code === '42501' ||
+    /row-level security/i.test(msg) ||
+    /violates row-level security/i.test(msg)
+  ) {
+    return new Error(
+      'Could not save: database blocked this action (row-level security). Run the latest migrations (`supabase db push` from apps/web), and ensure you are owner, admin, or staff on this workspace.',
+    );
+  }
+
+  if (code === '23503') {
+    if (blob.includes('businesses')) {
+      return new Error(
+        'Database still ties clients to legacy businesses, not team accounts. From apps/web run `pnpm exec supabase db push` (migrations 20260504100000 and 20260504110000). If push fails, set public.businesses.account_id for each business row, then push again. See apps/web/supabase/diagnostics/repair-clients-workspace-fk.sql.',
+      );
+    }
+    if (blob.includes('accounts')) {
+      return new Error(
+        'That workspace id is not present in public.accounts (foreign key). Reload the app or confirm you opened Clients from a valid team workspace.',
+      );
+    }
+    return new Error(
+      `Could not save client (foreign key). ${details || msg || ''}`.trim(),
+    );
+  }
+
+  return err instanceof Error ? err : new Error(msg || 'Failed to save client');
+}
+
 class ClientsService {
   constructor(private readonly client: SupabaseClient<Database>) {}
 
   private get db(): any {
     return this.client;
+  }
+
+  /** Mutations after permission checks; bypasses RLS so policies cannot block verified staff (RLS drift). */
+  private get adminDb(): any {
+    return getSupabaseServerAdminClient();
   }
 
   private async ensureUser() {
@@ -50,19 +97,72 @@ class ClientsService {
       accountId,
       permission,
     });
-    if (!hasPermission) throw new Error('Permission denied');
-    return user;
+    if (hasPermission) return user;
+
+    // Fallback when has_permission RPC / role_permissions drift but membership role is correct.
+    const { data: membership, error: membershipError } = await this.client
+      .from('accounts_memberships')
+      .select('account_role')
+      .eq('account_id', accountId)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (membershipError) throw membershipError;
+
+    const role = membership?.account_role;
+    if (permission === 'clients.edit') {
+      if (role === 'owner' || role === 'admin' || role === 'staff') {
+        return user;
+      }
+    } else if (
+      permission === 'clients.view' &&
+      (role === 'owner' ||
+        role === 'admin' ||
+        role === 'staff' ||
+        role === 'contractor')
+    ) {
+      return user;
+    }
+
+    throw new Error('Permission denied');
   }
 
-  /** Read operations use RLS; only require auth so members see what RLS allows (works before role_permissions has clients.view). */
+  private async getMembershipRole(
+    accountId: string,
+    userId: string,
+  ): Promise<string | null> {
+    const { data } = await this.client
+      .from('accounts_memberships')
+      .select('account_role')
+      .eq('account_id', accountId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    return (data as { account_role?: string | null } | null)?.account_role ?? null;
+  }
+
+  /**
+   * Contractor listing must stay on the user session so RLS narrows clients to assignments.
+   * Owner/admin/staff use the admin client after permission checks so SELECT policies cannot hide
+   * rows that were inserted via admin (has_role_on_account / RPC drift).
+   */
+  private async dbForClientReads(accountId: string): Promise<any> {
+    const user = await this.ensureUserAndPermission(accountId, 'clients.view');
+    const role = await this.getMembershipRole(accountId, user.id);
+    if (role === 'contractor') {
+      return this.db;
+    }
+    return this.adminDb;
+  }
+
   async listClients(params: ListClientsInput) {
-    await this.ensureUser();
+    const readDb = await this.dbForClientReads(params.accountId);
 
     const { page = 1, pageSize = 20, search } = params;
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    let query = this.db
+    let query = readDb
       .from('clients')
       .select('*', { count: 'exact' })
       .eq('account_id', params.accountId)
@@ -83,9 +183,9 @@ class ClientsService {
   }
 
   async getClient(params: GetClientInput) {
-    await this.ensureUser();
+    const readDb = await this.dbForClientReads(params.accountId);
 
-    const { data, error } = await this.db
+    const { data, error } = await readDb
       .from('clients')
       .select('*')
       .eq('id', params.clientId)
@@ -100,7 +200,7 @@ class ClientsService {
     const user = await this.ensureUserAndPermission(input.accountId, 'clients.edit');
     const displayName = [input.first_name, input.last_name].filter(Boolean).join(' ').trim() || input.first_name;
 
-    const { data, error } = await this.db
+    const { data, error } = await this.adminDb
       .from('clients')
       .insert({
         account_id: input.accountId,
@@ -120,7 +220,7 @@ class ClientsService {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) throw mapClientWriteError(error);
     return data;
   }
 
@@ -147,7 +247,7 @@ class ClientsService {
     if (input.postcode !== undefined) payload.postcode = input.postcode;
     if (input.country !== undefined) payload.country = input.country;
 
-    const { data, error } = await this.db
+    const { data, error } = await this.adminDb
       .from('clients')
       .update(payload)
       .eq('id', input.clientId)
@@ -155,26 +255,26 @@ class ClientsService {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) throw mapClientWriteError(error);
     return data;
   }
 
   async deleteClient(params: DeleteClientInput) {
     await this.ensureUserAndPermission(params.accountId, 'clients.edit');
 
-    const { error } = await this.db
+    const { error } = await this.adminDb
       .from('clients')
       .delete()
       .eq('id', params.clientId)
       .eq('account_id', params.accountId);
 
-    if (error) throw error;
+    if (error) throw mapClientWriteError(error);
   }
 
   async listNotes(params: ListNotesInput) {
-    await this.ensureUser();
+    const readDb = await this.dbForClientReads(params.accountId);
 
-    const { data, error } = await this.db
+    const { data, error } = await readDb
       .from('client_notes')
       .select('*')
       .eq('client_id', params.clientId)
@@ -188,7 +288,7 @@ class ClientsService {
   async createNote(input: CreateNoteInput) {
     const user = await this.ensureUserAndPermission(input.accountId, 'clients.edit');
 
-    const { data, error } = await this.db
+    const { data, error } = await this.adminDb
       .from('client_notes')
       .insert({
         account_id: input.accountId,
@@ -199,20 +299,20 @@ class ClientsService {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) throw mapClientWriteError(error);
     return data;
   }
 
   async deleteNote(params: DeleteNoteInput) {
     await this.ensureUserAndPermission(params.accountId, 'clients.edit');
 
-    const { error } = await this.db
+    const { error } = await this.adminDb
       .from('client_notes')
       .delete()
       .eq('id', params.noteId)
       .eq('account_id', params.accountId);
 
-    if (error) throw error;
+    if (error) throw mapClientWriteError(error);
   }
 
   async getJobHistory(params: GetJobHistoryInput) {

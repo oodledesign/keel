@@ -1,0 +1,170 @@
+{
+  "title": "Signatures",
+  "description": "Sync Microsoft 365 staff, manage templates, and push Outlook signatures.",
+  "sidebar": {
+    "label": "Signatures"
+  },
+  "module": {
+    "disabled": {
+      "title": "Signatures isn’t enabled",
+      "description": "Turn on the Signatures module for this workspace in account settings (or upgrade billing if your plan includes add-on modules).",
+      "linkSettings": "Account settings",
+      "linkBilling": "Billing"
+    }
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "staff": "Staff",
+    "templates": "Templates",
+    "settings": "Settings"
+  },
+  "pages": {
+    "dashboard": {
+      "title": "Dashboard",
+      "subtitle": "Monitor staff signature status and push current templates to Outlook.",
+      "sectionStaff": "Staff signatures",
+      "sectionStaffDescription": "A quick view of synced staff, assigned templates, and the last push state."
+    },
+    "staff": {
+      "title": "Staff",
+      "subtitle": "Review synced Microsoft 365 staff and filter by branch, department, or push status."
+    },
+    "staffDetail": {
+      "subtitle": "Edit staff profile details, assign a template, and preview the rendered Outlook signature."
+    },
+    "templates": {
+      "title": "Templates",
+      "subtitle": "Create and edit reusable HTML email signature templates.",
+      "openEditor": "Open editor",
+      "noTemplates": "No templates yet. Create a default template to get started."
+    },
+    "templateEditor": {
+      "title": "HTML template",
+      "templateName": "Template name",
+      "defaultTemplate": "Default template",
+      "htmlLabel": "HTML",
+      "tokenPanelTitle": "Token reference",
+      "tokenPanelHint": "Click a token to insert it at the cursor.",
+      "livePreview": "Live preview",
+      "previewBadgeStaff": "Preview sample staff"
+    },
+    "settings": {
+      "title": "Settings",
+      "subtitle": "Manage the Microsoft 365 connection used by the signatures module.",
+      "m365CardTitle": "Microsoft 365 connection",
+      "tenantId": "Tenant ID",
+      "connectedAt": "Connected",
+      "azureSetupTitle": "Azure setup",
+      "azureSetupTrigger": "Setup instructions",
+      "notConnectedTitle": "No Microsoft tenant connected",
+      "notConnectedDescription": "Connect Microsoft 365 to sync staff and push Outlook signatures."
+    }
+  },
+  "summary": {
+    "totalStaff": "Total Staff",
+    "pushed": "Pushed",
+    "pending": "Pending",
+    "errors": "Errors"
+  },
+  "table": {
+    "name": "Name",
+    "jobTitle": "Job title",
+    "branch": "Branch",
+    "template": "Template",
+    "status": "Status",
+    "lastPushed": "Last pushed",
+    "actions": "Actions",
+    "edit": "Edit",
+    "unassignedTemplate": "Unassigned",
+    "neverPushed": "Never"
+  },
+  "filters": {
+    "title": "Filter staff",
+    "branch": "Branch",
+    "department": "Department",
+    "status": "Status",
+    "allBranches": "All branches",
+    "allDepartments": "All departments",
+    "allStatuses": "All statuses"
+  },
+  "connectionGate": {
+    "title": "Connect Microsoft 365",
+    "description": "Signatures needs a Microsoft 365 connection before staff can be synced and email signatures can be pushed to Outlook mailboxes."
+  },
+  "staffEditor": {
+    "cardTitle": "Edit staff member",
+    "photoHint": "Uploading replaces the synced photo for this staff profile.",
+    "livePreview": "Live preview",
+    "previewAssignTemplate": "Assign a template to preview this signature.",
+    "pushDialogTitle": "Push this signature?",
+    "pushDialogDescription": "Keel will send the currently assigned template to this staff member’s Microsoft mailbox.",
+    "pushConfirm": "Push signature",
+    "saving": "Saving...",
+    "pushing": "Pushing..."
+  },
+  "actions": {
+    "connectMicrosoft365": "Connect Microsoft 365",
+    "disconnect": "Disconnect",
+    "disconnecting": "Disconnecting...",
+    "syncFromM365": "Sync from M365",
+    "syncing": "Syncing...",
+    "pushAll": "Push All",
+    "pushingAll": "Pushing...",
+    "pushSignature": "Push Signature",
+    "saveChanges": "Save changes",
+    "saveTemplate": "Save template",
+    "savingTemplate": "Saving...",
+    "newTemplate": "New Template"
+  },
+  "status": {
+    "pushed": "Pushed",
+    "pending": "Pending",
+    "error": "Error"
+  },
+  "badges": {
+    "defaultTemplate": "Default"
+  },
+  "fields": {
+    "fullName": "Full name",
+    "jobTitle": "Job title",
+    "department": "Department",
+    "phoneDirect": "Direct phone",
+    "phoneMobile": "Mobile phone",
+    "branch": "Branch",
+    "photoUpload": "Photo upload",
+    "template": "Template",
+    "noTemplate": "No template"
+  },
+  "emptyStates": {
+    "noStaff": "No staff synced yet. Connect Microsoft 365, then sync staff from M365.",
+    "staffTable": "No staff synced yet. Connect Microsoft 365, then sync staff from M365."
+  },
+  "errors": {
+    "postgrestSchemaTitle": "Signatures API schema isn’t exposed",
+    "postgrestSchemaDescription": "Your Supabase project must expose the database schema named signatures to PostgREST. Local dev uses supabase/config.toml; hosted projects need a Dashboard setting.",
+    "postgrestSchemaStep1": "Open Supabase Dashboard → your project → Settings → API.",
+    "postgrestSchemaStep2": "Under Exposed schemas, add signatures (keep public and any others you already use). Save.",
+    "postgrestSchemaStep3": "Apply migrations that create the signatures schema and tables (for example supabase db push), then reload this page.",
+    "postgrestSchemaRetry": "Try again",
+    "generic": "Something went wrong. Try again.",
+    "moduleDisabled": "Signatures is disabled for this account.",
+    "syncFailed": "Sync failed",
+    "pushFailed": "Push failed",
+    "saveFailed": "Save failed",
+    "disconnectFailed": "Could not disconnect",
+    "uploadInvalid": "Invalid image upload",
+    "staffNotFound": "Staff member not found",
+    "templateNotFound": "Template not found"
+  },
+  "toasts": {
+    "connected": "Microsoft 365 connected",
+    "disconnected": "Microsoft 365 disconnected",
+    "staffSaved": "Staff member saved",
+    "templateSaved": "Template saved",
+    "signaturePushed": "Signature pushed",
+    "syncSuccess": "Staff synced from M365",
+    "pushAllSuccess": "Signatures pushed",
+    "syncWarnings": "Some sync issues were recorded",
+    "pushWarnings": "Some pushes failed"
+  }
+}

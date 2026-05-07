@@ -3,6 +3,10 @@ import 'server-only';
 import { getMailer } from '@kit/mailers';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import {
+  loadAccountBrandResolved,
+  wrapEmailHtmlWithBrand,
+} from '~/lib/brand/account-brand';
 import pathsConfig from '~/config/paths.config';
 
 type PaymentMethod = 'stripe' | 'cash' | 'bank_transfer';
@@ -104,9 +108,10 @@ export async function sendInvoicePaidNotifications(params: {
     ? new URL(`/portal/invoices/${invoice.public_token}`, siteUrl).href
     : null;
 
+  const brand = await loadAccountBrandResolved(params.accountId);
+
   const customerSubject = `Payment received for invoice ${invoice.invoice_number}`;
-  const customerHtml = `
-    <div style="font-family:Poppins,Arial,sans-serif;color:#09111F;line-height:1.6">
+  const customerInner = `
       <h2 style="margin:0 0 16px">Payment received</h2>
       <p>Hi ${clientName},</p>
       <p>We have received payment for invoice <strong>${invoice.invoice_number}</strong> via <strong>${methodLabel}</strong>.</p>
@@ -117,18 +122,23 @@ export async function sendInvoicePaidNotifications(params: {
           : ''
       }
       <p>Thanks,<br />${productName}</p>
-    </div>
   `;
+  const customerHtml = wrapEmailHtmlWithBrand({
+    brand,
+    innerHtml: customerInner,
+  });
 
   const ownerSubject = `Invoice ${invoice.invoice_number} paid via ${methodLabel}`;
-  const ownerHtml = `
-    <div style="font-family:Poppins,Arial,sans-serif;color:#09111F;line-height:1.6">
+  const ownerInner = `
       <h2 style="margin:0 0 16px">Invoice paid</h2>
       <p>Invoice <strong>${invoice.invoice_number}</strong> for <strong>${clientName}</strong> has been marked as paid via <strong>${methodLabel}</strong>.</p>
       <p><strong>Amount:</strong> ${amount}<br /><strong>Paid at:</strong> ${paidAt}</p>
       <p>Open invoice: <a href="${adminInvoiceUrl}">${adminInvoiceUrl}</a></p>
-    </div>
   `;
+  const ownerHtml = wrapEmailHtmlWithBrand({
+    brand,
+    innerHtml: ownerInner,
+  });
 
   const mailer = await getMailer();
   const emailJobs: Promise<unknown>[] = [];
@@ -213,20 +223,24 @@ export async function sendInvoiceIssuedEmail(params: {
     : '—';
   const amount = formatPence(invoice.total_pence ?? 0);
 
+  const brand = await loadAccountBrandResolved(params.accountId);
+  const issuedInner = `
+      <h2 style="margin:0 0 16px">Your invoice is ready</h2>
+      <p>Hi ${clientName},</p>
+      <p>You have received invoice <strong>${invoice.invoice_number}</strong> from <strong>${account?.name ?? productName}</strong>.</p>
+      <p><strong>Total:</strong> ${amount}<br /><strong>Due date:</strong> ${dueDate}</p>
+      <p>View and pay your invoice here: <a href="${portalInvoiceUrl}">${portalInvoiceUrl}</a></p>
+      <p>Thanks,<br />${productName}</p>
+  `;
+
   const mailer = await getMailer();
   await mailer.sendEmail({
     from: sender,
     to: params.recipientEmail,
     subject: `Invoice ${invoice.invoice_number} from ${account?.name ?? productName}`,
-    html: `
-      <div style="font-family:Poppins,Arial,sans-serif;color:#09111F;line-height:1.6">
-        <h2 style="margin:0 0 16px">Your invoice is ready</h2>
-        <p>Hi ${clientName},</p>
-        <p>You have received invoice <strong>${invoice.invoice_number}</strong> from <strong>${account?.name ?? productName}</strong>.</p>
-        <p><strong>Total:</strong> ${amount}<br /><strong>Due date:</strong> ${dueDate}</p>
-        <p>View and pay your invoice here: <a href="${portalInvoiceUrl}">${portalInvoiceUrl}</a></p>
-        <p>Thanks,<br />${productName}</p>
-      </div>
-    `,
+    html: wrapEmailHtmlWithBrand({
+      brand,
+      innerHtml: issuedInner,
+    }),
   });
 }

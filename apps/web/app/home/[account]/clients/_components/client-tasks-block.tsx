@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 
-import { CheckCircle2, Circle, Clock, Loader2, Plus } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, Loader2, Pencil, Plus } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import {
@@ -30,6 +30,7 @@ import {
   getTasksForClient,
 } from '~/home/(user)/_lib/actions/task-actions';
 import type { TasksPageTask } from '~/home/(user)/_lib/server/tasks.loader';
+import { EditTaskDialog } from '~/home/(user)/tasks/_components/edit-task-dialog';
 
 const priorityConfig: Record<string, string> = {
   low: 'text-zinc-400',
@@ -56,16 +57,21 @@ export function ClientTasksBlock({
   clientName,
   canEditClients,
   tasksHref,
+  workspaceAccountId,
 }: {
   clientId: string;
   clientName: string;
   canEditClients: boolean;
   /** Link to full tasks page (e.g. /home/tasks) */
   tasksHref: string;
+  /** Team account id — scopes Edit Task assignment to this workspace. */
+  workspaceAccountId?: string;
 }) {
   const [tasks, setTasks] = useState<TasksPageTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
+  const [editTask, setEditTask] = useState<TasksPageTask | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const fetchTasks = useCallback(async () => {
@@ -113,10 +119,7 @@ export function ClientTasksBlock({
             const StatusIcon = statusIcons[task.status];
             return (
               <li key={task.id}>
-                <Link
-                  href={tasksHref}
-                  className="flex items-center gap-2 rounded-md border border-zinc-700 bg-[var(--workspace-shell-panel)] px-3 py-2 text-sm transition hover:border-zinc-600 hover:bg-[var(--workspace-shell-panel-hover)]"
-                >
+                <div className="flex items-center gap-2 rounded-md border border-zinc-700 bg-[var(--workspace-shell-panel)] px-3 py-2 text-sm transition hover:border-zinc-600">
                   <StatusIcon
                     className={`h-4 w-4 shrink-0 ${
                       task.status === 'completed'
@@ -124,22 +127,36 @@ export function ClientTasksBlock({
                         : 'text-zinc-400'
                     }`}
                   />
-                  <span
-                    className={`min-w-0 flex-1 ${task.status === 'completed' ? 'text-zinc-400 line-through' : 'text-white'}`}
+                  <Link
+                    href={tasksHref}
+                    className={`min-w-0 flex-1 truncate hover:underline ${task.status === 'completed' ? 'text-zinc-400 line-through' : 'text-white'}`}
                   >
                     {task.title}
-                  </span>
+                  </Link>
                   <span
-                    className={`shrink-0 text-xs ${priorityConfig[task.priority] ?? 'text-zinc-400'}`}
+                    className={`hidden shrink-0 text-xs sm:inline ${priorityConfig[task.priority] ?? 'text-zinc-400'}`}
                   >
                     {task.priority}
                   </span>
                   {task.dueDateLabel && (
-                    <span className="shrink-0 text-xs text-zinc-500">
+                    <span className="hidden shrink-0 text-xs text-zinc-500 sm:inline">
                       {task.dueDateLabel}
                     </span>
                   )}
-                </Link>
+                  {canEditClients && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditTask(task);
+                        setEditOpen(true);
+                      }}
+                      className="shrink-0 rounded p-1 text-zinc-400 transition hover:bg-white/5 hover:text-white"
+                      aria-label="Edit task"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
               </li>
             );
           })}
@@ -151,6 +168,22 @@ export function ClientTasksBlock({
             View all tasks →
           </Link>
         </p>
+      )}
+
+      {canEditClients && editTask && (
+        <EditTaskDialog
+          task={editTask}
+          open={editOpen}
+          onOpenChange={(next) => {
+            setEditOpen(next);
+            if (!next) {
+              setEditTask(null);
+            }
+          }}
+          workspaceAccountId={workspaceAccountId}
+          onSaved={fetchTasks}
+          onDeleted={fetchTasks}
+        />
       )}
 
       {canEditClients && (

@@ -1,10 +1,14 @@
 export type AccountModuleKey =
   | 'jobs'
   | 'schedule'
+  | 'tasks'
   | 'clients'
   | 'invoices'
   | 'team'
-  | 'pipeline';
+  | 'pipeline'
+  | 'feedflow'
+  | 'rankly'
+  | 'signatures';
 
 export type AccountModuleSettingsMap = Partial<Record<AccountModuleKey, boolean>>;
 
@@ -41,4 +45,25 @@ export function isWorkModuleEnabled(
   key: AccountModuleKey,
 ) {
   return isAccountModuleEnabled(moduleSettings, key);
+}
+
+/** Feedflow module toggle (`account_module_settings.module_key = 'feedflow'`). */
+export function isFeedflowModuleEnabled(
+  moduleSettings: Record<string, boolean> | null | undefined,
+) {
+  return isWorkModuleEnabled(moduleSettings, 'feedflow');
+}
+
+/** Rankly module toggle (`account_module_settings.module_key = 'rankly'`). */
+export function isRanklyModuleEnabled(
+  moduleSettings: Record<string, boolean> | null | undefined,
+) {
+  return isWorkModuleEnabled(moduleSettings, 'rankly');
+}
+
+/** Signatures module toggle (`account_module_settings.module_key = 'signatures'`). */
+export function isSignaturesModuleEnabled(
+  moduleSettings: Record<string, boolean> | null | undefined,
+) {
+  return isWorkModuleEnabled(moduleSettings, 'signatures');
 }

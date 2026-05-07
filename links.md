@@ -20,10 +20,15 @@ cd /Users/danjamespotter/projects/keel/apps/web
 pnpm supabase db push
 
 
+to stop and start docker:
+
+cd /Users/danjamespotter/projects/keel/apps/web
+supabase stop --no-backup && supabase start --exclude realtime
+
 
 Push to github:
 git add -A
-git commit -m "update 2nd april 2026"
+git commit -m "big update6"
 git push
 
 
@@ -47,7 +52,7 @@ supabase db reset
 
 Push migrations to **remote**:
 ```bash
-cd /Users/danjamespotter/cursor/keel/apps/web
+cd /Users/danjamespotter/projects/keel/apps/web
 supabase db push
 ```
 

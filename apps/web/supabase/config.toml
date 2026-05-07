@@ -6,8 +6,13 @@ project_id = "keel"
 # Port to use for the API URL.
 port = 54321
 # Schemas to expose in your API. Tables, views and stored procedures in this schema will get API
-# endpoints. public and storage are always included.
-schemas = ["public", "storage", "graphql_public"]
+# endpoints. public and storage are always included. Module schemas are created by migration
+# 20220101000000_create_module_schemas_for_api.sql. If PostgREST logs a missing schema, the Docker
+# DB volume likely predates those migrations while config.toml already lists them: from repo root
+# run `supabase stop`, `docker volume rm supabase_db_keel`, then `pnpm supabase:web:start` (fresh
+# init applies migrations before PostgREST). Alternatively `pnpm supabase:web:start` then
+# `pnpm supabase:web:reset` once the stack is healthy.
+schemas = ["public", "storage", "graphql_public", "feedflow", "rankly", "platform_merge", "signatures"]
 # Extra schemas to add to the search_path of every request. public is always included.
 extra_search_path = ["public", "extensions"]
 # The maximum number of rows returns from a view, table, or stored procedure. Limits payload size
@@ -111,4 +116,4 @@ schema_paths = [
 ]
 
 [db.seed]
-sql_paths = ['seed.sql', './seeds/*.sql']
+sql_paths = ['seed.sql']

@@ -409,6 +409,7 @@ export function ClientDetailSidebar({
                           }
                           canEditClients={canEditClients}
                           tasksHref={pathsConfig.app.home + '/tasks'}
+                          workspaceAccountId={accountId}
                         />
                       )}
                     </div>

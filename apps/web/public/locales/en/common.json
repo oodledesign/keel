@@ -65,13 +65,22 @@
     "members": "Members",
     "team": "Team",
     "clients": "Clients",
+    "tasks": "Tasks",
+    "pipeline": "Pipeline",
     "jobs": "Jobs",
     "billing": "Billing",
     "dashboard": "Dashboard",
     "settings": "Settings",
     "profile": "Profile",
     "accessibility": "Accessibility",
-    "application": "Application"
+    "application": "Application",
+    "apps": "Apps",
+    "feeds": "Feeds",
+    "videos": "Videos",
+    "socialFeeds": "Social feeds",
+    "widgets": "Widgets",
+    "reviews": "Reviews",
+    "rankly": "Rankly"
   },
   "roles": {
     "owner": { "label": "Owner" },

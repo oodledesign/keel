@@ -5,6 +5,15 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@kit/ui/alert-dialog';
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -17,7 +26,10 @@ import { Label } from '@kit/ui/label';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
@@ -25,7 +37,15 @@ import {
 import { Loader2 } from 'lucide-react';
 
 import type { TasksPageTask } from '../../_lib/server/tasks.loader';
-import { updateTask } from '../../_lib/actions/task-actions';
+import {
+  deleteTask,
+  loadTaskAssignmentOptions,
+  loadTaskAssignmentOptionsForWorkspace,
+  updateTask,
+  type TaskAssignmentOption,
+  type TaskAssignmentUpdate,
+} from '../../_lib/actions/task-actions';
+import { groupProjectsByWorkspace } from '../_lib/group-task-options';
 
 const PRIORITIES = [
   { key: 'low', label: 'Low' },
@@ -44,17 +64,89 @@ type Props = {
   task: TasksPageTask;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Team workspace tasks page — assignment limited to this account’s projects/clients. */
+  workspaceAccountId?: string;
+  /** After a successful delete (e.g. refresh a client-side list). */
+  onDeleted?: () => void;
+  /** After a successful save (same use case as onDeleted). */
+  onSaved?: () => void;
 };
 
-export function EditTaskDialog({ task, open, onOpenChange }: Props) {
+function initialAssignTo(task: TasksPageTask): string {
+  if (task.projectId) {
+    return task.projectId;
+  }
+  if (task.clientId) {
+    return task.clientId;
+  }
+  if (task.areaId) {
+    return task.areaId;
+  }
+  return 'none';
+}
+
+function assignmentFromSelection(
+  assignTo: string,
+  options: TaskAssignmentOption[],
+): TaskAssignmentUpdate {
+  if (assignTo === 'none') {
+    return { kind: 'none' };
+  }
+  const selected = options.find((o) => o.id === assignTo);
+  if (!selected) {
+    return { kind: 'none' };
+  }
+  if (selected.type === 'project') {
+    return { kind: 'project', id: selected.id };
+  }
+  if (selected.type === 'client') {
+    return { kind: 'client', id: selected.id };
+  }
+  return { kind: 'area', id: selected.id };
+}
+
+export function EditTaskDialog({
+  task,
+  open,
+  onOpenChange,
+  workspaceAccountId,
+  onDeleted,
+  onSaved,
+}: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [title, setTitle] = useState(task.title);
   const [priority, setPriority] = useState(task.priority);
   const [status, setStatus] = useState(task.status);
   const [dueDate, setDueDate] = useState(task.dueDate ?? '');
+  const [options, setOptions] = useState<TaskAssignmentOption[]>([]);
+  const [optionsLoading, setOptionsLoading] = useState(false);
+  const [assignTo, setAssignTo] = useState(initialAssignTo(task));
   const formRef = useRef<HTMLFormElement>(null);
+
+  const isWorkspaceMode = Boolean(workspaceAccountId);
+
+  useEffect(() => {
+    if (!open) {
+      setOptions([]);
+      return;
+    }
+
+    void (async () => {
+      setOptionsLoading(true);
+      try {
+        const data = workspaceAccountId
+          ? await loadTaskAssignmentOptionsForWorkspace(workspaceAccountId)
+          : await loadTaskAssignmentOptions();
+        setOptions(data);
+      } finally {
+        setOptionsLoading(false);
+      }
+    })();
+  }, [open, workspaceAccountId]);
 
   useEffect(() => {
     if (open) {
@@ -62,9 +154,38 @@ export function EditTaskDialog({ task, open, onOpenChange }: Props) {
       setPriority(task.priority);
       setStatus(task.status);
       setDueDate(task.dueDate ?? '');
+      setAssignTo(initialAssignTo(task));
       setError(null);
+      setDeleteDialogOpen(false);
     }
-  }, [open, task.id, task.title, task.priority, task.status, task.dueDate]);
+  }, [
+    open,
+    task.id,
+    task.title,
+    task.priority,
+    task.status,
+    task.dueDate,
+    task.projectId,
+    task.clientId,
+    task.areaId,
+  ]);
+
+  function handleDeleteConfirm() {
+    setError(null);
+    setIsDeleting(true);
+    startTransition(async () => {
+      const result = await deleteTask(task.id);
+      setIsDeleting(false);
+      if (!result.success) {
+        setError(result.error ?? 'Failed to delete task');
+        return;
+      }
+      setDeleteDialogOpen(false);
+      onOpenChange(false);
+      onDeleted?.();
+      router.refresh();
+    });
+  }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -75,12 +196,27 @@ export function EditTaskDialog({ task, open, onOpenChange }: Props) {
       return;
     }
 
+    const selected = options.find((o) => o.id === assignTo);
+
+    if (
+      isWorkspaceMode &&
+      (!selected || assignTo === 'none')
+    ) {
+      setError(
+        'Choose a project or client so this task stays in this workspace.',
+      );
+      return;
+    }
+
+    const assignment = assignmentFromSelection(assignTo, options);
+
     startTransition(async () => {
       const result = await updateTask(task.id, {
         title: trimmedTitle,
         priority,
         status,
         dueDate: dueDate || null,
+        assignment,
       });
 
       if (!result.success) {
@@ -89,107 +225,293 @@ export function EditTaskDialog({ task, open, onOpenChange }: Props) {
       }
 
       onOpenChange(false);
+      onSaved?.();
       router.refresh();
     });
   }
 
+  const projects = options.filter((o) => o.type === 'project');
+  const clients = options.filter((o) => o.type === 'client');
+  const areas = options.filter((o) => o.type === 'area');
+  const projectGroups = groupProjectsByWorkspace(projects);
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-white/8 bg-[#0F1923] text-white sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Edit task</DialogTitle>
-          <DialogDescription className="text-zinc-400">
-            Update title, priority, status, or due date.
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="border-white/8 bg-[#0F1923] text-white sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit task</DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              <strong className="font-medium text-zinc-300">Work</strong> means
+              linked to a team workspace project or CRM client (your business
+              workspace). <strong className="font-medium text-zinc-300">
+                Life
+              </strong>{' '}
+              is a personal area or no link — separate from team workspaces.
+            </DialogDescription>
+          </DialogHeader>
 
-        <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="edit-title" className="text-zinc-300">
-              Title *
-            </Label>
-            <Input
-              id="edit-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-              className="border-white/10 bg-white/5 text-white placeholder:text-zinc-600"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+          <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-zinc-300">Priority</Label>
-              <Select value={priority} onValueChange={setPriority}>
-                <SelectTrigger className="border-white/10 bg-white/5 text-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="border-white/10 bg-[#1A2535] text-white">
-                  {PRIORITIES.map((p) => (
-                    <SelectItem key={p.key} value={p.key}>
-                      {p.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="edit-title" className="text-zinc-300">
+                Title *
+              </Label>
+              <Input
+                id="edit-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+                className="border-white/10 bg-white/5 text-white placeholder:text-zinc-600"
+              />
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-zinc-300">Priority</Label>
+                <Select
+                  value={priority}
+                  onValueChange={(v) =>
+                    setPriority(v as TasksPageTask['priority'])
+                  }
+                >
+                  <SelectTrigger className="border-white/10 bg-white/5 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="border-white/10 bg-[#1A2535] text-white">
+                    {PRIORITIES.map((p) => (
+                      <SelectItem key={p.key} value={p.key}>
+                        {p.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-zinc-300">Status</Label>
+                <Select
+                  value={status}
+                  onValueChange={(v) =>
+                    setStatus(v as TasksPageTask['status'])
+                  }
+                >
+                  <SelectTrigger className="border-white/10 bg-white/5 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="border-white/10 bg-[#1A2535] text-white">
+                    {STATUSES.map((s) => (
+                      <SelectItem key={s.key} value={s.key}>
+                        {s.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label className="text-zinc-300">Status</Label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger className="border-white/10 bg-white/5 text-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="border-white/10 bg-[#1A2535] text-white">
-                  {STATUSES.map((s) => (
-                    <SelectItem key={s.key} value={s.key}>
-                      {s.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="text-zinc-300">
+                {isWorkspaceMode
+                  ? 'Link to project or client *'
+                  : 'Assign to (team project, client, or life area)'}
+              </Label>
+              {optionsLoading ? (
+                <div className="flex h-9 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-zinc-500">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Loading…
+                </div>
+              ) : (
+                <Select value={assignTo} onValueChange={setAssignTo}>
+                  <SelectTrigger className="border-white/10 bg-white/5 text-white">
+                    <SelectValue
+                      placeholder={
+                        isWorkspaceMode
+                          ? 'Select project or client'
+                          : 'No assignment'
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent className="border-white/10 bg-[#1A2535] text-white">
+                    {!isWorkspaceMode ? (
+                      <SelectItem value="none">No assignment (life)</SelectItem>
+                    ) : null}
+                    {projectGroups.length > 0
+                      ? projectGroups.map((group) => (
+                          <SelectGroup key={group.key}>
+                            <SelectLabel className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                              {isWorkspaceMode ? 'Projects' : group.label}
+                            </SelectLabel>
+                            {group.projects.map((p) => (
+                              <SelectItem key={p.id} value={p.id}>
+                                <span className="flex items-center gap-2">
+                                  {p.color && (
+                                    <span
+                                      className="inline-block h-2 w-2 shrink-0 rounded-full"
+                                      style={{ backgroundColor: p.color }}
+                                    />
+                                  )}
+                                  {p.name}
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        ))
+                      : null}
+                    {isWorkspaceMode && clients.length > 0 ? (
+                      <>
+                        {projectGroups.length > 0 ? (
+                          <SelectSeparator className="my-1 bg-white/10" />
+                        ) : null}
+                        <SelectGroup>
+                          <SelectLabel className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                            Clients
+                          </SelectLabel>
+                          {clients.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </>
+                    ) : null}
+                    {!isWorkspaceMode && clients.length > 0 ? (
+                      <>
+                        {projectGroups.length > 0 ? (
+                          <SelectSeparator className="my-1 bg-white/10" />
+                        ) : null}
+                        <SelectGroup>
+                          <SelectLabel className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                            Clients (workspaces)
+                          </SelectLabel>
+                          {clients.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </>
+                    ) : null}
+                    {!isWorkspaceMode && areas.length > 0 ? (
+                      <>
+                        {projectGroups.length > 0 || clients.length > 0 ? (
+                          <SelectSeparator className="my-1 bg-white/10" />
+                        ) : null}
+                        <SelectGroup>
+                          <SelectLabel className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                            Life areas
+                          </SelectLabel>
+                          {areas.map((a) => (
+                            <SelectItem key={a.id} value={a.id}>
+                              <span className="flex items-center gap-2">
+                                {a.color && (
+                                  <span
+                                    className="inline-block h-2 w-2 shrink-0 rounded-full"
+                                    style={{ backgroundColor: a.color }}
+                                  />
+                                )}
+                                {a.name}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </>
+                    ) : null}
+                  </SelectContent>
+                </Select>
+              )}
+              {isWorkspaceMode &&
+              !optionsLoading &&
+              projects.length === 0 &&
+              clients.length === 0 ? (
+                <p className="text-xs text-zinc-500">
+                  Create a project or client in this workspace first.
+                </p>
+              ) : null}
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="edit-due" className="text-zinc-300">
-              Due date
-            </Label>
-            <Input
-              id="edit-due"
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              className="border-white/10 bg-white/5 text-white placeholder:text-zinc-600"
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-due" className="text-zinc-300">
+                Due date
+              </Label>
+              <Input
+                id="edit-due"
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="border-white/10 bg-white/5 text-white placeholder:text-zinc-600"
+              />
+            </div>
 
-          {error && <p className="text-sm text-rose-400">{error}</p>}
+            {error && <p className="text-sm text-rose-400">{error}</p>}
 
-          <DialogFooter>
+            <DialogFooter className="flex-col gap-3 sm:flex-col">
+              <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => onOpenChange(false)}
+                  className="h-9 rounded-xl border border-white/10 px-4 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/5"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isPending || isDeleting}
+                  className="inline-flex h-9 items-center gap-2 rounded-xl bg-[#57C87F] px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#4ab86f] disabled:opacity-50"
+                >
+                  {isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save changes'
+                  )}
+                </button>
+              </div>
+              <div className="flex w-full justify-end border-t border-white/8 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setDeleteDialogOpen(true)}
+                  disabled={isPending || isDeleting}
+                  className="text-sm font-medium text-[#E85D75] transition-colors hover:text-rose-300 disabled:opacity-50"
+                >
+                  Delete task
+                </button>
+              </div>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="border-white/10 bg-[#0F1923] text-white sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this task?</AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-white/10 bg-transparent text-zinc-300 hover:bg-white/5">
+              Cancel
+            </AlertDialogCancel>
             <button
               type="button"
-              onClick={() => onOpenChange(false)}
-              className="h-9 rounded-xl border border-white/10 px-4 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/5"
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="inline-flex h-10 items-center justify-center rounded-md bg-[#E85D75] px-4 text-sm font-medium text-white transition-colors hover:bg-[#d64d65] disabled:opacity-50"
             >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isPending}
-              className="inline-flex h-9 items-center gap-2 rounded-xl bg-[#57C87F] px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#4ab86f] disabled:opacity-50"
-            >
-              {isPending ? (
+              {isDeleting ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Saving...
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting…
                 </>
               ) : (
-                'Save changes'
+                'Delete'
               )}
             </button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

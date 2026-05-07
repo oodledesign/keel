@@ -23,6 +23,7 @@ import type {
   LifeAreaGroup,
   ActivityItem,
 } from '../../_lib/server/keel-dashboard.loader';
+import type { TasksPageTask } from '../../_lib/server/tasks.loader';
 
 import { AddTaskDialog } from './add-task-dialog';
 import { TaskListItem } from './task-list-item';
@@ -55,7 +56,11 @@ const LIFE_COLORS: Record<string, string> = {
   Personal: BRAND.personal,
 };
 
-type Props = { data: KeelDashboardData };
+type Props = {
+  data: KeelDashboardData;
+  /** Enables edit/delete on Today's Focus via EditTaskDialog. */
+  allTasksForEdit?: TasksPageTask[];
+};
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -84,7 +89,7 @@ function formatCurrency(value: number) {
 const panelClass =
   'rounded-2xl border border-violet-300/10 bg-[var(--workspace-shell-panel)] shadow-[0_12px_36px_rgba(4,10,24,0.18)]';
 
-export function KeelDashboard({ data }: Props) {
+export function KeelDashboard({ data, allTasksForEdit }: Props) {
   const greeting = useMemo(() => getGreeting(), []);
   const dateStr = useMemo(() => formatDate(), []);
   const firstName = data.userName;
@@ -118,18 +123,22 @@ export function KeelDashboard({ data }: Props) {
         </h2>
         {hasTodayItems ? (
           <div className="space-y-2">
-            {data.todayTasks.map((task) => (
-              <TaskListItem
-                key={task.id}
-                title={task.title}
-                project={task.projectName ?? undefined}
-                area={task.areaName ?? undefined}
-                dueDate="Today"
-                priority={task.priority as any}
-                status={task.status as any}
-                accentColor={task.areaColor ?? undefined}
-              />
-            ))}
+            {data.todayTasks.map((task) => {
+              const forEdit = allTasksForEdit?.find((t) => t.id === task.id);
+              return (
+                <TaskListItem
+                  key={task.id}
+                  title={task.title}
+                  project={task.projectName ?? undefined}
+                  area={task.areaName ?? undefined}
+                  dueDate="Today"
+                  priority={task.priority as any}
+                  status={task.status as any}
+                  accentColor={task.areaColor ?? undefined}
+                  editTask={forEdit}
+                />
+              );
+            })}
             {data.pipelineDealsToday.map((deal) => (
               <TaskListItem
                 key={deal.id}
@@ -231,6 +240,7 @@ export function KeelDashboard({ data }: Props) {
                   BRAND.personal
                 }
                 tasks={area.tasks}
+                allTasksForEdit={allTasksForEdit}
               />
             ))}
           </div>
@@ -376,11 +386,13 @@ function LifeGroup({
   icon: Icon,
   color,
   tasks,
+  allTasksForEdit,
 }: {
   title: string;
   icon: typeof Heart;
   color: string;
   tasks: DashboardTask[];
+  allTasksForEdit?: TasksPageTask[];
 }) {
   return (
     <div className={panelClass}>
@@ -402,17 +414,21 @@ function LifeGroup({
           <p className="text-xs text-violet-300/60">Nothing this week</p>
         ) : (
           <div className="space-y-2">
-            {tasks.map((task) => (
-              <TaskListItem
-                key={task.id}
-                title={task.title}
-                area={task.areaName ?? undefined}
-                dueDate={task.dueDate ?? undefined}
-                priority={task.priority as any}
-                status={task.status as any}
-                accentColor={task.areaColor ?? undefined}
-              />
-            ))}
+            {tasks.map((task) => {
+              const forEdit = allTasksForEdit?.find((t) => t.id === task.id);
+              return (
+                <TaskListItem
+                  key={task.id}
+                  title={task.title}
+                  area={task.areaName ?? undefined}
+                  dueDate={task.dueDate ?? undefined}
+                  priority={task.priority as any}
+                  status={task.status as any}
+                  accentColor={task.areaColor ?? undefined}
+                  editTask={forEdit}
+                />
+              );
+            })}
           </div>
         )}
       </div>

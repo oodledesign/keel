@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { getDbForWorkspaceTaskAssignmentOptions } from '~/home/_lib/server/workspace-scope';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 import type { TasksPageTask } from '../server/tasks.loader';
 import { loadTasksForClient } from '../server/tasks.loader';
@@ -46,8 +47,7 @@ export async function createTask(input: CreateTaskInput) {
     return { success: false, error: msg, id: null };
   }
 
-  revalidatePath('/home');
-  revalidatePath('/home/tasks');
+  revalidatePath('/home', 'layout');
   return { success: true, error: null, id: data.id as string };
 }
 
@@ -64,29 +64,67 @@ function uiStatusToDb(status: string): 'todo' | 'in_progress' | 'done' | 'cancel
   }
 }
 
+export type TaskAssignmentUpdate =
+  | { kind: 'none' }
+  | { kind: 'project'; id: string }
+  | { kind: 'client'; id: string }
+  | { kind: 'area'; id: string };
+
 export type UpdateTaskInput = {
   title?: string;
   priority?: string;
   status?: string;
   dueDate?: string | null;
-  clientId?: string | null;
+  /** When set, replaces project/client/area linking (mutually exclusive). */
+  assignment?: TaskAssignmentUpdate;
 };
 
 export async function updateTask(taskId: string, input: UpdateTaskInput) {
   const client = getSupabaseServerClient();
+  const user = await requireUserInServerComponent();
 
   const updates: Record<string, unknown> = {};
   if (input.title !== undefined) updates.title = input.title;
   if (input.priority !== undefined) updates.priority = input.priority;
   if (input.status !== undefined) updates.status = uiStatusToDb(input.status);
   if (input.dueDate !== undefined) updates.due_date = input.dueDate || null;
-  if (input.clientId !== undefined) updates.client_id = input.clientId || null;
+
+  if (input.assignment) {
+    switch (input.assignment.kind) {
+      case 'none':
+        updates.project_id = null;
+        updates.client_id = null;
+        updates.area_id = null;
+        break;
+      case 'project':
+        updates.project_id = input.assignment.id;
+        updates.client_id = null;
+        updates.area_id = null;
+        break;
+      case 'client':
+        updates.client_id = input.assignment.id;
+        updates.project_id = null;
+        updates.area_id = null;
+        break;
+      case 'area':
+        updates.area_id = input.assignment.id;
+        updates.project_id = null;
+        updates.client_id = null;
+        break;
+      default:
+        break;
+    }
+  }
 
   if (Object.keys(updates).length === 0) {
     return { success: true, error: null };
   }
 
-  const { error } = await client.from('tasks').update(updates).eq('id', taskId);
+  const { error } = await client
+    .from('tasks')
+    .update(updates)
+    .eq('id', taskId)
+    .eq('user_id', user.id);
 
   if (error) {
     const msg =
@@ -97,17 +135,118 @@ export async function updateTask(taskId: string, input: UpdateTaskInput) {
     return { success: false, error: msg };
   }
 
-  revalidatePath('/home');
-  revalidatePath('/home/tasks');
+  revalidatePath('/home', 'layout');
+  return { success: true, error: null };
+}
+
+export async function deleteTask(taskId: string) {
+  const client = getSupabaseServerClient();
+  const user = await requireUserInServerComponent();
+
+  const { error } = await client
+    .from('tasks')
+    .delete()
+    .eq('id', taskId)
+    .eq('user_id', user.id);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath('/home', 'layout');
   return { success: true, error: null };
 }
 
 export type TaskAssignmentOption = {
   id: string;
   name: string;
-  type: 'project' | 'area';
+  type: 'project' | 'area' | 'client';
   color: string | null;
+  /** Team account (workspace) for projects — same rows as /app/work/[slug]. */
+  accountId?: string | null;
+  accountName?: string | null;
 };
+
+type ProjectAssignmentRow = {
+  id: string;
+  name?: string | null;
+  account_id?: string | null;
+  accounts?: { id?: string; name?: string | null } | null;
+  businesses?: { colour?: string | null } | null;
+};
+
+type AreaAssignmentRow = {
+  id: string;
+  name?: string | null;
+  colour?: string | null;
+};
+
+type ClientAssignmentRow = {
+  id: string;
+  display_name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+};
+
+function clientAssignmentLabel(row: ClientAssignmentRow): string {
+  const dn = row.display_name?.trim();
+  if (dn) return dn;
+  const parts = [row.first_name, row.last_name]
+    .filter((x): x is string => Boolean(x && String(x).trim()))
+    .map((x) => String(x).trim())
+    .join(' ');
+  return parts || 'Client';
+}
+
+/** Projects + CRM clients for one workspace — tasks list shows rows linked to either. */
+export async function loadTaskAssignmentOptionsForWorkspace(
+  accountId: string,
+): Promise<TaskAssignmentOption[]> {
+  const userClient = getSupabaseServerClient();
+  const user = await requireUserInServerComponent();
+
+  const readDb = await getDbForWorkspaceTaskAssignmentOptions(
+    userClient,
+    user.id,
+    accountId,
+  );
+
+  const [projectsResult, clientsResult] = await Promise.all([
+    readDb
+      .from('projects')
+      .select('id, name, account_id, accounts(id, name), businesses(colour)')
+      .eq('account_id', accountId)
+      .not('status', 'in', '("completed","cancelled","archived")'),
+    readDb
+      .from('clients')
+      .select('id, display_name, first_name, last_name, account_id')
+      .eq('account_id', accountId),
+  ]);
+
+  const projects: TaskAssignmentOption[] = (projectsResult.data ?? []).map(
+    (row: ProjectAssignmentRow) => ({
+      id: row.id,
+      name: row.name ?? 'Untitled project',
+      type: 'project' as const,
+      color: row.businesses?.colour ?? null,
+      accountId: row.account_id ?? row.accounts?.id ?? null,
+      accountName: row.accounts?.name?.trim() || null,
+    }),
+  );
+
+  const clients: TaskAssignmentOption[] = (clientsResult.data ?? []).map(
+    (row: ClientAssignmentRow) => ({
+      id: row.id,
+      name: clientAssignmentLabel(row),
+      type: 'client' as const,
+      color: null,
+      accountId,
+      accountName: null,
+    }),
+  );
+
+  return [...projects, ...clients];
+}
 
 export async function loadTaskAssignmentOptions(): Promise<TaskAssignmentOption[]> {
   const client = getSupabaseServerClient();
@@ -116,7 +255,7 @@ export async function loadTaskAssignmentOptions(): Promise<TaskAssignmentOption[
   const [projectsResult, areasResult] = await Promise.all([
     client
       .from('projects')
-      .select('id, name, businesses(colour)')
+      .select('id, name, account_id, accounts(id, name), businesses(colour)')
       .not('status', 'in', '("completed","cancelled","archived")'),
     client
       .from('areas')
@@ -125,16 +264,18 @@ export async function loadTaskAssignmentOptions(): Promise<TaskAssignmentOption[
   ]);
 
   const projects: TaskAssignmentOption[] = (projectsResult.data ?? []).map(
-    (row: any) => ({
+    (row: ProjectAssignmentRow) => ({
       id: row.id,
       name: row.name ?? 'Untitled project',
       type: 'project' as const,
       color: row.businesses?.colour ?? null,
+      accountId: row.account_id ?? row.accounts?.id ?? null,
+      accountName: row.accounts?.name?.trim() || null,
     }),
   );
 
   const areas: TaskAssignmentOption[] = (areasResult.data ?? []).map(
-    (row: any) => ({
+    (row: AreaAssignmentRow) => ({
       id: row.id,
       name: row.name ?? 'Untitled area',
       type: 'area' as const,

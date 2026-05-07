@@ -37,9 +37,14 @@ const STAGES = [
 type Props = {
   businesses: Array<{ id: string; name: string; color: string | null }>;
   onDealCreated: (deal: PipelineDeal) => void;
+  accountSlug?: string;
 };
 
-export function AddDealDialog({ businesses, onDealCreated }: Props) {
+export function AddDealDialog({
+  businesses,
+  onDealCreated,
+  accountSlug,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -79,6 +84,7 @@ export function AddDealDialog({ businesses, onDealCreated }: Props) {
         nextAction: nextAction || undefined,
         nextActionDate: nextActionDate || undefined,
         businessId,
+        accountSlug: accountSlug ?? null,
       });
 
       if (!result.success) {

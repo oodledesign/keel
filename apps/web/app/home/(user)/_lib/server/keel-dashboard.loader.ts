@@ -4,6 +4,10 @@ import { cache } from 'react';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import {
+  loadBusinessIdsForTeamAccount,
+  loadUserWorkspaceAccounts,
+} from '~/home/_lib/server/workspace-scope';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -87,7 +91,9 @@ function toFirstName(raw: string | null | undefined): string {
   return base.charAt(0).toUpperCase() + base.slice(1);
 }
 
-function mapTaskStatus(status: string | null | undefined): 'pending' | 'in_progress' | 'completed' {
+function mapTaskStatus(
+  status: string | null | undefined,
+): 'pending' | 'in_progress' | 'completed' {
   switch ((status ?? '').toLowerCase()) {
     case 'todo':
       return 'pending';
@@ -101,6 +107,54 @@ function mapTaskStatus(status: string | null | undefined): 'pending' | 'in_progr
   }
 }
 
+function buildPipelineOrFilter(
+  workspaceIds: string[],
+  businessIds: string[],
+): string | null {
+  const parts: string[] = [];
+  if (workspaceIds.length > 0) {
+    parts.push(`account_id.in.(${workspaceIds.join(',')})`);
+  }
+  if (businessIds.length > 0) {
+    parts.push(`business_id.in.(${businessIds.join(',')})`);
+  }
+  if (parts.length === 0) return null;
+  return parts.length === 1 ? parts[0]! : parts.join(',');
+}
+
+async function countOpenTasksForAccount(
+  client: ReturnType<typeof getSupabaseServerClient>,
+  userId: string,
+  accountId: string,
+): Promise<number> {
+  const [{ data: projectsData }, { data: clientsData }] = await Promise.all([
+    client.from('projects').select('id').eq('account_id', accountId),
+    client.from('clients').select('id').eq('account_id', accountId),
+  ]);
+  const projectIds = (projectsData ?? []).map((p: { id: string }) => p.id);
+  const clientIds = (clientsData ?? []).map((c: { id: string }) => c.id);
+  if (projectIds.length === 0 && clientIds.length === 0) return 0;
+
+  let q = client
+    .from('tasks')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .not('status', 'eq', 'done');
+
+  if (projectIds.length > 0 && clientIds.length > 0) {
+    q = q.or(
+      `project_id.in.(${projectIds.join(',')}),client_id.in.(${clientIds.join(',')})`,
+    );
+  } else if (projectIds.length > 0) {
+    q = q.in('project_id', projectIds);
+  } else {
+    q = q.in('client_id', clientIds);
+  }
+  const { count, error } = await q;
+  if (error) return 0;
+  return count ?? 0;
+}
+
 // ─── Main loader ─────────────────────────────────────────────────────
 
 export const loadKeelDashboard = cache(async (): Promise<KeelDashboardData> => {
@@ -110,96 +164,96 @@ export const loadKeelDashboard = cache(async (): Promise<KeelDashboardData> => {
   const today = todayIso();
   const weekEnd = weekFromNowIso();
 
-  const displayName =
-    toFirstName(
-      (user.user_metadata as Record<string, unknown>)?.display_name as string ??
-      (user.user_metadata as Record<string, unknown>)?.name as string,
-    ) ||
-    toFirstName(user.email?.split('@')[0]) ||
-    'there';
+  const meta = user.user_metadata as Record<string, unknown> | undefined;
+  const displayNameRaw =
+    (typeof meta?.display_name === 'string' && meta.display_name.trim()) ||
+    (typeof meta?.name === 'string' && meta.name.trim()) ||
+    user.email?.split('@')[0] ||
+    '';
+  const displayName = toFirstName(displayNameRaw) || 'there';
 
-  // Run all queries in parallel
+  const workspaces = await loadUserWorkspaceAccounts(client, userId);
+  const workspaceIds = workspaces.map((w) => w.id);
+
+  const allBizIds = new Set<string>();
+  const bizIdsByWorkspace = new Map<string, string[]>();
+  for (const w of workspaces) {
+    const bids = await loadBusinessIdsForTeamAccount(client, w.id);
+    bizIdsByWorkspace.set(w.id, bids);
+    bids.forEach((id) => allBizIds.add(id));
+  }
+
+  const { data: ownedBizRows } = await client
+    .from('businesses')
+    .select('id')
+    .eq('owner_id', userId);
+  for (const row of ownedBizRows ?? []) {
+    allBizIds.add((row as { id: string }).id);
+  }
+
+  const pipelineOr = buildPipelineOrFilter(workspaceIds, [...allBizIds]);
+
+  const todayTasksQuery = client
+    .from('tasks')
+    .select(
+      'id, title, status, priority, due_date, project_id, client_id, projects(name, businesses(name, colour), accounts(name)), areas(name, colour)',
+    )
+    .eq('user_id', userId)
+    .eq('due_date', today)
+    .not('status', 'eq', 'done')
+    .order('priority', { ascending: false })
+    .limit(20);
+
+  let pipelineDealsTodayQuery = client
+    .from('pipeline_deals')
+    .select(
+      'id, contact_name, company_name, next_action, business_id, account_id, businesses(name, colour), accounts(name)',
+    )
+    .eq('next_action_date', today)
+    .not('stage', 'in', '("won","lost")')
+    .limit(10);
+
+  let pipelineSnapshotQuery = client.from('pipeline_deals').select('id, stage');
+
+  let activeDealsQuery = client
+    .from('pipeline_deals')
+    .select('id, business_id, account_id, value, stage')
+    .not('stage', 'in', '("won","lost")');
+
+  if (pipelineOr) {
+    pipelineDealsTodayQuery = pipelineDealsTodayQuery.or(pipelineOr);
+    pipelineSnapshotQuery = pipelineSnapshotQuery.or(pipelineOr);
+    activeDealsQuery = activeDealsQuery.or(pipelineOr);
+  } else {
+    pipelineDealsTodayQuery = pipelineDealsTodayQuery.limit(0);
+    pipelineSnapshotQuery = pipelineSnapshotQuery.limit(0);
+    activeDealsQuery = activeDealsQuery.limit(0);
+  }
+
   const [
     todayTasksResult,
     pipelineDealsResult,
-    businessesResult,
-    businessProjectsResult,
-    businessTasksResult,
-    businessTicketsResult,
-    businessDealsResult,
     pipelineSnapshotResult,
+    activeDealsAllResult,
     lifeTasksResult,
     recentTasksResult,
   ] = await Promise.all([
-    // Tasks due today for current user
+    todayTasksQuery,
+    pipelineDealsTodayQuery,
+    pipelineSnapshotQuery,
+    activeDealsQuery,
     client
       .from('tasks')
       .select(
-        'id, title, status, priority, due_date, projects(name, businesses(name, colour)), areas(name, colour)',
-      )
-      .eq('user_id', userId)
-      .eq('due_date', today)
-      .not('status', 'eq', 'done')
-      .order('priority', { ascending: false })
-      .limit(20),
-
-    // Pipeline deals with next_action_date = today
-    client
-      .from('pipeline_deals')
-      .select('id, contact_name, company_name, next_action, businesses(name, colour)')
-      .eq('next_action_date', today)
-      .not('stage', 'in', '("won","lost")')
-      .limit(10),
-
-    // All businesses owned by user
-    client
-      .from('businesses')
-      .select('id, name, colour')
-      .eq('owner_id', userId),
-
-    // Active projects per business
-    client
-      .from('projects')
-      .select('id, business_id')
-      .not('status', 'in', '("completed","cancelled","archived")'),
-
-    // Open tasks per business (via project)
-    client
-      .from('tasks')
-      .select('id, projects!inner(business_id)')
-      .not('status', 'eq', 'done'),
-
-    // Open support tickets per business
-    client
-      .from('support_tickets')
-      .select('id, client_orgs!inner(business_id)')
-      .not('status', 'in', '("resolved","closed")'),
-
-    // Active pipeline deals per business (for counts + value)
-    client
-      .from('pipeline_deals')
-      .select('id, business_id, value, stage')
-      .not('stage', 'in', '("won","lost")'),
-
-    // Pipeline deals for snapshot (all stages)
-    client
-      .from('pipeline_deals')
-      .select('id, stage'),
-
-    // Life tasks (areas not linked to a business, due this week)
-    client
-      .from('tasks')
-      .select(
-        'id, title, status, priority, due_date, areas!inner(name, colour, group_id, groups(name, type))',
+        'id, title, status, priority, due_date, areas(name, colour, group_id, groups(name, type))',
       )
       .eq('user_id', userId)
       .is('project_id', null)
+      .is('client_id', null)
       .lte('due_date', weekEnd)
       .not('status', 'eq', 'done')
       .order('due_date', { ascending: true })
       .limit(30),
-
-    // Recent completed tasks for activity feed
     client
       .from('tasks')
       .select('id, title, status, updated_at')
@@ -209,9 +263,22 @@ export const loadKeelDashboard = cache(async (): Promise<KeelDashboardData> => {
       .limit(5),
   ]);
 
-  // ─── Transform: Today's tasks ──────────────────────────────────
+  type TodayTaskRow = {
+    id: string;
+    title?: string | null;
+    status?: string | null;
+    priority?: string | null;
+    due_date?: string | null;
+    projects?: {
+      name?: string | null;
+      businesses?: { name?: string | null } | null;
+      accounts?: { name?: string | null } | null;
+    } | null;
+    areas?: { name?: string | null; colour?: string | null } | null;
+  };
+
   const todayTasks: DashboardTask[] = (todayTasksResult.data ?? []).map(
-    (row: any) => ({
+    (row: TodayTaskRow) => ({
       id: row.id,
       title: row.title ?? 'Untitled',
       status: mapTaskStatus(row.status),
@@ -220,65 +287,96 @@ export const loadKeelDashboard = cache(async (): Promise<KeelDashboardData> => {
       projectName: row.projects?.name ?? null,
       areaName: row.areas?.name ?? null,
       areaColor: row.areas?.colour ?? null,
-      businessName: row.projects?.businesses?.name ?? null,
+      businessName:
+        row.projects?.businesses?.name ??
+        row.projects?.accounts?.name ??
+        null,
     }),
   );
 
-  // ─── Transform: Pipeline deals today ───────────────────────────
+  type PipelineDealRow = {
+    id: string;
+    contact_name?: string | null;
+    company_name?: string | null;
+    next_action?: string | null;
+    businesses?: { name?: string | null; colour?: string | null } | null;
+    accounts?: { name?: string | null } | null;
+  };
+
   const pipelineDealsToday: PipelineDealToday[] = (
     pipelineDealsResult.data ?? []
-  ).map((row: any) => ({
+  ).map((row: PipelineDealRow) => ({
     id: row.id,
     contactName: row.contact_name ?? '',
     companyName: row.company_name ?? '',
     nextAction: row.next_action ?? '',
-    businessName: row.businesses?.name ?? null,
+    businessName:
+      row.businesses?.name ?? row.accounts?.name ?? null,
     businessColor: row.businesses?.colour ?? null,
   }));
 
-  // ─── Transform: Business overviews ─────────────────────────────
-  const businessRows = businessesResult.data ?? [];
+  type DealOverviewRow = {
+    account_id?: string | null;
+    business_id?: string | null;
+    value?: number | string | null;
+  };
 
-  const businesses: BusinessOverview[] = businessRows.map((biz: any) => {
-    const bizId = biz.id;
+  const allDealsForOverview = (activeDealsAllResult.data ??
+    []) as DealOverviewRow[];
 
-    const activeProjects = (businessProjectsResult.data ?? []).filter(
-      (p: any) => p.business_id === bizId,
-    ).length;
+  const businesses: BusinessOverview[] = await Promise.all(
+    workspaces.map(async (w) => {
+      const bids = new Set(bizIdsByWorkspace.get(w.id) ?? []);
 
-    const openTasks = (businessTasksResult.data ?? []).filter(
-      (t: any) => t.projects?.business_id === bizId,
-    ).length;
+      const [{ count: projCount }, openTasks, ticketCount] = await Promise.all([
+        client
+          .from('projects')
+          .select('id', { count: 'exact', head: true })
+          .eq('account_id', w.id),
+        countOpenTasksForAccount(client, userId, w.id),
+        countSupportTicketsForWorkspace(client, bids),
+      ]);
 
-    const openTickets = (businessTicketsResult.data ?? []).filter(
-      (t: any) => t.client_orgs?.business_id === bizId,
-    ).length;
+      const dealsHere = allDealsForOverview.filter(
+        (d) =>
+          d.account_id === w.id ||
+          (d.business_id && bids.has(String(d.business_id))),
+      );
+      const activeDeals = dealsHere.length;
+      const dealValue = dealsHere.reduce(
+        (sum, d) => sum + (Number(d.value) || 0),
+        0,
+      );
 
-    const bizDeals = (businessDealsResult.data ?? []).filter(
-      (d: any) => d.business_id === bizId,
-    );
-    const activeDeals = bizDeals.length;
-    const dealValue = bizDeals.reduce(
-      (sum: number, d: any) => sum + (d.value ?? 0),
-      0,
-    );
+      let businessColor: string | null = null;
+      if (bids.size > 0) {
+        const { data: colourRow } = await client
+          .from('businesses')
+          .select('colour')
+          .in('id', [...bids])
+          .limit(1)
+          .maybeSingle();
+        businessColor =
+          (colourRow as { colour?: string | null } | null)?.colour ?? null;
+      }
 
-    return {
-      businessId: bizId,
-      businessName: biz.name ?? 'Unknown',
-      businessColor: biz.colour ?? null,
-      activeProjects,
-      openTasks,
-      openTickets,
-      activeDeals,
-      dealValue,
-    };
-  });
+      return {
+        businessId: w.id,
+        businessName: w.name ?? w.slug ?? 'Workspace',
+        businessColor,
+        activeProjects: projCount ?? 0,
+        openTasks,
+        openTickets: ticketCount,
+        activeDeals,
+        dealValue,
+      };
+    }),
+  );
 
-  // ─── Transform: Pipeline snapshot ──────────────────────────────
   const stageCounts = new Map<string, number>();
   for (const deal of pipelineSnapshotResult.data ?? []) {
-    const stage = (deal as any).stage ?? 'lead';
+    const stage =
+      (deal as { stage?: string | null }).stage ?? 'lead';
     stageCounts.set(stage, (stageCounts.get(stage) ?? 0) + 1);
   }
 
@@ -298,11 +396,26 @@ export const loadKeelDashboard = cache(async (): Promise<KeelDashboardData> => {
     }),
   );
 
-  // ─── Transform: Life areas ─────────────────────────────────────
-  const lifeMap = new Map<string, { color: string | null; tasks: DashboardTask[] }>();
+  const lifeMap = new Map<
+    string,
+    { color: string | null; tasks: DashboardTask[] }
+  >();
+
+  type LifeTaskRow = {
+    id: string;
+    title?: string | null;
+    status?: string | null;
+    priority?: string | null;
+    due_date?: string | null;
+    areas?: {
+      name?: string | null;
+      colour?: string | null;
+      groups?: { name?: string | null } | null;
+    } | null;
+  };
 
   for (const row of lifeTasksResult.data ?? []) {
-    const r = row as any;
+    const r = row as LifeTaskRow;
     const areaName = r.areas?.groups?.name ?? r.areas?.name ?? 'Personal';
     const color = r.areas?.colour ?? null;
 
@@ -331,11 +444,16 @@ export const loadKeelDashboard = cache(async (): Promise<KeelDashboardData> => {
     }),
   );
 
-  // ─── Transform: Recent activity ────────────────────────────────
+  type RecentTaskRow = {
+    id: string;
+    title?: string | null;
+    updated_at?: string | null;
+  };
+
   const recentActivity: ActivityItem[] = (recentTasksResult.data ?? []).map(
-    (row: any) => ({
+    (row: RecentTaskRow) => ({
       id: row.id,
-      description: `Completed "${row.title}"`,
+      description: `Completed "${row.title ?? 'Task'}"`,
       timestamp: row.updated_at
         ? new Date(row.updated_at).toLocaleDateString('en-GB', {
             day: 'numeric',
@@ -356,3 +474,29 @@ export const loadKeelDashboard = cache(async (): Promise<KeelDashboardData> => {
     recentActivity,
   };
 });
+
+async function countSupportTicketsForWorkspace(
+  client: ReturnType<typeof getSupabaseServerClient>,
+  businessIds: Set<string>,
+): Promise<number> {
+  if (businessIds.size === 0) return 0;
+  try {
+    const { data: orgRows, error: orgErr } = await client
+      .from('client_orgs')
+      .select('id')
+      .in('business_id', [...businessIds]);
+    if (orgErr) return 0;
+    const orgIds = (orgRows ?? []).map((r: { id: string }) => r.id);
+    if (orgIds.length === 0) return 0;
+
+    const { count, error } = await client
+      .from('support_tickets')
+      .select('id', { count: 'exact', head: true })
+      .not('status', 'in', '("resolved","closed")')
+      .in('client_org_id', orgIds);
+    if (error) return 0;
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}

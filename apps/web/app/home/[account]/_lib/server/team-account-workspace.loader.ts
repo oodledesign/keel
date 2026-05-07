@@ -4,6 +4,7 @@ import { cache } from 'react';
 
 import { redirect } from 'next/navigation';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
@@ -26,7 +27,7 @@ export type TeamAccountWorkspace = Awaited<
 export const loadTeamWorkspace = cache(workspaceLoader);
 
 async function workspaceLoader(accountSlug: string) {
-  const client = getSupabaseServerClient();
+  const client = getSupabaseServerClient() as SupabaseClient;
   const api = createTeamAccountsApi(client);
 
   const [workspace, user] = await Promise.all([
@@ -40,7 +41,7 @@ async function workspaceLoader(accountSlug: string) {
     return redirect(pathsConfig.app.home);
   }
 
-  const accountId = workspace.data.account.id as string;
+  const accountId = (workspace.data.account as { id: string }).id;
   const { data: moduleSettingsRows } = await client
     .from('account_module_settings')
     .select('module_key, enabled')
@@ -50,8 +51,11 @@ async function workspaceLoader(accountSlug: string) {
     (moduleSettingsRows ?? []).map((row) => [row.module_key, row.enabled]),
   ) as Record<string, boolean>;
 
+  const data = workspace.data;
+
   return {
-    ...workspace.data,
+    ...data,
+    account: data.account as { id: string; slug: string },
     moduleSettings,
     user,
   };

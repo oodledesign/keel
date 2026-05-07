@@ -76,9 +76,15 @@ function formatCurrency(value: number) {
 type Props = {
   initialData: PipelineData;
   onDealWon?: (deal: PipelineDeal) => void;
+  /** When set, revalidates `/app/work/[account]/pipeline` after server actions */
+  workspaceAccountSlug?: string;
 };
 
-export function PipelineBoard({ initialData, onDealWon }: Props) {
+export function PipelineBoard({
+  initialData,
+  onDealWon,
+  workspaceAccountSlug,
+}: Props) {
   const [deals, setDeals] = useState<PipelineDeal[]>(initialData.deals);
   const [filter, setFilter] = useState<string>('all');
   const [activeDeal, setActiveDeal] = useState<PipelineDeal | null>(null);
@@ -175,7 +181,9 @@ export function PipelineBoard({ initialData, onDealWon }: Props) {
       );
 
       startTransition(async () => {
-        const result = await moveDealToStage(dealId, newStage!);
+        const result = await moveDealToStage(dealId, newStage!, {
+          accountSlug: workspaceAccountSlug,
+        });
         if (!result.success) {
           setDeals((prev) =>
             prev.map((d) =>
@@ -229,6 +237,7 @@ export function PipelineBoard({ initialData, onDealWon }: Props) {
           <AddDealDialog
             businesses={initialData.businesses}
             onDealCreated={(deal) => setDeals((prev) => [deal, ...prev])}
+            accountSlug={workspaceAccountSlug}
           />
         </div>
       </div>
@@ -242,6 +251,7 @@ export function PipelineBoard({ initialData, onDealWon }: Props) {
           if (!open) setDealToEdit(null);
         }}
         onDealUpdated={handleDealUpdated}
+        accountSlug={workspaceAccountSlug}
       />
 
       {/* Kanban */}

@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation';
 
+import Link from 'next/link';
+
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 import {
@@ -77,6 +79,11 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
     enableTeamDeletion: featuresFlagConfig.enableTeamDeletion,
   };
 
+  const brandPath = pathsConfig.app.accountBrandSettings.replace(
+    '[account]',
+    account.slug,
+  );
+
   return (
     <>
       <TeamAccountLayoutPageHeader
@@ -86,6 +93,24 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
       />
 
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 text-[var(--workspace-shell-text)] lg:px-6">
+        {!isClient ? (
+          <div className="mx-auto mb-6 flex max-w-2xl flex-col gap-3 rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+            <div>
+              <h2 className="text-base font-semibold">Brand appearance</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Colours and logo used on invoice emails, signature templates, and
+                other branded surfaces.
+              </p>
+            </div>
+            <Link
+              href={brandPath}
+              className="inline-flex text-sm font-medium text-[#57C87F] hover:underline"
+            >
+              Manage brand settings →
+            </Link>
+          </div>
+        ) : null}
+
         <div className="flex max-w-2xl flex-1 flex-col gap-6 rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
           {isClient ? (
             <TeamAccountDangerZone

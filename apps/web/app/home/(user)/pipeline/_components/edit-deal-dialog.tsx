@@ -41,6 +41,7 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDealUpdated: (deal: PipelineDeal) => void;
+  accountSlug?: string;
 };
 
 export function EditDealDialog({
@@ -49,6 +50,7 @@ export function EditDealDialog({
   open,
   onOpenChange,
   onDealUpdated,
+  accountSlug,
 }: Props) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -97,6 +99,7 @@ export function EditDealDialog({
         nextAction: nextAction || undefined,
         nextActionDate: nextActionDate || undefined,
         businessId,
+        accountSlug: accountSlug ?? null,
       });
 
       if (!result.success) {

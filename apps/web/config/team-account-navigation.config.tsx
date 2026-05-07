@@ -1,16 +1,24 @@
 import {
   Briefcase,
+  BarChart3,
   Calendar,
   ClipboardList,
   CreditCard,
   FileText,
+  Kanban,
   LayoutDashboard,
+  LayoutGrid,
+  Megaphone,
+  MessageSquareText,
+  PenLine,
+  Share2,
   Settings,
   ShoppingCart,
   StickyNote,
   CheckSquare,
   Users,
   UtensilsCrossed,
+  Video,
 } from 'lucide-react';
 
 import { NavigationConfigSchema } from '@kit/ui/navigation-schema';
@@ -19,6 +27,9 @@ import featureFlagsConfig from '~/config/feature-flags.config';
 import pathsConfig from '~/config/paths.config';
 import {
   isAccountModuleEnabled,
+  isFeedflowModuleEnabled,
+  isRanklyModuleEnabled,
+  isSignaturesModuleEnabled,
   isWorkModuleEnabled,
   type WorkspaceSpaceType,
 } from '~/home/[account]/_lib/server/account-modules';
@@ -80,6 +91,24 @@ const getRoutes = (
             },
           ]
         : []),
+      ...(access.canViewDashboard && isWorkModuleEnabled(ms, 'pipeline')
+        ? [
+            {
+              label: 'common:routes.pipeline',
+              path: createPath(pathsConfig.app.accountPipeline, account),
+              Icon: <Kanban className={iconClasses} />,
+            },
+          ]
+        : []),
+      ...(access.canViewDashboard && isWorkModuleEnabled(ms, 'tasks')
+        ? [
+            {
+              label: 'common:routes.tasks',
+              path: createPath(pathsConfig.app.accountTasks, account),
+              Icon: <CheckSquare className={iconClasses} />,
+            },
+          ]
+        : []),
       ...(access.canViewClients && isWorkModuleEnabled(ms, 'clients')
         ? [
             {
@@ -107,6 +136,7 @@ const getRoutes = (
             },
           ]
         : []),
+      ...buildWorkAppsCollapsible(account, ms),
     ];
   } else if (spaceType === 'family') {
     applicationChildren = [
@@ -244,4 +274,81 @@ export function getTeamAccountSidebarConfig(
 
 function createPath(path: string, account: string) {
   return path.replace('[account]', account);
+}
+
+/**
+ * Single **Apps** submenu for Rankly, Feedflow, and Signatures. The UI kit allows only
+ * one level of nesting, so Feeds + Videos appear as ordered links (Reviews → Social → Widgets → Videos).
+ */
+function buildWorkAppsCollapsible(
+  account: string,
+  moduleSettings?: Record<string, boolean>,
+) {
+  const ms = moduleSettings;
+
+  const children: Array<{
+    label: string;
+    path: string;
+    Icon?: React.ReactNode;
+    end?: boolean;
+  }> = [];
+
+  if (isRanklyModuleEnabled(ms)) {
+    children.push({
+      label: 'common:routes.rankly',
+      path: createPath(pathsConfig.app.accountRanklyDashboard, account),
+      Icon: <BarChart3 className={iconClasses} />,
+    });
+  }
+
+  if (isSignaturesModuleEnabled(ms)) {
+    children.push({
+      label: 'signatures:sidebar.label',
+      path: createPath(pathsConfig.app.accountSignaturesDashboard, account),
+      Icon: <PenLine className={iconClasses} />,
+    });
+  }
+
+  if (isFeedflowModuleEnabled(ms)) {
+    children.push(
+      {
+        label: 'common:routes.reviews',
+        path: createPath(pathsConfig.app.accountFeedflowReviews, account),
+        Icon: <MessageSquareText className={iconClasses} />,
+      },
+      {
+        label: 'common:routes.socialFeeds',
+        path: createPath(
+          pathsConfig.app.accountFeedflowSocialAccounts,
+          account,
+        ),
+        Icon: <Share2 className={iconClasses} />,
+      },
+      {
+        label: 'common:routes.widgets',
+        path: createPath(pathsConfig.app.accountFeedflowWidgets, account),
+        Icon: <Share2 className={iconClasses} />,
+      },
+      {
+        label: 'common:routes.videos',
+        path: createPath(pathsConfig.app.accountFeedflowVideos, account),
+        Icon: <Video className={iconClasses} />,
+      },
+    );
+  }
+
+  if (children.length === 0) {
+    return [];
+  }
+
+  return [
+    {
+      label: 'common:routes.apps',
+      path: createPath(pathsConfig.app.accountHome, account),
+      Icon: <LayoutGrid className={iconClasses} />,
+      collapsible: true,
+      collapsed: false,
+      children,
+    },
+  ];
 }

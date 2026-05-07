@@ -17,7 +17,10 @@ import { Label } from '@kit/ui/label';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
@@ -27,8 +30,10 @@ import { Loader2, Plus } from 'lucide-react';
 import {
   createTask,
   loadTaskAssignmentOptions,
+  loadTaskAssignmentOptionsForWorkspace,
   type TaskAssignmentOption,
 } from '../../_lib/actions/task-actions';
+import { groupProjectsByWorkspace } from '../../tasks/_lib/group-task-options';
 
 const PRIORITIES = [
   { key: 'low', label: 'Low' },
@@ -37,7 +42,12 @@ const PRIORITIES = [
   { key: 'urgent', label: 'Urgent' },
 ];
 
-export function AddTaskDialog() {
+type AddTaskDialogProps = {
+  /** When set, only projects/clients in this team workspace; assignment required so the task appears on workspace Tasks. */
+  workspaceAccountId?: string;
+};
+
+export function AddTaskDialog({ workspaceAccountId }: AddTaskDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -49,14 +59,28 @@ export function AddTaskDialog() {
   const [priority, setPriority] = useState('medium');
   const [assignTo, setAssignTo] = useState('none');
 
+  const isWorkspaceMode = Boolean(workspaceAccountId);
+
   useEffect(() => {
-    if (open && options.length === 0) {
-      setOptionsLoading(true);
-      loadTaskAssignmentOptions()
-        .then(setOptions)
-        .finally(() => setOptionsLoading(false));
+    if (!open) {
+      setOptions([]);
+      setAssignTo('none');
+      setError(null);
+      return;
     }
-  }, [open, options.length]);
+
+    void (async () => {
+      setOptionsLoading(true);
+      try {
+        const data = workspaceAccountId
+          ? await loadTaskAssignmentOptionsForWorkspace(workspaceAccountId)
+          : await loadTaskAssignmentOptions();
+        setOptions(data);
+      } finally {
+        setOptionsLoading(false);
+      }
+    })();
+  }, [open, workspaceAccountId]);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -73,6 +97,11 @@ export function AddTaskDialog() {
 
     const selected = options.find((o) => o.id === assignTo);
 
+    if (isWorkspaceMode && (!selected || assignTo === 'none')) {
+      setError('Choose a project or client so this task appears in this workspace.');
+      return;
+    }
+
     startTransition(async () => {
       const result = await createTask({
         title,
@@ -80,6 +109,7 @@ export function AddTaskDialog() {
         dueDate: dueDate || undefined,
         projectId: selected?.type === 'project' ? selected.id : undefined,
         areaId: selected?.type === 'area' ? selected.id : undefined,
+        clientId: selected?.type === 'client' ? selected.id : undefined,
       });
 
       if (!result.success) {
@@ -96,7 +126,9 @@ export function AddTaskDialog() {
   }
 
   const projects = options.filter((o) => o.type === 'project');
+  const clients = options.filter((o) => o.type === 'client');
   const areas = options.filter((o) => o.type === 'area');
+  const projectGroups = groupProjectsByWorkspace(projects);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -113,7 +145,9 @@ export function AddTaskDialog() {
         <DialogHeader>
           <DialogTitle>Add a new task</DialogTitle>
           <DialogDescription className="text-zinc-400">
-            Create a task and assign it to a project or life area.
+            {isWorkspaceMode
+              ? 'Link the task to a project or client in this workspace. It will show up on this team’s Tasks list.'
+              : 'Assign to a team workspace project or a personal life area. Projects are grouped by workspace.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -162,7 +196,9 @@ export function AddTaskDialog() {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-zinc-300">Assign to</Label>
+            <Label className="text-zinc-300">
+              {isWorkspaceMode ? 'Link to project or client *' : 'Assign to'}
+            </Label>
             {optionsLoading ? (
               <div className="flex h-9 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-zinc-500">
                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -171,53 +207,94 @@ export function AddTaskDialog() {
             ) : (
               <Select value={assignTo} onValueChange={setAssignTo}>
                 <SelectTrigger className="border-white/10 bg-white/5 text-white">
-                  <SelectValue placeholder="No assignment" />
+                  <SelectValue
+                    placeholder={
+                      isWorkspaceMode
+                        ? 'Select project or client'
+                        : 'No assignment'
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent className="border-white/10 bg-[#1A2535] text-white">
-                  <SelectItem value="none">No assignment</SelectItem>
-                  {projects.length > 0 && (
+                  {!isWorkspaceMode ? (
+                    <SelectItem value="none">No assignment</SelectItem>
+                  ) : null}
+                  {projectGroups.length > 0
+                    ? projectGroups.map((group) => (
+                        <SelectGroup key={group.key}>
+                          <SelectLabel className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                            {isWorkspaceMode ? 'Projects' : group.label}
+                          </SelectLabel>
+                          {group.projects.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              <span className="flex items-center gap-2">
+                                {p.color && (
+                                  <span
+                                    className="inline-block h-2 w-2 shrink-0 rounded-full"
+                                    style={{ backgroundColor: p.color }}
+                                  />
+                                )}
+                                {p.name}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      ))
+                    : null}
+                  {isWorkspaceMode && clients.length > 0 ? (
                     <>
-                      <div className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide text-zinc-500">
-                        Projects
-                      </div>
-                      {projects.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          <span className="flex items-center gap-2">
-                            {p.color && (
-                              <span
-                                className="inline-block h-2 w-2 rounded-full"
-                                style={{ backgroundColor: p.color }}
-                              />
-                            )}
-                            {p.name}
-                          </span>
-                        </SelectItem>
-                      ))}
+                      {projectGroups.length > 0 ? (
+                        <SelectSeparator className="my-1 bg-white/10" />
+                      ) : null}
+                      <SelectGroup>
+                        <SelectLabel className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                          Clients
+                        </SelectLabel>
+                        {clients.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
                     </>
-                  )}
-                  {areas.length > 0 && (
+                  ) : null}
+                  {!isWorkspaceMode && areas.length > 0 ? (
                     <>
-                      <div className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide text-zinc-500">
-                        Life areas
-                      </div>
-                      {areas.map((a) => (
-                        <SelectItem key={a.id} value={a.id}>
-                          <span className="flex items-center gap-2">
-                            {a.color && (
-                              <span
-                                className="inline-block h-2 w-2 rounded-full"
-                                style={{ backgroundColor: a.color }}
-                              />
-                            )}
-                            {a.name}
-                          </span>
-                        </SelectItem>
-                      ))}
+                      {projectGroups.length > 0 ? (
+                        <SelectSeparator className="my-1 bg-white/10" />
+                      ) : null}
+                      <SelectGroup>
+                        <SelectLabel className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                          Life areas
+                        </SelectLabel>
+                        {areas.map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            <span className="flex items-center gap-2">
+                              {a.color && (
+                                <span
+                                  className="inline-block h-2 w-2 shrink-0 rounded-full"
+                                  style={{ backgroundColor: a.color }}
+                                />
+                              )}
+                              {a.name}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
                     </>
-                  )}
+                  ) : null}
                 </SelectContent>
               </Select>
             )}
+            {isWorkspaceMode &&
+            !optionsLoading &&
+            projects.length === 0 &&
+            clients.length === 0 ? (
+              <p className="text-xs text-zinc-500">
+                Create a project or client in this workspace first, then link a
+                task here.
+              </p>
+            ) : null}
           </div>
 
           {error && (

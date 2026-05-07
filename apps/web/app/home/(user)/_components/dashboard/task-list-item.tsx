@@ -1,6 +1,11 @@
 'use client';
 
-import { Circle, CheckCircle2, AlertTriangle, Clock } from 'lucide-react';
+import { useState } from 'react';
+
+import { Circle, CheckCircle2, AlertTriangle, Clock, Pencil } from 'lucide-react';
+
+import type { TasksPageTask } from '../../_lib/server/tasks.loader';
+import { EditTaskDialog } from '../../tasks/_components/edit-task-dialog';
 
 export type TaskListItemProps = {
   title: string;
@@ -10,6 +15,8 @@ export type TaskListItemProps = {
   priority: 'low' | 'medium' | 'high' | 'urgent';
   status: 'pending' | 'in_progress' | 'completed';
   accentColor?: string;
+  /** When set, shows Edit (same popup as /home/tasks) including delete. */
+  editTask?: TasksPageTask | null;
 };
 
 const priorityConfig = {
@@ -33,11 +40,14 @@ export function TaskListItem({
   priority,
   status,
   accentColor,
+  editTask,
 }: TaskListItemProps) {
+  const [editOpen, setEditOpen] = useState(false);
   const StatusIcon = statusIcons[status];
   const priorityCfg = priorityConfig[priority];
 
   return (
+    <>
     <div className="group flex items-start gap-3 rounded-xl border border-white/6 bg-[var(--workspace-shell-panel)] px-4 py-3 transition-colors hover:border-white/10">
       <span className="mt-0.5 shrink-0">
         {status === 'completed' ? (
@@ -58,6 +68,11 @@ export function TaskListItem({
           {title}
         </p>
         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+          {editTask?.workspaceName && (
+            <span className="rounded-md border border-violet-400/20 bg-violet-500/10 px-1.5 py-0.5 font-medium text-violet-200">
+              {editTask.workspaceName}
+            </span>
+          )}
           {(project || area) && (
             <span className="flex items-center gap-1.5">
               {accentColor && (
@@ -80,6 +95,25 @@ export function TaskListItem({
           )}
         </div>
       </div>
+      {editTask ? (
+        <button
+          type="button"
+          onClick={() => setEditOpen(true)}
+          className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-lg border border-white/8 px-2 py-1 text-[11px] text-zinc-400 transition-colors hover:border-white/16 hover:text-white"
+          aria-label="Edit task"
+        >
+          <Pencil className="h-3 w-3" />
+          <span className="hidden sm:inline">Edit</span>
+        </button>
+      ) : null}
     </div>
+    {editTask ? (
+      <EditTaskDialog
+        task={editTask}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+      />
+    ) : null}
+    </>
   );
 }

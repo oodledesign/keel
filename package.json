@@ -27,9 +27,12 @@
     "update": "pnpm update -r",
     "syncpack:list": "pnpm dlx syncpack list-mismatches",
     "syncpack:fix": "pnpm dlx syncpack fix-mismatches",
+    "supabase:web:exec": "pnpm --filter web exec supabase",
     "supabase:web:start": "pnpm --filter web supabase:start",
+    "supabase:web:start:full": "pnpm --filter web supabase:start:full",
     "supabase:web:start:minimal": "pnpm --filter web supabase:start:minimal",
     "supabase:web:stop": "pnpm --filter web supabase:stop",
+    "supabase:web:fresh": "pnpm --filter web supabase:fresh",
     "supabase:web:typegen": "pnpm --filter web supabase:typegen",
     "supabase:web:reset": "pnpm --filter web supabase:reset",
     "supabase:web:test": "pnpm --filter web supabase:test",
@@ -41,6 +44,8 @@
   "packageManager": "pnpm@10.19.0",
   "pnpm": {
     "overrides": {
+      "@supabase/ssr": "0.10.2",
+      "@supabase/supabase-js": "2.103.0",
       "zod": "3.25.76"
     }
   },
