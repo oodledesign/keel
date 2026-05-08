@@ -268,7 +268,8 @@ export const loadKeelDashboard = cache(async (): Promise<KeelDashboardData> => {
     activeDealsQuery,
     (() => {
       // Include personal tasks (no project) and tasks in family/community workspace projects.
-      // Do NOT require project_id IS NULL — family/homegroup tasks are project-linked.
+      // Include tasks with no due date — filtering on due_date alone silently drops them
+      // because NULL <= date evaluates to false in SQL.
       let q = client
         .from('tasks')
         .select(
@@ -276,9 +277,10 @@ export const loadKeelDashboard = cache(async (): Promise<KeelDashboardData> => {
         )
         .eq('user_id', userId)
         .is('client_id', null)
-        .lte('due_date', weekEnd)
         .not('status', 'eq', 'done')
-        .order('due_date', { ascending: true })
+        // Allow tasks with no due date OR tasks due within the next 7 days
+        .or(`due_date.is.null,due_date.lte.${weekEnd}`)
+        .order('due_date', { ascending: true, nullsFirst: false })
         .limit(50);
       if (lifeProjectIds.length > 0) {
         q = q.or(
