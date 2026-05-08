@@ -28,7 +28,7 @@ supabase stop --no-backup && supabase start --exclude realtime
 
 Push to github:
 git add -A
-git commit -m "big update6"
+git commit -m "properties, clients"
 git push
 
 

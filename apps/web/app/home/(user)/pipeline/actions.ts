@@ -84,7 +84,7 @@ export async function createDeal(input: CreateDealInput) {
   await requireUserInServerComponent();
 
   const parsed = parseWorkspaceDealBusinessId(input.businessId);
-  let resolvedAccountId =
+  const resolvedAccountId =
     input.accountId?.trim() ||
     parsed.accountId ||
     (await resolveAccountIdForBusiness(client, parsed.businessId));

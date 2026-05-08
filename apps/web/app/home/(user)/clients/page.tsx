@@ -63,7 +63,7 @@ async function PersonalClientsPage({ searchParams }: Props) {
     );
   }
 
-  let slug = sp.account?.trim() || accounts[0]?.value;
+  const slug = sp.account?.trim() || accounts[0]?.value;
   if (!slug) {
     redirect(pathsConfig.app.home);
   }
