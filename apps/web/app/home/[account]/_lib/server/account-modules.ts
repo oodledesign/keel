@@ -17,13 +17,14 @@ export type AccountModuleKey =
 
 export type AccountModuleSettingsMap = Partial<Record<AccountModuleKey, boolean>>;
 
-export type WorkspaceSpaceType = 'work' | 'family' | 'community';
+export type WorkspaceSpaceType = 'work' | 'family' | 'community' | 'property';
 
 export function normalizeSpaceType(
   raw: string | null | undefined,
 ): WorkspaceSpaceType {
   if (raw === 'family') return 'family';
   if (raw === 'community') return 'community';
+  if (raw === 'property') return 'property';
   return 'work';
 }
 

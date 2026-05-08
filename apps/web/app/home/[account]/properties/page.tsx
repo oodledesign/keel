@@ -31,8 +31,8 @@ async function PropertiesPage({ params }: PropertiesPageProps) {
     workspace.account as { space_type?: string | null },
   );
 
-  // Properties is a work-space feature only
-  if (spaceType !== 'work') {
+  // Properties is available on 'work' and 'property' space types
+  if (spaceType !== 'work' && spaceType !== 'property') {
     redirect(getDefaultAccountPath(slug, workspace.account));
   }
 

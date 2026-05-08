@@ -8,11 +8,13 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 import { DashboardPageContent } from './_components/dashboard-page-content';
 import { FamilyDashboard } from './_components/family-dashboard';
 import { HomegroupDashboard } from './_components/homegroup-dashboard';
+import { PropertyBusinessDashboard } from './_components/property-business-dashboard';
 import { TeamAccountLayoutPageHeader } from './_components/team-account-layout-page-header';
 import { getDefaultAccountPath, getTeamAccountAccess } from './_lib/role-access';
 import { getSpaceTypeFromAccount } from './_lib/server/account-modules';
 import { loadDashboardPageData } from './_lib/server/dashboard-page.loader';
 import { loadGroupDashboardData } from './_lib/server/group-dashboard.loader';
+import { loadPropertyDashboardData } from './_lib/server/property-dashboard.loader';
 import { loadTeamWorkspace } from './_lib/server/team-account-workspace.loader';
 
 interface TeamAccountHomePageProps {
@@ -49,6 +51,28 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
   const accountLabel =
     (workspace.account as { name?: string | null }).name?.trim() ||
     account;
+
+  if (spaceType === 'property') {
+    const propertyData = await loadPropertyDashboardData(account);
+    return (
+      <>
+        <TeamAccountLayoutPageHeader
+          account={account}
+          title={accountLabel}
+          description="Overview of your property business."
+        />
+        <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
+          <PropertyBusinessDashboard
+            accountSlug={account}
+            accountId={workspace.account.id as string}
+            propertyCounts={propertyData.propertyCounts}
+            members={propertyData.members}
+            recentTasks={propertyData.recentTasks}
+          />
+        </PageBody>
+      </>
+    );
+  }
 
   if (spaceType === 'family') {
     const groupData = await loadGroupDashboardData(account);

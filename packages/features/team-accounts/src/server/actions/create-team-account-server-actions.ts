@@ -69,7 +69,7 @@ export const createTeamAccountAction = enhanceAction(
     logger.info(ctx, `Team account created`);
 
     const accountHomePath =
-      spaceType === 'work'
+      spaceType === 'work' || spaceType === 'property'
         ? '/app/work/' + data.slug
         : spaceType === 'family'
           ? '/app/family'

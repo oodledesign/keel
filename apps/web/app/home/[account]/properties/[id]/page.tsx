@@ -35,7 +35,7 @@ async function PropertyDetailPage({ params }: PropertyDetailPageProps) {
     workspace.account as { space_type?: string | null },
   );
 
-  if (spaceType !== 'work') {
+  if (spaceType !== 'work' && spaceType !== 'property') {
     redirect(getDefaultAccountPath(slug, workspace.account));
   }
 

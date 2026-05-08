@@ -148,6 +148,60 @@ const getRoutes = (
         : []),
       ...buildWorkAppsCollapsible(account, ms),
     ];
+  } else if (spaceType === 'property') {
+    applicationChildren = [
+      ...dashboardItem,
+      {
+        label: 'Properties',
+        path: createPath(pathsConfig.app.accountProperties, account),
+        Icon: <Building2 className={iconClasses} />,
+      },
+      ...(access.canViewProjects && isWorkModuleEnabled(ms, 'jobs')
+        ? [
+            {
+              label: 'common:routes.jobs',
+              path: createPath(pathsConfig.app.accountJobs, account),
+              Icon: <ClipboardList className={iconClasses} />,
+            },
+          ]
+        : []),
+      ...(access.canViewClients && isWorkModuleEnabled(ms, 'clients')
+        ? [
+            {
+              label: 'common:routes.clients',
+              path: createPath(pathsConfig.app.accountClients, account),
+              Icon: <Briefcase className={iconClasses} />,
+            },
+          ]
+        : []),
+      ...(access.canViewInvoices && isWorkModuleEnabled(ms, 'invoices')
+        ? [
+            {
+              label: 'Invoices',
+              path: createPath(pathsConfig.app.accountInvoices, account),
+              Icon: <FileText className={iconClasses} />,
+            },
+          ]
+        : []),
+      ...(access.canViewDashboard && isWorkModuleEnabled(ms, 'tasks')
+        ? [
+            {
+              label: 'common:routes.tasks',
+              path: createPath(pathsConfig.app.accountTasks, account),
+              Icon: <CheckSquare className={iconClasses} />,
+            },
+          ]
+        : []),
+      ...(access.canViewMembers && isWorkModuleEnabled(ms, 'team')
+        ? [
+            {
+              label: 'common:routes.team',
+              path: createPath(pathsConfig.app.accountMembers, account),
+              Icon: <Users className={iconClasses} />,
+            },
+          ]
+        : []),
+    ];
   } else if (spaceType === 'family') {
     applicationChildren = [
       ...dashboardItem,
