@@ -9,6 +9,18 @@ import { requireUserInServerComponent } from '~/lib/server/require-user-in-serve
 import type { TasksPageTask } from '../server/tasks.loader';
 import { loadTasksForClient } from '../server/tasks.loader';
 
+const TASK_DB_PRIORITIES = new Set(['low', 'medium', 'high', 'urgent']);
+
+/** Maps UI / AI labels to values allowed by `tasks_priority_check` in the database. */
+function normalizeTaskPriorityForDb(
+  input: string | undefined | null,
+): string {
+  const raw = String(input ?? 'medium').trim().toLowerCase();
+  if (TASK_DB_PRIORITIES.has(raw)) return raw;
+  if (raw === 'normal' || raw === 'default') return 'medium';
+  return 'medium';
+}
+
 export type CreateTaskInput = {
   title: string;
   priority: string;
@@ -16,25 +28,64 @@ export type CreateTaskInput = {
   projectId?: string;
   areaId?: string;
   clientId?: string;
+  /** When set, inherits project/client/area from parent if those are omitted. */
+  parentTaskId?: string;
+  notes?: string | null;
 };
 
 export async function createTask(input: CreateTaskInput) {
   const client = getSupabaseServerClient();
   const user = await requireUserInServerComponent();
 
+  let projectId = input.projectId || null;
+  let clientId = input.clientId || null;
+  let areaId = input.areaId || null;
+
+  if (input.parentTaskId) {
+    const { data: parent, error: pe } = await client
+      .from('tasks')
+      .select('user_id, project_id, client_id, area_id')
+      .eq('id', input.parentTaskId)
+      .maybeSingle();
+
+    if (pe || !parent || (parent as { user_id: string }).user_id !== user.id) {
+      return {
+        success: false,
+        error: 'Parent task not found',
+        id: null,
+      };
+    }
+    const p = parent as {
+      project_id: string | null;
+      client_id: string | null;
+      area_id: string | null;
+    };
+    projectId = projectId ?? p.project_id;
+    clientId = clientId ?? p.client_id;
+    areaId = areaId ?? p.area_id;
+  }
+
+  const insertRow: Record<string, unknown> = {
+    title: input.title,
+    priority: normalizeTaskPriorityForDb(input.priority),
+    due_date: input.dueDate || null,
+    project_id: projectId,
+    area_id: areaId,
+    client_id: clientId,
+    user_id: user.id,
+    status: 'todo',
+  };
+
+  if (input.parentTaskId) {
+    insertRow.parent_task_id = input.parentTaskId;
+  }
+  if (input.notes?.trim()) {
+    insertRow.notes = input.notes.trim();
+  }
+
   const { data, error } = await client
     .from('tasks')
-    .insert({
-      title: input.title,
-      priority: input.priority,
-      due_date: input.dueDate || null,
-      project_id: input.projectId || null,
-      area_id: input.areaId || null,
-      client_id: input.clientId || null,
-      user_id: user.id,
-      // DB constraint allows: 'todo', 'in_progress', 'done', 'cancelled'
-      status: 'todo',
-    })
+    .insert(insertRow)
     .select('id')
     .single();
 
@@ -48,17 +99,29 @@ export async function createTask(input: CreateTaskInput) {
   }
 
   revalidatePath('/home', 'layout');
+  revalidatePath('/app/work', 'layout');
+  revalidatePath('/home/tasks');
+  revalidatePath('/app/tasks');
   return { success: true, error: null, id: data.id as string };
 }
 
-function uiStatusToDb(status: string): 'todo' | 'in_progress' | 'done' | 'cancelled' {
+function uiStatusToDb(
+  status: string,
+): 'todo' | 'in_progress' | 'client_review' | 'done' | 'cancelled' {
   switch (status) {
     case 'pending':
+    case 'todo':
+    case 'not_started':
       return 'todo';
     case 'in_progress':
       return 'in_progress';
+    case 'client_review':
+      return 'client_review';
     case 'completed':
+    case 'done':
       return 'done';
+    case 'cancelled':
+      return 'cancelled';
     default:
       return 'todo';
   }
@@ -75,6 +138,7 @@ export type UpdateTaskInput = {
   priority?: string;
   status?: string;
   dueDate?: string | null;
+  notes?: string | null;
   /** When set, replaces project/client/area linking (mutually exclusive). */
   assignment?: TaskAssignmentUpdate;
 };
@@ -85,9 +149,12 @@ export async function updateTask(taskId: string, input: UpdateTaskInput) {
 
   const updates: Record<string, unknown> = {};
   if (input.title !== undefined) updates.title = input.title;
-  if (input.priority !== undefined) updates.priority = input.priority;
+  if (input.priority !== undefined) {
+    updates.priority = normalizeTaskPriorityForDb(input.priority);
+  }
   if (input.status !== undefined) updates.status = uiStatusToDb(input.status);
   if (input.dueDate !== undefined) updates.due_date = input.dueDate || null;
+  if (input.notes !== undefined) updates.notes = input.notes?.trim() || null;
 
   if (input.assignment) {
     switch (input.assignment.kind) {
@@ -136,6 +203,9 @@ export async function updateTask(taskId: string, input: UpdateTaskInput) {
   }
 
   revalidatePath('/home', 'layout');
+  revalidatePath('/app/work', 'layout');
+  revalidatePath('/home/tasks');
+  revalidatePath('/app/tasks');
   return { success: true, error: null };
 }
 
@@ -154,6 +224,9 @@ export async function deleteTask(taskId: string) {
   }
 
   revalidatePath('/home', 'layout');
+  revalidatePath('/app/work', 'layout');
+  revalidatePath('/home/tasks');
+  revalidatePath('/app/tasks');
   return { success: true, error: null };
 }
 

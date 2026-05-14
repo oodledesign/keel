@@ -15,6 +15,7 @@ import {
 import { Badge } from '@kit/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 
+import { isCalendarOverdueYmd } from '../../_lib/due-date-ymd';
 import type { GroupMember, GroupProject, GroupTask } from '../_lib/server/group-dashboard.loader';
 
 interface HomegroupDashboardProps {
@@ -37,8 +38,8 @@ export function HomegroupDashboard({
   const [activeTab, setActiveTab] = useState<'tasks' | 'members'>('tasks');
 
   const totalOpenTasks = projects.reduce((sum, p) => sum + p.openTaskCount, 0);
-  const overdueCount = recentTasks.filter(
-    (t) => t.dueDate && new Date(t.dueDate) < new Date(),
+  const overdueCount = recentTasks.filter((t) =>
+    isCalendarOverdueYmd(t.dueDate),
   ).length;
 
   return (

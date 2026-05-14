@@ -20,6 +20,21 @@ cd /Users/danjamespotter/projects/keel/apps/web
 pnpm supabase db push
 
 
+cd /Users/danjamespotter/projects/keel/apps/web
+# Create a token at https://supabase.com/dashboard/account/tokens — never commit it.
+export SUPABASE_ACCESS_TOKEN="<paste-token-here>"
+
+cd /Users/danjamespotter/projects/keel/apps/web
+supabase link --project-ref igewpbdkvvhclfprteca
+
+cd /Users/danjamespotter/projects/keel/apps/web
+pnpm supabase db push
+
+
+
+
+
+
 to stop and start docker:
 
 cd /Users/danjamespotter/projects/keel/apps/web
@@ -28,7 +43,7 @@ supabase stop --no-backup && supabase start --exclude realtime
 
 Push to github:
 git add -A
-git commit -m "properties, clients"
+git commit -m "ai tasks, task UI"
 git push
 
 

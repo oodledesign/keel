@@ -17,6 +17,8 @@ interface CommunityTasksPageProps {
   params: Promise<{ account: string }>;
 }
 
+export const dynamic = 'force-dynamic';
+
 export const generateMetadata = async () => {
   const i18n = await createI18nServerInstance();
   const title = i18n.t('teams:home.pageTitle');
@@ -67,6 +69,7 @@ async function CommunityTasksPage({ params }: CommunityTasksPageProps) {
           initialTasks={tasks}
           variant="workspace"
           workspaceAccountId={accountId}
+          workspaceAccountSlug={slug}
         />
       </PageBody>
     </>

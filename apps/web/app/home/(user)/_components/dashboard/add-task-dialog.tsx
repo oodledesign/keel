@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 
+import Link from 'next/link';
+
 import {
   Dialog,
   DialogContent,
@@ -25,7 +27,9 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 
-import { Loader2, Plus } from 'lucide-react';
+import { Loader2, Plus, Sparkles } from 'lucide-react';
+
+import pathsConfig from '~/config/paths.config';
 
 import {
   createTask,
@@ -45,9 +49,14 @@ const PRIORITIES = [
 type AddTaskDialogProps = {
   /** When set, only projects/clients in this team workspace; assignment required so the task appears on workspace Tasks. */
   workspaceAccountId?: string;
+  /** Slug for workspace routes (e.g. AI task extract). Required when `workspaceAccountId` is set. */
+  workspaceAccountSlug?: string;
 };
 
-export function AddTaskDialog({ workspaceAccountId }: AddTaskDialogProps) {
+export function AddTaskDialog({
+  workspaceAccountId,
+  workspaceAccountSlug,
+}: AddTaskDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -300,6 +309,21 @@ export function AddTaskDialog({ workspaceAccountId }: AddTaskDialogProps) {
           {error && (
             <p className="text-sm text-rose-400">{error}</p>
           )}
+
+          {isWorkspaceMode && workspaceAccountSlug ? (
+            <p className="text-xs text-zinc-500">
+              <Link
+                href={pathsConfig.app.accountTasksExtract.replace(
+                  '[account]',
+                  workspaceAccountSlug,
+                )}
+                className="font-medium text-[#57C87F] hover:underline"
+              >
+                <Sparkles className="mr-1 inline h-3 w-3" />
+                Extract tasks from email or transcript (AI)
+              </Link>
+            </p>
+          ) : null}
 
           <DialogFooter>
             <button

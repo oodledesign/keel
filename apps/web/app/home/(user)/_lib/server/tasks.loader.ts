@@ -9,6 +9,8 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { getDbForWorkspaceTaskAssignmentOptions } from '~/home/_lib/server/workspace-scope';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
+import { parseDueDateParts, toIsoDateString } from '../../../_lib/due-date-ymd';
+
 type TaskQueryRow = {
   id: string;
   title?: string | null;
@@ -18,6 +20,8 @@ type TaskQueryRow = {
   project_id?: string | null;
   client_id?: string | null;
   area_id?: string | null;
+  parent_task_id?: string | null;
+  notes?: string | null;
 };
 
 type ProjectEnrichment = {
@@ -53,7 +57,7 @@ export type TasksPageTask = {
   projectName: string | null;
   areaLabel: string | null;
   context: 'work' | 'life';
-  status: 'pending' | 'in_progress' | 'completed';
+  status: 'pending' | 'in_progress' | 'client_review' | 'completed';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   dueDateLabel: string;
   dueDate: string | null; // ISO date for edit form
@@ -65,6 +69,10 @@ export type TasksPageTask = {
   /** Team account (workspace) for work tasks — from linked project or client. */
   workspaceName: string | null;
   workspaceSlug: string | null;
+  parentTaskId: string | null;
+  notes: string | null;
+  /** Populated for root tasks only (see `nestTaskTree`). */
+  subtasks?: TasksPageTask[];
 };
 
 function workspaceFromAccountId(
@@ -86,13 +94,23 @@ function workspaceFromAccountId(
 
 function mapTaskStatus(
   status: string | null | undefined,
-): 'pending' | 'in_progress' | 'completed' {
+): 'pending' | 'in_progress' | 'client_review' | 'completed' {
   switch ((status ?? '').toLowerCase()) {
     case 'todo':
+    case 'pending':
+    case 'not_started':
+    case 'open':
       return 'pending';
     case 'in_progress':
       return 'in_progress';
+    case 'client_review':
+    case 'review':
+    case 'in_review':
+    case 'awaiting_client':
+      return 'client_review';
     case 'done':
+    case 'completed':
+    case 'complete':
     case 'cancelled':
       return 'completed';
     default:
@@ -101,8 +119,9 @@ function mapTaskStatus(
 }
 
 function formatDueDateLabel(due: string | null): string {
-  if (!due) return '';
-  const date = new Date(due);
+  const parts = parseDueDateParts(due);
+  if (!parts) return '';
+  const date = new Date(parts.y, parts.m - 1, parts.d, 12, 0, 0, 0);
   if (Number.isNaN(date.getTime())) return '';
   return date.toLocaleDateString('en-GB', {
     weekday: 'short',
@@ -176,7 +195,7 @@ function taskRowToPageTask(
     status: mapTaskStatus(row.status),
     priority: (row.priority as TasksPageTask['priority']) ?? 'medium',
     dueDateLabel: formatDueDateLabel(dueDateRaw),
-    dueDate: dueDateRaw ? String(dueDateRaw).slice(0, 10) : null,
+    dueDate: toIsoDateString(dueDateRaw),
     accentColor,
     clientId: row.client_id ?? null,
     projectId: row.project_id ?? null,
@@ -184,7 +203,34 @@ function taskRowToPageTask(
     clientName,
     workspaceName,
     workspaceSlug,
+    parentTaskId: row.parent_task_id ?? null,
+    notes: row.notes?.trim() ? row.notes : null,
   };
+}
+
+function nestTaskTree(flat: TasksPageTask[]): TasksPageTask[] {
+  const byParent = new Map<string, TasksPageTask[]>();
+  for (const t of flat) {
+    if (t.parentTaskId) {
+      const list = byParent.get(t.parentTaskId) ?? [];
+      list.push(t);
+      byParent.set(t.parentTaskId, list);
+    }
+  }
+  for (const list of byParent.values()) {
+    list.sort((a, b) => {
+      const da = a.dueDate ?? '';
+      const db = b.dueDate ?? '';
+      if (da !== db) return da.localeCompare(db);
+      return a.title.localeCompare(b.title);
+    });
+  }
+  return flat
+    .filter((t) => !t.parentTaskId)
+    .map((t) => ({
+      ...t,
+      subtasks: byParent.get(t.id) ?? [],
+    }));
 }
 
 async function enrichTaskRows(
@@ -273,7 +319,8 @@ async function enrichTaskRows(
 
   const maps = { projects, clients, areas, accountsById };
 
-  return rows.map((row) => taskRowToPageTask(row, maps, contextOverride));
+  const flat = rows.map((row) => taskRowToPageTask(row, maps, contextOverride));
+  return nestTaskTree(flat);
 }
 
 export const loadTasksForUser = cache(async (): Promise<TasksPageTask[]> => {
@@ -283,7 +330,7 @@ export const loadTasksForUser = cache(async (): Promise<TasksPageTask[]> => {
   const { data, error } = await client
     .from('tasks')
     .select(
-      'id, title, status, priority, due_date, project_id, client_id, area_id',
+      'id, title, status, priority, due_date, project_id, client_id, area_id, parent_task_id, notes',
     )
     .eq('user_id', user.id)
     .order('due_date', { ascending: true, nullsLast: true });
@@ -305,7 +352,7 @@ export const loadTasksForClient = cache(
     const { data, error } = await client
       .from('tasks')
       .select(
-        'id, title, status, priority, due_date, project_id, client_id, area_id',
+        'id, title, status, priority, due_date, project_id, client_id, area_id, parent_task_id, notes',
       )
       .eq('user_id', user.id)
       .eq('client_id', clientId)
@@ -320,7 +367,7 @@ export const loadTasksForClient = cache(
   },
 );
 
-/** Current user's tasks linked to this team account via projects or CRM clients. */
+/** Tasks linked to this team account’s projects or CRM clients (RLS + project/client ID scope). */
 export const loadTasksForTeamAccount = cache(
   async (accountId: string): Promise<TasksPageTask[]> => {
     const userClient = getSupabaseServerClient();
@@ -349,12 +396,12 @@ export const loadTasksForTeamAccount = cache(
       return [];
     }
 
-    let query = userClient
-      .from('tasks')
-      .select(
-        'id, title, status, priority, due_date, project_id, client_id, area_id',
-      )
-      .eq('user_id', user.id);
+    // Do not filter by user_id here: RLS already limits rows to tasks you may see
+    // (your own or workspace-linked). Scoping to this account’s project/client IDs
+    // keeps the list aligned with the workspace surface.
+    let query = userClient.from('tasks').select(
+      'id, title, status, priority, due_date, project_id, client_id, area_id, parent_task_id, notes',
+    );
 
     if (projectIds.length > 0 && clientIds.length > 0) {
       query = query.or(

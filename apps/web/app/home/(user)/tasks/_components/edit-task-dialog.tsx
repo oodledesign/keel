@@ -21,8 +21,10 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@kit/ui/dialog';
+import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import { Textarea } from '@kit/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -38,6 +40,7 @@ import { Loader2 } from 'lucide-react';
 
 import type { TasksPageTask } from '../../_lib/server/tasks.loader';
 import {
+  createTask,
   deleteTask,
   loadTaskAssignmentOptions,
   loadTaskAssignmentOptionsForWorkspace,
@@ -55,9 +58,10 @@ const PRIORITIES = [
 ];
 
 const STATUSES = [
-  { key: 'pending', label: 'To do' },
+  { key: 'pending', label: 'Not started' },
   { key: 'in_progress', label: 'In progress' },
-  { key: 'completed', label: 'Done' },
+  { key: 'client_review', label: 'Client review' },
+  { key: 'completed', label: 'Completed' },
 ];
 
 type Props = {
@@ -122,12 +126,16 @@ export function EditTaskDialog({
   const [priority, setPriority] = useState(task.priority);
   const [status, setStatus] = useState(task.status);
   const [dueDate, setDueDate] = useState(task.dueDate ?? '');
+  const [notes, setNotes] = useState(task.notes ?? '');
   const [options, setOptions] = useState<TaskAssignmentOption[]>([]);
   const [optionsLoading, setOptionsLoading] = useState(false);
   const [assignTo, setAssignTo] = useState(initialAssignTo(task));
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+  const [subtaskAdding, setSubtaskAdding] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   const isWorkspaceMode = Boolean(workspaceAccountId);
+  const isRootTask = !task.parentTaskId;
 
   useEffect(() => {
     if (!open) {
@@ -154,9 +162,11 @@ export function EditTaskDialog({
       setPriority(task.priority);
       setStatus(task.status);
       setDueDate(task.dueDate ?? '');
+      setNotes(task.notes ?? '');
       setAssignTo(initialAssignTo(task));
       setError(null);
       setDeleteDialogOpen(false);
+      setNewSubtaskTitle('');
     }
   }, [
     open,
@@ -165,10 +175,38 @@ export function EditTaskDialog({
     task.priority,
     task.status,
     task.dueDate,
+    task.notes,
     task.projectId,
     task.clientId,
     task.areaId,
   ]);
+
+  async function handleAddSubtask() {
+    if (!isRootTask) return;
+    const trimmed = newSubtaskTitle.trim();
+    if (!trimmed) return;
+    setError(null);
+    setSubtaskAdding(true);
+    try {
+      const result = await createTask({
+        title: trimmed,
+        priority: 'medium',
+        parentTaskId: task.id,
+        projectId: task.projectId ?? undefined,
+        clientId: task.clientId ?? undefined,
+        areaId: task.areaId ?? undefined,
+      });
+      if (!result.success) {
+        setError(result.error ?? 'Failed to add subtask');
+        return;
+      }
+      setNewSubtaskTitle('');
+      onSaved?.();
+      router.refresh();
+    } finally {
+      setSubtaskAdding(false);
+    }
+  }
 
   function handleDeleteConfirm() {
     setError(null);
@@ -216,6 +254,7 @@ export function EditTaskDialog({
         priority,
         status,
         dueDate: dueDate || null,
+        notes: notes.trim() || null,
         assignment,
       });
 
@@ -264,6 +303,70 @@ export function EditTaskDialog({
                 className="border-white/10 bg-white/5 text-white placeholder:text-zinc-600"
               />
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-notes" className="text-zinc-300">
+                Notes
+              </Label>
+              <Textarea
+                id="edit-notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Context, checklist, or transcript snippet…"
+                className="min-h-[88px] border-white/10 bg-white/5 text-sm text-white placeholder:text-zinc-600"
+              />
+            </div>
+
+            {isRootTask ? (
+              <div className="space-y-2 rounded-lg border border-white/8 bg-white/[0.03] p-3">
+                <Label htmlFor="new-subtask" className="text-zinc-300">
+                  Subtasks
+                </Label>
+                {(task.subtasks?.length ?? 0) > 0 ? (
+                  <p className="text-xs text-zinc-500">
+                    {(task.subtasks ?? []).filter((s) => s.status === 'completed').length}
+                    /{(task.subtasks ?? []).length} complete
+                  </p>
+                ) : (
+                  <p className="text-xs text-zinc-500">
+                    Break this task into smaller steps.
+                  </p>
+                )}
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+                  <Input
+                    id="new-subtask"
+                    value={newSubtaskTitle}
+                    onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        void handleAddSubtask();
+                      }
+                    }}
+                    placeholder="New subtask title"
+                    className="border-white/10 bg-white/5 text-white placeholder:text-zinc-600 sm:flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="shrink-0 border-white/15 bg-white/5 text-zinc-200 hover:bg-white/10 hover:text-white"
+                    disabled={
+                      subtaskAdding || !newSubtaskTitle.trim() || isDeleting
+                    }
+                    onClick={() => void handleAddSubtask()}
+                  >
+                    {subtaskAdding ? (
+                      <>
+                        <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                        Adding…
+                      </>
+                    ) : (
+                      'Add subtask'
+                    )}
+                  </Button>
+                </div>
+              </div>
+            ) : null}
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

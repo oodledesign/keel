@@ -18,6 +18,8 @@ interface TeamAccountTasksPageProps {
   params: Promise<{ account: string }>;
 }
 
+export const dynamic = 'force-dynamic';
+
 export const generateMetadata = async () => {
   const i18n = await createI18nServerInstance();
   const title = i18n.t('common:routes.tasks');
@@ -40,7 +42,7 @@ async function TeamAccountTasksPage({ params }: TeamAccountTasksPageProps) {
     <>
       <TeamAccountLayoutPageHeader
         title={<Trans i18nKey="common:routes.tasks" />}
-        description="Your tasks linked to projects and clients in this workspace."
+        description="Tasks linked to projects and clients in this workspace."
         account={accountSlug}
       />
 
@@ -49,6 +51,7 @@ async function TeamAccountTasksPage({ params }: TeamAccountTasksPageProps) {
           initialTasks={tasks}
           variant="workspace"
           workspaceAccountId={accountId}
+          workspaceAccountSlug={accountSlug}
         />
       </PageBody>
     </>

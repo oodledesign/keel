@@ -4,6 +4,8 @@ import { cache } from 'react';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { toIsoDateString } from '../../../_lib/due-date-ymd';
+
 export type GroupProject = {
   id: string;
   name: string;
@@ -71,6 +73,7 @@ export const loadGroupDashboardData = cache(
           .from('tasks')
           .select('id', { count: 'exact', head: true })
           .eq('project_id', p.id)
+          .is('parent_task_id', null)
           .not('status', 'eq', 'done');
         return {
           id: p.id,
@@ -106,6 +109,7 @@ export const loadGroupDashboardData = cache(
         .from('tasks')
         .select('id, title, status, priority, due_date, project_id')
         .in('project_id', projectIds)
+        .is('parent_task_id', null)
         .not('status', 'eq', 'done')
         .order('due_date', { ascending: true, nullsLast: true })
         .limit(20);
@@ -124,7 +128,7 @@ export const loadGroupDashboardData = cache(
         title: t.title ?? 'Untitled',
         status: t.status ?? 'todo',
         priority: t.priority ?? 'medium',
-        dueDate: t.due_date ? String(t.due_date).slice(0, 10) : null,
+        dueDate: toIsoDateString(t.due_date),
         projectName: t.project_id ? (projectNameMap.get(t.project_id) ?? null) : null,
       }));
     }
