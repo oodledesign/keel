@@ -104,8 +104,8 @@ const STATUS_LABEL: Record<TaskStatus, string> = STATUS_COLUMNS.reduce(
 /** Shared grid for list header + task rows (ClickUp-style columns). */
 function taskListRowGridClass(showWorkspace: boolean) {
   return showWorkspace
-    ? 'grid grid-cols-[1.25rem_1.5rem_minmax(0,1.45fr)_minmax(0,0.65fr)_minmax(0,0.72fr)_minmax(0,0.72fr)_5.5rem_6.25rem_4.75rem_2.25rem] items-center gap-x-2 px-3 py-2 sm:gap-x-3 sm:px-4 sm:py-2.5'
-    : 'grid grid-cols-[1.25rem_1.5rem_minmax(0,1.65fr)_minmax(0,0.85fr)_minmax(0,0.85fr)_5.5rem_6.25rem_4.75rem_2.25rem] items-center gap-x-2 px-3 py-2 sm:gap-x-3 sm:px-4 sm:py-2.5';
+    ? 'grid grid-cols-[1.25rem_1.5rem_minmax(260px,1.65fr)_minmax(120px,0.75fr)_minmax(130px,0.8fr)_minmax(140px,0.85fr)_6.75rem_5.5rem_4.75rem_2.25rem] items-center gap-x-2 px-3 py-2 sm:gap-x-3 sm:px-4'
+    : 'grid grid-cols-[1.25rem_1.5rem_minmax(280px,1.8fr)_minmax(140px,0.9fr)_minmax(150px,1fr)_6.75rem_5.5rem_4.75rem_2.25rem] items-center gap-x-2 px-3 py-2 sm:gap-x-3 sm:px-4';
 }
 
 function TaskTableHeader({ showWorkspaceTag }: { showWorkspaceTag: boolean }) {
@@ -114,19 +114,19 @@ function TaskTableHeader({ showWorkspaceTag }: { showWorkspaceTag: boolean }) {
     <div
       className={cn(
         g,
-        'border-b border-white/10 bg-white/[0.04] text-[11px] font-semibold uppercase tracking-wide text-zinc-500',
+        'border-b border-white/10 bg-white/[0.04] text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500',
       )}
       role="row"
     >
       <span aria-hidden className="block w-3 shrink-0" />
       <span className="sr-only">Done</span>
-      <span>Name</span>
-      {showWorkspaceTag ? <span>Workspace</span> : null}
-      <span>Client</span>
-      <span>List</span>
-      <span>Due</span>
-      <span>Status</span>
-      <span>Priority</span>
+      <span className="truncate">Name</span>
+      {showWorkspaceTag ? <span className="truncate">Workspace</span> : null}
+      <span className="truncate">Client</span>
+      <span className="truncate">List</span>
+      <span className="truncate">Due</span>
+      <span className="truncate">Status</span>
+      <span className="truncate">Priority</span>
       <span className="sr-only">Edit</span>
     </div>
   );
@@ -520,7 +520,11 @@ export function TasksPageClient({
             </div>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-white/6 bg-[var(--workspace-shell-panel)] shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]">
-              <div className="min-w-[880px]">
+              <div
+                className={cn(
+                  variant === 'personal' ? 'min-w-[1080px]' : 'min-w-[940px]',
+                )}
+              >
                 <TaskTableHeader showWorkspaceTag={variant === 'personal'} />
                 {statusFilter === 'active' && urgent.length > 0 && (
                   <div className="flex items-center gap-2 border-b border-white/8 bg-amber-500/[0.07] px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-amber-400/95">
@@ -780,10 +784,22 @@ function TaskRow({
   return (
     <div
       className={cn(
-        !isRoot &&
-          'ml-0.5 border-l border-dashed border-white/[0.12] pl-2 sm:ml-1 sm:pl-3',
+        'relative',
+        !isRoot && 'pl-6 sm:pl-8',
       )}
     >
+      {!isRoot ? (
+        <>
+          <span
+            aria-hidden
+            className="absolute bottom-0 left-3 top-0 w-px bg-white/[0.12] sm:left-4"
+          />
+          <span
+            aria-hidden
+            className="absolute left-3 top-1/2 h-px w-3 bg-white/[0.16] sm:left-4 sm:w-4"
+          />
+        </>
+      ) : null}
       <div
         className={cn(
           rowGrid,
@@ -791,7 +807,7 @@ function TaskRow({
             'bg-rose-500/[0.07] ring-1 ring-inset ring-rose-400/20 hover:bg-rose-500/[0.09]',
           !overdue && 'hover:bg-white/[0.035]',
           !isRoot && !overdue && 'bg-transparent hover:bg-white/[0.025]',
-          'border-b border-white/[0.06] transition-colors',
+          'relative border-b border-white/[0.06] transition-colors',
         )}
       >
         <div className="flex justify-center">
@@ -887,9 +903,11 @@ function TaskRow({
         </div>
         <div className="min-w-0">
           {task.status === 'pending' && !isDone ? (
-            <span className="text-xs text-zinc-500">Not started</span>
+            <span className="block truncate text-[11px] leading-5 text-zinc-500">
+              Not started
+            </span>
           ) : (
-            <StatusPill status={task.status} />
+            <StatusPill status={task.status} compact />
           )}
         </div>
         <span
@@ -1123,19 +1141,30 @@ function BoardCard({
 
 // ─── Status / overdue pills ─────────────────────────────────────────
 
-function StatusPill({ status }: { status: TaskStatus }) {
+function StatusPill({
+  status,
+  compact = false,
+}: {
+  status: TaskStatus;
+  compact?: boolean;
+}) {
   const col = STATUS_COLUMNS.find((c) => c.key === status);
   if (!col) return null;
   return (
     <span
-      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-medium text-zinc-200"
+      className={cn(
+        'inline-flex max-w-full items-center gap-1 rounded-[5px] font-medium text-zinc-200',
+        compact
+          ? 'px-1.5 py-0 text-[11px] leading-5'
+          : 'px-1.5 py-0.5 text-xs leading-5',
+      )}
       style={{ backgroundColor: col.tint }}
     >
       <span
-        className="inline-block h-1.5 w-1.5 rounded-full"
+        className="inline-block h-1.5 w-1.5 shrink-0 rounded-full"
         style={{ backgroundColor: col.dot }}
       />
-      {STATUS_LABEL[status]}
+      <span className="truncate">{STATUS_LABEL[status]}</span>
     </span>
   );
 }
@@ -1153,9 +1182,16 @@ function OverduePill({
       ? `Overdue · ${formatOverdueDate(dueDate)}`
       : 'Overdue';
   return (
-    <span className="inline-flex items-center gap-1 rounded-md border border-rose-400/30 bg-rose-500/15 px-1.5 py-0.5 font-medium text-rose-200">
-      <AlertTriangle className="h-3 w-3" />
-      {label}
+    <span
+      className={cn(
+        'inline-flex max-w-full items-center gap-1 rounded-[5px] border border-rose-400/25 bg-rose-500/12 font-medium text-rose-200',
+        compact
+          ? 'px-1.5 py-0 text-[11px] leading-5'
+          : 'px-1.5 py-0.5 text-xs leading-5',
+      )}
+    >
+      <AlertTriangle className="h-2.5 w-2.5 shrink-0" />
+      <span className="truncate">{label}</span>
     </span>
   );
 }
