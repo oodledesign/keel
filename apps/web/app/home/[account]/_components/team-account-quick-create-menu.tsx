@@ -23,7 +23,7 @@ const items = [
     description: 'Create a new project job',
     icon: BriefcaseBusiness,
     href: pathsConfig.app.accountJobs,
-    tone: 'from-emerald-500/20 to-emerald-500/5 text-emerald-300',
+    tone: 'from-[var(--keel-teal)]/20 to-[var(--keel-teal)]/5 text-[#5eead4]',
   },
   {
     key: 'invoice',
@@ -59,7 +59,7 @@ export function TeamAccountQuickCreateMenu(props: { account: string }) {
       <PopoverTrigger asChild>
         <Button
           size="icon"
-          className="h-11 w-11 rounded-xl border border-emerald-400/40 bg-emerald-500 text-[#05120b] shadow-[0_10px_24px_rgba(5,46,22,0.55)] hover:bg-emerald-400"
+          className="h-11 w-11 rounded-xl border border-[var(--keel-teal)]/40 bg-[var(--keel-teal)] text-white shadow-[0_10px_24px_rgba(5,46,22,0.55)] hover:bg-[#238b7f]"
         >
           <Plus className="h-5 w-5" />
           <span className="sr-only">Create new item</span>

@@ -1,14 +1,15 @@
 import { redirect } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
-import { Trans } from '@kit/ui/trans';
-
-import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
 import { getDefaultAccountPath } from '../_lib/role-access';
-import { isWorkModuleEnabled } from '../_lib/server/account-modules';
+import {
+  getSpaceTypeFromAccount,
+  isPropertyNavModuleEnabled,
+  isWorkModuleEnabled,
+} from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import { loadJobsPageData } from './_lib/server/jobs-page.loader';
 import { JobsPageContent } from './_components/jobs-page-content';
@@ -17,17 +18,33 @@ interface JobsPageProps {
   params: Promise<{ account: string }>;
 }
 
-export const generateMetadata = async () => {
-  const i18n = await createI18nServerInstance();
-  const title = i18n.t('common:routes.jobs');
-  return { title };
+export const generateMetadata = async ({
+  params,
+}: {
+  params: Promise<{ account: string }>;
+}) => {
+  const workspace = await loadTeamWorkspace((await params).account);
+  const spaceType = getSpaceTypeFromAccount(
+    workspace.account as { space_type?: string | null },
+  );
+  return {
+    title: spaceType === 'property' ? 'Maintenance' : 'Projects',
+  };
 };
 
 async function JobsPage({ params }: JobsPageProps) {
   const accountSlug = (await params).account;
   const workspace = await loadTeamWorkspace(accountSlug);
+  const spaceType = getSpaceTypeFromAccount(
+    workspace.account as { space_type?: string | null },
+  );
 
-  if (!isWorkModuleEnabled(workspace.moduleSettings, 'jobs')) {
+  const jobsEnabled =
+    spaceType === 'property'
+      ? isPropertyNavModuleEnabled(workspace.moduleSettings, 'maintenance')
+      : isWorkModuleEnabled(workspace.moduleSettings, 'jobs');
+
+  if (!jobsEnabled) {
     redirect(getDefaultAccountPath(accountSlug, workspace.account));
   }
 
@@ -37,14 +54,19 @@ async function JobsPage({ params }: JobsPageProps) {
     canViewJobs,
     canEditJobs,
     isContractorView,
-  } =
-    await loadJobsPageData(accountSlug);
+  } = await loadJobsPageData(accountSlug);
+
+  const isProperty = spaceType === 'property';
 
   return (
     <>
       <TeamAccountLayoutPageHeader
-        title={<Trans i18nKey="common:routes.jobs" />}
-        description="Manage jobs and assignments"
+        title={isProperty ? 'Maintenance' : 'Projects'}
+        description={
+          isProperty
+            ? 'Open jobs and work orders'
+            : 'Manage projects and assignments'
+        }
         account={slug}
       />
 
@@ -55,6 +77,7 @@ async function JobsPage({ params }: JobsPageProps) {
           canViewJobs={canViewJobs}
           canEditJobs={canEditJobs}
           isContractorView={isContractorView}
+          uiVariant={isProperty ? 'maintenance' : 'projects'}
         />
       </PageBody>
     </>

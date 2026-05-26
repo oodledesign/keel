@@ -51,7 +51,7 @@ export function TaskListItem({
     <div className="group flex items-start gap-3 rounded-xl border border-white/6 bg-[var(--workspace-shell-panel)] px-4 py-3 transition-colors hover:border-white/10">
       <span className="mt-0.5 shrink-0">
         {status === 'completed' ? (
-          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+          <CheckCircle2 className="h-4 w-4 text-[#5eead4]" />
         ) : (
           <StatusIcon className="h-4 w-4 text-zinc-500" />
         )}

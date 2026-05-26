@@ -17,11 +17,19 @@ import pathsConfig from '~/config/paths.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 // local imports
+import { TeamWorkspaceTopBarSlot } from '~/components/workspace-shell/workspace-top-bar-slot';
+
 import { TeamAccountLayoutMobileNavigation } from './_components/team-account-layout-mobile-navigation';
 import { TeamAccountLayoutSidebar } from './_components/team-account-layout-sidebar';
 import { TeamAccountNavigationMenu } from './_components/team-account-navigation-menu';
-import { getSpaceTypeFromAccount } from './_lib/server/account-modules';
+import { spaceTypeFromProfile } from './_lib/server/workspace-profile';
 import { loadTeamWorkspace } from './_lib/server/team-account-workspace.loader';
+import { loadWorkspaceSwitcherAccounts } from '../_lib/server/workspace-switcher.loader';
+import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
+import {
+  userRequiresWorkspaceSetup,
+  workspaceSetupPath,
+} from '~/lib/server/workspace-setup-guard';
 
 type TeamWorkspaceLayoutProps = React.PropsWithChildren<{
   params: Promise<{ account: string }>;
@@ -44,32 +52,35 @@ async function SidebarLayout({
 }: React.PropsWithChildren<{
   account: string;
 }>) {
-  const [data, state] = await Promise.all([
+  const user = await requireUserInServerComponent();
+  if (await userRequiresWorkspaceSetup(user.id)) {
+    redirect(workspaceSetupPath());
+  }
+
+  const client = (await import('@kit/supabase/server-client')).getSupabaseServerClient();
+
+  const [data, state, switcherAccounts] = await Promise.all([
     loadTeamWorkspace(account),
     getLayoutState(account),
+    loadWorkspaceSwitcherAccounts(client, user.id),
   ]);
 
   if (!data) {
     redirect('/');
   }
 
-  const accounts = data.accounts.map(
-    ({ name, slug, picture_url, role }: { name: string | null; slug: string | null; picture_url: string | null; role?: string | null }) => ({
-      label: name ?? '',
-      value: slug,
-      image: picture_url,
-      role: role ?? null,
-    }),
-  );
-
-  const spaceType = getSpaceTypeFromAccount(
-    data.account as { space_type?: string | null },
-  );
+  const workspaceProfile = data.workspaceProfile;
+  const spaceType = spaceTypeFromProfile(workspaceProfile);
+  const accounts =
+    switcherAccounts.length > 0 ? switcherAccounts : [];
 
   return (
     <TeamAccountWorkspaceContextProvider value={data}>
       <SidebarProvider defaultOpen={state.open}>
-        <Page style={'sidebar'}>
+        <Page
+          style={'sidebar'}
+          contentContainerClassName="mx-auto flex h-screen w-full min-w-0 flex-1 flex-col bg-[var(--workspace-shell-canvas)]"
+        >
           <PageNavigation>
             <TeamAccountLayoutSidebar
               account={account}
@@ -77,7 +88,7 @@ async function SidebarLayout({
               accounts={accounts}
               user={data.user}
               moduleSettings={data.moduleSettings}
-              spaceType={spaceType}
+              workspaceProfile={workspaceProfile}
               accountAccess={
                 data.account as {
                   permissions?: string[] | null;
@@ -99,7 +110,7 @@ async function SidebarLayout({
                 userId={data.user.id}
                 accounts={accounts}
                 account={account}
-                spaceType={spaceType}
+                workspaceProfile={workspaceProfile}
                 moduleSettings={data.moduleSettings}
                 accountAccess={
                   data.account as {
@@ -116,6 +127,7 @@ async function SidebarLayout({
             </div>
           </PageMobileNavigation>
 
+          <TeamWorkspaceTopBarSlot account={account} />
           {children}
         </Page>
       </SidebarProvider>
@@ -123,26 +135,25 @@ async function SidebarLayout({
   );
 }
 
-function HeaderLayout({
+async function HeaderLayout({
   account,
   children,
 }: React.PropsWithChildren<{
   account: string;
 }>) {
-  const data = use(loadTeamWorkspace(account));
+  const user = await requireUserInServerComponent();
+  if (await userRequiresWorkspaceSetup(user.id)) {
+    redirect(workspaceSetupPath());
+  }
 
-  const accounts = data.accounts.map(
-    ({ name, slug, picture_url, role }: { name: string | null; slug: string | null; picture_url: string | null; role?: string | null }) => ({
-      label: name ?? '',
-      value: slug,
-      image: picture_url,
-      role: role ?? null,
-    }),
-  );
+  const client = (await import('@kit/supabase/server-client')).getSupabaseServerClient();
+  const [data, switcherAccounts] = await Promise.all([
+    loadTeamWorkspace(account),
+    loadWorkspaceSwitcherAccounts(client, user.id),
+  ]);
 
-  const spaceType = getSpaceTypeFromAccount(
-    data.account as { space_type?: string | null },
-  );
+  const workspaceProfile = data.workspaceProfile;
+  const accounts = switcherAccounts;
 
   return (
     <TeamAccountWorkspaceContextProvider value={data}>
@@ -162,7 +173,7 @@ function HeaderLayout({
               userId={data.user.id}
               accounts={accounts}
               account={account}
-              spaceType={spaceType}
+              workspaceProfile={workspaceProfile}
               moduleSettings={data.moduleSettings}
               accountAccess={
                 data.account as {

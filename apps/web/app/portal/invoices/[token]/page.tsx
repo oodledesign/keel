@@ -91,7 +91,7 @@ export default async function PortalInvoicePage({
         </Link>
       </div>
       {paid === '1' && isPaid && (
-        <div className="mb-6 rounded-lg border border-emerald-700 bg-emerald-500/10 px-4 py-3 text-emerald-400">
+        <div className="mb-6 rounded-lg border border-emerald-700 bg-[var(--keel-teal)]/10 px-4 py-3 text-[#5eead4]">
           Payment successful. Thank you.
         </div>
       )}

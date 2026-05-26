@@ -52,11 +52,11 @@ const STAGE_COLORS: Record<
   { dot: string; bar: string; tint: string }
 > = {
   lead: { dot: '#3B82F6', bar: '#3B82F6', tint: 'rgba(59,130,246,0.08)' },
-  qualified: { dot: '#22C55E', bar: '#22C55E', tint: 'rgba(34,197,94,0.08)' },
+  qualified: { dot: '#2A9D8F', bar: '#2A9D8F', tint: 'rgba(42,157,143,0.08)' },
   call_booked: { dot: '#A855F7', bar: '#A855F7', tint: 'rgba(168,85,247,0.08)' },
   proposal_sent: { dot: '#F97316', bar: '#F97316', tint: 'rgba(249,115,22,0.08)' },
   negotiation: { dot: '#EAB308', bar: '#EAB308', tint: 'rgba(234,179,8,0.08)' },
-  won: { dot: '#22C55E', bar: '#22C55E', tint: 'rgba(34,197,94,0.16)' },
+  won: { dot: '#2A9D8F', bar: '#2A9D8F', tint: 'rgba(42,157,143,0.16)' },
   lost: { dot: '#64748B', bar: '#64748B', tint: 'rgba(100,116,139,0.10)' },
 };
 
@@ -423,7 +423,7 @@ function DealCard({
         </button>
       </div>
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-emerald-400">
+        <span className="text-sm font-semibold text-[#5eead4]">
           {formatCurrency(deal.value)}
         </span>
         <span className="flex items-center gap-1.5 text-xs text-zinc-400">

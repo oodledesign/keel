@@ -108,7 +108,7 @@ export function StepSidebar({
             <span
               className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
                 isCompleted
-                  ? 'bg-emerald-600/80 text-white'
+                  ? 'bg-[var(--keel-teal)]/80 text-white'
                   : isCurrent
                     ? 'bg-zinc-700 text-white'
                     : 'border border-zinc-600 text-zinc-500'

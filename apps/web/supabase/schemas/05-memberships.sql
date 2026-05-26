@@ -88,17 +88,21 @@ or replace trigger prevent_account_owner_membership_delete_check before delete o
 execute function kit.prevent_account_owner_membership_delete ();
 
 -- Function "kit.prevent_memberships_update"
--- Trigger to prevent updates to account memberships with the exception of the account_role
+-- Trigger to prevent updates to account memberships except onboarding/role fields
 create
 or replace function kit.prevent_memberships_update () returns trigger
 set
   search_path = '' as $$
 begin
-    if new.account_role <> old.account_role then
+    if new.account_role is distinct from old.account_role
+       or new.company_role is distinct from old.company_role
+       or new.trade_role is distinct from old.trade_role
+       or new.onboarding_step is distinct from old.onboarding_step
+       or new.onboarding_completed is distinct from old.onboarding_completed then
         return new;
     end if;
 
-    raise exception 'Only the account_role can be updated';
+    raise exception 'Only account_role, company_role, trade_role, onboarding_step, and onboarding_completed can be updated';
 
 end; $$ language plpgsql;
 

@@ -7,76 +7,31 @@ import Link from 'next/link';
 import {
   Building2,
   CheckSquare,
-  ClipboardList,
+  UserRound,
   Users,
   Wrench,
 } from 'lucide-react';
 
 import { Badge } from '@kit/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
+import { Card, CardContent, CardHeader } from '@kit/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
+
+import pathsConfig from '~/config/paths.config';
 
 import type { GroupMember, GroupTask } from '../_lib/server/group-dashboard.loader';
 import type { PropertyStatusCounts } from '../_lib/server/property-dashboard.loader';
 
 interface PropertyBusinessDashboardProps {
   accountSlug: string;
-  accountId: string;
   propertyCounts: PropertyStatusCounts;
+  openMaintenanceJobs: number;
+  openTasksCount: number;
   members: GroupMember[];
   recentTasks: GroupTask[];
 }
 
 const panelClass =
   'rounded-[24px] border border-white/6 bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]';
-
-const statCards = (
-  propertyCounts: PropertyStatusCounts,
-  openTasks: number,
-  memberCount: number,
-) => [
-  {
-    label: 'Total Properties',
-    value: propertyCounts.total,
-    icon: Building2,
-    colour: 'text-violet-400',
-    bg: 'bg-violet-500/15',
-  },
-  {
-    label: 'Active',
-    value: propertyCounts.active,
-    icon: Building2,
-    colour: 'text-emerald-400',
-    bg: 'bg-emerald-500/15',
-  },
-  {
-    label: 'Vacant',
-    value: propertyCounts.vacant,
-    icon: ClipboardList,
-    colour: 'text-amber-400',
-    bg: 'bg-amber-500/15',
-  },
-  {
-    label: 'Open Tasks',
-    value: openTasks,
-    icon: CheckSquare,
-    colour: 'text-sky-400',
-    bg: 'bg-sky-500/15',
-  },
-  {
-    label: 'Maintenance',
-    value: propertyCounts.maintenance,
-    icon: Wrench,
-    colour: 'text-orange-400',
-    bg: 'bg-orange-500/15',
-  },
-  {
-    label: 'Team Members',
-    value: memberCount,
-    icon: Users,
-    colour: 'text-indigo-400',
-    bg: 'bg-indigo-500/15',
-  },
-];
 
 const priorityColour: Record<string, string> = {
   urgent: 'bg-rose-500/15 text-rose-300',
@@ -85,124 +40,176 @@ const priorityColour: Record<string, string> = {
   low: 'bg-sky-500/15 text-sky-300',
 };
 
+function accountPath(accountSlug: string, template: string) {
+  return template.replace('[account]', accountSlug);
+}
+
 export function PropertyBusinessDashboard({
   accountSlug,
   propertyCounts,
+  openMaintenanceJobs,
+  openTasksCount,
   members,
   recentTasks,
 }: PropertyBusinessDashboardProps) {
   const [activeTab, setActiveTab] = useState<'tasks' | 'members'>('tasks');
 
-  const openTasks = recentTasks.filter((t) => t.status !== 'done').length;
-  const cards = statCards(propertyCounts, openTasks, members.length);
+  const statCards = [
+    {
+      label: 'Total Properties',
+      value: propertyCounts.total,
+      icon: Building2,
+      colour: 'text-[#5eead4]',
+      bg: 'bg-[#2A9D8F]/15',
+    },
+    {
+      label: 'Active',
+      value: propertyCounts.active,
+      icon: Building2,
+      colour: 'text-[#5eead4]',
+      bg: 'bg-[var(--keel-teal)]/15',
+    },
+    {
+      label: 'Vacant',
+      value: propertyCounts.vacant,
+      icon: Building2,
+      colour: 'text-amber-400',
+      bg: 'bg-amber-500/15',
+    },
+    {
+      label: 'Open Maintenance',
+      value: openMaintenanceJobs,
+      icon: Wrench,
+      colour: 'text-orange-400',
+      bg: 'bg-orange-500/15',
+    },
+    {
+      label: 'Open Tasks',
+      value: openTasksCount,
+      icon: CheckSquare,
+      colour: 'text-sky-400',
+      bg: 'bg-sky-500/15',
+    },
+    {
+      label: 'Team Members',
+      value: members.length,
+      icon: Users,
+      colour: 'text-zinc-300',
+      bg: 'bg-white/8',
+    },
+  ];
 
   return (
     <div className="space-y-6 p-4 lg:p-6">
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        {cards.map((c) => (
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+        {statCards.map((c) => (
           <Card key={c.label} className={panelClass}>
-            <CardContent className="p-4">
-              <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-xl ${c.bg}`}>
-                <c.icon className={`h-4 w-4 ${c.colour}`} />
+            <CardContent className="p-3">
+              <div
+                className={`mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg ${c.bg}`}
+              >
+                <c.icon className={`h-3.5 w-3.5 ${c.colour}`} />
               </div>
-              <p className="text-2xl font-bold text-white">{c.value}</p>
-              <p className="mt-0.5 text-xs text-white/50">{c.label}</p>
+              <p className="text-xl font-bold tracking-tight text-white">
+                {c.value}
+              </p>
+              <p className="mt-0.5 text-[10px] font-medium uppercase tracking-wide text-white/45">
+                {c.label}
+              </p>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* Quick links */}
       <div className="grid gap-3 sm:grid-cols-3">
-        <QuickLink
-          href={`/app/work/${accountSlug}/properties`}
+        <ShortcutCard
+          href={accountPath(accountSlug, pathsConfig.app.accountProperties)}
           icon={Building2}
-          label="View Properties"
+          title="Properties"
           description="Manage your property portfolio"
-          colour="violet"
+          accent="teal"
         />
-        <QuickLink
-          href={`/app/work/${accountSlug}/jobs`}
-          icon={ClipboardList}
-          label="Jobs"
-          description="Active maintenance & work orders"
-          colour="sky"
+        <ShortcutCard
+          href={accountPath(accountSlug, pathsConfig.app.accountClients)}
+          icon={UserRound}
+          title="Tenants"
+          description="Active tenancies and contacts"
+          accent="emerald"
         />
-        <QuickLink
-          href={`/app/work/${accountSlug}/clients`}
-          icon={Users}
-          label="Clients & Tenants"
-          description="Owners, tenants, and contacts"
-          colour="emerald"
+        <ShortcutCard
+          href={accountPath(accountSlug, pathsConfig.app.accountJobs)}
+          icon={Wrench}
+          title="Maintenance"
+          description="Open jobs and work orders"
+          accent="orange"
         />
       </div>
 
-      {/* Tasks / Members tabs */}
       <Card className={panelClass}>
-        <CardHeader className="border-b border-white/6 pb-0">
-          <div className="flex gap-1">
-            {(['tasks', 'members'] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`rounded-t-lg px-4 py-2.5 text-sm font-medium capitalize transition-colors ${
-                  activeTab === tab
-                    ? 'border-b-2 border-violet-400 text-violet-300'
-                    : 'text-white/50 hover:text-white/80'
-                }`}
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as typeof activeTab)}
+        >
+          <CardHeader className="border-b border-white/6 pb-0 pt-4">
+            <TabsList className="h-10 w-full justify-start rounded-none border-0 bg-transparent p-0 md:w-auto">
+              <TabsTrigger
+                value="tasks"
+                className="rounded-t-lg data-[state=active]:border-b-2 data-[state=active]:border-[#2A9D8F] data-[state=active]:bg-transparent data-[state=active]:text-[#5eead4]"
               >
-                {tab}
-              </button>
-            ))}
-          </div>
-        </CardHeader>
-        <CardContent className="p-4">
-          {activeTab === 'tasks' && (
-            <TasksPanel tasks={recentTasks} accountSlug={accountSlug} />
-          )}
-          {activeTab === 'members' && <MembersPanel members={members} />}
-        </CardContent>
+                Tasks
+              </TabsTrigger>
+              <TabsTrigger
+                value="members"
+                className="rounded-t-lg data-[state=active]:border-b-2 data-[state=active]:border-[#2A9D8F] data-[state=active]:bg-transparent data-[state=active]:text-[#5eead4]"
+              >
+                Members
+              </TabsTrigger>
+            </TabsList>
+          </CardHeader>
+          <CardContent className="p-4">
+            <TabsContent value="tasks" className="mt-0">
+              <TasksPanel tasks={recentTasks} accountSlug={accountSlug} />
+            </TabsContent>
+            <TabsContent value="members" className="mt-0">
+              <MembersPanel members={members} />
+            </TabsContent>
+          </CardContent>
+        </Tabs>
       </Card>
     </div>
   );
 }
 
-function QuickLink({
+function ShortcutCard({
   href,
   icon: Icon,
-  label,
+  title,
   description,
-  colour,
+  accent,
 }: {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
-  label: string;
+  title: string;
   description: string;
-  colour: 'violet' | 'sky' | 'emerald';
+  accent: 'teal' | 'emerald' | 'orange';
 }) {
-  const bg =
-    colour === 'violet'
-      ? 'bg-violet-500/15'
-      : colour === 'sky'
-        ? 'bg-sky-500/15'
-        : 'bg-emerald-500/15';
-  const text =
-    colour === 'violet'
-      ? 'text-violet-400'
-      : colour === 'sky'
-        ? 'text-sky-400'
-        : 'text-emerald-400';
+  const styles = {
+    teal: { bg: 'bg-[#2A9D8F]/15', text: 'text-[#5eead4]' },
+    emerald: { bg: 'bg-[var(--keel-teal)]/15', text: 'text-[#5eead4]' },
+    orange: { bg: 'bg-orange-500/15', text: 'text-orange-400' },
+  }[accent];
 
   return (
     <Link href={href}>
-      <Card className={`${panelClass} transition-all hover:border-white/10`}>
+      <Card className={`${panelClass} transition hover:border-[#2A9D8F]/25`}>
         <CardContent className="flex items-center gap-3 p-4">
-          <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${bg}`}>
-            <Icon className={`h-5 w-5 ${text}`} />
+          <span
+            className={`flex h-10 w-10 items-center justify-center rounded-xl ${styles.bg}`}
+          >
+            <Icon className={`h-5 w-5 ${styles.text}`} />
           </span>
           <div>
-            <p className="text-sm font-semibold text-white">{label}</p>
+            <p className="text-sm font-semibold text-white">{title}</p>
             <p className="text-xs text-white/50">{description}</p>
           </div>
         </CardContent>
@@ -227,6 +234,8 @@ function TasksPanel({
     );
   }
 
+  const tasksPath = accountPath(accountSlug, pathsConfig.app.accountTasks);
+
   return (
     <div className="space-y-2">
       {tasks.slice(0, 8).map((task) => (
@@ -236,14 +245,14 @@ function TasksPanel({
         >
           <div className="min-w-0">
             <p className="truncate text-sm text-white/80">{task.title}</p>
-            {task.projectName && (
+            {task.projectName ? (
               <p className="text-xs text-white/40">{task.projectName}</p>
-            )}
+            ) : null}
           </div>
           <div className="ml-3 flex flex-shrink-0 items-center gap-2">
-            {task.dueDate && (
+            {task.dueDate ? (
               <span className="text-xs text-white/40">{task.dueDate}</span>
-            )}
+            ) : null}
             <Badge
               className={`text-[10px] ${priorityColour[task.priority] ?? 'bg-white/10 text-white/50'}`}
             >
@@ -252,14 +261,14 @@ function TasksPanel({
           </div>
         </div>
       ))}
-      {tasks.length > 8 && (
+      {tasks.length > 8 ? (
         <Link
-          href={`/app/work/${accountSlug}/tasks`}
-          className="block pt-1 text-center text-xs text-white/40 hover:text-white/70"
+          href={tasksPath}
+          className="block pt-1 text-center text-xs text-white/40 hover:text-[#5eead4]"
         >
-          View all {tasks.length} tasks →
+          View all tasks →
         </Link>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -281,14 +290,14 @@ function MembersPanel({ members }: { members: GroupMember[] }) {
           key={m.id}
           className="flex items-center gap-3 rounded-xl border border-white/6 bg-white/[0.02] px-3 py-2.5"
         >
-          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-violet-500/20 text-xs font-semibold text-violet-300">
+          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#2A9D8F]/20 text-xs font-semibold text-[#5eead4]">
             {m.displayName.slice(0, 2).toUpperCase()}
           </span>
           <div className="min-w-0">
             <p className="truncate text-sm text-white/80">{m.displayName}</p>
-            {m.email && (
+            {m.email ? (
               <p className="truncate text-xs text-white/40">{m.email}</p>
-            )}
+            ) : null}
           </div>
           <span className="ml-auto flex-shrink-0 text-xs capitalize text-white/40">
             {m.role}

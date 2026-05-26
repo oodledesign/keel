@@ -10,8 +10,10 @@ export function HomeLayoutPageHeader(
     <PageHeader
       description={props.description}
       title={props.title}
-      className="sticky top-0 z-20 border-b border-white/6 bg-[var(--workspace-shell-panel)] px-4 py-4 backdrop-blur-xl lg:px-4"
+      className="border-0 bg-transparent px-4 py-4 lg:px-6"
       displaySidebarTrigger={false}
-    />
+    >
+      {props.children}
+    </PageHeader>
   );
 }

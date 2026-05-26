@@ -5,8 +5,9 @@ import {
 
 import { AppLogo } from '~/components/app-logo';
 import { ProfileAccountDropdownContainer } from '~/components/personal-account-dropdown-container';
+import pathsConfig from '~/config/paths.config';
 import {
-  buildPersonalAccountRoutes,
+  buildPersonalHomeNavRoutes,
   parsePersonalAccountNavigationConfig,
 } from '~/config/personal-account-navigation.config';
 import { APP_LOGO_SHELL_CLASSNAME } from '~/lib/app-logo-shell';
@@ -18,8 +19,14 @@ export function HomeMenuNavigation(props: { workspace: UserWorkspace }) {
   const { workspace, user, accounts } = props.workspace;
   const teamAccounts = Array.isArray(accounts) ? accounts : [];
   const navConfig = parsePersonalAccountNavigationConfig(
-    buildPersonalAccountRoutes(teamAccounts),
+    buildPersonalHomeNavRoutes(),
   );
+
+  const workspaceRoutes = teamAccounts.map((a) => ({
+    path: pathsConfig.app.accountHome.replace('[account]', a.value),
+    label: a.label,
+    end: true as const,
+  }));
 
   const routes = navConfig.routes.reduce<
     Array<{
@@ -47,6 +54,9 @@ export function HomeMenuNavigation(props: { workspace: UserWorkspace }) {
 
         <BorderedNavigationMenu>
           {routes.map((route) => (
+            <BorderedNavigationMenuItem {...route} key={route.path} />
+          ))}
+          {workspaceRoutes.map((route) => (
             <BorderedNavigationMenuItem {...route} key={route.path} />
           ))}
         </BorderedNavigationMenu>

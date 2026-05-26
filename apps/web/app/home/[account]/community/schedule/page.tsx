@@ -5,9 +5,16 @@ import { PageBody } from '@kit/ui/page';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
+import { CommunityMemberNotesPanel } from '../_components/community-member-notes-panel';
+import { CommunitySchedulePageContent } from '../_components/community-schedule-page-content';
+import { CommunitySeriesPanel } from '../_components/community-series-panel';
 import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
 import { getDefaultAccountPath, getTeamAccountAccess } from '../../_lib/role-access';
 import { isAccountModuleEnabled } from '../../_lib/server/account-modules';
+import {
+  loadCommunityMemberNotes,
+  loadCommunitySchedulePage,
+} from '../_lib/server/community-schedule.loader';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../_lib/server/workspace-route-guard';
 
@@ -40,17 +47,46 @@ async function CommunitySchedulePage({ params }: CommunitySchedulePageProps) {
     redirect(getDefaultAccountPath(slug, workspace.account));
   }
 
+  const [schedule, memberNotes] = await Promise.all([
+    loadCommunitySchedulePage(slug),
+    loadCommunityMemberNotes(slug),
+  ]);
+
   return (
     <>
       <TeamAccountLayoutPageHeader
         account={slug}
         title="Schedule"
-        description="Group events and availability for your community space."
+        description="Plan home group meetups, attach session content, and keep a record of each gathering."
       />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-8 text-[var(--workspace-shell-text)] lg:px-6">
-        <p className="text-muted-foreground max-w-xl text-sm">
-          Community schedule is coming soon.
-        </p>
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-8 text-white lg:px-6">
+        {schedule.accountId ? (
+          <div className="mx-auto max-w-3xl space-y-10">
+            <CommunitySeriesPanel
+              accountSlug={slug}
+              accountId={schedule.accountId}
+              series={schedule.series}
+            />
+            <CommunitySchedulePageContent
+              accountSlug={slug}
+              accountId={schedule.accountId}
+              upcoming={schedule.upcoming}
+              past={schedule.past}
+              series={schedule.series}
+              templates={schedule.templates}
+              members={schedule.members}
+              tablesReady={schedule.tablesReady}
+            />
+            <CommunityMemberNotesPanel
+              accountSlug={slug}
+              accountId={schedule.accountId}
+              notes={memberNotes.notes}
+              members={memberNotes.members}
+            />
+          </div>
+        ) : (
+          <p className="text-sm text-white/60">Workspace not found.</p>
+        )}
       </PageBody>
     </>
   );

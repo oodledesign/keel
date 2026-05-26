@@ -11,7 +11,11 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
 import { isWorkModuleEnabled } from '../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../../_lib/server/workspace-route-guard';
+import {
+  BUSINESS_WORKSPACE_SPACE_TYPES,
+  redirectIfSpaceNotIn,
+} from '../../_lib/server/workspace-route-guard';
+import { loadContextWorkspaceContent } from '../../_lib/workspace-content/context-loader';
 import { createJobsService } from '../_lib/server/jobs.service';
 import { loadJobsPageData } from '../_lib/server/jobs-page.loader';
 import { JobDetailContent } from '../_components/job-detail-content';
@@ -35,7 +39,7 @@ export const generateMetadata = async ({
 async function JobDetailPage({ params }: JobDetailPageProps) {
   const { account: accountSlug, id } = await params;
   const workspace = await loadTeamWorkspace(accountSlug);
-  redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
+  redirectIfSpaceNotIn(workspace, accountSlug, BUSINESS_WORKSPACE_SPACE_TYPES);
   if (!isWorkModuleEnabled(workspace.moduleSettings, 'jobs')) {
     notFound();
   }
@@ -62,6 +66,13 @@ async function JobDetailPage({ params }: JobDetailPageProps) {
     jobClient = data;
   }
 
+  const workspaceContent = await loadContextWorkspaceContent({
+    accountId,
+    spaceType: (workspace.account as { space_type?: string }).space_type,
+    businessType: workspace.businessType,
+    scope: { jobId: id },
+  });
+
   return (
     <>
       <TeamAccountLayoutPageHeader
@@ -80,6 +91,12 @@ async function JobDetailPage({ params }: JobDetailPageProps) {
           canViewJobs={canViewJobs}
           canEditJobs={canEditJobs}
           isContractorView={isContractorView}
+          workspaceNotes={workspaceContent.notes}
+          workspaceDocs={workspaceContent.docs}
+          notesTableAvailable={workspaceContent.notesTableAvailable}
+          docsTableAvailable={workspaceContent.docsTableAvailable}
+          linkOptions={workspaceContent.linkOptions}
+          defaultLink={workspaceContent.defaultLink}
         />
       </PageBody>
     </>

@@ -181,7 +181,7 @@ export function ClientsPageContent({
               onClick={() => setActiveListTab('list')}
               className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
                 activeListTab === 'list'
-                  ? 'border-emerald-500 text-emerald-400'
+                  ? 'border-[var(--keel-teal)] text-[#5eead4]'
                   : 'border-transparent text-zinc-400 hover:text-white'
               }`}
             >
@@ -193,7 +193,7 @@ export function ClientsPageContent({
               onClick={() => setActiveListTab('activity')}
               className={`border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
                 activeListTab === 'activity'
-                  ? 'border-emerald-500 text-emerald-400'
+                  ? 'border-[var(--keel-teal)] text-[#5eead4]'
                   : 'border-transparent text-zinc-400 hover:text-white'
               }`}
             >
@@ -204,7 +204,7 @@ export function ClientsPageContent({
               onClick={() => setActiveListTab('documents')}
               className={`border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
                 activeListTab === 'documents'
-                  ? 'border-emerald-500 text-emerald-400'
+                  ? 'border-[var(--keel-teal)] text-[#5eead4]'
                   : 'border-transparent text-zinc-400 hover:text-white'
               }`}
             >
@@ -215,7 +215,7 @@ export function ClientsPageContent({
               onClick={() => setActiveListTab('notes')}
               className={`border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
                 activeListTab === 'notes'
-                  ? 'border-emerald-500 text-emerald-400'
+                  ? 'border-[var(--keel-teal)] text-[#5eead4]'
                   : 'border-transparent text-zinc-400 hover:text-white'
               }`}
             >
@@ -226,7 +226,7 @@ export function ClientsPageContent({
           <If condition={canEditClients}>
             <Button
               size="sm"
-              className="bg-emerald-600 hover:bg-emerald-500"
+              className="bg-[var(--keel-teal)] hover:bg-[#238b7f]"
               onClick={() => openDetail(null)}
               data-test="add-client-button"
             >
@@ -247,7 +247,7 @@ export function ClientsPageContent({
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] pl-9 text-white placeholder:text-zinc-500 focus-visible:ring-emerald-500"
+              className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] pl-9 text-white placeholder:text-zinc-500 focus-visible:ring-[var(--keel-teal)]"
             />
           </div>
           <Button

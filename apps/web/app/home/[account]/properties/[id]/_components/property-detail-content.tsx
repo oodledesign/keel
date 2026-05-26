@@ -12,20 +12,37 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 
 import type { Property, PropertyDocument } from '../../_lib/server/properties.service';
 import { PropertyFormModal } from '../../_components/property-form-modal';
+import { ContextWorkspaceDocs } from '../../../_components/workspace-content/context-workspace-docs';
+import { ContextWorkspaceNotes } from '../../../_components/workspace-content/context-workspace-notes';
+import type { LinkValue } from '../../../_components/workspace-content/link-to-select';
+import type {
+  DocListItem,
+  LinkOption,
+  NoteListItem,
+  WorkspaceNotesVariant,
+} from '../../../_lib/workspace-content/types';
 import { PropertyDocumentsTab } from './property-documents-tab';
 
 interface PropertyDetailContentProps {
   property: Property;
   accountId: string;
+  accountSlug: string;
   userId: string;
   documents: PropertyDocument[];
+  workspaceNotes: NoteListItem[];
+  workspaceDocs: DocListItem[];
+  notesTableAvailable: boolean;
+  docsTableAvailable: boolean;
+  linkOptions: LinkOption[];
+  defaultLink: LinkValue;
+  notesVariant: WorkspaceNotesVariant;
 }
 
 const statusStyles: Record<
   Property['status'],
   { bg: string; text: string; label: string }
 > = {
-  active: { bg: 'bg-emerald-500/15', text: 'text-emerald-300', label: 'Active' },
+  active: { bg: 'bg-[var(--keel-teal)]/15', text: 'text-[#5eead4]', label: 'Active' },
   vacant: { bg: 'bg-amber-500/15', text: 'text-amber-300', label: 'Vacant' },
   maintenance: { bg: 'bg-orange-500/15', text: 'text-orange-300', label: 'Maintenance' },
   sold: { bg: 'bg-sky-500/15', text: 'text-sky-300', label: 'Sold' },
@@ -42,8 +59,16 @@ const typeLabels: Record<Property['propertyType'], string> = {
 export function PropertyDetailContent({
   property: initialProperty,
   accountId,
+  accountSlug,
   userId,
   documents,
+  workspaceNotes,
+  workspaceDocs,
+  notesTableAvailable,
+  docsTableAvailable,
+  linkOptions,
+  defaultLink,
+  notesVariant,
 }: PropertyDetailContentProps) {
   const router = useRouter();
   const [property] = useState(initialProperty);
@@ -157,8 +182,40 @@ export function PropertyDetailContent({
               />
             </TabsContent>
 
-            <TabsContent value="notes" className="mt-0">
-              <PropertyNotesTab property={property} />
+            <TabsContent value="notes" className="mt-0 space-y-8">
+              <section>
+                <h3 className="mb-3 text-sm font-medium text-white/50">
+                  Property description
+                </h3>
+                <PropertyNotesTab property={property} />
+              </section>
+              <section>
+                <h3 className="mb-3 text-sm font-medium text-white/50">
+                  Workspace notes
+                </h3>
+                <ContextWorkspaceNotes
+                  accountId={accountId}
+                  accountSlug={accountSlug}
+                  notes={workspaceNotes}
+                  tableAvailable={notesTableAvailable}
+                  linkOptions={linkOptions}
+                  defaultLink={defaultLink}
+                  variant={notesVariant}
+                />
+              </section>
+              <section>
+                <h3 className="mb-3 text-sm font-medium text-white/50">
+                  Workspace documents
+                </h3>
+                <ContextWorkspaceDocs
+                  accountId={accountId}
+                  accountSlug={accountSlug}
+                  docs={workspaceDocs}
+                  tableAvailable={docsTableAvailable}
+                  linkOptions={linkOptions}
+                  defaultLink={defaultLink}
+                />
+              </section>
             </TabsContent>
           </Tabs>
         </CardContent>

@@ -34,7 +34,7 @@ export function SignaturesConnectionGate({
     return (
       <Card className="border-white/10 bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] shadow-2xl">
         <CardHeader className="items-center text-center">
-          <div className="mb-3 rounded-2xl border border-[#57C87F]/20 bg-[#57C87F]/10 p-3 text-[#57C87F]">
+          <div className="mb-3 rounded-2xl border border-[var(--keel-teal)]/20 bg-[var(--keel-teal)]/10 p-3 text-[var(--keel-teal)]">
             <PlugZap className="h-7 w-7" />
           </div>
           <CardTitle className="text-2xl">Connect Microsoft 365</CardTitle>

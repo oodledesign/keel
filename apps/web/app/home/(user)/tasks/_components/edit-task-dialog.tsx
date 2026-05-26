@@ -558,7 +558,7 @@ export function EditTaskDialog({
                 <button
                   type="submit"
                   disabled={isPending || isDeleting}
-                  className="inline-flex h-9 items-center gap-2 rounded-xl bg-[#57C87F] px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#4ab86f] disabled:opacity-50"
+                  className="inline-flex h-9 items-center gap-2 rounded-xl bg-[var(--keel-teal)] px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#238b7f] disabled:opacity-50"
                 >
                   {isPending ? (
                     <>

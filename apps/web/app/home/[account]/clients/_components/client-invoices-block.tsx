@@ -48,7 +48,7 @@ function getDisplayStatus(invoice: InvoiceRow) {
 
 function getStatusClasses(status: string) {
   if (status === 'paid') {
-    return 'bg-emerald-500/15 text-emerald-300';
+    return 'bg-[var(--keel-teal)]/15 text-[#5eead4]';
   }
 
   if (status === 'overdue') {

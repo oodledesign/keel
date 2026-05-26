@@ -206,7 +206,7 @@ export function CreateJobSheet({
             <Button
               type="submit"
               disabled={submitting}
-              className="bg-emerald-600 hover:bg-emerald-500"
+              className="bg-[var(--keel-teal)] hover:bg-[#238b7f]"
             >
               {submitting ? 'Creating...' : 'Create job'}
             </Button>

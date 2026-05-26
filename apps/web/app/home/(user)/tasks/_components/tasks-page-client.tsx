@@ -20,6 +20,7 @@ import {
   List as ListIcon,
   Pencil,
   Search,
+  Users,
 } from 'lucide-react';
 
 import {
@@ -51,6 +52,7 @@ import type { TasksPageTask } from '../../_lib/server/tasks.loader';
 import { updateTask } from '../../_lib/actions/task-actions';
 import { AddTaskDialog } from '../../_components/dashboard/add-task-dialog';
 import { EditTaskDialog } from './edit-task-dialog';
+import { InlineAddTaskRow } from './inline-add-task-row';
 
 type TaskStatus = TasksPageTask['status'];
 
@@ -91,7 +93,7 @@ const STATUS_COLUMNS: Array<{
   {
     key: 'completed',
     label: 'Completed',
-    dot: '#57C87F',
+    dot: 'var(--keel-teal)',
     tint: 'rgba(87,200,127,0.10)',
   },
 ];
@@ -132,10 +134,247 @@ function TaskTableHeader({ showWorkspaceTag }: { showWorkspaceTag: boolean }) {
   );
 }
 
+type TaskViewMode = 'list' | 'board' | 'byClient';
+type DueDateFilter = 'all' | 'today' | 'week' | 'month';
+
 function todayISO(): string {
   const d = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function addDaysYmd(ymd: string, days: number): string {
+  const p = parseDueDateParts(ymd);
+  if (!p) return ymd;
+  const d = new Date(p.y, p.m - 1, p.d, 12, 0, 0, 0);
+  d.setDate(d.getDate() + days);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function endOfWeekYmd(today: string): string {
+  const p = parseDueDateParts(today);
+  if (!p) return today;
+  const d = new Date(p.y, p.m - 1, p.d, 12, 0, 0, 0);
+  const day = d.getDay();
+  const daysUntilSunday = day === 0 ? 0 : 7 - day;
+  return addDaysYmd(today, daysUntilSunday);
+}
+
+function endOfMonthYmd(today: string): string {
+  const p = parseDueDateParts(today);
+  if (!p) return today;
+  const last = new Date(p.y, p.m, 0, 12, 0, 0, 0);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${last.getFullYear()}-${pad(last.getMonth() + 1)}-${pad(last.getDate())}`;
+}
+
+function matchesDueDateFilter(
+  task: TasksPageTask,
+  filter: DueDateFilter,
+  today: string,
+): boolean {
+  if (filter === 'all') return true;
+  const due = task.dueDate;
+  if (!due) return false;
+  if (filter === 'today') return due === today;
+  if (filter === 'week') {
+    return due >= today && due <= endOfWeekYmd(today);
+  }
+  return due >= today && due <= endOfMonthYmd(today);
+}
+
+function isHighPriority(task: TasksPageTask): boolean {
+  return task.priority === 'urgent' || task.priority === 'high';
+}
+
+function PriorityGroupHeader({
+  variant,
+}: {
+  variant: 'high' | 'rest';
+}) {
+  const isHigh = variant === 'high';
+  return (
+    <div
+      className={cn(
+        'flex items-center gap-2 border-b border-white/8 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide',
+        isHigh
+          ? 'bg-amber-500/[0.07] text-amber-400/95'
+          : 'bg-white/[0.03] text-zinc-500',
+      )}
+    >
+      {isHigh ? (
+        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+      ) : null}
+      <span
+        className={cn(
+          'h-2 w-2 shrink-0 rounded-full',
+          isHigh ? 'bg-amber-400' : 'bg-zinc-500/70',
+        )}
+        aria-hidden
+      />
+      {isHigh ? 'High priority' : 'Everything else'}
+    </div>
+  );
+}
+
+function WorkspaceColorChip({
+  name,
+  color,
+}: {
+  name: string;
+  color: string;
+}) {
+  return (
+    <span className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[11px] font-medium text-white/90">
+      <span
+        className="h-2 w-2 shrink-0 rounded-full"
+        style={{ backgroundColor: color }}
+        aria-hidden
+      />
+      <span className="truncate">{name}</span>
+    </span>
+  );
+}
+
+type TaskRowHandlers = {
+  showWorkspaceTag: boolean;
+  workspaceAccountId?: string;
+  today: string;
+  expandedRootTaskIds: Set<string>;
+  onToggleSubtasks: (taskId: string) => void;
+  onStatusChanged: (taskId: string, status: TaskStatus) => void;
+  onTitleChanged: (taskId: string, title: string) => void;
+};
+
+function renderTaskRows(list: TasksPageTask[], handlers: TaskRowHandlers) {
+  return list.map((task) => (
+    <TaskRow
+      key={task.id}
+      task={task}
+      showWorkspaceTag={handlers.showWorkspaceTag}
+      workspaceAccountId={handlers.workspaceAccountId}
+      today={handlers.today}
+      onStatusChanged={handlers.onStatusChanged}
+      onTitleChanged={handlers.onTitleChanged}
+      subtasksExpanded={
+        (task.subtasks?.length ?? 0) > 0
+          ? handlers.expandedRootTaskIds.has(task.id)
+          : false
+      }
+      onToggleSubtasks={
+        (task.subtasks?.length ?? 0) > 0
+          ? () => handlers.onToggleSubtasks(task.id)
+          : undefined
+      }
+    />
+  ));
+}
+
+function PriorityGroupedTaskList({
+  urgent,
+  rest,
+  statusFilter,
+  handlers,
+  inlineClientId,
+}: {
+  urgent: TasksPageTask[];
+  rest: TasksPageTask[];
+  statusFilter: 'active' | 'completed';
+  handlers: TaskRowHandlers;
+  inlineClientId: string | null;
+}) {
+  const showActiveGroups = statusFilter === 'active';
+
+  return (
+    <>
+      {showActiveGroups && urgent.length > 0 && (
+        <>
+          <PriorityGroupHeader variant="high" />
+          {renderTaskRows(urgent, handlers)}
+          <InlineAddTaskRow
+            priority="high"
+            clientId={inlineClientId}
+            workspaceAccountId={handlers.workspaceAccountId}
+          />
+        </>
+      )}
+      {showActiveGroups && urgent.length > 0 && rest.length > 0 && (
+        <PriorityGroupHeader variant="rest" />
+      )}
+      {showActiveGroups && urgent.length === 0 && rest.length > 0 && (
+        <PriorityGroupHeader variant="rest" />
+      )}
+      {rest.length > 0 && (
+        <>
+          {renderTaskRows(rest, handlers)}
+          <InlineAddTaskRow
+            priority="medium"
+            clientId={inlineClientId}
+            workspaceAccountId={handlers.workspaceAccountId}
+          />
+        </>
+      )}
+      {!showActiveGroups && (
+        <>
+          {renderTaskRows([...urgent, ...rest], handlers)}
+          <InlineAddTaskRow
+            priority="medium"
+            clientId={inlineClientId}
+            workspaceAccountId={handlers.workspaceAccountId}
+          />
+        </>
+      )}
+    </>
+  );
+}
+
+function TasksByClientList({
+  groups,
+  statusFilter,
+  handlers,
+}: {
+  groups: Array<{ id: string; label: string; tasks: TasksPageTask[] }>;
+  statusFilter: 'active' | 'completed';
+  handlers: TaskRowHandlers;
+}) {
+  return (
+    <div className="space-y-4">
+      {groups.map((group) => {
+        const urgent = group.tasks.filter(isHighPriority);
+        const rest = group.tasks.filter((t) => !isHighPriority(t));
+        const clientId = group.id === '__unassigned__' ? null : group.id;
+
+        return (
+          <div
+            key={group.id}
+            className="overflow-x-auto rounded-xl border border-white/6 bg-[var(--workspace-shell-panel)] shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]"
+          >
+            <div className="border-b border-white/8 bg-white/[0.04] px-4 py-2.5">
+              <p className="text-sm font-semibold text-white">{group.label}</p>
+              <p className="text-xs text-zinc-500">
+                {group.tasks.length} task{group.tasks.length === 1 ? '' : 's'}
+              </p>
+            </div>
+            <div
+              className={cn(
+                handlers.showWorkspaceTag ? 'min-w-[1080px]' : 'min-w-[940px]',
+              )}
+            >
+              <TaskTableHeader showWorkspaceTag={handlers.showWorkspaceTag} />
+              <PriorityGroupedTaskList
+                urgent={urgent}
+                rest={rest}
+                statusFilter={statusFilter}
+                handlers={handlers}
+                inlineClientId={clientId}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 function isOverdue(task: TasksPageTask, today = todayISO()): boolean {
@@ -181,7 +420,7 @@ export function TasksPageClient({
 }: Props) {
   const router = useRouter();
   const [tasks, setTasks] = useState<TasksPageTask[]>(initialTasks);
-  const [view, setView] = useState<'list' | 'board'>('list');
+  const [view, setView] = useState<TaskViewMode>('list');
   const [filter, setFilter] = useState<'all' | 'work' | 'life'>(
     variant === 'workspace' ? 'work' : 'all',
   );
@@ -189,6 +428,7 @@ export function TasksPageClient({
     'active',
   );
   const [clientFilter, setClientFilter] = useState<string>('all');
+  const [dueDateFilter, setDueDateFilter] = useState<DueDateFilter>('all');
   const [search, setSearch] = useState('');
   const [activeDragTask, setActiveDragTask] = useState<TasksPageTask | null>(
     null,
@@ -260,9 +500,12 @@ export function TasksPageClient({
           return false;
         }
       }
+      if (!matchesDueDateFilter(t, dueDateFilter, todayKey)) {
+        return false;
+      }
       return true;
     },
-    [variant, filter, clientFilter, search],
+    [variant, filter, clientFilter, search, dueDateFilter, todayKey],
   );
 
   const filteredForList = useMemo(() => {
@@ -306,12 +549,39 @@ export function TasksPageClient({
     [tasks, todayKey],
   );
 
-  const urgent = filteredForList.filter(
-    (t) => t.priority === 'urgent' || t.priority === 'high',
-  );
-  const rest = filteredForList.filter(
-    (t) => t.priority !== 'urgent' && t.priority !== 'high',
-  );
+  const urgent = filteredForList.filter(isHighPriority);
+  const rest = filteredForList.filter((t) => !isHighPriority(t));
+
+  const clientGroups = useMemo(() => {
+    const map = new Map<
+      string,
+      { id: string; label: string; tasks: TasksPageTask[] }
+    >();
+    for (const t of filteredForList) {
+      const key = t.clientId ?? '__unassigned__';
+      const label =
+        key === '__unassigned__'
+          ? 'Unassigned'
+          : (t.clientName?.trim() || 'Client');
+      const existing = map.get(key);
+      if (existing) {
+        existing.tasks.push(t);
+      } else {
+        map.set(key, { id: key, label, tasks: [t] });
+      }
+    }
+    return [...map.values()].sort((a, b) => {
+      if (a.id === '__unassigned__') return 1;
+      if (b.id === '__unassigned__') return -1;
+      return a.label.localeCompare(b.label);
+    });
+  }, [filteredForList]);
+
+  const showWorkspaceTag = variant === 'personal';
+  const inlineClientId =
+    clientFilter !== 'all' && clientFilter !== '__none__'
+      ? clientFilter
+      : null;
 
   const activeCount = useMemo(
     () => tasks.filter((t) => t.status !== 'completed').length,
@@ -334,6 +604,27 @@ export function TasksPageClient({
   const handleTitleChanged = useCallback((taskId: string, title: string) => {
     setTasks((prev) => updateTaskTitleInTree(prev, taskId, title));
   }, []);
+
+  const taskRowHandlers: TaskRowHandlers = useMemo(
+    () => ({
+      showWorkspaceTag,
+      workspaceAccountId,
+      today: todayKey,
+      expandedRootTaskIds,
+      onToggleSubtasks: toggleRootExpanded,
+      onStatusChanged: handleStatusChanged,
+      onTitleChanged: handleTitleChanged,
+    }),
+    [
+      showWorkspaceTag,
+      workspaceAccountId,
+      todayKey,
+      expandedRootTaskIds,
+      toggleRootExpanded,
+      handleStatusChanged,
+      handleTitleChanged,
+    ],
+  );
 
   const onDragStart = useCallback(
     (event: DragStartEvent) => {
@@ -441,6 +732,29 @@ export function TasksPageClient({
               </SelectContent>
             </Select>
           )}
+          <div className="flex rounded-xl border border-white/8 bg-[var(--workspace-shell-panel)] p-1 text-xs">
+            {(
+              [
+                ['today', 'Today'],
+                ['week', 'This week'],
+                ['month', 'This month'],
+                ['all', 'All'],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setDueDateFilter(key)}
+                className={`rounded-lg px-2.5 py-1.5 font-medium transition-colors sm:px-3 ${
+                  dueDateFilter === key
+                    ? 'bg-white/10 text-white'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           {variant === 'personal' ? (
             <div className="flex rounded-xl border border-white/8 bg-[var(--workspace-shell-panel)] p-1 text-xs">
               {(['all', 'work', 'life'] as const).map((f) => (
@@ -459,7 +773,7 @@ export function TasksPageClient({
               ))}
             </div>
           ) : null}
-          {view === 'list' && (
+          {(view === 'list' || view === 'byClient') && (
             <div className="flex rounded-xl border border-white/8 bg-[var(--workspace-shell-panel)] p-1 text-xs">
               {(['active', 'completed'] as const).map((s) => (
                 <button
@@ -504,11 +818,24 @@ export function TasksPageClient({
               <KanbanSquare className="h-3.5 w-3.5" />
               Board
             </button>
+            <button
+              type="button"
+              onClick={() => setView('byClient')}
+              aria-label="By client view"
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-colors ${
+                view === 'byClient'
+                  ? 'bg-white/10 text-white'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Users className="h-3.5 w-3.5" />
+              By Client
+            </button>
           </div>
         </div>
       </div>
 
-      {view === 'list' ? (
+      {view === 'list' || view === 'byClient' ? (
         <>
           {filteredForList.length === 0 ? (
             <div className="rounded-xl border border-dashed border-white/8 px-6 py-12 text-center text-sm text-zinc-500">
@@ -518,68 +845,27 @@ export function TasksPageClient({
                   ? 'No tasks linked to this workspace yet. Use Add Task and choose a project or client, or open a client record.'
                   : 'No tasks match your filters'}
             </div>
+          ) : view === 'byClient' ? (
+            <TasksByClientList
+              groups={clientGroups}
+              statusFilter={statusFilter}
+              handlers={taskRowHandlers}
+            />
           ) : (
             <div className="overflow-x-auto rounded-xl border border-white/6 bg-[var(--workspace-shell-panel)] shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]">
               <div
                 className={cn(
-                  variant === 'personal' ? 'min-w-[1080px]' : 'min-w-[940px]',
+                  showWorkspaceTag ? 'min-w-[1080px]' : 'min-w-[940px]',
                 )}
               >
-                <TaskTableHeader showWorkspaceTag={variant === 'personal'} />
-                {statusFilter === 'active' && urgent.length > 0 && (
-                  <div className="flex items-center gap-2 border-b border-white/8 bg-amber-500/[0.07] px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-amber-400/95">
-                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                    High priority
-                  </div>
-                )}
-                {statusFilter === 'active' &&
-                  urgent.map((task) => (
-                    <TaskRow
-                      key={task.id}
-                      task={task}
-                      showWorkspaceTag={variant === 'personal'}
-                      workspaceAccountId={workspaceAccountId}
-                      today={todayKey}
-                      onStatusChanged={handleStatusChanged}
-                      onTitleChanged={handleTitleChanged}
-                      subtasksExpanded={
-                        (task.subtasks?.length ?? 0) > 0
-                          ? expandedRootTaskIds.has(task.id)
-                          : true
-                      }
-                      onToggleSubtasks={
-                        (task.subtasks?.length ?? 0) > 0
-                          ? () => toggleRootExpanded(task.id)
-                          : undefined
-                      }
-                    />
-                  ))}
-                {statusFilter === 'active' && urgent.length > 0 && rest.length > 0 && (
-                  <div className="border-b border-white/8 bg-white/[0.03] px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-                    Everything else
-                  </div>
-                )}
-                {rest.map((task) => (
-                  <TaskRow
-                    key={task.id}
-                    task={task}
-                    showWorkspaceTag={variant === 'personal'}
-                    workspaceAccountId={workspaceAccountId}
-                    today={todayKey}
-                    onStatusChanged={handleStatusChanged}
-                    onTitleChanged={handleTitleChanged}
-                    subtasksExpanded={
-                      (task.subtasks?.length ?? 0) > 0
-                        ? expandedRootTaskIds.has(task.id)
-                        : true
-                    }
-                    onToggleSubtasks={
-                      (task.subtasks?.length ?? 0) > 0
-                        ? () => toggleRootExpanded(task.id)
-                        : undefined
-                    }
-                  />
-                ))}
+                <TaskTableHeader showWorkspaceTag={showWorkspaceTag} />
+                <PriorityGroupedTaskList
+                  urgent={urgent}
+                  rest={rest}
+                  statusFilter={statusFilter}
+                  handlers={taskRowHandlers}
+                  inlineClientId={inlineClientId}
+                />
               </div>
             </div>
           )}
@@ -804,7 +1090,7 @@ function TaskRow({
         className={cn(
           rowGrid,
           overdue &&
-            'bg-rose-500/[0.07] ring-1 ring-inset ring-rose-400/20 hover:bg-rose-500/[0.09]',
+            'border-l-[3px] border-l-rose-500 bg-rose-500/[0.07] ring-1 ring-inset ring-rose-400/20 hover:bg-rose-500/[0.09]',
           !overdue && 'hover:bg-white/[0.035]',
           !isRoot && !overdue && 'bg-transparent hover:bg-white/[0.025]',
           'relative border-b border-white/[0.06] transition-colors',
@@ -840,7 +1126,7 @@ function TaskRow({
               handleCheckedChange(Boolean(value));
             }}
             aria-label={isDone ? 'Mark task as not done' : 'Mark task as done'}
-            className="h-5 w-5 shrink-0 rounded-full border-white/25 shadow-none data-[state=checked]:border-[#57C87F] data-[state=checked]:bg-[#57C87F]/20 data-[state=checked]:text-[#57C87F]"
+            className="h-5 w-5 shrink-0 rounded-full border-white/25 shadow-none data-[state=checked]:border-[var(--keel-teal)] data-[state=checked]:bg-[var(--keel-teal)]/20 data-[state=checked]:text-[var(--keel-teal)]"
           />
         </div>
         <div className="min-w-0">
@@ -860,12 +1146,16 @@ function TaskRow({
           ) : null}
         </div>
         {showWorkspaceTag ? (
-          <span
-            className="min-w-0 truncate text-xs text-zinc-400"
-            title={task.workspaceName ?? undefined}
-          >
-            {task.workspaceName ?? '—'}
-          </span>
+          <div className="min-w-0">
+            {task.workspaceName ? (
+              <WorkspaceColorChip
+                name={task.workspaceName}
+                color={task.workspaceColor ?? '#64748B'}
+              />
+            ) : (
+              <span className="text-xs text-zinc-600">—</span>
+            )}
+          </div>
         ) : null}
         <span
           className="min-w-0 truncate text-xs text-zinc-300"
@@ -1052,7 +1342,7 @@ function BoardCard({
     : {};
 
   const baseClass = overdue
-    ? 'rounded-xl border border-rose-400/30 bg-rose-500/[0.08]'
+    ? 'rounded-xl border border-rose-400/30 border-l-[3px] border-l-rose-500 bg-rose-500/[0.08]'
     : 'rounded-xl border border-white/8 bg-[var(--workspace-shell-canvas)]';
   const interactClass = isOverlay
     ? 'shadow-[0_18px_48px_rgba(4,10,24,0.45)]'

@@ -107,7 +107,7 @@ export function KeelContextsStep({
                 'flex w-full items-start gap-4 rounded-2xl border px-4 py-4 text-left transition-colors',
                 'border-white/[0.08] bg-[#122033] shadow-[0_18px_50px_rgba(4,10,24,0.24)]',
                 on
-                  ? 'border-[#57C87F]/40 ring-1 ring-[#57C87F]/30'
+                  ? 'border-[var(--keel-teal)]/40 ring-1 ring-[var(--keel-teal)]/30'
                   : 'hover:border-white/[0.12] hover:bg-[#122033]/90',
               )}
             >
@@ -115,7 +115,7 @@ export function KeelContextsStep({
                 className={cn(
                   'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl',
                   on
-                    ? 'bg-[#57C87F]/20 text-[#57C87F]'
+                    ? 'bg-[var(--keel-teal)]/20 text-[var(--keel-teal)]'
                     : 'bg-white/[0.06] text-[var(--workspace-shell-text-muted)]',
                 )}
               >
@@ -133,7 +133,7 @@ export function KeelContextsStep({
                 className={cn(
                   'mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs font-bold',
                   on
-                    ? 'border-[#57C87F] bg-[#57C87F] text-[#060C18]'
+                    ? 'border-[var(--keel-teal)] bg-[var(--keel-teal)] text-[#060C18]'
                     : 'border-white/20 text-transparent',
                 )}
                 aria-hidden

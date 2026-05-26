@@ -11,6 +11,7 @@ export type WorkspaceAccountRow = {
   slug: string | null;
   space_type: string | null;
   is_personal_account: boolean | null;
+  picture_url?: string | null;
 };
 
 /**
@@ -23,7 +24,7 @@ export async function loadUserWorkspaceAccounts(
   const { data, error } = await client
     .from('accounts_memberships')
     .select(
-      'account:accounts!inner(id, name, slug, space_type, is_personal_account)',
+      'account:accounts!inner(id, name, slug, space_type, is_personal_account, picture_url)',
     )
     .eq('user_id', userId);
 

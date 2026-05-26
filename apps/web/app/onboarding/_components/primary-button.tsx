@@ -18,7 +18,7 @@ export function PrimaryButton({
       className={
         className
           ? className
-          : 'w-full bg-emerald-600 text-white hover:bg-emerald-500'
+          : 'w-full bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]'
       }
       {...props}
     >

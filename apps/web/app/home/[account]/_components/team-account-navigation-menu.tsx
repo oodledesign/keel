@@ -9,19 +9,17 @@ import { ProfileAccountDropdownContainer } from '~/components/personal-account-d
 import { getTeamAccountSidebarConfig } from '~/config/team-account-navigation.config';
 import pathsConfig from '~/config/paths.config';
 import { TeamAccountAccountsSelector } from '~/home/[account]/_components/team-account-accounts-selector';
-import { getSpaceTypeFromAccount } from '~/home/[account]/_lib/server/account-modules';
+import { loadWorkspaceSwitcherAccounts } from '~/home/_lib/server/workspace-switcher.loader';
 
 // local imports
 import { TeamAccountWorkspace } from '../_lib/server/team-account-workspace.loader';
 
-export function TeamAccountNavigationMenu(props: {
+export async function TeamAccountNavigationMenu(props: {
   workspace: TeamAccountWorkspace;
 }) {
-  const { account, user, accounts } = props.workspace;
-
-  const spaceType = getSpaceTypeFromAccount(
-    account as { space_type?: string | null },
-  );
+  const { account, user } = props.workspace;
+  const client = (await import('@kit/supabase/server-client')).getSupabaseServerClient();
+  const switcherAccounts = await loadWorkspaceSwitcherAccounts(client, user.id);
 
   const routes = getTeamAccountSidebarConfig(
     account.slug,
@@ -31,7 +29,7 @@ export function TeamAccountNavigationMenu(props: {
       company_role?: string | null;
     },
     props.workspace.moduleSettings,
-    spaceType,
+    props.workspace.workspaceProfile,
   ).routes.reduce<
     Array<{
       path: string;
@@ -74,11 +72,7 @@ export function TeamAccountNavigationMenu(props: {
         <TeamAccountAccountsSelector
           userId={user.id}
           selectedAccount={account.slug}
-          accounts={accounts.map((account) => ({
-            label: account.name,
-            value: account.slug,
-            image: account.picture_url,
-          }))}
+          accounts={switcherAccounts}
         />
 
         <div>

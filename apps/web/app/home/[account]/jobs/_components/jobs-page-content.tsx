@@ -66,13 +66,29 @@ export function JobsPageContent({
   canViewJobs,
   canEditJobs,
   isContractorView,
+  uiVariant = 'projects',
 }: {
   accountSlug: string;
   accountId: string;
   canViewJobs: boolean;
   canEditJobs: boolean;
   isContractorView: boolean;
+  uiVariant?: 'projects' | 'maintenance';
 }) {
+  const copy =
+    uiVariant === 'maintenance'
+      ? {
+          accessDenied: 'maintenance jobs',
+          create: 'Create maintenance job',
+          search: 'Search maintenance jobs…',
+          empty: 'No maintenance jobs yet.',
+        }
+      : {
+          accessDenied: 'projects',
+          create: 'Create project',
+          search: 'Search projects…',
+          empty: 'No projects yet.',
+        };
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -155,7 +171,7 @@ export function JobsPageContent({
     return (
       <div className="flex min-h-[60vh] w-full items-center justify-center rounded-lg border border-zinc-700 bg-[var(--workspace-shell-panel)] p-8">
         <p className="text-center text-zinc-400">
-          You don&apos;t have access to jobs in this account.
+          You don&apos;t have access to {copy.accessDenied} in this account.
         </p>
       </div>
     );
@@ -172,7 +188,7 @@ export function JobsPageContent({
               onClick={() => setTab('active')}
               className={`px-3 py-1.5 font-medium transition-colors rounded-full ${
                 tab === 'active'
-                  ? 'bg-emerald-500 text-[#05120b]'
+                  ? 'bg-[var(--keel-teal)] text-white'
                   : 'text-zinc-300 hover:text-white'
               }`}
             >
@@ -183,7 +199,7 @@ export function JobsPageContent({
               onClick={() => setTab('completed')}
               className={`px-3 py-1.5 font-medium transition-colors rounded-full ${
                 tab === 'completed'
-                  ? 'bg-emerald-500 text-[#05120b]'
+                  ? 'bg-[var(--keel-teal)] text-white'
                   : 'text-zinc-300 hover:text-white'
               }`}
             >
@@ -194,12 +210,12 @@ export function JobsPageContent({
           <If condition={canEditJobs}>
             <Button
               size="sm"
-              className="bg-emerald-600 hover:bg-emerald-500"
+              className="bg-[var(--keel-teal)] hover:bg-[#238b7f]"
               data-test="create-job-button"
               onClick={() => setCreateSheetOpen(true)}
             >
               <PlusCircle className="mr-2 h-4 w-4" />
-              Create job
+              {copy.create}
             </Button>
           </If>
         </div>
@@ -209,10 +225,10 @@ export function JobsPageContent({
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
             <Input
-              placeholder="Search jobs..."
+              placeholder={copy.search}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] pl-9 text-white placeholder:text-zinc-500 focus-visible:ring-emerald-500"
+              className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] pl-9 text-white placeholder:text-zinc-500 focus-visible:ring-[var(--keel-teal)]"
             />
           </div>
         </div>
@@ -237,11 +253,11 @@ export function JobsPageContent({
               {canEditJobs && !searchDebounced && tab === 'active' && (
                 <Button
                   size="sm"
-                  className="bg-emerald-600 hover:bg-emerald-500"
+                  className="bg-[var(--keel-teal)] hover:bg-[#238b7f]"
                   onClick={() => setCreateSheetOpen(true)}
                 >
                   <PlusCircle className="mr-2 h-4 w-4" />
-                  Create job
+                  Create project
                 </Button>
               )}
             </div>
@@ -273,7 +289,7 @@ export function JobsPageContent({
                       <td className="rounded-l-xl py-2.5 pl-3 pr-4 font-medium text-white">
                         <Link
                           href={jobDetailPath.replace('[id]', job.id)}
-                          className="hover:underline focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          className="hover:underline focus:outline-none focus:ring-2 focus:ring-[var(--keel-teal)]"
                           onClick={(e) => e.stopPropagation()}
                         >
                           {job.title}
@@ -286,7 +302,7 @@ export function JobsPageContent({
                         <span
                           className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                             job.status === 'completed'
-                              ? 'bg-emerald-500/20 text-emerald-400'
+                              ? 'bg-[var(--keel-teal)]/20 text-[#5eead4]'
                               : job.status === 'cancelled'
                                 ? 'bg-zinc-600 text-zinc-400'
                                 : 'bg-amber-500/20 text-amber-400'

@@ -50,8 +50,9 @@ export type DashboardInvoiceSummary = {
 };
 
 export type DashboardMetrics = {
-  totalRevenue: number;
-  activeJobs: number;
+  /** Sum of paid invoice totals (pence) for the current calendar month. */
+  totalRevenuePence: number;
+  activeProjects: number;
   totalClients: number;
   hoursLogged: number;
 };
@@ -119,8 +120,21 @@ export async function loadDashboardPageData(
 
   const todayIso = new Date().toISOString().slice(0, 10);
 
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+  const monthStartIso = monthStart.toISOString();
+
+  const weekStart = new Date();
+  const day = weekStart.getDay();
+  const diff = day === 0 ? 6 : day - 1;
+  weekStart.setDate(weekStart.getDate() - diff);
+  weekStart.setHours(0, 0, 0, 0);
+  const weekStartIso = weekStart.toISOString();
+
   const [
     activeJobsResult,
+    activeProjectsCountResult,
     completedJobsCountResult,
     inProgressJobsCountResult,
     pendingJobsCountResult,
@@ -128,6 +142,8 @@ export async function loadDashboardPageData(
     clientsCountResult,
     teamMembersResult,
     recentInvoicesResult,
+    paidInvoicesMonthResult,
+    hoursJobsResult,
   ] = await Promise.all([
     client
       .from('jobs')
@@ -135,10 +151,15 @@ export async function loadDashboardPageData(
         count: 'exact',
       })
       .eq('account_id', accountId)
-      .not('status', 'in', '("completed","cancelled")')
+      .in('status', ['pending', 'in_progress'])
       .order('due_date', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: false })
       .range(0, 4),
+    client
+      .from('jobs')
+      .select('id', { count: 'exact', head: true })
+      .eq('account_id', accountId)
+      .in('status', ['pending', 'in_progress']),
     client
       .from('jobs')
       .select('id', { count: 'exact', head: true })
@@ -153,7 +174,7 @@ export async function loadDashboardPageData(
       .from('jobs')
       .select('id', { count: 'exact', head: true })
       .eq('account_id', accountId)
-      .in('status', ['pending', 'on_hold']),
+      .eq('status', 'pending'),
     client
       .from('jobs')
       .select('id', { count: 'exact', head: true })
@@ -175,6 +196,18 @@ export async function loadDashboardPageData(
       .eq('account_id', accountId)
       .order('created_at', { ascending: false })
       .limit(5),
+    client
+      .from('invoices')
+      .select('total_pence')
+      .eq('account_id', accountId)
+      .eq('status', 'paid')
+      .gte('paid_at', monthStartIso),
+    client
+      .from('jobs')
+      .select('actual_minutes')
+      .eq('account_id', accountId)
+      .gte('updated_at', weekStartIso)
+      .not('actual_minutes', 'is', null),
   ]);
 
   const jobsUnavailable = isTableMissingFromApi(activeJobsResult.error);
@@ -200,9 +233,9 @@ export async function loadDashboardPageData(
     );
   }
 
-  const activeJobsCount = jobsUnavailable
+  const activeProjectsCount = jobsUnavailable
     ? 0
-    : (activeJobsResult.count ?? 0);
+    : (activeProjectsCountResult.count ?? 0);
   const activeJobsList: DashboardJobSummary[] = (
     jobsUnavailable ? [] : (activeJobsResult.data ?? [])
   ).map((row: any) => ({
@@ -228,12 +261,29 @@ export async function loadDashboardPageData(
     : (overdueJobsCountResult.count ?? 0);
   const totalClients = clientsCountResult.count ?? 0;
 
+  const totalRevenuePence = invoicesUnavailable
+    ? 0
+    : (paidInvoicesMonthResult.data ?? []).reduce(
+        (sum, row) => sum + ((row.total_pence as number | null) ?? 0),
+        0,
+      );
+
+  const hoursLogged = jobsUnavailable
+    ? 0
+    : Math.round(
+        ((hoursJobsResult.data ?? []).reduce(
+          (sum, row) => sum + ((row.actual_minutes as number | null) ?? 0),
+          0,
+        ) /
+          60) *
+          10,
+      ) / 10;
+
   const metrics: DashboardMetrics = {
-    // Placeholder values for now; will be wired to real data later.
-    totalRevenue: 48392,
-    activeJobs: activeJobsCount,
+    totalRevenuePence,
+    activeProjects: activeProjectsCount,
     totalClients,
-    hoursLogged: 342,
+    hoursLogged,
   };
 
   const statusSummary: DashboardStatusSummary = {

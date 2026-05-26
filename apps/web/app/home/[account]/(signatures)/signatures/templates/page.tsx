@@ -76,7 +76,7 @@ export default async function SignaturesTemplatesPage({
                   <div className="flex items-start justify-between gap-3">
                     <CardTitle className="text-base">{template.name}</CardTitle>
                     {template.is_default ? (
-                      <Badge className="bg-[#57C87F]/10 text-[#57C87F]">
+                      <Badge className="bg-[var(--keel-teal)]/10 text-[var(--keel-teal)]">
                         Default
                       </Badge>
                     ) : null}

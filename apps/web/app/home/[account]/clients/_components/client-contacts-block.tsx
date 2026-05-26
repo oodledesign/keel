@@ -201,7 +201,7 @@ export function ClientContactsBlock({
                     <div>
                       <p className="font-medium text-white">{contact.full_name}</p>
                       {contact.is_primary && (
-                        <span className="text-[10px] text-emerald-400">Primary</span>
+                        <span className="text-[10px] text-[#5eead4]">Primary</span>
                       )}
                       {/* Mobile: show role/email/phone inline */}
                       <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 sm:hidden">
@@ -209,12 +209,12 @@ export function ClientContactsBlock({
                           <span className="text-[11px] text-zinc-500">{contact.role}</span>
                         )}
                         {contact.email && (
-                          <a href={`mailto:${contact.email}`} className="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-emerald-400">
+                          <a href={`mailto:${contact.email}`} className="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-[#5eead4]">
                             <Mail className="h-3 w-3" />{contact.email}
                           </a>
                         )}
                         {contact.phone && (
-                          <a href={`tel:${contact.phone}`} className="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-emerald-400">
+                          <a href={`tel:${contact.phone}`} className="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-[#5eead4]">
                             <Phone className="h-3 w-3" />{contact.phone}
                           </a>
                         )}
@@ -226,7 +226,7 @@ export function ClientContactsBlock({
                   </td>
                   <td className="hidden px-3 py-2.5 md:table-cell">
                     {contact.email ? (
-                      <a href={`mailto:${contact.email}`} className="flex items-center gap-1 text-xs text-zinc-400 hover:text-emerald-400">
+                      <a href={`mailto:${contact.email}`} className="flex items-center gap-1 text-xs text-zinc-400 hover:text-[#5eead4]">
                         <Mail className="h-3 w-3" />{contact.email}
                       </a>
                     ) : (
@@ -235,7 +235,7 @@ export function ClientContactsBlock({
                   </td>
                   <td className="hidden px-3 py-2.5 md:table-cell">
                     {contact.phone ? (
-                      <a href={`tel:${contact.phone}`} className="flex items-center gap-1 text-xs text-zinc-400 hover:text-emerald-400">
+                      <a href={`tel:${contact.phone}`} className="flex items-center gap-1 text-xs text-zinc-400 hover:text-[#5eead4]">
                         <Phone className="h-3 w-3" />{contact.phone}
                       </a>
                     ) : (

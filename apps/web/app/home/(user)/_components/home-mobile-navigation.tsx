@@ -15,9 +15,11 @@ import {
 } from '@kit/ui/dropdown-menu';
 import { Trans } from '@kit/ui/trans';
 
+import pathsConfig from '~/config/paths.config';
 import {
-  buildPersonalAccountRoutes,
+  buildPersonalHomeNavRoutes,
   parsePersonalAccountNavigationConfig,
+  personalAccountSettingsPath,
 } from '~/config/personal-account-navigation.config';
 
 // home imports
@@ -29,7 +31,7 @@ export function HomeMobileNavigation(props: { workspace: UserWorkspace }) {
     ? props.workspace.accounts
     : [];
   const navConfig = parsePersonalAccountNavigationConfig(
-    buildPersonalAccountRoutes(teamAccounts),
+    buildPersonalHomeNavRoutes(),
   );
 
   const Links = navConfig.routes.map((item, index) => {
@@ -59,6 +61,35 @@ export function HomeMobileNavigation(props: { workspace: UserWorkspace }) {
 
       <DropdownMenuContent sideOffset={10} className={'w-screen rounded-none'}>
         <DropdownMenuGroup>{Links}</DropdownMenuGroup>
+
+        {teamAccounts.length > 0 ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              {teamAccounts.map((a) => (
+                <DropdownMenuItem asChild key={a.value}>
+                  <Link
+                    href={pathsConfig.app.accountHome.replace(
+                      '[account]',
+                      a.value,
+                    )}
+                    className="flex h-12 w-full items-center px-2"
+                  >
+                    {a.label}
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
+          </>
+        ) : null}
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem asChild>
+          <Link href={personalAccountSettingsPath} className="flex h-12 w-full items-center px-2">
+            Settings
+          </Link>
+        </DropdownMenuItem>
 
         <DropdownMenuSeparator />
 

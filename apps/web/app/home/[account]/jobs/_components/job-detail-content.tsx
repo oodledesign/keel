@@ -41,6 +41,15 @@ import {
 } from '../_lib/server/server-actions';
 import { getErrorMessage } from '../_lib/error-message';
 
+import { ContextWorkspaceDocs } from '../../_components/workspace-content/context-workspace-docs';
+import { ContextWorkspaceNotes } from '../../_components/workspace-content/context-workspace-notes';
+import type { LinkValue } from '../../_components/workspace-content/link-to-select';
+import type {
+  DocListItem,
+  LinkOption,
+  NoteListItem,
+} from '../../_lib/workspace-content/types';
+
 import { JobEventsTabContent } from './job-events-tab';
 import { JobScheduleTabContent } from './job-schedule-tab';
 
@@ -123,6 +132,12 @@ export function JobDetailContent({
   canViewJobs,
   canEditJobs,
   isContractorView,
+  workspaceNotes,
+  workspaceDocs,
+  notesTableAvailable,
+  docsTableAvailable,
+  linkOptions,
+  defaultLink,
 }: {
   accountSlug: string;
   accountId: string;
@@ -132,6 +147,12 @@ export function JobDetailContent({
   canViewJobs: boolean;
   canEditJobs: boolean;
   isContractorView: boolean;
+  workspaceNotes: NoteListItem[];
+  workspaceDocs: DocListItem[];
+  notesTableAvailable: boolean;
+  docsTableAvailable: boolean;
+  linkOptions: LinkOption[];
+  defaultLink: LinkValue;
 }) {
   const jobsPath = pathsConfig.app.accountJobs.replace('[account]', accountSlug);
   const clientsPath = pathsConfig.app.accountClients.replace('[account]', accountSlug);
@@ -288,7 +309,7 @@ export function JobDetailContent({
                 <span
                   className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
                     job.status === 'completed'
-                      ? 'bg-emerald-500/20 text-emerald-400'
+                      ? 'bg-[var(--keel-teal)]/20 text-[#5eead4]'
                       : job.status === 'cancelled'
                         ? 'bg-zinc-600 text-zinc-400'
                         : 'bg-amber-500/20 text-amber-400'
@@ -474,7 +495,7 @@ export function JobDetailContent({
                       <Button
                         type="button"
                         size="sm"
-                        className={selectedMemberId && !assigning ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'bg-zinc-700 hover:bg-zinc-600 text-zinc-400'}
+                        className={selectedMemberId && !assigning ? 'bg-[var(--keel-teal)] hover:bg-[#238b7f] text-white' : 'bg-zinc-700 hover:bg-zinc-600 text-zinc-400'}
                         disabled={!selectedMemberId || assigning}
                         onClick={handleAssign}
                       >
@@ -519,8 +540,32 @@ export function JobDetailContent({
             )}
 
             {!isContractorView && (
-              <TabsContent value="docs" className="mt-4">
-                <p className="text-sm text-zinc-500">Proposals, agreements, invoices and other files coming soon.</p>
+              <TabsContent value="docs" className="mt-4 space-y-8">
+                <section>
+                  <h3 className="mb-3 text-sm font-medium text-zinc-400">Notes</h3>
+                  <ContextWorkspaceNotes
+                    accountId={accountId}
+                    accountSlug={accountSlug}
+                    notes={workspaceNotes}
+                    tableAvailable={notesTableAvailable}
+                    linkOptions={linkOptions}
+                    defaultLink={defaultLink}
+                    canEdit={canEditJobs}
+                  />
+                </section>
+                <section>
+                  <h3 className="mb-3 text-sm font-medium text-zinc-400">
+                    Documents
+                  </h3>
+                  <ContextWorkspaceDocs
+                    accountId={accountId}
+                    accountSlug={accountSlug}
+                    docs={workspaceDocs}
+                    tableAvailable={docsTableAvailable}
+                    linkOptions={linkOptions}
+                    defaultLink={defaultLink}
+                  />
+                </section>
               </TabsContent>
             )}
           </Tabs>
@@ -599,7 +644,7 @@ export function JobDetailContent({
                     <Button
                       type="submit"
                       size="sm"
-                      className={`mt-2 ${newNote.trim() && !addingNote ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'bg-zinc-700 hover:bg-zinc-600 text-zinc-400'}`}
+                      className={`mt-2 ${newNote.trim() && !addingNote ? 'bg-[var(--keel-teal)] hover:bg-[#238b7f] text-white' : 'bg-zinc-700 hover:bg-zinc-600 text-zinc-400'}`}
                       disabled={!newNote.trim() || addingNote}
                     >
                       {addingNote ? 'Adding…' : 'Add note'}

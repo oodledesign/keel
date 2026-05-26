@@ -196,7 +196,7 @@ export function ExtractWorkspaceTasksClient({
             type="button"
             onClick={extract}
             disabled={extracting || rawText.trim().length < 20}
-            className="bg-[#57C87F] text-white hover:bg-[#4ab86f]"
+            className="bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
           >
             {extracting ? (
               <>
@@ -226,7 +226,7 @@ export function ExtractWorkspaceTasksClient({
               type="button"
               onClick={commit}
               disabled={committing}
-              className="bg-[#57C87F] text-white hover:bg-[#4ab86f]"
+              className="bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
             >
               {committing ? (
                 <>

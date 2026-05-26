@@ -4,9 +4,11 @@ import { cache } from 'react';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { PIPELINE_WORKSPACE_BUSINESS_PREFIX } from '~/home/(user)/_lib/pipeline-constants';
 import {
   loadBusinessIdsForTeamAccount,
   loadTeamAccountIdsForUser,
+  loadUserWorkspaceAccounts,
 } from '~/home/_lib/server/workspace-scope';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
@@ -76,8 +78,7 @@ function mapDealRow(row: PipelineDealRow): PipelineDeal {
   };
 }
 
-/** Matches `pipeline/actions` synthetic business row for account-scoped deals without business_id */
-export const PIPELINE_WORKSPACE_BUSINESS_PREFIX = 'workspace:';
+export { PIPELINE_WORKSPACE_BUSINESS_PREFIX } from '~/home/(user)/_lib/pipeline-constants';
 
 const DEAL_SELECT =
   'id, contact_name, company_name, value, stage, next_action, next_action_date, business_id, account_id, businesses(name, colour), accounts(name)';
@@ -158,11 +159,25 @@ export const loadPipelineData = cache(async (): Promise<PipelineData> => {
     }
   }
 
-  const businesses = [...bizRowsMap.values()].map((row) => ({
+  const workspaces = await loadUserWorkspaceAccounts(client, userId);
+  const workspaceTargets = workspaces.map((ws) => ({
+    id: `${PIPELINE_WORKSPACE_BUSINESS_PREFIX}${ws.id}`,
+    name: ws.name?.trim() || ws.slug?.trim() || 'Workspace',
+    color: null as string | null,
+  }));
+
+  const legacyBusinesses = [...bizRowsMap.values()].map((row) => ({
     id: row.id,
     name: row.name ?? '',
     color: row.colour ?? null,
   }));
+
+  const seen = new Set<string>();
+  const businesses = [...workspaceTargets, ...legacyBusinesses].filter((b) => {
+    if (seen.has(b.id)) return false;
+    seen.add(b.id);
+    return true;
+  });
 
   return { deals, businesses };
 });

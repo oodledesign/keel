@@ -19,9 +19,11 @@ export function HomeAccountSelector(props: {
     label: string | null;
     value: string | null;
     image: string | null;
+    role?: string | null;
   }>;
 
   userId: string;
+  className?: string;
   collisionPadding?: number;
 }) {
   const router = useRouter();
@@ -31,6 +33,7 @@ export function HomeAccountSelector(props: {
     <AccountSelector
       collapsed={!context?.open}
       collisionPadding={props.collisionPadding ?? 20}
+      className={props.className}
       accounts={props.accounts}
       features={features}
       userId={props.userId}

@@ -1,0 +1,75 @@
+'use client';
+
+import { cn } from '@kit/ui/utils';
+
+import type { PersonalDashboardTask } from '../../_lib/server/keel-dashboard.loader';
+
+const priorityStyles = {
+  low: 'border-zinc-500/30 bg-zinc-500/10 text-zinc-300',
+  medium: 'border-blue-500/30 bg-blue-500/10 text-blue-200',
+  high: 'border-amber-500/30 bg-amber-500/10 text-amber-200',
+  urgent: 'border-rose-500/30 bg-rose-500/10 text-rose-200',
+} as const;
+
+const priorityLabels = {
+  low: 'Low',
+  medium: 'Normal',
+  high: 'High',
+  urgent: 'Urgent',
+} as const;
+
+export function PersonalDashboardTaskRow(props: {
+  task: PersonalDashboardTask;
+}) {
+  const { task } = props;
+
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-[var(--workspace-shell-panel)] px-3 py-2.5">
+      <div className="min-w-0 flex-1">
+        <p
+          className={cn(
+            'truncate text-sm font-medium',
+            task.isOverdue ? 'text-rose-200' : 'text-white',
+          )}
+        >
+          {task.title}
+        </p>
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          <WorkspaceChip name={task.workspaceName} color={task.workspaceColor} />
+          {task.dueLabel ? (
+            <span
+              className={cn(
+                'text-xs',
+                task.isOverdue ? 'text-rose-300/90' : 'text-white/50',
+              )}
+            >
+              {task.isOverdue ? `Overdue · ${task.dueLabel}` : task.dueLabel}
+            </span>
+          ) : null}
+        </div>
+      </div>
+      <span
+        className={cn(
+          'shrink-0 rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+          priorityStyles[task.priority],
+        )}
+      >
+        {priorityLabels[task.priority]}
+      </span>
+    </div>
+  );
+}
+
+function WorkspaceChip(props: { name: string; color: string }) {
+  return (
+    <span
+      className="inline-flex max-w-[140px] items-center gap-1.5 rounded-md border border-white/10 px-1.5 py-0.5 text-[11px] font-medium text-white/90"
+    >
+      <span
+        className="h-2 w-2 shrink-0 rounded-full"
+        style={{ backgroundColor: props.color }}
+      />
+      <span className="truncate">{props.name}</span>
+    </span>
+  );
+}

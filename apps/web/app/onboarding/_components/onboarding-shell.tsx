@@ -60,7 +60,7 @@ export function OnboardingShell({
               href={helpHref}
               target="_blank"
               rel="noopener"
-              className="text-emerald-500 hover:text-emerald-400"
+              className="text-[var(--keel-teal)] hover:text-[#5eead4]"
             >
               Get help
             </Link>

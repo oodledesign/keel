@@ -7,7 +7,12 @@ import pathsConfig from '~/config/paths.config';
 import { getTeamAccountAccess } from '../../_lib/role-access';
 import { isWorkModuleEnabled } from '../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../../_lib/server/workspace-route-guard';
+import {
+  BUSINESS_WORKSPACE_SPACE_TYPES,
+  redirectIfSpaceNotIn,
+} from '../../_lib/server/workspace-route-guard';
+import { loadContextWorkspaceContent } from '../../_lib/workspace-content/context-loader';
+import { notesVariantFromProfile } from '../../_lib/server/workspace-profile';
 import { loadClientsPageData } from '../_lib/server/clients-page.loader';
 import { getClient } from '../_lib/server/server-actions';
 import { ClientDetailPageContent } from '../_components/client-detail-page-content';
@@ -23,7 +28,7 @@ export default async function ClientDetailPage({ params }: Props) {
   const workspace = await loadTeamWorkspace(accountSlug);
   if (!workspace?.account) notFound();
 
-  redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
+  redirectIfSpaceNotIn(workspace, accountSlug, BUSINESS_WORKSPACE_SPACE_TYPES);
 
   const access = getTeamAccountAccess(
     workspace.account as {
@@ -55,6 +60,13 @@ export default async function ClientDetailPage({ params }: Props) {
     accountSlug,
   );
 
+  const workspaceContent = await loadContextWorkspaceContent({
+    accountId,
+    spaceType: (workspace.account as { space_type?: string }).space_type,
+    businessType: workspace.businessType,
+    scope: { clientOrgId: clientId },
+  });
+
   return (
     <PageBody className="flex flex-col bg-[var(--workspace-shell-canvas)] p-4 md:p-6">
       <ClientDetailPageNav
@@ -69,6 +81,13 @@ export default async function ClientDetailPage({ params }: Props) {
           canEditClients={canEditClients}
           isContractorView={isContractorView}
           clientsListHref={clientsListHref}
+          workspaceNotes={workspaceContent.notes}
+          workspaceDocs={workspaceContent.docs}
+          notesTableAvailable={workspaceContent.notesTableAvailable}
+          docsTableAvailable={workspaceContent.docsTableAvailable}
+          linkOptions={workspaceContent.linkOptions}
+          defaultLink={workspaceContent.defaultLink}
+          notesVariant={notesVariantFromProfile(workspaceContent.profile)}
         />
       </div>
     </PageBody>

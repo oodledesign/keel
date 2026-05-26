@@ -94,14 +94,14 @@ export function KeelUsePreferencesForm(props: {
                 'flex w-full items-start gap-4 rounded-2xl border px-4 py-3 text-left transition-colors',
                 'border-white/[0.08] bg-[var(--workspace-shell-panel)]',
                 on
-                  ? 'border-[#57C87F]/40 ring-1 ring-[#57C87F]/25'
+                  ? 'border-[var(--keel-teal)]/40 ring-1 ring-[var(--keel-teal)]/25'
                   : 'hover:border-white/[0.12]',
               )}
             >
               <span
                 className={cn(
                   'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
-                  on ? 'bg-[#57C87F]/20 text-[#57C87F]' : 'bg-white/[0.06]',
+                  on ? 'bg-[var(--keel-teal)]/20 text-[var(--keel-teal)]' : 'bg-white/[0.06]',
                 )}
               >
                 <Icon className="h-5 w-5" aria-hidden />
@@ -124,7 +124,7 @@ export function KeelUsePreferencesForm(props: {
           type="button"
           disabled={pending}
           onClick={handleSave}
-          className="bg-[#57C87F] text-[#060C18] hover:bg-[#57C87F]/90"
+          className="bg-[var(--keel-teal)] text-[#060C18] hover:bg-[var(--keel-teal)]/90"
         >
           {pending ? 'Saving…' : 'Save preferences'}
         </Button>
@@ -132,7 +132,7 @@ export function KeelUsePreferencesForm(props: {
           <span
             className={
               message === 'Saved.'
-                ? 'text-sm text-[#57C87F]'
+                ? 'text-sm text-[var(--keel-teal)]'
                 : 'text-sm text-amber-400'
             }
           >

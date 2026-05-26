@@ -12,7 +12,8 @@ import {
   Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent } from '@kit/ui/card';
@@ -38,7 +39,7 @@ const statusStyles: Record<
   Property['status'],
   { bg: string; text: string; label: string }
 > = {
-  active: { bg: 'bg-emerald-500/15', text: 'text-emerald-300', label: 'Active' },
+  active: { bg: 'bg-[var(--keel-teal)]/15', text: 'text-[#5eead4]', label: 'Active' },
   vacant: { bg: 'bg-amber-500/15', text: 'text-amber-300', label: 'Vacant' },
   maintenance: { bg: 'bg-orange-500/15', text: 'text-orange-300', label: 'Maintenance' },
   sold: { bg: 'bg-sky-500/15', text: 'text-sky-300', label: 'Sold' },
@@ -58,6 +59,8 @@ export function PropertiesList({
   initialProperties,
 }: PropertiesListProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [properties, setProperties] = useState<Property[]>(initialProperties);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Property | null>(null);
@@ -67,6 +70,16 @@ export function PropertiesList({
     setEditing(null);
     setModalOpen(true);
   };
+
+  useEffect(() => {
+    if (searchParams.get('create') !== 'property') return;
+    setEditing(null);
+    setModalOpen(true);
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete('create');
+    const qs = next.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [searchParams, pathname, router]);
 
   const openEdit = (property: Property) => {
     setEditing(property);

@@ -22,6 +22,9 @@ import {
 
 import { Loader2 } from 'lucide-react';
 
+import { pickDefaultPipelineTargetId } from '~/home/(user)/_lib/pipeline-constants';
+import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
+
 import { updateDeal } from '../actions';
 import type { PipelineDeal } from '../../_lib/server/pipeline.loader';
 
@@ -52,17 +55,22 @@ export function EditDealDialog({
   onDealUpdated,
   accountSlug,
 }: Props) {
+  const workspaceScoped = Boolean(accountSlug?.trim());
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   const [stage, setStage] = useState(deal?.stage ?? 'lead');
-  const [businessId, setBusinessId] = useState(deal?.businessId ?? businesses[0]?.id ?? '');
+  const [businessId, setBusinessId] = useState(
+    deal?.businessId ?? pickDefaultPipelineTargetId(businesses, { workspaceScoped }),
+  );
+
+  const showAssignField = !workspaceScoped && businesses.length > 1;
 
   useEffect(() => {
     if (deal && open) {
       setStage(deal.stage);
-      setBusinessId((deal.businessId || businesses[0]?.id) ?? '');
+      setBusinessId((deal.businessId || pickDefaultPipelineTargetId(businesses, { workspaceScoped })) ?? '');
       setError(null);
     }
   }, [deal, open, businesses]);
@@ -83,8 +91,11 @@ export function EditDealDialog({
       setError('Contact name is required');
       return;
     }
-    if (!businessId) {
-      setError('Please select a business');
+    const resolvedBusinessId =
+      businessId || pickDefaultPipelineTargetId(businesses, { workspaceScoped });
+
+    if (!resolvedBusinessId) {
+      setError('Please select a workspace');
       return;
     }
 
@@ -98,7 +109,7 @@ export function EditDealDialog({
         stage,
         nextAction: nextAction || undefined,
         nextActionDate: nextActionDate || undefined,
-        businessId,
+        businessId: resolvedBusinessId,
         accountSlug: accountSlug ?? null,
       });
 
@@ -107,7 +118,7 @@ export function EditDealDialog({
         return;
       }
 
-      const biz = businesses.find((b) => b.id === businessId);
+      const biz = businesses.find((b) => b.id === resolvedBusinessId);
       onDealUpdated({
         ...deal,
         contactName,
@@ -116,7 +127,7 @@ export function EditDealDialog({
         stage,
         nextAction,
         nextActionDate: nextActionDate || null,
-        businessId,
+        businessId: resolvedBusinessId,
         businessName: biz?.name ?? '',
         businessColor: biz?.color ?? null,
       });
@@ -166,30 +177,32 @@ export function EditDealDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-zinc-300">Business *</Label>
-              <Select value={businessId} onValueChange={setBusinessId}>
-                <SelectTrigger className="border-white/10 bg-white/5 text-white">
-                  <SelectValue placeholder="Select business" />
-                </SelectTrigger>
-                <SelectContent className="border-white/10 bg-[#1A2535] text-white">
-                  {businesses.map((biz) => (
-                    <SelectItem key={biz.id} value={biz.id}>
-                      <span className="flex items-center gap-2">
-                        {biz.color && (
-                          <span
-                            className="inline-block h-2 w-2 rounded-full"
-                            style={{ backgroundColor: biz.color }}
-                          />
-                        )}
-                        {biz.name}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className={`grid gap-4 ${showAssignField ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            {showAssignField ? (
+              <div className="space-y-2">
+                <Label className="text-zinc-300">Workspace *</Label>
+                <Select value={businessId} onValueChange={setBusinessId}>
+                  <SelectTrigger className="border-white/10 bg-white/5 text-white">
+                    <SelectValue placeholder="Select workspace" />
+                  </SelectTrigger>
+                  <SelectContent className="border-white/10 bg-[#1A2535] text-white">
+                    {businesses.map((biz) => (
+                      <SelectItem key={biz.id} value={biz.id}>
+                        <span className="flex items-center gap-2">
+                          {biz.color ? (
+                            <span
+                              className="inline-block h-2 w-2 rounded-full"
+                              style={{ backgroundColor: biz.color }}
+                            />
+                          ) : null}
+                          {biz.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
             <div className="space-y-2">
               <Label className="text-zinc-300">Stage</Label>
               <Select value={stage} onValueChange={setStage}>
@@ -265,7 +278,7 @@ export function EditDealDialog({
             <button
               type="submit"
               disabled={isPending}
-              className="inline-flex h-9 items-center gap-2 rounded-xl bg-[#57C87F] px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#4ab86f] disabled:opacity-50"
+              className={workspaceBtnPrimaryMd}
             >
               {isPending ? (
                 <>

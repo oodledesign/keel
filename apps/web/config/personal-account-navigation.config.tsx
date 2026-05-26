@@ -1,26 +1,18 @@
-import {
-  Briefcase,
-  Church,
-  Heart,
-  Kanban,
-  LayoutDashboard,
-  LifeBuoy,
-  ListTodo,
-  Settings,
-  User,
-} from 'lucide-react';
+import { LayoutDashboard, Settings } from 'lucide-react';
 import { z } from 'zod';
 
 import { NavigationConfigSchema } from '@kit/ui/navigation-schema';
 
-import featureFlagsConfig from '~/config/feature-flags.config';
 import pathsConfig from '~/config/paths.config';
 
 const iconClasses = 'w-4';
 
-export type PersonalNavAccount = {
+export type PersonalNavWorkspace = {
+  id: string;
   label: string;
-  value: string;
+  slug: string;
+  pictureUrl: string | null;
+  spaceType?: string | null;
 };
 
 function navigationShell() {
@@ -31,17 +23,12 @@ function navigationShell() {
   };
 }
 
-/**
- * Route tree for the personal / app shell sidebar.
- * Cross-cutting work tools (pipeline, tasks, support) live here; per-business
- * modules (clients, jobs, invoices) stay under each work space.
- */
-export function buildPersonalAccountRoutes(accounts: PersonalNavAccount[]) {
+/** Personal home sidebar: Home only (workspace shortcuts rendered separately). */
+export function buildPersonalHomeNavRoutes() {
   const routes: z.infer<typeof NavigationConfigSchema>['routes'] = [
     {
-      label: 'Dashboard',
-      collapsible: true,
-      collapsed: false,
+      label: 'keel-nav',
+      collapsible: false,
       children: [
         {
           label: 'Home',
@@ -51,87 +38,14 @@ export function buildPersonalAccountRoutes(accounts: PersonalNavAccount[]) {
         },
       ],
     },
-    {
-      label: 'Work',
-      collapsible: true,
-      collapsed: false,
-      children: [
-        {
-          label: 'Pipeline',
-          path: '/app/pipeline',
-          Icon: <Kanban className={iconClasses} />,
-        },
-        {
-          label: 'Tasks',
-          path: '/app/tasks',
-          Icon: <ListTodo className={iconClasses} />,
-        },
-        {
-          label: 'Support',
-          path: '/app/support',
-          Icon: <LifeBuoy className={iconClasses} />,
-        },
-      ],
-    },
   ];
-
-  if (featureFlagsConfig.enableTeamAccounts) {
-    const businessChildren = accounts
-      .filter((a) => a.value)
-      .map((a) => ({
-        label: a.label,
-        path: pathsConfig.app.accountHome.replace('[account]', a.value),
-        Icon: <Briefcase className={iconClasses} />,
-      }));
-
-    routes.push({
-      label: 'Business',
-      collapsible: true,
-      collapsed: false,
-      children: businessChildren,
-    });
-  }
-
-  routes.push(
-    {
-      label: 'Life',
-      collapsible: true,
-      collapsed: false,
-      children: [
-        {
-          label: 'Personal',
-          path: '/app/life/personal',
-          Icon: <User className={iconClasses} />,
-        },
-        {
-          label: 'Family',
-          path: '/app/family',
-          Icon: <Heart className={iconClasses} />,
-        },
-        {
-          label: 'Homegroup',
-          path: '/app/life/homegroup',
-          Icon: <Church className={iconClasses} />,
-        },
-      ],
-    },
-    { divider: true },
-    {
-      label: 'Account',
-      collapsible: true,
-      collapsed: false,
-      children: [
-        {
-          label: 'Settings',
-          path: pathsConfig.app.personalAccountSettings,
-          Icon: <Settings className={iconClasses} />,
-        },
-      ],
-    },
-  );
 
   return routes;
 }
+
+export const personalAccountSettingsPath = pathsConfig.app.personalAccountSettings;
+
+export { Settings as PersonalSettingsIcon };
 
 export function parsePersonalAccountNavigationConfig(
   routes: z.infer<typeof NavigationConfigSchema>['routes'],
@@ -142,7 +56,7 @@ export function parsePersonalAccountNavigationConfig(
   });
 }
 
-/** Used for layout defaults (style / collapse) when full routes are not needed. */
+/** Layout defaults when routes are not needed. */
 export const personalAccountNavigationConfig = parsePersonalAccountNavigationConfig(
-  buildPersonalAccountRoutes([]),
+  buildPersonalHomeNavRoutes(),
 );

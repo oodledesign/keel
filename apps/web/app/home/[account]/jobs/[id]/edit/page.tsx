@@ -11,7 +11,10 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
 import { isWorkModuleEnabled } from '../../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard';
+import {
+  BUSINESS_WORKSPACE_SPACE_TYPES,
+  redirectIfSpaceNotIn,
+} from '../../../_lib/server/workspace-route-guard';
 import { JobEditContent } from '../../_components/job-edit-content';
 import { createJobsService } from '../../_lib/server/jobs.service';
 import { loadJobsPageData } from '../../_lib/server/jobs-page.loader';
@@ -34,7 +37,7 @@ export const generateMetadata = async ({
 async function JobEditPage({ params }: JobEditPageProps) {
   const { account: accountSlug, id } = await params;
   const workspace = await loadTeamWorkspace(accountSlug);
-  redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
+  redirectIfSpaceNotIn(workspace, accountSlug, BUSINESS_WORKSPACE_SPACE_TYPES);
   if (!isWorkModuleEnabled(workspace.moduleSettings, 'jobs')) {
     notFound();
   }

@@ -403,7 +403,7 @@ export function JobEventForm({
             <Button
               type="button"
               size="sm"
-              className={selectedMemberId ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'bg-zinc-700 hover:bg-zinc-600 text-zinc-400'}
+              className={selectedMemberId ? 'bg-[var(--keel-teal)] hover:bg-[#238b7f] text-white' : 'bg-zinc-700 hover:bg-zinc-600 text-zinc-400'}
               disabled={!selectedMemberId}
               onClick={handleAddAssignment}
             >
@@ -418,7 +418,7 @@ export function JobEventForm({
         <Button
           type="submit"
           disabled={submitting}
-          className="bg-emerald-600 hover:bg-emerald-500"
+          className="bg-[var(--keel-teal)] hover:bg-[#238b7f]"
         >
           {submitting ? 'Saving…' : isCreate ? 'Create' : 'Save'}
         </Button>

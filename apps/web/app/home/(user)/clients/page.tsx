@@ -36,7 +36,7 @@ async function PersonalClientsPage({ searchParams }: Props) {
     return (
       <PageBody className="flex min-h-[60vh] items-center justify-center bg-[var(--workspace-shell-canvas)] px-4">
         <div className="max-w-md rounded-2xl border border-zinc-700 bg-[var(--workspace-shell-panel)] p-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-[var(--keel-teal)]/15 text-[#5eead4]">
             <Users className="h-7 w-7" />
           </div>
           <h1 className="text-xl font-semibold text-white">
@@ -46,7 +46,7 @@ async function PersonalClientsPage({ searchParams }: Props) {
             <Trans i18nKey="account:clientsNeedTeam" />
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-            <Button asChild className="bg-emerald-600 hover:bg-emerald-500">
+            <Button asChild className="bg-[var(--keel-teal)] hover:bg-[#238b7f]">
               <Link href={pathsConfig.app.home}>
                 <Trans i18nKey="account:goToHome" />
               </Link>

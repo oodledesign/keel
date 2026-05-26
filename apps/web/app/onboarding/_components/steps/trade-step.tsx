@@ -154,7 +154,7 @@ export function TradeStep({
         <PrimaryButton
           onClick={handleContinue}
           disabled={!selected || loading}
-          className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-500"
+          className="gap-1.5 bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
         >
           {loading ? 'Saving…' : 'Continue'}
           <span className="ml-0.5">→</span>

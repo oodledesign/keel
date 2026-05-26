@@ -42,7 +42,7 @@ const PLACEHOLDER_TICKETS: Ticket[] = [
 const statusConfig = {
   open: { label: 'Open', color: 'bg-blue-500/15 text-blue-400 border-blue-500/40', icon: AlertCircle },
   in_progress: { label: 'In Progress', color: 'bg-amber-500/15 text-amber-400 border-amber-500/40', icon: Clock },
-  resolved: { label: 'Resolved', color: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40', icon: CheckCircle2 },
+  resolved: { label: 'Resolved', color: 'bg-[var(--keel-teal)]/15 text-[#5eead4] border-[var(--keel-teal)]/40', icon: CheckCircle2 },
   closed: { label: 'Closed', color: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/40', icon: CheckCircle2 },
 } as const;
 
@@ -81,7 +81,7 @@ export default function SupportPage() {
         </div>
         <button
           type="button"
-          className="inline-flex h-9 items-center gap-2 rounded-xl bg-[#57C87F] px-4 text-sm font-medium text-white shadow-sm hover:bg-[#4ab86f]"
+          className="inline-flex h-9 items-center gap-2 rounded-xl bg-[var(--keel-teal)] px-4 text-sm font-medium text-white shadow-sm hover:bg-[#238b7f]"
         >
           <Plus className="h-4 w-4" />
           New Ticket
@@ -132,7 +132,7 @@ export default function SupportPage() {
               >
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div className="flex items-start gap-3">
-                    <StatusIcon className={`mt-0.5 h-4 w-4 shrink-0 ${ticket.status === 'open' ? 'text-blue-400' : ticket.status === 'in_progress' ? 'text-amber-400' : 'text-emerald-400'}`} />
+                    <StatusIcon className={`mt-0.5 h-4 w-4 shrink-0 ${ticket.status === 'open' ? 'text-blue-400' : ticket.status === 'in_progress' ? 'text-amber-400' : 'text-[#5eead4]'}`} />
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-zinc-500">{ticket.id}</span>

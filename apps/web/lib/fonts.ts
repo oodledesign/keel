@@ -1,45 +1,28 @@
-import { Space_Grotesk, Work_Sans } from 'next/font/google';
+import { Inter } from 'next/font/google';
 
 import { cn } from '@kit/ui/utils';
 
-const sans = Work_Sans({
+const inter = Inter({
   subsets: ['latin'],
   variable: '--font-sans-fallback',
   fallback: ['system-ui', 'Helvetica Neue', 'Helvetica', 'Arial'],
   preload: true,
-  weight: ['400', '500', '600', '700', '800'],
+  weight: ['400', '500', '700'],
 });
 
-const heading = Space_Grotesk({
-  subsets: ['latin'],
-  variable: '--font-heading-fallback',
-  fallback: ['system-ui', 'Helvetica Neue', 'Helvetica', 'Arial'],
-  preload: true,
-  weight: ['400', '500', '600', '700'],
-});
-
-// we export these fonts into the root layout
-export { sans, heading };
+// Inter for both body and headings (Keel brand)
+export const sans = inter;
+export const heading = inter;
 
 /**
  * @name getFontsClassName
  * @description Get the class name for the root layout.
- * @param theme
  */
 export function getFontsClassName(theme?: string) {
   const dark = theme === 'dark';
   const light = !dark;
 
-  const font = [sans.variable, heading.variable].reduce<string[]>(
-    (acc, curr) => {
-      if (acc.includes(curr)) return acc;
-
-      return [...acc, curr];
-    },
-    [],
-  );
-
-  return cn(...font, {
+  return cn(inter.variable, {
     dark,
     light,
   });

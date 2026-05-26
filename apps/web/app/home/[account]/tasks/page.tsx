@@ -10,9 +10,16 @@ import { TasksPageClient } from '~/home/(user)/tasks/_components/tasks-page-clie
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
 import { getDefaultAccountPath } from '../_lib/role-access';
-import { isWorkModuleEnabled } from '../_lib/server/account-modules';
+import {
+  isPropertyNavModuleEnabled,
+  isWorkModuleEnabled,
+  getSpaceTypeFromAccount,
+} from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../_lib/server/workspace-route-guard';
+import {
+  BUSINESS_WORKSPACE_SPACE_TYPES,
+  redirectIfSpaceNotIn,
+} from '../_lib/server/workspace-route-guard';
 
 interface TeamAccountTasksPageProps {
   params: Promise<{ account: string }>;
@@ -29,9 +36,17 @@ export const generateMetadata = async () => {
 async function TeamAccountTasksPage({ params }: TeamAccountTasksPageProps) {
   const accountSlug = (await params).account;
   const workspace = await loadTeamWorkspace(accountSlug);
-  redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
+  redirectIfSpaceNotIn(workspace, accountSlug, BUSINESS_WORKSPACE_SPACE_TYPES);
 
-  if (!isWorkModuleEnabled(workspace.moduleSettings, 'tasks')) {
+  const spaceType = getSpaceTypeFromAccount(
+    workspace.account as { space_type?: string | null },
+  );
+  const tasksEnabled =
+    spaceType === 'property'
+      ? isPropertyNavModuleEnabled(workspace.moduleSettings, 'tasks')
+      : isWorkModuleEnabled(workspace.moduleSettings, 'tasks');
+
+  if (!tasksEnabled) {
     redirect(getDefaultAccountPath(accountSlug, workspace.account));
   }
 

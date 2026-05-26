@@ -1,0 +1,113 @@
+'use client';
+
+import { useState, useTransition } from 'react';
+
+import { useRouter } from 'next/navigation';
+
+import { Plus } from 'lucide-react';
+
+import { cn } from '@kit/ui/utils';
+
+import { createTask } from '../../_lib/actions/task-actions';
+
+type InlineAddTaskRowProps = {
+  priority: 'high' | 'medium';
+  clientId?: string | null;
+  workspaceAccountId?: string;
+};
+
+export function InlineAddTaskRow({
+  priority,
+  clientId,
+  workspaceAccountId,
+}: InlineAddTaskRowProps) {
+  const router = useRouter();
+  const [active, setActive] = useState(false);
+  const [title, setTitle] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  const needsAssignment = Boolean(workspaceAccountId) && !clientId;
+
+  const submit = () => {
+    const trimmed = title.trim();
+    if (!trimmed) return;
+    if (needsAssignment) {
+      setError('Choose a client or project using Add Task above.');
+      return;
+    }
+    setError(null);
+    startTransition(async () => {
+      const result = await createTask({
+        title: trimmed,
+        priority,
+        clientId: clientId ?? undefined,
+      });
+      if (result.success) {
+        setTitle('');
+        setActive(false);
+        router.refresh();
+      } else {
+        setError(result.error ?? 'Could not create task');
+      }
+    });
+  };
+
+  return (
+    <div
+      className={cn(
+        'border-t border-dashed border-white/10 bg-white/[0.03] px-4 py-3 transition-colors sm:px-5',
+        active && 'bg-white/[0.05]',
+      )}
+    >
+      {!active ? (
+        <button
+          type="button"
+          onClick={() => {
+            setError(null);
+            setActive(true);
+          }}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#2A9D8F]/45 bg-gradient-to-r from-[#2A9D8F]/10 to-[#2563EB]/8 px-4 py-3 text-sm font-semibold text-[#7ee8d8] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-colors hover:border-[#2A9D8F]/70 hover:from-[#2A9D8F]/16 hover:to-[#2563EB]/12 hover:text-white"
+        >
+          <Plus className="h-4 w-4 shrink-0" strokeWidth={2.5} />
+          Add task
+        </button>
+      ) : (
+        <div className="mx-auto max-w-2xl space-y-2">
+          <input
+            autoFocus
+            value={title}
+            disabled={isPending}
+            onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                submit();
+              } else if (e.key === 'Escape') {
+                setActive(false);
+                setTitle('');
+                setError(null);
+              }
+            }}
+            onBlur={() => {
+              if (!title.trim()) {
+                setActive(false);
+              }
+            }}
+            placeholder="Task name, press Enter to save"
+            className="h-11 w-full rounded-xl border border-white/15 bg-[var(--workspace-shell-canvas)] px-3 text-sm text-white placeholder:text-zinc-500 focus:border-[#2A9D8F]/50 focus:outline-none focus:ring-1 focus:ring-[#2A9D8F]/30"
+            aria-label="New task title"
+          />
+          {error ? (
+            <p className="text-xs text-rose-300/90">{error}</p>
+          ) : needsAssignment ? (
+            <p className="text-xs text-zinc-500">
+              Link this task to a client or project with the Add Task button
+              above, or filter by client first.
+            </p>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}

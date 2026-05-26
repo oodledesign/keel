@@ -171,7 +171,7 @@ export function SignaturesSettingsPanel({
             ) : (
               <div className="space-y-4 rounded-2xl border border-dashed border-white/10 bg-black/10 p-6">
                 <div className="flex items-start gap-3">
-                  <div className="rounded-xl bg-[#57C87F]/10 p-2 text-[#57C87F]">
+                  <div className="rounded-xl bg-[var(--keel-teal)]/10 p-2 text-[var(--keel-teal)]">
                     <PlugZap className="h-5 w-5" />
                   </div>
                   <div>

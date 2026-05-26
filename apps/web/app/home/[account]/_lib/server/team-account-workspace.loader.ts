@@ -11,6 +11,11 @@ import { createTeamAccountsApi } from '@kit/team-accounts/api';
 import pathsConfig from '~/config/paths.config';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
+import {
+  resolveWorkspaceProfile,
+  type WorkspaceProfile,
+} from './workspace-profile';
+
 export type TeamAccountWorkspace = Awaited<
   ReturnType<typeof loadTeamWorkspace>
 >;
@@ -45,18 +50,47 @@ async function workspaceLoader(accountSlug: string) {
   const { data: moduleSettingsRows } = await client
     .from('account_module_settings')
     .select('module_key, enabled')
-    .eq('account_id', accountId);
+    .eq('account_id', accountId)
+    .eq('enabled', true);
 
   const moduleSettings = Object.fromEntries(
-    (moduleSettingsRows ?? []).map((row) => [row.module_key, row.enabled]),
+    (moduleSettingsRows ?? []).map((row) => [row.module_key, true]),
   ) as Record<string, boolean>;
+
+  let businessType: string | null = null;
+  const { data: businessRow } = await client
+    .from('businesses')
+    .select('type')
+    .eq('account_id', accountId)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (businessRow) {
+    businessType = (businessRow as { type?: string | null }).type ?? null;
+  }
+
+  const accountRecord = workspace.data.account as {
+    id: string;
+    slug: string;
+    space_type?: string | null;
+  };
+
+  const workspaceProfile = resolveWorkspaceProfile({
+    space_type: accountRecord.space_type,
+    business_type: businessType,
+  });
 
   const data = workspace.data;
 
   return {
     ...data,
-    account: data.account as { id: string; slug: string },
+    account: accountRecord,
     moduleSettings,
+    workspaceProfile,
+    businessType,
     user,
   };
 }
+
+export type { WorkspaceProfile };

@@ -95,43 +95,43 @@ export function DashboardPageContent({
   }, [statusSummary, totalProjects]);
 
   const revenueTrendData = useMemo(
-    () => buildRevenueTrendData(metrics.totalRevenue),
-    [metrics.totalRevenue],
+    () => buildRevenueTrendData(metrics.totalRevenuePence / 100),
+    [metrics.totalRevenuePence],
   );
 
   const monthRailData = useMemo(
     () =>
       buildMonthRailData({
-        currentRevenue: metrics.totalRevenue,
+        currentRevenue: metrics.totalRevenuePence / 100,
         currentHours: metrics.hoursLogged,
         currentJobsCompleted: statusSummary.completed,
       }),
-    [metrics.totalRevenue, metrics.hoursLogged, statusSummary.completed],
+    [metrics.totalRevenuePence, metrics.hoursLogged, statusSummary.completed],
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 bg-[radial-gradient(circle_at_18%_0%,rgba(167,139,250,0.12),transparent_35%),radial-gradient(circle_at_82%_6%,rgba(192,132,252,0.11),transparent_40%)] px-4 pb-10 pt-5 text-white md:px-6 lg:px-8">
+    <div className="flex min-h-0 flex-1 flex-col gap-6 bg-[radial-gradient(circle_at_18%_0%,rgba(42,157,143,0.1),transparent_35%),radial-gradient(circle_at_82%_6%,rgba(15,27,53,0.35),transparent_40%)] px-4 pb-10 pt-5 text-white md:px-6 lg:px-8">
       {/* Top stats */}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Total Revenue"
-          value={formatCurrency(metrics.totalRevenue)}
-          helper="+12.5% vs last month"
-          tone="emerald"
+          value={formatCurrency(metrics.totalRevenuePence / 100)}
+          helper="Paid invoices this month"
+          tone="teal"
           icon={BarChart3}
         />
         <StatCard
-          label="Active Jobs"
-          value={metrics.activeJobs.toString()}
-          helper="+3 new this week"
+          label="Active Projects"
+          value={metrics.activeProjects.toString()}
+          helper="Pending or in progress"
           tone="sky"
           icon={BriefcaseBusiness}
         />
         <StatCard
           label="Total Clients"
           value={metrics.totalClients.toString()}
-          helper="+5 since last month"
-          tone="violet"
+          helper="All clients"
+          tone="slate"
           icon={Users}
         />
         <StatCard
@@ -158,7 +158,10 @@ export function DashboardPageContent({
             <StatusLegend statusSummary={statusSummary} />
           </div>
           <StatusSummaryGrid statusSummary={statusSummary} />
-          <StatusBar statusPercent={statusPercent} />
+          <StatusBar
+            statusPercent={statusPercent}
+            statusSummary={statusSummary}
+          />
         </CardHeader>
         <CardContent className="pt-5">
           <Tabs
@@ -237,20 +240,20 @@ function StatCard({
   label: string;
   value: string;
   helper: string;
-  tone: 'emerald' | 'sky' | 'violet' | 'amber';
+  tone: 'teal' | 'sky' | 'slate' | 'amber';
   icon: React.ComponentType<{ className?: string }>;
 }) {
   const toneBg: Record<typeof tone, string> = {
-    emerald: 'bg-violet-500/12',
+    teal: 'bg-[#2A9D8F]/15',
     sky: 'bg-sky-500/10',
-    violet: 'bg-violet-500/10',
+    slate: 'bg-white/8',
     amber: 'bg-amber-500/10',
   } as const;
 
   const toneAccent: Record<typeof tone, string> = {
-    emerald: 'text-violet-300',
+    teal: 'text-[#5eead4]',
     sky: 'text-sky-400',
-    violet: 'text-violet-400',
+    slate: 'text-zinc-300',
     amber: 'text-amber-400',
   } as const;
 
@@ -288,12 +291,12 @@ function StatusLegend({
   const items = [
     {
       label: 'Completed',
-      color: 'bg-violet-500',
+      color: 'bg-[#2A9D8F]',
       value: statusSummary.completed,
     },
     {
       label: 'In Progress',
-      color: 'bg-sky-500',
+      color: 'bg-blue-500',
       value: statusSummary.inProgress,
     },
     {
@@ -303,7 +306,7 @@ function StatusLegend({
     },
     {
       label: 'Overdue',
-      color: 'bg-rose-500',
+      color: 'bg-red-500',
       value: statusSummary.overdue,
     },
   ];
@@ -336,8 +339,8 @@ function StatusSummaryGrid({
       label: 'Completed',
       value: statusSummary.completed,
       Icon: CheckCircle2,
-      iconClass: 'text-violet-300',
-      bgClass: 'bg-violet-500/15',
+      iconClass: 'text-[#5eead4]',
+      bgClass: 'bg-[#2A9D8F]/15',
     },
     {
       key: 'progress',
@@ -393,6 +396,7 @@ function StatusSummaryGrid({
 
 function StatusBar({
   statusPercent,
+  statusSummary,
 }: {
   statusPercent: {
     completed: number;
@@ -400,40 +404,49 @@ function StatusBar({
     pending: number;
     overdue: number;
   };
+  statusSummary: DashboardStatusSummary;
 }) {
   const segments = [
     {
       key: 'completed',
       width: statusPercent.completed,
-      color: 'bg-violet-500',
+      color: 'bg-[#2A9D8F]',
+      count: statusSummary.completed,
     },
     {
       key: 'inProgress',
       width: statusPercent.inProgress,
-      color: 'bg-sky-500',
+      color: 'bg-blue-500',
+      count: statusSummary.inProgress,
     },
     {
       key: 'pending',
       width: statusPercent.pending,
       color: 'bg-amber-400',
+      count: statusSummary.pending,
     },
     {
       key: 'overdue',
       width: statusPercent.overdue,
-      color: 'bg-rose-500',
+      color: 'bg-red-500',
+      count: statusSummary.overdue,
     },
   ];
 
   return (
-    <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-violet-950/50">
+    <div className="mt-4 h-9 w-full overflow-hidden rounded-full bg-[#0B132B]/80">
       <div className="flex h-full w-full">
         {segments.map((seg) =>
           seg.width > 0 ? (
             <div
               key={seg.key}
               style={{ width: `${seg.width}%` }}
-              className={`${seg.color} h-full transition-all`}
-            />
+              className={`${seg.color} flex h-full min-w-[2.25rem] items-center justify-center transition-all`}
+            >
+              <span className="text-[10px] font-semibold text-white">
+                {seg.count}
+              </span>
+            </div>
           ) : null,
         )}
       </div>

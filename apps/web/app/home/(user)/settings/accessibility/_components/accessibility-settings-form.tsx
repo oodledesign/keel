@@ -89,7 +89,7 @@ export function AccessibilitySettingsForm({
                 size="sm"
                 className={
                   textSize === opt.value
-                    ? 'border-emerald-400/60 bg-emerald-500 text-[#05120b] hover:bg-emerald-400'
+                    ? 'border-[var(--keel-teal)]/60 bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]'
                     : 'border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-zinc-300 hover:bg-[var(--workspace-shell-panel-hover)]'
                 }
                 onClick={() => setTextSize(opt.value)}

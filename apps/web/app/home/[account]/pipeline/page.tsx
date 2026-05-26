@@ -41,22 +41,11 @@ async function TeamAccountPipelinePage({ params }: TeamAccountPipelinePageProps)
     <>
       <TeamAccountLayoutPageHeader
         title={<Trans i18nKey="common:routes.pipeline" />}
-        description="Deals for businesses linked to this workspace (via projects or business records)."
+        description="Track leads and opportunities for this workspace. Won deals can be turned into clients."
         account={accountSlug}
       />
 
       <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
-        {data.businesses.length === 0 ? (
-          <div className="mx-4 mt-4 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm text-amber-100/90 md:mx-6 lg:mx-8">
-            No businesses are linked to this workspace yet for pipeline. Deals
-            appear when a{' '}
-            <span className="font-medium text-white">project</span> sets a
-            business, or when a{' '}
-            <span className="font-medium text-white">business</span> record is
-            tied to this team. You can still use your personal Pipeline under
-            Work in the home sidebar.
-          </div>
-        ) : null}
         <WorkspacePipelineBoardWrapper
           initialData={data}
           accountSlug={accountSlug}

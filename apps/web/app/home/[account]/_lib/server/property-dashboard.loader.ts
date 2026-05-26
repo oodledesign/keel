@@ -17,13 +17,25 @@ export type PropertyStatusCounts = {
 
 export type PropertyDashboardData = GroupDashboardData & {
   propertyCounts: PropertyStatusCounts;
+  openMaintenanceJobs: number;
+  openTasksCount: number;
 };
+
+function isTableMissing(error: { message?: string; code?: string } | null) {
+  if (!error) return false;
+  const m = (error.message ?? '').toLowerCase();
+  return (
+    m.includes('schema cache') ||
+    m.includes('does not exist') ||
+    error.code === 'PGRST205' ||
+    error.code === '42P01'
+  );
+}
 
 export const loadPropertyDashboardData = cache(
   async (accountSlug: string): Promise<PropertyDashboardData> => {
     const client = getSupabaseServerClient();
 
-    // Resolve account_id from slug
     const { data: accountRow } = await client
       .from('accounts')
       .select('id')
@@ -32,18 +44,33 @@ export const loadPropertyDashboardData = cache(
 
     const accountId = (accountRow as { id?: string } | null)?.id;
 
-    const [groupData, propertiesResult] = await Promise.all([
-      loadGroupDashboardData(accountSlug),
-      accountId
-        ? client
-            .from('properties')
-            .select('status')
-            .eq('account_id', accountId)
-        : Promise.resolve({ data: [] }),
-    ]);
+    const [groupData, propertiesResult, jobsResult, projectsResult] =
+      await Promise.all([
+        loadGroupDashboardData(accountSlug),
+        accountId
+          ? client
+              .from('properties')
+              .select('status')
+              .eq('account_id', accountId)
+          : Promise.resolve({ data: [], error: null }),
+        accountId
+          ? client
+              .from('jobs')
+              .select('id', { count: 'exact', head: true })
+              .eq('account_id', accountId)
+              .not('status', 'in', '("completed","cancelled")')
+          : Promise.resolve({ count: 0, error: null }),
+        accountId
+          ? client
+              .from('projects')
+              .select('id')
+              .eq('account_id', accountId)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
 
     type PropertyRow = { status?: string | null };
-    const rows = ((propertiesResult as { data?: unknown[] | null }).data ?? []) as PropertyRow[];
+    const rows = ((propertiesResult as { data?: unknown[] | null }).data ??
+      []) as PropertyRow[];
 
     const propertyCounts: PropertyStatusCounts = {
       total: rows.length,
@@ -53,6 +80,36 @@ export const loadPropertyDashboardData = cache(
       sold: rows.filter((r) => r.status === 'sold').length,
     };
 
-    return { ...groupData, propertyCounts };
+    const openMaintenanceJobs = isTableMissing(
+      (jobsResult as { error?: { message?: string; code?: string } | null })
+        .error ?? null,
+    )
+      ? 0
+      : ((jobsResult as { count?: number | null }).count ?? 0);
+
+    const projectIds = (
+      (projectsResult as { data?: Array<{ id: string }> | null }).data ?? []
+    ).map((p) => p.id);
+
+    let openTasksCount = 0;
+    if (projectIds.length > 0) {
+      const { count, error } = await client
+        .from('tasks')
+        .select('id', { count: 'exact', head: true })
+        .in('project_id', projectIds)
+        .is('parent_task_id', null)
+        .not('status', 'eq', 'done');
+
+      if (!isTableMissing(error)) {
+        openTasksCount = count ?? 0;
+      }
+    }
+
+    return {
+      ...groupData,
+      propertyCounts,
+      openMaintenanceJobs,
+      openTasksCount,
+    };
   },
 );

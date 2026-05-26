@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
-import { PIPELINE_WORKSPACE_BUSINESS_PREFIX } from '../_lib/server/pipeline.loader';
+import { PIPELINE_WORKSPACE_BUSINESS_PREFIX } from '../_lib/pipeline-constants';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 function parseWorkspaceDealBusinessId(

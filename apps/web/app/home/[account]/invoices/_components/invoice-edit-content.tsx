@@ -438,7 +438,7 @@ export function InvoiceEditContent({
               size="sm"
               onClick={handleSave}
               disabled={saving || !canModifyInvoice}
-              className="bg-emerald-600 hover:bg-emerald-500"
+              className="bg-[var(--keel-teal)] hover:bg-[#238b7f]"
             >
               {saving ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -465,7 +465,7 @@ export function InvoiceEditContent({
               size="sm"
               variant="outline"
               asChild
-              className="border border-emerald-400/40 bg-transparent text-emerald-300 hover:bg-emerald-500/10"
+              className="border border-[var(--keel-teal)]/40 bg-transparent text-[#5eead4] hover:bg-[var(--keel-teal)]/10"
             >
               <a
                 href={`/api/invoices/pdf?invoiceId=${encodeURIComponent(invoice.id)}`}
@@ -545,7 +545,7 @@ export function InvoiceEditContent({
               <span
                 className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                   invoice.status === 'paid'
-                    ? 'bg-emerald-500/20 text-emerald-400'
+                    ? 'bg-[var(--keel-teal)]/20 text-[#5eead4]'
                     : isOverdue
                       ? 'bg-amber-500/20 text-amber-400'
                       : invoice.status === 'sent'
@@ -824,7 +824,7 @@ export function InvoiceEditContent({
             <Button
               onClick={handleSend}
               disabled={sending}
-              className="bg-emerald-600 hover:bg-emerald-500"
+              className="bg-[var(--keel-teal)] hover:bg-[#238b7f]"
             >
               {sending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

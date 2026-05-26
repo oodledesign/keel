@@ -11,9 +11,10 @@ import { HomegroupDashboard } from './_components/homegroup-dashboard';
 import { PropertyBusinessDashboard } from './_components/property-business-dashboard';
 import { TeamAccountLayoutPageHeader } from './_components/team-account-layout-page-header';
 import { getDefaultAccountPath, getTeamAccountAccess } from './_lib/role-access';
-import { getSpaceTypeFromAccount } from './_lib/server/account-modules';
+import { spaceTypeFromProfile } from './_lib/server/workspace-profile';
 import { loadDashboardPageData } from './_lib/server/dashboard-page.loader';
-import { loadGroupDashboardData } from './_lib/server/group-dashboard.loader';
+import { loadCommunityDashboardData } from './_lib/server/community-dashboard.loader';
+import { loadFamilyDashboardData } from './_lib/server/family-dashboard.loader';
 import { loadPropertyDashboardData } from './_lib/server/property-dashboard.loader';
 import { loadTeamWorkspace } from './_lib/server/team-account-workspace.loader';
 
@@ -45,9 +46,7 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
     redirect(getDefaultAccountPath(account, workspace.account));
   }
 
-  const spaceType = getSpaceTypeFromAccount(
-    workspace.account as { space_type?: string | null },
-  );
+  const spaceType = spaceTypeFromProfile(workspace.workspaceProfile);
   const accountLabel =
     (workspace.account as { name?: string | null }).name?.trim() ||
     account;
@@ -64,8 +63,9 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
         <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
           <PropertyBusinessDashboard
             accountSlug={account}
-            accountId={workspace.account.id as string}
             propertyCounts={propertyData.propertyCounts}
+            openMaintenanceJobs={propertyData.openMaintenanceJobs}
+            openTasksCount={propertyData.openTasksCount}
             members={propertyData.members}
             recentTasks={propertyData.recentTasks}
           />
@@ -75,7 +75,7 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
   }
 
   if (spaceType === 'family') {
-    const groupData = await loadGroupDashboardData(account);
+    const familyData = await loadFamilyDashboardData(account);
     return (
       <>
         <TeamAccountLayoutPageHeader
@@ -85,11 +85,14 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
         />
         <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
           <FamilyDashboard
-            accountSlug={account}
-            accountId={workspace.account.id as string}
-            projects={groupData.projects}
-            members={groupData.members}
-            recentTasks={groupData.recentTasks}
+            accountSlug={familyData.accountSlug}
+            openTasksCount={familyData.openTasksCount}
+            upcomingPlansCount={familyData.upcomingPlansCount}
+            familyMembersCount={familyData.familyMembersCount}
+            overdueCount={familyData.overdueCount}
+            upcomingTasks={familyData.upcomingTasks}
+            weekMealPlan={familyData.weekMealPlan}
+            upcomingEvents={familyData.upcomingEvents}
           />
         </PageBody>
       </>
@@ -97,7 +100,7 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
   }
 
   if (spaceType === 'community') {
-    const groupData = await loadGroupDashboardData(account);
+    const communityData = await loadCommunityDashboardData(account);
     return (
       <>
         <TeamAccountLayoutPageHeader
@@ -106,13 +109,7 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
           description="Overview of your group workspace."
         />
         <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
-          <HomegroupDashboard
-            accountSlug={account}
-            accountId={workspace.account.id as string}
-            projects={groupData.projects}
-            members={groupData.members}
-            recentTasks={groupData.recentTasks}
-          />
+          <HomegroupDashboard {...communityData} />
         </PageBody>
       </>
     );

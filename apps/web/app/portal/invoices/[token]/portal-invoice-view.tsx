@@ -96,7 +96,7 @@ export function PortalInvoiceView({
 
   const statusClasses =
     displayStatus === 'paid'
-      ? 'border-[#57C87F]/25 bg-[#57C87F]/12 text-[#97D9AA]'
+      ? 'border-[var(--keel-teal)]/25 bg-[var(--keel-teal)]/12 text-[#97D9AA]'
       : displayStatus === 'cancelled'
         ? 'border-[#E85D75]/25 bg-[#E85D75]/12 text-[#F6A7B5]'
       : displayStatus === 'overdue'
@@ -152,7 +152,7 @@ export function PortalInvoiceView({
               size="sm"
               onClick={handlePayNow}
               disabled={paying}
-              className="bg-[#57C87F] text-[#09111F] hover:bg-[#6BD48F]"
+              className="bg-[var(--keel-teal)] text-[#09111F] hover:bg-[#6BD48F]"
             >
               {paying ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -277,7 +277,7 @@ export function PortalInvoiceView({
             <Button
               asChild
               size="sm"
-              className="bg-[#57C87F] text-[#09111F] hover:bg-[#6BD48F]"
+              className="bg-[var(--keel-teal)] text-[#09111F] hover:bg-[#6BD48F]"
             >
               <Link href={signUpHref}>Client sign up</Link>
             </Button>

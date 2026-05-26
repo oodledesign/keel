@@ -26,13 +26,8 @@ import { Trans } from '@kit/ui/trans';
 import featureFlagsConfig from '~/config/feature-flags.config';
 import pathsConfig from '~/config/paths.config';
 import { getTeamAccountSidebarConfig } from '~/config/team-account-navigation.config';
-import type { WorkspaceSpaceType } from '~/home/[account]/_lib/server/account-modules';
-
-type Accounts = Array<{
-  label: string | null;
-  value: string | null;
-  image: string | null;
-}>;
+import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
+import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
 
 type TeamAccountAccessSource = {
   permissions?: string[] | null;
@@ -49,10 +44,10 @@ export const TeamAccountLayoutMobileNavigation = (
   props: React.PropsWithChildren<{
     account: string;
     userId: string;
-    accounts: Accounts;
+    accounts: WorkspaceSwitcherAccount[];
     accountAccess?: TeamAccountAccessSource;
     moduleSettings?: Record<string, boolean>;
-    spaceType: WorkspaceSpaceType;
+    workspaceProfile: WorkspaceProfile;
   }>,
 ) => {
   const signOut = useSignOut();
@@ -61,7 +56,7 @@ export const TeamAccountLayoutMobileNavigation = (
     props.account,
     props.accountAccess,
     props.moduleSettings,
-    props.spaceType,
+    props.workspaceProfile,
   ).routes.map(
     (item, index) => {
       if ('children' in item) {

@@ -93,7 +93,7 @@ export function BrandSettingsForm({
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
       <div className="text-sm text-muted-foreground">
-        <Link href={settingsHref} className="text-[#57C87F] hover:underline">
+        <Link href={settingsHref} className="text-[var(--keel-teal)] hover:underline">
           ← Back to settings
         </Link>
       </div>

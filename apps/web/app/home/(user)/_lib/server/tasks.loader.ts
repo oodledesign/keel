@@ -10,6 +10,7 @@ import { getDbForWorkspaceTaskAssignmentOptions } from '~/home/_lib/server/works
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import { parseDueDateParts, toIsoDateString } from '../../../_lib/due-date-ymd';
+import { workspaceColorForSpaceType } from '../workspace-accent';
 
 type TaskQueryRow = {
   id: string;
@@ -24,11 +25,17 @@ type TaskQueryRow = {
   notes?: string | null;
 };
 
+type BusinessEnrichment = {
+  colour?: string | null;
+  account_id?: string | null;
+};
+
 type ProjectEnrichment = {
   id: string;
   name?: string | null;
   account_id?: string | null;
-  businesses?: { colour?: string | null } | null;
+  business_id?: string | null;
+  businesses?: BusinessEnrichment | null;
 };
 
 type ClientEnrichment = {
@@ -43,6 +50,7 @@ type AccountWorkspaceRow = {
   id: string;
   name?: string | null;
   slug?: string | null;
+  space_type?: string | null;
 };
 
 type AreaEnrichment = {
@@ -69,6 +77,8 @@ export type TasksPageTask = {
   /** Team account (workspace) for work tasks — from linked project or client. */
   workspaceName: string | null;
   workspaceSlug: string | null;
+  /** Accent for cross-workspace list chips (business colour or space-type default). */
+  workspaceColor: string | null;
   parentTaskId: string | null;
   notes: string | null;
   /** Populated for root tasks only (see `nestTaskTree`). */
@@ -147,12 +157,16 @@ function taskRowToPageTask(
   let clientName: string | null = null;
   let workspaceName: string | null = null;
   let workspaceSlug: string | null = null;
+  let workspaceColor: string | null = null;
+  let resolvedAccountId: string | null = null;
 
   if (row.project_id) {
     const p = maps.projects.get(row.project_id);
     projectName = p?.name ?? null;
-    accentColor = p?.businesses?.colour ?? null;
-    const ws = workspaceFromAccountId(p?.account_id, maps.accountsById);
+    const biz = p?.businesses;
+    accentColor = biz?.colour ?? null;
+    resolvedAccountId = p?.account_id ?? biz?.account_id ?? null;
+    const ws = workspaceFromAccountId(resolvedAccountId, maps.accountsById);
     workspaceName = ws.name;
     workspaceSlug = ws.slug;
   }
@@ -167,12 +181,23 @@ function taskRowToPageTask(
           .map((x) => String(x).trim())
           .join(' ') ||
         null;
+      if (!resolvedAccountId) {
+        resolvedAccountId = c.account_id ?? null;
+      }
       if (!workspaceName) {
         const ws = workspaceFromAccountId(c.account_id, maps.accountsById);
         workspaceName = ws.name;
         workspaceSlug = ws.slug;
       }
     }
+  }
+
+  if (resolvedAccountId) {
+    const accountRow = maps.accountsById.get(resolvedAccountId);
+    workspaceColor =
+      accentColor ?? workspaceColorForSpaceType(accountRow?.space_type ?? 'work');
+  } else if (!row.project_id && !row.client_id) {
+    workspaceColor = '#7C3AED';
   }
   if (row.area_id) {
     const a = maps.areas.get(row.area_id);
@@ -203,6 +228,7 @@ function taskRowToPageTask(
     clientName,
     workspaceName,
     workspaceSlug,
+    workspaceColor,
     parentTaskId: row.parent_task_id ?? null,
     notes: row.notes?.trim() ? row.notes : null,
   };
@@ -256,7 +282,7 @@ async function enrichTaskRows(
     projectIds.length > 0
       ? rowDb
           .from('projects')
-          .select('id, name, account_id, businesses(colour)')
+          .select('id, name, account_id, business_id, businesses(colour, account_id)')
           .in('id', projectIds)
       : Promise.resolve({ data: [] as ProjectEnrichment[] }),
     clientIds.length > 0
@@ -288,6 +314,10 @@ async function enrichTaskRows(
     if (p.account_id) {
       accountIdSet.add(p.account_id);
     }
+    const bizAccountId = p.businesses?.account_id;
+    if (bizAccountId) {
+      accountIdSet.add(bizAccountId);
+    }
   }
   for (const c of clients.values()) {
     if (c.account_id) {
@@ -300,7 +330,7 @@ async function enrichTaskRows(
   if (uniqueAccountIds.length > 0) {
     const { data: accountRows, error: accountsErr } = await rowDb
       .from('accounts')
-      .select('id, name, slug')
+      .select('id, name, slug, space_type')
       .in('id', uniqueAccountIds);
 
     if (accountsErr) {

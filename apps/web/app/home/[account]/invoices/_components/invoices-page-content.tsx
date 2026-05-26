@@ -228,7 +228,7 @@ export function InvoicesPageContent({
               onClick={() => setStatusTab('')}
               className={`px-3 py-1.5 font-medium transition-colors rounded-full ${
                 statusFilter === ''
-                  ? 'bg-emerald-500 text-[#05120b]'
+                  ? 'bg-[var(--keel-teal)] text-white'
                   : 'text-zinc-300 hover:text-white'
               }`}
             >
@@ -239,7 +239,7 @@ export function InvoicesPageContent({
               onClick={() => setStatusTab('draft')}
               className={`px-3 py-1.5 font-medium transition-colors rounded-full ${
                 statusFilter === 'draft'
-                  ? 'bg-emerald-500 text-[#05120b]'
+                  ? 'bg-[var(--keel-teal)] text-white'
                   : 'text-zinc-300 hover:text-white'
               }`}
             >
@@ -250,7 +250,7 @@ export function InvoicesPageContent({
               onClick={() => setStatusTab('paid')}
               className={`px-3 py-1.5 font-medium transition-colors rounded-full ${
                 statusFilter === 'paid'
-                  ? 'bg-emerald-500 text-[#05120b]'
+                  ? 'bg-[var(--keel-teal)] text-white'
                   : 'text-zinc-300 hover:text-white'
               }`}
             >
@@ -261,7 +261,7 @@ export function InvoicesPageContent({
           <If condition={canEditInvoices}>
             <Button
               size="sm"
-              className="bg-emerald-600 hover:bg-emerald-500"
+              className="bg-[var(--keel-teal)] hover:bg-[#238b7f]"
               onClick={openCreateSheet}
               disabled={creating}
             >
@@ -298,7 +298,7 @@ export function InvoicesPageContent({
                 )}
               </div>
               <Button
-                className="w-full bg-emerald-600 hover:bg-emerald-500"
+                className="w-full bg-[var(--keel-teal)] hover:bg-[#238b7f]"
                 onClick={handleCreateInvoice}
                 disabled={creating || !selectedClientId}
               >
@@ -334,7 +334,7 @@ export function InvoicesPageContent({
               <If condition={canEditInvoices}>
                 <Button
                   size="sm"
-                  className="mt-4 bg-emerald-600 hover:bg-emerald-500"
+                  className="mt-4 bg-[var(--keel-teal)] hover:bg-[#238b7f]"
                   onClick={openCreateSheet}
                   disabled={creating}
                 >
@@ -381,7 +381,7 @@ export function InvoicesPageContent({
                             (() => {
                               const status = displayStatus(inv);
                               return status === 'paid'
-                                ? 'bg-emerald-500/20 text-emerald-400'
+                                ? 'bg-[var(--keel-teal)]/20 text-[#5eead4]'
                                 : status === 'sent'
                                   ? 'bg-blue-500/20 text-blue-400'
                                   : status === 'draft'

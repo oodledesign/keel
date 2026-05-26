@@ -4,10 +4,10 @@ import { useState } from 'react';
 
 import {
   Calendar,
+  CalendarClock,
   CheckCircle2,
   CheckSquare,
   Clock,
-  Folder,
   StickyNote,
   Users,
 } from 'lucide-react';
@@ -15,54 +15,66 @@ import {
 import { Badge } from '@kit/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 
-import { isCalendarOverdueYmd } from '../../_lib/due-date-ymd';
-import type { GroupMember, GroupProject, GroupTask } from '../_lib/server/group-dashboard.loader';
+import pathsConfig from '~/config/paths.config';
 
-interface HomegroupDashboardProps {
-  accountSlug: string;
-  accountId: string;
-  projects: GroupProject[];
-  members: GroupMember[];
-  recentTasks: GroupTask[];
-}
+import { isCalendarOverdueYmd } from '../../_lib/due-date-ymd';
+import type {
+  CommunityDashboardData,
+  CommunityNextSession,
+} from '../_lib/server/community-dashboard.loader';
+import type { GroupMember, GroupTask } from '../_lib/server/group-dashboard.loader';
 
 const panelClass =
   'rounded-[24px] border border-white/6 bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]';
 
+type HomegroupDashboardProps = CommunityDashboardData;
+
+function accountPath(account: string, template: string) {
+  return template.replace('[account]', account);
+}
+
 export function HomegroupDashboard({
   accountSlug,
-  projects,
-  members,
+  openTasksCount,
+  upcomingSessionsCount,
+  membersCount,
+  overdueCount,
   recentTasks,
+  members,
+  nextSession,
 }: HomegroupDashboardProps) {
   const [activeTab, setActiveTab] = useState<'tasks' | 'members'>('tasks');
 
-  const totalOpenTasks = projects.reduce((sum, p) => sum + p.openTaskCount, 0);
-  const overdueCount = recentTasks.filter((t) =>
-    isCalendarOverdueYmd(t.dueDate),
-  ).length;
+  const tasksPath = accountPath(
+    accountSlug,
+    pathsConfig.app.accountCommunityTasks,
+  );
+  const schedulePath = accountPath(
+    accountSlug,
+    pathsConfig.app.accountCommunitySchedule,
+  );
+  const notesPath = accountPath(accountSlug, pathsConfig.app.accountNotes);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6 bg-[radial-gradient(circle_at_18%_0%,rgba(251,191,36,0.09),transparent_35%),radial-gradient(circle_at_82%_6%,rgba(245,158,11,0.08),transparent_40%)] px-4 pb-10 pt-5 text-white md:px-6 lg:px-8">
-      {/* Summary cards */}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Open Tasks"
-          value={totalOpenTasks.toString()}
-          helper={`Across ${projects.length} projects`}
+          value={openTasksCount.toString()}
+          helper="Open across your group"
           tone="amber"
           icon={CheckSquare}
         />
         <StatCard
-          label="Projects"
-          value={projects.length.toString()}
-          helper="Active group projects"
+          label="Upcoming Sessions"
+          value={upcomingSessionsCount.toString()}
+          helper="Scheduled on the calendar"
           tone="orange"
-          icon={Folder}
+          icon={CalendarClock}
         />
         <StatCard
           label="Members"
-          value={members.length.toString()}
+          value={membersCount.toString()}
           helper="Group members"
           tone="sky"
           icon={Users}
@@ -76,34 +88,6 @@ export function HomegroupDashboard({
         />
       </div>
 
-      {/* Projects */}
-      {projects.length > 0 && (
-        <div>
-          <h2 className="mb-3 text-sm font-semibold text-amber-200/80 uppercase tracking-wide">
-            Projects
-          </h2>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {projects.map((project) => (
-              <div
-                key={project.id}
-                className="flex items-center justify-between rounded-2xl border border-amber-400/15 bg-[var(--workspace-shell-panel)] px-4 py-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/15">
-                    <Folder className="h-4 w-4 text-amber-400" />
-                  </span>
-                  <p className="text-sm font-medium text-white">{project.name}</p>
-                </div>
-                <span className="rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-300">
-                  {project.openTaskCount} open
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Tasks + Members tab panel */}
       <Card className={panelClass}>
         <CardHeader className="border-b border-white/6 pb-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -114,7 +98,6 @@ export function HomegroupDashboard({
               <TabButton
                 active={activeTab === 'tasks'}
                 onClick={() => setActiveTab('tasks')}
-                tone="amber"
               >
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 Tasks
@@ -122,7 +105,6 @@ export function HomegroupDashboard({
               <TabButton
                 active={activeTab === 'members'}
                 onClick={() => setActiveTab('members')}
-                tone="amber"
               >
                 <Users className="h-3.5 w-3.5" />
                 Members
@@ -130,17 +112,19 @@ export function HomegroupDashboard({
             </div>
           </div>
         </CardHeader>
-        <CardContent className="pt-5">
+        <CardContent className="space-y-5 pt-5">
           {activeTab === 'tasks' && (
-            <TasksPanel tasks={recentTasks} accountSlug={accountSlug} tone="amber" />
+            <TasksPanel tasks={recentTasks} tasksPath={tasksPath} />
           )}
-          {activeTab === 'members' && (
-            <MembersPanel members={members} tone="amber" />
-          )}
+          {activeTab === 'members' && <MembersPanel members={members} />}
+
+          <NextSessionCard
+            session={nextSession}
+            schedulePath={schedulePath}
+          />
         </CardContent>
       </Card>
 
-      {/* Notes shortcut */}
       <div className="flex items-center justify-between rounded-2xl border border-amber-400/15 bg-[var(--workspace-shell-panel)] px-5 py-4">
         <div className="flex items-center gap-3">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15">
@@ -148,11 +132,13 @@ export function HomegroupDashboard({
           </span>
           <div>
             <p className="text-sm font-semibold text-white">Group Notes</p>
-            <p className="text-xs text-white/50">Shared notes for your homegroup</p>
+            <p className="text-xs text-white/50">
+              Shared notes for your homegroup
+            </p>
           </div>
         </div>
         <a
-          href={`/home/${accountSlug}/community/notes`}
+          href={notesPath}
           className="rounded-lg border border-amber-400/30 bg-amber-500/15 px-3 py-1.5 text-xs font-medium text-amber-300 transition-colors hover:bg-amber-500/25"
         >
           View notes →
@@ -162,29 +148,75 @@ export function HomegroupDashboard({
   );
 }
 
+function NextSessionCard({
+  session,
+  schedulePath,
+}: {
+  session: CommunityNextSession | null;
+  schedulePath: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-amber-400/15 bg-[var(--workspace-shell-canvas)] p-4">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-amber-200/80">
+          Next session
+        </p>
+        <a
+          href={schedulePath}
+          className="text-xs font-medium text-amber-300 hover:underline"
+        >
+          View schedule →
+        </a>
+      </div>
+      {!session ? (
+        <p className="text-sm text-white/50">
+          No upcoming sessions.{' '}
+          <a
+            href={`${schedulePath}?create=session`}
+            className="font-medium text-amber-300 hover:underline"
+          >
+            Schedule one
+          </a>
+        </p>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-base font-semibold text-white">{session.title}</p>
+          <p className="flex flex-wrap items-center gap-2 text-sm text-white/70">
+            <Calendar className="h-3.5 w-3.5 text-amber-400/80" />
+            <span>{session.dateLabel}</span>
+            <span className="text-white/30">·</span>
+            <span>{session.timeLabel}</span>
+          </p>
+          {session.location ? (
+            <p className="text-xs text-white/50">{session.location}</p>
+          ) : null}
+          {session.sessionNotes ? (
+            <p className="text-sm leading-relaxed text-white/60">
+              {session.sessionNotes}
+            </p>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TabButton({
   active,
   onClick,
-  tone,
   children,
 }: {
   active: boolean;
   onClick: () => void;
-  tone: 'emerald' | 'amber';
   children: React.ReactNode;
 }) {
-  const toneActive =
-    tone === 'emerald'
-      ? 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/50'
-      : 'bg-amber-500/20 text-amber-200 border border-amber-400/50';
-
   return (
     <button
       type="button"
       onClick={onClick}
       className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium transition-colors ${
         active
-          ? toneActive
+          ? 'border border-amber-400/50 bg-amber-500/20 text-amber-200'
           : 'border border-white/10 bg-[var(--workspace-shell-panel)] text-white/60 hover:text-white'
       }`}
     >
@@ -195,23 +227,18 @@ function TabButton({
 
 function TasksPanel({
   tasks,
-  accountSlug,
-  tone,
+  tasksPath,
 }: {
   tasks: GroupTask[];
-  accountSlug: string;
-  tone: 'emerald' | 'amber';
+  tasksPath: string;
 }) {
-  const accentText = tone === 'emerald' ? 'text-emerald-300' : 'text-amber-300';
-  const accentBg = tone === 'emerald' ? 'bg-emerald-500/15' : 'bg-amber-500/15';
-
   if (tasks.length === 0) {
     return (
-      <div className="py-8 text-center text-sm text-white/50">
+      <div className="py-4 text-center text-sm text-white/50">
         No open tasks yet.{' '}
         <a
-          href={`/home/${accountSlug}/community/tasks`}
-          className={`font-medium ${accentText} hover:underline`}
+          href={`${tasksPath}?create=task`}
+          className="font-medium text-amber-300 hover:underline"
         >
           Create a task
         </a>
@@ -221,38 +248,54 @@ function TasksPanel({
 
   return (
     <div className="space-y-2">
-      {tasks.map((task) => (
-        <div
-          key={task.id}
-          className="flex flex-col gap-1.5 rounded-xl border border-white/6 bg-[var(--workspace-shell-canvas)] px-4 py-3 text-sm md:flex-row md:items-center md:justify-between"
-        >
-          <div className="flex-1 min-w-0">
-            <p className="truncate font-medium text-white">{task.title}</p>
-            {task.projectName && (
-              <p className="mt-0.5 text-xs text-white/50">{task.projectName}</p>
-            )}
+      {tasks.map((task) => {
+        const overdue =
+          task.dueDate != null && isCalendarOverdueYmd(task.dueDate);
+
+        return (
+          <div
+            key={task.id}
+            className={`flex flex-col gap-1.5 rounded-xl border px-4 py-3 text-sm md:flex-row md:items-center md:justify-between ${
+              overdue
+                ? 'border-rose-400/25 bg-rose-500/5'
+                : 'border-white/6 bg-[var(--workspace-shell-canvas)]'
+            }`}
+          >
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-medium text-white">{task.title}</p>
+              {task.projectName ? (
+                <p className="mt-0.5 text-xs text-white/50">
+                  {task.projectName}
+                </p>
+              ) : null}
+            </div>
+            <div className="flex flex-shrink-0 items-center gap-2">
+              {task.dueDate ? (
+                <span
+                  className={`inline-flex items-center gap-1 text-xs ${
+                    overdue ? 'text-rose-300' : 'text-white/50'
+                  }`}
+                >
+                  <Calendar className="h-3 w-3" />
+                  {formatDate(task.dueDate)}
+                  {overdue ? ' · Overdue' : ''}
+                </span>
+              ) : null}
+              <Badge
+                className="border-0 bg-amber-500/15 text-[11px] font-medium text-amber-300"
+                variant="outline"
+              >
+                {formatPriority(task.priority)}
+              </Badge>
+              <TaskStatusBadge status={task.status} />
+            </div>
           </div>
-          <div className="flex flex-shrink-0 items-center gap-2">
-            {task.dueDate && (
-              <span className="inline-flex items-center gap-1 text-xs text-white/50">
-                <Calendar className="h-3 w-3" />
-                {formatDate(task.dueDate)}
-              </span>
-            )}
-            <Badge
-              className={`text-[11px] font-medium ${accentBg} ${accentText} border-0`}
-              variant="outline"
-            >
-              {formatPriority(task.priority)}
-            </Badge>
-            <TaskStatusBadge status={task.status} />
-          </div>
-        </div>
-      ))}
+        );
+      })}
       <div className="pt-2 text-center">
         <a
-          href={`/home/${accountSlug}/community/tasks`}
-          className={`text-xs font-medium ${accentText} hover:underline`}
+          href={tasksPath}
+          className="text-xs font-medium text-amber-300 hover:underline"
         >
           View all tasks →
         </a>
@@ -261,19 +304,10 @@ function TasksPanel({
   );
 }
 
-function MembersPanel({
-  members,
-  tone,
-}: {
-  members: GroupMember[];
-  tone: 'emerald' | 'amber';
-}) {
-  const accentBg = tone === 'emerald' ? 'bg-emerald-500/15' : 'bg-amber-500/15';
-  const accentText = tone === 'emerald' ? 'text-emerald-300' : 'text-amber-300';
-
+function MembersPanel({ members }: { members: GroupMember[] }) {
   if (members.length === 0) {
     return (
-      <p className="py-8 text-center text-sm text-white/50">
+      <p className="py-4 text-center text-sm text-white/50">
         No members yet. Invite members to get started.
       </p>
     );
@@ -286,9 +320,7 @@ function MembersPanel({
           key={member.id}
           className="flex items-center gap-3 rounded-xl border border-white/6 bg-[var(--workspace-shell-canvas)] px-4 py-3"
         >
-          <span
-            className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-sm font-semibold ${accentBg} ${accentText}`}
-          >
+          <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-sm font-semibold text-amber-300">
             {getInitials(member.displayName)}
           </span>
           <div className="min-w-0 flex-1">
@@ -299,7 +331,9 @@ function MembersPanel({
               {member.email ?? formatRole(member.role)}
             </p>
           </div>
-          <span className="text-xs text-white/40 capitalize">{formatRole(member.role)}</span>
+          <span className="text-xs capitalize text-white/40">
+            {formatRole(member.role)}
+          </span>
         </div>
       ))}
     </div>
@@ -347,7 +381,9 @@ function StatCard({
             {label}
           </p>
         </div>
-        <p className="text-2xl font-semibold tracking-tight md:text-3xl">{value}</p>
+        <p className="text-2xl font-semibold tracking-tight md:text-3xl">
+          {value}
+        </p>
         <p className="text-xs text-white/40">{helper}</p>
       </CardContent>
     </Card>
@@ -357,8 +393,12 @@ function StatCard({
 function TaskStatusBadge({ status }: { status: string }) {
   const map: Record<string, { bg: string; text: string; label: string }> = {
     todo: { bg: 'bg-white/5', text: 'text-white/50', label: 'To do' },
-    in_progress: { bg: 'bg-sky-500/15', text: 'text-sky-300', label: 'In progress' },
-    done: { bg: 'bg-emerald-500/15', text: 'text-emerald-300', label: 'Done' },
+    in_progress: {
+      bg: 'bg-sky-500/15',
+      text: 'text-sky-300',
+      label: 'In progress',
+    },
+    done: { bg: 'bg-[var(--keel-teal)]/15', text: 'text-[#5eead4]', label: 'Done' },
     blocked: { bg: 'bg-rose-500/15', text: 'text-rose-300', label: 'Blocked' },
   };
   const style = map[status] ?? map.todo;

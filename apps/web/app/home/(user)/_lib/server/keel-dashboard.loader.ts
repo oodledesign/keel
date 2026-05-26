@@ -5,84 +5,70 @@ import { cache } from 'react';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import {
+  isCalendarOverdueYmd,
+  parseDueDateParts,
+  todayLocalYmd,
+  toIsoDateString,
+} from '~/home/_lib/due-date-ymd';
+import {
   loadBusinessIdsForTeamAccount,
   loadUserWorkspaceAccounts,
+  type WorkspaceAccountRow,
 } from '~/home/_lib/server/workspace-scope';
+import { normalizeSpaceType } from '~/home/[account]/_lib/server/account-modules';
+import { workspaceColorForSpaceType } from '~/home/(user)/_lib/workspace-accent';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
+
+import type { PersonalNavWorkspace } from '~/config/personal-account-navigation.config';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
-export type DashboardTask = {
+export type PersonalDashboardTask = {
   id: string;
   title: string;
-  status: string;
-  priority: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
   dueDate: string | null;
-  projectName: string | null;
-  areaName: string | null;
-  areaColor: string | null;
-  businessName: string | null;
+  dueLabel: string;
+  isOverdue: boolean;
+  workspaceName: string;
+  workspaceSlug: string | null;
+  workspaceColor: string;
 };
 
-export type PipelineDealToday = {
+export type PersonalCalendarEvent = {
   id: string;
-  contactName: string;
-  companyName: string;
-  nextAction: string;
-  businessName: string | null;
-  businessColor: string | null;
+  title: string;
+  timeLabel: string;
+  workspaceName: string;
+  workspaceColor: string;
 };
 
-export type BusinessOverview = {
-  businessId: string;
-  businessName: string;
-  businessColor: string | null;
-  activeProjects: number;
-  openTasks: number;
-  openTickets: number;
-  activeDeals: number;
-  dealValue: number;
+export type WorkspaceOverviewStat = {
+  label: string;
+  value: string;
 };
 
-export type PipelineStageCount = {
-  stage: string;
-  count: number;
-};
-
-export type LifeAreaGroup = {
-  areaName: string;
-  areaColor: string | null;
-  tasks: DashboardTask[];
-};
-
-export type ActivityItem = {
+export type WorkspaceOverviewCard = {
   id: string;
-  description: string;
-  timestamp: string;
-  type: string;
+  name: string;
+  slug: string;
+  spaceType: ReturnType<typeof normalizeSpaceType>;
+  color: string;
+  pictureUrl: string | null;
+  stats: WorkspaceOverviewStat[];
 };
 
 export type KeelDashboardData = {
   userName: string;
-  todayTasks: DashboardTask[];
-  pipelineDealsToday: PipelineDealToday[];
-  businesses: BusinessOverview[];
-  pipelineSnapshot: PipelineStageCount[];
-  lifeAreas: LifeAreaGroup[];
-  recentActivity: ActivityItem[];
+  dateLabel: string;
+  workspaces: PersonalNavWorkspace[];
+  todaysFocus: PersonalDashboardTask[];
+  upcoming: PersonalDashboardTask[];
+  myDayEvents: PersonalCalendarEvent[];
+  workspaceOverview: WorkspaceOverviewCard[];
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────
-
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function weekFromNowIso() {
-  const d = new Date();
-  d.setDate(d.getDate() + 7);
-  return d.toISOString().slice(0, 10);
-}
 
 function toFirstName(raw: string | null | undefined): string {
   if (!raw) return 'there';
@@ -91,35 +77,163 @@ function toFirstName(raw: string | null | undefined): string {
   return base.charAt(0).toUpperCase() + base.slice(1);
 }
 
-function mapTaskStatus(
-  status: string | null | undefined,
-): 'pending' | 'in_progress' | 'completed' {
-  switch ((status ?? '').toLowerCase()) {
-    case 'todo':
-      return 'pending';
-    case 'in_progress':
-      return 'in_progress';
-    case 'done':
-    case 'cancelled':
-      return 'completed';
-    default:
-      return 'pending';
-  }
+function formatDateLabel(now = new Date()): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(now);
 }
 
-function buildPipelineOrFilter(
-  workspaceIds: string[],
-  businessIds: string[],
-): string | null {
-  const parts: string[] = [];
-  if (workspaceIds.length > 0) {
-    parts.push(`account_id.in.(${workspaceIds.join(',')})`);
+function formatDueLabel(due: string | null, isOverdue: boolean): string {
+  if (!due) return '';
+  const today = todayLocalYmd();
+  if (due === today) return 'Today';
+  if (isOverdue) {
+    const p = parseDueDateParts(due);
+    if (!p) return 'Overdue';
+    const d = new Date(p.y, p.m - 1, p.d, 12, 0, 0, 0);
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
   }
-  if (businessIds.length > 0) {
-    parts.push(`business_id.in.(${businessIds.join(',')})`);
+  const p = parseDueDateParts(due);
+  if (!p) return '';
+  const d = new Date(p.y, p.m - 1, p.d, 12, 0, 0, 0);
+  return d.toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+}
+
+function mapPriority(raw: string | null | undefined): PersonalDashboardTask['priority'] {
+  const p = (raw ?? 'medium').toLowerCase();
+  if (p === 'low' || p === 'high' || p === 'urgent') return p;
+  return 'medium';
+}
+
+function formatTimeLabel(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit' });
+}
+
+function weekFromNowIso() {
+  const d = new Date();
+  d.setDate(d.getDate() + 7);
+  return d.toISOString().slice(0, 10);
+}
+
+function localDayBounds(now = new Date()) {
+  const start = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    0,
+    0,
+    0,
+    0,
+  );
+  const end = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    23,
+    59,
+    59,
+    999,
+  );
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
+type TaskRow = {
+  id: string;
+  title?: string | null;
+  status?: string | null;
+  priority?: string | null;
+  due_date?: string | null;
+  project_id?: string | null;
+  client_id?: string | null;
+};
+
+type ProjectRow = {
+  id: string;
+  name?: string | null;
+  account_id?: string | null;
+  businesses?: { colour?: string | null } | null;
+};
+
+type ClientRow = {
+  id: string;
+  account_id?: string | null;
+};
+
+async function mapTasksToDashboard(
+  client: ReturnType<typeof getSupabaseServerClient>,
+  rows: TaskRow[],
+  workspaceById: Map<string, WorkspaceAccountRow>,
+): Promise<PersonalDashboardTask[]> {
+  const projectIds = [
+    ...new Set(rows.map((r) => r.project_id).filter(Boolean)),
+  ] as string[];
+  const clientIds = [
+    ...new Set(rows.map((r) => r.client_id).filter(Boolean)),
+  ] as string[];
+
+  const [projectsResult, clientsResult] = await Promise.all([
+    projectIds.length > 0
+      ? client
+          .from('projects')
+          .select('id, name, account_id, businesses(colour)')
+          .in('id', projectIds)
+      : Promise.resolve({ data: [] as ProjectRow[] }),
+    clientIds.length > 0
+      ? client.from('clients').select('id, account_id').in('id', clientIds)
+      : Promise.resolve({ data: [] as ClientRow[] }),
+  ]);
+
+  const projects = new Map<string, ProjectRow>();
+  for (const p of (projectsResult.data ?? []) as ProjectRow[]) {
+    projects.set(p.id, p);
   }
-  if (parts.length === 0) return null;
-  return parts.length === 1 ? parts[0]! : parts.join(',');
+  const clients = new Map<string, ClientRow>();
+  for (const c of (clientsResult.data ?? []) as ClientRow[]) {
+    clients.set(c.id, c);
+  }
+
+  const today = todayLocalYmd();
+
+  return rows.map((row) => {
+    let accountId: string | null = null;
+    let accent: string | null = null;
+
+    if (row.project_id) {
+      const p = projects.get(row.project_id);
+      accountId = p?.account_id ?? null;
+      accent = p?.businesses?.colour ?? null;
+    } else if (row.client_id) {
+      accountId = clients.get(row.client_id)?.account_id ?? null;
+    }
+
+    const ws = accountId ? workspaceById.get(accountId) : null;
+    const due = toIsoDateString(row.due_date);
+    const overdue = isCalendarOverdueYmd(due);
+    const isPersonal = !ws;
+
+    return {
+      id: row.id,
+      title: row.title?.trim() || 'Untitled',
+      priority: mapPriority(row.priority),
+      dueDate: due,
+      dueLabel: formatDueLabel(due, overdue),
+      isOverdue: overdue,
+      workspaceName: ws?.name?.trim() || ws?.slug || 'Personal',
+      workspaceSlug: ws?.slug ?? null,
+      workspaceColor: isPersonal
+        ? '#7C3AED'
+        : accent ?? workspaceColorForSpaceType(ws?.space_type ?? 'work'),
+    };
+  });
 }
 
 async function countOpenTasksForAccount(
@@ -150,9 +264,154 @@ async function countOpenTasksForAccount(
   } else {
     q = q.in('client_id', clientIds);
   }
-  const { count, error } = await q;
-  if (error) return 0;
+
+  const { count } = await q;
   return count ?? 0;
+}
+
+async function buildWorkspaceOverview(
+  client: ReturnType<typeof getSupabaseServerClient>,
+  userId: string,
+  workspaces: WorkspaceAccountRow[],
+  bizIdsByWorkspace: Map<string, string[]>,
+): Promise<WorkspaceOverviewCard[]> {
+  const weekEnd = weekFromNowIso();
+  const { start: todayStart, end: todayEnd } = localDayBounds();
+
+  return Promise.all(
+    workspaces.map(async (w) => {
+      const spaceType = normalizeSpaceType(w.space_type);
+      const color = workspaceColorForSpaceType(spaceType);
+      const name = w.name?.trim() || w.slug || 'Workspace';
+      const slug = w.slug ?? '';
+      const stats: WorkspaceOverviewStat[] = [];
+
+      if (spaceType === 'work') {
+        const bids = bizIdsByWorkspace.get(w.id) ?? [];
+        const pipelineOr =
+          bids.length > 0
+            ? `account_id.eq.${w.id},business_id.in.(${bids.join(',')})`
+            : `account_id.eq.${w.id}`;
+
+        const [
+          { count: jobCount },
+          openTasks,
+          { data: deals },
+        ] = await Promise.all([
+          client
+            .from('jobs')
+            .select('id', { count: 'exact', head: true })
+            .eq('account_id', w.id)
+            .not('status', 'in', '("completed","cancelled")'),
+          countOpenTasksForAccount(client, userId, w.id),
+          client
+            .from('pipeline_deals')
+            .select('value')
+            .or(pipelineOr)
+            .not('stage', 'in', '("won","lost")'),
+        ]);
+
+        const pipelineValue = (deals ?? []).reduce(
+          (sum, d) => sum + (Number((d as { value?: number }).value) || 0),
+          0,
+        );
+
+        stats.push(
+          { label: 'Active projects', value: String(jobCount ?? 0) },
+          { label: 'Open tasks', value: String(openTasks) },
+          {
+            label: 'Pipeline value',
+            value: new Intl.NumberFormat('en-GB', {
+              style: 'currency',
+              currency: 'GBP',
+              maximumFractionDigits: 0,
+            }).format(pipelineValue),
+          },
+        );
+      } else if (spaceType === 'property') {
+        const [
+          { count: propertyCount },
+          { count: activeCount },
+          { count: maintenanceCount },
+        ] = await Promise.all([
+          client
+            .from('properties')
+            .select('id', { count: 'exact', head: true })
+            .eq('account_id', w.id),
+          client
+            .from('properties')
+            .select('id', { count: 'exact', head: true })
+            .eq('account_id', w.id)
+            .eq('status', 'active'),
+          client
+            .from('properties')
+            .select('id', { count: 'exact', head: true })
+            .eq('account_id', w.id)
+            .eq('status', 'maintenance'),
+        ]);
+
+        stats.push(
+          { label: 'Properties', value: String(propertyCount ?? 0) },
+          { label: 'Active tenancies', value: String(activeCount ?? 0) },
+          { label: 'Open maintenance', value: String(maintenanceCount ?? 0) },
+        );
+      } else if (spaceType === 'family') {
+        const openTasks = await countOpenTasksForAccount(client, userId, w.id);
+        const { count: eventCount } = await client
+          .from('job_events')
+          .select('id', { count: 'exact', head: true })
+          .eq('account_id', w.id)
+          .gte('scheduled_start_at', todayStart)
+          .lte('scheduled_start_at', `${weekEnd}T23:59:59.999Z`);
+
+        stats.push(
+          { label: 'Open tasks', value: String(openTasks) },
+          {
+            label: 'Upcoming events',
+            value: String(eventCount ?? 0),
+          },
+        );
+      } else {
+        const openTasks = await countOpenTasksForAccount(client, userId, w.id);
+        const { data: nextEvent } = await client
+          .from('job_events')
+          .select('scheduled_start_at')
+          .eq('account_id', w.id)
+          .gte('scheduled_start_at', todayStart)
+          .order('scheduled_start_at', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        const nextSession = (nextEvent as { scheduled_start_at?: string } | null)
+          ?.scheduled_start_at;
+        let nextLabel = '—';
+        if (nextSession) {
+          const d = new Date(nextSession);
+          if (!Number.isNaN(d.getTime())) {
+            nextLabel = d.toLocaleDateString('en-GB', {
+              day: 'numeric',
+              month: 'short',
+            });
+          }
+        }
+
+        stats.push(
+          { label: 'Open tasks', value: String(openTasks) },
+          { label: 'Next session', value: nextLabel },
+        );
+      }
+
+      return {
+        id: w.id,
+        name,
+        slug,
+        spaceType,
+        color,
+        pictureUrl: w.picture_url ?? null,
+        stats: stats.slice(0, 4),
+      };
+    }),
+  );
 }
 
 // ─── Main loader ─────────────────────────────────────────────────────
@@ -161,8 +420,8 @@ export const loadKeelDashboard = cache(async (): Promise<KeelDashboardData> => {
   const client = getSupabaseServerClient();
   const user = await requireUserInServerComponent();
   const userId = user.id;
-  const today = todayIso();
-  const weekEnd = weekFromNowIso();
+  const today = todayLocalYmd();
+  const { start: todayStart, end: todayEnd } = localDayBounds();
 
   const meta = user.user_metadata as Record<string, unknown> | undefined;
   const displayNameRaw =
@@ -170,386 +429,99 @@ export const loadKeelDashboard = cache(async (): Promise<KeelDashboardData> => {
     (typeof meta?.name === 'string' && meta.name.trim()) ||
     user.email?.split('@')[0] ||
     '';
-  const displayName = toFirstName(displayNameRaw) || 'there';
+  const userName = toFirstName(displayNameRaw) || 'there';
 
-  const workspaces = await loadUserWorkspaceAccounts(client, userId);
-  const workspaceIds = workspaces.map((w) => w.id);
+  const workspaceRows = await loadUserWorkspaceAccounts(client, userId);
+  const workspaceById = new Map(workspaceRows.map((w) => [w.id, w]));
 
-  const allBizIds = new Set<string>();
+  const workspaces: PersonalNavWorkspace[] = workspaceRows
+    .filter((w) => w.slug)
+    .map((w) => ({
+      id: w.id,
+      label: w.name?.trim() || w.slug!,
+      slug: w.slug!,
+      pictureUrl: w.picture_url ?? null,
+      spaceType: w.space_type,
+    }));
+
   const bizIdsByWorkspace = new Map<string, string[]>();
-  for (const w of workspaces) {
-    const bids = await loadBusinessIdsForTeamAccount(client, w.id);
-    bizIdsByWorkspace.set(w.id, bids);
-    bids.forEach((id) => allBizIds.add(id));
+  for (const w of workspaceRows) {
+    bizIdsByWorkspace.set(w.id, await loadBusinessIdsForTeamAccount(client, w.id));
   }
 
-  const { data: ownedBizRows } = await client
-    .from('businesses')
-    .select('id')
-    .eq('owner_id', userId);
-  for (const row of ownedBizRows ?? []) {
-    allBizIds.add((row as { id: string }).id);
-  }
+  const workspaceIds = workspaceRows.map((w) => w.id);
 
-  const pipelineOr = buildPipelineOrFilter(workspaceIds, [...allBizIds]);
-
-  // Fetch project IDs for life workspaces (family + community) so we can
-  // include project-linked tasks in the Life This Week section.
-  const lifeWorkspaces = workspaces.filter(
-    (w) => w.space_type === 'family' || w.space_type === 'community',
-  );
-  const lifeProjectToSpaceType = new Map<string, string>();
-  if (lifeWorkspaces.length > 0) {
-    const lifeWsIds = lifeWorkspaces.map((w) => w.id);
-    const { data: lifeProjRows } = await client
-      .from('projects')
-      .select('id, account_id')
-      .in('account_id', lifeWsIds);
-    for (const proj of (lifeProjRows ?? []) as Array<{
-      id: string;
-      account_id: string;
-    }>) {
-      const ws = lifeWorkspaces.find((w) => w.id === proj.account_id);
-      if (ws?.space_type) {
-        lifeProjectToSpaceType.set(proj.id, ws.space_type);
-      }
-    }
-  }
-  const lifeProjectIds = [...lifeProjectToSpaceType.keys()];
-
-  const todayTasksQuery = client
+  const { data: focusRows } = await client
     .from('tasks')
-    .select(
-      'id, title, status, priority, due_date, project_id, client_id, projects(name, businesses(name, colour), accounts(name)), areas(name, colour)',
-    )
+    .select('id, title, status, priority, due_date, project_id, client_id')
     .eq('user_id', userId)
-    .eq('due_date', today)
     .not('status', 'eq', 'done')
-    .order('priority', { ascending: false })
-    .limit(20);
+    .not('due_date', 'is', null)
+    .or(`due_date.eq.${today},due_date.lt.${today}`)
+    .order('due_date', { ascending: true })
+    .limit(30);
 
-  let pipelineDealsTodayQuery = client
-    .from('pipeline_deals')
-    .select(
-      'id, contact_name, company_name, next_action, business_id, account_id, businesses(name, colour), accounts(name)',
-    )
-    .eq('next_action_date', today)
-    .not('stage', 'in', '("won","lost")')
-    .limit(10);
+  const { data: upcomingRows } = await client
+    .from('tasks')
+    .select('id, title, status, priority, due_date, project_id, client_id')
+    .eq('user_id', userId)
+    .not('status', 'eq', 'done')
+    .gt('due_date', today)
+    .order('due_date', { ascending: true })
+    .limit(5);
 
-  let pipelineSnapshotQuery = client.from('pipeline_deals').select('id, stage');
-
-  let activeDealsQuery = client
-    .from('pipeline_deals')
-    .select('id, business_id, account_id, value, stage')
-    .not('stage', 'in', '("won","lost")');
-
-  if (pipelineOr) {
-    pipelineDealsTodayQuery = pipelineDealsTodayQuery.or(pipelineOr);
-    pipelineSnapshotQuery = pipelineSnapshotQuery.or(pipelineOr);
-    activeDealsQuery = activeDealsQuery.or(pipelineOr);
-  } else {
-    pipelineDealsTodayQuery = pipelineDealsTodayQuery.limit(0);
-    pipelineSnapshotQuery = pipelineSnapshotQuery.limit(0);
-    activeDealsQuery = activeDealsQuery.limit(0);
-  }
-
-  const [
-    todayTasksResult,
-    pipelineDealsResult,
-    pipelineSnapshotResult,
-    activeDealsAllResult,
-    lifeTasksResult,
-    recentTasksResult,
-  ] = await Promise.all([
-    todayTasksQuery,
-    pipelineDealsTodayQuery,
-    pipelineSnapshotQuery,
-    activeDealsQuery,
-    (() => {
-      // Include personal tasks (no project) and tasks in family/community workspace projects.
-      // Include tasks with no due date — filtering on due_date alone silently drops them
-      // because NULL <= date evaluates to false in SQL.
-      let q = client
-        .from('tasks')
-        .select(
-          'id, title, status, priority, due_date, project_id, areas(name, colour, group_id, groups(name, type))',
-        )
-        .eq('user_id', userId)
-        .is('client_id', null)
-        .not('status', 'eq', 'done')
-        // Allow tasks with no due date OR tasks due within the next 7 days
-        .or(`due_date.is.null,due_date.lte.${weekEnd}`)
-        .order('due_date', { ascending: true, nullsFirst: false })
-        .limit(50);
-      if (lifeProjectIds.length > 0) {
-        q = q.or(
-          `project_id.is.null,project_id.in.(${lifeProjectIds.join(',')})`,
-        );
-      } else {
-        q = q.is('project_id', null);
-      }
-      return q;
-    })(),
-    client
-      .from('tasks')
-      .select('id, title, status, updated_at')
-      .eq('user_id', userId)
-      .eq('status', 'done')
-      .order('updated_at', { ascending: false })
-      .limit(5),
+  const [todaysFocus, upcoming] = await Promise.all([
+    mapTasksToDashboard(client, (focusRows ?? []) as TaskRow[], workspaceById),
+    mapTasksToDashboard(
+      client,
+      (upcomingRows ?? []) as TaskRow[],
+      workspaceById,
+    ),
   ]);
 
-  type TodayTaskRow = {
-    id: string;
-    title?: string | null;
-    status?: string | null;
-    priority?: string | null;
-    due_date?: string | null;
-    projects?: {
-      name?: string | null;
-      businesses?: { name?: string | null } | null;
-      accounts?: { name?: string | null } | null;
-    } | null;
-    areas?: { name?: string | null; colour?: string | null } | null;
-  };
+  let myDayEvents: PersonalCalendarEvent[] = [];
+  if (workspaceIds.length > 0) {
+    const { data: eventRows } = await client
+      .from('job_events')
+      .select('id, title, scheduled_start_at, account_id')
+      .in('account_id', workspaceIds)
+      .gte('scheduled_start_at', todayStart)
+      .lte('scheduled_start_at', todayEnd)
+      .order('scheduled_start_at', { ascending: true })
+      .limit(20);
 
-  const todayTasks: DashboardTask[] = (todayTasksResult.data ?? []).map(
-    (row: TodayTaskRow) => ({
-      id: row.id,
-      title: row.title ?? 'Untitled',
-      status: mapTaskStatus(row.status),
-      priority: row.priority ?? 'medium',
-      dueDate: row.due_date,
-      projectName: row.projects?.name ?? null,
-      areaName: row.areas?.name ?? null,
-      areaColor: row.areas?.colour ?? null,
-      businessName:
-        row.projects?.businesses?.name ??
-        row.projects?.accounts?.name ??
-        null,
-    }),
-  );
-
-  type PipelineDealRow = {
-    id: string;
-    contact_name?: string | null;
-    company_name?: string | null;
-    next_action?: string | null;
-    businesses?: { name?: string | null; colour?: string | null } | null;
-    accounts?: { name?: string | null } | null;
-  };
-
-  const pipelineDealsToday: PipelineDealToday[] = (
-    pipelineDealsResult.data ?? []
-  ).map((row: PipelineDealRow) => ({
-    id: row.id,
-    contactName: row.contact_name ?? '',
-    companyName: row.company_name ?? '',
-    nextAction: row.next_action ?? '',
-    businessName:
-      row.businesses?.name ?? row.accounts?.name ?? null,
-    businessColor: row.businesses?.colour ?? null,
-  }));
-
-  type DealOverviewRow = {
-    account_id?: string | null;
-    business_id?: string | null;
-    value?: number | string | null;
-  };
-
-  const allDealsForOverview = (activeDealsAllResult.data ??
-    []) as DealOverviewRow[];
-
-  const businesses: BusinessOverview[] = await Promise.all(
-    workspaces.map(async (w) => {
-      const bids = new Set(bizIdsByWorkspace.get(w.id) ?? []);
-
-      const [{ count: projCount }, openTasks, ticketCount] = await Promise.all([
-        client
-          .from('projects')
-          .select('id', { count: 'exact', head: true })
-          .eq('account_id', w.id),
-        countOpenTasksForAccount(client, userId, w.id),
-        countSupportTicketsForWorkspace(client, bids),
-      ]);
-
-      const dealsHere = allDealsForOverview.filter(
-        (d) =>
-          d.account_id === w.id ||
-          (d.business_id && bids.has(String(d.business_id))),
-      );
-      const activeDeals = dealsHere.length;
-      const dealValue = dealsHere.reduce(
-        (sum, d) => sum + (Number(d.value) || 0),
-        0,
-      );
-
-      let businessColor: string | null = null;
-      if (bids.size > 0) {
-        const { data: colourRow } = await client
-          .from('businesses')
-          .select('colour')
-          .in('id', [...bids])
-          .limit(1)
-          .maybeSingle();
-        businessColor =
-          (colourRow as { colour?: string | null } | null)?.colour ?? null;
-      }
-
-      return {
-        businessId: w.id,
-        businessName: w.name ?? w.slug ?? 'Workspace',
-        businessColor,
-        activeProjects: projCount ?? 0,
-        openTasks,
-        openTickets: ticketCount,
-        activeDeals,
-        dealValue,
+    myDayEvents = (eventRows ?? []).map((row) => {
+      const r = row as {
+        id: string;
+        title?: string | null;
+        scheduled_start_at?: string;
+        account_id?: string;
       };
-    }),
-  );
-
-  const stageCounts = new Map<string, number>();
-  for (const deal of pipelineSnapshotResult.data ?? []) {
-    const stage =
-      (deal as { stage?: string | null }).stage ?? 'lead';
-    stageCounts.set(stage, (stageCounts.get(stage) ?? 0) + 1);
-  }
-
-  const ORDERED_STAGES = [
-    'lead',
-    'qualified',
-    'call_booked',
-    'proposal_sent',
-    'negotiation',
-    'won',
-    'lost',
-  ];
-  const pipelineSnapshot: PipelineStageCount[] = ORDERED_STAGES.map(
-    (stage) => ({
-      stage,
-      count: stageCounts.get(stage) ?? 0,
-    }),
-  );
-
-  const lifeMap = new Map<
-    string,
-    { color: string | null; tasks: DashboardTask[] }
-  >();
-
-  type LifeTaskRow = {
-    id: string;
-    title?: string | null;
-    status?: string | null;
-    priority?: string | null;
-    due_date?: string | null;
-    project_id?: string | null;
-    areas?: {
-      name?: string | null;
-      colour?: string | null;
-      groups?: { name?: string | null; type?: string | null } | null;
-    } | null;
-  };
-
-  function lifeBucket(r: LifeTaskRow): string {
-    // Project-based tasks: use the life workspace's space_type
-    if (r.project_id) {
-      const spaceType = lifeProjectToSpaceType.get(r.project_id);
-      if (spaceType === 'family') return 'Family';
-      if (spaceType === 'community') return 'Homegroup';
-    }
-    // Area-based tasks: use the group type field if available
-    const groupType = r.areas?.groups?.type;
-    if (groupType === 'family') return 'Family';
-    if (groupType === 'community') return 'Homegroup';
-    // Fall back to area name (personal areas)
-    return r.areas?.name ?? 'Personal';
-  }
-
-  for (const row of lifeTasksResult.data ?? []) {
-    const r = row as LifeTaskRow;
-    const areaName = lifeBucket(r);
-    const color = r.areas?.colour ?? null;
-
-    if (!lifeMap.has(areaName)) {
-      lifeMap.set(areaName, { color, tasks: [] });
-    }
-
-    lifeMap.get(areaName)!.tasks.push({
-      id: r.id,
-      title: r.title ?? 'Untitled',
-      status: mapTaskStatus(r.status),
-      priority: r.priority ?? 'medium',
-      dueDate: r.due_date,
-      projectName: null,
-      areaName,
-      areaColor: color,
-      businessName: null,
+      const ws = r.account_id ? workspaceById.get(r.account_id) : null;
+      return {
+        id: r.id,
+        title: r.title?.trim() || 'Event',
+        timeLabel: formatTimeLabel(r.scheduled_start_at ?? ''),
+        workspaceName: ws?.name?.trim() || ws?.slug || 'Workspace',
+        workspaceColor: workspaceColorForSpaceType(ws?.space_type),
+      };
     });
   }
 
-  const lifeAreas: LifeAreaGroup[] = Array.from(lifeMap.entries()).map(
-    ([name, data]) => ({
-      areaName: name,
-      areaColor: data.color,
-      tasks: data.tasks,
-    }),
-  );
-
-  type RecentTaskRow = {
-    id: string;
-    title?: string | null;
-    updated_at?: string | null;
-  };
-
-  const recentActivity: ActivityItem[] = (recentTasksResult.data ?? []).map(
-    (row: RecentTaskRow) => ({
-      id: row.id,
-      description: `Completed "${row.title ?? 'Task'}"`,
-      timestamp: row.updated_at
-        ? new Date(row.updated_at).toLocaleDateString('en-GB', {
-            day: 'numeric',
-            month: 'short',
-          })
-        : '',
-      type: 'task_completed',
-    }),
+  const workspaceOverview = await buildWorkspaceOverview(
+    client,
+    userId,
+    workspaceRows,
+    bizIdsByWorkspace,
   );
 
   return {
-    userName: displayName,
-    todayTasks,
-    pipelineDealsToday,
-    businesses,
-    pipelineSnapshot,
-    lifeAreas,
-    recentActivity,
+    userName,
+    dateLabel: formatDateLabel(),
+    workspaces,
+    todaysFocus,
+    upcoming,
+    myDayEvents,
+    workspaceOverview,
   };
 });
-
-async function countSupportTicketsForWorkspace(
-  client: ReturnType<typeof getSupabaseServerClient>,
-  businessIds: Set<string>,
-): Promise<number> {
-  if (businessIds.size === 0) return 0;
-  try {
-    const { data: orgRows, error: orgErr } = await client
-      .from('client_orgs')
-      .select('id')
-      .in('business_id', [...businessIds]);
-    if (orgErr) return 0;
-    const orgIds = (orgRows ?? []).map((r: { id: string }) => r.id);
-    if (orgIds.length === 0) return 0;
-
-    const { count, error } = await client
-      .from('support_tickets')
-      .select('id', { count: 'exact', head: true })
-      .not('status', 'in', '("resolved","closed")')
-      .in('client_org_id', orgIds);
-    if (error) return 0;
-    return count ?? 0;
-  } catch {
-    return 0;
-  }
-}

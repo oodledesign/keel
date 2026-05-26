@@ -2,64 +2,27 @@
 
 import { useMemo } from 'react';
 
-import {
-  Briefcase,
-  CheckSquare,
-  Clock,
-  Compass,
-  Heart,
-  Church,
-  Inbox,
-  TicketCheck,
-  User,
-} from 'lucide-react';
+import Link from 'next/link';
+
+import { ArrowRight } from 'lucide-react';
+
+import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
+
+import pathsConfig from '~/config/paths.config';
 
 import type {
   KeelDashboardData,
-  BusinessOverview,
-  DashboardTask,
-  PipelineDealToday,
-  PipelineStageCount,
-  LifeAreaGroup,
-  ActivityItem,
+  PersonalCalendarEvent,
+  WorkspaceOverviewCard,
 } from '../../_lib/server/keel-dashboard.loader';
-import type { TasksPageTask } from '../../_lib/server/tasks.loader';
 
-import { AddTaskDialog } from './add-task-dialog';
-import { TaskListItem } from './task-list-item';
+import { PersonalDashboardTaskRow } from './personal-dashboard-task-row';
 
-const BRAND = {
-  family: '#059669',
-  homegroup: '#D97706',
-  personal: '#7C3AED',
-} as const;
-
-const STAGE_LABELS: Record<string, string> = {
-  lead: 'Lead',
-  qualified: 'Qualified',
-  call_booked: 'Call Booked',
-  proposal_sent: 'Proposal Sent',
-  negotiation: 'Negotiation',
-  won: 'Won',
-  lost: 'Lost',
-};
-
-const LIFE_ICONS: Record<string, typeof Heart> = {
-  Family: Heart,
-  Homegroup: Church,
-  Personal: User,
-};
-
-const LIFE_COLORS: Record<string, string> = {
-  Family: BRAND.family,
-  Homegroup: BRAND.homegroup,
-  Personal: BRAND.personal,
-};
+const panelClass =
+  'rounded-2xl border border-white/[0.08] bg-[var(--workspace-shell-panel)]';
 
 type Props = {
   data: KeelDashboardData;
-  /** Enables edit/delete on Today's Focus via EditTaskDialog. */
-  allTasksForEdit?: TasksPageTask[];
 };
 
 function getGreeting(): string {
@@ -69,368 +32,156 @@ function getGreeting(): string {
   return 'Good evening';
 }
 
-function formatDate(): string {
-  return new Intl.DateTimeFormat('en-GB', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date());
-}
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: 'GBP',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-const panelClass =
-  'rounded-2xl border border-violet-300/10 bg-[var(--workspace-shell-panel)] shadow-[0_12px_36px_rgba(4,10,24,0.18)]';
-
-export function KeelDashboard({ data, allTasksForEdit }: Props) {
+export function KeelDashboard({ data }: Props) {
   const greeting = useMemo(() => getGreeting(), []);
-  const dateStr = useMemo(() => formatDate(), []);
-  const firstName = data.userName;
-
-  const hasTodayItems =
-    data.todayTasks.length > 0 || data.pipelineDealsToday.length > 0;
-  const hasBusinesses = data.businesses.length > 0;
-  const hasPipeline = data.pipelineSnapshot.some((s) => s.count > 0);
-  const hasLifeTasks = data.lifeAreas.length > 0;
-  const hasActivity = data.recentActivity.length > 0;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-8 bg-[radial-gradient(circle_at_15%_0%,rgba(167,139,250,0.12),transparent_35%),radial-gradient(circle_at_85%_8%,rgba(192,132,252,0.12),transparent_40%)] px-4 pb-12 pt-6 text-white md:px-6 lg:px-8">
-      {/* ─── 1. Header / greeting ─────────────────────────────── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-            {greeting}, {firstName}
-          </h1>
-          <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-            {dateStr}
-          </p>
+    <div className="flex min-h-0 flex-1 flex-col gap-8 px-4 pb-12 pt-6 text-white md:px-6 lg:px-8">
+      <header>
+        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+          {greeting}, {data.userName}
+        </h1>
+        <p className="mt-1 text-sm font-normal text-white/60">{data.dateLabel}</p>
+      </header>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <div className="flex flex-col gap-6">
+          <DashboardSection title="Today's Focus">
+            {data.todaysFocus.length > 0 ? (
+              <div className="space-y-2">
+                {data.todaysFocus.map((task) => (
+                  <PersonalDashboardTaskRow key={task.id} task={task} />
+                ))}
+              </div>
+            ) : (
+              <EmptyPanel message="Nothing due today. Enjoy the breathing room." />
+            )}
+          </DashboardSection>
+
+          <DashboardSection title="Upcoming">
+            {data.upcoming.length > 0 ? (
+              <div className="space-y-2">
+                {data.upcoming.map((task) => (
+                  <PersonalDashboardTaskRow key={task.id} task={task} />
+                ))}
+              </div>
+            ) : (
+              <EmptyPanel message="No upcoming tasks scheduled." />
+            )}
+          </DashboardSection>
         </div>
-        <AddTaskDialog />
-      </div>
 
-      {/* ─── 2. Today's focus ─────────────────────────────────── */}
-      <section>
-        <h2 className="mb-4 text-lg font-semibold tracking-tight">
-          Today&apos;s Focus
-        </h2>
-        {hasTodayItems ? (
-          <div className="space-y-2">
-            {data.todayTasks.map((task) => {
-              const forEdit = allTasksForEdit?.find((t) => t.id === task.id);
-              return (
-                <TaskListItem
-                  key={task.id}
-                  title={task.title}
-                  project={task.projectName ?? undefined}
-                  area={task.areaName ?? undefined}
-                  dueDate="Today"
-                  priority={task.priority as any}
-                  status={task.status as any}
-                  accentColor={task.areaColor ?? undefined}
-                  editTask={forEdit}
-                />
-              );
-            })}
-            {data.pipelineDealsToday.map((deal) => (
-              <TaskListItem
-                key={deal.id}
-                title={`Follow up: ${deal.contactName} — ${deal.companyName}`}
-                project={deal.businessName ?? undefined}
-                dueDate="Today"
-                priority="high"
-                status="pending"
-                accentColor={deal.businessColor ?? undefined}
-              />
-            ))}
-          </div>
-        ) : (
-          <EmptyState
-            icon={CheckSquare}
-            message="No tasks or deals due today. Enjoy the breathing room."
-          />
-        )}
-      </section>
-
-      {/* ─── 3. Work overview (business cards) ────────────────── */}
-      <section>
-        <h2 className="mb-4 text-lg font-semibold tracking-tight">
-          Work Overview
-        </h2>
-        {hasBusinesses ? (
-          <div className="grid gap-4 md:grid-cols-2">
-            {data.businesses.map((biz) => (
-              <BusinessCard key={biz.businessId} biz={biz} />
-            ))}
-          </div>
-        ) : (
-          <EmptyState
-            icon={Briefcase}
-            message="No businesses set up yet. Create your first business to start tracking work."
-          />
-        )}
-      </section>
-
-      {/* ─── 4. Pipeline snapshot ─────────────────────────────── */}
-      <section>
-        <h2 className="mb-4 text-lg font-semibold tracking-tight">
-          Pipeline Snapshot
-        </h2>
-        {hasPipeline ? (
-          <div className={`${panelClass} overflow-hidden`}>
-            <div className="flex overflow-x-auto">
-              {data.pipelineSnapshot.map((stage) => {
-                const isWon = stage.stage === 'won';
-                const isLost = stage.stage === 'lost';
-                return (
-                  <button
-                    key={stage.stage}
-                    type="button"
-                    className="group flex min-w-[120px] flex-1 flex-col items-center gap-2 border-r border-violet-300/10 px-4 py-5 transition-colors last:border-r-0 hover:bg-white/[0.03]"
-                  >
-                    <span
-                      className={`text-2xl font-bold ${
-                        isWon
-                          ? 'text-violet-300'
-                          : isLost
-                            ? 'text-violet-300/60'
-                            : 'text-white'
-                      }`}
-                    >
-                      {stage.count}
-                    </span>
-                    <span className="text-xs font-medium text-violet-200/70 group-hover:text-violet-100/80">
-                      {STAGE_LABELS[stage.stage] ?? stage.stage}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ) : (
-          <EmptyState
-            icon={Compass}
-            message="No pipeline deals yet. Add your first deal to start tracking your pipeline."
-          />
-        )}
-      </section>
-
-      {/* ─── 5. Life snapshot ─────────────────────────────────── */}
-      <section>
-        <h2 className="mb-4 text-lg font-semibold tracking-tight">
-          Life This Week
-        </h2>
-        {hasLifeTasks ? (
-          <div className="grid gap-6 md:grid-cols-3">
-            {data.lifeAreas.map((area) => (
-              <LifeGroup
-                key={area.areaName}
-                title={area.areaName}
-                icon={LIFE_ICONS[area.areaName] ?? User}
-                color={
-                  area.areaColor ??
-                  LIFE_COLORS[area.areaName] ??
-                  BRAND.personal
-                }
-                tasks={area.tasks}
-                allTasksForEdit={allTasksForEdit}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-3">
-            {(['Family', 'Homegroup', 'Personal'] as const).map((name) => (
-              <LifeGroup
-                key={name}
-                title={name}
-                icon={LIFE_ICONS[name]!}
-                color={LIFE_COLORS[name]!}
-                tasks={[]}
-              />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* ─── 6. Recent activity ───────────────────────────────── */}
-      <section>
-        <h2 className="mb-4 text-lg font-semibold tracking-tight">
-          Recent Activity
-        </h2>
-        {hasActivity ? (
-          <div className={panelClass}>
-            <div className="divide-y divide-white/6">
-              {data.recentActivity.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-start gap-3 px-5 py-4"
-                >
-                  <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-400/10 text-violet-200/70">
-                    <ActivityIcon type={item.type} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm text-violet-100/90">{item.description}</p>
-                    <p className="mt-0.5 text-xs text-violet-300/60">
-                      {item.timestamp}
-                    </p>
-                  </div>
-                </div>
+        <DashboardSection title="My Day">
+          {data.myDayEvents.length > 0 ? (
+            <div className={`${panelClass} divide-y divide-white/[0.06]`}>
+              {data.myDayEvents.map((event) => (
+                <CalendarEventRow key={event.id} event={event} />
               ))}
             </div>
+          ) : (
+            <EmptyPanel message="No events on your calendar today." />
+          )}
+        </DashboardSection>
+      </div>
+
+      <DashboardSection title="Workspace overview">
+        {data.workspaceOverview.length > 0 ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {data.workspaceOverview.map((card) => (
+              <WorkspaceOverviewCardView key={card.id} card={card} />
+            ))}
           </div>
         ) : (
-          <EmptyState
-            icon={Clock}
-            message="No recent activity. Things you do will show up here."
-          />
+          <EmptyPanel message="Join or create a workspace to see an overview here." />
         )}
-      </section>
+      </DashboardSection>
     </div>
   );
 }
 
-// ─── Sub-components ──────────────────────────────────────────────────
-
-function ActivityIcon({ type }: { type: string }) {
-  switch (type) {
-    case 'task_completed':
-      return <CheckSquare className="h-3.5 w-3.5" />;
-    case 'deal_moved':
-      return <Compass className="h-3.5 w-3.5" />;
-    case 'ticket_raised':
-      return <TicketCheck className="h-3.5 w-3.5" />;
-    default:
-      return <Briefcase className="h-3.5 w-3.5" />;
-  }
+function DashboardSection(props: React.PropsWithChildren<{ title: string }>) {
+  return (
+    <section>
+      <h2 className="mb-3 text-base font-semibold tracking-tight text-white">
+        {props.title}
+      </h2>
+      {props.children}
+    </section>
+  );
 }
 
-function EmptyState({
-  icon: Icon,
-  message,
-}: {
-  icon: typeof Inbox;
-  message: string;
-}) {
+function EmptyPanel(props: { message: string }) {
   return (
-    <div className={`${panelClass} flex flex-col items-center gap-3 px-6 py-10`}>
-      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-400/10 text-violet-300/60">
-        <Icon className="h-5 w-5" />
+    <div className={`${panelClass} px-4 py-8 text-center text-sm text-white/50`}>
+      {props.message}
+    </div>
+  );
+}
+
+function CalendarEventRow(props: { event: PersonalCalendarEvent }) {
+  return (
+    <div className="flex items-start gap-3 px-4 py-3">
+      <span className="w-14 shrink-0 text-sm font-medium tabular-nums text-[#2A9D8F]">
+        {props.event.timeLabel || '—'}
       </span>
-      <p className="max-w-xs text-center text-sm text-violet-300/60">{message}</p>
-    </div>
-  );
-}
-
-function BusinessCard({ biz }: { biz: BusinessOverview }) {
-  const color = biz.businessColor ?? '#4F46E5';
-
-  return (
-    <div className={panelClass}>
-      <div className="p-5">
-        <div className="mb-4 flex items-center gap-3">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-white">{props.event.title}</p>
+        <span className="mt-1 inline-flex items-center gap-1.5 text-[11px] text-white/60">
           <span
-            className="flex h-9 w-9 items-center justify-center rounded-xl"
-            style={{ backgroundColor: `${color}18`, color }}
-          >
-            <Briefcase className="h-[18px] w-[18px]" />
-          </span>
-          <h3 className="text-base font-semibold">{biz.businessName}</h3>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <MiniStat label="Active Projects" value={biz.activeProjects} />
-          <MiniStat label="Open Tasks" value={biz.openTasks} />
-          <MiniStat label="Open Tickets" value={biz.openTickets} />
-          <MiniStat
-            label="Pipeline"
-            value={`${biz.activeDeals} deals`}
-            subtitle={formatCurrency(biz.dealValue)}
+            className="h-2 w-2 rounded-full"
+            style={{ backgroundColor: props.event.workspaceColor }}
           />
-        </div>
+          {props.event.workspaceName}
+        </span>
       </div>
     </div>
   );
 }
 
-function MiniStat({
-  label,
-  value,
-  subtitle,
-}: {
-  label: string;
-  value: string | number;
-  subtitle?: string;
-}) {
-  return (
-    <div className="rounded-xl border border-violet-300/10 bg-[var(--workspace-shell-canvas)] px-3 py-2.5">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-violet-300/60">
-        {label}
-      </p>
-      <p className="mt-1 text-lg font-semibold text-white">{value}</p>
-      {subtitle && (
-        <p className="text-xs text-violet-300">{subtitle}</p>
-      )}
-    </div>
-  );
-}
+function WorkspaceOverviewCardView(props: { card: WorkspaceOverviewCard }) {
+  const { card } = props;
+  const href = pathsConfig.app.accountHome.replace('[account]', card.slug);
+  const initial = (card.name.trim()[0] ?? '?').toUpperCase();
 
-function LifeGroup({
-  title,
-  icon: Icon,
-  color,
-  tasks,
-  allTasksForEdit,
-}: {
-  title: string;
-  icon: typeof Heart;
-  color: string;
-  tasks: DashboardTask[];
-  allTasksForEdit?: TasksPageTask[];
-}) {
   return (
     <div className={panelClass}>
-      <div className="p-5">
-        <div className="mb-3 flex items-center gap-2">
-          <span
-            className="flex h-7 w-7 items-center justify-center rounded-lg"
-            style={{ backgroundColor: `${color}18`, color }}
-          >
-            <Icon className="h-3.5 w-3.5" />
-          </span>
-          <h3 className="text-sm font-semibold">{title}</h3>
-          <span className="ml-auto rounded-full bg-violet-400/12 px-2 py-0.5 text-xs text-violet-200/70">
-            {tasks.length}
-          </span>
+      <div className="flex flex-col gap-4 p-5">
+        <div className="flex items-center gap-3">
+          <Avatar className="h-10 w-10 rounded-xl">
+            <AvatarImage src={card.pictureUrl ?? undefined} alt="" />
+            <AvatarFallback
+              className="rounded-xl text-sm font-semibold text-white"
+              style={{ backgroundColor: card.color }}
+            >
+              {initial}
+            </AvatarFallback>
+          </Avatar>
+          <h3 className="text-base font-semibold text-white">{card.name}</h3>
         </div>
 
-        {tasks.length === 0 ? (
-          <p className="text-xs text-violet-300/60">Nothing this week</p>
-        ) : (
-          <div className="space-y-2">
-            {tasks.map((task) => {
-              const forEdit = allTasksForEdit?.find((t) => t.id === task.id);
-              return (
-                <TaskListItem
-                  key={task.id}
-                  title={task.title}
-                  area={task.areaName ?? undefined}
-                  dueDate={task.dueDate ?? undefined}
-                  priority={task.priority as any}
-                  status={task.status as any}
-                  accentColor={task.areaColor ?? undefined}
-                  editTask={forEdit}
-                />
-              );
-            })}
-          </div>
-        )}
+        <dl className="grid grid-cols-2 gap-3">
+          {card.stats.map((stat) => (
+            <div
+              key={stat.label}
+              className="rounded-lg border border-white/[0.06] bg-[var(--workspace-shell-canvas)] px-3 py-2"
+            >
+              <dt className="text-[10px] font-medium uppercase tracking-wide text-white/45">
+                {stat.label}
+              </dt>
+              <dd className="mt-0.5 text-lg font-semibold text-white">
+                {stat.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+
+        <Link
+          href={href}
+          className="inline-flex items-center gap-1 text-sm font-medium text-[#2A9D8F] hover:text-[#34b3a4]"
+        >
+          Open
+          <ArrowRight className="h-4 w-4" />
+        </Link>
       </div>
     </div>
   );

@@ -1,47 +1,22 @@
 'use client';
 
-import { useContext } from 'react';
-
-import { useRouter } from 'next/navigation';
-
-import { AccountSelector } from '@kit/accounts/account-selector';
-import { SidebarContext } from '@kit/ui/shadcn-sidebar';
-
 import featureFlagsConfig from '~/config/feature-flags.config';
-import pathsConfig from '~/config/paths.config';
-
-const features = {
-  enableTeamCreation: featureFlagsConfig.enableTeamCreation,
-};
+import { WorkspaceAccountsSelector } from '~/components/workspace-shell/workspace-accounts-selector';
+import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
 
 export function TeamAccountAccountsSelector(params: {
   selectedAccount: string;
   userId: string;
-
-  accounts: Array<{
-    label: string | null;
-    value: string | null;
-    image: string | null;
-    role?: string | null;
-  }>;
+  className?: string;
+  accounts: WorkspaceSwitcherAccount[];
 }) {
-  const router = useRouter();
-  const ctx = useContext(SidebarContext);
-
   return (
-    <AccountSelector
+    <WorkspaceAccountsSelector
       selectedAccount={params.selectedAccount}
-      accounts={params.accounts}
       userId={params.userId}
-      collapsed={!ctx?.open}
-      features={features}
-      onAccountChange={(value) => {
-        const path = value
-          ? pathsConfig.app.accountHome.replace('[account]', value)
-          : pathsConfig.app.home;
-
-        router.replace(path);
-      }}
+      accounts={params.accounts}
+      className={params.className}
+      enableTeamCreation={featureFlagsConfig.enableTeamCreation}
     />
   );
 }

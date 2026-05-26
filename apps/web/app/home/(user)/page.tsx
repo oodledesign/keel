@@ -10,7 +10,6 @@ import { DashboardWorkspaceBanner } from './_components/dashboard/dashboard-work
 import { KeelDashboard } from './_components/dashboard/keel-dashboard';
 import { DashboardSkeleton } from './_components/dashboard/dashboard-skeleton';
 import { loadKeelDashboard } from './_lib/server/keel-dashboard.loader';
-import { loadTasksForUser } from './_lib/server/tasks.loader';
 import { loadUserWorkspace } from './_lib/server/load-user-workspace';
 
 export const generateMetadata = async () => {
@@ -20,11 +19,8 @@ export const generateMetadata = async () => {
 };
 
 async function DashboardContent() {
-  const [data, allTasks] = await Promise.all([
-    loadKeelDashboard(),
-    loadTasksForUser(),
-  ]);
-  return <KeelDashboard data={data} allTasksForEdit={allTasks} />;
+  const data = await loadKeelDashboard();
+  return <KeelDashboard data={data} />;
 }
 
 async function UserHomePage() {

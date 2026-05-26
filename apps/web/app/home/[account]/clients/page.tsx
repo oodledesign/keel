@@ -1,14 +1,16 @@
 import { redirect } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
-import { Trans } from '@kit/ui/trans';
 
-import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
 import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access';
-import { isWorkModuleEnabled } from '../_lib/server/account-modules';
+import {
+  getSpaceTypeFromAccount,
+  isPropertyNavModuleEnabled,
+  isWorkModuleEnabled,
+} from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import { loadClientsPageData } from './_lib/server/clients-page.loader';
 import { ClientsPageContent } from './_components/clients-page-content';
@@ -17,15 +19,24 @@ interface ClientsPageProps {
   params: Promise<{ account: string }>;
 }
 
-export const generateMetadata = async () => {
-  const i18n = await createI18nServerInstance();
-  const title = i18n.t('common:routes.clients');
-  return { title };
+export const generateMetadata = async ({
+  params,
+}: {
+  params: Promise<{ account: string }>;
+}) => {
+  const workspace = await loadTeamWorkspace((await params).account);
+  const spaceType = getSpaceTypeFromAccount(
+    workspace.account as { space_type?: string | null },
+  );
+  return { title: spaceType === 'property' ? 'Tenants' : 'Clients' };
 };
 
 async function ClientsPage({ params }: ClientsPageProps) {
   const accountSlug = (await params).account;
   const workspace = await loadTeamWorkspace(accountSlug);
+  const spaceType = getSpaceTypeFromAccount(
+    workspace.account as { space_type?: string | null },
+  );
   const access = getTeamAccountAccess(
     workspace.account as {
       permissions?: string[] | null;
@@ -34,10 +45,12 @@ async function ClientsPage({ params }: ClientsPageProps) {
     },
   );
 
-  if (
-    !access.canViewClients ||
-    !isWorkModuleEnabled(workspace.moduleSettings, 'clients')
-  ) {
+  const clientsEnabled =
+    spaceType === 'property'
+      ? isPropertyNavModuleEnabled(workspace.moduleSettings, 'tenants')
+      : isWorkModuleEnabled(workspace.moduleSettings, 'clients');
+
+  if (!access.canViewClients || !clientsEnabled) {
     redirect(getDefaultAccountPath(accountSlug, workspace.account));
   }
 
@@ -50,11 +63,17 @@ async function ClientsPage({ params }: ClientsPageProps) {
     initialTotal,
   } = await loadClientsPageData(accountSlug);
 
+  const isProperty = spaceType === 'property';
+
   return (
     <>
       <TeamAccountLayoutPageHeader
-        title={<Trans i18nKey="common:routes.clients" />}
-        description="Manage your clients"
+        title={isProperty ? 'Tenants' : 'Clients'}
+        description={
+          isProperty
+            ? 'Active tenancies and contacts'
+            : 'Manage your clients'
+        }
         account={accountSlug}
       />
 

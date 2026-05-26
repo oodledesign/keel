@@ -98,7 +98,7 @@ export function ClientTasksBlock({
           <Button
             variant="ghost"
             size="sm"
-            className="text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-400"
+            className="text-[#5eead4] hover:bg-[var(--keel-teal)]/10 hover:text-[#5eead4]"
             onClick={() => setAddOpen(true)}
           >
             <Plus className="mr-1 h-4 w-4" />
@@ -123,7 +123,7 @@ export function ClientTasksBlock({
                   <StatusIcon
                     className={`h-4 w-4 shrink-0 ${
                       task.status === 'completed'
-                        ? 'text-emerald-400'
+                        ? 'text-[#5eead4]'
                         : 'text-zinc-400'
                     }`}
                   />
@@ -317,7 +317,7 @@ function AddTaskForClientDialog({
             <Button
               type="submit"
               disabled={isPending}
-              className="bg-emerald-600 hover:bg-emerald-500"
+              className="bg-[var(--keel-teal)] hover:bg-[#238b7f]"
             >
               {isPending ? (
                 <>

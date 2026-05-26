@@ -19,7 +19,7 @@ type SignaturesDashboardPageProps = {
 
 const cards = [
   { key: 'total', label: 'Total Staff', icon: Users, tone: 'text-[#39AEB3]' },
-  { key: 'pushed', label: 'Pushed', icon: CheckCircle2, tone: 'text-[#57C87F]' },
+  { key: 'pushed', label: 'Pushed', icon: CheckCircle2, tone: 'text-[var(--keel-teal)]' },
   { key: 'pending', label: 'Pending', icon: Clock, tone: 'text-[#F2C94C]' },
   { key: 'errors', label: 'Errors', icon: AlertCircle, tone: 'text-[#E85D75]' },
 ] as const;

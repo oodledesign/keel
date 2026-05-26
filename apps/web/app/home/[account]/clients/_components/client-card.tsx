@@ -52,7 +52,7 @@ export function ClientCard({
     'flex w-full items-center gap-4 rounded-lg border px-4 py-3 text-left transition-colors',
     'border-zinc-700 bg-[var(--workspace-shell-panel)] hover:bg-[var(--workspace-shell-panel-hover)]',
     selected &&
-      'border-emerald-500/50 bg-[var(--workspace-shell-panel-hover)] ring-2 ring-emerald-500/50',
+      'border-[var(--keel-teal)]/50 bg-[var(--workspace-shell-panel-hover)] ring-2 ring-[var(--keel-teal)]/50',
   );
 
   const content = (
@@ -70,7 +70,7 @@ export function ClientCard({
         </p>
       </div>
       <div className="flex items-center gap-1">
-        <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-400">
+        <span className="flex items-center gap-1.5 rounded-full bg-[var(--keel-teal)]/20 px-2 py-0.5 text-xs font-medium text-[#5eead4]">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
           Active
         </span>

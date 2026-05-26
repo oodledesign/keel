@@ -78,13 +78,13 @@ export function SubscriptionStep({
 
       {hasActiveSubscription ? (
         <>
-          <p className="text-sm text-emerald-400">
+          <p className="text-sm text-[#5eead4]">
             You have an active subscription. You can continue onboarding.
           </p>
           <div className="flex justify-end">
             <PrimaryButton
               onClick={handleContinue}
-              className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-500"
+              className="gap-1.5 bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
             >
               Continue
               <ChevronRight className="h-4 w-4" />
@@ -97,7 +97,7 @@ export function SubscriptionStep({
             Start a trial or subscribe to unlock your workspace.
           </p>
           <div className="flex flex-wrap items-center gap-3">
-            <PrimaryButton asChild className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-500">
+            <PrimaryButton asChild className="gap-1.5 bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]">
               <Link href={billingPath}>
                 Go to billing
                 <ChevronRight className="h-4 w-4" />

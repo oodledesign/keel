@@ -104,7 +104,7 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
             </div>
             <Link
               href={brandPath}
-              className="inline-flex text-sm font-medium text-[#57C87F] hover:underline"
+              className="inline-flex text-sm font-medium text-[var(--keel-teal)] hover:underline"
             >
               Manage brand settings →
             </Link>

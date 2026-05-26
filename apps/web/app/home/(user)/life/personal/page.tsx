@@ -124,7 +124,7 @@ export default function PersonalPage() {
               return (
                 <div key={task.id} className="flex items-start gap-3 rounded-xl border border-white/6 bg-[var(--workspace-shell-panel)] px-4 py-3 transition-colors hover:border-white/10">
                   <span className="mt-0.5 shrink-0">
-                    {task.status === 'completed' ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <StatusIcon className="h-4 w-4 text-zinc-500" />}
+                    {task.status === 'completed' ? <CheckCircle2 className="h-4 w-4 text-[#5eead4]" /> : <StatusIcon className="h-4 w-4 text-zinc-500" />}
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className={`text-sm font-medium ${task.status === 'completed' ? 'text-zinc-500 line-through' : 'text-white'}`}>{task.title}</p>

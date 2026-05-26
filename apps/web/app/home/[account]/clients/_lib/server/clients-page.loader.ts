@@ -7,7 +7,10 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { getTeamAccountAccess } from '../../../_lib/role-access';
 import { isWorkModuleEnabled } from '../../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard';
+import {
+  BUSINESS_WORKSPACE_SPACE_TYPES,
+  redirectIfSpaceNotIn,
+} from '../../../_lib/server/workspace-route-guard';
 import pathsConfig from '~/config/paths.config';
 import { createClientsService } from './clients.service';
 
@@ -18,7 +21,7 @@ export async function loadClientsPageData(accountSlug: string) {
     redirect(pathsConfig.app.home);
   }
 
-  redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
+  redirectIfSpaceNotIn(workspace, accountSlug, BUSINESS_WORKSPACE_SPACE_TYPES);
 
   const account = workspace.account as {
     id: string;

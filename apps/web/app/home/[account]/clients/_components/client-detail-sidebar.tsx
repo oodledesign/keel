@@ -22,6 +22,15 @@ import { ClientForm } from './client-form';
 import { ClientImageUploader } from './client-image-uploader';
 import { ClientInvoicesBlock } from './client-invoices-block';
 import { ClientJobHistoryBlock } from './client-job-history-block';
+import { ContextWorkspaceDocs } from '../../_components/workspace-content/context-workspace-docs';
+import { ContextWorkspaceNotes } from '../../_components/workspace-content/context-workspace-notes';
+import type { LinkValue } from '../../_components/workspace-content/link-to-select';
+import type {
+  DocListItem,
+  LinkOption,
+  NoteListItem,
+  WorkspaceNotesVariant,
+} from '../../_lib/workspace-content/types';
 import { ClientNotesBlock } from './client-notes-block';
 import { ClientTasksBlock } from './client-tasks-block';
 
@@ -83,6 +92,13 @@ export function ClientDetailSidebar({
   onSaved,
   onDeleted,
   fullPage = false,
+  workspaceNotes,
+  workspaceDocs,
+  notesTableAvailable,
+  docsTableAvailable,
+  linkOptions,
+  defaultLink,
+  notesVariant = 'work',
 }: {
   accountSlug: string;
   accountId: string;
@@ -94,6 +110,13 @@ export function ClientDetailSidebar({
   onDeleted: () => void;
   /** When true, render as full-page layout (e.g. /clients/[id]) instead of narrow sidebar */
   fullPage?: boolean;
+  workspaceNotes?: NoteListItem[];
+  workspaceDocs?: DocListItem[];
+  notesTableAvailable?: boolean;
+  docsTableAvailable?: boolean;
+  linkOptions?: LinkOption[];
+  defaultLink?: LinkValue;
+  notesVariant?: WorkspaceNotesVariant;
 }) {
   const [client, setClient] = useState<Client | null>(null);
   const [jobs, setJobs] = useState<ClientJobSummary[]>([]);
@@ -242,7 +265,7 @@ export function ClientDetailSidebar({
               {client.email && (
                 <a
                   href={`mailto:${client.email}`}
-                  className="mt-2 flex items-center gap-2 text-sm text-zinc-400 hover:text-emerald-400"
+                  className="mt-2 flex items-center gap-2 text-sm text-zinc-400 hover:text-[#5eead4]"
                 >
                   <Mail className="h-4 w-4" />
                   {client.email}
@@ -251,7 +274,7 @@ export function ClientDetailSidebar({
               {client.phone && (
                 <a
                   href={`tel:${client.phone}`}
-                  className="mt-1 flex items-center gap-2 text-sm text-zinc-400 hover:text-emerald-400"
+                  className="mt-1 flex items-center gap-2 text-sm text-zinc-400 hover:text-[#5eead4]"
                 >
                   <Phone className="h-4 w-4" />
                   {client.phone}
@@ -353,7 +376,7 @@ export function ClientDetailSidebar({
                           className={cn(
                             'border-b-2 px-3 py-2 text-sm font-medium transition-colors',
                             activeTab === key
-                              ? 'border-emerald-500 text-emerald-400'
+                              ? 'border-[var(--keel-teal)] text-[#5eead4]'
                               : 'border-transparent text-zinc-400 hover:text-white',
                           )}
                         >
@@ -366,7 +389,7 @@ export function ClientDetailSidebar({
                       {activeTab === 'activity' && (
                         <div className="space-y-2">
                           <div className="flex gap-3 rounded-lg border border-zinc-700 bg-[var(--workspace-shell-panel)] p-3">
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/20" />
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--keel-teal)]/20" />
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium text-white">New client</p>
                               <p className="text-xs text-zinc-500">
@@ -401,14 +424,48 @@ export function ClientDetailSidebar({
                           clientId={client.id}
                         />
                       )}
-                      {activeTab === 'notes' && (
-                        <ClientNotesBlock
-                          accountId={accountId}
-                          clientId={client.id}
-                          canEdit={canEditClients}
-                          onNoteAdded={fetchClient}
-                        />
-                      )}
+                      {activeTab === 'notes' &&
+                        (workspaceNotes && linkOptions && defaultLink ? (
+                          <div className="space-y-8">
+                            <section>
+                              <h3 className="mb-3 text-sm font-medium text-zinc-400">
+                                Notes
+                              </h3>
+                              <ContextWorkspaceNotes
+                                accountId={accountId}
+                                accountSlug={accountSlug}
+                                notes={workspaceNotes}
+                                tableAvailable={notesTableAvailable ?? true}
+                                linkOptions={linkOptions}
+                                defaultLink={defaultLink}
+                                variant={notesVariant}
+                                canEdit={canEditClients}
+                              />
+                            </section>
+                            {workspaceDocs ? (
+                              <section>
+                                <h3 className="mb-3 text-sm font-medium text-zinc-400">
+                                  Documents
+                                </h3>
+                                <ContextWorkspaceDocs
+                                  accountId={accountId}
+                                  accountSlug={accountSlug}
+                                  docs={workspaceDocs}
+                                  tableAvailable={docsTableAvailable ?? true}
+                                  linkOptions={linkOptions}
+                                  defaultLink={defaultLink}
+                                />
+                              </section>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <ClientNotesBlock
+                            accountId={accountId}
+                            clientId={client.id}
+                            canEdit={canEditClients}
+                            onNoteAdded={fetchClient}
+                          />
+                        ))}
                       {activeTab === 'tasks' && (
                         <ClientTasksBlock
                           clientId={client.id}
@@ -432,7 +489,7 @@ export function ClientDetailSidebar({
               {canEditClients && client.email && (
                 <Button
                   variant="outline"
-                  className="justify-start border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10"
+                  className="justify-start border-[var(--keel-teal)]/40 text-[#5eead4] hover:bg-[var(--keel-teal)]/10"
                   onClick={async () => {
                     try {
                       const result = await createInvitationsAction({

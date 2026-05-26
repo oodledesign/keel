@@ -144,7 +144,7 @@ export function AddTaskDialog({
       <DialogTrigger asChild>
         <button
           type="button"
-          className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-[#57C87F] px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#4ab86f]"
+          className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-[var(--keel-teal)] px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#238b7f]"
         >
           <Plus className="h-4 w-4" />
           Add Task
@@ -317,7 +317,7 @@ export function AddTaskDialog({
                   '[account]',
                   workspaceAccountSlug,
                 )}
-                className="font-medium text-[#57C87F] hover:underline"
+                className="font-medium text-[var(--keel-teal)] hover:underline"
               >
                 <Sparkles className="mr-1 inline h-3 w-3" />
                 Extract tasks from email or transcript (AI)
@@ -336,7 +336,7 @@ export function AddTaskDialog({
             <button
               type="submit"
               disabled={isPending}
-              className="inline-flex h-9 items-center gap-2 rounded-xl bg-[#57C87F] px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#4ab86f] disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-2 rounded-xl bg-[var(--keel-teal)] px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#238b7f] disabled:opacity-50"
             >
               {isPending ? (
                 <>

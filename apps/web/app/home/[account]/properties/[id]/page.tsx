@@ -11,6 +11,8 @@ import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layo
 import { getDefaultAccountPath, getTeamAccountAccess } from '../../_lib/role-access';
 import { getSpaceTypeFromAccount } from '../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
+import { loadContextWorkspaceContent } from '../../_lib/workspace-content/context-loader';
+import { notesVariantFromProfile } from '../../_lib/server/workspace-profile';
 import { createPropertiesService } from '../_lib/server/properties.service';
 import { PropertyDetailContent } from './_components/property-detail-content';
 
@@ -64,6 +66,13 @@ async function PropertyDetailPage({ params }: PropertyDetailPageProps) {
     notFound();
   }
 
+  const workspaceContent = await loadContextWorkspaceContent({
+    accountId: workspace.account.id as string,
+    spaceType: (workspace.account as { space_type?: string }).space_type,
+    businessType: workspace.businessType,
+    scope: { propertyId },
+  });
+
   return (
     <>
       <TeamAccountLayoutPageHeader
@@ -75,8 +84,16 @@ async function PropertyDetailPage({ params }: PropertyDetailPageProps) {
         <PropertyDetailContent
           property={property}
           accountId={workspace.account.id as string}
+          accountSlug={slug}
           userId={user.id}
           documents={documents}
+          workspaceNotes={workspaceContent.notes}
+          workspaceDocs={workspaceContent.docs}
+          notesTableAvailable={workspaceContent.notesTableAvailable}
+          docsTableAvailable={workspaceContent.docsTableAvailable}
+          linkOptions={workspaceContent.linkOptions}
+          defaultLink={workspaceContent.defaultLink}
+          notesVariant={notesVariantFromProfile(workspaceContent.profile)}
         />
       </PageBody>
     </>
