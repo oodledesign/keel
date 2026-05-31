@@ -34,6 +34,7 @@ import {
 import {
   buildWorkSettingsChildren,
   buildWorkSpaceNavChildren,
+  type WorkNavCounts,
 } from '~/config/work-account-navigation.config';
 import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
 import { spaceTypeFromProfile } from '~/home/[account]/_lib/workspace-profile';
@@ -51,6 +52,7 @@ const getRoutes = (
     companyRole?: string | null;
   },
   moduleSettings?: Record<string, boolean>,
+  navCounts?: WorkNavCounts,
 ) => {
   const access = getTeamAccountAccess(accessInput);
   const ms = moduleSettings;
@@ -61,6 +63,7 @@ const getRoutes = (
     path: string;
     Icon: React.ReactNode;
     end?: boolean;
+    renderAction?: React.ReactNode;
   }> = [];
 
   if (profile === 'work_design') {
@@ -68,6 +71,7 @@ const getRoutes = (
       account,
       access,
       ms,
+      navCounts,
     ) as typeof applicationChildren;
   } else if (profile === 'work_property') {
     applicationChildren = buildPropertySpaceNavChildren(
@@ -137,9 +141,10 @@ export function getTeamAccountSidebarConfig(
   },
   moduleSettings?: Record<string, boolean>,
   profile: WorkspaceProfile = 'work_design',
+  navCounts?: WorkNavCounts,
 ) {
   return NavigationConfigSchema.parse({
-    routes: getRoutes(account, profile, accessInput, moduleSettings),
+    routes: getRoutes(account, profile, accessInput, moduleSettings, navCounts),
     style: process.env.NEXT_PUBLIC_TEAM_NAVIGATION_STYLE,
     sidebarCollapsed: process.env.NEXT_PUBLIC_TEAM_SIDEBAR_COLLAPSED,
     sidebarCollapsedStyle: process.env.NEXT_PUBLIC_SIDEBAR_COLLAPSIBLE_STYLE,

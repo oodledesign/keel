@@ -25,6 +25,7 @@ import { TeamAccountNavigationMenu } from './_components/team-account-navigation
 import { spaceTypeFromProfile } from './_lib/server/workspace-profile';
 import { loadTeamWorkspace } from './_lib/server/team-account-workspace.loader';
 import { loadWorkspaceSwitcherAccounts } from '../_lib/server/workspace-switcher.loader';
+import { loadWorkNavCounts } from './_lib/server/work-nav-counts.loader';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 import {
   userRequiresWorkspaceSetup,
@@ -65,6 +66,12 @@ async function SidebarLayout({
     loadWorkspaceSwitcherAccounts(client, user.id),
   ]);
 
+  const navCounts = await loadWorkNavCounts(
+    client,
+    data.account.id,
+    data.moduleSettings,
+  );
+
   if (!data) {
     redirect('/');
   }
@@ -89,6 +96,7 @@ async function SidebarLayout({
               user={data.user}
               moduleSettings={data.moduleSettings}
               workspaceProfile={workspaceProfile}
+              navCounts={navCounts}
               accountAccess={
                 data.account as {
                   permissions?: string[] | null;
@@ -112,6 +120,7 @@ async function SidebarLayout({
                 account={account}
                 workspaceProfile={workspaceProfile}
                 moduleSettings={data.moduleSettings}
+                navCounts={navCounts}
                 accountAccess={
                   data.account as {
                     permissions?: string[] | null;
@@ -154,6 +163,11 @@ async function HeaderLayout({
 
   const workspaceProfile = data.workspaceProfile;
   const accounts = switcherAccounts;
+  const navCounts = await loadWorkNavCounts(
+    client,
+    data.account.id,
+    data.moduleSettings,
+  );
 
   return (
     <TeamAccountWorkspaceContextProvider value={data}>
@@ -175,6 +189,7 @@ async function HeaderLayout({
               account={account}
               workspaceProfile={workspaceProfile}
               moduleSettings={data.moduleSettings}
+              navCounts={navCounts}
               accountAccess={
                 data.account as {
                   permissions?: string[] | null;

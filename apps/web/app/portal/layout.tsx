@@ -1,8 +1,7 @@
 import { ReactNode } from 'react';
 
 /**
- * Portal layout: minimal wrapper for public invoice view.
- * No auth required; no sidebar.
+ * Portal layout: public invoice views and authenticated client portal routes.
  */
 export default function PortalLayout({ children }: { children: ReactNode }) {
   return (

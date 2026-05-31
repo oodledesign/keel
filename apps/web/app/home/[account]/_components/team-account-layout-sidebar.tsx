@@ -18,6 +18,7 @@ import { WorkspaceProfileBlock } from '~/components/workspace-shell/workspace-pr
 import { getTeamAccountSidebarConfig } from '~/config/team-account-navigation.config';
 import pathsConfig from '~/config/paths.config';
 import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
+import type { WorkNavCounts } from '~/config/work-account-navigation.config';
 import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
 
 import { TeamAccountAccountsSelector } from '../_components/team-account-accounts-selector';
@@ -37,12 +38,14 @@ export function TeamAccountLayoutSidebar(props: {
   accountAccess?: TeamAccountAccessSource;
   moduleSettings?: Record<string, boolean>;
   workspaceProfile: WorkspaceProfile;
+  navCounts?: WorkNavCounts;
 }) {
   const config = getTeamAccountSidebarConfig(
     props.account,
     props.accountAccess,
     props.moduleSettings,
     props.workspaceProfile,
+    props.navCounts,
   );
 
   return (

@@ -6,9 +6,11 @@ import {
   ClipboardList,
   CreditCard,
   FileText,
+  Globe,
   Kanban,
   LayoutDashboard,
   LayoutGrid,
+  LifeBuoy,
   MessageSquareText,
   PenLine,
   Settings,
@@ -29,8 +31,13 @@ import {
   isWorkNavModuleEnabled,
 } from '~/home/[account]/_lib/server/account-modules';
 import type { TeamAccountAccess } from '~/home/[account]/_lib/role-access';
+import { SidebarMenuBadge } from '@kit/ui/shadcn-sidebar';
 
 const iconClasses = 'w-4';
+
+export type WorkNavCounts = {
+  supportOpenCount?: number;
+};
 
 type NavChild = {
   label: string;
@@ -116,6 +123,7 @@ export function buildWorkSpaceNavChildren(
   account: string,
   access: TeamAccountAccess,
   moduleSettings?: Record<string, boolean>,
+  navCounts?: WorkNavCounts,
 ): Array<NavChild | NavCollapsible> {
   const ms = moduleSettings;
   const home = createPath(pathsConfig.app.accountHome, account);
@@ -173,6 +181,31 @@ export function buildWorkSpaceNavChildren(
             Icon: <Briefcase className={iconClasses} />,
           }
         : null,
+    websites: () =>
+      access.canViewDashboard && isWorkNavModuleEnabled(ms, 'websites')
+        ? {
+            label: 'Websites',
+            path: createPath(pathsConfig.app.accountWebsites, account),
+            Icon: <Globe className={iconClasses} />,
+          }
+        : null,
+    support_tickets: () => {
+      const openCount = navCounts?.supportOpenCount ?? 0;
+      return access.canViewDashboard &&
+        isWorkNavModuleEnabled(ms, 'support_tickets')
+        ? {
+            label: 'Support',
+            path: createPath(pathsConfig.app.accountSupport, account),
+            Icon: <LifeBuoy className={iconClasses} />,
+            renderAction:
+              openCount > 0 ? (
+                <SidebarMenuBadge className="bg-blue-500/20 text-blue-300">
+                  {openCount > 99 ? '99+' : openCount}
+                </SidebarMenuBadge>
+              ) : undefined,
+          }
+        : null;
+    },
     invoices: () =>
       access.canViewInvoices && isWorkNavModuleEnabled(ms, 'invoices')
         ? {

@@ -14,6 +14,8 @@ export type AccountModuleKey =
   | 'schedule'
   | 'tasks'
   | 'clients'
+  | 'websites'
+  | 'support_tickets'
   | 'invoices'
   | 'team'
   | 'pipeline'

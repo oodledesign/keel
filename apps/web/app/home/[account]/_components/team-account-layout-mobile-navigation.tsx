@@ -27,6 +27,7 @@ import featureFlagsConfig from '~/config/feature-flags.config';
 import pathsConfig from '~/config/paths.config';
 import { getTeamAccountSidebarConfig } from '~/config/team-account-navigation.config';
 import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
+import type { WorkNavCounts } from '~/config/work-account-navigation.config';
 import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
 
 type TeamAccountAccessSource = {
@@ -48,6 +49,7 @@ export const TeamAccountLayoutMobileNavigation = (
     accountAccess?: TeamAccountAccessSource;
     moduleSettings?: Record<string, boolean>;
     workspaceProfile: WorkspaceProfile;
+    navCounts?: WorkNavCounts;
   }>,
 ) => {
   const signOut = useSignOut();
@@ -57,6 +59,7 @@ export const TeamAccountLayoutMobileNavigation = (
     props.accountAccess,
     props.moduleSettings,
     props.workspaceProfile,
+    props.navCounts,
   ).routes.map(
     (item, index) => {
       if ('children' in item) {
