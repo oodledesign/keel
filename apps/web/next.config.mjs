@@ -163,6 +163,10 @@ async function getRewrites() {
         destination: '/home/pipeline',
       },
       {
+        source: '/app/planner',
+        destination: '/home/planner',
+      },
+      {
         source: '/app/clients',
         destination: '/home/clients',
       },
@@ -212,6 +216,11 @@ async function getRedirects() {
     {
       source: '/home/pipeline',
       destination: '/app/pipeline',
+      permanent: false,
+    },
+    {
+      source: '/home/planner',
+      destination: '/app/planner',
       permanent: false,
     },
     {

@@ -11,6 +11,7 @@ const PathsSchema = z.object({
   }),
   app: z.object({
     home: z.string().min(1),
+    personalPlanner: z.string().min(1),
     personalAccountSettings: z.string().min(1),
     personalAccountAccessibility: z.string().min(1),
     personalAccountBilling: z.string().min(1),
@@ -77,6 +78,7 @@ const pathsConfig = PathsSchema.parse({
   },
   app: {
     home: '/app',
+    personalPlanner: '/app/planner',
     personalAccountSettings: '/app/settings',
     personalAccountAccessibility: '/app/accessibility',
     personalAccountBilling: '/app/billing',

@@ -21,6 +21,7 @@ import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader'
 
 // local imports
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
+import { RestoreWorkspaceModulesCard } from './_components/restore-workspace-modules-card';
 
 export const generateMetadata = async () => {
   const i18n = await createI18nServerInstance();
@@ -93,6 +94,14 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
       />
 
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 text-[var(--workspace-shell-text)] lg:px-6">
+        {!isClient && (access.isOwner || access.isAdmin) ? (
+          <RestoreWorkspaceModulesCard
+            accountId={account.id}
+            accountSlug={account.slug}
+            workspaceProfile={workspace.workspaceProfile}
+          />
+        ) : null}
+
         {!isClient ? (
           <div className="mx-auto mb-6 flex max-w-2xl flex-col gap-3 rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
             <div>

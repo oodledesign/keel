@@ -1,4 +1,4 @@
-import { LayoutDashboard, Settings } from 'lucide-react';
+import { CalendarDays, LayoutDashboard, Settings } from 'lucide-react';
 import { z } from 'zod';
 
 import { NavigationConfigSchema } from '@kit/ui/navigation-schema';
@@ -35,6 +35,11 @@ export function buildPersonalHomeNavRoutes() {
           path: pathsConfig.app.home,
           Icon: <LayoutDashboard className={iconClasses} />,
           end: true,
+        },
+        {
+          label: 'Planner',
+          path: pathsConfig.app.personalPlanner,
+          Icon: <CalendarDays className={iconClasses} />,
         },
       ],
     },

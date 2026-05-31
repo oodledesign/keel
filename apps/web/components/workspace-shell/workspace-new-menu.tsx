@@ -7,6 +7,7 @@ import {
   BriefcaseBusiness,
   Building2,
   Calendar,
+  CalendarCheck2,
   CheckSquare,
   ChevronDown,
   FileStack,
@@ -258,6 +259,12 @@ function getPersonalItems() {
       label: 'New Task',
       icon: CheckSquare,
       href: `${pathsConfig.app.home}/tasks?create=task`,
+    },
+    {
+      key: 'planner',
+      label: 'Plan My Day',
+      icon: CalendarCheck2,
+      href: pathsConfig.app.personalPlanner,
     },
     {
       key: 'note',
