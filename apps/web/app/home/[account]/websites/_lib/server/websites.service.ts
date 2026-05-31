@@ -3,7 +3,6 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { requireUser } from '@kit/supabase/require-user';
-import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import type {
   GetWebsiteInput,
@@ -191,19 +190,6 @@ class WebsitesService {
 
   private async ensureCanView(accountId: string) {
     const user = await this.ensureUser();
-    const api = createTeamAccountsApi(this.client);
-    const hasAccess =
-      (await api.hasPermission({
-        userId: user.id,
-        accountId,
-        permission: 'settings.manage',
-      })) ||
-      (await api.hasPermission({
-        userId: user.id,
-        accountId,
-        permission: 'projects.view',
-      }));
-
     const { data, error } = await this.db
       .from('accounts_memberships')
       .select('account_role')
@@ -213,14 +199,49 @@ class WebsitesService {
 
     if (error) this.throwErr(error);
     const role = data?.account_role;
-    const allowed =
-      hasAccess || role === 'owner' || role === 'admin' || role === 'staff';
-
-    if (!allowed) {
+    if (!role || role === 'contractor' || role === 'client') {
       throw new Error('Permission denied');
     }
 
     return user;
+  }
+
+  private async listWebsiteRows(input: ListWebsitesInput): Promise<WebsiteRow[]> {
+    let query = this.db
+      .from('websites')
+      .select('*, client_orgs(name)')
+      .eq('business_id', input.accountId)
+      .order('name');
+
+    if (input.status) {
+      query = query.eq('status', input.status);
+    }
+
+    const { data, error } = await query;
+
+    if (!error) {
+      return (data ?? []) as WebsiteRow[];
+    }
+
+    console.error('[websites] listWebsites embed error:', error.message);
+
+    let fallbackQuery = this.db
+      .from('websites')
+      .select('*')
+      .eq('business_id', input.accountId)
+      .order('name');
+
+    if (input.status) {
+      fallbackQuery = fallbackQuery.eq('status', input.status);
+    }
+
+    const fallback = await fallbackQuery;
+    if (fallback.error) {
+      console.error('[websites] listWebsites error:', fallback.error.message);
+      return [];
+    }
+
+    return (fallback.data ?? []) as WebsiteRow[];
   }
 
   private async resolveLinkedClientIds(
@@ -248,23 +269,7 @@ class WebsitesService {
   async listWebsites(input: ListWebsitesInput): Promise<Website[]> {
     await this.ensureCanView(input.accountId);
 
-    let query = this.db
-      .from('websites')
-      .select('*, client_orgs(name)')
-      .eq('business_id', input.accountId)
-      .order('name');
-
-    if (input.status) {
-      query = query.eq('status', input.status);
-    }
-
-    const { data, error } = await query;
-    if (error) {
-      console.error('[websites] listWebsites error:', error.message);
-      return [];
-    }
-
-    const rows = (data ?? []) as WebsiteRow[];
+    const rows = await this.listWebsiteRows(input);
     const orgIds = [
       ...new Set(
         rows

@@ -34,7 +34,7 @@ export function usePersonalAccountData(
       )
       .eq('primary_owner_user_id', userId)
       .eq('is_personal_account', true)
-      .single();
+      .maybeSingle();
 
     if (response.error) {
       throw response.error;
