@@ -13,6 +13,7 @@ import { AppLogo } from '~/components/app-logo';
 import { APP_LOGO_SHELL_CLASSNAME } from '~/lib/app-logo-shell';
 import { ProfileAccountDropdownContainer } from '~/components/personal-account-dropdown-container';
 import { getTeamAccountSidebarConfig } from '~/config/team-account-navigation.config';
+import type { WorkNavCounts } from '~/config/work-account-navigation.config';
 import pathsConfig from '~/config/paths.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
@@ -22,7 +23,6 @@ import { TeamWorkspaceTopBarSlot } from '~/components/workspace-shell/workspace-
 import { TeamAccountLayoutMobileNavigation } from './_components/team-account-layout-mobile-navigation';
 import { TeamAccountLayoutSidebar } from './_components/team-account-layout-sidebar';
 import { TeamAccountNavigationMenu } from './_components/team-account-navigation-menu';
-import { spaceTypeFromProfile } from './_lib/server/workspace-profile';
 import { loadTeamWorkspace } from './_lib/server/team-account-workspace.loader';
 import { loadWorkspaceSwitcherAccounts } from '../_lib/server/workspace-switcher.loader';
 import { loadWorkNavCounts } from './_lib/server/work-nav-counts.loader';
@@ -70,14 +70,16 @@ async function SidebarLayout({
     client,
     data.account.id,
     data.moduleSettings,
-  );
+  ).catch((error) => {
+    console.error('[team-workspace] loadWorkNavCounts:', error);
+    return {} as WorkNavCounts;
+  });
 
   if (!data) {
     redirect('/');
   }
 
   const workspaceProfile = data.workspaceProfile;
-  const spaceType = spaceTypeFromProfile(workspaceProfile);
   const accounts =
     switcherAccounts.length > 0 ? switcherAccounts : [];
 
@@ -167,7 +169,10 @@ async function HeaderLayout({
     client,
     data.account.id,
     data.moduleSettings,
-  );
+  ).catch((error) => {
+    console.error('[team-workspace] loadWorkNavCounts:', error);
+    return {} as WorkNavCounts;
+  });
 
   return (
     <TeamAccountWorkspaceContextProvider value={data}>

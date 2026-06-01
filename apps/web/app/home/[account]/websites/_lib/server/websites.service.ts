@@ -3,6 +3,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { requireUser } from '@kit/supabase/require-user';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import type {
   GetWebsiteInput,
@@ -60,8 +61,8 @@ type WebsiteRow = {
   notes?: string | null;
   hosting_notes?: string | null;
   launched_at?: string | null;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
   client_orgs?: { name?: string | null } | { name?: string | null }[] | null;
 };
 
@@ -74,6 +75,41 @@ type ClientRow = {
   id: string;
   client_org_id?: string | null;
 };
+
+function mapWebsiteWriteError(err: unknown): Error {
+  const e = err as {
+    message?: string;
+    code?: string;
+    details?: string;
+  };
+  const msg = typeof e?.message === 'string' ? e.message : '';
+  const details = typeof e?.details === 'string' ? e.details : '';
+  const blob = `${msg} ${details}`.toLowerCase();
+
+  if (
+    e?.code === '42501' ||
+    /row-level security/i.test(blob) ||
+    /violates row-level security/i.test(blob)
+  ) {
+    return new Error(
+      'Could not save website: database blocked this action (row-level security). Run the latest migrations from apps/web (`pnpm exec supabase db push`).',
+    );
+  }
+
+  if (e?.code === 'PGRST204' || /could not find the .* column/i.test(blob)) {
+    return new Error(
+      'Could not save website: the websites table is missing columns expected by Keel. Run migrations from apps/web (`pnpm exec supabase db push`).',
+    );
+  }
+
+  if (e?.code === '23503') {
+    return new Error(
+      `Could not save website (invalid reference). ${details || msg}`.trim(),
+    );
+  }
+
+  return err instanceof Error ? err : new Error(msg || 'Failed to save website');
+}
 
 function mapWebsite(row: WebsiteRow, linkedClientId: string | null = null): Website {
   const org = Array.isArray(row.client_orgs)
@@ -98,8 +134,8 @@ function mapWebsite(row: WebsiteRow, linkedClientId: string | null = null): Webs
     notes: row.notes ?? null,
     hostingNotes: row.hosting_notes ?? null,
     launchedAt: row.launched_at ?? null,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    createdAt: row.created_at ?? new Date().toISOString(),
+    updatedAt: row.updated_at ?? row.created_at ?? new Date().toISOString(),
     clientOrgName: org?.name?.trim() ?? null,
     linkedClientId,
   };
@@ -150,6 +186,80 @@ class WebsitesService {
 
   private get db(): SupabaseClient {
     return this.client;
+  }
+
+  /** Writes after permission checks; bypasses RLS drift (same pattern as clients). */
+  private get adminDb(): SupabaseClient {
+    return getSupabaseServerAdminClient();
+  }
+
+  private async enrichWebsiteRow(
+    accountId: string,
+    row: WebsiteRow,
+  ): Promise<Website> {
+    let enriched = row;
+
+    if (row.client_org_id && !row.client_orgs) {
+      const { data } = await this.db
+        .from('client_orgs')
+        .select('name')
+        .eq('id', row.client_org_id)
+        .eq('business_id', accountId)
+        .maybeSingle();
+
+      if (data) {
+        enriched = { ...row, client_orgs: { name: data.name } };
+      }
+    }
+
+    let linkedClientId: string | null = null;
+    if (row.client_org_id) {
+      const linked = await this.resolveLinkedClientIds(accountId, [
+        row.client_org_id,
+      ]);
+      linkedClientId = linked.get(row.client_org_id) ?? null;
+    }
+
+    return mapWebsite(enriched, linkedClientId);
+  }
+
+  private async saveWebsiteRow(
+    accountId: string,
+    payload: Record<string, unknown>,
+    mode: 'insert' | 'update',
+    websiteId?: string,
+  ): Promise<Website> {
+    const timestamp = new Date().toISOString();
+
+    const result =
+      mode === 'insert'
+        ? await this.adminDb
+            .from('websites')
+            .insert({
+              business_id: accountId,
+              ...payload,
+              updated_at: timestamp,
+            })
+            .select('*')
+            .single()
+        : await this.adminDb
+            .from('websites')
+            .update({
+              ...payload,
+              updated_at: timestamp,
+            })
+            .eq('id', websiteId!)
+            .eq('business_id', accountId)
+            .select('*')
+            .single();
+
+    if (result.error || !result.data) {
+      throw mapWebsiteWriteError(
+        result.error ?? new Error('Failed to save website'),
+      );
+    }
+
+    return this.enrichWebsiteRow(accountId, result.data as WebsiteRow);
   }
 
   private throwErr(err: unknown, fallback = 'Something went wrong'): never {
@@ -297,19 +407,22 @@ class WebsitesService {
       .eq('business_id', input.accountId)
       .maybeSingle();
 
-    if (error || !data) return null;
+    if (error) {
+      console.error('[websites] getWebsite embed error:', error.message);
+      const fallback = await this.db
+        .from('websites')
+        .select('*')
+        .eq('id', input.websiteId)
+        .eq('business_id', input.accountId)
+        .maybeSingle();
 
-    const row = data as WebsiteRow;
-    let linkedClientId: string | null = null;
-
-    if (row.client_org_id) {
-      const linked = await this.resolveLinkedClientIds(input.accountId, [
-        row.client_org_id,
-      ]);
-      linkedClientId = linked.get(row.client_org_id) ?? null;
+      if (fallback.error || !fallback.data) return null;
+      return this.enrichWebsiteRow(input.accountId, fallback.data as WebsiteRow);
     }
 
-    return mapWebsite(row, linkedClientId);
+    if (!data) return null;
+
+    return this.enrichWebsiteRow(input.accountId, data as WebsiteRow);
   }
 
   async listClientOrgs(accountId: string): Promise<ClientOrgOption[]> {
@@ -338,20 +451,7 @@ class WebsitesService {
     await this.ensureOwnerOrAdmin(input.accountId);
 
     const { accountId, ...fields } = input;
-    const { data, error } = await this.db
-      .from('websites')
-      .insert({
-        business_id: accountId,
-        ...toDbPayload(fields),
-      })
-      .select('*, client_orgs(name)')
-      .single();
-
-    if (error || !data) {
-      this.throwErr(error, 'Failed to create website');
-    }
-
-    return mapWebsite(data as WebsiteRow);
+    return this.saveWebsiteRow(accountId, toDbPayload(fields), 'insert');
   }
 
   async updateWebsite(
@@ -361,39 +461,23 @@ class WebsitesService {
     await this.ensureOwnerOrAdmin(accountId);
 
     const { websiteId, ...fields } = input;
-    const { data, error } = await this.db
-      .from('websites')
-      .update(toDbPayload(fields))
-      .eq('id', websiteId)
-      .eq('business_id', accountId)
-      .select('*, client_orgs(name)')
-      .single();
-
-    if (error || !data) {
-      this.throwErr(error, 'Failed to update website');
-    }
-
-    const row = data as WebsiteRow;
-    let linkedClientId: string | null = null;
-    if (row.client_org_id) {
-      const linked = await this.resolveLinkedClientIds(accountId, [
-        row.client_org_id,
-      ]);
-      linkedClientId = linked.get(row.client_org_id) ?? null;
-    }
-
-    return mapWebsite(row, linkedClientId);
+    return this.saveWebsiteRow(
+      accountId,
+      toDbPayload(fields),
+      'update',
+      websiteId,
+    );
   }
 
   async deleteWebsite(accountId: string, websiteId: string): Promise<void> {
     await this.ensureOwnerOrAdmin(accountId);
 
-    const { error } = await this.db
+    const { error } = await this.adminDb
       .from('websites')
       .delete()
       .eq('id', websiteId)
       .eq('business_id', accountId);
 
-    if (error) this.throwErr(error, 'Failed to delete website');
+    if (error) throw mapWebsiteWriteError(error);
   }
 }

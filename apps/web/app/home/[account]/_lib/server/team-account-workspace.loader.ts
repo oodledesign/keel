@@ -40,18 +40,34 @@ async function workspaceLoader(accountSlug: string) {
     requireUserInServerComponent(),
   ]);
 
+  if (workspace.error) {
+    const message =
+      workspace.error instanceof Error
+        ? workspace.error.message
+        : String(workspace.error);
+    console.error('[team-workspace] getAccountWorkspace:', message);
+    redirect(pathsConfig.app.home);
+  }
+
   // we cannot find any record for the selected account
   // so we redirect the user to the home page
   if (!workspace.data?.account) {
-    return redirect(pathsConfig.app.home);
+    redirect(pathsConfig.app.home);
   }
 
   const accountId = (workspace.data.account as { id: string }).id;
-  const { data: moduleSettingsRows } = await client
+  const { data: moduleSettingsRows, error: moduleSettingsError } = await client
     .from('account_module_settings')
     .select('module_key, enabled')
     .eq('account_id', accountId)
     .eq('enabled', true);
+
+  if (moduleSettingsError) {
+    console.error(
+      '[team-workspace] account_module_settings:',
+      moduleSettingsError.message,
+    );
+  }
 
   const moduleSettings = Object.fromEntries(
     (moduleSettingsRows ?? []).map((row) => [row.module_key, true]),

@@ -116,7 +116,8 @@ export class TeamAccountsApi {
       };
     }
 
-    const accountData = accountResult.data[0];
+    const rows = accountResult.data;
+    const accountData = Array.isArray(rows) ? rows[0] : rows;
 
     if (!accountData) {
       return {
@@ -150,10 +151,14 @@ export class TeamAccountsApi {
     });
 
     if (error) {
-      throw error;
+      console.error(
+        `[team-accounts] hasPermission(${params.permission}):`,
+        error.message,
+      );
+      return false;
     }
 
-    return data;
+    return Boolean(data);
   }
 
   /**
