@@ -113,6 +113,16 @@ function mapWebsiteWriteError(err: unknown): Error {
   }
 
   if (e?.code === '23503') {
+    if (blob.includes('businesses')) {
+      return new Error(
+        'Could not save website: the database still ties websites to legacy businesses, not your team workspace. From apps/web run `pnpm exec supabase db push` (migration 20260601100000_repair_websites_business_fk_to_accounts.sql).',
+      );
+    }
+    if (blob.includes('accounts')) {
+      return new Error(
+        'That workspace id is not present in public.accounts. Reload the page or open Websites from a valid team workspace.',
+      );
+    }
     return new Error(
       `Could not save website (invalid reference). ${details || msg}`.trim(),
     );
