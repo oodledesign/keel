@@ -12,8 +12,8 @@ import {
   disconnectGoogleWorkspace,
   connectGoogleWorkspace,
 } from '~/lib/signatures/google-workspace';
+import { getSignaturesSupabaseClient } from '~/lib/signatures/graph';
 import {
-  getSignaturesSupabaseClient,
   pushAllSignatures,
   pushSignatureToStaff,
   syncStaffForAccount,
