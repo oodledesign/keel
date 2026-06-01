@@ -12,6 +12,7 @@ import type {
   GetJobCalendarItemsInput,
   GetOrgCalendarItemsInput,
 } from '../schema/calendar.schema';
+import { isMissingRelationError, logMissingRelation } from './supabase-errors';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Db = any;
@@ -56,8 +57,7 @@ class CalendarService {
       .gte('scheduled_start_at', start)
       .lte('scheduled_start_at', end);
 
-    if (eventsErr) this.throwErr(eventsErr);
-    const eventList = (events ?? []) as Array<{
+    let eventList: Array<{
       id: string;
       job_id: string;
       client_id: string | null;
@@ -66,7 +66,18 @@ class CalendarService {
       scheduled_start_at: string;
       scheduled_end_at: string | null;
       location: string | null;
-    }>;
+    }> = [];
+
+    if (eventsErr) {
+      if (!isMissingRelationError(eventsErr)) {
+        this.throwErr(eventsErr);
+      } else {
+        logMissingRelation('calendar.getJobCalendarItems.job_events', eventsErr);
+      }
+    } else {
+      eventList = (events ?? []) as typeof eventList;
+    }
+
     for (const e of eventList) {
       items.push({
         id: e.id,
@@ -156,8 +167,7 @@ class CalendarService {
       .gte('scheduled_start_at', start)
       .lte('scheduled_start_at', end);
 
-    if (eventsErr) this.throwErr(eventsErr);
-    const eventList = (events ?? []) as Array<{
+    let eventList: Array<{
       id: string;
       job_id: string;
       client_id: string | null;
@@ -166,7 +176,18 @@ class CalendarService {
       scheduled_start_at: string;
       scheduled_end_at: string | null;
       location: string | null;
-    }>;
+    }> = [];
+
+    if (eventsErr) {
+      if (!isMissingRelationError(eventsErr)) {
+        this.throwErr(eventsErr);
+      } else {
+        logMissingRelation('calendar.getOrgCalendarItems.job_events', eventsErr);
+      }
+    } else {
+      eventList = (events ?? []) as typeof eventList;
+    }
+
     for (const e of eventList) {
       items.push({
         id: e.id,
@@ -191,7 +212,14 @@ class CalendarService {
       .eq('account_id', accountId)
       .or(`due_date.gte.${startDate},start_date.gte.${startDate}`);
 
-    if (jobsErr) this.throwErr(jobsErr);
+    if (jobsErr) {
+      if (isMissingRelationError(jobsErr)) {
+        logMissingRelation('calendar.getOrgCalendarItems.jobs', jobsErr);
+        return items;
+      }
+      this.throwErr(jobsErr);
+    }
+
     const jobList = (jobs ?? []) as Array<{
       id: string;
       title: string;
@@ -259,7 +287,15 @@ class CalendarService {
         .eq('id', source_id)
         .eq('account_id', accountId)
         .single();
-      if (error) this.throwErr(error);
+      if (error) {
+        if (isMissingRelationError(error)) {
+          logMissingRelation('calendar.getCalendarItemDetails.job_events', error);
+          throw new Error(
+            'Schedule events are not available yet. Run database migrations (apps/web: supabase db push).',
+          );
+        }
+        this.throwErr(error);
+      }
       if (!data) throw new Error('Event not found');
       return data as Record<string, unknown>;
     }

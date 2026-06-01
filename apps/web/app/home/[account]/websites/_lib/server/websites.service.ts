@@ -13,6 +13,10 @@ import type {
   WebsiteStack,
   WebsiteStatus,
 } from '../schema/websites.schema';
+import {
+  isMissingRelationError,
+  logMissingRelation,
+} from '../../jobs/_lib/server/supabase-errors';
 
 export type Website = {
   id: string;
@@ -99,6 +103,12 @@ function mapWebsiteWriteError(err: unknown): Error {
   if (e?.code === 'PGRST204' || /could not find the .* column/i.test(blob)) {
     return new Error(
       'Could not save website: the websites table is missing columns expected by Keel. Run migrations from apps/web (`pnpm exec supabase db push`).',
+    );
+  }
+
+  if (isMissingRelationError(err)) {
+    return new Error(
+      'Could not save website: the websites table is not set up on this project. Run migrations from apps/web (`pnpm exec supabase db push`).',
     );
   }
 
@@ -331,6 +341,11 @@ class WebsitesService {
 
     if (!error) {
       return (data ?? []) as WebsiteRow[];
+    }
+
+    if (isMissingRelationError(error)) {
+      logMissingRelation('websites.listWebsiteRows', error);
+      return [];
     }
 
     console.error('[websites] listWebsites embed error:', error.message);

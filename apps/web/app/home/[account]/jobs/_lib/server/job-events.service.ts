@@ -19,6 +19,7 @@ import type {
   SetJobEventAssignmentsInput,
   UpdateJobEventInput,
 } from '../schema/job-events.schema';
+import { isMissingRelationError, logMissingRelation } from './supabase-errors';
 
 type AccountRole = 'owner' | 'admin' | 'staff' | 'contractor' | 'client' | null;
 
@@ -117,7 +118,13 @@ class JobEventsService {
       .eq('job_id', params.jobId)
       .order('scheduled_start_at', { ascending: true });
 
-    if (error) this.throwErr(error);
+    if (error) {
+      if (isMissingRelationError(error)) {
+        logMissingRelation('jobEvents.listJobEvents', error);
+        return { upcoming: [], previous: [] };
+      }
+      this.throwErr(error);
+    }
     const list = (data ?? []) as Array<{ scheduled_start_at: string }>;
     const now = new Date().toISOString();
     const upcoming = list.filter((e) => e.scheduled_start_at >= now);
@@ -227,7 +234,13 @@ class JobEventsService {
       .eq('account_id', params.accountId)
       .order('created_at', { ascending: false });
 
-    if (error) this.throwErr(error);
+    if (error) {
+      if (isMissingRelationError(error)) {
+        logMissingRelation('jobEvents.listJobEventAssignments', error);
+        return [];
+      }
+      this.throwErr(error);
+    }
     return data ?? [];
   }
 
@@ -240,6 +253,15 @@ class JobEventsService {
       .select('id')
       .eq('account_id', params.accountId)
       .eq('job_id', params.jobId);
+
+    if (eventIdsResult.error) {
+      if (isMissingRelationError(eventIdsResult.error)) {
+        logMissingRelation('jobEvents.listJobEventAssignmentsForJob.job_events', eventIdsResult.error);
+        return [];
+      }
+      this.throwErr(eventIdsResult.error);
+    }
+
     const events = (eventIdsResult.data ?? []) as { id: string }[];
     const ids = events.map((e) => e.id);
     if (ids.length === 0) return [];
@@ -250,7 +272,13 @@ class JobEventsService {
       .eq('account_id', params.accountId)
       .in('job_event_id', ids);
 
-    if (error) this.throwErr(error);
+    if (error) {
+      if (isMissingRelationError(error)) {
+        logMissingRelation('jobEvents.listJobEventAssignmentsForJob.assignments', error);
+        return [];
+      }
+      this.throwErr(error);
+    }
     return (data ?? []) as { job_event_id: string; user_id: string; role_on_event: string | null }[];
   }
 
