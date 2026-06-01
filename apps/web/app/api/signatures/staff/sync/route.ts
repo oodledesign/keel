@@ -6,7 +6,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { assertAccountAdmin } from '~/lib/signatures/account-access';
-import { syncStaffFromM365 } from '~/lib/signatures/graph';
+import { syncStaffForAccount } from '~/lib/signatures/signatures-provider';
 
 const bodySchema = z.object({
   accountId: z.string().uuid(),
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     );
     if (adminErr) return adminErr;
 
-    const result = await syncStaffFromM365(parsed.data.accountId);
+    const result = await syncStaffForAccount(parsed.data.accountId);
     return jsonOk(result);
   } catch (e) {
     return jsonErr(

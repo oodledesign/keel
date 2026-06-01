@@ -25,6 +25,21 @@ export const disconnectM365ActionSchema = z.object({
   accountId: z.string().uuid(),
 });
 
+export const connectGoogleWorkspaceActionSchema = z.object({
+  accountId: z.string().uuid(),
+  primaryDomain: z
+    .string()
+    .trim()
+    .min(3, 'Domain is required')
+    .max(253)
+    .transform((value) => value.toLowerCase()),
+  delegatedAdminEmail: z.string().trim().email('Valid admin email required'),
+});
+
+export const disconnectGoogleActionSchema = z.object({
+  accountId: z.string().uuid(),
+});
+
 export const upsertDepartmentBadgeActionSchema = z.object({
   accountId: z.string().uuid(),
   department: z.string().trim().min(1, 'Department is required').max(120),

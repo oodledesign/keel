@@ -27,11 +27,14 @@ import {
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 
 import {
+  connectGoogleWorkspaceAction,
   deleteDepartmentBadgeAction,
+  disconnectGoogleWorkspaceAction,
   disconnectMicrosoft365,
   upsertDepartmentBadgeAction,
 } from '../_lib/server/signatures-module-actions';
 import type {
+  GoogleConnection,
   MsConnection,
   SignatureDepartmentBadge,
 } from '../_lib/server/signatures-data';
@@ -39,20 +42,30 @@ import type {
 export function SignaturesSettingsPanel({
   accountId,
   accountSlug,
-  connection,
+  msConnection,
+  googleConnection,
   connected,
   departmentBadges,
   departments,
 }: {
   accountId: string;
   accountSlug: string;
-  connection: MsConnection | null;
+  msConnection: MsConnection | null;
+  googleConnection: GoogleConnection | null;
   connected: boolean;
   departmentBadges: SignatureDepartmentBadge[];
   departments: string[];
 }) {
   const router = useRouter();
   const [disconnecting, setDisconnecting] = useState(false);
+  const [disconnectingGoogle, setDisconnectingGoogle] = useState(false);
+  const [connectingGoogle, setConnectingGoogle] = useState(false);
+  const [primaryDomain, setPrimaryDomain] = useState(
+    googleConnection?.primary_domain ?? '',
+  );
+  const [delegatedAdminEmail, setDelegatedAdminEmail] = useState(
+    googleConnection?.delegated_admin_email ?? '',
+  );
   const [selectedDepartment, setSelectedDepartment] = useState(
     departments[0] ?? '',
   );
@@ -64,9 +77,13 @@ export function SignaturesSettingsPanel({
 
   useEffect(() => {
     if (connected) {
-      toast.success('Microsoft 365 connected');
+      if (googleConnection) {
+        toast.success('Google Workspace connected');
+      } else if (msConnection) {
+        toast.success('Microsoft 365 connected');
+      }
     }
-  }, [connected]);
+  }, [connected, googleConnection, msConnection]);
 
   useEffect(() => {
     if (!selectedDepartment && departments.length) {
@@ -86,7 +103,7 @@ export function SignaturesSettingsPanel({
     account_slug: accountSlug,
   }).toString()}`;
 
-  const disconnect = async () => {
+  const disconnectMs = async () => {
     setDisconnecting(true);
     try {
       await disconnectMicrosoft365({ accountId });
@@ -96,6 +113,36 @@ export function SignaturesSettingsPanel({
       toast.error(getErrorMessage(e));
     } finally {
       setDisconnecting(false);
+    }
+  };
+
+  const connectGoogle = async () => {
+    setConnectingGoogle(true);
+    try {
+      await connectGoogleWorkspaceAction({
+        accountId,
+        primaryDomain,
+        delegatedAdminEmail,
+      });
+      toast.success('Google Workspace connected');
+      router.refresh();
+    } catch (e) {
+      toast.error(getErrorMessage(e));
+    } finally {
+      setConnectingGoogle(false);
+    }
+  };
+
+  const disconnectGoogle = async () => {
+    setDisconnectingGoogle(true);
+    try {
+      await disconnectGoogleWorkspaceAction({ accountId });
+      toast.success('Google Workspace disconnected');
+      router.refresh();
+    } catch (e) {
+      toast.error(getErrorMessage(e));
+    } finally {
+      setDisconnectingGoogle(false);
     }
   };
 
@@ -143,25 +190,112 @@ export function SignaturesSettingsPanel({
       <div className="space-y-6">
         <Card className="border-white/10 bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
           <CardHeader>
-            <CardTitle>Microsoft 365 connection</CardTitle>
+            <CardTitle>Google Workspace connection</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
-            {connection ? (
+            {googleConnection ? (
               <div className="space-y-4">
                 <div className="grid gap-3 rounded-2xl border border-white/10 bg-black/10 p-4 text-sm">
                   <div>
-                    <p className="text-muted-foreground">Tenant ID</p>
-                    <p className="font-mono text-xs">{connection.ms_tenant_id}</p>
+                    <p className="text-muted-foreground">Primary domain</p>
+                    <p className="font-mono text-xs">{googleConnection.primary_domain}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Delegated admin</p>
+                    <p className="font-mono text-xs">
+                      {googleConnection.delegated_admin_email}
+                    </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Connected</p>
-                    <p>{new Date(connection.connected_at).toLocaleString()}</p>
+                    <p>{new Date(googleConnection.connected_at).toLocaleString()}</p>
                   </div>
                 </div>
                 <Button
                   type="button"
                   variant="destructive"
-                  onClick={disconnect}
+                  onClick={disconnectGoogle}
+                  disabled={disconnectingGoogle}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  {disconnectingGoogle ? 'Disconnecting...' : 'Disconnect'}
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4 rounded-2xl border border-dashed border-white/10 bg-black/10 p-6">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-xl bg-[var(--keel-teal)]/10 p-2 text-[var(--keel-teal)]">
+                    <PlugZap className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Connect Google Workspace</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      After domain-wide delegation is set up in Google Admin,
+                      enter your domain and a super-admin email. Keel verifies
+                      access and syncs staff via the Directory API.
+                    </p>
+                  </div>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="google-primary-domain">Primary domain</Label>
+                    <Input
+                      id="google-primary-domain"
+                      placeholder="example.com"
+                      value={primaryDomain}
+                      onChange={(event) => setPrimaryDomain(event.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="google-admin-email">Delegated admin email</Label>
+                    <Input
+                      id="google-admin-email"
+                      type="email"
+                      placeholder="admin@example.com"
+                      value={delegatedAdminEmail}
+                      onChange={(event) =>
+                        setDelegatedAdminEmail(event.target.value)
+                      }
+                    />
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  onClick={connectGoogle}
+                  disabled={
+                    connectingGoogle ||
+                    !primaryDomain.trim() ||
+                    !delegatedAdminEmail.trim()
+                  }
+                >
+                  {connectingGoogle ? 'Connecting...' : 'Connect Google Workspace'}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-white/10 bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+          <CardHeader>
+            <CardTitle>Microsoft 365 connection</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {msConnection ? (
+              <div className="space-y-4">
+                <div className="grid gap-3 rounded-2xl border border-white/10 bg-black/10 p-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Tenant ID</p>
+                    <p className="font-mono text-xs">{msConnection.ms_tenant_id}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Connected</p>
+                    <p>{new Date(msConnection.connected_at).toLocaleString()}</p>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={disconnectMs}
                   disabled={disconnecting}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
@@ -272,6 +406,36 @@ export function SignaturesSettingsPanel({
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border-white/10 bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+        <CardHeader>
+          <CardTitle>Google Workspace setup</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Collapsible>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full justify-between">
+                Setup instructions
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-4 space-y-3 rounded-2xl border border-white/10 bg-black/10 p-4 text-sm text-muted-foreground">
+              <p>
+                Enable Admin SDK and Gmail APIs in Google Cloud, create a service
+                account, and authorize domain-wide delegation in Google Admin
+                with Directory + Gmail settings scopes.
+              </p>
+              <p>
+                Set GOOGLE_SERVICE_ACCOUNT_JSON (or EMAIL + PRIVATE_KEY) in the
+                web app environment.
+              </p>
+              <p>
+                See SIGNATURES_GOOGLE_SETUP.md in the repo for the full checklist.
+              </p>
+            </CollapsibleContent>
+          </Collapsible>
+        </CardContent>
+      </Card>
 
       <Card className="border-white/10 bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
         <CardHeader>

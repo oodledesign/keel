@@ -6,10 +6,8 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { assertAccountAdmin } from '~/lib/signatures/account-access';
-import {
-  getSignaturesSupabaseClient,
-  pushSignatureToStaff,
-} from '~/lib/signatures/graph';
+import { getSignaturesSupabaseClient } from '~/lib/signatures/graph';
+import { pushSignatureToStaff } from '~/lib/signatures/signatures-provider';
 
 const bodySchema = z.object({
   staffId: z.string().uuid(),

@@ -3,6 +3,7 @@ import { SignaturesSettingsPanel } from '../../_components/signatures-settings-p
 import {
   loadDepartmentBadges,
   loadDepartments,
+  loadGoogleConnection,
   loadMsConnection,
   loadSignaturesWorkspace,
 } from '../../_lib/server/signatures-data';
@@ -20,21 +21,24 @@ export default async function SignaturesSettingsPage({
   const sp = await searchParams;
   const workspace = await loadSignaturesWorkspace(account);
   const accountId = workspace.account.id as string;
-  const [connection, departmentBadges, departments] = await Promise.all([
-    loadMsConnection(accountId),
-    loadDepartmentBadges(accountId),
-    loadDepartments(accountId),
-  ]);
+  const [msConnection, googleConnection, departmentBadges, departments] =
+    await Promise.all([
+      loadMsConnection(accountId),
+      loadGoogleConnection(accountId),
+      loadDepartmentBadges(accountId),
+      loadDepartments(accountId),
+    ]);
 
   return (
     <ModuleDataSection
       title="Settings"
-      description="Manage the Microsoft 365 connection used by the signatures module."
+      description="Connect Microsoft 365 or Google Workspace to sync staff and push signatures."
     >
       <SignaturesSettingsPanel
         accountId={accountId}
         accountSlug={account}
-        connection={connection}
+        msConnection={msConnection}
+        googleConnection={googleConnection}
         connected={sp.connected === 'true'}
         departmentBadges={departmentBadges}
         departments={departments}

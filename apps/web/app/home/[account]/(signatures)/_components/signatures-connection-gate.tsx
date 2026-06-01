@@ -8,25 +8,35 @@ import { PlugZap } from 'lucide-react';
 import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 
+import pathsConfig from '~/config/paths.config';
+
+import type { SignaturesMailProvider } from '../_lib/server/signatures-data';
+
 export function SignaturesConnectionGate({
   accountId,
   accountSlug,
   connected,
+  mailProvider,
   showUxPreviewBanner,
   children,
 }: React.PropsWithChildren<{
   accountId: string;
-  /** Workspace route slug (e.g. oodle-1) — required for OAuth return URL. */
   accountSlug: string;
   connected: boolean;
-  /** Dev-only: SIGNATURES_UX_PREVIEW without MS 365 — explain banner above content. */
+  mailProvider?: SignaturesMailProvider;
   showUxPreviewBanner?: boolean;
+  children: React.ReactNode;
 }>) {
   const pathname = usePathname();
   const isSettings = pathname.endsWith('/signatures/settings');
 
+  const settingsPath = pathsConfig.app.accountSignaturesSettings.replace(
+    '[account]',
+    accountSlug,
+  );
+
   if (!connected && !isSettings) {
-    const href = `/api/signatures/ms-auth?${new URLSearchParams({
+    const msHref = `/api/signatures/ms-auth?${new URLSearchParams({
       account_id: accountId,
       account_slug: accountSlug,
     }).toString()}`;
@@ -37,16 +47,21 @@ export function SignaturesConnectionGate({
           <div className="mb-3 rounded-2xl border border-[var(--keel-teal)]/20 bg-[var(--keel-teal)]/10 p-3 text-[var(--keel-teal)]">
             <PlugZap className="h-7 w-7" />
           </div>
-          <CardTitle className="text-2xl">Connect Microsoft 365</CardTitle>
+          <CardTitle className="text-2xl">Connect your mail provider</CardTitle>
         </CardHeader>
         <CardContent className="mx-auto max-w-xl space-y-5 text-center">
           <p className="text-sm text-muted-foreground">
-            Signatures needs a Microsoft 365 connection before staff can be
-            synced and email signatures can be pushed to Outlook mailboxes.
+            Sync staff from your directory and push HTML signatures to Outlook
+            or Gmail. Choose Microsoft 365 or Google Workspace below.
           </p>
-          <Button asChild>
-            <Link href={href}>Connect Microsoft 365</Link>
-          </Button>
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+            <Button asChild>
+              <Link href={msHref}>Connect Microsoft 365</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href={settingsPath}>Connect Google Workspace</Link>
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );
@@ -61,15 +76,21 @@ export function SignaturesConnectionGate({
         >
           <p className="font-semibold text-amber-50">Signatures UX preview</p>
           <p className="mt-1 text-amber-100/90">
-            Microsoft 365 is not connected — you can browse screens and empty
-            states. Sync, push, and tenant-dependent actions stay unavailable
-            until you connect (or turn off{' '}
+            No mail provider is connected — you can browse screens and empty
+            states. Sync, push, and directory actions stay unavailable until you
+            connect (or turn off{' '}
             <code className="rounded bg-black/20 px-1 font-mono text-xs">
               SIGNATURES_UX_PREVIEW
-            </code>{' '}
-            to require OAuth again).
+            </code>
+            ).
           </p>
         </div>
+      ) : null}
+      {connected && mailProvider ? (
+        <p className="text-xs text-muted-foreground">
+          Connected via{' '}
+          {mailProvider === 'google' ? 'Google Workspace' : 'Microsoft 365'}.
+        </p>
       ) : null}
       {children}
     </>

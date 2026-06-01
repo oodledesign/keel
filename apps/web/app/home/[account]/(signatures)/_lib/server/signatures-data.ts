@@ -138,6 +138,22 @@ export type MsConnection = {
   connected_by: string | null;
 };
 
+export type GoogleConnection = {
+  id: string;
+  account_id: string;
+  primary_domain: string;
+  delegated_admin_email: string;
+  connected_at: string;
+  connected_by: string | null;
+};
+
+export { loadGoogleConnection } from '~/lib/signatures/google-workspace';
+export {
+  getSignaturesMailProvider,
+  isSignaturesMailConnected,
+  type SignaturesMailProvider,
+} from '~/lib/signatures/signatures-provider';
+
 export type SignatureDepartmentBadge = {
   account_id: string;
   department: string;

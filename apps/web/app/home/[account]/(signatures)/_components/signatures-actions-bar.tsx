@@ -10,6 +10,7 @@ import { toast } from '@kit/ui/sonner';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 
+import type { SignaturesMailProvider } from '../_lib/server/signatures-data';
 import {
   pushAllSignaturesAction,
   syncSignaturesStaff,
@@ -17,14 +18,22 @@ import {
 
 export function SignaturesActionsBar({
   accountId,
-  graphActionsDisabled,
+  mailProvider,
+  mailActionsDisabled,
 }: {
   accountId: string;
-  /** UX preview without MS 365 — disables Sync / Push (Graph). */
-  graphActionsDisabled?: boolean;
+  mailProvider?: SignaturesMailProvider | null;
+  mailActionsDisabled?: boolean;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState<'sync' | 'push-all' | null>(null);
+
+  const providerLabel =
+    mailProvider === 'google'
+      ? 'Google Workspace'
+      : mailProvider === 'microsoft'
+        ? 'Microsoft 365'
+        : 'mail provider';
 
   const sync = async () => {
     setPending('sync');
@@ -60,13 +69,14 @@ export function SignaturesActionsBar({
     }
   };
 
-  const blocked = Boolean(graphActionsDisabled);
+  const blocked = Boolean(mailActionsDisabled);
 
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
       {blocked ? (
         <p className="text-xs text-muted-foreground">
-          Connect Microsoft 365 to sync staff and push signatures.
+          Connect Microsoft 365 or Google Workspace to sync staff and push
+          signatures.
         </p>
       ) : null}
       <div className="flex flex-wrap gap-2">
@@ -77,12 +87,12 @@ export function SignaturesActionsBar({
           disabled={pending !== null || blocked}
           title={
             blocked
-              ? 'Requires Microsoft 365 connection'
-              : 'Sync directory from Microsoft 365'
+              ? 'Requires a mail provider connection'
+              : `Sync directory from ${providerLabel}`
           }
         >
           <RefreshCw className="mr-2 h-4 w-4" />
-          {pending === 'sync' ? 'Syncing...' : 'Sync from M365'}
+          {pending === 'sync' ? 'Syncing...' : 'Sync staff'}
         </Button>
         <Button
           type="button"
@@ -90,8 +100,8 @@ export function SignaturesActionsBar({
           disabled={pending !== null || blocked}
           title={
             blocked
-              ? 'Requires Microsoft 365 connection'
-              : 'Push signatures to Outlook'
+              ? 'Requires a mail provider connection'
+              : `Push signatures via ${providerLabel}`
           }
         >
           <Send className="mr-2 h-4 w-4" />

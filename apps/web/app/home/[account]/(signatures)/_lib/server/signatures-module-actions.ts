@@ -9,15 +9,21 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import pathsConfig from '~/config/paths.config';
 import { isSignaturesModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
 import {
+  disconnectGoogleWorkspace,
+  connectGoogleWorkspace,
+} from '~/lib/signatures/google-workspace';
+import {
   getSignaturesSupabaseClient,
   pushAllSignatures,
   pushSignatureToStaff,
-  syncStaffFromM365,
-} from '~/lib/signatures/graph';
+  syncStaffForAccount,
+} from '~/lib/signatures/signatures-provider';
 
 import {
   deleteDepartmentBadgeActionSchema,
   disconnectM365ActionSchema,
+  connectGoogleWorkspaceActionSchema,
+  disconnectGoogleActionSchema,
   pushAllActionSchema,
   pushStaffActionSchema,
   saveTemplateActionSchema,
@@ -86,7 +92,7 @@ async function assertSignaturesAdmin(accountId: string, userId: string) {
 export const syncSignaturesStaff = enhanceAction(
   async (input, user) => {
     const { accountSlug } = await assertSignaturesAdmin(input.accountId, user.id);
-    const result = await syncStaffFromM365(input.accountId);
+    const result = await syncStaffForAccount(input.accountId);
 
     revalidatePath(workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug));
     revalidatePath(workPath(pathsConfig.app.accountSignaturesStaff, accountSlug));
@@ -254,6 +260,36 @@ export const disconnectMicrosoft365 = enhanceAction(
     return { ok: true as const };
   },
   { schema: disconnectM365ActionSchema },
+);
+
+export const connectGoogleWorkspaceAction = enhanceAction(
+  async (input, user) => {
+    const { accountSlug } = await assertSignaturesAdmin(input.accountId, user.id);
+    await connectGoogleWorkspace({
+      accountId: input.accountId,
+      primaryDomain: input.primaryDomain,
+      delegatedAdminEmail: input.delegatedAdminEmail,
+      connectedBy: user.id,
+    });
+
+    revalidatePath(workPath(pathsConfig.app.accountSignaturesSettings, accountSlug));
+    revalidatePath(workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug));
+    revalidatePath(workPath(pathsConfig.app.accountSignaturesStaff, accountSlug));
+    return { ok: true as const };
+  },
+  { schema: connectGoogleWorkspaceActionSchema },
+);
+
+export const disconnectGoogleWorkspaceAction = enhanceAction(
+  async (input, user) => {
+    const { accountSlug } = await assertSignaturesAdmin(input.accountId, user.id);
+    await disconnectGoogleWorkspace(input.accountId);
+
+    revalidatePath(workPath(pathsConfig.app.accountSignaturesSettings, accountSlug));
+    revalidatePath(workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug));
+    return { ok: true as const };
+  },
+  { schema: disconnectGoogleActionSchema },
 );
 
 export const upsertDepartmentBadgeAction = enhanceAction(

@@ -8,9 +8,10 @@ import { SignaturesStaffTable } from '../_components/signatures-staff-table';
 import { isSignaturesUxPreviewEnabled } from '~/lib/signatures/ux-preview';
 
 import {
+  getSignaturesMailProvider,
+  isSignaturesMailConnected,
   loadSignaturesDashboard,
   loadSignaturesWorkspace,
-  loadMsConnection,
 } from '../_lib/server/signatures-data';
 
 type SignaturesDashboardPageProps = {
@@ -33,14 +34,17 @@ export default async function SignaturesDashboardPage({
   const { summary, staff } = await loadSignaturesDashboard(accountId);
 
   const uxPreview = isSignaturesUxPreviewEnabled();
-  let graphActionsDisabled = false;
+  let mailActionsDisabled = false;
+  let mailProvider: Awaited<ReturnType<typeof getSignaturesMailProvider>> = null;
+
   if (uxPreview) {
     try {
-      const conn = await loadMsConnection(accountId);
-      graphActionsDisabled = !conn;
+      mailActionsDisabled = !(await isSignaturesMailConnected(accountId));
     } catch {
-      graphActionsDisabled = true;
+      mailActionsDisabled = true;
     }
+  } else {
+    mailProvider = await getSignaturesMailProvider(accountId);
   }
 
   return (
@@ -49,12 +53,13 @@ export default async function SignaturesDashboardPage({
         <div>
           <h2 className="text-2xl font-semibold">Dashboard</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Monitor staff signature status and push current templates to Outlook.
+            Monitor staff signature status and push templates to Gmail or Outlook.
           </p>
         </div>
         <SignaturesActionsBar
           accountId={accountId}
-          graphActionsDisabled={graphActionsDisabled}
+          mailProvider={mailProvider}
+          mailActionsDisabled={mailActionsDisabled}
         />
       </div>
 

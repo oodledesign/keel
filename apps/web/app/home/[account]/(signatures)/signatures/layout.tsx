@@ -13,7 +13,7 @@ import { SignaturesNav } from '../_components/signatures-nav';
 import { isSignaturesPostgrestSchemaError } from '../_lib/signatures-postgrest-schema-error';
 import { isSignaturesUxPreviewEnabled } from '~/lib/signatures/ux-preview';
 
-import { loadMsConnection } from '../_lib/server/signatures-data';
+import { getSignaturesMailProvider, isSignaturesMailConnected } from '~/lib/signatures/signatures-provider';
 
 type SignaturesLayoutProps = React.PropsWithChildren<{
   params: Promise<{ account: string }>;
@@ -44,9 +44,14 @@ export default async function SignaturesLayout({
 
   const accountId = workspace.account.id as string;
   const uxPreview = isSignaturesUxPreviewEnabled();
-  let connection: Awaited<ReturnType<typeof loadMsConnection>> = null;
+  let hasRealConnection = false;
+  let mailProvider: Awaited<ReturnType<typeof getSignaturesMailProvider>> = null;
+
   try {
-    connection = await loadMsConnection(accountId);
+    hasRealConnection = await isSignaturesMailConnected(accountId);
+    if (hasRealConnection) {
+      mailProvider = await getSignaturesMailProvider(accountId);
+    }
   } catch (err) {
     if (isSignaturesPostgrestSchemaError(err)) {
       const i18n = await createI18nServerInstance();
@@ -80,8 +85,9 @@ export default async function SignaturesLayout({
         <SignaturesConnectionGate
           accountId={accountId}
           accountSlug={account}
-          connected={Boolean(connection) || uxPreview}
-          showUxPreviewBanner={uxPreview && !connection}
+          connected={hasRealConnection || uxPreview}
+          mailProvider={mailProvider ?? undefined}
+          showUxPreviewBanner={uxPreview && !hasRealConnection}
         >
           {children}
         </SignaturesConnectionGate>
