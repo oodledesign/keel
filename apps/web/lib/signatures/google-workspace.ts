@@ -146,6 +146,13 @@ export async function loadGoogleConnection(
       logMissingRelation('signatures.loadGoogleConnection', error);
       return null;
     }
+    const msg = error.message?.toLowerCase() ?? '';
+    if (msg.includes('permission denied')) {
+      console.error(
+        '[signatures] google_connections: missing GRANT for service_role. Run migration 20260601130000_signatures_google_connections_grants.sql',
+      );
+      return null;
+    }
     throw new Error(error.message);
   }
 

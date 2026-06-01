@@ -45,6 +45,7 @@ for all to service_role
 using (true)
 with check (true);
 
+grant all on signatures.google_connections to postgres, service_role;
 grant select, insert, update, delete on signatures.google_connections to authenticated;
 
 notify pgrst, 'reload schema';
