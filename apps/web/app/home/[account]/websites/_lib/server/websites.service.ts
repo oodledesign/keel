@@ -112,6 +112,12 @@ function mapWebsiteWriteError(err: unknown): Error {
     );
   }
 
+  if (e?.code === '23505' || msg.includes('duplicate key')) {
+    return new Error(
+      'Could not save website: a website with this name or domain already exists in this workspace.',
+    );
+  }
+
   if (e?.code === '23503') {
     if (blob.includes('businesses')) {
       return new Error(

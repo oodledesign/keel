@@ -11,6 +11,10 @@ import {
 
 import { getSignaturesSupabaseClient } from './graph';
 import {
+  isMissingRelationError,
+  logMissingRelation,
+} from '~/home/[account]/_lib/server/supabase-errors';
+import {
   renderTemplate,
   type SignaturesStaffRow,
 } from './render-template';
@@ -138,6 +142,10 @@ export async function loadGoogleConnection(
     .maybeSingle();
 
   if (error) {
+    if (isMissingRelationError(error)) {
+      logMissingRelation('signatures.loadGoogleConnection', error);
+      return null;
+    }
     throw new Error(error.message);
   }
 
