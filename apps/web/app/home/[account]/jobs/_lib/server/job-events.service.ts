@@ -19,7 +19,7 @@ import type {
   SetJobEventAssignmentsInput,
   UpdateJobEventInput,
 } from '../schema/job-events.schema';
-import { isMissingRelationError, logMissingRelation } from './supabase-errors';
+import { isMissingRelationError, logMissingRelation } from '../../../_lib/server/supabase-errors';
 
 type AccountRole = 'owner' | 'admin' | 'staff' | 'contractor' | 'client' | null;
 

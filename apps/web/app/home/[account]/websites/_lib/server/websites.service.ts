@@ -16,7 +16,7 @@ import type {
 import {
   isMissingRelationError,
   logMissingRelation,
-} from '../../jobs/_lib/server/supabase-errors';
+} from '../../../_lib/server/supabase-errors';
 
 export type Website = {
   id: string;

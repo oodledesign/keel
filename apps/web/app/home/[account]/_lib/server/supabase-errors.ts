@@ -8,7 +8,7 @@ export function isMissingRelationError(err: unknown): boolean {
     e?.code === '42P01' ||
     blob.includes('could not find the table') ||
     blob.includes('schema cache') ||
-    blob.includes('relation') && blob.includes('does not exist')
+    (blob.includes('relation') && blob.includes('does not exist'))
   );
 }
 

@@ -12,7 +12,7 @@ import type {
   GetJobCalendarItemsInput,
   GetOrgCalendarItemsInput,
 } from '../schema/calendar.schema';
-import { isMissingRelationError, logMissingRelation } from './supabase-errors';
+import { isMissingRelationError, logMissingRelation } from '../../../_lib/server/supabase-errors';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Db = any;
