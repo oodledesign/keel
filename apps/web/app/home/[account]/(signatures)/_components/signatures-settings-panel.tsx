@@ -317,7 +317,7 @@ export function SignaturesSettingsPanel({
                   </div>
                 </div>
                 <Button asChild>
-                  <Link href={connectHref}>Connect Microsoft 365</Link>
+                  <a href={connectHref}>Connect Microsoft 365</a>
                 </Button>
               </div>
             )}

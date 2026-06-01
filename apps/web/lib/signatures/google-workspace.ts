@@ -42,31 +42,78 @@ export type GoogleConnection = {
   connected_by: string | null;
 };
 
+/** Vercel/env copies often mangle PEM newlines — normalize before OpenSSL. */
+function normalizePrivateKey(raw: string): string {
+  let key = raw.trim();
+
+  if (
+    (key.startsWith('"') && key.endsWith('"')) ||
+    (key.startsWith("'") && key.endsWith("'"))
+  ) {
+    key = key.slice(1, -1).trim();
+  }
+
+  key = key.replace(/\\n/g, '\n').replace(/\\\\n/g, '\n');
+
+  if (key.includes('-----BEGIN') && !key.includes('\n')) {
+    key = key
+      .replace(/-----BEGIN ([^-]+)-----/, '-----BEGIN $1-----\n')
+      .replace(/-----END ([^-]+)-----/, '\n-----END $1-----\n');
+  }
+
+  return key.trim();
+}
+
+function loadServiceAccountPrivateKey(raw: string): ReturnType<typeof createPrivateKey> {
+  const normalized = normalizePrivateKey(raw);
+
+  try {
+    return createPrivateKey({ key: normalized, format: 'pem' });
+  } catch (err) {
+    const code =
+      err && typeof err === 'object' && 'code' in err
+        ? String((err as { code?: string }).code)
+        : '';
+    if (code === 'ERR_OSSL_UNSUPPORTED' || code === 'ERR_OSSL_PEM_NO_START_LINE') {
+      throw new Error(
+        'Google service account private key is invalid or malformed. In Vercel, paste the key with literal \\n between lines (not real line breaks), or set GOOGLE_SERVICE_ACCOUNT_JSON to the full JSON key file instead.',
+      );
+    }
+    throw err;
+  }
+}
+
 function parseServiceAccountCredentials(): ServiceAccountCredentials {
   const jsonRaw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.trim();
   if (jsonRaw) {
-    const parsed = JSON.parse(jsonRaw) as Partial<ServiceAccountCredentials>;
-    if (parsed.client_email && parsed.private_key) {
-      return {
-        client_email: parsed.client_email,
-        private_key: parsed.private_key.replace(/\\n/g, '\n'),
-      };
+    try {
+      const parsed = JSON.parse(jsonRaw) as Partial<ServiceAccountCredentials>;
+      if (parsed.client_email && parsed.private_key) {
+        return {
+          client_email: parsed.client_email.trim(),
+          private_key: normalizePrivateKey(parsed.private_key),
+        };
+      }
+    } catch {
+      throw new Error(
+        'GOOGLE_SERVICE_ACCOUNT_JSON is not valid JSON. Paste the full service account key file, or use GOOGLE_SERVICE_ACCOUNT_EMAIL + GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.',
+      );
     }
   }
 
   const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.trim();
-  const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(
-    /\\n/g,
-    '\n',
-  );
+  const privateKeyRaw = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
 
-  if (!clientEmail || !privateKey) {
+  if (!clientEmail || !privateKeyRaw?.trim()) {
     throw new Error(
-      'Google service account is not configured. Set GOOGLE_SERVICE_ACCOUNT_JSON or GOOGLE_SERVICE_ACCOUNT_EMAIL + GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.',
+      'Google service account is not configured. Set GOOGLE_SERVICE_ACCOUNT_JSON or GOOGLE_SERVICE_ACCOUNT_EMAIL + GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY on Vercel (Production).',
     );
   }
 
-  return { client_email: clientEmail, private_key: privateKey };
+  return {
+    client_email: clientEmail,
+    private_key: normalizePrivateKey(privateKeyRaw),
+  };
 }
 
 function base64url(value: string | Buffer): string {
@@ -98,7 +145,7 @@ async function getGoogleAccessToken(
   signer.end();
 
   const signature = signer.sign(
-    createPrivateKey(creds.private_key),
+    loadServiceAccountPrivateKey(creds.private_key),
     'base64url',
   );
   const assertion = `${unsigned}.${signature}`;
@@ -231,6 +278,12 @@ export async function connectGoogleWorkspace(input: {
     .single();
 
   if (error || !data) {
+    const msg = error?.message?.toLowerCase() ?? '';
+    if (msg.includes('permission denied')) {
+      throw new Error(
+        'Could not save Google connection: database permissions missing. Run GRANT ALL ON signatures.google_connections TO service_role in Supabase (migration 20260601130000).',
+      );
+    }
     throw new Error(error?.message ?? 'Failed to save Google connection');
   }
 

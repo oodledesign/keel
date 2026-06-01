@@ -46,6 +46,11 @@ GOOGLE_SERVICE_ACCOUNT_EMAIL=keel-signatures@your-project.iam.gserviceaccount.co
 GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 ```
 
+**Private key tips on Vercel:**
+
+- Use **literal `\n`** in `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` (backslash + n), not actual line breaks.
+- If logs show `DECODER routines::unsupported`, switch to **Option A** (full JSON) — most reliable on Vercel.
+
 Redeploy after adding env vars.
 
 ## 5. Connect in Keel

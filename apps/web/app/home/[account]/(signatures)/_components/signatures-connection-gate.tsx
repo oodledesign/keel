@@ -56,7 +56,7 @@ export function SignaturesConnectionGate({
           </p>
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
             <Button asChild>
-              <Link href={msHref}>Connect Microsoft 365</Link>
+              <a href={msHref}>Connect Microsoft 365</a>
             </Button>
             <Button asChild variant="outline">
               <Link href={settingsPath}>Connect Google Workspace</Link>
