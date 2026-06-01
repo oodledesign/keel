@@ -3,8 +3,11 @@
 import { revalidatePath } from 'next/cache';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { z } from 'zod';
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
+
+import { isRedirectError } from 'next/dist/client/components/redirect-error';
 
 import pathsConfig from '~/config/paths.config';
 import { isSignaturesModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
@@ -262,23 +265,52 @@ export const disconnectMicrosoft365 = enhanceAction(
   { schema: disconnectM365ActionSchema },
 );
 
-export const connectGoogleWorkspaceAction = enhanceAction(
-  async (input, user) => {
-    const { accountSlug } = await assertSignaturesAdmin(input.accountId, user.id);
-    await connectGoogleWorkspace({
-      accountId: input.accountId,
-      primaryDomain: input.primaryDomain,
-      delegatedAdminEmail: input.delegatedAdminEmail,
-      connectedBy: user.id,
-    });
+function actionFailure(error: unknown, fallback: string) {
+  console.error('[signatures-module-actions]', error);
+  if (error instanceof Error && error.message) {
+    return { ok: false as const, error: error.message };
+  }
+  return { ok: false as const, error: fallback };
+}
 
-    revalidatePath(workPath(pathsConfig.app.accountSignaturesSettings, accountSlug));
-    revalidatePath(workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug));
-    revalidatePath(workPath(pathsConfig.app.accountSignaturesStaff, accountSlug));
-    return { ok: true as const };
+export type ConnectGoogleWorkspaceResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+const connectGoogleWorkspaceActionImpl = enhanceAction(
+  async (input, user) => {
+    try {
+      const { accountSlug } = await assertSignaturesAdmin(input.accountId, user.id);
+      await connectGoogleWorkspace({
+        accountId: input.accountId,
+        primaryDomain: input.primaryDomain,
+        delegatedAdminEmail: input.delegatedAdminEmail,
+        connectedBy: user.id,
+      });
+
+      revalidatePath(workPath(pathsConfig.app.accountSignaturesSettings, accountSlug));
+      revalidatePath(workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug));
+      revalidatePath(workPath(pathsConfig.app.accountSignaturesStaff, accountSlug));
+      return { ok: true as const };
+    } catch (error) {
+      return actionFailure(error, 'Failed to connect Google Workspace');
+    }
   },
   { schema: connectGoogleWorkspaceActionSchema },
 );
+
+export async function connectGoogleWorkspaceAction(
+  input: z.infer<typeof connectGoogleWorkspaceActionSchema>,
+): Promise<ConnectGoogleWorkspaceResult> {
+  try {
+    return await connectGoogleWorkspaceActionImpl(input);
+  } catch (error) {
+    if (isRedirectError(error)) {
+      throw error;
+    }
+    return actionFailure(error, 'Invalid Google Workspace connection request');
+  }
+}
 
 export const disconnectGoogleWorkspaceAction = enhanceAction(
   async (input, user) => {

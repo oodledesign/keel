@@ -117,13 +117,33 @@ export function SignaturesSettingsPanel({
   };
 
   const connectGoogle = async () => {
+    const domain = primaryDomain.trim().toLowerCase();
+    const adminEmail = delegatedAdminEmail.trim().toLowerCase();
+
+    if (!domain.includes('.')) {
+      toast.error('Enter a valid primary domain (e.g. example.com)');
+      return;
+    }
+    if (!adminEmail.includes('@')) {
+      toast.error('Enter a valid delegated admin email');
+      return;
+    }
+    if (!adminEmail.endsWith(`@${domain}`)) {
+      toast.error(`Delegated admin email must belong to ${domain}`);
+      return;
+    }
+
     setConnectingGoogle(true);
     try {
-      await connectGoogleWorkspaceAction({
+      const result = await connectGoogleWorkspaceAction({
         accountId,
-        primaryDomain,
-        delegatedAdminEmail,
+        primaryDomain: domain,
+        delegatedAdminEmail: adminEmail,
       });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
       toast.success('Google Workspace connected');
       router.refresh();
     } catch (e) {

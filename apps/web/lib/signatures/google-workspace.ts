@@ -53,7 +53,8 @@ function normalizePrivateKey(raw: string): string {
     key = key.slice(1, -1).trim();
   }
 
-  key = key.replace(/\\n/g, '\n').replace(/\\\\n/g, '\n');
+  key = key.replace(/\\n/g, '\n').replace(/\\\\n/g, '\n').replace(/%0A/gi, '\n');
+  key = key.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
   if (key.includes('-----BEGIN') && !key.includes('\n')) {
     key = key
@@ -64,23 +65,58 @@ function normalizePrivateKey(raw: string): string {
   return key.trim();
 }
 
+function repairPem(raw: string): string {
+  const beginMatch = raw.match(/-----BEGIN ([^-]+)-----/);
+  const endMatch = raw.match(/-----END ([^-]+)-----/);
+  if (!beginMatch?.[1] || !endMatch?.[0]) {
+    return raw;
+  }
+
+  const type = beginMatch[1];
+  const start = raw.indexOf(beginMatch[0]) + beginMatch[0].length;
+  const end = raw.indexOf(endMatch[0]);
+  const body = raw.slice(start, end).replace(/\s+/g, '');
+
+  if (!body) {
+    return raw;
+  }
+
+  return `-----BEGIN ${type}-----\n${body}\n-----END ${type}-----\n`;
+}
+
+function isOpenSslKeyError(err: unknown): boolean {
+  if (!err || typeof err !== 'object' || !('code' in err)) {
+    return false;
+  }
+  const code = String((err as { code?: string }).code);
+  return (
+    code === 'ERR_OSSL_UNSUPPORTED' ||
+    code === 'ERR_OSSL_PEM_NO_START_LINE' ||
+    code === 'ERR_OSSL_EVP_UNSUPPORTED'
+  );
+}
+
+const INVALID_GOOGLE_KEY_MESSAGE =
+  'Google service account private key is invalid or malformed. In Vercel, paste the key with literal \\n between lines (not real line breaks), or set GOOGLE_SERVICE_ACCOUNT_JSON to the full JSON key file instead.';
+
 function loadServiceAccountPrivateKey(raw: string): ReturnType<typeof createPrivateKey> {
   const normalized = normalizePrivateKey(raw);
+  const candidates = [normalized, repairPem(normalized)];
 
-  try {
-    return createPrivateKey({ key: normalized, format: 'pem' });
-  } catch (err) {
-    const code =
-      err && typeof err === 'object' && 'code' in err
-        ? String((err as { code?: string }).code)
-        : '';
-    if (code === 'ERR_OSSL_UNSUPPORTED' || code === 'ERR_OSSL_PEM_NO_START_LINE') {
-      throw new Error(
-        'Google service account private key is invalid or malformed. In Vercel, paste the key with literal \\n between lines (not real line breaks), or set GOOGLE_SERVICE_ACCOUNT_JSON to the full JSON key file instead.',
-      );
+  let lastErr: unknown;
+  for (const key of [...new Set(candidates)]) {
+    try {
+      return createPrivateKey({ key, format: 'pem' });
+    } catch (err) {
+      lastErr = err;
     }
-    throw err;
   }
+
+  if (isOpenSslKeyError(lastErr)) {
+    throw new Error(INVALID_GOOGLE_KEY_MESSAGE);
+  }
+
+  throw lastErr instanceof Error ? lastErr : new Error(INVALID_GOOGLE_KEY_MESSAGE);
 }
 
 function parseServiceAccountCredentials(): ServiceAccountCredentials {
@@ -94,7 +130,13 @@ function parseServiceAccountCredentials(): ServiceAccountCredentials {
           private_key: normalizePrivateKey(parsed.private_key),
         };
       }
-    } catch {
+      throw new Error(
+        'GOOGLE_SERVICE_ACCOUNT_JSON is missing client_email or private_key. Paste the full service account key file from Google Cloud.',
+      );
+    } catch (err) {
+      if (err instanceof Error && err.message.startsWith('GOOGLE_SERVICE_ACCOUNT_JSON')) {
+        throw err;
+      }
       throw new Error(
         'GOOGLE_SERVICE_ACCOUNT_JSON is not valid JSON. Paste the full service account key file, or use GOOGLE_SERVICE_ACCOUNT_EMAIL + GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.',
       );
