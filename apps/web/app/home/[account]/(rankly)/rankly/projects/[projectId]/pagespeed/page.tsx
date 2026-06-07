@@ -1,10 +1,10 @@
 import { notFound } from 'next/navigation';
 
-import { RanklyProjectSectionHeader } from '../../../_components/rankly-project-section-header';
-import { PagespeedPanel } from '../../../_components/pagespeed/pagespeed-panel';
-import { loadRanklyProjectForTeam } from '../../../../_lib/server/rankly-account-data';
-import { loadTeamWorkspace } from '../../../../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../../../../_lib/server/workspace-route-guard';
+import { RanklyProjectSectionHeader } from '../../../../_components/rankly-project-section-header';
+import { PagespeedPanel } from '../../../../_components/pagespeed/pagespeed-panel';
+import { loadRanklyProjectForTeam } from '../../../../../_lib/server/rankly-account-data';
+import { loadTeamWorkspace } from '../../../../../_lib/server/team-account-workspace.loader';
+import { redirectIfSpaceNotIn } from '../../../../../_lib/server/workspace-route-guard';
 import {
   loadLatestPagespeedCheckJob,
   loadPagespeedSettings,

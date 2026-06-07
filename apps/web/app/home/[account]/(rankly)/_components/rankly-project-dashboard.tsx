@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { ranklyProjectPaths } from '../../_lib/rankly-project-paths';
+import { ranklyProjectPaths } from '../_lib/rankly-project-paths';
 import type { SiteOverviewSnapshot } from '~/lib/site-overview/types';
 
 function StatCard(props: {

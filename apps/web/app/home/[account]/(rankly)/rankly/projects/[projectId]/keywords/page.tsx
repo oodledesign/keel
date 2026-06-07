@@ -1,13 +1,13 @@
 import { notFound } from 'next/navigation';
 
-import { RanklyProjectSectionHeader } from '../../../_components/rankly-project-section-header';
-import { RankTrackingPanel } from '../../../_components/rank-tracking/rank-tracking-panel';
+import { RanklyProjectSectionHeader } from '../../../../_components/rankly-project-section-header';
+import { RankTrackingPanel } from '../../../../_components/rank-tracking/rank-tracking-panel';
 import {
   loadRanklyKeywordsForProject,
   loadRanklyProjectForTeam,
-} from '../../../../_lib/server/rankly-account-data';
-import { loadTeamWorkspace } from '../../../../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../../../../_lib/server/workspace-route-guard';
+} from '../../../../../_lib/server/rankly-account-data';
+import { loadTeamWorkspace } from '../../../../../_lib/server/team-account-workspace.loader';
+import { redirectIfSpaceNotIn } from '../../../../../_lib/server/workspace-route-guard';
 import {
   estimateProjectRankCheckCost,
   loadKeywordRankSnapshots,
