@@ -35,6 +35,7 @@ export function RankCheckJobPoller({
   useEffect(() => {
     let active = true;
     let timer: ReturnType<typeof setTimeout>;
+    let lastTasksCompleted = -1;
 
     const poll = async () => {
       try {
@@ -52,7 +53,16 @@ export function RankCheckJobPoller({
 
         if (current.status === 'error') {
           toast.error(current.error_msg ?? 'Rank check failed');
+          router.refresh();
           return;
+        }
+
+        if (
+          current.tasks_completed > 0 &&
+          current.tasks_completed !== lastTasksCompleted
+        ) {
+          lastTasksCompleted = current.tasks_completed;
+          router.refresh();
         }
 
         timer = setTimeout(poll, 2500);

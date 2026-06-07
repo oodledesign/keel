@@ -1,8 +1,7 @@
 import { type NextRequest } from 'next/server';
-import { after } from 'next/server';
 
 import { loadProjectsDueForRankCheck } from '~/lib/rank-tracking/db';
-import { runRankCheckJob } from '~/lib/rank-tracking/runner';
+import { triggerRankCheckRun } from '~/lib/rank-tracking/trigger-run';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
@@ -61,12 +60,7 @@ export async function GET(request: NextRequest) {
 
       const jobId = job.id as string;
       started.push(jobId);
-
-      after(() => {
-        void runRankCheckJob(jobId).catch((err) => {
-          console.error('[rankly] cron rank-check failed', jobId, err);
-        });
-      });
+      triggerRankCheckRun(jobId);
     }
 
     return jsonOk({ started: started.length, jobIds: started });

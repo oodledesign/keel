@@ -17,6 +17,7 @@ import type {
   RankTrackingSettings,
 } from '~/lib/rank-tracking/types';
 import { RANK_REFRESH_INTERVAL_LABELS } from '~/lib/rank-tracking/types';
+import type { KeywordIntent } from '~/lib/clusters/types';
 
 import { parseKeywordLines } from '../../_lib/parse-keyword-lines';
 import type { RanklyKeywordRow } from '../../../_lib/server/rankly-account-data';
@@ -41,6 +42,57 @@ function formatChange(change: number | null): string | null {
   return `▼ ${Math.abs(change)}`;
 }
 
+function formatVolume(volume: number | null | undefined): string {
+  if (volume == null) return '—';
+  if (volume >= 1_000_000) return `${(volume / 1_000_000).toFixed(1)}M`;
+  if (volume >= 10_000) return `${Math.round(volume / 1_000)}K`;
+  if (volume >= 1_000) return `${(volume / 1_000).toFixed(1)}K`;
+  return String(volume);
+}
+
+function formatKd(kd: number | null | undefined): string {
+  if (kd == null) return '—';
+  return String(Math.round(kd));
+}
+
+function formatCpc(cpc: number | null | undefined): string {
+  if (cpc == null || cpc <= 0) return '—';
+  return `$${cpc.toFixed(2)}`;
+}
+
+const INTENT_LABELS: Record<KeywordIntent, string> = {
+  informational: 'Info',
+  commercial: 'Commercial',
+  transactional: 'Transactional',
+  navigational: 'Nav',
+};
+
+const INTENT_STYLES: Record<KeywordIntent, string> = {
+  informational: 'bg-blue-500/15 text-blue-200',
+  commercial: 'bg-amber-500/15 text-amber-200',
+  transactional: 'bg-[var(--keel-teal)]/15 text-[var(--keel-teal)]',
+  navigational: 'bg-violet-500/15 text-violet-200',
+};
+
+function IntentBadge({ intent }: { intent: string | null | undefined }) {
+  if (!intent) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+
+  const key = intent as KeywordIntent;
+  const label = INTENT_LABELS[key] ?? intent;
+  const style = INTENT_STYLES[key] ?? 'bg-white/10 text-muted-foreground';
+
+  return (
+    <span
+      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${style}`}
+      title={intent}
+    >
+      {label}
+    </span>
+  );
+}
+
 export function RankTrackingPanel(props: {
   accountId: string;
   projectId: string;
@@ -55,6 +107,7 @@ export function RankTrackingPanel(props: {
   const [keywordsText, setKeywordsText] = useState('');
   const [busy, setBusy] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMetrics, setLoadingMetrics] = useState(false);
   const [savingInterval, setSavingInterval] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [activeJobId, setActiveJobId] = useState<string | null>(
@@ -71,6 +124,53 @@ export function RankTrackingPanel(props: {
     () => parseKeywordLines(keywordsText).length,
     [keywordsText],
   );
+
+  const keywordsNeedingMetrics = useMemo(
+    () => props.keywords.filter((row) => !row.metrics_updated_at).length,
+    [props.keywords],
+  );
+
+  const fetchKeywordMetrics = async (options?: {
+    force?: boolean;
+    silent?: boolean;
+  }) => {
+    setLoadingMetrics(true);
+    try {
+      const res = await fetch('/api/rankly/keyword-metrics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: props.projectId,
+          accountId: props.accountId,
+          force: options?.force ?? false,
+        }),
+      });
+      const json = (await res.json()) as ApiResponse<{
+        updated: number;
+        skipped: number;
+        estimatedCostUsd: number;
+      }>;
+      if (!json.ok) throw new Error(json.error.message);
+
+      if (!options?.silent) {
+        if (json.data.updated === 0) {
+          toast.message('All keywords already have metrics');
+        } else {
+          toast.success(
+            `Updated metrics for ${json.data.updated} keyword${json.data.updated === 1 ? '' : 's'}`,
+          );
+        }
+      }
+
+      router.refresh();
+      return json.data;
+    } catch (err) {
+      if (!options?.silent) toast.error(getErrorMessage(err));
+      return null;
+    } finally {
+      setLoadingMetrics(false);
+    }
+  };
 
   const addKeywords = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,6 +198,7 @@ export function RankTrackingPanel(props: {
         toast.message('No new keywords added — all were already on this project');
       } else {
         toast.success(`Added ${result.added} keyword${result.added === 1 ? '' : 's'}`);
+        void fetchKeywordMetrics({ silent: true });
       }
 
       setKeywordsText('');
@@ -246,6 +347,18 @@ export function RankTrackingPanel(props: {
           >
             {refreshing ? 'Starting…' : 'Refresh ranks now'}
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={loadingMetrics || props.keywordCount === 0}
+            onClick={() => fetchKeywordMetrics({ force: keywordsNeedingMetrics === 0 })}
+          >
+            {loadingMetrics
+              ? 'Loading…'
+              : keywordsNeedingMetrics > 0
+                ? `Load insights (${keywordsNeedingMetrics})`
+                : 'Refresh insights'}
+          </Button>
         </div>
       </div>
 
@@ -261,6 +374,12 @@ export function RankTrackingPanel(props: {
           <p className="text-muted-foreground mt-1 text-xs">
             Last run: {formatUsdCost(Number(props.latestJob.api_cost_usd))} ·{' '}
             {props.latestJob.tasks_completed}/{props.latestJob.tasks_total} lookups
+          </p>
+        ) : null}
+        {keywordsNeedingMetrics > 0 ? (
+          <p className="text-muted-foreground mt-1 text-xs">
+            {keywordsNeedingMetrics} keyword{keywordsNeedingMetrics === 1 ? '' : 's'}{' '}
+            missing volume & intent — click Load insights to fetch from DataForSEO.
           </p>
         ) : null}
       </div>
@@ -302,12 +421,16 @@ export function RankTrackingPanel(props: {
         </p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-white/10">
-          <table className="w-full min-w-[40rem] text-left text-sm">
+          <table className="w-full min-w-[56rem] text-left text-sm">
             <thead className="border-b border-white/10 bg-black/20 text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th className="px-4 py-3">Keyword</th>
-                <th className="px-4 py-3">Position</th>
-                <th className="px-4 py-3">Change</th>
+                <th className="px-4 py-3 text-right">Volume</th>
+                <th className="px-4 py-3 text-right">KD</th>
+                <th className="px-4 py-3">Intent</th>
+                <th className="px-4 py-3 text-right">CPC</th>
+                <th className="px-4 py-3 text-right">Position</th>
+                <th className="px-4 py-3 text-right">Change</th>
                 <th className="px-4 py-3">Device</th>
                 <th className="px-4 py-3">Ranking URL</th>
                 <th className="px-4 py-3 text-right"> </th>
@@ -322,16 +445,28 @@ export function RankTrackingPanel(props: {
                     className="border-b border-white/5 last:border-0"
                   >
                     <td className="px-4 py-3">{keyword.keyword}</td>
-                    <td className="px-4 py-3 font-medium tabular-nums">
+                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                      {showRemove ? formatVolume(keyword.search_volume) : ''}
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                      {showRemove ? formatKd(keyword.keyword_difficulty) : ''}
+                    </td>
+                    <td className="px-4 py-3">
+                      {showRemove ? <IntentBadge intent={keyword.intent} /> : null}
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                      {showRemove ? formatCpc(keyword.cpc) : ''}
+                    </td>
+                    <td className="px-4 py-3 text-right font-medium tabular-nums">
                       {formatPosition(snapshot?.position ?? null)}
                     </td>
                     <td
                       className={
                         change?.startsWith('▲')
-                          ? 'px-4 py-3 text-[var(--keel-teal)] tabular-nums'
+                          ? 'px-4 py-3 text-right text-[var(--keel-teal)] tabular-nums'
                           : change?.startsWith('▼')
-                            ? 'px-4 py-3 text-red-400 tabular-nums'
-                            : 'px-4 py-3 text-muted-foreground'
+                            ? 'px-4 py-3 text-right text-red-400 tabular-nums'
+                            : 'px-4 py-3 text-right text-muted-foreground'
                       }
                     >
                       {change ?? '—'}

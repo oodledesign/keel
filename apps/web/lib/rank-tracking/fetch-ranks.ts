@@ -110,6 +110,108 @@ export async function fetchKeywordRanksBatch(input: {
   return { results, apiCostUsd };
 }
 
+export type RankTask = {
+  keywordId: string;
+  keyword: string;
+  device: 'desktop' | 'mobile';
+};
+
+export function buildRankTasks(input: {
+  keywords: Array<{ id: string; keyword: string }>;
+  trackDesktop: boolean;
+  trackMobile: boolean;
+}): RankTask[] {
+  const devices: Array<'desktop' | 'mobile'> = [];
+  if (input.trackDesktop) devices.push('desktop');
+  if (input.trackMobile) devices.push('mobile');
+  if (devices.length === 0) devices.push('desktop');
+
+  const tasks: RankTask[] = [];
+  for (const device of devices) {
+    for (const keyword of input.keywords) {
+      tasks.push({
+        keywordId: keyword.id,
+        keyword: keyword.keyword,
+        device,
+      });
+    }
+  }
+  return tasks;
+}
+
+export async function fetchKeywordRanksFromTasks(input: {
+  tasks: RankTask[];
+  startIndex: number;
+  targetDomain: string;
+  countryCode: string;
+  timeBudgetMs?: number;
+  onBatch: (batch: {
+    rows: Array<SerpRankResult & { keywordId: string }>;
+    tasksCompleted: number;
+    tasksTotal: number;
+    sessionApiCostUsd: number;
+  }) => Promise<void>;
+}): Promise<{
+  tasksCompleted: number;
+  sessionApiCostUsd: number;
+  completed: boolean;
+}> {
+  const startTime = Date.now();
+  const tasksTotal = input.tasks.length;
+  let sessionApiCostUsd = 0;
+  let i = input.startIndex;
+
+  while (i < input.tasks.length) {
+    if (
+      input.timeBudgetMs != null &&
+      Date.now() - startTime > input.timeBudgetMs
+    ) {
+      break;
+    }
+
+    const device = input.tasks[i].device;
+    const batch: RankTask[] = [];
+    while (
+      batch.length < 5 &&
+      i < input.tasks.length &&
+      input.tasks[i].device === device
+    ) {
+      batch.push(input.tasks[i]);
+      i += 1;
+    }
+
+    const { results, apiCostUsd: batchCost } = await fetchKeywordRanksBatch({
+      keywords: batch.map((row) => row.keyword),
+      targetDomain: input.targetDomain,
+      countryCode: input.countryCode,
+      device,
+    });
+
+    sessionApiCostUsd += batchCost;
+
+    const rows: Array<SerpRankResult & { keywordId: string }> = [];
+    for (const result of results) {
+      const keywordRow = batch.find((row) => row.keyword === result.keyword);
+      if (!keywordRow) continue;
+      rows.push({ ...result, keywordId: keywordRow.keywordId });
+    }
+
+    await input.onBatch({
+      rows,
+      tasksCompleted: i,
+      tasksTotal,
+      sessionApiCostUsd,
+    });
+  }
+
+  return {
+    tasksCompleted: i,
+    sessionApiCostUsd,
+    completed: i >= input.tasks.length,
+  };
+}
+
+/** @deprecated Prefer fetchKeywordRanksFromTasks for resumable rank checks. */
 export async function fetchAllKeywordRanks(input: {
   keywords: Array<{ id: string; keyword: string; device: string }>;
   targetDomain: string;
@@ -131,42 +233,40 @@ export async function fetchAllKeywordRanks(input: {
   tasksCompleted: number;
   tasksTotal: number;
 }> {
-  const devices: Array<'desktop' | 'mobile'> = [];
-  if (input.trackDesktop) devices.push('desktop');
-  if (input.trackMobile) devices.push('mobile');
-  if (devices.length === 0) devices.push('desktop');
+  const tasks = buildRankTasks({
+    keywords: input.keywords.map((row) => ({
+      id: row.id,
+      keyword: row.keyword,
+    })),
+    trackDesktop: input.trackDesktop,
+    trackMobile: input.trackMobile,
+  });
 
-  const tasksTotal = input.keywords.length * devices.length;
-  let tasksCompleted = 0;
-  let apiCostUsd = 0;
   const rows: Array<SerpRankResult & { keywordId: string }> = [];
+  let apiCostUsd = 0;
 
-  for (const device of devices) {
-    for (let i = 0; i < input.keywords.length; i += 5) {
-      const batch = input.keywords.slice(i, i + 5);
-      const { results, apiCostUsd: batchCost } = await fetchKeywordRanksBatch({
-        keywords: batch.map((row) => row.keyword),
-        targetDomain: input.targetDomain,
-        countryCode: input.countryCode,
-        device,
-      });
+  const { tasksCompleted, sessionApiCostUsd } = await fetchKeywordRanksFromTasks(
+    {
+      tasks,
+      startIndex: 0,
+      targetDomain: input.targetDomain,
+      countryCode: input.countryCode,
+      onBatch: async (batch) => {
+        apiCostUsd = batch.sessionApiCostUsd;
+        rows.push(...batch.rows);
+        await input.onBatch?.({
+          tasksCompleted: batch.tasksCompleted,
+          tasksTotal: batch.tasksTotal,
+          apiCostUsd: batch.sessionApiCostUsd,
+        });
+      },
+    },
+  );
 
-      apiCostUsd += batchCost;
-      tasksCompleted += batch.length;
-
-      for (const result of results) {
-        const keywordRow = batch.find((row) => row.keyword === result.keyword);
-        if (!keywordRow) continue;
-        rows.push({ ...result, keywordId: keywordRow.id });
-      }
-
-      await input.onBatch?.({
-        tasksCompleted,
-        tasksTotal,
-        apiCostUsd,
-      });
-    }
-  }
-
-  return { rows, apiCostUsd, tasksCompleted, tasksTotal };
+  return {
+    rows,
+    apiCostUsd: sessionApiCostUsd || apiCostUsd,
+    tasksCompleted,
+    tasksTotal: tasks.length,
+  };
 }

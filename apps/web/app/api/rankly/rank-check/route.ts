@@ -1,5 +1,4 @@
 import { type NextRequest } from 'next/server';
-import { after } from 'next/server';
 import { z } from 'zod';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -11,7 +10,7 @@ import {
   loadLatestRankCheckJob,
   loadRankTrackingSettings,
 } from '~/lib/rank-tracking/db';
-import { runRankCheckJob } from '~/lib/rank-tracking/runner';
+import { triggerRankCheckRun } from '~/lib/rank-tracking/trigger-run';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { userIsAccountMember } from '~/lib/rankly/account-membership';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
@@ -161,6 +160,7 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (runningJob) {
+      triggerRankCheckRun(runningJob.id as string);
       return jsonOk({ jobId: runningJob.id as string, alreadyRunning: true });
     }
 
@@ -195,11 +195,7 @@ export async function POST(request: NextRequest) {
     }
 
     const jobId = job.id as string;
-    after(() => {
-      void runRankCheckJob(jobId).catch((err) => {
-        console.error('[rankly] rank-check job failed', jobId, err);
-      });
-    });
+    triggerRankCheckRun(jobId);
 
     return jsonOk({ jobId, alreadyRunning: false, estimatedCostUsd });
   } catch (error) {

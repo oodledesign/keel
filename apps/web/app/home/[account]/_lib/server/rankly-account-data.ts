@@ -130,6 +130,11 @@ export type RanklyKeywordRow = {
   keyword: string;
   search_engine: string;
   device: string;
+  search_volume: number | null;
+  keyword_difficulty: number | null;
+  cpc: number | null;
+  intent: string | null;
+  metrics_updated_at: string | null;
   created_at: string;
 };
 
@@ -167,7 +172,9 @@ export const loadRanklyKeywordsForProject = cache(
     const client = getSupabaseServerClient();
     const { data, error } = await supabaseCustomSchema(client, 'rankly')
       .from('keywords')
-      .select('id, project_id, keyword, search_engine, device, created_at')
+      .select(
+        'id, project_id, keyword, search_engine, device, search_volume, keyword_difficulty, cpc, intent, metrics_updated_at, created_at',
+      )
       .eq('project_id', projectId)
       .order('created_at', { ascending: false });
 

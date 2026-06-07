@@ -165,6 +165,59 @@ export function filterCandidates(
   });
 }
 
+const KEYWORD_OVERVIEW_BATCH_SIZE = 200;
+
+/** Bulk keyword metrics (volume, KD, CPC, intent) via DataForSEO Labs. */
+export async function fetchKeywordOverviewMetrics(
+  keywords: string[],
+  countryCode: string,
+): Promise<Map<string, ClusterKeyword>> {
+  const locationCode = countryToLocationCode(countryCode);
+  const unique = [
+    ...new Map(
+      keywords
+        .map((keyword) => keyword.trim())
+        .filter(Boolean)
+        .map((keyword) => [keyword.toLowerCase(), keyword] as const),
+    ).values(),
+  ];
+
+  const byKeyword = new Map<string, ClusterKeyword>();
+
+  for (let i = 0; i < unique.length; i += KEYWORD_OVERVIEW_BATCH_SIZE) {
+    const batch = unique.slice(i, i + KEYWORD_OVERVIEW_BATCH_SIZE);
+    if (batch.length === 0) continue;
+
+    const json = await dfsPost<{
+      tasks?: Array<{ result?: Array<{ items?: Array<Record<string, unknown>> }> }>;
+    }>('/dataforseo_labs/google/keyword_overview/live', [
+      {
+        keywords: batch,
+        location_code: locationCode,
+        language_code: 'en',
+      },
+    ]);
+
+    const items = json.tasks?.[0]?.result?.[0]?.items ?? [];
+    for (const item of items) {
+      const parsed = parseKeywordItem(item);
+      if (!parsed) continue;
+      byKeyword.set(parsed.keyword.toLowerCase(), parsed);
+    }
+
+    if (i + KEYWORD_OVERVIEW_BATCH_SIZE < unique.length) {
+      await delay(150);
+    }
+  }
+
+  return byKeyword;
+}
+
+export function estimateKeywordOverviewCostUsd(keywordCount: number): number {
+  const batches = Math.ceil(keywordCount / KEYWORD_OVERVIEW_BATCH_SIZE) || 0;
+  return Math.round(batches * 0.075 * 1000) / 1000;
+}
+
 export function estimateSerpCredits(candidateCount: number): number {
   return candidateCount * 5;
 }

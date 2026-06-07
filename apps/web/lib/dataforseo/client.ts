@@ -36,6 +36,7 @@ export async function dfsPost<T = DfsResponse>(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(120_000),
   });
 
   if (!res.ok) {
