@@ -1,26 +1,27 @@
 import { notFound } from 'next/navigation';
 
-import { RanklyProjectDashboard } from '../../../_components/rankly-project-dashboard';
-import {
-  loadRanklyKeywordsForProject,
-  loadRanklyProjectForTeam,
-} from '../../../../_lib/server/rankly-account-data';
+import pathsConfig from '~/config/paths.config';
+
+import { SiteOverviewPanel } from '../../../_components/site-overview/site-overview-panel';
+import { loadRanklyProjectForTeam } from '../../../../_lib/server/rankly-account-data';
 import { loadTeamWorkspace } from '../../../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../../../_lib/server/workspace-route-guard';
-import { loadPagespeedSnapshots } from '~/lib/pagespeed/db';
-import { loadSiteOverviewForProject } from '~/lib/site-overview/db';
+import {
+  isSiteOverviewStale,
+  loadSiteOverviewForProject,
+} from '~/lib/site-overview/db';
 import { projectCountryToCode } from '~/lib/site-overview/domain';
 
-type RanklyProjectDashboardPageProps = {
+type RanklyProjectSiteExplorerPageProps = {
   params: Promise<{
     account: string;
     projectId: string;
   }>;
 };
 
-export default async function RanklyProjectDashboardPage({
+export default async function RanklyProjectSiteExplorerPage({
   params,
-}: RanklyProjectDashboardPageProps) {
+}: RanklyProjectSiteExplorerPageProps) {
   const { account, projectId } = await params;
   const workspace = await loadTeamWorkspace(account);
   redirectIfSpaceNotIn(workspace, account, ['work']);
@@ -31,11 +32,8 @@ export default async function RanklyProjectDashboardPage({
     notFound();
   }
 
-  const [keywords, overview, pagespeedSnapshots] = await Promise.all([
-    loadRanklyKeywordsForProject(projectId, accountId),
-    loadSiteOverviewForProject(projectId),
-    loadPagespeedSnapshots(projectId),
-  ]);
+  const overview = await loadSiteOverviewForProject(projectId);
+  const overviewStale = isSiteOverviewStale(overview);
 
   const countryLabels: Record<string, string> = {
     gb: 'United Kingdom',
@@ -49,17 +47,19 @@ export default async function RanklyProjectDashboardPage({
   const countryCode = projectCountryToCode(project.target_country);
   const countryLabel = countryLabels[countryCode] ?? countryCode.toUpperCase();
 
-  const homepage = pagespeedSnapshots.find((row) => row.isHomepage);
+  const auditHref = pathsConfig.app.accountRanklyProjectAiAudit
+    .replace('[account]', account)
+    .replace('[projectId]', projectId);
 
   return (
-    <RanklyProjectDashboard
-      account={account}
+    <SiteOverviewPanel
+      accountId={accountId}
       projectId={projectId}
-      keywordCount={keywords.length}
-      overview={overview}
-      pagespeedMobileScore={homepage?.mobile?.performanceScore ?? null}
-      pagespeedDesktopScore={homepage?.desktop?.performanceScore ?? null}
+      domain={project.domain}
       countryLabel={countryLabel}
+      overview={overview}
+      stale={overviewStale}
+      auditHref={auditHref}
     />
   );
 }

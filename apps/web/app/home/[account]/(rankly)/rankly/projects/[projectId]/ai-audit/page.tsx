@@ -1,7 +1,4 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
-
-import { PageBody } from '@kit/ui/page';
 
 import pathsConfig from '~/config/paths.config';
 
@@ -11,7 +8,7 @@ import {
   AuditReportView,
 } from '../../../../_components/ai-audit/audit-report-view';
 import { AuditLauncher } from '../../../../_components/ai-audit/audit-launcher';
-import { TeamAccountLayoutPageHeader } from '../../../../../_components/team-account-layout-page-header';
+import { RanklyProjectSectionHeader } from '../../../../_components/rankly-project-section-header';
 import {
   loadAuditReportsForProject,
   loadLatestAuditForProject,
@@ -20,7 +17,6 @@ import {
 import { loadRanklyProjectForTeam } from '../../../../../_lib/server/rankly-account-data';
 import { loadTeamWorkspace } from '../../../../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../../../../_lib/server/workspace-route-guard';
-import { workAccountPath, workPaths } from '../../../../../_lib/work-account-path';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 type RanklyAiAuditPageProps = {
@@ -54,63 +50,51 @@ export default async function RanklyAiAuditPage({
   const scoreTrend = await loadScoreHistory(projectId, user.id);
 
   return (
-    <>
-      <TeamAccountLayoutPageHeader
-        account={account}
+    <div className="space-y-8">
+      <RanklyProjectSectionHeader
         title="AI Search Audit"
-        description={`${project.name} · ${project.domain}`}
+        description="Score entity, content, E-E-A-T, and technical readiness for AI search citations."
       />
-      <PageBody className="space-y-8 bg-[var(--workspace-shell-canvas)] px-4 py-8 text-[var(--workspace-shell-text)] lg:px-6">
-        {jobId ? (
-          <AuditJobPoller jobId={jobId} auditPath={base} />
-        ) : (
-          <>
-            <AuditLauncher
-              accountId={accountId}
-              projectId={projectId}
-              targetDomain={project.domain}
-              auditPath={base}
-              lastRun={
-                latest
-                  ? {
-                      overall_score: latest.report.overall_score,
-                      created_at: latest.report.created_at,
-                      reportId: latest.report.id,
-                    }
-                  : null
-              }
-              scoreTrend={scoreTrend.map((row) => ({
-                overall_score: row.overall_score,
-                run_at: row.run_at,
-              }))}
+
+      {jobId ? (
+        <AuditJobPoller jobId={jobId} auditPath={base} />
+      ) : (
+        <>
+          <AuditLauncher
+            accountId={accountId}
+            projectId={projectId}
+            targetDomain={project.domain}
+            auditPath={base}
+            lastRun={
+              latest
+                ? {
+                    overall_score: latest.report.overall_score,
+                    created_at: latest.report.created_at,
+                    reportId: latest.report.id,
+                  }
+                : null
+            }
+            scoreTrend={scoreTrend.map((row) => ({
+              overall_score: row.overall_score,
+              run_at: row.run_at,
+            }))}
+          />
+
+          {latest ? (
+            <AuditReportView
+              report={latest.report}
+              recommendations={latest.recommendations}
             />
-
-            {latest ? (
-              <AuditReportView
-                report={latest.report}
-                recommendations={latest.recommendations}
-              />
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No audit yet. Run your first AI Search Audit to score entity,
-                content, E-E-A-T, and technical readiness for AI citations.
-              </p>
-            )}
-          </>
-        )}
-
-        {!jobId ? <AuditReportList reports={reports} auditPath={base} /> : null}
-
-        <Link
-          href={workAccountPath(workPaths.accountRanklyProjectDetail, account).replace(
-            '[projectId]',
-            projectId,
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No audit yet. Run your first AI Search Audit to score entity,
+              content, E-E-A-T, and technical readiness for AI citations.
+            </p>
           )}
-          className="inline-block text-sm text-primary underline-offset-4 hover:underline"
-        >
-          Back to project
-        </Link>
-      </PageBody>
-    </>
+        </>
+      )}
+
+      {!jobId ? <AuditReportList reports={reports} auditPath={base} /> : null}
+    </div>
   );
 }

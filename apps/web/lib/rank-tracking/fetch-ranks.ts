@@ -2,7 +2,6 @@ import 'server-only';
 
 import { normaliseOverviewDomain } from '~/lib/site-overview/domain';
 import { countryToLocationCode } from '~/lib/clusters/utils';
-import { delay } from '~/lib/clusters/utils';
 import { dfsPost, type DfsResponse } from '~/lib/dataforseo/client';
 
 import { extractApiCost } from './cost';
@@ -76,36 +75,40 @@ export async function fetchKeywordRanksBatch(input: {
     return { results: [], apiCostUsd: 0 };
   }
 
-  const locationCode = countryToLocationCode(input.countryCode);
-  const tasks = input.keywords.map((keyword) => ({
-    keyword,
-    location_code: locationCode,
-    language_code: 'en',
-    device: input.device,
-    os: input.device === 'mobile' ? 'android' : 'windows',
-    depth: input.depth ?? 100,
-  }));
+  if (input.keywords.length !== 1) {
+    throw new Error('fetchKeywordRanksBatch accepts one keyword at a time');
+  }
 
-  const json = await dfsPost<DfsResponse>('/serp/google/organic/live/advanced', tasks);
+  const keyword = input.keywords[0]!;
+  const locationCode = countryToLocationCode(input.countryCode);
+
+  const json = await dfsPost<DfsResponse>('/serp/google/organic/live/advanced', [
+    {
+      keyword,
+      location_code: locationCode,
+      language_code: 'en',
+      device: input.device,
+      os: input.device === 'mobile' ? 'android' : 'windows',
+      depth: input.depth ?? 100,
+    },
+  ]);
   const apiCostUsd = extractApiCost(json);
   const results: SerpRankResult[] = [];
 
   for (const task of json.tasks ?? []) {
-    const keyword = String(task.data?.keyword ?? '');
+    const taskKeyword = String(task.data?.keyword ?? keyword);
     const parsed = parseKeywordRankFromSerp(
       parseSerpItems(task.result?.[0] as Record<string, unknown> | undefined),
       input.targetDomain,
     );
 
     results.push({
-      keyword,
+      keyword: taskKeyword,
       device: input.device,
       ...parsed,
       apiCostUsd: extractApiCost({ tasks: [task] }),
     });
   }
-
-  await delay(200);
 
   return { results, apiCostUsd };
 }
@@ -169,31 +172,21 @@ export async function fetchKeywordRanksFromTasks(input: {
       break;
     }
 
-    const device = input.tasks[i].device;
-    const batch: RankTask[] = [];
-    while (
-      batch.length < 5 &&
-      i < input.tasks.length &&
-      input.tasks[i].device === device
-    ) {
-      batch.push(input.tasks[i]);
-      i += 1;
-    }
+    const task = input.tasks[i]!;
+    i += 1;
 
     const { results, apiCostUsd: batchCost } = await fetchKeywordRanksBatch({
-      keywords: batch.map((row) => row.keyword),
+      keywords: [task.keyword],
       targetDomain: input.targetDomain,
       countryCode: input.countryCode,
-      device,
+      device: task.device,
     });
 
     sessionApiCostUsd += batchCost;
 
     const rows: Array<SerpRankResult & { keywordId: string }> = [];
     for (const result of results) {
-      const keywordRow = batch.find((row) => row.keyword === result.keyword);
-      if (!keywordRow) continue;
-      rows.push({ ...result, keywordId: keywordRow.keywordId });
+      rows.push({ ...result, keywordId: task.keywordId });
     }
 
     await input.onBatch({

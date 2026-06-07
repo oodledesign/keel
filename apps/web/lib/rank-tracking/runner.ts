@@ -25,7 +25,7 @@ function ranklyAdmin() {
 }
 
 const STALE_JOB_MS = 8 * 60 * 1000;
-const NUDGE_JOB_MS = 45 * 1000;
+const NUDGE_JOB_MS = 120 * 1000;
 
 export async function recoverStaleRankCheckJob(
   jobId: string,

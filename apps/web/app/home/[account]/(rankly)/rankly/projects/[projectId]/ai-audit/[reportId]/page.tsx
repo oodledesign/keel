@@ -1,12 +1,10 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-import { PageBody } from '@kit/ui/page';
-
 import pathsConfig from '~/config/paths.config';
 
 import { AuditReportView } from '../../../../../_components/ai-audit/audit-report-view';
-import { TeamAccountLayoutPageHeader } from '../../../../../../_components/team-account-layout-page-header';
+import { RanklyProjectSectionHeader } from '../../../../../_components/rankly-project-section-header';
 import { loadAuditReportBundle } from '~/lib/ai-audit/db';
 import { loadRanklyProjectForTeam } from '../../../../../../_lib/server/rankly-account-data';
 import { loadTeamWorkspace } from '../../../../../../_lib/server/team-account-workspace.loader';
@@ -39,25 +37,23 @@ export default async function RanklyAiAuditReportPage({
   if (!bundle || bundle.report.project_id !== projectId) notFound();
 
   return (
-    <>
-      <TeamAccountLayoutPageHeader
-        account={account}
+    <div className="space-y-8">
+      <RanklyProjectSectionHeader
         title="AI Search Audit report"
         description={bundle.report.target_domain}
       />
-      <PageBody className="space-y-8 bg-[var(--workspace-shell-canvas)] px-4 py-8 text-[var(--workspace-shell-text)] lg:px-6">
-        <AuditReportView
-          report={bundle.report}
-          recommendations={bundle.recommendations}
-        />
 
-        <Link
-          href={auditPath(account, projectId)}
-          className="inline-block text-sm text-primary underline-offset-4 hover:underline"
-        >
-          Back to AI Search Audit
-        </Link>
-      </PageBody>
-    </>
+      <AuditReportView
+        report={bundle.report}
+        recommendations={bundle.recommendations}
+      />
+
+      <Link
+        href={auditPath(account, projectId)}
+        className="inline-block text-sm text-primary underline-offset-4 hover:underline"
+      >
+        ← Back to AI Search Audit
+      </Link>
+    </div>
   );
 }

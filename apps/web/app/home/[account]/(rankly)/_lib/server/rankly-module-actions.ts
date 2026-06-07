@@ -47,6 +47,41 @@ function ranklyProjectDetailPath(accountSlug: string, projectId: string) {
     .replace('[projectId]', projectId);
 }
 
+function ranklyProjectSectionPath(
+  template: string,
+  accountSlug: string,
+  projectId: string,
+) {
+  return template
+    .replace('[account]', accountSlug)
+    .replace('[projectId]', projectId);
+}
+
+function revalidateRanklyProjectPaths(accountSlug: string, projectId: string) {
+  revalidatePath(ranklyProjectDetailPath(accountSlug, projectId));
+  revalidatePath(
+    ranklyProjectSectionPath(
+      pathsConfig.app.accountRanklyProjectKeywords,
+      accountSlug,
+      projectId,
+    ),
+  );
+  revalidatePath(
+    ranklyProjectSectionPath(
+      pathsConfig.app.accountRanklyProjectSiteExplorer,
+      accountSlug,
+      projectId,
+    ),
+  );
+  revalidatePath(
+    ranklyProjectSectionPath(
+      pathsConfig.app.accountRanklyProjectPagespeed,
+      accountSlug,
+      projectId,
+    ),
+  );
+}
+
 async function assertRanklyWrite(accountId: string, userId: string) {
   const client = getSupabaseServerClient() as SupabaseClient;
   const isMember = await userIsAccountMember(client, userId, accountId);
@@ -168,7 +203,7 @@ export const deleteRanklyProject = enhanceAction(
 
     revalidatePath(workPath(pathsConfig.app.accountRanklyProjects, accountSlug));
     revalidatePath(workPath(pathsConfig.app.accountRanklyDashboard, accountSlug));
-    revalidatePath(ranklyProjectDetailPath(accountSlug, input.projectId));
+    revalidateRanklyProjectPaths(accountSlug, input.projectId);
     return { ok: true as const };
   },
   { schema: deleteRanklyProjectActionSchema },
@@ -208,7 +243,7 @@ export const addRanklyKeyword = enhanceAction(
       throw new Error(error.message);
     }
 
-    revalidatePath(ranklyProjectDetailPath(accountSlug, input.projectId));
+    revalidateRanklyProjectPaths(accountSlug, input.projectId);
     revalidatePath(workPath(pathsConfig.app.accountRanklyProjects, accountSlug));
     return { ok: true as const };
   },
@@ -288,7 +323,7 @@ export const addRanklyKeywordsBulk = enhanceAction(
       throw new Error(error.message);
     }
 
-    revalidatePath(ranklyProjectDetailPath(accountSlug, input.projectId));
+    revalidateRanklyProjectPaths(accountSlug, input.projectId);
     revalidatePath(workPath(pathsConfig.app.accountRanklyProjects, accountSlug));
 
     return {
@@ -339,9 +374,7 @@ export const deleteRanklyKeyword = enhanceAction(
       throw new Error(error.message);
     }
 
-    revalidatePath(
-      ranklyProjectDetailPath(accountSlug, row.project_id as string),
-    );
+    revalidateRanklyProjectPaths(accountSlug, row.project_id as string);
     return { ok: true as const };
   },
   { schema: deleteRanklyKeywordActionSchema },
@@ -384,7 +417,7 @@ export const addPagespeedPage = enhanceAction(
       label,
     });
 
-    revalidatePath(ranklyProjectDetailPath(accountSlug, input.projectId));
+    revalidateRanklyProjectPaths(accountSlug, input.projectId);
     return { ok: true as const };
   },
   { schema: addPagespeedPageActionSchema },
@@ -422,9 +455,7 @@ export const deletePagespeedPageAction = enhanceAction(
 
     await deletePagespeedPage(input.pageId);
 
-    revalidatePath(
-      ranklyProjectDetailPath(accountSlug, page.project_id as string),
-    );
+    revalidateRanklyProjectPaths(accountSlug, page.project_id as string);
     return { ok: true as const };
   },
   { schema: deletePagespeedPageActionSchema },

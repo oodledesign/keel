@@ -1,13 +1,11 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-import { PageBody } from '@kit/ui/page';
-
 import pathsConfig from '~/config/paths.config';
 
 import { ClusterJobPoller } from '../../../../../_components/clusters/cluster-job-poller';
 import { ClusterPlanView } from '../../../../../_components/clusters/cluster-plan-view';
-import { TeamAccountLayoutPageHeader } from '../../../../../../_components/team-account-layout-page-header';
+import { RanklyProjectSectionHeader } from '../../../../../_components/rankly-project-section-header';
 import { loadClusterJobBundleForUser } from '../../../../../../_lib/server/rankly-cluster-data';
 import { loadRanklyProjectForTeam } from '../../../../../../_lib/server/rankly-account-data';
 import { loadTeamWorkspace } from '../../../../../../_lib/server/team-account-workspace.loader';
@@ -54,33 +52,31 @@ export default async function RanklyClusterJobPage({
     .replace('[projectId]', projectId)}/new`;
 
   return (
-    <>
-      <TeamAccountLayoutPageHeader
-        account={account}
+    <div className="space-y-8">
+      <RanklyProjectSectionHeader
         title={isDone ? 'Cluster plan' : 'Building cluster plan'}
-        description={`${project.name} · ${job.seeds.length} seeds`}
+        description={`${job.seeds.length} seed keywords`}
       />
-      <PageBody className="space-y-8 bg-[var(--workspace-shell-canvas)] px-4 py-8 text-[var(--workspace-shell-text)] lg:px-6">
-        {!isDone ? (
-          <ClusterJobPoller jobId={jobId} />
-        ) : (
-          <ClusterPlanView
-            job={job}
-            clusters={clusters}
-            qualityGates={qualityGates}
-            links={links}
-            clusterNameById={clusterNameById}
-            briefNewPath={briefNewPath}
-          />
-        )}
 
-        <Link
-          href={clustersPath(account, projectId)}
-          className="inline-block text-sm text-primary underline-offset-4 hover:underline"
-        >
-          Back to cluster plans
-        </Link>
-      </PageBody>
-    </>
+      {!isDone ? (
+        <ClusterJobPoller jobId={jobId} />
+      ) : (
+        <ClusterPlanView
+          job={job}
+          clusters={clusters}
+          qualityGates={qualityGates}
+          links={links}
+          clusterNameById={clusterNameById}
+          briefNewPath={briefNewPath}
+        />
+      )}
+
+      <Link
+        href={clustersPath(account, projectId)}
+        className="inline-block text-sm text-primary underline-offset-4 hover:underline"
+      >
+        ← Back to cluster plans
+      </Link>
+    </div>
   );
 }

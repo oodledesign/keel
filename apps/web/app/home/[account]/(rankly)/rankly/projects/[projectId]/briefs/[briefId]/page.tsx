@@ -1,12 +1,10 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-import { PageBody } from '@kit/ui/page';
-
 import pathsConfig from '~/config/paths.config';
 
 import { BriefView } from '../../../../../_components/briefs/brief-view';
-import { TeamAccountLayoutPageHeader } from '../../../../../../_components/team-account-layout-page-header';
+import { RanklyProjectSectionHeader } from '../../../../../_components/rankly-project-section-header';
 import { loadRanklyProjectForTeam } from '../../../../../../_lib/server/rankly-account-data';
 import { loadTeamWorkspace } from '../../../../../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../../../../../_lib/server/workspace-route-guard';
@@ -39,22 +37,20 @@ export default async function RanklyBriefDetailPage({
   if (!brief || brief.project_id !== projectId) notFound();
 
   return (
-    <>
-      <TeamAccountLayoutPageHeader
-        account={account}
+    <div className="space-y-8">
+      <RanklyProjectSectionHeader
         title="Content brief"
         description={brief.target_keyword}
       />
-      <PageBody className="space-y-8 bg-[var(--workspace-shell-canvas)] px-4 py-8 text-[var(--workspace-shell-text)] lg:px-6">
-        <BriefView brief={brief} />
 
-        <Link
-          href={briefsPath(account, projectId)}
-          className="inline-block text-sm text-primary underline-offset-4 hover:underline"
-        >
-          Back to briefs
-        </Link>
-      </PageBody>
-    </>
+      <BriefView brief={brief} />
+
+      <Link
+        href={briefsPath(account, projectId)}
+        className="inline-block text-sm text-primary underline-offset-4 hover:underline"
+      >
+        ← Back to briefs
+      </Link>
+    </div>
   );
 }

@@ -81,6 +81,12 @@ export async function dfsPost<T = DfsResponse>(
   path: string,
   body: unknown[],
 ): Promise<T> {
+  if (isDfsLivePath(path) && body.length !== 1) {
+    throw new Error(
+      `DataForSEO live endpoint ${path} accepts exactly one task per request (got ${body.length})`,
+    );
+  }
+
   if (!isDfsLivePath(path)) {
     return dfsPostImmediate<T>(path, body);
   }

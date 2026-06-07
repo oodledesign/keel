@@ -1,19 +1,14 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-import { PageBody } from '@kit/ui/page';
-
 import pathsConfig from '~/config/paths.config';
 
 import { ClusterForm } from '../../../../_components/clusters/cluster-form';
-import { TeamAccountLayoutPageHeader } from '../../../../../_components/team-account-layout-page-header';
+import { RanklyProjectSectionHeader } from '../../../../_components/rankly-project-section-header';
 import { loadClusterJobsForProject } from '../../../../../_lib/server/rankly-cluster-data';
-import {
-  loadRanklyProjectForTeam,
-} from '../../../../../_lib/server/rankly-account-data';
+import { loadRanklyProjectForTeam } from '../../../../../_lib/server/rankly-account-data';
 import { loadTeamWorkspace } from '../../../../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../../../../_lib/server/workspace-route-guard';
-import { workAccountPath, workPaths } from '../../../../../_lib/work-account-path';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 type RanklyProjectClustersPageProps = {
@@ -65,85 +60,73 @@ export default async function RanklyProjectClustersPage({
   const clustersPath = clustersBasePath(account, projectId);
 
   return (
-    <>
-      <TeamAccountLayoutPageHeader
-        account={account}
+    <div className="space-y-8">
+      <RanklyProjectSectionHeader
         title="Keyword clusters"
-        description={`${project.name} · pillar + spoke content architecture`}
+        description="Expand seed keywords into a pillar + spokes content plan using SERP overlap clustering."
       />
-      <PageBody className="space-y-8 bg-[var(--workspace-shell-canvas)] px-4 py-8 text-[var(--workspace-shell-text)] lg:px-6">
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold">New cluster plan</h2>
-          <ClusterForm
-            accountId={accountId}
-            projectId={projectId}
-            clustersPath={clustersPath}
-          />
-        </section>
 
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold">Previous plans</h2>
-          {jobs.length === 0 ? (
-            <p className="text-muted-foreground rounded-lg border border-white/10 bg-black/10 px-4 py-6 text-sm">
-              No cluster plans yet. Enter seed keywords above to generate a
-              pillar + spokes architecture.
-            </p>
-          ) : (
-            <div className="overflow-x-auto rounded-lg border border-white/10">
-              <table className="w-full min-w-[36rem] text-left text-sm">
-                <thead className="border-b border-white/10 bg-black/20 text-xs uppercase tracking-wide text-muted-foreground">
-                  <tr>
-                    <th className="px-4 py-3">Seeds</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Country</th>
-                    <th className="px-4 py-3">Created</th>
-                    <th className="px-4 py-3 text-right"> </th>
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold">New cluster plan</h2>
+        <ClusterForm
+          accountId={accountId}
+          projectId={projectId}
+          clustersPath={clustersPath}
+        />
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold">Previous plans</h2>
+        {jobs.length === 0 ? (
+          <p className="text-muted-foreground rounded-lg border border-white/10 bg-black/10 px-4 py-6 text-sm">
+            No cluster plans yet. Enter seed keywords above to generate a
+            pillar + spokes architecture.
+          </p>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-white/10">
+            <table className="w-full min-w-[36rem] text-left text-sm">
+              <thead className="border-b border-white/10 bg-black/20 text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3">Seeds</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Country</th>
+                  <th className="px-4 py-3">Created</th>
+                  <th className="px-4 py-3 text-right"> </th>
+                </tr>
+              </thead>
+              <tbody>
+                {jobs.map((job) => (
+                  <tr
+                    key={job.id}
+                    className="border-b border-white/5 last:border-0"
+                  >
+                    <td className="max-w-xs truncate px-4 py-3">
+                      {job.seeds.join(', ')}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {STATUS_LABELS[job.status] ?? job.status}
+                    </td>
+                    <td className="px-4 py-3 uppercase text-muted-foreground">
+                      {job.country}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {new Date(job.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <Link
+                        href={clusterJobPath(account, projectId, job.id)}
+                        className="text-primary underline-offset-4 hover:underline"
+                      >
+                        View
+                      </Link>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {jobs.map((job) => (
-                    <tr
-                      key={job.id}
-                      className="border-b border-white/5 last:border-0"
-                    >
-                      <td className="max-w-xs truncate px-4 py-3">
-                        {job.seeds.join(', ')}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {STATUS_LABELS[job.status] ?? job.status}
-                      </td>
-                      <td className="px-4 py-3 uppercase text-muted-foreground">
-                        {job.country}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {new Date(job.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <Link
-                          href={clusterJobPath(account, projectId, job.id)}
-                          className="text-primary underline-offset-4 hover:underline"
-                        >
-                          View
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-
-        <Link
-          href={workAccountPath(workPaths.accountRanklyProjectDetail, account).replace(
-            '[projectId]',
-            projectId,
-          )}
-          className="inline-block text-sm text-primary underline-offset-4 hover:underline"
-        >
-          Back to project
-        </Link>
-      </PageBody>
-    </>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </div>
   );
 }

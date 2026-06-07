@@ -21,18 +21,17 @@ export async function fetchSerpsForKeywords(
   const locationCode = countryToLocationCode(country);
   const cache: SerpCache = {};
 
-  for (let i = 0; i < keywords.length; i += 5) {
-    const batch = keywords.slice(i, i + 5);
-    const tasks = batch.map((keyword) => ({
-      keyword,
-      location_code: locationCode,
-      language_code: 'en',
-      device: 'desktop',
-      os: 'windows',
-      depth: 10,
-    }));
-
-    const results = await dfsPost('/serp/google/organic/live/advanced', tasks);
+  for (const keyword of keywords) {
+    const results = await dfsPost('/serp/google/organic/live/advanced', [
+      {
+        keyword,
+        location_code: locationCode,
+        language_code: 'en',
+        device: 'desktop',
+        os: 'windows',
+        depth: 10,
+      },
+    ]);
 
     for (const task of results.tasks ?? []) {
       const kw = task.data?.keyword as string | undefined;
