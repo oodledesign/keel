@@ -5,12 +5,20 @@ import { cache } from 'react';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
+import type { RanklyClientImportOption } from '~/lib/rankly/client-import';
+import {
+  buildRanklyClientImportOptions,
+  buildRanklyImportSeedForClient,
+} from '~/lib/rankly/client-import';
+
+export type { RanklyClientImportOption };
 
 export type RanklyProjectRow = {
   id: string;
   name: string;
   domain: string;
   locale: string | null;
+  client_id: string | null;
   created_at: string;
 };
 
@@ -37,7 +45,7 @@ export const loadRanklyProjectsForTeam = cache(
     const client = getSupabaseServerClient();
     const { data, error } = await supabaseCustomSchema(client, 'rankly')
       .from('projects')
-      .select('id, name, domain, locale, created_at')
+      .select('id, name, domain, locale, client_id, created_at')
       .eq('account_id', accountId)
       .order('created_at', { ascending: false });
 
@@ -130,7 +138,7 @@ export const loadRanklyProjectForTeam = cache(
     const client = getSupabaseServerClient();
     const { data, error } = await supabaseCustomSchema(client, 'rankly')
       .from('projects')
-      .select('id, name, domain, locale, created_at')
+      .select('id, name, domain, locale, client_id, created_at')
       .eq('id', projectId)
       .eq('account_id', accountId)
       .maybeSingle();
@@ -197,5 +205,45 @@ export const loadRanklyKeywordCountsByProject = cache(
       counts[pid] = (counts[pid] ?? 0) + 1;
     }
     return counts;
+  },
+);
+
+export const loadRanklyClientImportOptions = cache(
+  async (accountId: string): Promise<RanklyClientImportOption[]> => {
+    const client = getSupabaseServerClient();
+    return buildRanklyClientImportOptions(client, accountId);
+  },
+);
+
+export const loadRanklyImportSeedForClient = cache(
+  async (
+    accountId: string,
+    clientId: string,
+  ): Promise<RanklyClientImportOption | null> => {
+    const client = getSupabaseServerClient();
+    return buildRanklyImportSeedForClient(client, accountId, clientId);
+  },
+);
+
+export const loadRanklyProjectForClient = cache(
+  async (
+    accountId: string,
+    clientId: string,
+  ): Promise<RanklyProjectRow | null> => {
+    const client = getSupabaseServerClient();
+    const { data, error } = await supabaseCustomSchema(client, 'rankly')
+      .from('projects')
+      .select('id, name, domain, locale, client_id, created_at')
+      .eq('account_id', accountId)
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[rankly] project for client', error.message);
+      return null;
+    }
+    return data as RanklyProjectRow | null;
   },
 );

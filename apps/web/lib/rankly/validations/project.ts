@@ -10,6 +10,7 @@ export const createProjectSchema = z.object({
   target_language: z.string().min(2).max(16).default('en'),
   track_desktop: z.boolean().optional().default(true),
   track_mobile: z.boolean().optional().default(true),
+  client_id: z.string().uuid().optional().nullable(),
 });
 
 export const patchProjectSchema = createProjectSchema

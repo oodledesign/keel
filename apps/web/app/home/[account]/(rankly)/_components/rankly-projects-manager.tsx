@@ -5,18 +5,15 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { Button } from '@kit/ui/button';
-import { Input } from '@kit/ui/input';
-import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
+import type { RanklyClientImportOption } from '~/home/[account]/_lib/server/rankly-account-data';
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 
 import type { RanklyProjectRow } from '../../_lib/server/rankly-account-data';
-import {
-  createRanklyProject,
-  deleteRanklyProject,
-} from '../_lib/server/rankly-module-actions';
+import { deleteRanklyProject } from '../_lib/server/rankly-module-actions';
+import { RanklyProjectForm } from './rankly-project-form';
 
 function projectHref(accountSlug: string, projectId: string) {
   return pathsConfig.app.accountRanklyProjectDetail
@@ -29,42 +26,12 @@ export function RanklyProjectsManager(props: {
   accountId: string;
   projects: RanklyProjectRow[];
   keywordCounts: Record<string, number>;
+  clientImportOptions: RanklyClientImportOption[];
+  clientLabels: Record<string, string>;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState('');
-  const [domain, setDomain] = useState('');
-  const [busy, setBusy] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !domain.trim()) {
-      toast.error('Name and domain are required');
-      return;
-    }
-    setBusy(true);
-    try {
-      await createRanklyProject({
-        accountId: props.accountId,
-        name: name.trim(),
-        domain: domain.trim(),
-        target_country: 'US',
-        target_language: 'en',
-        track_desktop: true,
-        track_mobile: true,
-      });
-      toast.success('Project created');
-      setName('');
-      setDomain('');
-      setOpen(false);
-      router.refresh();
-    } catch (err) {
-      toast.error(getErrorMessage(err));
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const remove = async (projectId: string) => {
     if (
@@ -93,46 +60,25 @@ export function RanklyProjectsManager(props: {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-muted-foreground max-w-xl text-sm">
-          Track domains and keyword sets. Open a project to add keywords.
+          Track domains and keyword sets. Link projects to clients or create one
+          for your own business.
         </p>
         <Button
           type="button"
           variant={open ? 'secondary' : 'default'}
-          onClick={() => setOpen((v) => !v)}
+          onClick={() => setOpen((value) => !value)}
         >
           {open ? 'Cancel' : 'New project'}
         </Button>
       </div>
 
       {open ? (
-        <form
-          onSubmit={submit}
-          className="max-w-md space-y-4 rounded-lg border border-white/10 bg-black/10 p-4"
-        >
-          <div className="space-y-2">
-            <Label htmlFor="rankly-project-name">Name</Label>
-            <Input
-              id="rankly-project-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Acme SEO"
-              autoComplete="off"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="rankly-project-domain">Domain</Label>
-            <Input
-              id="rankly-project-domain"
-              value={domain}
-              onChange={(e) => setDomain(e.target.value)}
-              placeholder="example.com"
-              autoComplete="off"
-            />
-          </div>
-          <Button type="submit" disabled={busy}>
-            {busy ? 'Saving…' : 'Create project'}
-          </Button>
-        </form>
+        <RanklyProjectForm
+          accountId={props.accountId}
+          clientImportOptions={props.clientImportOptions}
+          onCreated={() => setOpen(false)}
+          onCancel={() => setOpen(false)}
+        />
       ) : null}
 
       {props.projects.length === 0 && !open ? (
@@ -143,32 +89,40 @@ export function RanklyProjectsManager(props: {
 
       {props.projects.length > 0 ? (
         <div className="overflow-x-auto rounded-lg border border-white/10">
-          <table className="w-full min-w-[36rem] text-left text-sm">
+          <table className="w-full min-w-[40rem] text-left text-sm">
             <thead className="border-b border-white/10 bg-black/20 text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">Domain</th>
+                <th className="px-4 py-3">Client</th>
                 <th className="px-4 py-3">Keywords</th>
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {props.projects.map((p) => (
+              {props.projects.map((project) => (
                 <tr
-                  key={p.id}
+                  key={project.id}
                   className="border-b border-white/5 last:border-0"
                 >
                   <td className="px-4 py-3">
                     <Link
-                      href={projectHref(props.accountSlug, p.id)}
+                      href={projectHref(props.accountSlug, project.id)}
                       className="font-medium text-primary underline-offset-4 hover:underline"
                     >
-                      {p.name}
+                      {project.name}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">{p.domain}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {project.domain}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {project.client_id
+                      ? (props.clientLabels[project.client_id] ?? '—')
+                      : '—'}
+                  </td>
                   <td className="px-4 py-3">
-                    {props.keywordCounts[p.id] ?? 0}
+                    {props.keywordCounts[project.id] ?? 0}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <Button
@@ -176,10 +130,10 @@ export function RanklyProjectsManager(props: {
                       variant="ghost"
                       size="sm"
                       className="text-destructive"
-                      disabled={deletingId === p.id}
-                      onClick={() => remove(p.id)}
+                      disabled={deletingId === project.id}
+                      onClick={() => remove(project.id)}
                     >
-                      {deletingId === p.id ? 'Deleting…' : 'Delete'}
+                      {deletingId === project.id ? 'Deleting…' : 'Delete'}
                     </Button>
                   </td>
                 </tr>

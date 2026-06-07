@@ -89,6 +89,7 @@ export const createRanklyProject = enhanceAction(
         target_language: input.target_language,
         track_desktop: input.track_desktop,
         track_mobile: input.track_mobile,
+        client_id: input.clientId ?? null,
       });
 
     if (error) {
@@ -97,6 +98,11 @@ export const createRanklyProject = enhanceAction(
 
     revalidatePath(workPath(pathsConfig.app.accountRanklyProjects, accountSlug));
     revalidatePath(workPath(pathsConfig.app.accountRanklyDashboard, accountSlug));
+    if (input.clientId) {
+      revalidatePath(
+        `/app/work/${accountSlug}/clients/${input.clientId}`,
+      );
+    }
     return { ok: true as const };
   },
   { schema: createRanklyProjectActionSchema },

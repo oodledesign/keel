@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation';
 import type { LinkOption, NoteListItem, WorkspaceNotesVariant } from '../../_lib/workspace-content/types';
 import type { LinkValue } from '../../_components/workspace-content/link-to-select';
 import type { DocListItem } from '../../_lib/workspace-content/types';
+import type {
+  RanklyClientImportOption,
+  RanklyProjectRow,
+} from '../../_lib/server/rankly-account-data';
 import { ClientDetailSidebar } from './client-detail-sidebar';
 
 type Props = {
@@ -21,6 +25,10 @@ type Props = {
   linkOptions: LinkOption[];
   defaultLink: LinkValue;
   notesVariant: WorkspaceNotesVariant;
+  ranklyEnabled?: boolean;
+  ranklyProject?: RanklyProjectRow | null;
+  ranklyImportSeed?: RanklyClientImportOption | null;
+  ranklyClientImportOptions?: RanklyClientImportOption[];
 };
 
 export function ClientDetailPageContent({
@@ -37,6 +45,10 @@ export function ClientDetailPageContent({
   linkOptions,
   defaultLink,
   notesVariant,
+  ranklyEnabled = false,
+  ranklyProject = null,
+  ranklyImportSeed = null,
+  ranklyClientImportOptions = [],
 }: Props) {
   const router = useRouter();
 
@@ -60,6 +72,10 @@ export function ClientDetailPageContent({
       linkOptions={linkOptions}
       defaultLink={defaultLink}
       notesVariant={notesVariant}
+      ranklyEnabled={ranklyEnabled}
+      ranklyProject={ranklyProject}
+      ranklyImportSeed={ranklyImportSeed}
+      ranklyClientImportOptions={ranklyClientImportOptions}
     />
   );
 }

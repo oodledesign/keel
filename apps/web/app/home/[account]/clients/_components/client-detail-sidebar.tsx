@@ -32,7 +32,13 @@ import type {
   WorkspaceNotesVariant,
 } from '../../_lib/workspace-content/types';
 import { ClientNotesBlock } from './client-notes-block';
+import { ClientRanklyBlock } from './client-rankly-block';
 import { ClientTasksBlock } from './client-tasks-block';
+
+import type {
+  RanklyClientImportOption,
+  RanklyProjectRow,
+} from '../../_lib/server/rankly-account-data';
 
 import pathsConfig from '~/config/paths.config';
 
@@ -99,6 +105,10 @@ export function ClientDetailSidebar({
   linkOptions,
   defaultLink,
   notesVariant = 'work',
+  ranklyEnabled = false,
+  ranklyProject = null,
+  ranklyImportSeed = null,
+  ranklyClientImportOptions = [],
 }: {
   accountSlug: string;
   accountId: string;
@@ -117,6 +127,10 @@ export function ClientDetailSidebar({
   linkOptions?: LinkOption[];
   defaultLink?: LinkValue;
   notesVariant?: WorkspaceNotesVariant;
+  ranklyEnabled?: boolean;
+  ranklyProject?: RanklyProjectRow | null;
+  ranklyImportSeed?: RanklyClientImportOption | null;
+  ranklyClientImportOptions?: RanklyClientImportOption[];
 }) {
   const [client, setClient] = useState<Client | null>(null);
   const [jobs, setJobs] = useState<ClientJobSummary[]>([]);
@@ -346,6 +360,17 @@ export function ClientDetailSidebar({
                 )}
               </>
             )}
+
+            {ranklyEnabled ? (
+              <ClientRanklyBlock
+                accountSlug={accountSlug}
+                accountId={accountId}
+                clientId={client.id}
+                project={ranklyProject}
+                importSeed={ranklyImportSeed}
+                clientImportOptions={ranklyClientImportOptions}
+              />
+            ) : null}
 
             <div className="mt-4">
               <div className="mt-3">

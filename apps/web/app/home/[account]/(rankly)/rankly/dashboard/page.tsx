@@ -4,10 +4,12 @@ import { PageBody } from '@kit/ui/page';
 
 import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
 import { ModuleDataSection } from '../../../_components/module-data-section';
+import { RanklyDashboardProjectsPanel } from '../../_components/rankly-dashboard-projects-panel';
 import {
-  loadRanklyAlertsForTeam,
+  loadRanklyClientImportOptions,
   loadRanklyKeywordCountsByProject,
   loadRanklyProjectsForTeam,
+  loadRanklyAlertsForTeam,
 } from '../../../_lib/server/rankly-account-data';
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard';
@@ -27,11 +29,17 @@ export default async function RanklyDashboardPage({
   redirectIfSpaceNotIn(workspace, account, ['work']);
 
   const accountId = workspace.account.id as string;
-  const [projects, keywordCounts, alerts] = await Promise.all([
-    loadRanklyProjectsForTeam(accountId),
-    loadRanklyKeywordCountsByProject(accountId),
-    loadRanklyAlertsForTeam(accountId),
-  ]);
+  const [projects, keywordCounts, alerts, clientImportOptions] =
+    await Promise.all([
+      loadRanklyProjectsForTeam(accountId),
+      loadRanklyKeywordCountsByProject(accountId),
+      loadRanklyAlertsForTeam(accountId),
+      loadRanklyClientImportOptions(accountId),
+    ]);
+
+  const clientLabels = Object.fromEntries(
+    clientImportOptions.map((option) => [option.clientId, option.label]),
+  );
 
   const keywordTotal = Object.values(keywordCounts).reduce((a, b) => a + b, 0);
   const activeAlerts = alerts.filter((a) => a.is_active).length;
@@ -68,30 +76,15 @@ export default async function RanklyDashboardPage({
           </div>
         </div>
 
-        <ModuleDataSection title="Recent projects">
-          {projects.length === 0 ? (
-            <p className="text-muted-foreground rounded-lg border border-white/10 bg-black/10 px-4 py-6 text-sm">
-              No projects yet. Create one via the Rankly API or seed{' '}
-              <code className="text-xs">rankly.projects</code> for this account.
-            </p>
-          ) : (
-            <ul className="divide-y divide-white/10 rounded-lg border border-white/10">
-              {projects.slice(0, 6).map((p) => (
-                <li
-                  key={p.id}
-                  className="flex flex-wrap items-baseline justify-between gap-2 px-4 py-3"
-                >
-                  <div>
-                    <p className="font-medium">{p.name}</p>
-                    <p className="text-muted-foreground text-sm">{p.domain}</p>
-                  </div>
-                  <p className="text-muted-foreground text-xs">
-                    {keywordCounts[p.id] ?? 0} keywords
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
+        <ModuleDataSection title="Projects">
+          <RanklyDashboardProjectsPanel
+            accountSlug={account}
+            accountId={accountId}
+            clientImportOptions={clientImportOptions}
+            projects={projects}
+            keywordCounts={keywordCounts}
+            clientLabels={clientLabels}
+          />
         </ModuleDataSection>
 
         <div className="flex flex-wrap gap-3 text-sm">

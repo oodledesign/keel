@@ -8,6 +8,11 @@ import { getTeamAccountAccess } from '../../_lib/role-access';
 import { isWorkModuleEnabled } from '../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
 import {
+  loadRanklyClientImportOptions,
+  loadRanklyImportSeedForClient,
+  loadRanklyProjectForClient,
+} from '../../_lib/server/rankly-account-data';
+import {
   BUSINESS_WORKSPACE_SPACE_TYPES,
   redirectIfSpaceNotIn,
 } from '../../_lib/server/workspace-route-guard';
@@ -67,6 +72,16 @@ export default async function ClientDetailPage({ params }: Props) {
     scope: { clientOrgId: clientId },
   });
 
+  const ranklyEnabled = isWorkModuleEnabled(workspace.moduleSettings, 'rankly');
+  const [ranklyProject, ranklyImportSeed, ranklyClientImportOptions] =
+    ranklyEnabled
+      ? await Promise.all([
+          loadRanklyProjectForClient(accountId, clientId),
+          loadRanklyImportSeedForClient(accountId, clientId),
+          loadRanklyClientImportOptions(accountId),
+        ])
+      : [null, null, []];
+
   return (
     <PageBody className="flex flex-col bg-[var(--workspace-shell-canvas)] p-4 md:p-6">
       <ClientDetailPageNav
@@ -88,6 +103,10 @@ export default async function ClientDetailPage({ params }: Props) {
           linkOptions={workspaceContent.linkOptions}
           defaultLink={workspaceContent.defaultLink}
           notesVariant={notesVariantFromProfile(workspaceContent.profile)}
+          ranklyEnabled={ranklyEnabled}
+          ranklyProject={ranklyProject}
+          ranklyImportSeed={ranklyImportSeed}
+          ranklyClientImportOptions={ranklyClientImportOptions}
         />
       </div>
     </PageBody>

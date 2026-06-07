@@ -6,6 +6,7 @@ import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-l
 import { ModuleDataSection } from '../../../_components/module-data-section';
 import { RanklyProjectsManager } from '../../_components/rankly-projects-manager';
 import {
+  loadRanklyClientImportOptions,
   loadRanklyKeywordCountsByProject,
   loadRanklyProjectsForTeam,
 } from '../../../_lib/server/rankly-account-data';
@@ -27,10 +28,15 @@ export default async function RanklyProjectsPage({
   redirectIfSpaceNotIn(workspace, account, ['work']);
 
   const accountId = workspace.account.id as string;
-  const [projects, keywordCounts] = await Promise.all([
+  const [projects, keywordCounts, clientImportOptions] = await Promise.all([
     loadRanklyProjectsForTeam(accountId),
     loadRanklyKeywordCountsByProject(accountId),
+    loadRanklyClientImportOptions(accountId),
   ]);
+
+  const clientLabels = Object.fromEntries(
+    clientImportOptions.map((option) => [option.clientId, option.label]),
+  );
 
   return (
     <>
@@ -46,6 +52,8 @@ export default async function RanklyProjectsPage({
             accountId={accountId}
             projects={projects}
             keywordCounts={keywordCounts}
+            clientImportOptions={clientImportOptions}
+            clientLabels={clientLabels}
           />
         </ModuleDataSection>
 
