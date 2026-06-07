@@ -7,6 +7,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { runClusterJob } from '~/lib/clusters/runner';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
+import { userIsAccountMember } from '~/lib/rankly/account-membership';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 export const runtime = 'nodejs';
@@ -27,14 +28,9 @@ async function assertProjectAccess(
   projectId: string,
   accountId: string,
 ) {
-  const { data: membership } = await client
-    .from('accounts_memberships')
-    .select('id')
-    .eq('account_id', accountId)
-    .eq('user_id', userId)
-    .maybeSingle();
+  const isMember = await userIsAccountMember(client, userId, accountId);
 
-  if (!membership) {
+  if (!isMember) {
     return jsonErr('FORBIDDEN', 'Not a member of this account', 403);
   }
 

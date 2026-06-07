@@ -13,6 +13,7 @@ import {
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard';
 import { workAccountPath, workPaths } from '../../../_lib/work-account-path';
+import pathsConfig from '~/config/paths.config';
 
 type RanklyProjectsPageProps = {
   params: Promise<{
@@ -38,6 +39,11 @@ export default async function RanklyProjectsPage({
     clientImportOptions.map((option) => [option.clientId, option.label]),
   );
 
+  const clientsHref = pathsConfig.app.accountClients.replace(
+    '[account]',
+    account,
+  );
+
   return (
     <>
       <TeamAccountLayoutPageHeader
@@ -50,6 +56,7 @@ export default async function RanklyProjectsPage({
           <RanklyProjectsManager
             accountSlug={account}
             accountId={accountId}
+            clientsHref={clientsHref}
             projects={projects}
             keywordCounts={keywordCounts}
             clientImportOptions={clientImportOptions}

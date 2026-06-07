@@ -14,6 +14,7 @@ import {
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard';
 import { workAccountPath, workPaths } from '../../../_lib/work-account-path';
+import pathsConfig from '~/config/paths.config';
 
 type RanklyDashboardPageProps = {
   params: Promise<{
@@ -43,6 +44,11 @@ export default async function RanklyDashboardPage({
 
   const keywordTotal = Object.values(keywordCounts).reduce((a, b) => a + b, 0);
   const activeAlerts = alerts.filter((a) => a.is_active).length;
+
+  const clientsHref = pathsConfig.app.accountClients.replace(
+    '[account]',
+    account,
+  );
 
   return (
     <>
@@ -80,6 +86,7 @@ export default async function RanklyDashboardPage({
           <RanklyDashboardProjectsPanel
             accountSlug={account}
             accountId={accountId}
+            clientsHref={clientsHref}
             clientImportOptions={clientImportOptions}
             projects={projects}
             keywordCounts={keywordCounts}

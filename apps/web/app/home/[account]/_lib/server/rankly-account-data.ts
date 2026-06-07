@@ -4,6 +4,8 @@ import { cache } from 'react';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { createClientsService } from '../../clients/_lib/server/clients.service';
+import { createWebsitesService } from '../../websites/_lib/server/websites.service';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 import type { RanklyClientImportOption } from '~/lib/rankly/client-import';
 import {
@@ -211,7 +213,47 @@ export const loadRanklyKeywordCountsByProject = cache(
 export const loadRanklyClientImportOptions = cache(
   async (accountId: string): Promise<RanklyClientImportOption[]> => {
     const client = getSupabaseServerClient();
-    return buildRanklyClientImportOptions(client, accountId);
+
+    try {
+      const clientsService = createClientsService(client);
+      const { data: clients } = await clientsService.listClients({
+        accountId,
+        page: 1,
+        pageSize: 500,
+      });
+
+      if (!clients?.length) {
+        return [];
+      }
+
+      let websites: Array<{
+        domain: string | null;
+        clientOrgId: string | null;
+        linkedClientId: string | null;
+      }> = [];
+
+      try {
+        const websitesService = createWebsitesService(client);
+        const rows = await websitesService.listWebsites({ accountId });
+        websites = rows.map((row) => ({
+          domain: row.domain,
+          clientOrgId: row.clientOrgId,
+          linkedClientId: row.linkedClientId,
+        }));
+      } catch (err) {
+        console.error('[rankly] websites for client import', err);
+      }
+
+      return buildRanklyClientImportOptions(
+        client,
+        accountId,
+        clients,
+        websites,
+      );
+    } catch (err) {
+      console.error('[rankly] client import options', err);
+      return [];
+    }
   },
 );
 
@@ -220,8 +262,8 @@ export const loadRanklyImportSeedForClient = cache(
     accountId: string,
     clientId: string,
   ): Promise<RanklyClientImportOption | null> => {
-    const client = getSupabaseServerClient();
-    return buildRanklyImportSeedForClient(client, accountId, clientId);
+    const options = await loadRanklyClientImportOptions(accountId);
+    return options.find((option) => option.clientId === clientId) ?? null;
   },
 );
 

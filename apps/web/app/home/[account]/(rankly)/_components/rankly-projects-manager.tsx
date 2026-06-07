@@ -24,6 +24,7 @@ function projectHref(accountSlug: string, projectId: string) {
 export function RanklyProjectsManager(props: {
   accountSlug: string;
   accountId: string;
+  clientsHref: string;
   projects: RanklyProjectRow[];
   keywordCounts: Record<string, number>;
   clientImportOptions: RanklyClientImportOption[];
@@ -76,6 +77,7 @@ export function RanklyProjectsManager(props: {
         <RanklyProjectForm
           accountId={props.accountId}
           clientImportOptions={props.clientImportOptions}
+          clientsHref={props.clientsHref}
           onCreated={() => setOpen(false)}
           onCancel={() => setOpen(false)}
         />

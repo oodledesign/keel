@@ -9,6 +9,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import pathsConfig from '~/config/paths.config';
 import { isWorkModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
+import { userIsAccountMember } from '~/lib/rankly/account-membership';
 
 import {
   addRanklyKeywordActionSchema,
@@ -33,14 +34,9 @@ function ranklyProjectDetailPath(accountSlug: string, projectId: string) {
 
 async function assertRanklyWrite(accountId: string, userId: string) {
   const client = getSupabaseServerClient() as SupabaseClient;
-  const { data: membership } = await client
-    .from('accounts_memberships')
-    .select('id')
-    .eq('account_id', accountId)
-    .eq('user_id', userId)
-    .maybeSingle();
+  const isMember = await userIsAccountMember(client, userId, accountId);
 
-  if (!membership) {
+  if (!isMember) {
     throw new Error('You do not have access to this account');
   }
 

@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
+import { userIsAccountMember } from '~/lib/rankly/account-membership';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 import { createProjectSchema } from '~/lib/rankly/validations/project';
 
@@ -30,14 +31,13 @@ export async function GET(request: NextRequest) {
 
     const account_id = parsedId.data;
 
-    const { data: membership } = await client
-      .from('accounts_memberships')
-      .select('id')
-      .eq('account_id', account_id)
-      .eq('user_id', sessionData.user.id)
-      .maybeSingle();
+    const isMember = await userIsAccountMember(
+      client,
+      sessionData.user.id,
+      account_id,
+    );
 
-    if (!membership) {
+    if (!isMember) {
       return jsonErr('FORBIDDEN', 'Not a member of this account', 403);
     }
 
@@ -76,14 +76,9 @@ export async function POST(request: Request) {
 
     const { account_id, ...rest } = parsed.data;
 
-    const { data: membership } = await client
-      .from('accounts_memberships')
-      .select('id')
-      .eq('account_id', account_id)
-      .eq('user_id', user.id)
-      .maybeSingle();
+    const isMember = await userIsAccountMember(client, user.id, account_id);
 
-    if (!membership) {
+    if (!isMember) {
       return jsonErr('FORBIDDEN', 'Not a member of this account', 403);
     }
 

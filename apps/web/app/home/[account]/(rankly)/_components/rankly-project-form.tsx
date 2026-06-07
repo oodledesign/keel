@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -18,6 +19,7 @@ type CreateMode = 'manual' | 'import';
 export function RanklyProjectForm(props: {
   accountId: string;
   clientImportOptions: RanklyClientImportOption[];
+  clientsHref?: string;
   defaultClientId?: string;
   defaultOpen?: boolean;
   onCreated?: () => void;
@@ -25,7 +27,7 @@ export function RanklyProjectForm(props: {
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<CreateMode>(
-    props.defaultClientId || props.clientImportOptions.length ? 'import' : 'manual',
+    props.defaultClientId ? 'import' : 'manual',
   );
   const [selectedClientId, setSelectedClientId] = useState(
     props.defaultClientId ?? '',
@@ -88,68 +90,94 @@ export function RanklyProjectForm(props: {
     }
   };
 
-  const hasImportOptions = props.clientImportOptions.length > 0;
+  const hasClients = props.clientImportOptions.length > 0;
 
   return (
     <form
       onSubmit={submit}
       className="max-w-lg space-y-4 rounded-lg border border-white/10 bg-black/10 p-4"
     >
-      {hasImportOptions ? (
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setMode('manual')}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium ${
-              mode === 'manual'
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-black/30 text-muted-foreground'
-            }`}
-          >
-            Manual
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode('import')}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium ${
-              mode === 'import'
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-black/30 text-muted-foreground'
-            }`}
-          >
-            Import from client
-          </button>
-        </div>
-      ) : null}
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setMode('manual')}
+          className={`rounded-md px-3 py-1.5 text-xs font-medium ${
+            mode === 'manual'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-black/30 text-muted-foreground'
+          }`}
+        >
+          Manual
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode('import')}
+          className={`rounded-md px-3 py-1.5 text-xs font-medium ${
+            mode === 'import'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-black/30 text-muted-foreground'
+          }`}
+        >
+          Import from client
+        </button>
+      </div>
 
-      {mode === 'import' && hasImportOptions ? (
+      {mode === 'import' ? (
         <div className="space-y-2">
           <Label htmlFor="rankly-import-client">Client / business</Label>
-          <select
-            id="rankly-import-client"
-            value={selectedClientId}
-            onChange={(e) => setSelectedClientId(e.target.value)}
-            className="flex h-10 w-full rounded-md border border-white/10 bg-black/20 px-3 text-sm"
-          >
-            <option value="">Select a client…</option>
-            {props.clientImportOptions.map((option) => (
-              <option key={option.clientId} value={option.clientId}>
-                {option.label}
-                {option.domain ? ` · ${option.domain}` : ''}
-                {option.hasExistingProject ? ' · has project' : ''}
-              </option>
-            ))}
-          </select>
-          <p className="text-muted-foreground text-xs">
-            Pulls name and country from the client record. Domain comes from a
-            linked website when available.
-          </p>
-          {selectedClient?.hasExistingProject ? (
-            <p className="text-xs text-amber-400/90">
-              This client already has a Rankly project — you can still add
-              another domain if needed.
-            </p>
-          ) : null}
+          {hasClients ? (
+            <>
+              <select
+                id="rankly-import-client"
+                value={selectedClientId}
+                onChange={(e) => setSelectedClientId(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-white/10 bg-black/20 px-3 text-sm"
+              >
+                <option value="">Select a client…</option>
+                {props.clientImportOptions.map((option) => (
+                  <option key={option.clientId} value={option.clientId}>
+                    {option.label}
+                    {option.domain ? ` · ${option.domain}` : ''}
+                    {option.hasExistingProject ? ' · has project' : ''}
+                  </option>
+                ))}
+              </select>
+              <p className="text-muted-foreground text-xs">
+                Pulls name and country from the client record. Domain comes from
+                a linked website when available.
+              </p>
+              {selectedClient && !selectedClient.domain ? (
+                <p className="text-xs text-amber-400/90">
+                  No website domain linked to this client — add one under
+                  Websites or enter the domain below.
+                </p>
+              ) : null}
+              {selectedClient?.hasExistingProject ? (
+                <p className="text-xs text-amber-400/90">
+                  This client already has a Rankly project — you can still add
+                  another domain if needed.
+                </p>
+              ) : null}
+            </>
+          ) : (
+            <div className="rounded-md border border-white/10 bg-black/20 px-3 py-3 text-sm text-muted-foreground">
+              No clients found in this workspace.
+              {props.clientsHref ? (
+                <>
+                  {' '}
+                  <Link
+                    href={props.clientsHref}
+                    className="text-primary underline-offset-4 hover:underline"
+                  >
+                    Add a client
+                  </Link>{' '}
+                  first, or use Manual for your own business site.
+                </>
+              ) : (
+                ' Add clients under Clients, or use Manual for your own business site.'
+              )}
+            </div>
+          )}
         </div>
       ) : (
         <p className="text-muted-foreground text-xs">
