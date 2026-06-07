@@ -37,7 +37,12 @@ Do not give generic advice not grounded in the data.
 ---
 DOMAIN: ${host}
 PAGES CRAWLED: ${pages.length}
-${pages.map((page) => `  ${page.url} (${page.wordCount} words, title: "${page.title}")`).join('\n')}
+${pages
+  .map(
+    (page) =>
+      `  ${page.url} (HTTP ${page.statusCode}, ${page.wordCount} words, fetch=${page.fetchProfile ?? 'rankly'}${page.botBlockedInitially ? ', bot-blocked initially' : ''}, title: "${page.title}")`,
+  )
+  .join('\n')}
 
 ROBOTS.TXT:
 - Present: ${robotsResult.present}

@@ -9,6 +9,7 @@ import {
   Globe2,
   LayoutDashboard,
   Network,
+  ScanSearch,
   Search,
   Sparkles,
 } from 'lucide-react';
@@ -44,6 +45,12 @@ function buildNavItems(
       label: 'Site Explorer',
       href: paths.siteExplorer,
       icon: Globe2,
+      isActive: (pathname, href) => pathname.startsWith(href),
+    },
+    {
+      label: 'Site Crawler',
+      href: paths.siteCrawler,
+      icon: ScanSearch,
       isActive: (pathname, href) => pathname.startsWith(href),
     },
     {

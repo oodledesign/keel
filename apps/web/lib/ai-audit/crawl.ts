@@ -2,6 +2,8 @@ import 'server-only';
 
 import { load } from 'cheerio';
 
+import { crawlFetch } from '~/lib/crawl/http-fetch';
+
 import type {
   CrawlResult,
   JsonLdBlock,
@@ -10,11 +12,6 @@ import type {
   RobotsResult,
   SitemapResult,
 } from './types';
-
-const CRAWL_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (compatible; Rankly/1.0; +https://rankly.app)',
-  Accept: 'text/html,application/xml,text/plain,*/*',
-};
 
 const AI_BOTS = [
   'GPTBot',
@@ -56,28 +53,46 @@ function extractBotSection(
   return { disallowsAll };
 }
 
+function looksLikeHtmlForbidden(text: string): boolean {
+  return /<title>\s*403/i.test(text) || /403\s*-\s*Forbidden/i.test(text);
+}
+
+function parseRobotsText(text: string): Omit<RobotsResult, 'present'> {
+  const blocked: string[] = [];
+  const allowed: string[] = [];
+
+  for (const bot of AI_BOTS) {
+    const botSection = extractBotSection(text, bot);
+    if (botSection?.disallowsAll) blocked.push(bot);
+    else allowed.push(bot);
+  }
+
+  const wildcardBlocked =
+    /User-agent:\s*\*[\s\S]*?Disallow:\s*\/(?:\s|$)/im.test(text);
+
+  return { raw: text, blocked, allowed, wildcardBlocked };
+}
+
 export async function crawlRobots(domain: string): Promise<RobotsResult> {
   const host = normaliseDomain(domain);
 
   try {
-    const res = await fetch(`https://${host}/robots.txt`, {
-      headers: CRAWL_HEADERS,
-      signal: AbortSignal.timeout(8000),
+    const { response } = await crawlFetch(`https://${host}/robots.txt`, {
+      timeoutMs: 8000,
     });
-    const text = await res.text();
-    const blocked: string[] = [];
-    const allowed: string[] = [];
+    const text = await response.text();
 
-    for (const bot of AI_BOTS) {
-      const botSection = extractBotSection(text, bot);
-      if (botSection?.disallowsAll) blocked.push(bot);
-      else allowed.push(bot);
+    if (!response.ok || looksLikeHtmlForbidden(text)) {
+      return {
+        present: false,
+        raw: '',
+        blocked: [],
+        allowed: [],
+        wildcardBlocked: false,
+      };
     }
 
-    const wildcardBlocked =
-      /User-agent:\s*\*[\s\S]*?Disallow:\s*\/(?:\s|$)/im.test(text);
-
-    return { present: true, raw: text, blocked, allowed, wildcardBlocked };
+    return { present: true, ...parseRobotsText(text) };
   } catch {
     return {
       present: false,
@@ -93,12 +108,12 @@ export async function crawlLlmsTxt(domain: string): Promise<LlmsTxtResult> {
   const host = normaliseDomain(domain);
 
   try {
-    const res = await fetch(`https://${host}/llms.txt`, {
-      headers: CRAWL_HEADERS,
-      signal: AbortSignal.timeout(5000),
+    const { response } = await crawlFetch(`https://${host}/llms.txt`, {
+      timeoutMs: 5000,
     });
-    if (!res.ok) return { present: false };
-    const text = await res.text();
+    if (!response.ok) return { present: false };
+    const text = await response.text();
+    if (looksLikeHtmlForbidden(text)) return { present: false };
     return {
       present: true,
       wordCount: text.split(/\s+/).filter(Boolean).length,
@@ -113,12 +128,14 @@ export async function crawlSitemap(domain: string): Promise<SitemapResult> {
   const host = normaliseDomain(domain);
 
   try {
-    const res = await fetch(`https://${host}/sitemap.xml`, {
-      headers: CRAWL_HEADERS,
-      signal: AbortSignal.timeout(8000),
+    const { response } = await crawlFetch(`https://${host}/sitemap.xml`, {
+      timeoutMs: 8000,
     });
-    if (!res.ok) return { present: false, urlCount: 0 };
-    const text = await res.text();
+    if (!response.ok) return { present: false, urlCount: 0 };
+    const text = await response.text();
+    if (looksLikeHtmlForbidden(text) || !text.includes('<loc>')) {
+      return { present: false, urlCount: 0 };
+    }
     const urlCount = (text.match(/<loc>/g) ?? []).length;
     const lastmod = text.match(/<lastmod>([^<]+)<\/lastmod>/)?.[1] ?? null;
     return { present: true, urlCount, lastmod };
@@ -223,11 +240,14 @@ async function selectPagesToCrawl(
   }
 
   try {
-    const res = await fetch(`https://${host}/sitemap.xml`, {
-      headers: CRAWL_HEADERS,
-      signal: AbortSignal.timeout(8000),
+    const { response } = await crawlFetch(`https://${host}/sitemap.xml`, {
+      timeoutMs: 8000,
     });
-    const xml = await res.text();
+    const xml = await response.text();
+    if (!response.ok || looksLikeHtmlForbidden(xml)) {
+      return [homepage];
+    }
+
     const allUrls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]!);
 
     const scored = allUrls
@@ -246,12 +266,41 @@ async function selectPagesToCrawl(
   }
 }
 
+function emptyPageCrawl(url: string, overrides?: Partial<PageCrawl>): PageCrawl {
+  return {
+    url,
+    statusCode: 0,
+    title: 'Crawl failed',
+    metaDesc: '',
+    canonical: '',
+    ogTitle: '',
+    ogDesc: '',
+    ogImage: '',
+    twitterCard: '',
+    h1s: [],
+    h2s: [],
+    h3s: [],
+    jsonLd: [],
+    bylinePresent: false,
+    tableCount: 0,
+    faqPatternPresent: false,
+    wordCount: 0,
+    isJsRendered: false,
+    lastUpdatedVisible: false,
+    hasTldr: false,
+    contactInfoPresent: false,
+    internalLinkCount: 0,
+    externalLinkCount: 0,
+    crawlFailed: true,
+    ...overrides,
+  };
+}
+
 export async function crawlPage(url: string, domain: string): Promise<PageCrawl> {
-  const res = await fetch(url, {
-    headers: CRAWL_HEADERS,
-    signal: AbortSignal.timeout(10000),
+  const { response, profile, botBlockedInitially } = await crawlFetch(url, {
+    timeoutMs: 10_000,
   });
-  const html = await res.text();
+  const html = await response.text();
   const $ = load(html);
 
   $('nav, footer, header, script, style, .cookie-banner, #cookie-consent').remove();
@@ -270,7 +319,7 @@ export async function crawlPage(url: string, domain: string): Promise<PageCrawl>
 
   return {
     url,
-    statusCode: res.status,
+    statusCode: response.status,
     title: $('title').text().trim(),
     metaDesc: $('meta[name="description"]').attr('content') ?? '',
     canonical: $('link[rel="canonical"]').attr('href') ?? '',
@@ -304,6 +353,8 @@ export async function crawlPage(url: string, domain: string): Promise<PageCrawl>
     contactInfoPresent: detectContactInfo($),
     internalLinkCount,
     externalLinkCount,
+    fetchProfile: profile,
+    botBlockedInitially,
   };
 }
 
@@ -318,32 +369,7 @@ export async function crawlPages(
     try {
       pages.push(await crawlPage(url, domain));
     } catch {
-      pages.push({
-        url,
-        statusCode: 0,
-        title: 'Crawl failed',
-        metaDesc: '',
-        canonical: '',
-        ogTitle: '',
-        ogDesc: '',
-        ogImage: '',
-        twitterCard: '',
-        h1s: [],
-        h2s: [],
-        h3s: [],
-        jsonLd: [],
-        bylinePresent: false,
-        tableCount: 0,
-        faqPatternPresent: false,
-        wordCount: 0,
-        isJsRendered: false,
-        lastUpdatedVisible: false,
-        hasTldr: false,
-        contactInfoPresent: false,
-        internalLinkCount: 0,
-        externalLinkCount: 0,
-        crawlFailed: true,
-      });
+      pages.push(emptyPageCrawl(url));
     }
   }
 

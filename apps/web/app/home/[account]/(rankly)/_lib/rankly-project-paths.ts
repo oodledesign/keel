@@ -4,6 +4,7 @@ export type RanklyProjectPaths = {
   dashboard: string;
   keywords: string;
   siteExplorer: string;
+  siteCrawler: string;
   pagespeed: string;
   aiAudit: string;
   briefs: string;
@@ -21,6 +22,7 @@ export function ranklyProjectPaths(
     dashboard: replace(pathsConfig.app.accountRanklyProjectDetail),
     keywords: replace(pathsConfig.app.accountRanklyProjectKeywords),
     siteExplorer: replace(pathsConfig.app.accountRanklyProjectSiteExplorer),
+    siteCrawler: replace(pathsConfig.app.accountRanklyProjectSiteCrawler),
     pagespeed: replace(pathsConfig.app.accountRanklyProjectPagespeed),
     aiAudit: replace(pathsConfig.app.accountRanklyProjectAiAudit),
     briefs: replace(pathsConfig.app.accountRanklyProjectBriefs),

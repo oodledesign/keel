@@ -49,6 +49,8 @@ export type PageCrawl = {
   internalLinkCount: number;
   externalLinkCount: number;
   crawlFailed?: boolean;
+  fetchProfile?: 'rankly' | 'browser_fallback';
+  botBlockedInitially?: boolean;
 };
 
 export type RobotsResult = {

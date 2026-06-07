@@ -93,6 +93,11 @@ export function RanklyProjectDashboard(props: {
             href: paths.siteExplorer,
           },
           {
+            title: 'Site Crawler',
+            body: 'Internal crawl for broken links, metadata issues, and duplicates.',
+            href: paths.siteCrawler,
+          },
+          {
             title: 'PageSpeed Insights',
             body: 'Lighthouse scores and Core Web Vitals for key URLs.',
             href: paths.pagespeed,

@@ -13,7 +13,10 @@ import {
   type AuditRecommendationRow,
   type AuditReportRow,
 } from '~/lib/ai-audit/types';
+import { analyzeCrawlAccess } from '~/lib/crawl/access-summary';
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
+
+import { CrawlAccessBanner } from '../crawl-access-banner';
 
 function scoreColour(score: number | null): string {
   if (score == null) return 'text-muted-foreground';
@@ -309,6 +312,8 @@ export function AuditReportView({
     window.location.href = `/api/rankly/ai-audit/export/${report.id}`;
   }, [report.id]);
 
+  const crawlAccess = analyzeCrawlAccess(report.crawl_data?.pages ?? []);
+
   return (
     <div className="space-y-8">
       <header className="space-y-2">
@@ -319,11 +324,16 @@ export function AuditReportView({
             {report.overall_score ?? '—'}/100
           </span>{' '}
           · {new Date(report.created_at).toLocaleDateString()}
+          {crawlAccess.severity === 'blocked' ? (
+            <span className="text-red-300"> · crawl blocked</span>
+          ) : null}
         </p>
         {report.executive_summary ? (
           <p className="text-sm text-muted-foreground">{report.executive_summary}</p>
         ) : null}
       </header>
+
+      <CrawlAccessBanner summary={crawlAccess} />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <DimensionScoreCard
