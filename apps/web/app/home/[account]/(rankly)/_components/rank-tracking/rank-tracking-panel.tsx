@@ -93,6 +93,69 @@ function IntentBadge({ intent }: { intent: string | null | undefined }) {
   );
 }
 
+type SortColumn =
+  | 'keyword'
+  | 'volume'
+  | 'kd'
+  | 'intent'
+  | 'cpc'
+  | 'position'
+  | 'change';
+
+type SortDirection = 'asc' | 'desc';
+
+function defaultSortDirection(column: SortColumn): SortDirection {
+  if (column === 'keyword' || column === 'intent' || column === 'position') {
+    return 'asc';
+  }
+  return 'desc';
+}
+
+function compareNullableNumber(
+  a: number | null | undefined,
+  b: number | null | undefined,
+  direction: SortDirection,
+): number {
+  const aNull = a == null;
+  const bNull = b == null;
+  if (aNull && bNull) return 0;
+  if (aNull) return 1;
+  if (bNull) return -1;
+  return direction === 'asc' ? a - b : b - a;
+}
+
+function compareStrings(a: string, b: string, direction: SortDirection): number {
+  const result = a.localeCompare(b, undefined, { sensitivity: 'base' });
+  return direction === 'asc' ? result : -result;
+}
+
+function SortableHeader(props: {
+  label: string;
+  column: SortColumn;
+  activeColumn: SortColumn;
+  direction: SortDirection;
+  onSort: (column: SortColumn) => void;
+  align?: 'left' | 'right';
+}) {
+  const active = props.activeColumn === props.column;
+  const alignClass = props.align === 'right' ? 'justify-end' : 'justify-start';
+
+  return (
+    <th className={`px-4 py-3 ${props.align === 'right' ? 'text-right' : ''}`}>
+      <button
+        type="button"
+        onClick={() => props.onSort(props.column)}
+        className={`inline-flex w-full items-center gap-1 font-medium uppercase tracking-wide transition-colors hover:text-white ${alignClass} ${active ? 'text-white' : ''}`}
+      >
+        {props.label}
+        <span className="text-[10px] tabular-nums opacity-80">
+          {active ? (props.direction === 'asc' ? '↑' : '↓') : '↕'}
+        </span>
+      </button>
+    </th>
+  );
+}
+
 export function RankTrackingPanel(props: {
   accountId: string;
   projectId: string;
@@ -118,6 +181,88 @@ export function RankTrackingPanel(props: {
   );
   const [interval, setInterval] = useState<RankRefreshInterval>(
     props.settings?.rankRefreshInterval ?? 'weekly',
+  );
+  const [sort, setSort] = useState<{
+    column: SortColumn;
+    direction: SortDirection;
+  }>({ column: 'keyword', direction: 'asc' });
+
+  const toggleSort = (column: SortColumn) => {
+    setSort((current) =>
+      current.column === column
+        ? { column, direction: current.direction === 'asc' ? 'desc' : 'asc' }
+        : { column, direction: defaultSortDirection(column) },
+    );
+  };
+
+  const snapshotByKeywordDevice = useMemo(
+    () =>
+      new Map(
+        props.snapshots.map((row) => [`${row.keywordId}:${row.device}`, row]),
+      ),
+    [props.snapshots],
+  );
+
+  const primarySnapshot = (keywordId: string): KeywordRankSnapshot | undefined => {
+    const desktop = snapshotByKeywordDevice.get(`${keywordId}:desktop`);
+    if (desktop) return desktop;
+    return snapshotByKeywordDevice.get(`${keywordId}:mobile`);
+  };
+
+  const sortedKeywords = useMemo(() => {
+    const rows = [...props.keywords];
+
+    rows.sort((a, b) => {
+      switch (sort.column) {
+        case 'keyword':
+          return compareStrings(a.keyword, b.keyword, sort.direction);
+        case 'volume':
+          return compareNullableNumber(
+            a.search_volume,
+            b.search_volume,
+            sort.direction,
+          );
+        case 'kd':
+          return compareNullableNumber(
+            a.keyword_difficulty,
+            b.keyword_difficulty,
+            sort.direction,
+          );
+        case 'intent':
+          return compareStrings(a.intent ?? '', b.intent ?? '', sort.direction);
+        case 'cpc':
+          return compareNullableNumber(a.cpc, b.cpc, sort.direction);
+        case 'position': {
+          const aPos = primarySnapshot(a.id)?.position;
+          const bPos = primarySnapshot(b.id)?.position;
+          return compareNullableNumber(aPos, bPos, sort.direction);
+        }
+        case 'change': {
+          const aChange = primarySnapshot(a.id)?.positionChange;
+          const bChange = primarySnapshot(b.id)?.positionChange;
+          return compareNullableNumber(aChange, bChange, sort.direction);
+        }
+        default:
+          return 0;
+      }
+    });
+
+    return rows;
+  }, [props.keywords, sort, snapshotByKeywordDevice]);
+
+  const displayRows = useMemo(
+    () =>
+      sortedKeywords.flatMap((keyword) => {
+        const devices = props.settings?.trackMobile
+          ? ['desktop', 'mobile']
+          : [String(keyword.device ?? 'desktop')];
+
+        return devices.map((device, deviceIndex) => {
+          const snapshot = snapshotByKeywordDevice.get(`${keyword.id}:${device}`);
+          return { keyword, device, snapshot, showRemove: deviceIndex === 0 };
+        });
+      }),
+    [sortedKeywords, props.settings?.trackMobile, snapshotByKeywordDevice],
   );
 
   const parsedCount = useMemo(
@@ -287,21 +432,6 @@ export function RankTrackingPanel(props: {
     }
   };
 
-  const snapshotByKeywordDevice = new Map(
-    props.snapshots.map((row) => [`${row.keywordId}:${row.device}`, row]),
-  );
-
-  const displayRows = props.keywords.flatMap((keyword) => {
-    const devices = props.settings?.trackMobile
-      ? ['desktop', 'mobile']
-      : [String(keyword.device ?? 'desktop')];
-
-    return devices.map((device, deviceIndex) => {
-      const snapshot = snapshotByKeywordDevice.get(`${keyword.id}:${device}`);
-      return { keyword, device, snapshot, showRemove: deviceIndex === 0 };
-    });
-  });
-
   return (
     <div className="space-y-6">
       <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
@@ -424,13 +554,60 @@ export function RankTrackingPanel(props: {
           <table className="w-full min-w-[56rem] text-left text-sm">
             <thead className="border-b border-white/10 bg-black/20 text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
-                <th className="px-4 py-3">Keyword</th>
-                <th className="px-4 py-3 text-right">Volume</th>
-                <th className="px-4 py-3 text-right">KD</th>
-                <th className="px-4 py-3">Intent</th>
-                <th className="px-4 py-3 text-right">CPC</th>
-                <th className="px-4 py-3 text-right">Position</th>
-                <th className="px-4 py-3 text-right">Change</th>
+                <SortableHeader
+                  label="Keyword"
+                  column="keyword"
+                  activeColumn={sort.column}
+                  direction={sort.direction}
+                  onSort={toggleSort}
+                />
+                <SortableHeader
+                  label="Volume"
+                  column="volume"
+                  activeColumn={sort.column}
+                  direction={sort.direction}
+                  onSort={toggleSort}
+                  align="right"
+                />
+                <SortableHeader
+                  label="KD"
+                  column="kd"
+                  activeColumn={sort.column}
+                  direction={sort.direction}
+                  onSort={toggleSort}
+                  align="right"
+                />
+                <SortableHeader
+                  label="Intent"
+                  column="intent"
+                  activeColumn={sort.column}
+                  direction={sort.direction}
+                  onSort={toggleSort}
+                />
+                <SortableHeader
+                  label="CPC"
+                  column="cpc"
+                  activeColumn={sort.column}
+                  direction={sort.direction}
+                  onSort={toggleSort}
+                  align="right"
+                />
+                <SortableHeader
+                  label="Position"
+                  column="position"
+                  activeColumn={sort.column}
+                  direction={sort.direction}
+                  onSort={toggleSort}
+                  align="right"
+                />
+                <SortableHeader
+                  label="Change"
+                  column="change"
+                  activeColumn={sort.column}
+                  direction={sort.direction}
+                  onSort={toggleSort}
+                  align="right"
+                />
                 <th className="px-4 py-3">Device</th>
                 <th className="px-4 py-3">Ranking URL</th>
                 <th className="px-4 py-3 text-right"> </th>
