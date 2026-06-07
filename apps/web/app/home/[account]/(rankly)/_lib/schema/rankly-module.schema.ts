@@ -26,6 +26,14 @@ export const addRanklyKeywordActionSchema = z.object({
   device: z.string().min(1).max(16).default('desktop'),
 });
 
+export const addRanklyKeywordsBulkActionSchema = z.object({
+  accountId: z.string().uuid(),
+  projectId: z.string().uuid(),
+  keywords: z.array(z.string().min(1).max(500)).min(1).max(500),
+  search_engine: z.string().min(1).max(32).default('google'),
+  device: z.string().min(1).max(16).default('desktop'),
+});
+
 export const deleteRanklyKeywordActionSchema = z.object({
   accountId: z.string().uuid(),
   keywordId: z.string().uuid(),

@@ -1,18 +1,19 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { Button } from '@kit/ui/button';
-import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 
+import { parseKeywordLines } from '../_lib/parse-keyword-lines';
 import type { RanklyKeywordRow } from '../../_lib/server/rankly-account-data';
 import {
-  addRanklyKeyword,
+  addRanklyKeywordsBulk,
   deleteRanklyKeyword,
 } from '../_lib/server/rankly-module-actions';
 
@@ -22,27 +23,52 @@ export function RanklyProjectKeywordsManager(props: {
   keywords: RanklyKeywordRow[];
 }) {
   const router = useRouter();
-  const [keyword, setKeyword] = useState('');
+  const [keywordsText, setKeywordsText] = useState('');
   const [busy, setBusy] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  const parsedCount = useMemo(
+    () => parseKeywordLines(keywordsText).length,
+    [keywordsText],
+  );
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!keyword.trim()) {
-      toast.error('Keyword is required');
+    const keywords = parseKeywordLines(keywordsText);
+
+    if (keywords.length === 0) {
+      toast.error('Enter at least one keyword, one per line');
       return;
     }
+
+    if (keywords.length > 500) {
+      toast.error('Add up to 500 keywords at a time');
+      return;
+    }
+
     setBusy(true);
     try {
-      await addRanklyKeyword({
+      const result = await addRanklyKeywordsBulk({
         accountId: props.accountId,
         projectId: props.projectId,
-        keyword: keyword.trim(),
+        keywords,
         search_engine: 'google',
         device: 'desktop',
       });
-      toast.success('Keyword added');
-      setKeyword('');
+
+      if (result.added === 0) {
+        toast.message('No new keywords added — all were already on this project');
+      } else if (result.skipped > 0) {
+        toast.success(
+          `Added ${result.added} keyword${result.added === 1 ? '' : 's'} (${result.skipped} duplicate${result.skipped === 1 ? '' : 's'} skipped)`,
+        );
+      } else {
+        toast.success(
+          `Added ${result.added} keyword${result.added === 1 ? '' : 's'}`,
+        );
+      }
+
+      setKeywordsText('');
       router.refresh();
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -69,22 +95,28 @@ export function RanklyProjectKeywordsManager(props: {
 
   return (
     <div className="space-y-6">
-      <form
-        onSubmit={submit}
-        className="flex max-w-xl flex-col gap-3 sm:flex-row sm:items-end"
-      >
-        <div className="min-w-0 flex-1 space-y-2">
-          <Label htmlFor="new-keyword">Add keyword</Label>
-          <Input
-            id="new-keyword"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            placeholder="e.g. best crm software"
+      <form onSubmit={submit} className="max-w-xl space-y-3">
+        <div className="space-y-2">
+          <Label htmlFor="new-keywords">Add keywords</Label>
+          <Textarea
+            id="new-keywords"
+            rows={8}
+            value={keywordsText}
+            onChange={(e) => setKeywordsText(e.target.value)}
+            placeholder={
+              'best crm software\nproject management tools\ncustomer support platform'
+            }
+            className="font-mono text-sm"
             autoComplete="off"
           />
+          <p className="text-muted-foreground text-xs">
+            One keyword per line. Paste from a spreadsheet or export — up to 500
+            at a time.
+            {parsedCount > 0 ? ` ${parsedCount} ready to add.` : null}
+          </p>
         </div>
-        <Button type="submit" disabled={busy}>
-          {busy ? 'Adding…' : 'Add'}
+        <Button type="submit" disabled={busy || parsedCount === 0}>
+          {busy ? 'Adding…' : parsedCount > 1 ? `Add ${parsedCount} keywords` : 'Add keywords'}
         </Button>
       </form>
 

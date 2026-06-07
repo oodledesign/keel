@@ -21,6 +21,7 @@ export type RanklyProjectRow = {
   domain: string;
   locale: string | null;
   client_id: string | null;
+  target_country: string;
   created_at: string;
 };
 
@@ -47,7 +48,7 @@ export const loadRanklyProjectsForTeam = cache(
     const client = getSupabaseServerClient();
     const { data, error } = await supabaseCustomSchema(client, 'rankly')
       .from('projects')
-      .select('id, name, domain, locale, client_id, created_at')
+      .select('id, name, domain, locale, client_id, target_country, created_at')
       .eq('account_id', accountId)
       .order('created_at', { ascending: false });
 
@@ -140,7 +141,7 @@ export const loadRanklyProjectForTeam = cache(
     const client = getSupabaseServerClient();
     const { data, error } = await supabaseCustomSchema(client, 'rankly')
       .from('projects')
-      .select('id, name, domain, locale, client_id, created_at')
+      .select('id, name, domain, locale, client_id, target_country, created_at')
       .eq('id', projectId)
       .eq('account_id', accountId)
       .maybeSingle();
@@ -275,7 +276,7 @@ export const loadRanklyProjectForClient = cache(
     const client = getSupabaseServerClient();
     const { data, error } = await supabaseCustomSchema(client, 'rankly')
       .from('projects')
-      .select('id, name, domain, locale, client_id, created_at')
+      .select('id, name, domain, locale, client_id, target_country, created_at')
       .eq('account_id', accountId)
       .eq('client_id', clientId)
       .order('created_at', { ascending: false })

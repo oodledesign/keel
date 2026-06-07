@@ -42,10 +42,10 @@ export function ClientRanklyBlock(props: {
               <p className="mt-1 text-sm text-zinc-300">{props.project.name}</p>
               <p className="text-xs text-zinc-500">{props.project.domain}</p>
               <Link
-                href={projectHref(props.accountSlug, props.project.id)}
+                href={`${projectHref(props.accountSlug, props.project.id)}#keyword-tracking`}
                 className="mt-2 inline-block text-sm text-[#5eead4] underline-offset-4 hover:underline"
               >
-                Open Rankly project →
+                Track keywords →
               </Link>
             </>
           ) : (

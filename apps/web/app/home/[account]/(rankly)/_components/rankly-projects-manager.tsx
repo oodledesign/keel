@@ -21,6 +21,10 @@ function projectHref(accountSlug: string, projectId: string) {
     .replace('[projectId]', projectId);
 }
 
+function keywordTrackingHref(accountSlug: string, projectId: string) {
+  return `${projectHref(accountSlug, projectId)}#keyword-tracking`;
+}
+
 export function RanklyProjectsManager(props: {
   accountSlug: string;
   accountId: string;
@@ -124,7 +128,15 @@ export function RanklyProjectsManager(props: {
                       : '—'}
                   </td>
                   <td className="px-4 py-3">
-                    {props.keywordCounts[project.id] ?? 0}
+                    <span className="tabular-nums">
+                      {props.keywordCounts[project.id] ?? 0}
+                    </span>
+                    <Link
+                      href={keywordTrackingHref(props.accountSlug, project.id)}
+                      className="text-primary mt-1 block text-xs underline-offset-4 hover:underline"
+                    >
+                      Track keywords
+                    </Link>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <Button

@@ -82,7 +82,10 @@ export default async function RanklyDashboardPage({
           </div>
         </div>
 
-        <ModuleDataSection title="Projects">
+        <ModuleDataSection
+          title="Projects"
+          description="Open a project to add keywords and view Site Explorer metrics. Keyword tracking is on each project page, not this dashboard."
+        >
           <RanklyDashboardProjectsPanel
             accountSlug={account}
             accountId={accountId}
