@@ -15,7 +15,7 @@ import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { userIsAccountMember } from '~/lib/rankly/account-membership';
 
 export const runtime = 'nodejs';
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 const querySchema = z.object({
   projectId: z.string().uuid(),
@@ -121,13 +121,13 @@ export async function POST(request: NextRequest) {
       return jsonOk({ overview: existing, stale: false, refreshed: false });
     }
 
-    const overview = await refreshSiteOverview({
+    const { overview, warnings } = await refreshSiteOverview({
       projectId: parsed.data.projectId,
       domain: access.domain,
       countryCode: projectCountryToCode(access.target_country),
     });
 
-    return jsonOk({ overview, stale: false, refreshed: true });
+    return jsonOk({ overview, stale: false, refreshed: true, warnings });
   } catch (error) {
     console.error('[rankly] site-overview POST', error);
     return jsonErr(

@@ -1,0 +1,74 @@
+import { type NextRequest } from 'next/server';
+
+import { loadProjectsDueForPagespeed } from '~/lib/pagespeed/db';
+import { triggerPagespeedRun } from '~/lib/pagespeed/trigger-run';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
+import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
+
+export const runtime = 'nodejs';
+export const maxDuration = 60;
+
+function authorizeCron(request: NextRequest): boolean {
+  const secret = process.env.CRON_SECRET?.trim();
+  if (!secret) return false;
+  const auth = request.headers.get('authorization');
+  return auth === `Bearer ${secret}`;
+}
+
+export async function GET(request: NextRequest) {
+  if (!authorizeCron(request)) {
+    return jsonErr('UNAUTHORIZED', 'Invalid cron secret', 401);
+  }
+
+  try {
+    const due = await loadProjectsDueForPagespeed(5);
+    const started: string[] = [];
+
+    for (const project of due) {
+      const db = supabaseCustomSchema(getSupabaseServerAdminClient(), 'rankly');
+
+      const { data: running } = await db
+        .from('pagespeed_check_jobs')
+        .select('id')
+        .eq('project_id', project.projectId)
+        .in('status', ['pending', 'running'])
+        .limit(1)
+        .maybeSingle();
+
+      if (running) continue;
+
+      const { count } = await db
+        .from('pagespeed_pages')
+        .select('id', { count: 'exact', head: true })
+        .eq('project_id', project.projectId);
+
+      if (!count) continue;
+
+      const { data: job } = await db
+        .from('pagespeed_check_jobs')
+        .insert({
+          project_id: project.projectId,
+          status: 'pending',
+          trigger_source: 'cron',
+        })
+        .select('id')
+        .single();
+
+      if (!job?.id) continue;
+
+      const jobId = job.id as string;
+      started.push(jobId);
+      triggerPagespeedRun(jobId);
+    }
+
+    return jsonOk({ started: started.length, jobIds: started });
+  } catch (error) {
+    console.error('[rankly] pagespeed cron', error);
+    return jsonErr(
+      'INTERNAL',
+      error instanceof Error ? error.message : 'Cron failed',
+      500,
+    );
+  }
+}

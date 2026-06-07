@@ -132,18 +132,23 @@ export async function refreshSiteOverview(input: {
   projectId: string;
   domain: string;
   countryCode: string;
-}): Promise<SiteOverviewSnapshot> {
+}): Promise<{ overview: SiteOverviewSnapshot; warnings: string[] }> {
   const locationCode = locationCodeForProjectCountry(input.countryCode);
   const domain = input.domain.trim();
+  const warnings: string[] = [];
 
   const existing = await loadSiteOverviewForProject(input.projectId);
+  const auditBrand = await loadLatestAuditBrandData(input.projectId);
 
-  const [rankMetrics, backlinks, aiOverviewsCount, auditBrand] = await Promise.all([
-    fetchDomainRankMetrics(domain, locationCode),
-    fetchBacklinkSummary(domain),
-    countAiOverviewCitations(domain, locationCode),
-    loadLatestAuditBrandData(input.projectId),
-  ]);
+  const rankMetrics = await fetchDomainRankMetrics(domain, locationCode);
+
+  const backlinkResult = await fetchBacklinkSummary(domain);
+  const backlinks = backlinkResult.metrics;
+  if (backlinkResult.warning) {
+    warnings.push(backlinkResult.warning);
+  }
+
+  const aiOverviewsCount = await countAiOverviewCitations(domain, locationCode);
 
   const ranklyScores = ranklyMetricsFromBacklinks(backlinks);
   const brandVisibility = buildBrandVisibilityRows(
@@ -203,7 +208,10 @@ export async function refreshSiteOverview(input: {
     throw new Error(error?.message ?? 'Failed to save site overview');
   }
 
-  return mapSiteOverviewRow(data as SiteOverviewRow);
+  return {
+    overview: mapSiteOverviewRow(data as SiteOverviewRow),
+    warnings,
+  };
 }
 
 export async function assertProjectForOverview(

@@ -1,6 +1,12 @@
 import 'server-only';
 
+import { delay } from '~/lib/clusters/utils';
+
 const BASE_URL = 'https://api.dataforseo.com/v3';
+const LIVE_GAP_MS = 400;
+
+/** Serializes DataForSEO *\/live requests — account allows one live task at a time. */
+let liveSerial: Promise<unknown> = Promise.resolve();
 
 function getAuthHeader(): string {
   const login = process.env.DATAFORSEO_LOGIN?.trim();
@@ -25,7 +31,20 @@ export type DfsResponse = {
   }>;
 };
 
-export async function dfsPost<T = DfsResponse>(
+export function isDfsLivePath(path: string): boolean {
+  return path.includes('/live');
+}
+
+export function isDfsAccessDenied(message: string): boolean {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes('access denied') ||
+    lower.includes('backlinks-subscription') ||
+    lower.includes('activate your subscription')
+  );
+}
+
+async function dfsPostImmediate<T = DfsResponse>(
   path: string,
   body: unknown[],
 ): Promise<T> {
@@ -56,6 +75,26 @@ export async function dfsPost<T = DfsResponse>(
   }
 
   return json;
+}
+
+export async function dfsPost<T = DfsResponse>(
+  path: string,
+  body: unknown[],
+): Promise<T> {
+  if (!isDfsLivePath(path)) {
+    return dfsPostImmediate<T>(path, body);
+  }
+
+  const run = liveSerial.then(() => dfsPostImmediate<T>(path, body));
+  liveSerial = run
+    .then(async () => {
+      await delay(LIVE_GAP_MS);
+    })
+    .catch(async () => {
+      await delay(LIVE_GAP_MS);
+    });
+
+  return run;
 }
 
 export async function dfsGetUserBalance(): Promise<number | null> {

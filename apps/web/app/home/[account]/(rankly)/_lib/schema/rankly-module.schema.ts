@@ -38,3 +38,15 @@ export const deleteRanklyKeywordActionSchema = z.object({
   accountId: z.string().uuid(),
   keywordId: z.string().uuid(),
 });
+
+export const addPagespeedPageActionSchema = z.object({
+  accountId: z.string().uuid(),
+  projectId: z.string().uuid(),
+  url: z.string().min(1).max(2000),
+  label: z.string().max(120).optional().nullable(),
+});
+
+export const deletePagespeedPageActionSchema = z.object({
+  accountId: z.string().uuid(),
+  pageId: z.string().uuid(),
+});

@@ -14,11 +14,24 @@ import { userIsAccountMember } from '~/lib/rankly/account-membership';
 import {
   addRanklyKeywordActionSchema,
   addRanklyKeywordsBulkActionSchema,
+  addPagespeedPageActionSchema,
   createRanklyProjectActionSchema,
+  deletePagespeedPageActionSchema,
   deleteRanklyKeywordActionSchema,
   deleteRanklyProjectActionSchema,
 } from '../schema/rankly-module.schema';
 import { computeNextRankCheckAt } from '~/lib/rank-tracking/types';
+import {
+  countPagespeedPages,
+  ensureHomepagePage,
+  insertPagespeedPage,
+  deletePagespeedPage,
+} from '~/lib/pagespeed/db';
+import {
+  normalizePagespeedUrl,
+  pageLabelFromUrl,
+} from '~/lib/pagespeed/domain';
+import { MAX_PAGESPEED_PAGES_PER_PROJECT } from '~/lib/pagespeed/types';
 
 function workPath(
   template: string,
@@ -102,7 +115,13 @@ export const createRanklyProject = enhanceAction(
       .upsert({
         project_id: created.id,
         next_rank_check_at: nextRankCheck?.toISOString() ?? null,
+        next_pagespeed_check_at: nextRankCheck?.toISOString() ?? null,
       });
+
+    await ensureHomepagePage({
+      projectId: created.id as string,
+      domain: input.domain,
+    });
 
     revalidatePath(workPath(pathsConfig.app.accountRanklyProjects, accountSlug));
     revalidatePath(workPath(pathsConfig.app.accountRanklyDashboard, accountSlug));
@@ -326,4 +345,87 @@ export const deleteRanklyKeyword = enhanceAction(
     return { ok: true as const };
   },
   { schema: deleteRanklyKeywordActionSchema },
+);
+
+export const addPagespeedPage = enhanceAction(
+  async (input, user) => {
+    const { client, accountSlug } = await assertRanklyWrite(
+      input.accountId,
+      user.id,
+    );
+
+    const rankly = supabaseCustomSchema(client, 'rankly');
+    const { data: project, error: pe } = await rankly
+      .from('projects')
+      .select('id, domain')
+      .eq('id', input.projectId)
+      .eq('account_id', input.accountId)
+      .maybeSingle();
+
+    if (pe || !project?.domain) {
+      throw new Error('Project not found');
+    }
+
+    const pageCount = await countPagespeedPages(input.projectId);
+    if (pageCount >= MAX_PAGESPEED_PAGES_PER_PROJECT) {
+      throw new Error(
+        `You can track up to ${MAX_PAGESPEED_PAGES_PER_PROJECT} pages per project`,
+      );
+    }
+
+    const url = normalizePagespeedUrl(input.url, String(project.domain));
+    const label =
+      input.label?.trim() ||
+      pageLabelFromUrl(url, false);
+
+    await insertPagespeedPage({
+      projectId: input.projectId,
+      url,
+      label,
+    });
+
+    revalidatePath(ranklyProjectDetailPath(accountSlug, input.projectId));
+    return { ok: true as const };
+  },
+  { schema: addPagespeedPageActionSchema },
+);
+
+export const deletePagespeedPageAction = enhanceAction(
+  async (input, user) => {
+    const { client, accountSlug } = await assertRanklyWrite(
+      input.accountId,
+      user.id,
+    );
+
+    const { data: page, error: pe } = await supabaseCustomSchema(
+      client,
+      'rankly',
+    )
+      .from('pagespeed_pages')
+      .select('id, project_id')
+      .eq('id', input.pageId)
+      .maybeSingle();
+
+    if (pe || !page) {
+      throw new Error('Page not found');
+    }
+
+    const { data: project } = await supabaseCustomSchema(client, 'rankly')
+      .from('projects')
+      .select('account_id')
+      .eq('id', page.project_id as string)
+      .maybeSingle();
+
+    if (!project || project.account_id !== input.accountId) {
+      throw new Error('Page not found');
+    }
+
+    await deletePagespeedPage(input.pageId);
+
+    revalidatePath(
+      ranklyProjectDetailPath(accountSlug, page.project_id as string),
+    );
+    return { ok: true as const };
+  },
+  { schema: deletePagespeedPageActionSchema },
 );

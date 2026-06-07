@@ -1,0 +1,439 @@
+import 'server-only';
+
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
+
+import { computeNextRankCheckAt } from '~/lib/rank-tracking/types';
+import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
+
+import {
+  projectDomainToHomepageUrl,
+} from './domain';
+import type {
+  PagespeedCheckJobRow,
+  PagespeedMetricSet,
+  PagespeedPageRow,
+  PagespeedRefreshInterval,
+  PagespeedResultRow,
+  PagespeedSettings,
+  PagespeedSnapshot,
+  PagespeedStrategy,
+  ParsedPagespeedResult,
+} from './types';
+
+function ranklyAdmin() {
+  return supabaseCustomSchema(getSupabaseServerAdminClient(), 'rankly');
+}
+
+function ranklyClient() {
+  return supabaseCustomSchema(getSupabaseServerClient(), 'rankly');
+}
+
+function mapResultRow(row: PagespeedResultRow): PagespeedMetricSet {
+  return {
+    performanceScore: row.performance_score,
+    accessibilityScore: row.accessibility_score,
+    bestPracticesScore: row.best_practices_score,
+    seoScore: row.seo_score,
+    lcpMs: row.lcp_ms != null ? Number(row.lcp_ms) : null,
+    fcpMs: row.fcp_ms != null ? Number(row.fcp_ms) : null,
+    cls: row.cls != null ? Number(row.cls) : null,
+    tbtMs: row.tbt_ms != null ? Number(row.tbt_ms) : null,
+    speedIndexMs: row.speed_index_ms != null ? Number(row.speed_index_ms) : null,
+    fetchedAt: row.fetched_at,
+    errorMsg: row.error_msg,
+  };
+}
+
+export async function ensureHomepagePage(input: {
+  projectId: string;
+  domain: string;
+}): Promise<void> {
+  const url = projectDomainToHomepageUrl(input.domain);
+
+  const { data: existing } = await ranklyAdmin()
+    .from('pagespeed_pages')
+    .select('id, url')
+    .eq('project_id', input.projectId)
+    .eq('is_homepage', true)
+    .maybeSingle();
+
+  if (existing) {
+    if (existing.url !== url) {
+      await ranklyAdmin()
+        .from('pagespeed_pages')
+        .update({ url, label: 'Homepage' })
+        .eq('id', existing.id as string);
+    }
+    return;
+  }
+
+  const { error } = await ranklyAdmin().from('pagespeed_pages').insert({
+    project_id: input.projectId,
+    url,
+    label: 'Homepage',
+    is_homepage: true,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function loadPagespeedPages(
+  projectId: string,
+): Promise<PagespeedPageRow[]> {
+  const { data, error } = await ranklyClient()
+    .from('pagespeed_pages')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('is_homepage', { ascending: false })
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as PagespeedPageRow[];
+}
+
+export async function loadPagespeedPagesAdmin(
+  projectId: string,
+): Promise<PagespeedPageRow[]> {
+  const { data, error } = await ranklyAdmin()
+    .from('pagespeed_pages')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('is_homepage', { ascending: false })
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as PagespeedPageRow[];
+}
+
+export async function loadLatestPagespeedResults(
+  pageIds: string[],
+): Promise<Map<string, PagespeedResultRow>> {
+  if (pageIds.length === 0) return new Map();
+
+  const { data, error } = await ranklyClient()
+    .from('pagespeed_results')
+    .select('*')
+    .in('page_id', pageIds)
+    .order('fetched_at', { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const latest = new Map<string, PagespeedResultRow>();
+  for (const row of data ?? []) {
+    const key = `${row.page_id as string}:${row.strategy as string}`;
+    if (!latest.has(key)) {
+      latest.set(key, row as PagespeedResultRow);
+    }
+  }
+
+  return latest;
+}
+
+export async function loadPagespeedSnapshots(
+  projectId: string,
+): Promise<PagespeedSnapshot[]> {
+  await ensureHomepageForProject(projectId);
+
+  const pages = await loadPagespeedPages(projectId);
+  const latest = await loadLatestPagespeedResults(pages.map((page) => page.id));
+
+  return pages.map((page) => {
+    const mobile = latest.get(`${page.id}:mobile`);
+    const desktop = latest.get(`${page.id}:desktop`);
+
+    return {
+      pageId: page.id,
+      url: page.url,
+      label: page.label,
+      isHomepage: page.is_homepage,
+      mobile: mobile ? mapResultRow(mobile) : null,
+      desktop: desktop ? mapResultRow(desktop) : null,
+    };
+  });
+}
+
+async function ensureHomepageForProject(projectId: string): Promise<void> {
+  const { data: project } = await ranklyAdmin()
+    .from('projects')
+    .select('domain')
+    .eq('id', projectId)
+    .maybeSingle();
+
+  if (!project?.domain) return;
+
+  await ensureHomepagePage({
+    projectId,
+    domain: String(project.domain),
+  });
+}
+
+export async function loadPagespeedSettings(
+  projectId: string,
+): Promise<PagespeedSettings | null> {
+  const { data: project, error } = await ranklyClient()
+    .from('projects')
+    .select('pagespeed_refresh_interval')
+    .eq('id', projectId)
+    .maybeSingle();
+
+  if (error || !project) return null;
+
+  const { data: cronState } = await ranklyClient()
+    .from('project_cron_state')
+    .select('last_pagespeed_check_at, next_pagespeed_check_at')
+    .eq('project_id', projectId)
+    .maybeSingle();
+
+  return {
+    refreshInterval: (project.pagespeed_refresh_interval ??
+      'weekly') as PagespeedRefreshInterval,
+    lastCheckAt: cronState?.last_pagespeed_check_at ?? null,
+    nextCheckAt: cronState?.next_pagespeed_check_at ?? null,
+  };
+}
+
+export async function updatePagespeedRefreshInterval(
+  projectId: string,
+  interval: PagespeedRefreshInterval,
+): Promise<void> {
+  const next = computeNextRankCheckAt(interval);
+
+  const { error: projectError } = await ranklyAdmin()
+    .from('projects')
+    .update({ pagespeed_refresh_interval: interval })
+    .eq('id', projectId);
+
+  if (projectError) {
+    throw new Error(projectError.message);
+  }
+
+  await ranklyAdmin()
+    .from('project_cron_state')
+    .upsert(
+      {
+        project_id: projectId,
+        next_pagespeed_check_at: next?.toISOString() ?? null,
+      },
+      { onConflict: 'project_id' },
+    );
+}
+
+export async function touchPagespeedSchedule(input: {
+  projectId: string;
+  interval: PagespeedRefreshInterval;
+  checkedAt?: Date;
+}): Promise<void> {
+  const checkedAt = input.checkedAt ?? new Date();
+  const next = computeNextRankCheckAt(input.interval, checkedAt);
+
+  await ranklyAdmin()
+    .from('project_cron_state')
+    .upsert(
+      {
+        project_id: input.projectId,
+        last_pagespeed_check_at: checkedAt.toISOString(),
+        next_pagespeed_check_at: next?.toISOString() ?? null,
+      },
+      { onConflict: 'project_id' },
+    );
+}
+
+export async function getPagespeedCheckJob(
+  jobId: string,
+): Promise<PagespeedCheckJobRow> {
+  const { data, error } = await ranklyAdmin()
+    .from('pagespeed_check_jobs')
+    .select('*')
+    .eq('id', jobId)
+    .single();
+
+  if (error || !data) {
+    throw new Error(error?.message ?? 'PageSpeed job not found');
+  }
+
+  return data as PagespeedCheckJobRow;
+}
+
+export async function updatePagespeedCheckJob(
+  jobId: string,
+  patch: Partial<PagespeedCheckJobRow>,
+): Promise<void> {
+  const { error } = await ranklyAdmin()
+    .from('pagespeed_check_jobs')
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq('id', jobId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function loadLatestPagespeedCheckJob(
+  projectId: string,
+): Promise<PagespeedCheckJobRow | null> {
+  const { data, error } = await ranklyClient()
+    .from('pagespeed_check_jobs')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data as PagespeedCheckJobRow | null) ?? null;
+}
+
+export async function savePagespeedResult(input: {
+  pageId: string;
+  strategy: PagespeedStrategy;
+  metrics: ParsedPagespeedResult | null;
+  errorMsg?: string | null;
+}): Promise<void> {
+  const payload = {
+    page_id: input.pageId,
+    strategy: input.strategy,
+    performance_score: input.metrics?.performanceScore ?? null,
+    accessibility_score: input.metrics?.accessibilityScore ?? null,
+    best_practices_score: input.metrics?.bestPracticesScore ?? null,
+    seo_score: input.metrics?.seoScore ?? null,
+    lcp_ms: input.metrics?.lcpMs ?? null,
+    fcp_ms: input.metrics?.fcpMs ?? null,
+    cls: input.metrics?.cls ?? null,
+    tbt_ms: input.metrics?.tbtMs ?? null,
+    speed_index_ms: input.metrics?.speedIndexMs ?? null,
+    error_msg: input.errorMsg ?? null,
+    fetched_at: new Date().toISOString(),
+  };
+
+  const { error } = await ranklyAdmin()
+    .from('pagespeed_results')
+    .insert(payload);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function loadProjectsDueForPagespeed(limit = 5): Promise<
+  Array<{
+    projectId: string;
+    refreshInterval: PagespeedRefreshInterval;
+  }>
+> {
+  const now = new Date().toISOString();
+
+  const { data: cronRows } = await ranklyAdmin()
+    .from('project_cron_state')
+    .select('project_id, next_pagespeed_check_at')
+    .lte('next_pagespeed_check_at', now)
+    .order('next_pagespeed_check_at', { ascending: true })
+    .limit(limit * 3);
+
+  const projectIds = (cronRows ?? []).map((row) => row.project_id as string);
+  if (!projectIds.length) return [];
+
+  const { data: projects } = await ranklyAdmin()
+    .from('projects')
+    .select('id, pagespeed_refresh_interval')
+    .in('id', projectIds)
+    .neq('pagespeed_refresh_interval', 'manual');
+
+  return (projects ?? []).slice(0, limit).map((project) => ({
+    projectId: project.id as string,
+    refreshInterval: project.pagespeed_refresh_interval as PagespeedRefreshInterval,
+  }));
+}
+
+export async function countPagespeedPages(projectId: string): Promise<number> {
+  const { count, error } = await ranklyAdmin()
+    .from('pagespeed_pages')
+    .select('id', { count: 'exact', head: true })
+    .eq('project_id', projectId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return count ?? 0;
+}
+
+export async function insertPagespeedPage(input: {
+  projectId: string;
+  url: string;
+  label?: string | null;
+  isHomepage?: boolean;
+}): Promise<PagespeedPageRow> {
+  const { data, error } = await ranklyAdmin()
+    .from('pagespeed_pages')
+    .insert({
+      project_id: input.projectId,
+      url: input.url,
+      label: input.label ?? null,
+      is_homepage: input.isHomepage ?? false,
+    })
+    .select('*')
+    .single();
+
+  if (error || !data) {
+    throw new Error(error?.message ?? 'Failed to add page');
+  }
+
+  return data as PagespeedPageRow;
+}
+
+export async function deletePagespeedPage(pageId: string): Promise<void> {
+  const { data: page } = await ranklyAdmin()
+    .from('pagespeed_pages')
+    .select('is_homepage')
+    .eq('id', pageId)
+    .maybeSingle();
+
+  if (page?.is_homepage) {
+    throw new Error('The homepage cannot be removed');
+  }
+
+  const { error } = await ranklyAdmin()
+    .from('pagespeed_pages')
+    .delete()
+    .eq('id', pageId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export type PagespeedTask = {
+  pageId: string;
+  url: string;
+  strategy: PagespeedStrategy;
+};
+
+export function buildPagespeedTasks(
+  pages: PagespeedPageRow[],
+): PagespeedTask[] {
+  const tasks: PagespeedTask[] = [];
+  for (const page of pages) {
+    for (const strategy of ['mobile', 'desktop'] as const) {
+      tasks.push({
+        pageId: page.id,
+        url: page.url,
+        strategy,
+      });
+    }
+  }
+  return tasks;
+}

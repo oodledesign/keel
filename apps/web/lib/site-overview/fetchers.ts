@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { countryToLocationCode } from '~/lib/clusters/utils';
-import { dfsPost } from '~/lib/dataforseo/client';
+import { dfsPost, isDfsAccessDenied } from '~/lib/dataforseo/client';
 import { fetchDomainKeywords } from '~/lib/briefs/domain-analysis';
 import { delay } from '~/lib/clusters/utils';
 
@@ -67,40 +67,88 @@ export async function fetchDomainRankMetrics(
   return { organic, paid };
 }
 
-export async function fetchBacklinkSummary(
-  domain: string,
-): Promise<BacklinkSummaryMetrics> {
+export async function fetchLabsBulkRank(domain: string): Promise<number> {
   const target = normaliseOverviewDomain(domain);
-  const json = await dfsPost('/backlinks/summary/live', [
-    {
-      target,
-      include_subdomains: true,
-      rank_scale: 'one_hundred',
-    },
+  const json = await dfsPost('/dataforseo_labs/google/bulk_ranks/live', [
+    { targets: [target] },
   ]);
 
-  const summary = json.tasks?.[0]?.result?.[0] as
-    | {
-        rank?: number;
-        referring_domains?: number;
-        backlinks?: number;
-        target_spam_score?: number;
-        backlinks_spam_score?: number;
-      }
-    | undefined;
+  const items = (
+    json.tasks?.[0]?.result?.[0] as { items?: Array<{ rank?: number }> } | undefined
+  )?.items;
 
-  const authorityRank = Math.round(Number(summary?.rank ?? 0));
-  const spamScore = Math.round(
-    Number(summary?.target_spam_score ?? summary?.backlinks_spam_score ?? 0),
-  );
+  const rank = Number(items?.[0]?.rank ?? 0);
+  if (rank <= 0) return 0;
 
-  return {
-    authorityRank,
-    pageAuthority: authorityRank,
-    referringDomains: Number(summary?.referring_domains ?? 0),
-    backlinksCount: Number(summary?.backlinks ?? 0),
-    spamScore,
-  };
+  return Math.min(100, Math.round(rank / 10));
+}
+
+export type BacklinkFetchResult = {
+  metrics: BacklinkSummaryMetrics;
+  warning?: string;
+};
+
+export async function fetchBacklinkSummary(
+  domain: string,
+): Promise<BacklinkFetchResult> {
+  const target = normaliseOverviewDomain(domain);
+
+  try {
+    const json = await dfsPost('/backlinks/summary/live', [
+      {
+        target,
+        include_subdomains: true,
+        rank_scale: 'one_hundred',
+      },
+    ]);
+
+    const summary = json.tasks?.[0]?.result?.[0] as
+      | {
+          rank?: number;
+          referring_domains?: number;
+          backlinks?: number;
+          target_spam_score?: number;
+          backlinks_spam_score?: number;
+        }
+      | undefined;
+
+    const authorityRank = Math.round(Number(summary?.rank ?? 0));
+    const spamScore = Math.round(
+      Number(summary?.target_spam_score ?? summary?.backlinks_spam_score ?? 0),
+    );
+
+    return {
+      metrics: {
+        authorityRank,
+        pageAuthority: authorityRank,
+        referringDomains: Number(summary?.referring_domains ?? 0),
+        backlinksCount: Number(summary?.backlinks ?? 0),
+        spamScore,
+      },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    if (!isDfsAccessDenied(message)) {
+      throw error;
+    }
+
+    const authorityRank = await fetchLabsBulkRank(domain).catch(() => 0);
+
+    return {
+      metrics: {
+        authorityRank,
+        pageAuthority: authorityRank,
+        referringDomains: 0,
+        backlinksCount: 0,
+        spamScore: 0,
+      },
+      warning:
+        authorityRank > 0
+          ? 'Backlink counts need a DataForSEO Backlinks subscription — authority rank uses Labs only.'
+          : 'Backlink metrics need a DataForSEO Backlinks subscription. Organic traffic metrics are still shown.',
+    };
+  }
 }
 
 function domainInUrls(host: string, urls: string[]): boolean {
@@ -118,10 +166,18 @@ function domainInUrls(host: string, urls: string[]): boolean {
 export async function countAiOverviewCitations(
   domain: string,
   locationCode: number,
-  sampleSize = 12,
+  sampleSize = 8,
 ): Promise<number> {
   const host = normaliseOverviewDomain(domain);
-  const keywords = await fetchDomainKeywords(domain, locationCode);
+  let keywords: Awaited<ReturnType<typeof fetchDomainKeywords>> = [];
+
+  try {
+    keywords = await fetchDomainKeywords(domain, locationCode);
+  } catch (error) {
+    console.error('[site-overview] ranked keywords fetch failed', error);
+    return 0;
+  }
+
   const sample = keywords
     .slice()
     .sort((a, b) => b.volume - a.volume)

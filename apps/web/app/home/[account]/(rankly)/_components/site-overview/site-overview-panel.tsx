@@ -96,11 +96,17 @@ export function SiteOverviewPanel(props: {
       const json = (await res.json()) as ApiResponse<{
         overview: SiteOverviewSnapshot;
         refreshed: boolean;
+        warnings?: string[];
       }>;
       if (!json.ok) throw new Error(json.error.message);
-      toast.success(
-        json.data.refreshed ? 'Site overview updated' : 'Overview is already up to date',
-      );
+      if (json.data.refreshed) {
+        toast.success('Site overview updated');
+        if (json.data.warnings?.length) {
+          toast.message(json.data.warnings.join(' '));
+        }
+      } else {
+        toast.message('Overview is already up to date');
+      }
       router.refresh();
     } catch (err) {
       toast.error(getErrorMessage(err));

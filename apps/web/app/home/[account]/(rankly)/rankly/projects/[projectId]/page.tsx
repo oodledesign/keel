@@ -16,6 +16,12 @@ import { loadTeamWorkspace } from '../../../../_lib/server/team-account-workspac
 import { redirectIfSpaceNotIn } from '../../../../_lib/server/workspace-route-guard';
 import { workAccountPath, workPaths } from '../../../../_lib/work-account-path';
 import { SiteOverviewPanel } from '../../../_components/site-overview/site-overview-panel';
+import { PagespeedPanel } from '../../../_components/pagespeed/pagespeed-panel';
+import {
+  loadLatestPagespeedCheckJob,
+  loadPagespeedSettings,
+  loadPagespeedSnapshots,
+} from '~/lib/pagespeed/db';
 import {
   estimateProjectRankCheckCost,
   loadKeywordRankSnapshots,
@@ -50,10 +56,14 @@ export default async function RanklyProjectDetailPage({
 
   const keywords = await loadRanklyKeywordsForProject(projectId, accountId);
   const rankSettings = await loadRankTrackingSettings(projectId);
-  const [rankSnapshots, latestRankJob, overview] = await Promise.all([
+  const [rankSnapshots, latestRankJob, overview, pagespeedSettings, pagespeedSnapshots, latestPagespeedJob] =
+    await Promise.all([
     loadKeywordRankSnapshots(projectId, rankSettings),
     loadLatestRankCheckJob(projectId),
     loadSiteOverviewForProject(projectId),
+    loadPagespeedSettings(projectId),
+    loadPagespeedSnapshots(projectId),
+    loadLatestPagespeedCheckJob(projectId),
   ]);
   const estimatedRankCost = rankSettings
     ? estimateProjectRankCheckCost(keywords.length, rankSettings)
@@ -114,6 +124,22 @@ export default async function RanklyProjectDetailPage({
           stale={overviewStale}
           auditHref={auditHref}
         />
+
+        <ModuleDataSection
+          title="PageSpeed Insights"
+          description="Track Lighthouse scores and Core Web Vitals for your homepage and key landing pages — refreshed automatically on your schedule."
+        >
+          <div className="rounded-lg border border-white/10 bg-black/10 p-5">
+            <PagespeedPanel
+              accountId={accountId}
+              projectId={projectId}
+              domain={project.domain}
+              settings={pagespeedSettings}
+              snapshots={pagespeedSnapshots}
+              latestJob={latestPagespeedJob}
+            />
+          </div>
+        </ModuleDataSection>
 
         <section className="rounded-lg border border-white/10 bg-black/10 px-4 py-5">
           <h2 className="text-lg font-semibold">AI Search Audit</h2>
