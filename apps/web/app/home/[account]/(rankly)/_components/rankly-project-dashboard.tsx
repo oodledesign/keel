@@ -1,22 +1,41 @@
 import Link from 'next/link';
 
+import type { LucideIcon } from 'lucide-react';
+
+import { RANKLY_DASHBOARD_TOOL_SECTIONS, getRanklySection } from '../_lib/rankly-project-sections';
 import { ranklyProjectPaths } from '../_lib/rankly-project-paths';
 import type { SiteOverviewSnapshot } from '~/lib/site-overview/types';
+
+function SectionIcon(props: { icon: LucideIcon }) {
+  const Icon = props.icon;
+
+  return (
+    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-white/10 bg-black/20">
+      <Icon className="h-4 w-4 text-[var(--keel-teal)]" aria-hidden />
+    </span>
+  );
+}
 
 function StatCard(props: {
   label: string;
   value: string | number;
   hint?: string;
   href: string;
+  icon: LucideIcon;
 }) {
+  const Icon = props.icon;
+
   return (
     <Link
       href={props.href}
       className="rounded-lg border border-white/10 bg-black/20 p-4 transition-colors hover:border-white/20 hover:bg-black/30"
     >
-      <p className="text-muted-foreground text-xs uppercase tracking-wide">
-        {props.label}
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-muted-foreground text-xs uppercase tracking-wide">
+          {props.label}
+        </p>
+        <Icon className="text-muted-foreground h-4 w-4 shrink-0 opacity-80" aria-hidden />
+      </div>
       <p className="mt-1 text-2xl font-semibold tabular-nums">{props.value}</p>
       {props.hint ? (
         <p className="text-muted-foreground mt-1 text-xs">{props.hint}</p>
@@ -35,6 +54,9 @@ export function RanklyProjectDashboard(props: {
   countryLabel: string;
 }) {
   const paths = ranklyProjectPaths(props.account, props.projectId);
+  const keywordsSection = getRanklySection('keywords');
+  const siteExplorerSection = getRanklySection('siteExplorer');
+  const pagespeedSection = getRanklySection('pagespeed');
 
   return (
     <div className="space-y-8">
@@ -51,12 +73,14 @@ export function RanklyProjectDashboard(props: {
           value={props.keywordCount}
           hint="Open keyword tracking →"
           href={paths.keywords}
+          icon={keywordsSection.icon}
         />
         <StatCard
           label="Domain Power"
           value={props.overview?.domainPower ?? '—'}
           hint="Site Explorer →"
           href={paths.siteExplorer}
+          icon={siteExplorerSection.icon}
         />
         <StatCard
           label="Organic traffic"
@@ -67,6 +91,7 @@ export function RanklyProjectDashboard(props: {
           }
           hint="ETV / month"
           href={paths.siteExplorer}
+          icon={siteExplorerSection.icon}
         />
         <StatCard
           label="PageSpeed (mobile)"
@@ -77,56 +102,32 @@ export function RanklyProjectDashboard(props: {
               : 'Run PageSpeed →'
           }
           href={paths.pagespeed}
+          icon={pagespeedSection.icon}
         />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        {[
-          {
-            title: 'Keyword tracking',
-            body: 'SERP positions, refresh schedule, and rank history.',
-            href: paths.keywords,
-          },
-          {
-            title: 'Site Explorer',
-            body: 'Authority, traffic, backlinks, and AI visibility metrics.',
-            href: paths.siteExplorer,
-          },
-          {
-            title: 'Site Crawler',
-            body: 'Internal crawl for broken links, metadata issues, and duplicates.',
-            href: paths.siteCrawler,
-          },
-          {
-            title: 'PageSpeed Insights',
-            body: 'Lighthouse scores and Core Web Vitals for key URLs.',
-            href: paths.pagespeed,
-          },
-          {
-            title: 'AI Search Audit',
-            body: 'Entity, content, and technical readiness for AI citations.',
-            href: paths.aiAudit,
-          },
-          {
-            title: 'Content briefs',
-            body: 'Writer-ready SEO briefs from SERP analysis.',
-            href: paths.briefs,
-          },
-          {
-            title: 'Keyword clusters',
-            body: 'Pillar + spoke architecture from seed keywords.',
-            href: paths.clusters,
-          },
-        ].map((card) => (
-          <Link
-            key={card.href}
-            href={card.href}
-            className="rounded-lg border border-white/10 bg-black/10 px-4 py-5 transition-colors hover:border-white/20 hover:bg-black/20"
-          >
-            <h2 className="font-semibold">{card.title}</h2>
-            <p className="text-muted-foreground mt-1 text-sm">{card.body}</p>
-          </Link>
-        ))}
+        {RANKLY_DASHBOARD_TOOL_SECTIONS.map((section) => {
+          const Icon = section.icon;
+
+          return (
+            <Link
+              key={section.id}
+              href={paths[section.pathKey]}
+              className="rounded-lg border border-white/10 bg-black/10 px-4 py-5 transition-colors hover:border-white/20 hover:bg-black/20"
+            >
+              <div className="flex items-start gap-3">
+                <SectionIcon icon={Icon} />
+                <div className="min-w-0">
+                  <h2 className="font-semibold">{section.dashboardTitle}</h2>
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    {section.dashboardBody}
+                  </p>
+                </div>
+              </div>
+            </Link>
+          );
+        })}
       </div>
     </div>
   );

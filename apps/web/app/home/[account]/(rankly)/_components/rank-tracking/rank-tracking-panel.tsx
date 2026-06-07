@@ -4,6 +4,15 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
 import { Button } from '@kit/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@kit/ui/dialog';
 import { Label } from '@kit/ui/label';
 import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
@@ -186,6 +195,7 @@ export function RankTrackingPanel(props: {
     column: SortColumn;
     direction: SortDirection;
   }>({ column: 'keyword', direction: 'asc' });
+  const [addKeywordsOpen, setAddKeywordsOpen] = useState(false);
 
   const toggleSort = (column: SortColumn) => {
     setSort((current) =>
@@ -347,6 +357,7 @@ export function RankTrackingPanel(props: {
       }
 
       setKeywordsText('');
+      setAddKeywordsOpen(false);
       router.refresh();
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -462,6 +473,58 @@ export function RankTrackingPanel(props: {
         </div>
 
         <div className="flex flex-wrap gap-2">
+          <Dialog open={addKeywordsOpen} onOpenChange={setAddKeywordsOpen}>
+            <DialogTrigger asChild>
+              <Button type="button">Add keywords</Button>
+            </DialogTrigger>
+            <DialogContent className="border-white/8 bg-[#0F1923] text-white sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Add keywords</DialogTitle>
+                <DialogDescription className="text-zinc-400">
+                  Enter one keyword per line — up to 500 at a time.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={addKeywords} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="new-keywords" className="text-zinc-300">
+                    Keywords
+                  </Label>
+                  <Textarea
+                    id="new-keywords"
+                    rows={8}
+                    value={keywordsText}
+                    onChange={(e) => setKeywordsText(e.target.value)}
+                    placeholder={
+                      'best crm software\nproject management tools\ncustomer support platform'
+                    }
+                    className="border-white/10 bg-white/5 font-mono text-sm text-white placeholder:text-zinc-600"
+                    autoComplete="off"
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    {parsedCount > 0
+                      ? `${parsedCount} ready to add.`
+                      : 'Paste or type keywords, one per line.'}
+                  </p>
+                </div>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setAddKeywordsOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={busy || parsedCount === 0}>
+                    {busy
+                      ? 'Adding…'
+                      : parsedCount > 1
+                        ? `Add ${parsedCount} keywords`
+                        : 'Add keywords'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
           <Button
             type="button"
             variant="outline"
@@ -521,33 +584,9 @@ export function RankTrackingPanel(props: {
         />
       ) : null}
 
-      <form onSubmit={addKeywords} className="max-w-xl space-y-3">
-        <div className="space-y-2">
-          <Label htmlFor="new-keywords">Add keywords</Label>
-          <Textarea
-            id="new-keywords"
-            rows={6}
-            value={keywordsText}
-            onChange={(e) => setKeywordsText(e.target.value)}
-            placeholder={
-              'best crm software\nproject management tools\ncustomer support platform'
-            }
-            className="font-mono text-sm"
-            autoComplete="off"
-          />
-          <p className="text-muted-foreground text-xs">
-            One keyword per line — up to 500 at a time.
-            {parsedCount > 0 ? ` ${parsedCount} ready to add.` : null}
-          </p>
-        </div>
-        <Button type="submit" disabled={busy || parsedCount === 0}>
-          {busy ? 'Adding…' : parsedCount > 1 ? `Add ${parsedCount} keywords` : 'Add keywords'}
-        </Button>
-      </form>
-
       {displayRows.length === 0 ? (
         <p className="text-muted-foreground rounded-lg border border-white/10 bg-black/10 px-4 py-6 text-sm">
-          No keywords yet. Add phrases above, then refresh ranks to pull positions from Google.
+          No keywords yet. Click Add keywords, then refresh ranks to pull positions from Google.
         </p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-white/10">

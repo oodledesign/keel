@@ -3,82 +3,13 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import {
-  FileText,
-  Gauge,
-  Globe2,
-  LayoutDashboard,
-  Network,
-  ScanSearch,
-  Search,
-  Sparkles,
-} from 'lucide-react';
-
 import { cn } from '@kit/ui/utils';
 
+import {
+  isRanklySectionActive,
+  RANKLY_PROJECT_SECTIONS,
+} from '../_lib/rankly-project-sections';
 import { ranklyProjectPaths } from '../_lib/rankly-project-paths';
-
-type NavItem = {
-  label: string;
-  href: string;
-  icon: typeof LayoutDashboard;
-  isActive: (pathname: string, href: string, paths: ReturnType<typeof ranklyProjectPaths>) => boolean;
-};
-
-function buildNavItems(
-  paths: ReturnType<typeof ranklyProjectPaths>,
-): NavItem[] {
-  return [
-    {
-      label: 'Dashboard',
-      href: paths.dashboard,
-      icon: LayoutDashboard,
-      isActive: (pathname, href) => pathname === href,
-    },
-    {
-      label: 'Keyword tracking',
-      href: paths.keywords,
-      icon: Search,
-      isActive: (pathname, href) => pathname.startsWith(href),
-    },
-    {
-      label: 'Site Explorer',
-      href: paths.siteExplorer,
-      icon: Globe2,
-      isActive: (pathname, href) => pathname.startsWith(href),
-    },
-    {
-      label: 'Site Crawler',
-      href: paths.siteCrawler,
-      icon: ScanSearch,
-      isActive: (pathname, href) => pathname.startsWith(href),
-    },
-    {
-      label: 'PageSpeed',
-      href: paths.pagespeed,
-      icon: Gauge,
-      isActive: (pathname, href) => pathname.startsWith(href),
-    },
-    {
-      label: 'AI Search Audit',
-      href: paths.aiAudit,
-      icon: Sparkles,
-      isActive: (pathname, href) => pathname.startsWith(href),
-    },
-    {
-      label: 'Content briefs',
-      href: paths.briefs,
-      icon: FileText,
-      isActive: (pathname, href) => pathname.startsWith(href),
-    },
-    {
-      label: 'Keyword clusters',
-      href: paths.clusters,
-      icon: Network,
-      isActive: (pathname, href) => pathname.startsWith(href),
-    },
-  ];
-}
 
 export function RanklyProjectNav(props: {
   account: string;
@@ -86,7 +17,6 @@ export function RanklyProjectNav(props: {
 }) {
   const pathname = usePathname();
   const paths = ranklyProjectPaths(props.account, props.projectId);
-  const items = buildNavItems(paths);
 
   return (
     <aside className="w-full shrink-0 lg:sticky lg:top-6 lg:w-56">
@@ -95,14 +25,15 @@ export function RanklyProjectNav(props: {
         className="rounded-lg border border-white/10 bg-[var(--workspace-shell-panel)] p-2"
       >
         <ul className="space-y-0.5">
-          {items.map((item) => {
-            const active = item.isActive(pathname, item.href, paths);
-            const Icon = item.icon;
+          {RANKLY_PROJECT_SECTIONS.map((section) => {
+            const href = paths[section.pathKey];
+            const active = isRanklySectionActive(section.id, pathname, href);
+            const Icon = section.icon;
 
             return (
-              <li key={item.href}>
+              <li key={section.id}>
                 <Link
-                  href={item.href}
+                  href={href}
                   className={cn(
                     'flex h-10 items-center gap-2.5 rounded-md px-3 text-sm font-medium transition-colors',
                     active
@@ -111,7 +42,7 @@ export function RanklyProjectNav(props: {
                   )}
                 >
                   <Icon className="h-4 w-4 shrink-0 opacity-90" />
-                  {item.label}
+                  {section.navLabel}
                 </Link>
               </li>
             );
