@@ -47,7 +47,7 @@ export default async function FeedflowClientReviewsPage({
         title={`Reviews · ${client.display_name}`}
         description="Social sources linked to this CRM client for Feedflow."
       />
-      <PageBody className="space-y-8 bg-[var(--workspace-shell-canvas)] px-4 py-8 text-[var(--workspace-shell-text)] lg:px-6">
+      <PageBody className="space-y-8 bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
         <ModuleDataSection title="Connected sources for this client">
           {social.length === 0 ? (
             <ModuleEmptyState message="No feedflow.social_accounts rows for this client yet. Associate connections with client_id to see them here." />

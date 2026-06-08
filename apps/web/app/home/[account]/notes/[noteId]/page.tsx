@@ -67,7 +67,7 @@ async function NoteDetailPage({ params }: NoteDetailPageProps) {
         title={data.note.title || 'Untitled note'}
         description="Edit note"
       />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 text-white lg:px-8">
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-white lg:px-8">
         <NoteEditor
           accountId={data.accountId}
           accountSlug={data.accountSlug}

@@ -34,7 +34,7 @@ async function PersonalClientsPage({ searchParams }: Props) {
 
   if (!Array.isArray(accounts) || accounts.length === 0) {
     return (
-      <PageBody className="flex min-h-[60vh] items-center justify-center bg-[var(--workspace-shell-canvas)] px-4">
+      <PageBody className="flex min-h-[60vh] items-center justify-center bg-[var(--workspace-shell-canvas)] px-0">
         <div className="max-w-md rounded-2xl border border-zinc-700 bg-[var(--workspace-shell-panel)] p-8 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-[var(--keel-teal)]/15 text-[#5eead4]">
             <Users className="h-7 w-7" />
@@ -100,7 +100,7 @@ async function PersonalClientsPage({ searchParams }: Props) {
   } = await loadClientsPageData(slug);
 
   return (
-    <PageBody className="bg-[var(--workspace-shell-canvas)] p-4 md:p-6">
+    <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
       <div className="mb-6 flex flex-col gap-4 border-b border-white/10 pb-6">
         <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
           <div className="min-w-0 flex-1">

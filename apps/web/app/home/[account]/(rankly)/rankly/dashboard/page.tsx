@@ -57,8 +57,8 @@ export default async function RanklyDashboardPage({
         title="Rankly"
         description="SEO projects, tracked keywords, and alerts for this workspace."
       />
-      <PageBody className="space-y-10 bg-[var(--workspace-shell-canvas)] px-4 py-8 text-[var(--workspace-shell-text)] lg:px-6">
-        <div className="grid gap-4 sm:grid-cols-3">
+      <PageBody className="space-y-10 bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
+        <div className="grid gap-4 px-4 sm:grid-cols-3 lg:px-0">
           <div className="rounded-lg border border-white/10 bg-black/10 p-4">
             <p className="text-muted-foreground text-xs uppercase tracking-wide">
               Projects
@@ -97,7 +97,7 @@ export default async function RanklyDashboardPage({
           />
         </ModuleDataSection>
 
-        <div className="flex flex-wrap gap-3 text-sm">
+        <div className="flex flex-wrap gap-3 px-4 text-sm lg:px-0">
           <Link
             href={workAccountPath(workPaths.accountRanklyProjects, account)}
             className="rounded-lg border border-white/10 bg-black/10 px-4 py-2 transition hover:border-white/20"

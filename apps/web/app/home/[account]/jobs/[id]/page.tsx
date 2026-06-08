@@ -81,7 +81,7 @@ async function JobDetailPage({ params }: JobDetailPageProps) {
         account={accountSlug}
       />
 
-      <PageBody className="bg-[var(--workspace-shell-canvas)] p-4 md:p-6">
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
         <JobDetailContent
           accountSlug={accountSlug}
           accountId={accountId}

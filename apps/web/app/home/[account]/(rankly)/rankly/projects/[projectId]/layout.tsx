@@ -41,16 +41,16 @@ export default async function RanklyProjectLayout({
         title={project.name}
         description={project.domain}
       />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-8 text-[var(--workspace-shell-text)] lg:px-6">
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
         <Link
           href={projectsHref}
-          className="text-primary mb-6 inline-block text-sm underline-offset-4 hover:underline"
+          className="text-primary mb-6 inline-block px-4 text-sm underline-offset-4 hover:underline lg:px-0"
         >
           ← All projects
         </Link>
         <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
           <RanklyProjectNav account={account} projectId={projectId} />
-          <div className="min-w-0 flex-1 space-y-8">{children}</div>
+          <div className="min-w-0 flex-1 space-y-8 px-4 lg:px-0">{children}</div>
         </div>
       </PageBody>
     </>

@@ -28,7 +28,7 @@ export default function SignaturesError({ error, reset }: SignaturesErrorProps) 
         title={t('title')}
         description={t('description')}
       />
-      <PageBody className="space-y-4 bg-[var(--workspace-shell-canvas)] px-4 py-8 text-[var(--workspace-shell-text)] lg:px-6">
+      <PageBody className="space-y-4 bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
         <p className="text-sm text-destructive">{t('errors.generic')}</p>
         <Button type="button" variant="outline" onClick={reset}>
           {t('errors.postgrestSchemaRetry')}

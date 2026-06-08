@@ -51,7 +51,7 @@ export default async function RanklyProjectsPage({
         title="Rankly projects"
         description="Domains and keyword sets tracked for this team account."
       />
-      <PageBody className="space-y-8 bg-[var(--workspace-shell-canvas)] px-4 py-8 text-[var(--workspace-shell-text)] lg:px-6">
+      <PageBody className="space-y-8 bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
         <ModuleDataSection title="Projects">
           <RanklyProjectsManager
             accountSlug={account}

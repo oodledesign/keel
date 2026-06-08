@@ -59,7 +59,7 @@ async function CommunitySchedulePage({ params }: CommunitySchedulePageProps) {
         title="Schedule"
         description="Plan home group meetups, attach session content, and keep a record of each gathering."
       />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-8 text-white lg:px-6">
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-8 text-white lg:px-6">
         {schedule.accountId ? (
           <div className="mx-auto max-w-3xl space-y-10">
             <CommunitySeriesPanel

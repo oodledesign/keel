@@ -93,7 +93,8 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
         description={<AppBreadcrumbs />}
       />
 
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 text-[var(--workspace-shell-text)] lg:px-6">
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-[var(--workspace-shell-text)] lg:px-6">
+        <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 lg:px-0">
         {!isClient && (access.isOwner || access.isAdmin) ? (
           <RestoreWorkspaceModulesCard
             accountId={account.id}
@@ -134,6 +135,7 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
               features={features}
             />
           )}
+        </div>
         </div>
       </PageBody>
     </>

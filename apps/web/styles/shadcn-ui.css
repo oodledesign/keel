@@ -59,7 +59,7 @@
 
     --workspace-shell-header: transparent;
     --workspace-shell-sidebar: #0f1b35;
-    --workspace-shell-canvas: #0b132b;
+    --workspace-shell-canvas: #0f1b35;
     --workspace-shell-panel: #0f1b35;
     --workspace-shell-panel-hover: #152544;
     --workspace-shell-sidebar-active: #2a9d8f;
@@ -78,7 +78,7 @@
   }
 
   .dark {
-    --background: var(--color-neutral-900);
+    --background: #0f1b35;
     --foreground: var(--color-white);
 
     --card: var(--workspace-shell-panel);
@@ -124,7 +124,7 @@
 
     --workspace-shell-header: transparent;
     --workspace-shell-sidebar: #0f1b35;
-    --workspace-shell-canvas: #0b132b;
+    --workspace-shell-canvas: #0f1b35;
     --workspace-shell-panel: #0f1b35;
     --workspace-shell-panel-hover: #152544;
     --workspace-shell-sidebar-active: #2a9d8f;

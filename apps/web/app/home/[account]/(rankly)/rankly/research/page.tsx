@@ -34,7 +34,7 @@ export default async function RanklyResearchPage({
         title="Keyword research cache"
         description="Shared DataForSEO-style cache entries (not per-account). Useful to confirm integrations wrote results."
       />
-      <PageBody className="space-y-8 bg-[var(--workspace-shell-canvas)] px-4 py-8 text-[var(--workspace-shell-text)] lg:px-6">
+      <PageBody className="space-y-8 bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
         <ModuleDataSection title="Recent cache entries">
           {cacheRows.length === 0 ? (
             <ModuleEmptyState message="No rows in rankly.keyword_research_cache yet." />

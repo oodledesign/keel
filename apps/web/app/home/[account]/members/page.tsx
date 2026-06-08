@@ -79,7 +79,7 @@ async function TeamAccountMembersPage({ params }: TeamAccountMembersPageProps) {
         account={account.slug}
       />
 
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 text-[var(--workspace-shell-text)] lg:px-6">
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-[var(--workspace-shell-text)] lg:px-6">
         <div className="flex w-full max-w-4xl flex-col space-y-4 pb-32">
           <Card className="border-white/6 bg-[var(--workspace-shell-panel)]">
             <CardHeader className={'flex flex-row justify-between'}>

@@ -6,7 +6,7 @@ type ModuleDataSectionProps = {
 
 export function ModuleDataSection(props: ModuleDataSectionProps) {
   return (
-    <section className="space-y-3">
+    <section className="space-y-3 px-4 lg:px-0">
       <div>
         <h2 className="text-lg font-medium">{props.title}</h2>
         {props.description ? (

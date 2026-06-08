@@ -11,7 +11,7 @@ async function PlannerPage() {
   const data = await loadPlannerPageData();
 
   return (
-    <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 text-white lg:px-6">
+    <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-white lg:px-6">
       <PlannerPageClient initialData={data} />
     </PageBody>
   );

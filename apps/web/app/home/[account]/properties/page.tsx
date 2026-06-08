@@ -59,7 +59,7 @@ async function PropertiesPage({ params }: PropertiesPageProps) {
         title="Properties"
         description="Manage your property portfolio."
       />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 lg:px-6">
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 lg:px-6">
         <PropertiesList
           accountId={accountId}
           accountSlug={slug}

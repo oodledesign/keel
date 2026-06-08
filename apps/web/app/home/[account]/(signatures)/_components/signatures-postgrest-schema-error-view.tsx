@@ -32,7 +32,7 @@ export function SignaturesPostgrestSchemaErrorView({
         title={t('title')}
         description={t('description')}
       />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-8 text-[var(--workspace-shell-text)] lg:px-6">
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
         <SignaturesPostgrestSchemaMissingCard
           title={t('errors.postgrestSchemaTitle')}
           description={t('errors.postgrestSchemaDescription')}

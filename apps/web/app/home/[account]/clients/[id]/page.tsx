@@ -83,7 +83,7 @@ export default async function ClientDetailPage({ params }: Props) {
       : [null, null, []];
 
   return (
-    <PageBody className="flex flex-col bg-[var(--workspace-shell-canvas)] p-4 md:p-6">
+    <PageBody className="flex flex-col bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
       <ClientDetailPageNav
         accountSlug={accountSlug}
         clientsListHref={clientsListHref}

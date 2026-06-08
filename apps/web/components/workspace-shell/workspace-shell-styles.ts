@@ -35,4 +35,11 @@ export const workspaceSidebarClassName = [
 ].join(' ');
 
 export const workspacePageCanvasClassName =
-  'bg-[var(--workspace-shell-canvas)] text-white min-h-0 flex-1';
+  'bg-[var(--workspace-shell-canvas)] text-[var(--workspace-shell-text)] min-h-0 flex-1';
+
+/** Page body: full-bleed on mobile, inset from lg. */
+export const workspacePageBodyClassName =
+  'bg-[var(--workspace-shell-canvas)] px-0 py-6 text-[var(--workspace-shell-text)] lg:px-6';
+
+/** Inner content column when the page body is full-bleed on mobile. */
+export const workspacePageContentClassName = 'px-4 lg:px-0';

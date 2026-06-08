@@ -61,7 +61,7 @@ async function DocsPage({ params }: DocsPageProps) {
         title="Docs"
         description="Written documents and uploaded files."
       />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 text-white lg:px-8">
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-white lg:px-8">
         <DocsPageContent
           accountId={data.accountId}
           accountSlug={data.accountSlug}

@@ -61,7 +61,7 @@ async function PersonalAccountBillingPage() {
         description={<AppBreadcrumbs />}
       />
 
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 text-[var(--workspace-shell-text)] lg:px-6">
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-[var(--workspace-shell-text)] lg:px-6">
         <div className="flex max-w-2xl flex-col space-y-4">
           <If
             condition={hasBillingData}

@@ -34,7 +34,7 @@ export default async function RanklyAlertsPage({
         title="Rankly alerts"
         description="Threshold rules on keywords in your projects (same account scope)."
       />
-      <PageBody className="space-y-8 bg-[var(--workspace-shell-canvas)] px-4 py-8 text-[var(--workspace-shell-text)] lg:px-6">
+      <PageBody className="space-y-8 bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
         <ModuleDataSection title="Alerts">
           {alerts.length === 0 ? (
             <ModuleEmptyState message="No alerts yet. Alerts reference rankly.keywords in your projects—add keywords first, then alert rows." />

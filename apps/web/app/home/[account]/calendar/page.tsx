@@ -47,7 +47,7 @@ async function FamilyCalendarPage({ params }: FamilyCalendarPageProps) {
         title="Calendar"
         description="Shared events and reminders for your family space."
       />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-8 text-[var(--workspace-shell-text)] lg:px-6">
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
         <p className="text-muted-foreground max-w-xl text-sm">
           Family calendar is coming soon. You will be able to see and plan
           events together here.

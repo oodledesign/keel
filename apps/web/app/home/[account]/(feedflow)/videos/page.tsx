@@ -34,7 +34,7 @@ export default async function FeedflowVideosPage({
         title="Feedflow videos"
         description="Hosted or processed videos tied to this workspace."
       />
-      <PageBody className="space-y-8 bg-[var(--workspace-shell-canvas)] px-4 py-8 text-[var(--workspace-shell-text)] lg:px-6">
+      <PageBody className="space-y-8 bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
         <ModuleDataSection title="Videos">
           {videos.length === 0 ? (
             <ModuleEmptyState message="No videos yet. Entries appear here when feedflow.videos has rows for this account." />

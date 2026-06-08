@@ -35,7 +35,7 @@ export default async function SignaturesLayout({
           title={<Trans i18nKey="signatures:title" />}
           description={<Trans i18nKey="signatures:description" />}
         />
-        <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-8 text-[var(--workspace-shell-text)] lg:px-6">
+        <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
           <SignaturesModuleDisabled accountSlug={account} />
         </PageBody>
       </>
@@ -64,7 +64,7 @@ export default async function SignaturesLayout({
             title={t('title')}
             description={t('description')}
           />
-          <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-8 text-[var(--workspace-shell-text)] lg:px-6">
+          <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
             <SignaturesPostgrestSchemaMissing />
           </PageBody>
         </>
@@ -80,7 +80,7 @@ export default async function SignaturesLayout({
         title={<Trans i18nKey="signatures:title" />}
         description={<Trans i18nKey="signatures:description" />}
       />
-      <PageBody className="space-y-8 bg-[var(--workspace-shell-canvas)] px-4 py-8 text-[var(--workspace-shell-text)] lg:px-6">
+      <PageBody className="space-y-8 bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
         <SignaturesNav accountSlug={account} />
         <SignaturesConnectionGate
           accountId={accountId}

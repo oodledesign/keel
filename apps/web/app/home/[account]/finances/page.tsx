@@ -62,7 +62,7 @@ async function FinancesPage({ params }: FinancesPageProps) {
         title="Finances"
         description="Revenue, expenses, and financial overview."
       />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-8 text-white lg:px-8">
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-8 text-white lg:px-8">
         <p className="max-w-xl text-sm text-zinc-400">
           Finances overview is coming soon. Use Invoices for billing in the
           meantime.

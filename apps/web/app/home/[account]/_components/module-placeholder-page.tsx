@@ -13,7 +13,8 @@ type ModulePlaceholderPageProps = {
 
 export function ModulePlaceholderPage(props: ModulePlaceholderPageProps) {
   return (
-    <PageBody className="space-y-6 bg-[var(--workspace-shell-canvas)] px-4 py-8 text-[var(--workspace-shell-text)] lg:px-6">
+    <PageBody className="space-y-6 bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
+      <div className="space-y-6 px-4 lg:px-0">
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">{props.title}</h1>
         <p className="text-muted-foreground max-w-2xl text-sm">
@@ -31,6 +32,7 @@ export function ModulePlaceholderPage(props: ModulePlaceholderPageProps) {
             {link.label}
           </Link>
         ))}
+      </div>
       </div>
     </PageBody>
   );

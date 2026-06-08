@@ -48,18 +48,20 @@ async function WorkspaceAppsPage({ params }: WorkspaceAppsPageProps) {
         title="Apps"
         description="Installed apps for this workspace."
       />
-      <PageBody className="space-y-6 bg-[var(--workspace-shell-canvas)] px-4 py-8 text-[var(--workspace-shell-text)] lg:px-6">
-        <WorkspaceAppsGrid apps={apps} />
-        <p className="text-muted-foreground text-xs">
-          Need another app? Manage modules in{' '}
-          <a
-            href={pathsConfig.app.accountSettings.replace('[account]', accountSlug)}
-            className="text-[var(--keel-teal)] hover:underline"
-          >
-            workspace settings
-          </a>
-          .
-        </p>
+      <PageBody className="space-y-6 bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
+        <div className="space-y-6 px-4 lg:px-0">
+          <WorkspaceAppsGrid apps={apps} />
+          <p className="text-muted-foreground text-xs">
+            Need another app? Manage modules in{' '}
+            <a
+              href={pathsConfig.app.accountSettings.replace('[account]', accountSlug)}
+              className="text-[var(--keel-teal)] hover:underline"
+            >
+              workspace settings
+            </a>
+            .
+          </p>
+        </div>
       </PageBody>
     </>
   );

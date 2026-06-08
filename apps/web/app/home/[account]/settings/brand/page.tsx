@@ -51,7 +51,7 @@ export default async function BrandSettingsPage(props: BrandSettingsPageProps) {
         description={<AppBreadcrumbs />}
       />
 
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 text-[var(--workspace-shell-text)] lg:px-6">
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-[var(--workspace-shell-text)] lg:px-6">
         <BrandSettingsForm
           accountId={accountId}
           accountSlug={account}

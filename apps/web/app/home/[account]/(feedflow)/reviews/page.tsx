@@ -56,7 +56,7 @@ export default async function FeedflowReviewsPage({
         title="Feedflow reviews"
         description="Connected social sources and embeddable widgets for this workspace."
       />
-      <PageBody className="space-y-10 bg-[var(--workspace-shell-canvas)] px-4 py-8 text-[var(--workspace-shell-text)] lg:px-6">
+      <PageBody className="space-y-10 bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
         <FeedflowOauthBanner
           error={oauthError}
           success={sp.feedflow_connected ?? null}

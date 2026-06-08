@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
 import { Button } from '@kit/ui/button';
+import { Checkbox } from '@kit/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -217,6 +218,13 @@ export function RankTrackingPanel(props: {
   const [interval, setInterval] = useState<RankRefreshInterval>(
     props.settings?.rankRefreshInterval ?? 'weekly',
   );
+  const [trackDesktop, setTrackDesktop] = useState(
+    props.settings?.trackDesktop ?? true,
+  );
+  const [trackMobile, setTrackMobile] = useState(
+    props.settings?.trackMobile ?? false,
+  );
+  const [savingDevices, setSavingDevices] = useState(false);
   const [sort, setSort] = useState<{
     column: SortColumn;
     direction: SortDirection;
@@ -230,6 +238,21 @@ export function RankTrackingPanel(props: {
         : { column, direction: defaultSortDirection(column) },
     );
   };
+
+  const trackedDevices = useMemo(() => {
+    const devices: string[] = [];
+    if (props.settings?.trackDesktop ?? true) devices.push('desktop');
+    if (props.settings?.trackMobile) devices.push('mobile');
+    if (devices.length === 0) devices.push('desktop');
+    return devices;
+  }, [props.settings?.trackDesktop, props.settings?.trackMobile]);
+
+  const deviceCostLabel =
+    trackedDevices.length > 1
+      ? ` (${trackedDevices.join(' + ')})`
+      : trackedDevices[0] === 'mobile'
+        ? ' (mobile only)'
+        : '';
 
   const snapshotByKeywordDevice = useMemo(
     () =>
@@ -294,16 +317,17 @@ export function RankTrackingPanel(props: {
   const displayRows = useMemo(
     () =>
       sortedKeywords.flatMap((keyword) => {
-        const devices = props.settings?.trackMobile
-          ? ['desktop', 'mobile']
-          : [String(keyword.device ?? 'desktop')];
+        const devices =
+          trackedDevices.length > 0
+            ? trackedDevices
+            : [String(keyword.device ?? 'desktop')];
 
         return devices.map((device, deviceIndex) => {
           const snapshot = snapshotByKeywordDevice.get(`${keyword.id}:${device}`);
           return { keyword, device, snapshot, showRemove: deviceIndex === 0 };
         });
       }),
-    [sortedKeywords, props.settings?.trackMobile, snapshotByKeywordDevice],
+    [sortedKeywords, trackedDevices, snapshotByKeywordDevice],
   );
 
   const parsedCount = useMemo(
@@ -474,33 +498,101 @@ export function RankTrackingPanel(props: {
     }
   };
 
+  const saveDevices = async () => {
+    if (!trackDesktop && !trackMobile) {
+      toast.error('Enable at least one device');
+      return;
+    }
+
+    setSavingDevices(true);
+    try {
+      const res = await fetch('/api/rankly/rank-check', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: props.projectId,
+          accountId: props.accountId,
+          trackDesktop,
+          trackMobile,
+        }),
+      });
+      const json = (await res.json()) as ApiResponse<{ settings: RankTrackingSettings }>;
+      if (!json.ok) throw new Error(json.error.message);
+      toast.success('Device tracking updated');
+      router.refresh();
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setSavingDevices(false);
+    }
+  };
+
+  const devicesDirty =
+    trackDesktop !== (props.settings?.trackDesktop ?? true) ||
+    trackMobile !== Boolean(props.settings?.trackMobile);
+
   return (
     <div className="space-y-6">
       <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
-        <div className="space-y-2">
-          <Label htmlFor="rank-refresh-interval">Auto refresh</Label>
-          <select
-            id="rank-refresh-interval"
-            value={interval}
-            onChange={(e) => setInterval(e.target.value as RankRefreshInterval)}
-            className="border-input bg-background flex h-10 w-full max-w-xs rounded-md border px-3 py-2 text-sm"
-          >
-            {(Object.keys(RANK_REFRESH_INTERVAL_LABELS) as RankRefreshInterval[]).map(
-              (value) => (
-                <option key={value} value={value}>
-                  {RANK_REFRESH_INTERVAL_LABELS[value]}
-                </option>
-              ),
-            )}
-          </select>
-          <p className="text-muted-foreground text-xs">
-            {props.settings?.lastRankCheckAt
-              ? `Last checked ${props.settings.lastRankCheckAt}`
-              : 'Not checked yet'}
-            {props.settings?.nextRankCheckAt && interval !== 'manual'
-              ? ` · Next ${new Date(props.settings.nextRankCheckAt).toLocaleDateString()}`
-              : null}
-          </p>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="rank-refresh-interval">Auto refresh</Label>
+            <select
+              id="rank-refresh-interval"
+              value={interval}
+              onChange={(e) => setInterval(e.target.value as RankRefreshInterval)}
+              className="border-input bg-background flex h-10 w-full max-w-xs rounded-md border px-3 py-2 text-sm"
+            >
+              {(Object.keys(RANK_REFRESH_INTERVAL_LABELS) as RankRefreshInterval[]).map(
+                (value) => (
+                  <option key={value} value={value}>
+                    {RANK_REFRESH_INTERVAL_LABELS[value]}
+                  </option>
+                ),
+              )}
+            </select>
+            <p className="text-muted-foreground text-xs">
+              {props.settings?.lastRankCheckAt
+                ? `Last checked ${props.settings.lastRankCheckAt}`
+                : 'Not checked yet'}
+              {props.settings?.nextRankCheckAt && interval !== 'manual'
+                ? ` · Next ${new Date(props.settings.nextRankCheckAt).toLocaleDateString()}`
+                : null}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Track devices</Label>
+            <div className="flex flex-wrap items-center gap-4">
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={trackDesktop}
+                  onCheckedChange={(checked) => setTrackDesktop(checked === true)}
+                />
+                Desktop
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={trackMobile}
+                  onCheckedChange={(checked) => setTrackMobile(checked === true)}
+                />
+                Mobile
+              </label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={savingDevices || !devicesDirty}
+                onClick={saveDevices}
+              >
+                {savingDevices ? 'Saving…' : 'Save devices'}
+              </Button>
+            </div>
+            <p className="text-muted-foreground text-xs">
+              Each enabled device doubles API cost and check time. Turn off mobile
+              if you only need desktop rankings.
+            </p>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -592,7 +684,7 @@ export function RankTrackingPanel(props: {
           <strong className="text-white">{formatUsdCost(props.estimatedCostUsd)}</strong>{' '}
           DataForSEO API spend for {props.keywordCount} keyword
           {props.keywordCount === 1 ? '' : 's'}
-          {props.settings?.trackMobile ? ' (desktop + mobile)' : ''}.
+          {deviceCostLabel}.
         </p>
         {props.latestJob?.status === 'done' ? (
           <p className="text-muted-foreground mt-1 text-xs">

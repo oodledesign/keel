@@ -47,7 +47,7 @@ function PersonalAccountSettingsPage() {
   const user = use(requireUserInServerComponent());
 
   return (
-    <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 text-[var(--workspace-shell-text)] lg:px-6">
+    <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-[var(--workspace-shell-text)] lg:px-6">
       <div className="flex w-full flex-1 flex-col lg:max-w-2xl">
         <div className="rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
           <PersonalAccountSettingsContainer

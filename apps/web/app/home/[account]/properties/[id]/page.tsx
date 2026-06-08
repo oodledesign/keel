@@ -80,7 +80,7 @@ async function PropertyDetailPage({ params }: PropertyDetailPageProps) {
         title={property.name}
         description={property.address ?? 'Property details'}
       />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 lg:px-6">
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 lg:px-6">
         <PropertyDetailContent
           property={property}
           accountId={workspace.account.id as string}

@@ -76,7 +76,7 @@ async function NotesPage({ params }: NotesPageProps) {
                 : 'Account notes linked to projects and clients.'
         }
       />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 text-white lg:px-8">
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-white lg:px-8">
         <NotesPageContent
           accountId={data.accountId}
           accountSlug={data.accountSlug}

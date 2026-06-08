@@ -52,7 +52,7 @@ async function DocDetailPage({ params }: DocDetailPageProps) {
         title={data.doc.title || 'Untitled document'}
         description="Edit document"
       />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 text-white lg:px-8">
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-white lg:px-8">
         <DocEditor
           accountId={data.accountId}
           accountSlug={data.accountSlug}
