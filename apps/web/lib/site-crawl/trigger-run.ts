@@ -1,9 +1,13 @@
 import 'server-only';
 
+import { delay } from '~/lib/clusters/utils';
+
 import { getSiteCrawlJob, updateSiteCrawlJob } from './db';
 import { SITE_CRAWL_WORKER_TRIGGER_DEBOUNCE_SEC } from './config';
 
-const RUN_TIME_BUDGET_MS = 240_000;
+const RUN_TIME_BUDGET_MS = 270_000;
+const RUN_TRIGGER_ATTEMPTS = 4;
+const RUN_TRIGGER_TIMEOUT_MS = 20_000;
 
 export function getSiteCrawlRunUrl(jobId: string): string {
   const base =
@@ -17,6 +21,66 @@ export function getSiteCrawlRunUrl(jobId: string): string {
   }
 
   return `${base}/api/rankly/site-crawl/${jobId}/run`;
+}
+
+async function postSiteCrawlRunWithRetry(
+  jobId: string,
+  secret: string,
+): Promise<boolean> {
+  const url = getSiteCrawlRunUrl(jobId);
+
+  for (let attempt = 1; attempt <= RUN_TRIGGER_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${secret}` },
+        signal: AbortSignal.timeout(RUN_TRIGGER_TIMEOUT_MS),
+      });
+
+      if (response.ok) {
+        return true;
+      }
+
+      console.error(
+        '[rankly] site crawl run trigger bad status',
+        jobId,
+        response.status,
+        attempt,
+      );
+    } catch (error) {
+      console.error(
+        '[rankly] site crawl run trigger attempt failed',
+        jobId,
+        attempt,
+        error,
+      );
+    }
+
+    if (attempt < RUN_TRIGGER_ATTEMPTS) {
+      await delay(1500 * attempt);
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Kick off the next worker invocation with retries (used from after() and cron).
+ */
+export async function scheduleSiteCrawlContinuation(
+  jobId: string,
+): Promise<boolean> {
+  const secret = process.env.CRON_SECRET?.trim();
+  if (!secret) {
+    console.error('[rankly] CRON_SECRET missing; cannot trigger site crawl run');
+    return false;
+  }
+
+  await updateSiteCrawlJob(jobId, {
+    last_worker_trigger_at: new Date().toISOString(),
+  });
+
+  return postSiteCrawlRunWithRetry(jobId, secret);
 }
 
 export async function triggerSiteCrawlRunDebounced(
@@ -45,19 +109,7 @@ export async function triggerSiteCrawlRunDebounced(
     }
   }
 
-  await updateSiteCrawlJob(jobId, {
-    last_worker_trigger_at: new Date().toISOString(),
-  });
-
-  const url = getSiteCrawlRunUrl(jobId);
-  void fetch(url, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${secret}` },
-  }).catch((err) => {
-    console.error('[rankly] trigger site crawl run failed', jobId, err);
-  });
-
-  return true;
+  return scheduleSiteCrawlContinuation(jobId);
 }
 
 /** Immediate worker trigger (new jobs). */

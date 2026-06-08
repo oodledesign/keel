@@ -10,20 +10,22 @@ import {
   insertSiteCrawlPage,
   loadAllPagesForJob,
   loadCrawledUrlsForJob,
+  listActiveSiteCrawlJobs,
+  listStalledSiteCrawlJobs,
   updateSiteCrawlJob,
   updateSiteCrawlPageIssues,
 } from './db';
 import { fetchAndParsePage } from './fetch-page';
 import { applyDuplicateIssues, summariseIssues } from './issues';
 import {
-  triggerSiteCrawlRunDebounced,
   RUN_TIME_BUDGET_MS,
 } from './trigger-run';
 import {
   SITE_CRAWL_JOB_STALE_MINUTES,
   SITE_CRAWL_MAX_ACTIVE_JOBS,
+  SITE_CRAWL_WORKER_STALL_MINUTES,
 } from './config';
-const PAGES_PER_BATCH = 12;
+const PAGES_PER_BATCH = 20;
 const CRAWL_DELAY_MS = 150;
 
 function ranklyAdmin() {
@@ -40,17 +42,33 @@ export async function syncSiteCrawlJobProgress(
     return 'unchanged';
   }
 
-  const ageMs = Date.now() - new Date(job.updated_at).getTime();
+  const previousUrlsCrawled = job.urls_crawled;
+  const previousUpdatedAt = job.updated_at;
+  const ageMs = Date.now() - new Date(previousUpdatedAt).getTime();
   const staleMs = SITE_CRAWL_JOB_STALE_MINUTES * 60 * 1000;
+  const hasOutstanding =
+    job.pending_urls.length > 0 && job.urls_crawled < job.url_limit;
 
-  if (
-    ageMs > staleMs &&
-    job.pending_urls.length > 0 &&
-    job.urls_crawled > 0
-  ) {
+  if (!hasOutstanding || previousUrlsCrawled === 0) {
+    return 'unchanged';
+  }
+
+  if (ageMs <= staleMs) {
+    return 'unchanged';
+  }
+
+  const refreshed = await getSiteCrawlJob(jobId);
+  const stillStalled =
+    refreshed.urls_crawled === previousUrlsCrawled &&
+    refreshed.pending_urls.length > 0 &&
+    refreshed.status !== 'done' &&
+    refreshed.status !== 'error';
+
+  if (stillStalled) {
     await updateSiteCrawlJob(jobId, {
       status: 'error',
-      error_msg: 'Site crawl timed out. Try again with a lower URL limit.',
+      error_msg:
+        'Site crawl timed out. Work may resume via the background worker — try starting a new crawl if this persists.',
       finished_at: new Date().toISOString(),
     });
     return 'stale_failed';
@@ -63,21 +81,36 @@ export async function sweepSiteCrawlWorkers(): Promise<{
   scanned: number;
   triggered: number;
 }> {
-  const { listActiveSiteCrawlJobs } = await import('./db');
-  const jobs = await listActiveSiteCrawlJobs(SITE_CRAWL_MAX_ACTIVE_JOBS);
+  const { triggerSiteCrawlRunDebounced } = await import('./trigger-run');
+  const stalled = await listStalledSiteCrawlJobs(
+    SITE_CRAWL_WORKER_STALL_MINUTES,
+    SITE_CRAWL_MAX_ACTIVE_JOBS,
+  );
+  const active = await listActiveSiteCrawlJobs(SITE_CRAWL_MAX_ACTIVE_JOBS);
+
+  const jobIds = new Set<string>();
+  for (const job of [...stalled, ...active]) {
+    jobIds.add(job.id);
+  }
 
   let triggered = 0;
-  for (const job of jobs) {
+  for (const jobId of jobIds) {
+    const job = [...stalled, ...active].find((row) => row.id === jobId);
+    if (!job) continue;
+
     const pending = job.pending_urls.length;
     if (pending === 0 && job.urls_crawled >= job.url_limit) {
       continue;
     }
 
-    const didTrigger = await triggerSiteCrawlRunDebounced(job.id);
+    const isStalled = stalled.some((row) => row.id === jobId);
+    const didTrigger = await triggerSiteCrawlRunDebounced(jobId, {
+      force: isStalled,
+    });
     if (didTrigger) triggered += 1;
   }
 
-  return { scanned: jobs.length, triggered };
+  return { scanned: jobIds.size, triggered };
 }
 
 async function finalizeSiteCrawlJob(jobId: string): Promise<void> {
@@ -172,7 +205,6 @@ export async function runSiteCrawlJob(
     const shouldContinue = pending.length > 0 && urlsCrawled < job.url_limit;
 
     if (shouldContinue) {
-      await triggerSiteCrawlRunDebounced(jobId);
       return { completed: false };
     }
 

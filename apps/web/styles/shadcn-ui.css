@@ -62,14 +62,16 @@
     --workspace-shell-canvas: #0f1b35;
     --workspace-shell-panel: #0f1b35;
     --workspace-shell-panel-hover: #152544;
-    --workspace-shell-sidebar-active: #2a9d8f;
+    --workspace-shell-sidebar-active: #1e403a;
     --workspace-shell-sidebar-accent: rgba(255, 255, 255, 0.06);
     --workspace-shell-text: #1e293b;
     --workspace-shell-text-muted: #64748b;
     --workspace-shell-text-on-light: #1e293b;
 
-    --keel-gradient-from: #0b132b;
-    --keel-gradient-to: #2a9d8f;
+    --keel-gradient-from: #152544;
+    --keel-gradient-to: #18352f;
+    --keel-gradient-hover-from: #1a3052;
+    --keel-gradient-hover-to: #1c4039;
     --keel-accent-blue: #2563eb;
     --keel-teal: #2a9d8f;
 
@@ -127,14 +129,16 @@
     --workspace-shell-canvas: #0f1b35;
     --workspace-shell-panel: #0f1b35;
     --workspace-shell-panel-hover: #152544;
-    --workspace-shell-sidebar-active: #2a9d8f;
+    --workspace-shell-sidebar-active: #1e403a;
     --workspace-shell-sidebar-accent: rgba(255, 255, 255, 0.06);
     --workspace-shell-text: #ffffff;
     --workspace-shell-text-muted: rgba(255, 255, 255, 0.65);
     --workspace-shell-text-on-light: #1e293b;
 
-    --keel-gradient-from: #0b132b;
-    --keel-gradient-to: #2a9d8f;
+    --keel-gradient-from: #152544;
+    --keel-gradient-to: #18352f;
+    --keel-gradient-hover-from: #1a3052;
+    --keel-gradient-hover-to: #1c4039;
     --keel-accent-blue: #2563eb;
     --keel-teal: #2a9d8f;
 

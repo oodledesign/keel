@@ -62,8 +62,7 @@ export function WorkspaceNewMenu(props: WorkspaceNewMenuProps) {
       <DropdownMenuTrigger asChild>
         <Button
           className={cn(
-            'h-10 gap-1.5 rounded-lg border-0 px-4 text-sm font-semibold text-white shadow-none',
-            'bg-gradient-to-r from-[#0B132B] to-[#2A9D8F] hover:from-[#0f1838] hover:to-[#34b3a4]',
+            'keel-gradient-btn h-10 gap-1.5 rounded-lg border-0 px-4 text-sm font-semibold shadow-none',
           )}
         >
           <Plus className="h-4 w-4" />

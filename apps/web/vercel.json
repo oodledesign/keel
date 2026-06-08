@@ -13,7 +13,7 @@
     },
     {
       "path": "/api/cron/rankly-site-crawl-worker",
-      "schedule": "*/5 * * * *"
+      "schedule": "*/2 * * * *"
     },
     {
       "path": "/api/cron/rankly-pagespeed",

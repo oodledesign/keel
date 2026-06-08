@@ -247,7 +247,7 @@ export function WorkspaceSetupForm() {
           type="button"
           disabled={isPending}
           onClick={submit}
-          className="h-11 rounded-xl bg-gradient-to-r from-[#0B132B] to-[#2A9D8F] px-8 text-sm font-semibold text-white hover:opacity-95"
+          className="keel-gradient-btn h-11 rounded-xl px-8 text-sm font-semibold"
         >
           {isPending ? 'Creating workspaces…' : 'Get started'}
         </Button>

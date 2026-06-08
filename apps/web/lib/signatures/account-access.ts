@@ -7,12 +7,16 @@ export async function assertAccountMember(
   accountId: string,
   userId: string,
 ) {
-  const { data } = await client
+  const { data, error } = await client
     .from('accounts_memberships')
-    .select('id')
+    .select('user_id')
     .eq('account_id', accountId)
     .eq('user_id', userId)
     .maybeSingle();
+
+  if (error) {
+    return jsonErr('DB_ERROR', error.message, 500);
+  }
 
   if (!data) {
     return jsonErr('FORBIDDEN', 'Not a member of this account', 403);
@@ -25,12 +29,16 @@ export async function assertAccountAdmin(
   accountId: string,
   userId: string,
 ) {
-  const { data } = await client
+  const { data, error } = await client
     .from('accounts_memberships')
     .select('account_role')
     .eq('account_id', accountId)
     .eq('user_id', userId)
     .maybeSingle();
+
+  if (error) {
+    return jsonErr('DB_ERROR', error.message, 500);
+  }
 
   const role = data?.account_role;
   if (role !== 'owner' && role !== 'admin') {

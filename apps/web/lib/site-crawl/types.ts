@@ -83,7 +83,7 @@ export type CrawledPageResult = {
   botBlockedInitially?: boolean;
 };
 
-export const SITE_CRAWL_URL_LIMIT_OPTIONS = [500, 1000, 2000] as const;
+export const SITE_CRAWL_URL_LIMIT_OPTIONS = [100, 500, 1000, 2000] as const;
 
 export const DEFAULT_SITE_CRAWL_URL_LIMIT = 1000;
 

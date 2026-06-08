@@ -193,6 +193,32 @@ export async function listActiveSiteCrawlJobs(
   return (data ?? []).map((row) => mapJobRow(row as Record<string, unknown>));
 }
 
+export async function listStalledSiteCrawlJobs(
+  stallMinutes: number,
+  limit = 8,
+): Promise<SiteCrawlJobRow[]> {
+  const cutoff = new Date(Date.now() - stallMinutes * 60 * 1000).toISOString();
+
+  const { data, error } = await ranklyAdmin()
+    .from('site_crawl_jobs')
+    .select('*')
+    .in('status', ['pending', 'running'])
+    .lt('updated_at', cutoff)
+    .order('updated_at', { ascending: true })
+    .limit(limit);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? [])
+    .map((row) => mapJobRow(row as Record<string, unknown>))
+    .filter(
+      (job) =>
+        job.pending_urls.length > 0 || job.urls_crawled < job.url_limit,
+    );
+}
+
 export async function loadSiteCrawlPagesForExport(
   jobId: string,
 ): Promise<SiteCrawlPageRow[]> {

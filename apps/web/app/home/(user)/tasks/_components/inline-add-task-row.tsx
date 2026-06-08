@@ -67,7 +67,7 @@ export function InlineAddTaskRow({
             setError(null);
             setActive(true);
           }}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#2A9D8F]/45 bg-gradient-to-r from-[#2A9D8F]/10 to-[#2563EB]/8 px-4 py-3 text-sm font-semibold text-[#7ee8d8] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-colors hover:border-[#2A9D8F]/70 hover:from-[#2A9D8F]/16 hover:to-[#2563EB]/12 hover:text-white"
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 bg-gradient-to-r from-[var(--keel-teal)]/6 to-[var(--keel-teal)]/3 px-4 py-3 text-sm font-semibold text-white/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors hover:border-white/25 hover:from-[var(--keel-teal)]/10 hover:to-[var(--keel-teal)]/5 hover:text-white"
         >
           <Plus className="h-4 w-4 shrink-0" strokeWidth={2.5} />
           Add task

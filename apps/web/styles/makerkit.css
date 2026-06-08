@@ -48,3 +48,34 @@ Optimize dropdowns for mobile
 .site-footer > .container:before {
   top: 0;
 }
+
+@layer components {
+  .keel-gradient-btn {
+    background-image: linear-gradient(
+      to right,
+      var(--keel-gradient-from),
+      var(--keel-gradient-to)
+    );
+    color: #ffffff;
+    transition:
+      background-image 200ms ease,
+      opacity 200ms ease;
+  }
+
+  .keel-gradient-btn:hover {
+    background-image: linear-gradient(
+      to right,
+      var(--keel-gradient-hover-from),
+      var(--keel-gradient-hover-to)
+    );
+  }
+
+  .keel-gradient-active {
+    background-image: linear-gradient(
+      to right,
+      var(--keel-gradient-from),
+      var(--keel-gradient-to)
+    );
+    color: #ffffff;
+  }
+}

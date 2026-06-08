@@ -123,7 +123,7 @@ export function DocEditor({ accountId, accountSlug, doc }: DocEditorProps) {
           type="button"
           disabled={pending}
           onClick={onSave}
-          className="bg-gradient-to-r from-[#0B132B] to-[#2A9D8F] text-white"
+          className="keel-gradient-btn"
         >
           {pending ? 'Saving…' : 'Save'}
         </Button>

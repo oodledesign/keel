@@ -26,12 +26,12 @@ export const workspaceSidebarClassName = [
   '[&_[data-sidebar=menu-button]:hover]:text-white',
   '[&_[data-sidebar=menu-button][data-active=true]]:border-0',
   '[&_[data-sidebar=menu-button][data-active=true]]:bg-gradient-to-r',
-  '[&_[data-sidebar=menu-button][data-active=true]]:from-[#0B132B]',
-  '[&_[data-sidebar=menu-button][data-active=true]]:to-[#2A9D8F]',
+  '[&_[data-sidebar=menu-button][data-active=true]]:from-[var(--keel-gradient-from)]',
+  '[&_[data-sidebar=menu-button][data-active=true]]:to-[var(--keel-gradient-to)]',
   '[&_[data-sidebar=menu-button][data-active=true]]:text-white',
   '[&_[data-sidebar=menu-sub-button][data-active=true]]:bg-gradient-to-r',
-  '[&_[data-sidebar=menu-sub-button][data-active=true]]:from-[#0B132B]',
-  '[&_[data-sidebar=menu-sub-button][data-active=true]]:to-[#2A9D8F]',
+  '[&_[data-sidebar=menu-sub-button][data-active=true]]:from-[var(--keel-gradient-from)]',
+  '[&_[data-sidebar=menu-sub-button][data-active=true]]:to-[var(--keel-gradient-to)]',
 ].join(' ');
 
 export const workspacePageCanvasClassName =

@@ -37,7 +37,7 @@ export function RanklyProjectNav(props: {
                   className={cn(
                     'flex h-10 items-center gap-2.5 rounded-md px-3 text-sm font-medium transition-colors',
                     active
-                      ? 'bg-gradient-to-r from-[var(--keel-gradient-from)] to-[var(--keel-gradient-to)] text-white'
+                      ? 'keel-gradient-active'
                       : 'text-muted-foreground hover:bg-white/5 hover:text-white',
                   )}
                 >

@@ -13,7 +13,7 @@ Brand-aligned tokens for the Keel workspace shell (sidebar, top bar, cards, and 
 
 | Token | Value | Usage |
 |-------|--------|--------|
-| Primary gradient | `#0B132B` → `#2A9D8F` | Active nav, primary “New” button |
+| Primary gradient | `#152544` → `#18352F` (subtle panel wash) | Active nav, primary “New” button |
 | Background (page) | `#0B132B` | Main canvas (`--workspace-shell-canvas`) |
 | Sidebar / cards | `#0F1B35` | Sidebar, panels (`--workspace-shell-panel`) |
 | Accent blue | `#2563EB` | Links, focus ring, info |
@@ -21,7 +21,7 @@ Brand-aligned tokens for the Keel workspace shell (sidebar, top bar, cards, and 
 | Text on dark | `#FFFFFF` | Sidebar and dark workspace UI |
 | Text on light | `#1E293B` | Light marketing / documents |
 
-CSS variables: `--keel-gradient-from`, `--keel-gradient-to`, `--keel-teal`, `--keel-accent-blue`.
+CSS variables: `--keel-gradient-from`, `--keel-gradient-to`, `--keel-gradient-hover-from`, `--keel-gradient-hover-to`, `--keel-teal`, `--keel-accent-blue`. Utility classes: `keel-gradient-btn`, `keel-gradient-active`.
 
 ## Workspace shell
 
