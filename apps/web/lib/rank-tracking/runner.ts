@@ -13,67 +13,101 @@ import {
   touchProjectRankSchedule,
   updateRankCheckJob,
 } from './db';
-import { buildRankTasks, fetchKeywordRanksFromTasks } from './fetch-ranks';
+import { fetchKeywordRanksBatch } from './fetch-ranks';
 import {
-  RUN_TIME_BUDGET_MS,
-  triggerRankCheckRun,
-} from './trigger-run';
+  RANK_GLOBAL_MAX_ACTIVE_JOBS,
+  RANK_JOB_STALE_MINUTES,
+  RANK_TASKS_PER_INVOCATION,
+} from './queue-config';
+import {
+  buildRankTasks,
+  claimRankCheckTasks,
+  completeRankCheckTask,
+  countRankCheckTasksByStatus,
+  enqueueRankCheckTasks,
+  findJobsNeedingWorker,
+  loadKeywordTextMap,
+  releaseStaleRankCheckTasks,
+} from './queue';
 import { estimateRankCheckCostUsd } from './types';
+import { triggerRankCheckRunDebounced } from './trigger-run';
 
 function ranklyAdmin() {
   return supabaseCustomSchema(getSupabaseServerAdminClient(), 'rankly');
 }
 
-const STALE_JOB_MS = 8 * 60 * 1000;
-const NUDGE_JOB_MS = 120 * 1000;
+/** Sync job counters from the task queue without triggering workers. */
+export async function syncRankCheckJobProgress(jobId: string): Promise<void> {
+  await releaseStaleRankCheckTasks();
 
-export async function recoverStaleRankCheckJob(
-  jobId: string,
-): Promise<'recovered' | 'nudged' | 'unchanged'> {
   const job = await getRankCheckJob(jobId);
-
   if (job.status === 'done' || job.status === 'error') {
-    return 'unchanged';
+    return;
   }
 
-  const updatedAt = new Date(job.updated_at).getTime();
-  const ageMs = Date.now() - updatedAt;
+  const counts = await countRankCheckTasksByStatus(jobId);
+  if (counts.total === 0) {
+    return;
+  }
+
+  const tasksCompleted = counts.done + counts.error;
+  const previousCompleted = job.tasks_completed;
+  const previousUpdatedAt = job.updated_at;
+
+  await updateRankCheckJob(jobId, {
+    tasks_completed: tasksCompleted,
+    tasks_total: counts.total,
+  });
+
+  const ageMs = Date.now() - new Date(previousUpdatedAt).getTime();
+  const staleMs = RANK_JOB_STALE_MINUTES * 60 * 1000;
+  const hasOutstanding = counts.pending + counts.processing > 0;
 
   if (
-    ageMs > STALE_JOB_MS &&
-    job.tasks_total > 0 &&
-    job.tasks_completed < job.tasks_total
+    ageMs > staleMs &&
+    hasOutstanding &&
+    tasksCompleted === previousCompleted
   ) {
     await updateRankCheckJob(jobId, {
       status: 'error',
       error_msg:
-        'Rank check timed out. Try again — large keyword lists run in batches.',
+        'Rank check stalled. Try again — work continues in the background via the task queue.',
       finished_at: new Date().toISOString(),
     });
-    return 'recovered';
+  }
+}
+
+export async function sweepRankCheckWorkers(): Promise<{
+  triggered: number;
+  jobIds: string[];
+}> {
+  await releaseStaleRankCheckTasks();
+
+  const jobs = await findJobsNeedingWorker(RANK_GLOBAL_MAX_ACTIVE_JOBS);
+  const triggeredIds: string[] = [];
+
+  for (const { jobId } of jobs) {
+    const triggered = await triggerRankCheckRunDebounced(jobId);
+    if (triggered) {
+      triggeredIds.push(jobId);
+    }
   }
 
-  if (ageMs > NUDGE_JOB_MS) {
-    triggerRankCheckRun(jobId);
-    return 'nudged';
-  }
-
-  return 'unchanged';
+  return { triggered: triggeredIds.length, jobIds: triggeredIds };
 }
 
 export async function runRankCheckJob(
   jobId: string,
-  options?: { timeBudgetMs?: number },
 ): Promise<{ completed: boolean }> {
+  await releaseStaleRankCheckTasks();
+
   const job = await getRankCheckJob(jobId);
 
   if (job.status === 'done' || job.status === 'error') {
     return { completed: true };
   }
 
-  const timeBudgetMs = options?.timeBudgetMs ?? RUN_TIME_BUDGET_MS;
   const baselineCostUsd = Number(job.api_cost_usd ?? 0);
-  const startIndex = Number(job.tasks_completed ?? 0);
   const rankDate = new Date().toISOString().slice(0, 10);
 
   try {
@@ -117,7 +151,7 @@ export async function runRankCheckJob(
     }
 
     const trackDesktop = Boolean(project.track_desktop ?? true);
-    const trackMobile = Boolean(project.track_mobile ?? false);
+    const trackMobile = Boolean(project.track_mobile ?? true);
     const deviceCount = countRankDevices({
       rankRefreshInterval: (project.rank_refresh_interval ??
         'weekly') as 'manual' | 'daily' | 'weekly' | 'monthly',
@@ -139,13 +173,16 @@ export async function runRankCheckJob(
       trackMobile,
     });
 
-    const tasksTotal = rankTasks.length;
+    const tasksTotal = await enqueueRankCheckTasks(jobId, rankTasks);
     const estimatedCostUsd = estimateRankCheckCostUsd(
       keywords.length,
       deviceCount,
     );
 
-    if (job.tasks_total !== tasksTotal) {
+    if (
+      job.tasks_total !== tasksTotal ||
+      job.keyword_count !== keywords.length
+    ) {
       await updateRankCheckJob(jobId, {
         keyword_count: keywords.length,
         device_count: deviceCount,
@@ -158,64 +195,108 @@ export async function runRankCheckJob(
       String(project.target_country ?? 'gb'),
     );
 
-    const { tasksCompleted, sessionApiCostUsd, completed } =
-      await fetchKeywordRanksFromTasks({
-        tasks: rankTasks,
-        startIndex,
-        targetDomain: String(project.domain),
-        countryCode,
-        timeBudgetMs,
-        onBatch: async (batch) => {
-          if (batch.rows.length > 0) {
-            await saveKeywordRankings(
-              batch.rows.map((row) => ({
-                keywordId: row.keywordId,
-                device: row.device,
-                position: row.position,
-                rankingUrl: row.rankingUrl,
-                aiOverviewPresent: row.aiOverviewPresent,
-                serpFeatures: row.serpFeatures,
-              })),
-              rankDate,
-            );
-          }
+    const claimed = await claimRankCheckTasks(
+      jobId,
+      RANK_TASKS_PER_INVOCATION,
+    );
 
-          await updateRankCheckJob(jobId, {
-            tasks_completed: batch.tasksCompleted,
-            api_cost_usd: baselineCostUsd + batch.sessionApiCostUsd,
-          });
-        },
-      });
+    if (claimed.length === 0) {
+      const counts = await countRankCheckTasksByStatus(jobId);
+      const hasOutstanding = counts.pending + counts.processing > 0;
+
+      if (!hasOutstanding && counts.total > 0) {
+        await finalizeRankCheckJob({
+          jobId,
+          projectId: job.project_id,
+          rankRefreshInterval: (project.rank_refresh_interval ??
+            'weekly') as 'manual' | 'daily' | 'weekly' | 'monthly',
+          tasksCompleted: counts.done + counts.error,
+          totalApiCostUsd: baselineCostUsd,
+        });
+        return { completed: true };
+      }
+
+      return { completed: !hasOutstanding };
+    }
+
+    const keywordTextById = await loadKeywordTextMap(
+      claimed.map((task) => task.keyword_id),
+    );
+
+    let sessionApiCostUsd = 0;
+
+    for (const task of claimed) {
+      const keyword =
+        keywordTextById.get(task.keyword_id) ??
+        keywords.find((row) => row.id === task.keyword_id)?.keyword;
+
+      if (!keyword) {
+        await completeRankCheckTask({
+          taskId: task.id,
+          status: 'error',
+          errorMsg: 'Keyword not found',
+        });
+        continue;
+      }
+
+      try {
+        const { results, apiCostUsd } = await fetchKeywordRanksBatch({
+          keywords: [String(keyword)],
+          targetDomain: String(project.domain),
+          countryCode,
+          device: task.device as 'desktop' | 'mobile',
+        });
+
+        sessionApiCostUsd += apiCostUsd;
+
+        if (results.length > 0) {
+          await saveKeywordRankings(
+            results.map((result) => ({
+              keywordId: task.keyword_id,
+              device: result.device,
+              position: result.position,
+              rankingUrl: result.rankingUrl,
+              aiOverviewPresent: result.aiOverviewPresent,
+              serpFeatures: result.serpFeatures,
+            })),
+            rankDate,
+          );
+        }
+
+        await completeRankCheckTask({ taskId: task.id, status: 'done' });
+      } catch (error) {
+        await completeRankCheckTask({
+          taskId: task.id,
+          status: 'error',
+          errorMsg:
+            error instanceof Error ? error.message : 'SERP fetch failed',
+        });
+      }
+    }
 
     const totalApiCostUsd = baselineCostUsd + sessionApiCostUsd;
+    const counts = await countRankCheckTasksByStatus(jobId);
 
-    if (!completed) {
-      triggerRankCheckRun(jobId);
+    await updateRankCheckJob(jobId, {
+      tasks_completed: counts.done + counts.error,
+      tasks_total: counts.total,
+      api_cost_usd: totalApiCostUsd,
+    });
+
+    const hasPending = counts.pending + counts.processing > 0;
+
+    if (hasPending) {
+      await triggerRankCheckRunDebounced(jobId);
       return { completed: false };
     }
 
-    await logDataForSeoUsage({
+    await finalizeRankCheckJob({
+      jobId,
       projectId: job.project_id,
-      endpoint: '/serp/google/organic/live/advanced',
-      taskCount: tasksCompleted,
-      estimatedCostUsd: totalApiCostUsd,
-      featureArea: 'rank_tracking',
-    });
-
-    await touchProjectRankSchedule({
-      projectId: job.project_id,
-      interval: (project.rank_refresh_interval ?? 'weekly') as
-        | 'manual'
-        | 'daily'
-        | 'weekly'
-        | 'monthly',
-    });
-
-    await updateRankCheckJob(jobId, {
-      status: 'done',
-      finished_at: new Date().toISOString(),
-      tasks_completed: tasksCompleted,
-      api_cost_usd: totalApiCostUsd,
+      rankRefreshInterval: (project.rank_refresh_interval ??
+        'weekly') as 'manual' | 'daily' | 'weekly' | 'monthly',
+      tasksCompleted: counts.done + counts.error,
+      totalApiCostUsd,
     });
 
     return { completed: true };
@@ -227,4 +308,32 @@ export async function runRankCheckJob(
     });
     throw error;
   }
+}
+
+async function finalizeRankCheckJob(input: {
+  jobId: string;
+  projectId: string;
+  rankRefreshInterval: 'manual' | 'daily' | 'weekly' | 'monthly';
+  tasksCompleted: number;
+  totalApiCostUsd: number;
+}): Promise<void> {
+  await logDataForSeoUsage({
+    projectId: input.projectId,
+    endpoint: '/serp/google/organic/live/advanced',
+    taskCount: input.tasksCompleted,
+    estimatedCostUsd: input.totalApiCostUsd,
+    featureArea: 'rank_tracking',
+  });
+
+  await touchProjectRankSchedule({
+    projectId: input.projectId,
+    interval: input.rankRefreshInterval,
+  });
+
+  await updateRankCheckJob(input.jobId, {
+    status: 'done',
+    finished_at: new Date().toISOString(),
+    tasks_completed: input.tasksCompleted,
+    api_cost_usd: input.totalApiCostUsd,
+  });
 }

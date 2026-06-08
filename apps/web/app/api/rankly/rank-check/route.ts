@@ -10,7 +10,10 @@ import {
   loadLatestRankCheckJob,
   loadRankTrackingSettings,
 } from '~/lib/rank-tracking/db';
-import { triggerRankCheckRun } from '~/lib/rank-tracking/trigger-run';
+import {
+  triggerRankCheckRun,
+  triggerRankCheckRunDebounced,
+} from '~/lib/rank-tracking/trigger-run';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { userIsAccountMember } from '~/lib/rankly/account-membership';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
@@ -31,7 +34,9 @@ const startSchema = z.object({
 const settingsSchema = z.object({
   projectId: z.string().uuid(),
   accountId: z.string().uuid(),
-  rankRefreshInterval: z.enum(['manual', 'daily', 'weekly', 'monthly']),
+  rankRefreshInterval: z.enum(['manual', 'daily', 'weekly', 'monthly']).optional(),
+  trackDesktop: z.boolean().optional(),
+  trackMobile: z.boolean().optional(),
 });
 
 async function assertProjectAccess(
@@ -160,7 +165,7 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (runningJob) {
-      triggerRankCheckRun(runningJob.id as string);
+      await triggerRankCheckRunDebounced(runningJob.id as string);
       return jsonOk({ jobId: runningJob.id as string, alreadyRunning: true });
     }
 
@@ -233,11 +238,30 @@ export async function PATCH(request: NextRequest) {
     );
     if (accessError) return accessError;
 
-    const { updateRankRefreshInterval } = await import('~/lib/rank-tracking/db');
-    await updateRankRefreshInterval(
-      parsed.data.projectId,
-      parsed.data.rankRefreshInterval,
-    );
+    const { updateRankRefreshInterval, updateRankTrackingDevices } =
+      await import('~/lib/rank-tracking/db');
+
+    if (parsed.data.rankRefreshInterval != null) {
+      await updateRankRefreshInterval(
+        parsed.data.projectId,
+        parsed.data.rankRefreshInterval,
+      );
+    }
+
+    if (
+      parsed.data.trackDesktop != null ||
+      parsed.data.trackMobile != null
+    ) {
+      const settings = await loadRankTrackingSettings(parsed.data.projectId);
+      if (!settings) {
+        return jsonErr('NOT_FOUND', 'Project not found', 404);
+      }
+
+      await updateRankTrackingDevices(parsed.data.projectId, {
+        trackDesktop: parsed.data.trackDesktop ?? settings.trackDesktop,
+        trackMobile: parsed.data.trackMobile ?? settings.trackMobile,
+      });
+    }
 
     const settings = await loadRankTrackingSettings(parsed.data.projectId);
     return jsonOk({ settings });

@@ -92,7 +92,7 @@ export async function loadRankTrackingSettings(
     rankRefreshInterval: (project.rank_refresh_interval ??
       'weekly') as RankRefreshInterval,
     trackDesktop: Boolean(project.track_desktop ?? true),
-    trackMobile: Boolean(project.track_mobile ?? false),
+    trackMobile: Boolean(project.track_mobile ?? true),
     targetCountry: projectCountryToCode(String(project.target_country ?? 'gb')),
     lastRankCheckAt: cronState?.last_rank_check_at ?? null,
     nextRankCheckAt: cronState?.next_rank_check_at ?? null,
@@ -274,6 +274,27 @@ export async function updateRankRefreshInterval(
       },
       { onConflict: 'project_id' },
     );
+}
+
+export async function updateRankTrackingDevices(
+  projectId: string,
+  input: { trackDesktop: boolean; trackMobile: boolean },
+): Promise<void> {
+  if (!input.trackDesktop && !input.trackMobile) {
+    throw new Error('Enable at least one device for rank tracking');
+  }
+
+  const { error } = await ranklyAdmin()
+    .from('projects')
+    .update({
+      track_desktop: input.trackDesktop,
+      track_mobile: input.trackMobile,
+    })
+    .eq('id', projectId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 export function countRankDevices(settings: RankTrackingSettings): number {

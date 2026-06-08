@@ -21,6 +21,7 @@ export type RankCheckJobRow = {
   finished_at: string | null;
   created_at: string;
   updated_at: string;
+  last_worker_trigger_at: string | null;
 };
 
 export type KeywordRankSnapshot = {

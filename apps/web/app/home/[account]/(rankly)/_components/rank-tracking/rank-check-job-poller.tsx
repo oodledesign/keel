@@ -1,13 +1,13 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import { formatUsageLabel, formatUsdCost } from '~/lib/rank-tracking/cost';
+import { RANK_JOB_POLL_INTERVAL_MS } from '~/lib/rank-tracking/queue-config';
 import type { RankCheckJobRow } from '~/lib/rank-tracking/types';
 
 type ApiResponse<T> =
@@ -23,6 +23,7 @@ export function RankCheckJobPoller({
 }) {
   const router = useRouter();
   const [job, setJob] = useState<RankCheckJobRow | null>(null);
+  const terminalNotifiedRef = useRef(false);
 
   const fetchStatus = useCallback(async () => {
     const res = await fetch(`/api/rankly/rank-check/${jobId}`);
@@ -35,7 +36,17 @@ export function RankCheckJobPoller({
   useEffect(() => {
     let active = true;
     let timer: ReturnType<typeof setTimeout>;
-    let lastTasksCompleted = -1;
+
+    const notifyTerminal = (type: 'done' | 'error', message: string) => {
+      if (terminalNotifiedRef.current) return;
+      terminalNotifiedRef.current = true;
+      if (type === 'done') {
+        toast.success(message);
+      } else {
+        toast.error(message);
+      }
+      onComplete?.();
+    };
 
     const poll = async () => {
       try {
@@ -43,29 +54,24 @@ export function RankCheckJobPoller({
         if (!active) return;
 
         if (current.status === 'done') {
-          toast.success(
+          notifyTerminal(
+            'done',
             `Rank check complete · ${formatUsdCost(Number(current.api_cost_usd))} API spend`,
           );
-          onComplete?.();
           router.refresh();
           return;
         }
 
         if (current.status === 'error') {
-          toast.error(current.error_msg ?? 'Rank check failed');
+          notifyTerminal(
+            'error',
+            current.error_msg ?? 'Rank check failed',
+          );
           router.refresh();
           return;
         }
 
-        if (
-          current.tasks_completed > 0 &&
-          current.tasks_completed !== lastTasksCompleted
-        ) {
-          lastTasksCompleted = current.tasks_completed;
-          router.refresh();
-        }
-
-        timer = setTimeout(poll, 2500);
+        timer = setTimeout(poll, RANK_JOB_POLL_INTERVAL_MS);
       } catch (err) {
         if (active) toast.error(getErrorMessage(err));
       }
