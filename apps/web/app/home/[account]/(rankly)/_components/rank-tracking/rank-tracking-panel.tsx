@@ -69,6 +69,17 @@ function formatCpc(cpc: number | null | undefined): string {
   return `$${cpc.toFixed(2)}`;
 }
 
+function formatRankDate(rankDate: string | null | undefined): string {
+  if (!rankDate) return '—';
+  const parsed = new Date(`${rankDate}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return rankDate;
+  return parsed.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
 const INTENT_LABELS: Record<KeywordIntent, string> = {
   informational: 'Info',
   commercial: 'Commercial',
@@ -109,7 +120,8 @@ type SortColumn =
   | 'intent'
   | 'cpc'
   | 'position'
-  | 'change';
+  | 'change'
+  | 'lastChecked';
 
 type SortDirection = 'asc' | 'desc';
 
@@ -135,6 +147,20 @@ function compareNullableNumber(
 
 function compareStrings(a: string, b: string, direction: SortDirection): number {
   const result = a.localeCompare(b, undefined, { sensitivity: 'base' });
+  return direction === 'asc' ? result : -result;
+}
+
+function compareNullableDate(
+  a: string | null | undefined,
+  b: string | null | undefined,
+  direction: SortDirection,
+): number {
+  const aNull = a == null;
+  const bNull = b == null;
+  if (aNull && bNull) return 0;
+  if (aNull) return 1;
+  if (bNull) return -1;
+  const result = a.localeCompare(b);
   return direction === 'asc' ? result : -result;
 }
 
@@ -251,6 +277,11 @@ export function RankTrackingPanel(props: {
           const aChange = primarySnapshot(a.id)?.positionChange;
           const bChange = primarySnapshot(b.id)?.positionChange;
           return compareNullableNumber(aChange, bChange, sort.direction);
+        }
+        case 'lastChecked': {
+          const aDate = primarySnapshot(a.id)?.rankDate;
+          const bDate = primarySnapshot(b.id)?.rankDate;
+          return compareNullableDate(aDate, bDate, sort.direction);
         }
         default:
           return 0;
@@ -590,7 +621,7 @@ export function RankTrackingPanel(props: {
         </p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-white/10">
-          <table className="w-full min-w-[56rem] text-left text-sm">
+          <table className="w-full min-w-[62rem] text-left text-sm">
             <thead className="border-b border-white/10 bg-black/20 text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
                 <SortableHeader
@@ -647,6 +678,14 @@ export function RankTrackingPanel(props: {
                   onSort={toggleSort}
                   align="right"
                 />
+                <SortableHeader
+                  label="Last checked"
+                  column="lastChecked"
+                  activeColumn={sort.column}
+                  direction={sort.direction}
+                  onSort={toggleSort}
+                  align="right"
+                />
                 <th className="px-4 py-3">Device</th>
                 <th className="px-4 py-3">Ranking URL</th>
                 <th className="px-4 py-3 text-right"> </th>
@@ -686,6 +725,12 @@ export function RankTrackingPanel(props: {
                       }
                     >
                       {change ?? '—'}
+                    </td>
+                    <td
+                      className="px-4 py-3 text-right tabular-nums text-muted-foreground"
+                      title={snapshot?.rankDate ?? undefined}
+                    >
+                      {formatRankDate(snapshot?.rankDate)}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{device}</td>
                     <td className="max-w-[14rem] truncate px-4 py-3 text-muted-foreground">

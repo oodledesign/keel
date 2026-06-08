@@ -26,6 +26,7 @@ import { Trans } from '@kit/ui/trans';
 import featureFlagsConfig from '~/config/feature-flags.config';
 import pathsConfig from '~/config/paths.config';
 import { getTeamAccountSidebarConfig } from '~/config/team-account-navigation.config';
+import { flattenTeamNavLinks } from '~/home/[account]/_lib/flatten-team-nav-links';
 import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
 import type { WorkNavCounts } from '~/config/work-account-navigation.config';
 import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
@@ -54,32 +55,22 @@ export const TeamAccountLayoutMobileNavigation = (
 ) => {
   const signOut = useSignOut();
 
-  const Links = getTeamAccountSidebarConfig(
-    props.account,
-    props.accountAccess,
-    props.moduleSettings,
-    props.workspaceProfile,
-    props.navCounts,
-  ).routes.map(
-    (item, index) => {
-      if ('children' in item) {
-        return item.children.map((child) => {
-          return (
-            <DropdownLink
-              key={child.path}
-              Icon={child.Icon}
-              path={child.path}
-              label={child.label}
-            />
-          );
-        });
-      }
-
-      if ('divider' in item) {
-        return <DropdownMenuSeparator key={index} />;
-      }
-    },
-  );
+  const Links = flattenTeamNavLinks(
+    getTeamAccountSidebarConfig(
+      props.account,
+      props.accountAccess,
+      props.moduleSettings,
+      props.workspaceProfile,
+      props.navCounts,
+    ),
+  ).map((item) => (
+    <DropdownLink
+      key={item.path}
+      Icon={item.Icon}
+      path={item.path}
+      label={item.label}
+    />
+  ));
 
   return (
     <DropdownMenu>
@@ -87,7 +78,10 @@ export const TeamAccountLayoutMobileNavigation = (
         <Menu className={'h-9'} />
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent sideOffset={10} className={'w-screen rounded-none'}>
+      <DropdownMenuContent
+        sideOffset={10}
+        className="max-h-[min(85vh,32rem)] w-screen overflow-y-auto rounded-none"
+      >
         <TeamAccountsModal
           userId={props.userId}
           accounts={props.accounts}

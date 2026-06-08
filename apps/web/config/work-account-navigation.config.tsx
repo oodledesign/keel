@@ -39,11 +39,12 @@ export type WorkNavCounts = {
   supportOpenCount?: number;
 };
 
-type NavChild = {
+export type NavChild = {
   label: string;
   path: string;
   Icon: React.ReactNode;
   end?: boolean;
+  description?: string;
 };
 
 type NavCollapsible = NavChild & {
@@ -68,6 +69,7 @@ function buildWorkAppsGroup(
       label: 'Rankly',
       path: createPath(pathsConfig.app.accountRanklyDashboard, account),
       Icon: <BarChart3 className={iconClasses} />,
+      description: 'SEO tracking, audits, and content briefs.',
     });
   }
 
@@ -76,6 +78,7 @@ function buildWorkAppsGroup(
       label: 'Signatures',
       path: createPath(pathsConfig.app.accountSignaturesDashboard, account),
       Icon: <PenLine className={iconClasses} />,
+      description: 'Branded email signatures for your team.',
     });
   }
 
@@ -85,16 +88,19 @@ function buildWorkAppsGroup(
         label: 'Reviews',
         path: createPath(pathsConfig.app.accountFeedflowReviews, account),
         Icon: <MessageSquareText className={iconClasses} />,
+        description: 'Collect and showcase customer reviews.',
       },
       {
         label: 'Social Feeds',
         path: createPath(pathsConfig.app.accountFeedflowSocialAccounts, account),
         Icon: <Share2 className={iconClasses} />,
+        description: 'Connect and publish to social accounts.',
       },
       {
         label: 'Videos',
         path: createPath(pathsConfig.app.accountFeedflowVideos, account),
         Icon: <Video className={iconClasses} />,
+        description: 'Review and manage video testimonials.',
       },
     );
   }
@@ -106,13 +112,20 @@ function buildWorkAppsGroup(
   return [
     {
       label: 'Apps',
-      path: createPath(pathsConfig.app.accountHome, account),
+      path: createPath(pathsConfig.app.accountApps, account),
       Icon: <LayoutGrid className={iconClasses} />,
       collapsible: true,
       collapsed: false,
       children,
     },
   ];
+}
+
+export function buildWorkAppLinks(
+  account: string,
+  moduleSettings?: Record<string, boolean>,
+): NavChild[] {
+  return buildWorkAppsGroup(account, moduleSettings)[0]?.children ?? [];
 }
 
 /**
