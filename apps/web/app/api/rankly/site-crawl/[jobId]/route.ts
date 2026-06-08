@@ -4,7 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { getSiteCrawlJob } from '~/lib/site-crawl/db';
-import { recoverStaleSiteCrawlJob } from '~/lib/site-crawl/runner';
+import { syncSiteCrawlJobProgress } from '~/lib/site-crawl/runner';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { userIsAccountMember } from '~/lib/rankly/account-membership';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
@@ -49,7 +49,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       return jsonErr('FORBIDDEN', 'Not a member of this account', 403);
     }
 
-    await recoverStaleSiteCrawlJob(jobId);
+    await syncSiteCrawlJobProgress(jobId);
     const refreshedJob = await getSiteCrawlJob(jobId);
 
     return jsonOk({ job: refreshedJob });

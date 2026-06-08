@@ -27,6 +27,8 @@ function mapJobRow(row: Record<string, unknown>): SiteCrawlJobRow {
       ? (row.pending_urls as string[])
       : [],
     issue_summary: (row.issue_summary as SiteCrawlIssueSummary) ?? {},
+    last_worker_trigger_at:
+      (row.last_worker_trigger_at as string | null | undefined) ?? null,
   };
 }
 
@@ -172,6 +174,23 @@ export async function updateSiteCrawlPageIssues(
   if (error) {
     throw new Error(error.message);
   }
+}
+
+export async function listActiveSiteCrawlJobs(
+  limit = 5,
+): Promise<SiteCrawlJobRow[]> {
+  const { data, error } = await ranklyAdmin()
+    .from('site_crawl_jobs')
+    .select('*')
+    .in('status', ['pending', 'running'])
+    .order('updated_at', { ascending: true })
+    .limit(limit);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map((row) => mapJobRow(row as Record<string, unknown>));
 }
 
 export async function loadSiteCrawlPagesForExport(

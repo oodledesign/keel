@@ -15,10 +15,14 @@ import {
 } from './db';
 import { fetchAndParsePage } from './fetch-page';
 import { applyDuplicateIssues, summariseIssues } from './issues';
-import { triggerSiteCrawlRun, RUN_TIME_BUDGET_MS } from './trigger-run';
-
-const STALE_JOB_MS = 8 * 60 * 1000;
-const NUDGE_JOB_MS = 120 * 1000;
+import {
+  triggerSiteCrawlRunDebounced,
+  RUN_TIME_BUDGET_MS,
+} from './trigger-run';
+import {
+  SITE_CRAWL_JOB_STALE_MINUTES,
+  SITE_CRAWL_MAX_ACTIVE_JOBS,
+} from './config';
 const PAGES_PER_BATCH = 12;
 const CRAWL_DELAY_MS = 150;
 
@@ -26,9 +30,10 @@ function ranklyAdmin() {
   return supabaseCustomSchema(getSupabaseServerAdminClient(), 'rankly');
 }
 
-export async function recoverStaleSiteCrawlJob(
+/** Read-only status sync — never triggers workers from poll requests. */
+export async function syncSiteCrawlJobProgress(
   jobId: string,
-): Promise<'recovered' | 'nudged' | 'unchanged'> {
+): Promise<'stale_failed' | 'unchanged'> {
   const job = await getSiteCrawlJob(jobId);
 
   if (job.status === 'done' || job.status === 'error') {
@@ -36,22 +41,43 @@ export async function recoverStaleSiteCrawlJob(
   }
 
   const ageMs = Date.now() - new Date(job.updated_at).getTime();
+  const staleMs = SITE_CRAWL_JOB_STALE_MINUTES * 60 * 1000;
 
-  if (ageMs > STALE_JOB_MS && job.pending_urls.length > 0 && job.urls_crawled > 0) {
+  if (
+    ageMs > staleMs &&
+    job.pending_urls.length > 0 &&
+    job.urls_crawled > 0
+  ) {
     await updateSiteCrawlJob(jobId, {
       status: 'error',
       error_msg: 'Site crawl timed out. Try again with a lower URL limit.',
       finished_at: new Date().toISOString(),
     });
-    return 'recovered';
-  }
-
-  if (ageMs > NUDGE_JOB_MS) {
-    triggerSiteCrawlRun(jobId);
-    return 'nudged';
+    return 'stale_failed';
   }
 
   return 'unchanged';
+}
+
+export async function sweepSiteCrawlWorkers(): Promise<{
+  scanned: number;
+  triggered: number;
+}> {
+  const { listActiveSiteCrawlJobs } = await import('./db');
+  const jobs = await listActiveSiteCrawlJobs(SITE_CRAWL_MAX_ACTIVE_JOBS);
+
+  let triggered = 0;
+  for (const job of jobs) {
+    const pending = job.pending_urls.length;
+    if (pending === 0 && job.urls_crawled >= job.url_limit) {
+      continue;
+    }
+
+    const didTrigger = await triggerSiteCrawlRunDebounced(job.id);
+    if (didTrigger) triggered += 1;
+  }
+
+  return { scanned: jobs.length, triggered };
 }
 
 async function finalizeSiteCrawlJob(jobId: string): Promise<void> {
@@ -146,7 +172,7 @@ export async function runSiteCrawlJob(
     const shouldContinue = pending.length > 0 && urlsCrawled < job.url_limit;
 
     if (shouldContinue) {
-      triggerSiteCrawlRun(jobId);
+      await triggerSiteCrawlRunDebounced(jobId);
       return { completed: false };
     }
 

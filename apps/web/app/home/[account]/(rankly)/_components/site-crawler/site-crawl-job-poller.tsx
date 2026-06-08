@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { toast } from '@kit/ui/sonner';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
+import { SITE_CRAWL_POLL_INTERVAL_MS } from '~/lib/site-crawl/config';
 import type { SiteCrawlJobRow } from '~/lib/site-crawl/types';
 
 type ApiResponse<T> =
@@ -33,7 +34,6 @@ export function SiteCrawlJobPoller({
   useEffect(() => {
     let active = true;
     let timer: ReturnType<typeof setTimeout>;
-    let lastCrawled = -1;
 
     const poll = async () => {
       try {
@@ -55,15 +55,7 @@ export function SiteCrawlJobPoller({
           return;
         }
 
-        if (
-          current.urls_crawled > 0 &&
-          current.urls_crawled !== lastCrawled
-        ) {
-          lastCrawled = current.urls_crawled;
-          router.refresh();
-        }
-
-        timer = setTimeout(poll, 2500);
+        timer = setTimeout(poll, SITE_CRAWL_POLL_INTERVAL_MS);
       } catch (err) {
         if (active) toast.error(getErrorMessage(err));
       }

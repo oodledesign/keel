@@ -14,7 +14,7 @@ import {
 } from '~/lib/site-crawl/types';
 import { projectDomainToStartUrl } from '~/lib/site-crawl/domain';
 import { seedSiteCrawlJob } from '~/lib/site-crawl/runner';
-import { triggerSiteCrawlRun } from '~/lib/site-crawl/trigger-run';
+import { triggerSiteCrawlRun, triggerSiteCrawlRunDebounced } from '~/lib/site-crawl/trigger-run';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { userIsAccountMember } from '~/lib/rankly/account-membership';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (runningJob) {
-      triggerSiteCrawlRun(runningJob.id as string);
+      await triggerSiteCrawlRunDebounced(runningJob.id as string);
       return jsonOk({ jobId: runningJob.id as string, alreadyRunning: true });
     }
 
