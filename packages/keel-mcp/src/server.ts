@@ -1,7 +1,7 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp';
 
-import type { McpRequestContext } from './context.js';
-import { keelMcpTools } from './tools/index.js';
+import type { McpRequestContext } from './context';
+import { keelMcpTools } from './tools/index';
 
 export function createKeelMcpServer(context: McpRequestContext): McpServer {
   const server = new McpServer({

@@ -314,6 +314,9 @@ importers:
       '@kit/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@kit/keel-mcp':
+        specifier: workspace:*
+        version: link:../../packages/keel-mcp
       '@kit/mailers':
         specifier: workspace:*
         version: link:../../packages/mailers/core

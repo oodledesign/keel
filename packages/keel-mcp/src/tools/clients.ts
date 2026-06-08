@@ -1,13 +1,13 @@
 import { z } from 'zod';
 
-import type { KeelMcpToolRegistrar } from './types.js';
+import type { KeelMcpToolRegistrar } from './types';
 import {
   assertClientOrgAccess,
   assertSupabaseOk,
   dealDisplayName,
   OPEN_TASK_STATUSES,
   toolJson,
-} from './shared.js';
+} from './shared';
 
 const getClientSchema = z.object({
   id: z.string().uuid(),

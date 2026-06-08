@@ -2,14 +2,14 @@ import { z } from 'zod';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { KeelMcpToolRegistrar } from './types.js';
+import type { KeelMcpToolRegistrar } from './types';
 import {
   assertSupabaseOk,
   dealDisplayName,
   loadUserAccountIds,
   pickDefined,
   toolJson,
-} from './shared.js';
+} from './shared';
 
 const listPipelineDealsSchema = z.object({
   stage: z.string().trim().optional(),

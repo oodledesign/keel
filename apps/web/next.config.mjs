@@ -13,6 +13,7 @@ const INTERNAL_PACKAGES = [
   '@kit/shared',
   '@kit/supabase',
   '@kit/i18n',
+  '@kit/keel-mcp',
   '@kit/mailers',
   '@kit/billing-gateway',
   '@kit/email-templates',

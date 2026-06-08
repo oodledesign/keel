@@ -1,12 +1,12 @@
 import { z } from 'zod';
 
-import type { KeelMcpToolRegistrar } from './types.js';
+import type { KeelMcpToolRegistrar } from './types';
 import {
   assertAccountAccess,
   assertSupabaseOk,
   loadUserAccountIds,
   toolJson,
-} from './shared.js';
+} from './shared';
 
 const listProjectsSchema = z.object({
   business_id: z.string().uuid().optional(),

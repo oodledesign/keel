@@ -1,6 +1,6 @@
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp';
 
-import type { McpRequestContext } from '../context.js';
+import type { McpRequestContext } from '../context';
 
 export type KeelMcpToolRegistrar = (
   server: McpServer,

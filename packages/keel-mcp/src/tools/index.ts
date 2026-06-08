@@ -1,9 +1,9 @@
-import type { KeelMcpToolRegistrar } from './types.js';
-import { registerClientTools } from './clients.js';
-import { registerNoteTools } from './notes.js';
-import { registerPipelineTools } from './pipeline.js';
-import { registerProjectTools } from './projects.js';
-import { registerTaskTools } from './tasks.js';
+import type { KeelMcpToolRegistrar } from './types';
+import { registerClientTools } from './clients';
+import { registerNoteTools } from './notes';
+import { registerPipelineTools } from './pipeline';
+import { registerProjectTools } from './projects';
+import { registerTaskTools } from './tasks';
 
 export const keelMcpTools: KeelMcpToolRegistrar[] = [
   registerTaskTools,

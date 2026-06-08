@@ -1,11 +1,11 @@
 import { z } from 'zod';
 
-import type { KeelMcpToolRegistrar } from './types.js';
+import type { KeelMcpToolRegistrar } from './types';
 import {
   assertSupabaseOk,
   pickDefined,
   toolJson,
-} from './shared.js';
+} from './shared';
 
 const taskStatusSchema = z.enum(['todo', 'in_progress', 'done']);
 const taskPrioritySchema = z.enum(['low', 'medium', 'high']);

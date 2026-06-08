@@ -2,8 +2,6 @@
   "extends": "@kit/tsconfig/base.json",
   "compilerOptions": {
     "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json",
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
     "noEmit": true
   },
   "include": ["src"],

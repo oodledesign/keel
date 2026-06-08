@@ -1,12 +1,12 @@
-export type { McpRequestContext } from './context.js';
-export { authenticateMcpRequest } from './auth.js';
+export type { McpRequestContext } from './context';
+export { authenticateMcpRequest } from './auth';
 export {
   createMcpRouteHandlers,
   handleMcpGet,
   handleMcpPostMessage,
   KEEL_MCP_MESSAGES_PATH,
-} from './handler.js';
-export { createKeelMcpServer } from './server.js';
-export { getKeelMcpSupabaseAdmin } from './supabase.js';
-export { keelMcpTools } from './tools/index.js';
-export type { KeelMcpToolRegistrar } from './tools/types.js';
+} from './handler';
+export { createKeelMcpServer } from './server';
+export { getKeelMcpSupabaseAdmin } from './supabase';
+export { keelMcpTools } from './tools/index';
+export type { KeelMcpToolRegistrar } from './tools/types';

@@ -1,6 +1,6 @@
-import type { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import type { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse';
 
-import type { McpRequestContext } from './context.js';
+import type { McpRequestContext } from './context';
 
 export type McpSession = {
   transport: SSEServerTransport;

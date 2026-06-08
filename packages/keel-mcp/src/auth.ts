@@ -1,7 +1,7 @@
 import { timingSafeEqual } from 'node:crypto';
 
-import type { McpRequestContext } from './context.js';
-import { getKeelMcpSupabaseAdmin } from './supabase.js';
+import type { McpRequestContext } from './context';
+import { getKeelMcpSupabaseAdmin } from './supabase';
 
 export type AuthResult =
   | { ok: true; context: McpRequestContext }

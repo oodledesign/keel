@@ -2,14 +2,14 @@ import { z } from 'zod';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { KeelMcpToolRegistrar } from './types.js';
+import type { KeelMcpToolRegistrar } from './types';
 import {
   assertAccountAccess,
   assertClientOrgAccess,
   assertSupabaseOk,
   loadUserAccountIds,
   toolJson,
-} from './shared.js';
+} from './shared';
 
 const createNoteSchema = z.object({
   content: z.string().trim().min(1),

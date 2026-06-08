@@ -1,13 +1,13 @@
-import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse';
 
-import { authenticateMcpRequest } from './auth.js';
-import { createSSEBridge, NodeResponseCollector, requestToIncomingMessage } from './http-bridge.js';
-import { createKeelMcpServer } from './server.js';
+import { authenticateMcpRequest } from './auth';
+import { createSSEBridge, NodeResponseCollector, requestToIncomingMessage } from './http-bridge';
+import { createKeelMcpServer } from './server';
 import {
   deleteMcpSession,
   getMcpSession,
   storeMcpSession,
-} from './session-store.js';
+} from './session-store';
 
 export const KEEL_MCP_MESSAGES_PATH = '/api/mcp/message';
 
