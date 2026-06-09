@@ -19,7 +19,7 @@ ${input.domainKeywords
   .join('\n')}
 
 TOP 5 COMPETITORS:
-${input.competitors.map((c) => `- ${c.domain}`).join('\n')}
+${input.competitors.map((c) => `- ${c.domain} (OPR: ${c.opr}/10)`).join('\n')}
 
 KEYWORD GAP OPPORTUNITIES (informational, vol >1k, KD <40):
 ${input.keywordGaps

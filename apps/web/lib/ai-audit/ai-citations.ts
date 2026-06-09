@@ -2,6 +2,7 @@ import 'server-only';
 
 import { delay } from '~/lib/clusters/utils';
 import { dfsPost, type DfsResponse } from '~/lib/dataforseo/client';
+import { getPageRanks, normaliseOprDomain } from '~/lib/openpagerank/client';
 
 import { normaliseDomain } from './crawl';
 import type {
@@ -310,12 +311,24 @@ export async function checkAiCitations(
   const citedQueries = [
     ...new Set(platforms.flatMap((platform) => platform.citedQueries)),
   ];
+  const competingBrandList = [...competingBrands];
+  const oprScores = await getPageRanks(competingBrandList);
 
   return {
     platforms,
     citations: allCitations,
     domainCitedInAny: platforms.some((platform) => platform.domainCitedInAny),
     citedQueries,
-    competingBrands: [...competingBrands],
+    competingBrands: competingBrandList,
+    competingBrandsOpr: competingBrandList.map((brand) => {
+      const key = normaliseOprDomain(brand);
+      const opr = oprScores[key];
+
+      return {
+        domain: brand,
+        opr: opr?.page_rank_integer ?? 0,
+        opr_decimal: opr?.page_rank_decimal ?? 0,
+      };
+    }),
   };
 }

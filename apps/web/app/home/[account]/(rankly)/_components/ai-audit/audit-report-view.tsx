@@ -17,6 +17,7 @@ import { analyzeCrawlAccess } from '~/lib/crawl/access-summary';
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 
 import { CrawlAccessBanner } from '../crawl-access-banner';
+import { OprBadge } from '../shared/opr-badge';
 
 function scoreColour(score: number | null): string {
   if (score == null) return 'text-muted-foreground';
@@ -208,12 +209,27 @@ function RecommendationCard({ rec }: { rec: AuditRecommendationRow }) {
 function AiCitationStatus({ report }: { report: AuditReportRow }) {
   const platforms = report.ai_citations_by_platform ?? [];
   const hasPlatformData = platforms.length > 0;
+  const competingBrandsOpr = report.ai_competing_brands_opr ?? [];
 
   if (hasPlatformData) {
     const citedCount = platforms.filter((p) => p.domainCitedInAny).length;
 
     return (
       <div className="space-y-3">
+        {report.opr_score != null ? (
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Your domain OPR:</span>
+            <OprBadge
+              score={report.opr_score}
+              decimal={
+                report.opr_decimal != null
+                  ? Number(report.opr_decimal)
+                  : undefined
+              }
+            />
+          </div>
+        ) : null}
+
         <div
           className={`rounded-lg border px-4 py-3 text-sm ${
             report.ai_cited
@@ -224,13 +240,24 @@ function AiCitationStatus({ report }: { report: AuditReportRow }) {
           {report.ai_cited
             ? `Your domain is cited on ${citedCount} of ${platforms.length} AI platforms tested.`
             : `Not cited on any of ${platforms.length} AI platforms tested.`}
-          {(report.ai_competing_brands?.length ?? 0) > 0 ? (
-            <span className="mt-1 block text-xs opacity-80">
-              Competing brands cited instead:{' '}
-              {report.ai_competing_brands!.join(', ')}
-            </span>
-          ) : null}
         </div>
+
+        {competingBrandsOpr.length > 0 ? (
+          <div className="rounded-lg border border-white/10 p-4 space-y-2">
+            <p className="text-sm font-medium">Competing brands cited instead</p>
+            <ul className="space-y-2 text-sm">
+              {competingBrandsOpr.map((brand) => (
+                <li
+                  key={brand.domain}
+                  className="flex flex-wrap items-center justify-between gap-2"
+                >
+                  <span>{brand.domain}</span>
+                  <OprBadge score={brand.opr} decimal={brand.opr_decimal} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         <div className="overflow-x-auto rounded-lg border border-white/10">
           <table className="w-full text-sm">
@@ -271,20 +298,59 @@ function AiCitationStatus({ report }: { report: AuditReportRow }) {
 
   if (report.ai_cited) {
     return (
-      <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
-        Your domain is cited in AI search for:{' '}
-        {(report.ai_cited_queries ?? []).join(', ') || 'at least one query'}
+      <div className="space-y-3">
+        {report.opr_score != null ? (
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Your domain OPR:</span>
+            <OprBadge
+              score={report.opr_score}
+              decimal={
+                report.opr_decimal != null
+                  ? Number(report.opr_decimal)
+                  : undefined
+              }
+            />
+          </div>
+        ) : null}
+        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+          Your domain is cited in AI search for:{' '}
+          {(report.ai_cited_queries ?? []).join(', ') || 'at least one query'}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-      Not cited in AI search for tested queries.
-      {(report.ai_competing_brands?.length ?? 0) > 0 ? (
-        <span className="mt-1 block text-xs text-amber-200/80">
-          Competing brands cited instead: {report.ai_competing_brands!.join(', ')}
-        </span>
+    <div className="space-y-3">
+      {report.opr_score != null ? (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Your domain OPR:</span>
+          <OprBadge
+            score={report.opr_score}
+            decimal={
+              report.opr_decimal != null ? Number(report.opr_decimal) : undefined
+            }
+          />
+        </div>
+      ) : null}
+      <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+        Not cited in AI search for tested queries.
+      </div>
+      {competingBrandsOpr.length > 0 ? (
+        <div className="rounded-lg border border-white/10 p-4 space-y-2">
+          <p className="text-sm font-medium">Competing brands cited instead</p>
+          <ul className="space-y-2 text-sm">
+            {competingBrandsOpr.map((brand) => (
+              <li
+                key={brand.domain}
+                className="flex flex-wrap items-center justify-between gap-2"
+              >
+                <span>{brand.domain}</span>
+                <OprBadge score={brand.opr} decimal={brand.opr_decimal} />
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : null}
     </div>
   );

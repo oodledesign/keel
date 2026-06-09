@@ -101,6 +101,12 @@ export type PlatformCitationResult = {
   citations: CitationCheck[];
 };
 
+export type CompetingBrandOpr = {
+  domain: string;
+  opr: number;
+  opr_decimal: number;
+};
+
 export type AiCitationResult = {
   platforms: PlatformCitationResult[];
   /** @deprecated use platforms — flat list for scorer prompt */
@@ -108,6 +114,7 @@ export type AiCitationResult = {
   domainCitedInAny: boolean;
   citedQueries: string[];
   competingBrands: string[];
+  competingBrandsOpr: CompetingBrandOpr[];
 };
 
 export type ScorerRecommendation = {
@@ -154,7 +161,10 @@ export type AuditReportRow = {
   ai_cited: boolean | null;
   ai_cited_queries: string[] | null;
   ai_competing_brands: string[] | null;
+  ai_competing_brands_opr: CompetingBrandOpr[] | null;
   ai_citations_by_platform: PlatformCitationResult[] | null;
+  opr_score: number | null;
+  opr_decimal: number | null;
   crawl_data: CrawlResult | null;
   executive_summary: string | null;
   created_at: string;

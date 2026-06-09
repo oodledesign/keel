@@ -7,6 +7,7 @@ import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 import { synthesiseBrief } from './claude-synthesiser';
 import { scrapeTopCompetitors } from './competitor-scrape';
 import {
+  enrichCompetitorsWithOpr,
   fetchCompetitors,
   fetchDomainKeywords,
   fetchKeywordGaps,
@@ -24,6 +25,7 @@ import { classifyTemplate } from './template-classifier';
 import { estimateTraffic } from './traffic-potential';
 import {
   estimateBriefCredits,
+  type CompetitorWithOpr,
   type DomainKeyword,
   type KeywordGap,
 } from './types';
@@ -45,7 +47,7 @@ export async function runBriefJob(jobId: string): Promise<void> {
     const locationCode = countryCodeToLocation(job.country);
 
     let domainKeywords: DomainKeyword[] = [];
-    let competitorDomains: string[] = [];
+    let competitorDomains: CompetitorWithOpr[] = [];
     let keywordGaps: KeywordGap[] = [];
     let targetKeyword = job.target_keyword?.trim() || null;
     let topicReasoning: string | null = null;
@@ -58,13 +60,14 @@ export async function runBriefJob(jobId: string): Promise<void> {
       domainKeywords = await fetchDomainKeywords(job.target_domain, locationCode);
 
       await updateBriefJobStatus(jobId, 'competitor_discovery');
-      competitorDomains = await fetchCompetitors(job.target_domain, locationCode);
+      const rawCompetitors = await fetchCompetitors(job.target_domain, locationCode);
+      competitorDomains = await enrichCompetitorsWithOpr(rawCompetitors);
 
       if (!targetKeyword) {
         await updateBriefJobStatus(jobId, 'keyword_gap');
         keywordGaps = await fetchKeywordGaps(
           job.target_domain,
-          competitorDomains,
+          rawCompetitors,
           locationCode,
         );
         const picked = pickBestTopic(keywordGaps, domainKeywords);
@@ -136,7 +139,7 @@ export async function runBriefJob(jobId: string): Promise<void> {
       template,
       templateRationale: rationale,
       domainKeywords,
-      competitors: competitorDomains.map((domain) => ({ domain })),
+      competitors: competitorDomains,
       keywordGaps,
       serpResults: serpData.organic,
       serpFeatures: serpData.features,
@@ -153,6 +156,7 @@ export async function runBriefJob(jobId: string): Promise<void> {
     await saveBrief(jobId, job.project_id, targetKeyword, briefOutput, {
       serp_snapshot: serpData.organic,
       competitor_data: competitorPages,
+      competitor_domains: competitorDomains,
       domain_keywords: domainKeywords,
     });
 

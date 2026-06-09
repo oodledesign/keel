@@ -47,6 +47,7 @@ export async function saveBrief(
   extras: {
     serp_snapshot: unknown;
     competitor_data: unknown;
+    competitor_domains: unknown;
     domain_keywords: unknown;
   },
 ): Promise<string> {
@@ -76,6 +77,7 @@ export async function saveBrief(
       traffic_position_5: brief.traffic_position_5,
       serp_snapshot: extras.serp_snapshot,
       competitor_data: extras.competitor_data,
+      competitor_domains: extras.competitor_domains,
       domain_keywords: extras.domain_keywords,
       tone_notes: brief.tone_notes,
       eeat_notes: brief.eeat_notes,

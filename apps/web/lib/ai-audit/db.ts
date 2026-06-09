@@ -8,6 +8,7 @@ import type {
   AuditJobRow,
   AuditRecommendationRow,
   AuditReportRow,
+  CompetingBrandOpr,
   CrawlResult,
   PlatformCitationResult,
   ScorerOutput,
@@ -57,7 +58,10 @@ export async function saveAuditReport(
     domainCitedInAny: boolean;
     citedQueries: string[];
     competingBrands: string[];
+    competingBrandsOpr: CompetingBrandOpr[];
     platforms: PlatformCitationResult[];
+    oprScore: number;
+    oprDecimal: number;
   },
 ): Promise<string> {
   const db = ranklyAdmin();
@@ -77,7 +81,10 @@ export async function saveAuditReport(
       ai_cited: aiCitation.domainCitedInAny,
       ai_cited_queries: aiCitation.citedQueries,
       ai_competing_brands: aiCitation.competingBrands,
+      ai_competing_brands_opr: aiCitation.competingBrandsOpr,
       ai_citations_by_platform: aiCitation.platforms,
+      opr_score: aiCitation.oprScore,
+      opr_decimal: aiCitation.oprDecimal,
       crawl_data: crawlData,
     })
     .select('id')

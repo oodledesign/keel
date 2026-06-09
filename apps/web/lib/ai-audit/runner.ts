@@ -4,6 +4,7 @@ import { countryToLocationCode } from '~/lib/clusters/utils';
 
 import { checkAiCitations, deriveBrandQueries } from './ai-citations';
 import { scoreAndRecommend } from './claude-scorer';
+import { getPageRank } from '~/lib/openpagerank/client';
 import {
   crawlLlmsTxt,
   crawlPages,
@@ -57,12 +58,10 @@ export async function runAuditJob(
     await updateAuditJobStatus(jobId, 'checking_citations');
 
     const brandQueries = deriveBrandQueries(domain, pages);
-    const aiCitations = await checkAiCitations(
-      domain,
-      brandQueries,
-      locationCode,
-      country,
-    );
+    const [aiCitations, targetOpr] = await Promise.all([
+      checkAiCitations(domain, brandQueries, locationCode, country),
+      getPageRank(domain),
+    ]);
 
     await updateAuditJobStatus(jobId, 'scoring');
 
@@ -85,7 +84,10 @@ export async function runAuditJob(
         domainCitedInAny: aiCitations.domainCitedInAny,
         citedQueries: aiCitations.citedQueries,
         competingBrands: aiCitations.competingBrands,
+        competingBrandsOpr: aiCitations.competingBrandsOpr,
         platforms: aiCitations.platforms,
+        oprScore: targetOpr.page_rank_integer,
+        oprDecimal: targetOpr.page_rank_decimal,
       },
     );
 

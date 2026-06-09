@@ -26,6 +26,12 @@ export type BriefJobRow = {
   updated_at: string;
 };
 
+export type CompetitorWithOpr = {
+  domain: string;
+  opr: number;
+  opr_decimal: number;
+};
+
 export type DomainKeyword = {
   keyword: string;
   rank: number;
@@ -108,7 +114,7 @@ export type BriefSynthesisInput = {
   template: BriefTemplate;
   templateRationale: string;
   domainKeywords: DomainKeyword[];
-  competitors: Array<{ domain: string }>;
+  competitors: CompetitorWithOpr[];
   keywordGaps: KeywordGap[];
   serpResults: SerpOrganicResult[];
   serpFeatures: string[];
@@ -154,6 +160,7 @@ export type ContentBriefRow = BriefOutput & {
   target_keyword: string;
   serp_snapshot: SerpOrganicResult[] | null;
   competitor_data: CompetitorPage[] | null;
+  competitor_domains: CompetitorWithOpr[] | null;
   domain_keywords: DomainKeyword[] | null;
   created_at: string;
 };

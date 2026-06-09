@@ -7,11 +7,14 @@ import { toast } from '@kit/ui/sonner';
 
 import type {
   CompetitorPage,
+  CompetitorWithOpr,
   ContentBriefRow,
   OutlineItem,
   SerpOrganicResult,
   SuggestedLink,
 } from '~/lib/briefs/types';
+
+import { OprBadge } from '../shared/opr-badge';
 
 function TemplateTypeBadge({ type }: { type: string | null }) {
   if (!type) return null;
@@ -19,6 +22,44 @@ function TemplateTypeBadge({ type }: { type: string | null }) {
     <span className="inline-flex rounded-full border border-white/20 bg-black/20 px-2.5 py-0.5 text-xs font-medium capitalize">
       {type.replace(/-/g, ' ')}
     </span>
+  );
+}
+
+function CompetitorDomainsTable({
+  competitors,
+}: {
+  competitors: CompetitorWithOpr[] | null;
+}) {
+  const rows = competitors ?? [];
+  if (!rows.length) return null;
+
+  return (
+    <div className="space-y-2 rounded-lg border border-white/10 p-4">
+      <h3 className="text-sm font-semibold">Top competitors</h3>
+      <div className="overflow-x-auto text-xs">
+        <table className="w-full text-left">
+          <thead className="text-muted-foreground">
+            <tr>
+              <th className="pb-2 pr-2">Domain</th>
+              <th className="pb-2">OPR</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((competitor) => (
+              <tr key={competitor.domain} className="border-t border-white/5">
+                <td className="py-2 pr-2">{competitor.domain}</td>
+                <td className="py-2">
+                  <OprBadge
+                    score={competitor.opr}
+                    decimal={competitor.opr_decimal}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
 
@@ -255,6 +296,8 @@ export function BriefView({ brief }: { brief: ContentBriefRow }) {
   const outline = (brief.outline as OutlineItem[] | null) ?? [];
   const serp = (brief.serp_snapshot as SerpOrganicResult[] | null) ?? [];
   const competitors = (brief.competitor_data as CompetitorPage[] | null) ?? [];
+  const competitorDomains =
+    (brief.competitor_domains as CompetitorWithOpr[] | null) ?? [];
   const links = (brief.suggested_links as SuggestedLink[] | null) ?? [];
 
   return (
@@ -369,6 +412,7 @@ export function BriefView({ brief }: { brief: ContentBriefRow }) {
         <div className="space-y-4">
           <TrafficPotential brief={brief} />
           <WordCountPanel brief={brief} />
+          <CompetitorDomainsTable competitors={competitorDomains} />
           <SerpBenchmarkTable competitors={competitors} />
           {serp.length > 0 ? (
             <div className="rounded-lg border border-white/10 p-4 space-y-2 text-xs">

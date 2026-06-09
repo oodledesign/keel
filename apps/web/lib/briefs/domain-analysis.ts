@@ -1,9 +1,10 @@
 import 'server-only';
 
 import { dfsPost } from '~/lib/dataforseo/client';
+import { getPageRanks, normaliseOprDomain } from '~/lib/openpagerank/client';
 import { countryToLocationCode, deduplicateBy, normalise } from '~/lib/clusters/utils';
 
-import type { DomainKeyword, KeywordGap } from './types';
+import type { CompetitorWithOpr, DomainKeyword, KeywordGap } from './types';
 
 function normaliseDomain(domain: string): string {
   return domain
@@ -90,6 +91,23 @@ export async function fetchCompetitors(
     .sort((a, b) => b.organicCount - a.organicCount)
     .slice(0, 5)
     .map((row) => row.domain);
+}
+
+export async function enrichCompetitorsWithOpr(
+  competitors: string[],
+): Promise<CompetitorWithOpr[]> {
+  const oprScores = await getPageRanks(competitors);
+
+  return competitors.map((domain) => {
+    const key = normaliseOprDomain(domain);
+    const opr = oprScores[key];
+
+    return {
+      domain,
+      opr: opr?.page_rank_integer ?? 0,
+      opr_decimal: opr?.page_rank_decimal ?? 0,
+    };
+  });
 }
 
 export async function fetchKeywordGaps(
