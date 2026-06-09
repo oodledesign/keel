@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from 'react';
 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
+
 import {
   PAGESPEED_CATEGORY_LABELS,
   PAGESPEED_PRIORITY_LABELS,
@@ -9,23 +11,15 @@ import {
 import type {
   PagespeedMetricSet,
   PagespeedRecommendation,
+  PagespeedRecommendationCategory,
   PagespeedRecommendationPriority,
 } from '~/lib/pagespeed/types';
+import { PAGESPEED_RECOMMENDATION_CATEGORIES } from '~/lib/pagespeed/types';
 
 const PRIORITY_COLOURS: Record<PagespeedRecommendationPriority, string> = {
   high: 'bg-red-500/20 text-red-200',
   medium: 'bg-amber-500/20 text-amber-200',
   low: 'bg-white/10 text-muted-foreground',
-};
-
-const CATEGORY_COLOURS: Record<
-  PagespeedRecommendation['category'],
-  string
-> = {
-  performance: 'border-orange-500/40 bg-orange-500/10 text-orange-200',
-  accessibility: 'border-blue-500/40 bg-blue-500/10 text-blue-200',
-  'best-practices': 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200',
-  seo: 'border-purple-500/40 bg-purple-500/10 text-purple-200',
 };
 
 function RecommendationRow({ rec }: { rec: PagespeedRecommendation }) {
@@ -45,11 +39,6 @@ function RecommendationRow({ rec }: { rec: PagespeedRecommendation }) {
               {rec.displayValue}
             </span>
           ) : null}
-        </span>
-        <span
-          className={`shrink-0 rounded border px-2 py-0.5 text-[10px] uppercase ${CATEGORY_COLOURS[rec.category]}`}
-        >
-          {PAGESPEED_CATEGORY_LABELS[rec.category]}
         </span>
         {rec.isQuickWin ? (
           <span className="shrink-0 rounded border border-cyan-500/40 bg-cyan-500/10 px-2 py-0.5 text-[10px] uppercase text-cyan-200">
@@ -77,58 +66,50 @@ function RecommendationRow({ rec }: { rec: PagespeedRecommendation }) {
   );
 }
 
-function StrategyRecommendations(props: {
-  label: string;
-  metrics: PagespeedMetricSet | null;
+function CategoryRecommendations(props: {
+  category: PagespeedRecommendationCategory;
+  recommendations: PagespeedRecommendation[];
 }) {
   const [priorityFilter, setPriorityFilter] = useState<
     'all' | PagespeedRecommendationPriority
   >('all');
 
-  const recommendations = props.metrics?.recommendations ?? [];
-
   const filtered = useMemo(
     () =>
-      recommendations.filter(
+      props.recommendations.filter(
         (rec) => priorityFilter === 'all' || rec.priority === priorityFilter,
       ),
-    [recommendations, priorityFilter],
+    [props.recommendations, priorityFilter],
   );
 
   const counts = useMemo(
     () => ({
-      high: recommendations.filter((rec) => rec.priority === 'high').length,
-      medium: recommendations.filter((rec) => rec.priority === 'medium').length,
-      low: recommendations.filter((rec) => rec.priority === 'low').length,
+      high: props.recommendations.filter((rec) => rec.priority === 'high')
+        .length,
+      medium: props.recommendations.filter((rec) => rec.priority === 'medium')
+        .length,
+      low: props.recommendations.filter((rec) => rec.priority === 'low').length,
     }),
-    [recommendations],
+    [props.recommendations],
   );
 
-  if (!props.metrics || props.metrics.errorMsg) {
-    return null;
-  }
-
-  if (recommendations.length === 0) {
+  if (props.recommendations.length === 0) {
     return (
-      <div className="border-t border-white/10 px-4 py-4">
-        <p className="text-muted-foreground text-sm">
-          {props.label}: no failing audits — looking good.
-        </p>
-      </div>
+      <p className="text-muted-foreground text-sm">
+        No {PAGESPEED_CATEGORY_LABELS[props.category].toLowerCase()} issues —
+        looking good.
+      </p>
     );
   }
 
   return (
-    <div className="border-t border-white/10 px-4 py-4">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h4 className="text-sm font-medium">{props.label} fixes</h4>
-          <p className="text-muted-foreground text-xs">
-            From Google Lighthouse — {recommendations.length} item
-            {recommendations.length === 1 ? '' : 's'}
-            {counts.high > 0 ? ` · ${counts.high} high urgency` : ''}
-          </p>
-        </div>
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-muted-foreground text-xs">
+          {props.recommendations.length} item
+          {props.recommendations.length === 1 ? '' : 's'}
+          {counts.high > 0 ? ` · ${counts.high} high urgency` : ''}
+        </p>
         <div className="flex flex-wrap gap-1">
           {(['all', 'high', 'medium', 'low'] as const).map((filter) => (
             <button
@@ -163,26 +144,118 @@ function StrategyRecommendations(props: {
   );
 }
 
+function StrategyCategoryTabs(props: {
+  label: string;
+  metrics: PagespeedMetricSet | null;
+}) {
+  const recommendations = props.metrics?.recommendations ?? [];
+
+  const byCategory = useMemo(() => {
+    const grouped = new Map<PagespeedRecommendationCategory, PagespeedRecommendation[]>();
+
+    for (const category of PAGESPEED_RECOMMENDATION_CATEGORIES) {
+      grouped.set(category, []);
+    }
+
+    for (const rec of recommendations) {
+      grouped.get(rec.category)?.push(rec);
+    }
+
+    return grouped;
+  }, [recommendations]);
+
+  const defaultCategory = useMemo(() => {
+    const firstWithItems = PAGESPEED_RECOMMENDATION_CATEGORIES.find(
+      (category) => (byCategory.get(category)?.length ?? 0) > 0,
+    );
+    return firstWithItems ?? 'performance';
+  }, [byCategory]);
+
+  if (!props.metrics) {
+    return (
+      <p className="text-muted-foreground text-sm">
+        {props.label} has not been checked yet.
+      </p>
+    );
+  }
+
+  if (props.metrics.errorMsg) {
+    return (
+      <p className="text-sm text-red-400">
+        {props.label}: {props.metrics.errorMsg}
+      </p>
+    );
+  }
+
+  if (recommendations.length === 0) {
+    return (
+      <p className="text-muted-foreground text-sm">
+        {props.label}: no failing audits — looking good.
+      </p>
+    );
+  }
+
+  return (
+    <Tabs defaultValue={defaultCategory} className="space-y-3">
+      <TabsList className="flex h-auto flex-wrap gap-1 bg-black/30 p-1">
+        {PAGESPEED_RECOMMENDATION_CATEGORIES.map((category) => {
+          const count = byCategory.get(category)?.length ?? 0;
+
+          return (
+            <TabsTrigger
+              key={category}
+              value={category}
+              className="text-xs data-[state=active]:keel-gradient-active"
+            >
+              {PAGESPEED_CATEGORY_LABELS[category]}
+              {count > 0 ? ` (${count})` : ''}
+            </TabsTrigger>
+          );
+        })}
+      </TabsList>
+
+      {PAGESPEED_RECOMMENDATION_CATEGORIES.map((category) => (
+        <TabsContent key={category} value={category} className="mt-0">
+          <CategoryRecommendations
+            category={category}
+            recommendations={byCategory.get(category) ?? []}
+          />
+        </TabsContent>
+      ))}
+    </Tabs>
+  );
+}
+
+function strategyIssueCount(metrics: PagespeedMetricSet | null): number {
+  if (!metrics || metrics.errorMsg) return 0;
+  return metrics.recommendations.length;
+}
+
 export function PagespeedRecommendations(props: {
   mobile: PagespeedMetricSet | null;
   desktop: PagespeedMetricSet | null;
+  className?: string;
 }) {
-  const hasAny =
-    (props.mobile?.recommendations.length ?? 0) > 0 ||
-    (props.desktop?.recommendations.length ?? 0) > 0;
+  const mobileCount = strategyIssueCount(props.mobile);
+  const desktopCount = strategyIssueCount(props.desktop);
+  const defaultStrategy =
+    mobileCount > 0 || !props.desktop?.recommendations.length
+      ? 'mobile'
+      : 'desktop';
 
   if (!props.mobile && !props.desktop) {
     return null;
   }
 
   if (
-    !hasAny &&
+    mobileCount === 0 &&
+    desktopCount === 0 &&
     !props.mobile?.errorMsg &&
     !props.desktop?.errorMsg &&
     (props.mobile?.resultId || props.desktop?.resultId)
   ) {
     return (
-      <div className="border-t border-white/10 px-4 py-4">
+      <div className={props.className ?? 'border-t border-white/10 px-4 py-4'}>
         <p className="text-muted-foreground text-sm">
           Re-run PageSpeed to import Lighthouse fix recommendations for this page.
         </p>
@@ -191,9 +264,39 @@ export function PagespeedRecommendations(props: {
   }
 
   return (
-    <div className="border-t border-white/10 bg-black/10">
-      <StrategyRecommendations label="Mobile" metrics={props.mobile} />
-      <StrategyRecommendations label="Desktop" metrics={props.desktop} />
+    <div className={props.className ?? 'border-t border-white/10 bg-black/10 px-4 py-4'}>
+      <div className="mb-3">
+        <h4 className="text-sm font-medium">Lighthouse fixes</h4>
+        <p className="text-muted-foreground mt-0.5 text-xs">
+          From Google PageSpeed Insights — grouped by device and category
+        </p>
+      </div>
+
+      <Tabs defaultValue={defaultStrategy}>
+        <TabsList className="mb-4 flex h-auto gap-1 bg-black/30 p-1">
+          <TabsTrigger
+            value="mobile"
+            className="text-xs data-[state=active]:keel-gradient-active"
+          >
+            Mobile
+            {mobileCount > 0 ? ` (${mobileCount})` : ''}
+          </TabsTrigger>
+          <TabsTrigger
+            value="desktop"
+            className="text-xs data-[state=active]:keel-gradient-active"
+          >
+            Desktop
+            {desktopCount > 0 ? ` (${desktopCount})` : ''}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="mobile" className="mt-0">
+          <StrategyCategoryTabs label="Mobile" metrics={props.mobile} />
+        </TabsContent>
+        <TabsContent value="desktop" className="mt-0">
+          <StrategyCategoryTabs label="Desktop" metrics={props.desktop} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

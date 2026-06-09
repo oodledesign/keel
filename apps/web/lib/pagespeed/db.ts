@@ -161,15 +161,46 @@ function mapHistoryPoint(row: PagespeedResultRow): PagespeedHistoryPoint {
   };
 }
 
-export async function loadPagespeedHistory(
+export async function loadPagespeedPageForProject(
   projectId: string,
-  limitPerStrategy = DEFAULT_PAGESPEED_HISTORY_LIMIT,
-): Promise<PagespeedPageHistory[]> {
-  await ensureHomepageForProject(projectId);
+  pageId: string,
+): Promise<PagespeedPageRow | null> {
+  const { data, error } = await ranklyClient()
+    .from('pagespeed_pages')
+    .select('*')
+    .eq('id', pageId)
+    .eq('project_id', projectId)
+    .maybeSingle();
 
-  const pages = await loadPagespeedPages(projectId);
-  const pageIds = pages.map((page) => page.id);
-  if (pageIds.length === 0) return [];
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data as PagespeedPageRow | null) ?? null;
+}
+
+function buildPageHistory(
+  page: PagespeedPageRow,
+  grouped: Map<string, PagespeedHistoryPoint[]>,
+): PagespeedPageHistory {
+  const mobile = grouped.get(`${page.id}:mobile`) ?? [];
+  const desktop = grouped.get(`${page.id}:desktop`) ?? [];
+
+  return {
+    pageId: page.id,
+    url: page.url,
+    label: page.label,
+    isHomepage: page.is_homepage,
+    mobile: mobile.reverse(),
+    desktop: desktop.reverse(),
+  };
+}
+
+async function loadHistoryGroupedByPage(
+  pageIds: string[],
+  limitPerStrategy: number,
+): Promise<Map<string, PagespeedHistoryPoint[]>> {
+  if (pageIds.length === 0) return new Map();
 
   const { data, error } = await ranklyClient()
     .from('pagespeed_results')
@@ -192,19 +223,60 @@ export async function loadPagespeedHistory(
     grouped.set(key, bucket);
   }
 
-  return pages.map((page) => {
-    const mobile = grouped.get(`${page.id}:mobile`) ?? [];
-    const desktop = grouped.get(`${page.id}:desktop`) ?? [];
+  return grouped;
+}
 
-    return {
-      pageId: page.id,
-      url: page.url,
-      label: page.label,
-      isHomepage: page.is_homepage,
-      mobile: mobile.reverse(),
-      desktop: desktop.reverse(),
-    };
-  });
+export async function loadPagespeedPageHistory(
+  projectId: string,
+  pageId: string,
+  limitPerStrategy = DEFAULT_PAGESPEED_HISTORY_LIMIT,
+): Promise<PagespeedPageHistory | null> {
+  const page = await loadPagespeedPageForProject(projectId, pageId);
+  if (!page) return null;
+
+  const grouped = await loadHistoryGroupedByPage([pageId], limitPerStrategy);
+  return buildPageHistory(page, grouped);
+}
+
+export async function loadPagespeedPageSnapshot(
+  projectId: string,
+  pageId: string,
+): Promise<PagespeedSnapshot | null> {
+  const page = await loadPagespeedPageForProject(projectId, pageId);
+  if (!page) return null;
+
+  const latest = await loadLatestPagespeedResults([pageId]);
+  const mobile = latest.get(`${pageId}:mobile`);
+  const desktop = latest.get(`${pageId}:desktop`);
+  const resultIds = [mobile?.id, desktop?.id].filter(Boolean) as string[];
+  const recommendationsByResult = await loadPagespeedRecommendations(resultIds);
+
+  return {
+    pageId: page.id,
+    url: page.url,
+    label: page.label,
+    isHomepage: page.is_homepage,
+    mobile: mobile
+      ? mapResultRow(mobile, recommendationsByResult.get(mobile.id) ?? [])
+      : null,
+    desktop: desktop
+      ? mapResultRow(desktop, recommendationsByResult.get(desktop.id) ?? [])
+      : null,
+  };
+}
+
+export async function loadPagespeedHistory(
+  projectId: string,
+  limitPerStrategy = DEFAULT_PAGESPEED_HISTORY_LIMIT,
+): Promise<PagespeedPageHistory[]> {
+  await ensureHomepageForProject(projectId);
+
+  const pages = await loadPagespeedPages(projectId);
+  const pageIds = pages.map((page) => page.id);
+  if (pageIds.length === 0) return [];
+
+  const grouped = await loadHistoryGroupedByPage(pageIds, limitPerStrategy);
+  return pages.map((page) => buildPageHistory(page, grouped));
 }
 
 function isMissingPagespeedRecommendationsTable(error: {

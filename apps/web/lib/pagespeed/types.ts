@@ -1,5 +1,11 @@
 export type PagespeedRecommendationPriority = 'high' | 'medium' | 'low';
 
+export type PagespeedRecommendationCategory =
+  | 'performance'
+  | 'accessibility'
+  | 'best-practices'
+  | 'seo';
+
 export type PagespeedRecommendation = {
   auditId: string;
   title: string;
@@ -8,9 +14,12 @@ export type PagespeedRecommendation = {
   savingsMs: number | null;
   priority: PagespeedRecommendationPriority;
   kind: 'opportunity' | 'diagnostic';
-  category: 'performance' | 'accessibility' | 'best-practices' | 'seo';
+  category: PagespeedRecommendationCategory;
   isQuickWin: boolean;
 };
+
+export const PAGESPEED_RECOMMENDATION_CATEGORIES: PagespeedRecommendationCategory[] =
+  ['performance', 'accessibility', 'best-practices', 'seo'];
 
 export type PagespeedStrategy = 'mobile' | 'desktop';
 

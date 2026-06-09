@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -11,20 +12,18 @@ import { toast } from '@kit/ui/sonner';
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import type {
   PagespeedCheckJobRow,
-  PagespeedPageHistory,
   PagespeedRefreshInterval,
   PagespeedSettings,
   PagespeedSnapshot,
 } from '~/lib/pagespeed/types';
 import { PAGESPEED_REFRESH_INTERVAL_LABELS } from '~/lib/pagespeed/types';
 
+import { ranklyPagespeedPagePath } from '../../_lib/rankly-project-paths';
 import {
   addPagespeedPage,
   deletePagespeedPageAction,
 } from '../../_lib/server/rankly-module-actions';
-import { PagespeedHistoryChart } from './pagespeed-history-chart';
 import { PagespeedJobPoller } from './pagespeed-job-poller';
-import { PagespeedRecommendations } from './pagespeed-recommendations';
 
 type ApiResponse<T> =
   | { ok: true; data: T }
@@ -46,6 +45,11 @@ function formatMs(ms: number | null | undefined): string {
   if (ms == null) return '—';
   if (ms >= 1000) return `${(ms / 1000).toFixed(1)}s`;
   return `${Math.round(ms)}ms`;
+}
+
+function issueCount(metrics: PagespeedSnapshot['mobile']): number {
+  if (!metrics || metrics.errorMsg) return 0;
+  return metrics.recommendations.length;
 }
 
 function MetricCell({
@@ -93,12 +97,12 @@ function MetricCell({
 }
 
 export function PagespeedPanel(props: {
+  account: string;
   accountId: string;
   projectId: string;
   domain: string;
   settings: PagespeedSettings | null;
   snapshots: PagespeedSnapshot[];
-  history: PagespeedPageHistory[];
   latestJob: PagespeedCheckJobRow | null;
 }) {
   const router = useRouter();
@@ -269,7 +273,7 @@ export function PagespeedPanel(props: {
       <p className="text-muted-foreground rounded-lg border border-white/10 bg-black/20 px-4 py-3 text-sm">
         Homepage is tracked automatically for <strong className="text-white">{props.domain}</strong>{' '}
         on desktop and mobile. Scores are from Google PageSpeed Insights (0–100).
-        Run a check to import Lighthouse recommendations with urgency labels.
+        Open a page to view score history and Lighthouse fix recommendations.
       </p>
 
       {activeJobId ? (
@@ -312,80 +316,83 @@ export function PagespeedPanel(props: {
       ) : (
         <div className="space-y-6">
           {props.snapshots.map((page) => {
-            const pageHistory = props.history.find(
-              (row) => row.pageId === page.pageId,
+            const detailHref = ranklyPagespeedPagePath(
+              props.account,
+              props.projectId,
+              page.pageId,
             );
+            const fixes =
+              issueCount(page.mobile) + issueCount(page.desktop);
 
             return (
-            <div
-              key={page.pageId}
-              className="overflow-x-auto rounded-lg border border-white/10"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-black/20 px-4 py-3">
-                <div>
-                  <p className="font-medium">
-                    {page.label ?? page.url}
-                    {page.isHomepage ? (
-                      <span className="text-muted-foreground ml-2 text-xs uppercase">
-                        Homepage
-                      </span>
+              <div
+                key={page.pageId}
+                className="overflow-x-auto rounded-lg border border-white/10"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-black/20 px-4 py-3">
+                  <div>
+                    <p className="font-medium">
+                      {page.label ?? page.url}
+                      {page.isHomepage ? (
+                        <span className="text-muted-foreground ml-2 text-xs uppercase">
+                          Homepage
+                        </span>
+                      ) : null}
+                    </p>
+                    <a
+                      href={page.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-muted-foreground hover:text-primary text-xs underline-offset-4 hover:underline"
+                    >
+                      {page.url.replace(/^https?:\/\//, '')}
+                    </a>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button type="button" variant="outline" size="sm" asChild>
+                      <Link href={detailHref}>
+                        History & fixes
+                        {fixes > 0 ? ` (${fixes})` : ''}
+                      </Link>
+                    </Button>
+                    {!page.isHomepage ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive"
+                        disabled={deletingId === page.pageId}
+                        onClick={() => removePage(page.pageId)}
+                      >
+                        {deletingId === page.pageId ? '…' : 'Remove'}
+                      </Button>
                     ) : null}
-                  </p>
-                  <a
-                    href={page.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-muted-foreground hover:text-primary text-xs underline-offset-4 hover:underline"
-                  >
-                    {page.url.replace(/^https?:\/\//, '')}
-                  </a>
+                  </div>
                 </div>
-                {!page.isHomepage ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive"
-                    disabled={deletingId === page.pageId}
-                    onClick={() => removePage(page.pageId)}
-                  >
-                    {deletingId === page.pageId ? '…' : 'Remove'}
-                  </Button>
-                ) : null}
+
+                <table className="w-full min-w-[40rem] text-left text-sm">
+                  <thead className="border-b border-white/10 text-xs uppercase tracking-wide text-muted-foreground">
+                    <tr>
+                      <th className="px-4 py-2">Device</th>
+                      <th className="px-4 py-2 text-right">Perf</th>
+                      <th className="px-4 py-2 text-right">A11y</th>
+                      <th className="px-4 py-2 text-right">Best</th>
+                      <th className="px-4 py-2 text-right">SEO</th>
+                      <th className="px-4 py-2 text-right">CWV</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-white/5">
+                      <td className="px-4 py-3 text-muted-foreground">Mobile</td>
+                      <MetricCell label="Mobile" metrics={page.mobile} />
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-muted-foreground">Desktop</td>
+                      <MetricCell label="Desktop" metrics={page.desktop} />
+                    </tr>
+                  </tbody>
+                </table>
               </div>
-
-              <table className="w-full min-w-[40rem] text-left text-sm">
-                <thead className="border-b border-white/10 text-xs uppercase tracking-wide text-muted-foreground">
-                  <tr>
-                    <th className="px-4 py-2">Device</th>
-                    <th className="px-4 py-2 text-right">Perf</th>
-                    <th className="px-4 py-2 text-right">A11y</th>
-                    <th className="px-4 py-2 text-right">Best</th>
-                    <th className="px-4 py-2 text-right">SEO</th>
-                    <th className="px-4 py-2 text-right">CWV</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b border-white/5">
-                    <td className="px-4 py-3 text-muted-foreground">Mobile</td>
-                    <MetricCell label="Mobile" metrics={page.mobile} />
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-3 text-muted-foreground">Desktop</td>
-                    <MetricCell label="Desktop" metrics={page.desktop} />
-                  </tr>
-                </tbody>
-              </table>
-
-              <PagespeedRecommendations
-                mobile={page.mobile}
-                desktop={page.desktop}
-              />
-
-              {pageHistory ? (
-                <PagespeedHistoryChart history={pageHistory} />
-              ) : null}
-            </div>
             );
           })}
         </div>

@@ -11,6 +11,17 @@ export type RanklyProjectPaths = {
   clusters: string;
 };
 
+export function ranklyPagespeedPagePath(
+  account: string,
+  projectId: string,
+  pageId: string,
+) {
+  return pathsConfig.app.accountRanklyProjectPagespeedPage
+    .replace('[account]', account)
+    .replace('[projectId]', projectId)
+    .replace('[pageId]', pageId);
+}
+
 export function ranklyProjectPaths(
   account: string,
   projectId: string,

@@ -7,7 +7,6 @@ import { loadTeamWorkspace } from '../../../../../_lib/server/team-account-works
 import { redirectIfSpaceNotIn } from '../../../../../_lib/server/workspace-route-guard';
 import {
   loadLatestPagespeedCheckJob,
-  loadPagespeedHistory,
   loadPagespeedSettings,
   loadPagespeedSnapshots,
 } from '~/lib/pagespeed/db';
@@ -32,11 +31,10 @@ export default async function RanklyProjectPagespeedPage({
     notFound();
   }
 
-  const [pagespeedSettings, pagespeedSnapshots, pagespeedHistory, latestPagespeedJob] =
+  const [pagespeedSettings, pagespeedSnapshots, latestPagespeedJob] =
     await Promise.all([
       loadPagespeedSettings(projectId),
       loadPagespeedSnapshots(projectId),
-      loadPagespeedHistory(projectId),
       loadLatestPagespeedCheckJob(projectId),
     ]);
 
@@ -48,12 +46,12 @@ export default async function RanklyProjectPagespeedPage({
       />
       <div className="rounded-lg border border-white/10 bg-black/10 p-5">
         <PagespeedPanel
+          account={account}
           accountId={accountId}
           projectId={projectId}
           domain={project.domain}
           settings={pagespeedSettings}
           snapshots={pagespeedSnapshots}
-          history={pagespeedHistory}
           latestJob={latestPagespeedJob}
         />
       </div>
