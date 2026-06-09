@@ -11,7 +11,9 @@ import {
 } from './domain';
 import type {
   PagespeedCheckJobRow,
+  PagespeedHistoryPoint,
   PagespeedMetricSet,
+  PagespeedPageHistory,
   PagespeedPageRow,
   PagespeedRecommendation,
   PagespeedRefreshInterval,
@@ -21,6 +23,7 @@ import type {
   PagespeedStrategy,
   ParsedPagespeedResult,
 } from './types';
+import { DEFAULT_PAGESPEED_HISTORY_LIMIT } from './types';
 
 function ranklyAdmin() {
   return supabaseCustomSchema(getSupabaseServerAdminClient(), 'rankly');
@@ -144,6 +147,64 @@ export async function loadLatestPagespeedResults(
   }
 
   return latest;
+}
+
+function mapHistoryPoint(row: PagespeedResultRow): PagespeedHistoryPoint {
+  return {
+    fetchedAt: row.fetched_at,
+    performanceScore: row.performance_score,
+    accessibilityScore: row.accessibility_score,
+    bestPracticesScore: row.best_practices_score,
+    seoScore: row.seo_score,
+    lcpMs: row.lcp_ms != null ? Number(row.lcp_ms) : null,
+    errorMsg: row.error_msg,
+  };
+}
+
+export async function loadPagespeedHistory(
+  projectId: string,
+  limitPerStrategy = DEFAULT_PAGESPEED_HISTORY_LIMIT,
+): Promise<PagespeedPageHistory[]> {
+  await ensureHomepageForProject(projectId);
+
+  const pages = await loadPagespeedPages(projectId);
+  const pageIds = pages.map((page) => page.id);
+  if (pageIds.length === 0) return [];
+
+  const { data, error } = await ranklyClient()
+    .from('pagespeed_results')
+    .select('*')
+    .in('page_id', pageIds)
+    .order('fetched_at', { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const grouped = new Map<string, PagespeedHistoryPoint[]>();
+
+  for (const raw of data ?? []) {
+    const row = raw as PagespeedResultRow;
+    const key = `${row.page_id}:${row.strategy}`;
+    const bucket = grouped.get(key) ?? [];
+    if (bucket.length >= limitPerStrategy) continue;
+    bucket.push(mapHistoryPoint(row));
+    grouped.set(key, bucket);
+  }
+
+  return pages.map((page) => {
+    const mobile = grouped.get(`${page.id}:mobile`) ?? [];
+    const desktop = grouped.get(`${page.id}:desktop`) ?? [];
+
+    return {
+      pageId: page.id,
+      url: page.url,
+      label: page.label,
+      isHomepage: page.is_homepage,
+      mobile: mobile.reverse(),
+      desktop: desktop.reverse(),
+    };
+  });
 }
 
 function isMissingPagespeedRecommendationsTable(error: {

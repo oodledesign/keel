@@ -11,6 +11,7 @@ import { toast } from '@kit/ui/sonner';
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import type {
   PagespeedCheckJobRow,
+  PagespeedPageHistory,
   PagespeedRefreshInterval,
   PagespeedSettings,
   PagespeedSnapshot,
@@ -21,6 +22,7 @@ import {
   addPagespeedPage,
   deletePagespeedPageAction,
 } from '../../_lib/server/rankly-module-actions';
+import { PagespeedHistoryChart } from './pagespeed-history-chart';
 import { PagespeedJobPoller } from './pagespeed-job-poller';
 import { PagespeedRecommendations } from './pagespeed-recommendations';
 
@@ -96,6 +98,7 @@ export function PagespeedPanel(props: {
   domain: string;
   settings: PagespeedSettings | null;
   snapshots: PagespeedSnapshot[];
+  history: PagespeedPageHistory[];
   latestJob: PagespeedCheckJobRow | null;
 }) {
   const router = useRouter();
@@ -308,7 +311,12 @@ export function PagespeedPanel(props: {
         </p>
       ) : (
         <div className="space-y-6">
-          {props.snapshots.map((page) => (
+          {props.snapshots.map((page) => {
+            const pageHistory = props.history.find(
+              (row) => row.pageId === page.pageId,
+            );
+
+            return (
             <div
               key={page.pageId}
               className="overflow-x-auto rounded-lg border border-white/10"
@@ -373,8 +381,13 @@ export function PagespeedPanel(props: {
                 mobile={page.mobile}
                 desktop={page.desktop}
               />
+
+              {pageHistory ? (
+                <PagespeedHistoryChart history={pageHistory} />
+              ) : null}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

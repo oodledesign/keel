@@ -67,6 +67,40 @@ export type PagespeedSnapshot = {
   desktop: PagespeedMetricSet | null;
 };
 
+export type PagespeedHistoryPoint = {
+  fetchedAt: string;
+  performanceScore: number | null;
+  accessibilityScore: number | null;
+  bestPracticesScore: number | null;
+  seoScore: number | null;
+  lcpMs: number | null;
+  errorMsg: string | null;
+};
+
+export type PagespeedPageHistory = {
+  pageId: string;
+  url: string;
+  label: string | null;
+  isHomepage: boolean;
+  mobile: PagespeedHistoryPoint[];
+  desktop: PagespeedHistoryPoint[];
+};
+
+export type PagespeedMetricKey =
+  | 'performanceScore'
+  | 'accessibilityScore'
+  | 'bestPracticesScore'
+  | 'seoScore';
+
+export const PAGESPEED_METRIC_LABELS: Record<PagespeedMetricKey, string> = {
+  performanceScore: 'Performance',
+  accessibilityScore: 'Accessibility',
+  bestPracticesScore: 'Best practices',
+  seoScore: 'SEO',
+};
+
+export const DEFAULT_PAGESPEED_HISTORY_LIMIT = 30;
+
 export type PagespeedMetricSet = {
   resultId: string | null;
   performanceScore: number | null;
