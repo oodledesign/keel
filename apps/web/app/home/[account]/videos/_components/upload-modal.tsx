@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
+import * as tus from 'tus-js-client';
 
 import { Button } from '@kit/ui/button';
 import {
@@ -49,39 +50,63 @@ function titleFromFilename(name: string) {
   return name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim();
 }
 
-function resolveUploadUrl(location: string, tusEndpoint: string) {
-  try {
-    return new URL(location, tusEndpoint).href;
-  } catch {
-    return location;
-  }
-}
+const TUS_CHUNK_SIZE = 50 * 1024 * 1024;
 
-function uploadWithProgress(
-  url: string,
+function uploadWithTus(
   file: File,
-  headers: Record<string, string>,
+  credentials: {
+    bunnyVideoId: string;
+    libraryId: string;
+    signature: string;
+    expiry: number;
+    tusEndpoint: string;
+    title: string;
+  },
   onProgress: (loaded: number, total: number) => void,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open('PATCH', url);
-    Object.entries(headers).forEach(([key, value]) => {
-      xhr.setRequestHeader(key, value);
-    });
-    xhr.upload.onprogress = (event) => {
-      if (!event.lengthComputable) return;
-      onProgress(event.loaded, event.total);
-    };
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
+    const upload = new tus.Upload(file, {
+      endpoint: credentials.tusEndpoint,
+      retryDelays: [0, 3000, 5000, 10000, 20000, 60000, 60000],
+      chunkSize: TUS_CHUNK_SIZE,
+      headers: {
+        AuthorizationSignature: credentials.signature,
+        AuthorizationExpire: String(credentials.expiry),
+        VideoId: credentials.bunnyVideoId,
+        LibraryId: credentials.libraryId,
+      },
+      metadata: {
+        filetype: file.type || 'video/mp4',
+        title: credentials.title,
+      },
+      onError(error) {
+        const status = error.originalResponse?.getStatus();
+        const body = error.originalResponse?.getBody?.() ?? '';
+        reject(
+          new Error(
+            status
+              ? `Upload failed (${status})${body ? `: ${body.slice(0, 200)}` : ''}`
+              : error.message || 'Upload failed',
+          ),
+        );
+      },
+      onProgress(bytesUploaded, bytesTotal) {
+        onProgress(bytesUploaded, bytesTotal);
+      },
+      onSuccess() {
         resolve();
-        return;
-      }
-      reject(new Error(`Upload failed (${xhr.status})`));
-    };
-    xhr.onerror = () => reject(new Error('Upload failed'));
-    xhr.send(file);
+      },
+    });
+
+    void upload
+      .findPreviousUploads()
+      .then((previousUploads) => {
+        if (previousUploads.length > 0) {
+          upload.resumeFromPreviousUpload(previousUploads[0]!);
+        }
+        upload.start();
+      })
+      .catch(reject);
   });
 }
 
@@ -228,37 +253,17 @@ export function UploadModal(props: {
         libraryId,
       } = createJson.data;
 
-      const tusCreate = await fetch(tusEndpoint, {
-        method: 'POST',
-        headers: {
-          AuthorizationSignature: signature,
-          AuthorizationExpire: String(expiry),
-          LibraryId: libraryId,
-          VideoId: bunnyVideoId,
-          'Upload-Length': String(file.size),
-          'Tus-Resumable': '1.0.0',
-          'Upload-Metadata': `filetype ${btoa(file.type || 'video/mp4')},title ${btoa(title.trim())}`,
-        },
-      });
-
-      if (!tusCreate.ok) {
-        throw new Error(`Upload session failed (${tusCreate.status})`);
-      }
-
-      const patchUrl = tusCreate.headers.get('Location');
-      if (!patchUrl) {
-        throw new Error('Upload session did not return a location');
-      }
-
       setPhase('uploading');
 
-      await uploadWithProgress(
-        resolveUploadUrl(patchUrl, tusEndpoint),
+      await uploadWithTus(
         file,
         {
-          'Content-Type': 'application/offset+octet-stream',
-          'Upload-Offset': '0',
-          'Tus-Resumable': '1.0.0',
+          bunnyVideoId,
+          libraryId,
+          signature,
+          expiry,
+          tusEndpoint,
+          title: title.trim(),
         },
         (loaded, total) => {
           setUploadedBytes(loaded);

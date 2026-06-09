@@ -106,6 +106,7 @@
     "remark-gfm": "^4.0.1",
     "stripe": "catalog:",
     "tailwind-merge": "^3.4.0",
+    "tus-js-client": "^4.3.1",
     "tw-animate-css": "catalog:",
     "urlpattern-polyfill": "^10.1.0",
     "zod": "catalog:"

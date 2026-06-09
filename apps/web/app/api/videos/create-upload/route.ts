@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     const bunny = createBunnyStreamClient(apiKey);
     const created = await bunny.createVideo(libraryId, parsed.data.title);
 
-    const expiry = Math.floor(Date.now() / 1000) + 60 * 60;
+    const expiry = Math.floor(Date.now() / 1000) + 60 * 60 * 24;
     const { signature } = bunny.getUploadSignature(
       libraryId,
       created.videoId,
