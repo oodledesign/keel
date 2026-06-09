@@ -146,6 +146,18 @@ export async function loadLatestPagespeedResults(
   return latest;
 }
 
+function isMissingPagespeedRecommendationsTable(error: {
+  message?: string;
+  code?: string;
+}) {
+  const message = error.message ?? '';
+  return (
+    error.code === 'PGRST205' ||
+    message.includes('pagespeed_recommendations') ||
+    message.includes('schema cache')
+  );
+}
+
 export async function loadPagespeedRecommendations(
   resultIds: string[],
 ): Promise<Map<string, PagespeedRecommendation[]>> {
@@ -158,6 +170,9 @@ export async function loadPagespeedRecommendations(
     .order('sort_order', { ascending: true });
 
   if (error) {
+    if (isMissingPagespeedRecommendationsTable(error)) {
+      return new Map();
+    }
     throw new Error(error.message);
   }
 
@@ -401,6 +416,9 @@ export async function savePagespeedResult(input: {
       .insert(rows);
 
     if (recError) {
+      if (isMissingPagespeedRecommendationsTable(recError)) {
+        return resultId;
+      }
       throw new Error(recError.message);
     }
   }
