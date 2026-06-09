@@ -58,6 +58,7 @@ export function databaseModuleKeysForProfile(
         'notes',
         'docs',
         'finances',
+        'videos',
         'apps',
         'feedflow',
         'rankly',

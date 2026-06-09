@@ -80,14 +80,15 @@ async function runPagespeedTasks(input: {
     const task = input.tasks[i];
 
     try {
-      const metrics = await fetchPagespeedInsights({
+      const response = await fetchPagespeedInsights({
         url: task.url,
         strategy: task.strategy,
       });
       await savePagespeedResult({
         pageId: task.pageId,
         strategy: task.strategy,
-        metrics,
+        metrics: response.metrics,
+        recommendations: response.recommendations,
       });
     } catch (error) {
       await savePagespeedResult({

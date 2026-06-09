@@ -25,6 +25,7 @@ export type AccountModuleKey =
   | 'feedflow'
   | 'rankly'
   | 'signatures'
+  | 'videos'
   | 'properties'
   | 'calendar'
   | 'shopping'
@@ -155,4 +156,11 @@ export function isSignaturesModuleEnabled(
   moduleSettings: Record<string, boolean> | null | undefined,
 ) {
   return isWorkModuleEnabled(moduleSettings, 'signatures');
+}
+
+/** Video hosting module toggle (`account_module_settings.module_key = 'videos'`). */
+export function isVideosModuleEnabled(
+  moduleSettings: Record<string, boolean> | null | undefined,
+) {
+  return isWorkModuleEnabled(moduleSettings, 'videos');
 }

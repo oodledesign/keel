@@ -46,6 +46,7 @@ export const WORK_BUSINESS_MODULE_ORDER = [
   'notes',
   'docs',
   'finances',
+  'videos',
   'apps',
   'settings',
 ] as const;

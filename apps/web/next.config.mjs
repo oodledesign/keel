@@ -16,6 +16,7 @@ const INTERNAL_PACKAGES = [
   '@kit/keel-mcp',
   '@kit/mailers',
   '@kit/billing-gateway',
+  '@kit/bunny',
   '@kit/email-templates',
   '@kit/database-webhooks',
   '@kit/cms',
@@ -91,6 +92,13 @@ function getImagesConfig() {
       hostname,
     });
   }
+
+  remotePatterns.push(
+    {
+      protocol: 'https',
+      hostname: '**.b-cdn.net',
+    },
+  );
 
   if (IS_PRODUCTION) {
     return {

@@ -28,6 +28,7 @@ import {
   isFeedflowModuleEnabled,
   isRanklyModuleEnabled,
   isSignaturesModuleEnabled,
+  isVideosModuleEnabled,
   isWorkNavModuleEnabled,
 } from '~/home/[account]/_lib/server/account-modules';
 import type { TeamAccountAccess } from '~/home/[account]/_lib/role-access';
@@ -95,12 +96,6 @@ function buildWorkAppsGroup(
         path: createPath(pathsConfig.app.accountFeedflowSocialAccounts, account),
         Icon: <Share2 className={iconClasses} />,
         description: 'Connect and publish to social accounts.',
-      },
-      {
-        label: 'Videos',
-        path: createPath(pathsConfig.app.accountFeedflowVideos, account),
-        Icon: <Video className={iconClasses} />,
-        description: 'Review and manage video testimonials.',
       },
     );
   }
@@ -249,6 +244,14 @@ export function buildWorkSpaceNavChildren(
             label: 'Finances',
             path: createPath(pathsConfig.app.accountFinances, account),
             Icon: <Wallet className={iconClasses} />,
+          }
+        : null,
+    videos: () =>
+      access.canViewDashboard && isVideosModuleEnabled(ms)
+        ? {
+            label: 'Videos',
+            path: createPath(pathsConfig.app.accountVideos, account),
+            Icon: <Video className={iconClasses} />,
           }
         : null,
     apps: () => {

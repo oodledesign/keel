@@ -22,6 +22,7 @@ import {
   deletePagespeedPageAction,
 } from '../../_lib/server/rankly-module-actions';
 import { PagespeedJobPoller } from './pagespeed-job-poller';
+import { PagespeedRecommendations } from './pagespeed-recommendations';
 
 type ApiResponse<T> =
   | { ok: true; data: T }
@@ -265,6 +266,7 @@ export function PagespeedPanel(props: {
       <p className="text-muted-foreground rounded-lg border border-white/10 bg-black/20 px-4 py-3 text-sm">
         Homepage is tracked automatically for <strong className="text-white">{props.domain}</strong>{' '}
         on desktop and mobile. Scores are from Google PageSpeed Insights (0–100).
+        Run a check to import Lighthouse recommendations with urgency labels.
       </p>
 
       {activeJobId ? (
@@ -366,6 +368,11 @@ export function PagespeedPanel(props: {
                   </tr>
                 </tbody>
               </table>
+
+              <PagespeedRecommendations
+                mobile={page.mobile}
+                desktop={page.desktop}
+              />
             </div>
           ))}
         </div>

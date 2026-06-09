@@ -1,3 +1,17 @@
+export type PagespeedRecommendationPriority = 'high' | 'medium' | 'low';
+
+export type PagespeedRecommendation = {
+  auditId: string;
+  title: string;
+  description: string;
+  displayValue: string | null;
+  savingsMs: number | null;
+  priority: PagespeedRecommendationPriority;
+  kind: 'opportunity' | 'diagnostic';
+  category: 'performance' | 'accessibility' | 'best-practices' | 'seo';
+  isQuickWin: boolean;
+};
+
 export type PagespeedStrategy = 'mobile' | 'desktop';
 
 export type PagespeedRefreshInterval = 'manual' | 'daily' | 'weekly' | 'monthly';
@@ -54,6 +68,7 @@ export type PagespeedSnapshot = {
 };
 
 export type PagespeedMetricSet = {
+  resultId: string | null;
   performanceScore: number | null;
   accessibilityScore: number | null;
   bestPracticesScore: number | null;
@@ -65,6 +80,7 @@ export type PagespeedMetricSet = {
   speedIndexMs: number | null;
   fetchedAt: string | null;
   errorMsg: string | null;
+  recommendations: PagespeedRecommendation[];
 };
 
 export type PagespeedSettings = {
@@ -83,6 +99,11 @@ export type ParsedPagespeedResult = {
   cls: number | null;
   tbtMs: number | null;
   speedIndexMs: number | null;
+};
+
+export type ParsedPagespeedResponse = {
+  metrics: ParsedPagespeedResult;
+  recommendations: PagespeedRecommendation[];
 };
 
 export const PAGESPEED_REFRESH_INTERVAL_LABELS: Record<

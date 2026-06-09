@@ -302,6 +302,9 @@ importers:
       '@kit/billing-gateway':
         specifier: workspace:*
         version: link:../../packages/billing/gateway
+      '@kit/bunny':
+        specifier: workspace:*
+        version: link:../../packages/bunny
       '@kit/cms':
         specifier: workspace:*
         version: link:../../packages/cms/core
@@ -395,6 +398,9 @@ importers:
       react-dom:
         specifier: 'catalog:'
         version: 19.2.4(react@19.2.4)
+      react-dropzone:
+        specifier: ^14.4.0
+        version: 14.4.1(react@19.2.4)
       react-hook-form:
         specifier: 'catalog:'
         version: 7.71.1(react@19.2.4)
@@ -662,6 +668,24 @@ importers:
       zod:
         specifier: 3.25.76
         version: 3.25.76
+
+  packages/bunny:
+    devDependencies:
+      '@kit/eslint-config':
+        specifier: workspace:*
+        version: link:../../tooling/eslint
+      '@kit/prettier-config':
+        specifier: workspace:*
+        version: link:../../tooling/prettier
+      '@kit/tsconfig':
+        specifier: workspace:*
+        version: link:../../tooling/typescript
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.2.3
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
 
   packages/cms/core:
     devDependencies:

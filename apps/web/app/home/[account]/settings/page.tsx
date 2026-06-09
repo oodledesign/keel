@@ -17,6 +17,7 @@ import pathsConfig from '~/config/paths.config';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access';
+import { isVideosModuleEnabled } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 
 // local imports
@@ -84,6 +85,11 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
     '[account]',
     account.slug,
   );
+  const videoSettingsPath = pathsConfig.app.accountVideoSettings.replace(
+    '[account]',
+    account.slug,
+  );
+  const videosModuleEnabled = isVideosModuleEnabled(workspace.moduleSettings);
 
   return (
     <>
@@ -117,6 +123,24 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
               className="inline-flex text-sm font-medium text-[var(--keel-teal)] hover:underline"
             >
               Manage brand settings →
+            </Link>
+          </div>
+        ) : null}
+
+        {!isClient && videosModuleEnabled ? (
+          <div className="mx-auto mb-6 flex max-w-2xl flex-col gap-3 rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+            <div>
+              <h2 className="text-base font-semibold">Video hosting</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Bunny Stream credentials, default player preset, and module
+                configuration.
+              </p>
+            </div>
+            <Link
+              href={videoSettingsPath}
+              className="inline-flex text-sm font-medium text-[var(--keel-teal)] hover:underline"
+            >
+              Manage video settings →
             </Link>
           </div>
         ) : null}

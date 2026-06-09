@@ -1,6 +1,11 @@
 import 'server-only';
 
-import type { PagespeedStrategy, ParsedPagespeedResult } from './types';
+import { parsePagespeedRecommendations } from './recommendations';
+import type {
+  PagespeedStrategy,
+  ParsedPagespeedResponse,
+  ParsedPagespeedResult,
+} from './types';
 
 const PSI_BASE = 'https://pagespeedonline.googleapis.com/pagespeedonline/v5/runPagespeed';
 
@@ -36,7 +41,9 @@ function auditValue(
   return Math.round(value * 1000) / 1000;
 }
 
-export function parsePagespeedResponse(json: Record<string, unknown>): ParsedPagespeedResult {
+export function parsePagespeedResponse(
+  json: Record<string, unknown>,
+): ParsedPagespeedResponse {
   const lighthouse = json.lighthouseResult as
     | {
         categories?: Record<string, { score?: number | null }>;
@@ -47,7 +54,7 @@ export function parsePagespeedResponse(json: Record<string, unknown>): ParsedPag
   const categories = lighthouse?.categories;
   const audits = lighthouse?.audits;
 
-  return {
+  const metrics: ParsedPagespeedResult = {
     performanceScore: scoreFromCategory(categories, 'performance'),
     accessibilityScore: scoreFromCategory(categories, 'accessibility'),
     bestPracticesScore: scoreFromCategory(categories, 'best-practices'),
@@ -58,12 +65,29 @@ export function parsePagespeedResponse(json: Record<string, unknown>): ParsedPag
     tbtMs: auditValue(audits, 'total-blocking-time'),
     speedIndexMs: auditValue(audits, 'speed-index'),
   };
+
+  const parsedRecommendations = parsePagespeedRecommendations(json);
+
+  return {
+    metrics,
+    recommendations: parsedRecommendations.map((rec) => ({
+      auditId: rec.auditId,
+      title: rec.title,
+      description: rec.description,
+      displayValue: rec.displayValue,
+      savingsMs: rec.savingsMs,
+      priority: rec.priority,
+      kind: rec.kind,
+      category: rec.category,
+      isQuickWin: rec.isQuickWin,
+    })),
+  };
 }
 
 export async function fetchPagespeedInsights(input: {
   url: string;
   strategy: PagespeedStrategy;
-}): Promise<ParsedPagespeedResult> {
+}): Promise<ParsedPagespeedResponse> {
   const params = new URLSearchParams({
     url: input.url,
     strategy: input.strategy,

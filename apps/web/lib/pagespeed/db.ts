@@ -13,6 +13,7 @@ import type {
   PagespeedCheckJobRow,
   PagespeedMetricSet,
   PagespeedPageRow,
+  PagespeedRecommendation,
   PagespeedRefreshInterval,
   PagespeedResultRow,
   PagespeedSettings,
@@ -29,8 +30,12 @@ function ranklyClient() {
   return supabaseCustomSchema(getSupabaseServerClient(), 'rankly');
 }
 
-function mapResultRow(row: PagespeedResultRow): PagespeedMetricSet {
+function mapResultRow(
+  row: PagespeedResultRow,
+  recommendations: PagespeedRecommendation[] = [],
+): PagespeedMetricSet {
   return {
+    resultId: row.id,
     performanceScore: row.performance_score,
     accessibilityScore: row.accessibility_score,
     bestPracticesScore: row.best_practices_score,
@@ -42,6 +47,7 @@ function mapResultRow(row: PagespeedResultRow): PagespeedMetricSet {
     speedIndexMs: row.speed_index_ms != null ? Number(row.speed_index_ms) : null,
     fetchedAt: row.fetched_at,
     errorMsg: row.error_msg,
+    recommendations,
   };
 }
 
@@ -140,6 +146,43 @@ export async function loadLatestPagespeedResults(
   return latest;
 }
 
+export async function loadPagespeedRecommendations(
+  resultIds: string[],
+): Promise<Map<string, PagespeedRecommendation[]>> {
+  if (resultIds.length === 0) return new Map();
+
+  const { data, error } = await ranklyClient()
+    .from('pagespeed_recommendations')
+    .select('*')
+    .in('result_id', resultIds)
+    .order('sort_order', { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const grouped = new Map<string, PagespeedRecommendation[]>();
+
+  for (const row of data ?? []) {
+    const resultId = row.result_id as string;
+    const list = grouped.get(resultId) ?? [];
+    list.push({
+      auditId: row.audit_id as string,
+      title: row.title as string,
+      description: (row.description as string) ?? '',
+      displayValue: (row.display_value as string | null) ?? null,
+      savingsMs: row.savings_ms != null ? Number(row.savings_ms) : null,
+      priority: row.priority as PagespeedRecommendation['priority'],
+      kind: row.kind as PagespeedRecommendation['kind'],
+      category: row.category as PagespeedRecommendation['category'],
+      isQuickWin: Boolean(row.is_quick_win),
+    });
+    grouped.set(resultId, list);
+  }
+
+  return grouped;
+}
+
 export async function loadPagespeedSnapshots(
   projectId: string,
 ): Promise<PagespeedSnapshot[]> {
@@ -147,6 +190,8 @@ export async function loadPagespeedSnapshots(
 
   const pages = await loadPagespeedPages(projectId);
   const latest = await loadLatestPagespeedResults(pages.map((page) => page.id));
+  const resultIds = [...latest.values()].map((row) => row.id);
+  const recommendationsByResult = await loadPagespeedRecommendations(resultIds);
 
   return pages.map((page) => {
     const mobile = latest.get(`${page.id}:mobile`);
@@ -157,8 +202,12 @@ export async function loadPagespeedSnapshots(
       url: page.url,
       label: page.label,
       isHomepage: page.is_homepage,
-      mobile: mobile ? mapResultRow(mobile) : null,
-      desktop: desktop ? mapResultRow(desktop) : null,
+      mobile: mobile
+        ? mapResultRow(mobile, recommendationsByResult.get(mobile.id) ?? [])
+        : null,
+      desktop: desktop
+        ? mapResultRow(desktop, recommendationsByResult.get(desktop.id) ?? [])
+        : null,
     };
   });
 }
@@ -301,8 +350,9 @@ export async function savePagespeedResult(input: {
   pageId: string;
   strategy: PagespeedStrategy;
   metrics: ParsedPagespeedResult | null;
+  recommendations?: PagespeedRecommendation[];
   errorMsg?: string | null;
-}): Promise<void> {
+}): Promise<string | null> {
   const payload = {
     page_id: input.pageId,
     strategy: input.strategy,
@@ -319,13 +369,43 @@ export async function savePagespeedResult(input: {
     fetched_at: new Date().toISOString(),
   };
 
-  const { error } = await ranklyAdmin()
+  const { data, error } = await ranklyAdmin()
     .from('pagespeed_results')
-    .insert(payload);
+    .insert(payload)
+    .select('id')
+    .single();
 
-  if (error) {
-    throw new Error(error.message);
+  if (error || !data) {
+    throw new Error(error?.message ?? 'Failed to save PageSpeed result');
   }
+
+  const resultId = data.id as string;
+
+  if (input.recommendations?.length) {
+    const rows = input.recommendations.map((rec, index) => ({
+      result_id: resultId,
+      audit_id: rec.auditId,
+      title: rec.title,
+      description: rec.description,
+      display_value: rec.displayValue,
+      savings_ms: rec.savingsMs,
+      priority: rec.priority,
+      kind: rec.kind,
+      category: rec.category,
+      is_quick_win: rec.isQuickWin,
+      sort_order: index,
+    }));
+
+    const { error: recError } = await ranklyAdmin()
+      .from('pagespeed_recommendations')
+      .insert(rows);
+
+    if (recError) {
+      throw new Error(recError.message);
+    }
+  }
+
+  return resultId;
 }
 
 export async function loadProjectsDueForPagespeed(limit = 5): Promise<
