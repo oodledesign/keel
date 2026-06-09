@@ -15,6 +15,7 @@ import type {
 } from '~/lib/briefs/types';
 
 import { OprBadge } from '../shared/opr-badge';
+import { BacklinkBar, BacklinkSourceNote } from '../shared/backlink-bar';
 
 function TemplateTypeBadge({ type }: { type: string | null }) {
   if (!type) return null;
@@ -27,38 +28,69 @@ function TemplateTypeBadge({ type }: { type: string | null }) {
 
 function CompetitorDomainsTable({
   competitors,
+  targetReferringDomains,
 }: {
   competitors: CompetitorWithOpr[] | null;
+  targetReferringDomains: number | null;
 }) {
   const rows = competitors ?? [];
-  if (!rows.length) return null;
+  if (!rows.length && targetReferringDomains === null) return null;
+
+  const maxCount = Math.max(
+    targetReferringDomains ?? 0,
+    ...rows.map((row) => row.referring_domains ?? 0),
+    1,
+  );
 
   return (
     <div className="space-y-2 rounded-lg border border-white/10 p-4">
-      <h3 className="text-sm font-semibold">Top competitors</h3>
-      <div className="overflow-x-auto text-xs">
-        <table className="w-full text-left">
-          <thead className="text-muted-foreground">
-            <tr>
-              <th className="pb-2 pr-2">Domain</th>
-              <th className="pb-2">OPR</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((competitor) => (
-              <tr key={competitor.domain} className="border-t border-white/5">
-                <td className="py-2 pr-2">{competitor.domain}</td>
-                <td className="py-2">
-                  <OprBadge
-                    score={competitor.opr}
-                    decimal={competitor.opr_decimal}
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold">Top competitors</h3>
+        <BacklinkSourceNote />
       </div>
+      {targetReferringDomains !== null ? (
+        <div className="space-y-1 border-b border-white/5 pb-3 text-xs">
+          <p className="text-muted-foreground">Your domain</p>
+          <BacklinkBar
+            domain="target"
+            referringDomains={targetReferringDomains}
+            maxCount={maxCount}
+          />
+        </div>
+      ) : null}
+      {rows.length ? (
+        <div className="overflow-x-auto text-xs">
+          <table className="w-full text-left">
+            <thead className="text-muted-foreground">
+              <tr>
+                <th className="pb-2 pr-2">Domain</th>
+                <th className="pb-2 pr-2">OPR</th>
+                <th className="pb-2">Referring domains</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((competitor) => (
+                <tr key={competitor.domain} className="border-t border-white/5">
+                  <td className="py-2 pr-2">{competitor.domain}</td>
+                  <td className="py-2 pr-2">
+                    <OprBadge
+                      score={competitor.opr}
+                      decimal={competitor.opr_decimal}
+                    />
+                  </td>
+                  <td className="py-2">
+                    <BacklinkBar
+                      domain={competitor.domain}
+                      referringDomains={competitor.referring_domains}
+                      maxCount={maxCount}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -412,7 +444,10 @@ export function BriefView({ brief }: { brief: ContentBriefRow }) {
         <div className="space-y-4">
           <TrafficPotential brief={brief} />
           <WordCountPanel brief={brief} />
-          <CompetitorDomainsTable competitors={competitorDomains} />
+          <CompetitorDomainsTable
+            competitors={competitorDomains}
+            targetReferringDomains={brief.target_referring_domains}
+          />
           <SerpBenchmarkTable competitors={competitors} />
           {serp.length > 0 ? (
             <div className="rounded-lg border border-white/10 p-4 space-y-2 text-xs">

@@ -17,6 +17,7 @@ import { analyzeCrawlAccess } from '~/lib/crawl/access-summary';
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 
 import { CrawlAccessBanner } from '../crawl-access-banner';
+import { BacklinkBar, BacklinkSourceNote } from '../shared/backlink-bar';
 import { OprBadge } from '../shared/opr-badge';
 
 function scoreColour(score: number | null): string {
@@ -210,14 +211,25 @@ function AiCitationStatus({ report }: { report: AuditReportRow }) {
   const platforms = report.ai_citations_by_platform ?? [];
   const hasPlatformData = platforms.length > 0;
   const competingBrandsOpr = report.ai_competing_brands_opr ?? [];
+  const competitorBacklinks = report.competitor_backlinks ?? {};
 
-  if (hasPlatformData) {
-    const citedCount = platforms.filter((p) => p.domainCitedInAny).length;
+  const maxBacklinkCount = Math.max(
+    report.referring_domains ?? 0,
+    ...competingBrandsOpr.map(
+      (brand) =>
+        brand.referring_domains ??
+        competitorBacklinks[brand.domain] ??
+        0,
+    ),
+    1,
+  );
 
-    return (
-      <div className="space-y-3">
+  const domainMetrics = (
+    <div className="space-y-2 rounded-lg border border-white/10 p-4">
+      <BacklinkSourceNote />
+      <div className="flex flex-wrap items-center gap-4 text-sm">
         {report.opr_score != null ? (
-          <div className="flex flex-wrap items-center gap-2 text-sm">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-muted-foreground">Your domain OPR:</span>
             <OprBadge
               score={report.opr_score}
@@ -229,6 +241,55 @@ function AiCitationStatus({ report }: { report: AuditReportRow }) {
             />
           </div>
         ) : null}
+        {report.referring_domains != null ? (
+          <div className="min-w-[200px] flex-1 space-y-1">
+            <p className="text-xs text-muted-foreground">Referring domains</p>
+            <BacklinkBar
+              domain={report.target_domain}
+              referringDomains={report.referring_domains}
+              maxCount={maxBacklinkCount}
+            />
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+
+  const competingBrandsPanel =
+    competingBrandsOpr.length > 0 ? (
+      <div className="rounded-lg border border-white/10 p-4 space-y-2">
+        <p className="text-sm font-medium">Competing brands cited instead</p>
+        <ul className="space-y-3 text-sm">
+          {competingBrandsOpr.map((brand) => {
+            const referringDomains =
+              brand.referring_domains ??
+              competitorBacklinks[brand.domain] ??
+              null;
+
+            return (
+              <li key={brand.domain} className="space-y-1">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span>{brand.domain}</span>
+                  <OprBadge score={brand.opr} decimal={brand.opr_decimal} />
+                </div>
+                <BacklinkBar
+                  domain={brand.domain}
+                  referringDomains={referringDomains}
+                  maxCount={maxBacklinkCount}
+                />
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    ) : null;
+
+  if (hasPlatformData) {
+    const citedCount = platforms.filter((p) => p.domainCitedInAny).length;
+
+    return (
+      <div className="space-y-3">
+        {domainMetrics}
 
         <div
           className={`rounded-lg border px-4 py-3 text-sm ${
@@ -242,17 +303,19 @@ function AiCitationStatus({ report }: { report: AuditReportRow }) {
             : `Not cited on any of ${platforms.length} AI platforms tested.`}
         </div>
 
-        {competingBrandsOpr.length > 0 ? (
+        {competingBrandsPanel}
+
+        {report.referring_domains != null && report.referring_domains > 0 ? (
           <div className="rounded-lg border border-white/10 p-4 space-y-2">
-            <p className="text-sm font-medium">Competing brands cited instead</p>
-            <ul className="space-y-2 text-sm">
-              {competingBrandsOpr.map((brand) => (
+            <p className="text-sm font-medium">Top referring domains</p>
+            <ul className="space-y-1 text-sm text-muted-foreground">
+              {(report.top_referring_domains ?? []).slice(0, 10).map((row) => (
                 <li
-                  key={brand.domain}
-                  className="flex flex-wrap items-center justify-between gap-2"
+                  key={row.domain}
+                  className="flex justify-between gap-2 tabular-nums"
                 >
-                  <span>{brand.domain}</span>
-                  <OprBadge score={brand.opr} decimal={brand.opr_decimal} />
+                  <span>{row.domain}</span>
+                  <span>{row.link_count.toLocaleString()} links</span>
                 </li>
               ))}
             </ul>
@@ -299,19 +362,7 @@ function AiCitationStatus({ report }: { report: AuditReportRow }) {
   if (report.ai_cited) {
     return (
       <div className="space-y-3">
-        {report.opr_score != null ? (
-          <div className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Your domain OPR:</span>
-            <OprBadge
-              score={report.opr_score}
-              decimal={
-                report.opr_decimal != null
-                  ? Number(report.opr_decimal)
-                  : undefined
-              }
-            />
-          </div>
-        ) : null}
+        {domainMetrics}
         <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
           Your domain is cited in AI search for:{' '}
           {(report.ai_cited_queries ?? []).join(', ') || 'at least one query'}
@@ -322,36 +373,11 @@ function AiCitationStatus({ report }: { report: AuditReportRow }) {
 
   return (
     <div className="space-y-3">
-      {report.opr_score != null ? (
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="text-muted-foreground">Your domain OPR:</span>
-          <OprBadge
-            score={report.opr_score}
-            decimal={
-              report.opr_decimal != null ? Number(report.opr_decimal) : undefined
-            }
-          />
-        </div>
-      ) : null}
+      {domainMetrics}
       <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
         Not cited in AI search for tested queries.
       </div>
-      {competingBrandsOpr.length > 0 ? (
-        <div className="rounded-lg border border-white/10 p-4 space-y-2">
-          <p className="text-sm font-medium">Competing brands cited instead</p>
-          <ul className="space-y-2 text-sm">
-            {competingBrandsOpr.map((brand) => (
-              <li
-                key={brand.domain}
-                className="flex flex-wrap items-center justify-between gap-2"
-              >
-                <span>{brand.domain}</span>
-                <OprBadge score={brand.opr} decimal={brand.opr_decimal} />
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
+      {competingBrandsPanel}
     </div>
   );
 }

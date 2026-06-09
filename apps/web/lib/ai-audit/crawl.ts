@@ -2,6 +2,7 @@ import 'server-only';
 
 import { load } from 'cheerio';
 
+import { discoverUrlsForDomain } from '~/lib/commoncrawl/index-api';
 import { crawlFetch } from '~/lib/crawl/http-fetch';
 
 import type {
@@ -235,35 +236,51 @@ async function selectPagesToCrawl(
   const host = normaliseDomain(domain);
   const homepage = `https://${host}`;
 
-  if (!sitemap.present || sitemap.urlCount === 0) {
+  if (sitemap.present && sitemap.urlCount >= 5) {
+    try {
+      const { response } = await crawlFetch(`https://${host}/sitemap.xml`, {
+        timeoutMs: 8000,
+      });
+      const xml = await response.text();
+      if (response.ok && !looksLikeHtmlForbidden(xml)) {
+        const allUrls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(
+          (m) => m[1]!,
+        );
+
+        const scored = allUrls
+          .map((url) => ({ url, score: scoreUrlImportance(url, host) }))
+          .sort((a, b) => b.score - a.score);
+
+        const selected = [homepage];
+        for (const item of scored) {
+          if (selected.length >= 10) break;
+          if (!selected.includes(item.url)) selected.push(item.url);
+        }
+
+        return selected.slice(0, 10);
+      }
+    } catch {
+      // fall through to Common Crawl
+    }
+  }
+
+  console.log(
+    `[ai-audit] No usable sitemap for ${host} (${sitemap.urlCount} URLs), falling back to Common Crawl index`,
+  );
+  const ccUrls = await discoverUrlsForDomain(host, 50);
+
+  if (ccUrls.length === 0) {
     return [homepage];
   }
 
-  try {
-    const { response } = await crawlFetch(`https://${host}/sitemap.xml`, {
-      timeoutMs: 8000,
-    });
-    const xml = await response.text();
-    if (!response.ok || looksLikeHtmlForbidden(xml)) {
-      return [homepage];
-    }
+  const scored = ccUrls
+    .map((url) => ({ url, score: scoreUrlImportance(url, host) }))
+    .sort((a, b) => b.score - a.score);
 
-    const allUrls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]!);
-
-    const scored = allUrls
-      .map((url) => ({ url, score: scoreUrlImportance(url, host) }))
-      .sort((a, b) => b.score - a.score);
-
-    const selected = [homepage];
-    for (const item of scored) {
-      if (selected.length >= 10) break;
-      if (!selected.includes(item.url)) selected.push(item.url);
-    }
-
-    return selected.slice(0, 10);
-  } catch {
-    return [homepage];
-  }
+  return [
+    homepage,
+    ...scored.filter((item) => item.url !== homepage).slice(0, 9).map((item) => item.url),
+  ];
 }
 
 function emptyPageCrawl(url: string, overrides?: Partial<PageCrawl>): PageCrawl {

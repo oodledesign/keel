@@ -11,6 +11,7 @@ import type {
   CompetingBrandOpr,
   CrawlResult,
   PlatformCitationResult,
+  ReferringDomainRow,
   ScorerOutput,
   ScoreHistoryRow,
 } from './types';
@@ -62,6 +63,9 @@ export async function saveAuditReport(
     platforms: PlatformCitationResult[];
     oprScore: number;
     oprDecimal: number;
+    referringDomains: number | null;
+    topReferringDomains: ReferringDomainRow[];
+    competitorBacklinks: Record<string, number>;
   },
 ): Promise<string> {
   const db = ranklyAdmin();
@@ -85,6 +89,9 @@ export async function saveAuditReport(
       ai_citations_by_platform: aiCitation.platforms,
       opr_score: aiCitation.oprScore,
       opr_decimal: aiCitation.oprDecimal,
+      referring_domains: aiCitation.referringDomains,
+      top_referring_domains: aiCitation.topReferringDomains,
+      competitor_backlinks: aiCitation.competitorBacklinks,
       crawl_data: crawlData,
     })
     .select('id')

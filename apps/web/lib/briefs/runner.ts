@@ -7,7 +7,7 @@ import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 import { synthesiseBrief } from './claude-synthesiser';
 import { scrapeTopCompetitors } from './competitor-scrape';
 import {
-  enrichCompetitorsWithOpr,
+  enrichCompetitors,
   fetchCompetitors,
   fetchDomainKeywords,
   fetchKeywordGaps,
@@ -48,6 +48,9 @@ export async function runBriefJob(jobId: string): Promise<void> {
 
     let domainKeywords: DomainKeyword[] = [];
     let competitorDomains: CompetitorWithOpr[] = [];
+    let targetOpr = 0;
+    let targetReferringDomains: number | null = null;
+    let competitorBacklinks: Record<string, number> = {};
     let keywordGaps: KeywordGap[] = [];
     let targetKeyword = job.target_keyword?.trim() || null;
     let topicReasoning: string | null = null;
@@ -61,7 +64,11 @@ export async function runBriefJob(jobId: string): Promise<void> {
 
       await updateBriefJobStatus(jobId, 'competitor_discovery');
       const rawCompetitors = await fetchCompetitors(job.target_domain, locationCode);
-      competitorDomains = await enrichCompetitorsWithOpr(rawCompetitors);
+      const enriched = await enrichCompetitors(rawCompetitors, job.target_domain);
+      competitorDomains = enriched.competitors;
+      targetOpr = enriched.targetOpr;
+      targetReferringDomains = enriched.targetReferringDomains;
+      competitorBacklinks = enriched.competitorBacklinks;
 
       if (!targetKeyword) {
         await updateBriefJobStatus(jobId, 'keyword_gap');
@@ -140,6 +147,8 @@ export async function runBriefJob(jobId: string): Promise<void> {
       templateRationale: rationale,
       domainKeywords,
       competitors: competitorDomains,
+      targetOpr,
+      targetReferringDomains,
       keywordGaps,
       serpResults: serpData.organic,
       serpFeatures: serpData.features,
@@ -157,6 +166,8 @@ export async function runBriefJob(jobId: string): Promise<void> {
       serp_snapshot: serpData.organic,
       competitor_data: competitorPages,
       competitor_domains: competitorDomains,
+      target_referring_domains: targetReferringDomains,
+      competitor_backlinks: competitorBacklinks,
       domain_keywords: domainKeywords,
     });
 

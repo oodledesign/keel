@@ -48,6 +48,8 @@ export async function saveBrief(
     serp_snapshot: unknown;
     competitor_data: unknown;
     competitor_domains: unknown;
+    target_referring_domains: number | null;
+    competitor_backlinks: unknown;
     domain_keywords: unknown;
   },
 ): Promise<string> {
@@ -78,6 +80,8 @@ export async function saveBrief(
       serp_snapshot: extras.serp_snapshot,
       competitor_data: extras.competitor_data,
       competitor_domains: extras.competitor_domains,
+      target_referring_domains: extras.target_referring_domains,
+      competitor_backlinks: extras.competitor_backlinks,
       domain_keywords: extras.domain_keywords,
       tone_notes: brief.tone_notes,
       eeat_notes: brief.eeat_notes,

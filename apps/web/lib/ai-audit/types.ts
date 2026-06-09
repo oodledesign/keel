@@ -105,6 +105,12 @@ export type CompetingBrandOpr = {
   domain: string;
   opr: number;
   opr_decimal: number;
+  referring_domains?: number | null;
+};
+
+export type ReferringDomainRow = {
+  domain: string;
+  link_count: number;
 };
 
 export type AiCitationResult = {
@@ -165,6 +171,9 @@ export type AuditReportRow = {
   ai_citations_by_platform: PlatformCitationResult[] | null;
   opr_score: number | null;
   opr_decimal: number | null;
+  referring_domains: number | null;
+  top_referring_domains: ReferringDomainRow[] | null;
+  competitor_backlinks: Record<string, number> | null;
   crawl_data: CrawlResult | null;
   executive_summary: string | null;
   created_at: string;

@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { compareBacklinks } from '~/lib/commoncrawl/athena';
 import { dfsPost } from '~/lib/dataforseo/client';
 import { getPageRanks, normaliseOprDomain } from '~/lib/openpagerank/client';
 import { countryToLocationCode, deduplicateBy, normalise } from '~/lib/clusters/utils';
@@ -93,21 +94,67 @@ export async function fetchCompetitors(
     .map((row) => row.domain);
 }
 
-export async function enrichCompetitorsWithOpr(
+export async function enrichCompetitors(
   competitors: string[],
-): Promise<CompetitorWithOpr[]> {
-  const oprScores = await getPageRanks(competitors);
+  targetDomain: string,
+): Promise<{
+  competitors: CompetitorWithOpr[];
+  targetOpr: number;
+  targetOprDecimal: number;
+  targetReferringDomains: number | null;
+  competitorBacklinks: Record<string, number>;
+}> {
+  const allDomains = [...competitors, targetDomain];
 
-  return competitors.map((domain) => {
-    const key = normaliseOprDomain(domain);
-    const opr = oprScores[key];
+  const [oprScores, backlinkCounts] = await Promise.all([
+    getPageRanks(allDomains),
+    compareBacklinks(allDomains),
+  ]);
+
+  const targetKey = normaliseOprDomain(targetDomain);
+  const targetBacklinkKey = normaliseDomain(targetDomain);
+  const targetOpr = oprScores[targetKey];
+
+  const enriched = competitors.map((domain) => {
+    const oprKey = normaliseOprDomain(domain);
+    const backlinkKey = normaliseDomain(domain);
+    const opr = oprScores[oprKey];
+    const referringDomains = backlinkCounts[backlinkKey];
 
     return {
       domain,
       opr: opr?.page_rank_integer ?? 0,
       opr_decimal: opr?.page_rank_decimal ?? 0,
+      referring_domains:
+        referringDomains !== undefined ? referringDomains : null,
     };
   });
+
+  const competitorBacklinks: Record<string, number> = {};
+  for (const row of enriched) {
+    if (row.referring_domains !== null) {
+      competitorBacklinks[row.domain] = row.referring_domains;
+    }
+  }
+
+  const targetReferring = backlinkCounts[targetBacklinkKey];
+
+  return {
+    competitors: enriched,
+    targetOpr: targetOpr?.page_rank_integer ?? 0,
+    targetOprDecimal: targetOpr?.page_rank_decimal ?? 0,
+    targetReferringDomains:
+      targetReferring !== undefined ? targetReferring : null,
+    competitorBacklinks,
+  };
+}
+
+/** @deprecated use enrichCompetitors */
+export async function enrichCompetitorsWithOpr(
+  competitors: string[],
+): Promise<CompetitorWithOpr[]> {
+  const result = await enrichCompetitors(competitors, competitors[0] ?? '');
+  return result.competitors;
 }
 
 export async function fetchKeywordGaps(

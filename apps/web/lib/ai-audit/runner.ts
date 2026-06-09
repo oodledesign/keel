@@ -4,6 +4,11 @@ import { countryToLocationCode } from '~/lib/clusters/utils';
 
 import { checkAiCitations, deriveBrandQueries } from './ai-citations';
 import { scoreAndRecommend } from './claude-scorer';
+import {
+  compareBacklinks,
+  getBacklinkSummary,
+  isCommonCrawlBacklinksEnabled,
+} from '~/lib/commoncrawl/athena';
 import { getPageRank } from '~/lib/openpagerank/client';
 import {
   crawlLlmsTxt,
@@ -58,10 +63,29 @@ export async function runAuditJob(
     await updateAuditJobStatus(jobId, 'checking_citations');
 
     const brandQueries = deriveBrandQueries(domain, pages);
-    const [aiCitations, targetOpr] = await Promise.all([
-      checkAiCitations(domain, brandQueries, locationCode, country),
+    const aiCitations = await checkAiCitations(
+      domain,
+      brandQueries,
+      locationCode,
+      country,
+    );
+
+    const [targetOpr, targetBacklinks, competitorBacklinks] = await Promise.all([
       getPageRank(domain),
+      getBacklinkSummary(domain, 200),
+      compareBacklinks(aiCitations.competingBrands),
     ]);
+
+    const backlinksEnabled = isCommonCrawlBacklinksEnabled();
+
+    const competingBrandsOpr = aiCitations.competingBrandsOpr.map((brand) => ({
+      ...brand,
+      referring_domains: backlinksEnabled
+        ? competitorBacklinks[brand.domain] !== undefined
+          ? competitorBacklinks[brand.domain]!
+          : null
+        : null,
+    }));
 
     await updateAuditJobStatus(jobId, 'scoring');
 
@@ -84,10 +108,17 @@ export async function runAuditJob(
         domainCitedInAny: aiCitations.domainCitedInAny,
         citedQueries: aiCitations.citedQueries,
         competingBrands: aiCitations.competingBrands,
-        competingBrandsOpr: aiCitations.competingBrandsOpr,
+        competingBrandsOpr,
         platforms: aiCitations.platforms,
         oprScore: targetOpr.page_rank_integer,
         oprDecimal: targetOpr.page_rank_decimal,
+        referringDomains: backlinksEnabled
+          ? targetBacklinks.referring_domains
+          : null,
+        topReferringDomains: backlinksEnabled
+          ? targetBacklinks.top_referring_domains
+          : [],
+        competitorBacklinks: backlinksEnabled ? competitorBacklinks : {},
       },
     );
 

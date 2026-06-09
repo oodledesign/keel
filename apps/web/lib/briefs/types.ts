@@ -30,6 +30,7 @@ export type CompetitorWithOpr = {
   domain: string;
   opr: number;
   opr_decimal: number;
+  referring_domains: number | null;
 };
 
 export type DomainKeyword = {
@@ -115,6 +116,8 @@ export type BriefSynthesisInput = {
   templateRationale: string;
   domainKeywords: DomainKeyword[];
   competitors: CompetitorWithOpr[];
+  targetOpr: number;
+  targetReferringDomains: number | null;
   keywordGaps: KeywordGap[];
   serpResults: SerpOrganicResult[];
   serpFeatures: string[];
@@ -161,6 +164,8 @@ export type ContentBriefRow = BriefOutput & {
   serp_snapshot: SerpOrganicResult[] | null;
   competitor_data: CompetitorPage[] | null;
   competitor_domains: CompetitorWithOpr[] | null;
+  target_referring_domains: number | null;
+  competitor_backlinks: Record<string, number> | null;
   domain_keywords: DomainKeyword[] | null;
   created_at: string;
 };
