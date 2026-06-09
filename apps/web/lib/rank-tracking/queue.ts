@@ -111,6 +111,26 @@ export async function completeRankCheckTask(input: {
   }
 }
 
+export async function cancelRankCheckJobTasks(jobId: string): Promise<number> {
+  const { data, error } = await ranklyAdmin()
+    .from('rank_check_tasks')
+    .update({
+      status: 'error',
+      error_msg: 'Cancelled',
+      locked_at: null,
+      locked_by: null,
+    })
+    .eq('job_id', jobId)
+    .in('status', ['pending', 'processing'])
+    .select('id');
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data?.length ?? 0;
+}
+
 export async function countRankCheckTasksByStatus(
   jobId: string,
 ): Promise<{ pending: number; processing: number; done: number; error: number; total: number }> {

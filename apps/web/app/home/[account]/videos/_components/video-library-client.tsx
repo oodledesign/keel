@@ -19,6 +19,7 @@ import { toast } from '@kit/ui/sonner';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import pathsConfig from '~/config/paths.config';
+import { buildPublicVideoWatchUrl } from '~/lib/videos/public-share';
 import type {
   VideoFolderRow,
   VideoRow,
@@ -115,6 +116,22 @@ export function VideoLibraryClient(props: {
 
       await navigator.clipboard.writeText(json.data.embedIframe);
       toast.success('Embed code copied');
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
+  };
+
+  const copyPublicLink = async (video: VideoRow) => {
+    if (!video.public_share_enabled || !video.public_share_token) {
+      toast.error('Enable the public link on the player config page first');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(
+        buildPublicVideoWatchUrl(video.public_share_token),
+      );
+      toast.success('Public link copied');
     } catch (error) {
       toast.error(getErrorMessage(error));
     }
@@ -329,6 +346,7 @@ export function VideoLibraryClient(props: {
                   accountSlug={props.accountSlug}
                   video={video}
                   onCopyEmbed={copyEmbed}
+                  onCopyPublicLink={copyPublicLink}
                   onRename={renameVideo}
                   onMove={moveVideo}
                   onDelete={deleteVideo}
@@ -343,6 +361,7 @@ export function VideoLibraryClient(props: {
                   accountSlug={props.accountSlug}
                   video={video}
                   onCopyEmbed={copyEmbed}
+                  onCopyPublicLink={copyPublicLink}
                   onRename={renameVideo}
                   onMove={moveVideo}
                   onDelete={deleteVideo}

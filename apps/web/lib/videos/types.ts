@@ -14,6 +14,8 @@ export type VideoRow = {
   status: VideoStatus;
   original_filename: string | null;
   tags: string[];
+  public_share_enabled: boolean;
+  public_share_token: string | null;
   created_at: string;
   updated_at: string;
 };

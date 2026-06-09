@@ -17,6 +17,7 @@ import {
 import { EmbedCode } from './embed-code';
 import { PlayerConfigEditor } from './player-config-editor';
 import { PlayerPreview } from './player-preview';
+import { PublicSharePanel } from './public-share-panel';
 
 function createPath(path: string, account: string, videoId: string) {
   return path.replace('[account]', account).replace('[videoId]', videoId);
@@ -29,6 +30,10 @@ export function PlayerConfigPageClient(props: {
     title: string;
     bunny_library_id: string;
     bunny_video_id: string;
+    status: string;
+    publicShareEnabled: boolean;
+    publicShareToken: string | null;
+    publicShareUrl: string | null;
   };
   initialConfig: VideoPlayerConfigValues;
   initialPresets: Array<{
@@ -167,6 +172,17 @@ export function PlayerConfigPageClient(props: {
             onUploadCaption={handleUploadCaption}
             uploadingCaption={uploadingCaption}
           />
+
+          <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+            <PublicSharePanel
+              videoId={props.video.id}
+              videoTitle={props.video.title}
+              initialEnabled={props.video.publicShareEnabled}
+              initialToken={props.video.publicShareToken}
+              initialPublicUrl={props.video.publicShareUrl}
+              videoReady={props.video.status === 'ready'}
+            />
+          </div>
 
           <div className="rounded-xl border border-white/10 bg-black/20 p-4">
             <EmbedCode

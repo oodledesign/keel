@@ -21,6 +21,7 @@ export function VideoListRow(props: {
   accountSlug: string;
   video: VideoRow;
   onCopyEmbed: (video: VideoRow) => void;
+  onCopyPublicLink: (video: VideoRow) => void;
   onRename: (video: VideoRow) => void;
   onMove: (video: VideoRow) => void;
   onDelete: (video: VideoRow) => void;
@@ -72,6 +73,11 @@ export function VideoListRow(props: {
             <DropdownMenuItem onClick={() => props.onCopyEmbed(video)}>
               Copy embed code
             </DropdownMenuItem>
+            {video.public_share_enabled && video.public_share_token ? (
+              <DropdownMenuItem onClick={() => props.onCopyPublicLink(video)}>
+                Copy public link
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuItem asChild>
               <Link href={playerConfigPath}>Edit player config</Link>
             </DropdownMenuItem>

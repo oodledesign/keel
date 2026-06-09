@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import {
@@ -15,6 +16,7 @@ import {
 } from '@kit/ui/dialog';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import { Progress } from '@kit/ui/progress';
 import {
   Select,
   SelectContent,
@@ -41,15 +43,25 @@ type CreateUploadResponse = {
   libraryId: string;
 };
 
+type UploadPhase = 'idle' | 'preparing' | 'uploading' | 'processing';
+
 function titleFromFilename(name: string) {
   return name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim();
+}
+
+function resolveUploadUrl(location: string, tusEndpoint: string) {
+  try {
+    return new URL(location, tusEndpoint).href;
+  } catch {
+    return location;
+  }
 }
 
 function uploadWithProgress(
   url: string,
   file: File,
   headers: Record<string, string>,
-  onProgress: (percent: number) => void,
+  onProgress: (loaded: number, total: number) => void,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -59,7 +71,7 @@ function uploadWithProgress(
     });
     xhr.upload.onprogress = (event) => {
       if (!event.lengthComputable) return;
-      onProgress(Math.round((event.loaded / event.total) * 100));
+      onProgress(event.loaded, event.total);
     };
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
@@ -86,6 +98,56 @@ async function pollVideoStatus(videoId: string) {
   throw new Error('Encoding timed out');
 }
 
+function UploadProgressPanel(props: {
+  phase: Exclude<UploadPhase, 'idle'>;
+  progress: number;
+  uploadedBytes: number;
+  totalBytes: number;
+}) {
+  const label =
+    props.phase === 'preparing'
+      ? 'Preparing upload…'
+      : props.phase === 'uploading'
+        ? 'Uploading…'
+        : 'Encoding video…';
+
+  const detail =
+    props.phase === 'uploading'
+      ? `${formatFileSize(props.uploadedBytes)} / ${formatFileSize(props.totalBytes)}`
+      : props.phase === 'processing'
+        ? 'Upload complete — Bunny Stream is processing your video'
+        : 'Creating upload session';
+
+  return (
+    <div className="space-y-3 rounded-xl border border-white/10 bg-black/20 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium">{label}</p>
+          <p className="text-muted-foreground mt-0.5 text-xs">{detail}</p>
+        </div>
+        {props.phase === 'processing' ? (
+          <Loader2 className="text-[var(--keel-teal)] h-4 w-4 shrink-0 animate-spin" />
+        ) : (
+          <span className="text-sm font-medium tabular-nums text-[var(--keel-teal)]">
+            {props.progress}%
+          </span>
+        )}
+      </div>
+
+      {props.phase === 'processing' ? (
+        <div className="h-2 overflow-hidden rounded-full bg-black/30">
+          <div className="h-full w-2/3 animate-pulse rounded-full bg-[var(--keel-teal)]" />
+        </div>
+      ) : (
+        <Progress
+          value={props.progress}
+          className="h-2 bg-black/30 [&>div]:bg-[var(--keel-teal)]"
+        />
+      )}
+    </div>
+  );
+}
+
 export function UploadModal(props: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -100,15 +162,17 @@ export function UploadModal(props: {
     props.defaultFolderId ?? '__root__',
   );
   const [progress, setProgress] = useState(0);
-  const [phase, setPhase] = useState<'idle' | 'uploading' | 'processing'>(
-    'idle',
-  );
+  const [uploadedBytes, setUploadedBytes] = useState(0);
+  const [totalBytes, setTotalBytes] = useState(0);
+  const [phase, setPhase] = useState<UploadPhase>('idle');
 
   const reset = useCallback(() => {
     setFile(null);
     setTitle('');
     setFolderId(props.defaultFolderId ?? '__root__');
     setProgress(0);
+    setUploadedBytes(0);
+    setTotalBytes(0);
     setPhase('idle');
   }, [props.defaultFolderId]);
 
@@ -126,13 +190,16 @@ export function UploadModal(props: {
     disabled: phase !== 'idle',
   });
 
-  const canSubmit = Boolean(file && title.trim() && phase === 'idle');
+  const isBusy = phase !== 'idle';
+  const canSubmit = Boolean(file && title.trim() && !isBusy);
 
   const submit = async () => {
     if (!file) return;
 
-    setPhase('uploading');
+    setPhase('preparing');
     setProgress(0);
+    setUploadedBytes(0);
+    setTotalBytes(file.size);
 
     try {
       const createRes = await fetch('/api/videos/create-upload', {
@@ -183,21 +250,29 @@ export function UploadModal(props: {
         throw new Error('Upload session did not return a location');
       }
 
+      setPhase('uploading');
+
       await uploadWithProgress(
-        patchUrl,
+        resolveUploadUrl(patchUrl, tusEndpoint),
         file,
         {
           'Content-Type': 'application/offset+octet-stream',
           'Upload-Offset': '0',
           'Tus-Resumable': '1.0.0',
         },
-        setProgress,
+        (loaded, total) => {
+          setUploadedBytes(loaded);
+          setTotalBytes(total);
+          setProgress(Math.min(100, Math.round((loaded / total) * 100)));
+        },
       );
+
+      setUploadedBytes(file.size);
+      setProgress(100);
 
       await fetch(`/api/videos/${videoId}/status`, { method: 'POST' });
 
       setPhase('processing');
-      setProgress(100);
 
       const finalStatus = await pollVideoStatus(videoId);
       if (finalStatus === 'ready') {
@@ -213,6 +288,8 @@ export function UploadModal(props: {
       toast.error(getErrorMessage(error));
       setPhase('idle');
       setProgress(0);
+      setUploadedBytes(0);
+      setTotalBytes(0);
     }
   };
 
@@ -225,6 +302,7 @@ export function UploadModal(props: {
     <Dialog
       open={props.open}
       onOpenChange={(open) => {
+        if (isBusy) return;
         if (!open) reset();
         props.onOpenChange(open);
       }}
@@ -245,7 +323,7 @@ export function UploadModal(props: {
               isDragActive
                 ? 'border-[var(--keel-teal)]/60 bg-[var(--keel-teal)]/10'
                 : 'border-white/15 bg-black/20 hover:border-white/25'
-            }`}
+            } ${isBusy ? 'pointer-events-none opacity-60' : ''}`}
           >
             <input {...getInputProps()} />
             {file ? (
@@ -268,7 +346,7 @@ export function UploadModal(props: {
               id="video-title"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              disabled={phase !== 'idle'}
+              disabled={isBusy}
             />
           </div>
 
@@ -277,7 +355,7 @@ export function UploadModal(props: {
             <Select
               value={folderId}
               onValueChange={setFolderId}
-              disabled={phase !== 'idle'}
+              disabled={isBusy}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select folder" />
@@ -293,20 +371,12 @@ export function UploadModal(props: {
           </div>
 
           {phase !== 'idle' ? (
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>
-                  {phase === 'uploading' ? 'Uploading…' : 'Processing…'}
-                </span>
-                <span>{progress}%</span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-black/30">
-                <div
-                  className="h-full rounded-full bg-[var(--keel-teal)] transition-all"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </div>
+            <UploadProgressPanel
+              phase={phase}
+              progress={progress}
+              uploadedBytes={uploadedBytes}
+              totalBytes={totalBytes}
+            />
           ) : null}
         </div>
 
@@ -315,12 +385,19 @@ export function UploadModal(props: {
             type="button"
             variant="outline"
             onClick={() => props.onOpenChange(false)}
-            disabled={phase === 'uploading'}
+            disabled={isBusy}
           >
             Cancel
           </Button>
           <Button type="button" disabled={!canSubmit} onClick={submit}>
-            {phase === 'idle' ? 'Upload' : 'Uploading…'}
+            {phase === 'idle' ? (
+              'Upload'
+            ) : (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {phase === 'processing' ? 'Encoding…' : 'Uploading…'}
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -22,6 +22,7 @@ import {
 import {
   buildRankTasks,
   claimRankCheckTasks,
+  cancelRankCheckJobTasks,
   completeRankCheckTask,
   countRankCheckTasksByStatus,
   enqueueRankCheckTasks,
@@ -30,6 +31,7 @@ import {
   releaseStaleRankCheckTasks,
 } from './queue';
 import { estimateRankCheckCostUsd } from './types';
+import type { RankCheckJobRow } from './types';
 import { triggerRankCheckRunDebounced } from './trigger-run';
 
 function ranklyAdmin() {
@@ -75,6 +77,28 @@ export async function syncRankCheckJobProgress(jobId: string): Promise<void> {
       finished_at: new Date().toISOString(),
     });
   }
+}
+
+export async function cancelRankCheckJob(jobId: string): Promise<RankCheckJobRow> {
+  await releaseStaleRankCheckTasks();
+
+  const job = await getRankCheckJob(jobId);
+  if (job.status === 'done' || job.status === 'error') {
+    return job;
+  }
+
+  await cancelRankCheckJobTasks(jobId);
+  const counts = await countRankCheckTasksByStatus(jobId);
+
+  await updateRankCheckJob(jobId, {
+    status: 'error',
+    error_msg: 'Cancelled by user',
+    finished_at: new Date().toISOString(),
+    tasks_completed: counts.done + counts.error,
+    tasks_total: counts.total || job.tasks_total,
+  });
+
+  return getRankCheckJob(jobId);
 }
 
 export async function sweepRankCheckWorkers(): Promise<{

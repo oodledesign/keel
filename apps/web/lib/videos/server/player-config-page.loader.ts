@@ -17,6 +17,7 @@ import {
 } from './player-config-data';
 import { requireVideoById } from './videos-access';
 import { getBunnyCdnHostname } from './videos-data';
+import { buildPublicVideoWatchUrl } from '../public-share';
 
 export async function loadVideoPlayerConfigPage(
   accountSlug: string,
@@ -76,6 +77,12 @@ export async function loadVideoPlayerConfigPage(
       bunny_library_id: String(video.bunny_library_id),
       bunny_video_id: String(video.bunny_video_id),
       status: video.status as string,
+      publicShareEnabled: Boolean(video.public_share_enabled),
+      publicShareToken: (video.public_share_token as string | null) ?? null,
+      publicShareUrl:
+        video.public_share_enabled && video.public_share_token
+          ? buildPublicVideoWatchUrl(String(video.public_share_token))
+          : null,
     },
     config: configRow ? configValuesFromRow(configRow) : resolved.config,
     configSource: configRow ? 'video' : resolved.source,
