@@ -18,13 +18,15 @@ export type LastSubPreset =
   | 'last_month'
   | 'last_quarter'
   | 'last_12_months'
-  | 'last_year';
+  | 'last_year'
+  | 'last_financial_year';
 
 export type PeriodSubPreset =
   | 'week_to_date'
   | 'month_to_date'
   | 'quarter_to_date'
-  | 'year_to_date';
+  | 'year_to_date'
+  | 'financial_year_to_date';
 
 export type ResolvedDateRange = {
   from: Date;
@@ -85,6 +87,25 @@ function startOfYear(d: Date) {
   return new Date(d.getFullYear(), 0, 1);
 }
 
+/** UK tax / financial year starts 6 April. */
+function ukFinancialYearStart(d: Date) {
+  const year = d.getFullYear();
+  const month = d.getMonth();
+  const day = d.getDate();
+  if (month > 3 || (month === 3 && day >= 6)) {
+    return startOfDay(new Date(year, 3, 6));
+  }
+  return startOfDay(new Date(year - 1, 3, 6));
+}
+
+function previousUkFinancialYearRange(now: Date): { from: Date; to: Date } {
+  const currentStart = ukFinancialYearStart(now);
+  const from = startOfDay(new Date(currentStart));
+  from.setFullYear(from.getFullYear() - 1);
+  const to = endOfDay(subtractDays(currentStart, 1));
+  return { from, to };
+}
+
 function subtractDays(d: Date, days: number) {
   const x = new Date(d);
   x.setDate(x.getDate() - days);
@@ -119,6 +140,15 @@ export function resolveAnalyticsDateRange(
 
   if (selection.preset === 'period_to_date') {
     const sub = selection.periodSubPreset ?? 'month_to_date';
+    if (sub === 'financial_year_to_date') {
+      const from = ukFinancialYearStart(today);
+      return {
+        from,
+        to: todayEnd,
+        fromIso: toIsoDate(from),
+        toIso: toIsoDate(today),
+      };
+    }
     const from =
       sub === 'week_to_date'
         ? startOfWeek(today)
@@ -173,6 +203,10 @@ export function resolveAnalyticsDateRange(
   if (sub === 'last_year') {
     const from = startOfYear(subtractMonths(end, 12));
     return { from, to: end, fromIso: toIsoDate(from), toIso: toIsoDate(end) };
+  }
+  if (sub === 'last_financial_year') {
+    const { from, to } = previousUkFinancialYearRange(end);
+    return { from, to, fromIso: toIsoDate(from), toIso: toIsoDate(to) };
   }
 
   const count = selection.lastCount ?? 30;
@@ -233,6 +267,7 @@ export function formatDateRangeLabel(selection: DateRangeSelection): string {
       month_to_date: 'Month to date',
       quarter_to_date: 'Quarter to date',
       year_to_date: 'Year to date',
+      financial_year_to_date: 'Financial year to date',
     };
     return map[selection.periodSubPreset ?? 'month_to_date'];
   }
@@ -249,6 +284,7 @@ export function formatDateRangeLabel(selection: DateRangeSelection): string {
     last_quarter: 'Last quarter',
     last_12_months: 'Last 12 months',
     last_year: 'Last year',
+    last_financial_year: 'Last financial year',
   };
 
   if (selection.lastSubPreset && subLabels[selection.lastSubPreset]) {

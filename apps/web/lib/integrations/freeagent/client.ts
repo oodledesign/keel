@@ -2,6 +2,10 @@ import 'server-only';
 
 import { getFreeAgentEnv } from './env';
 import { refreshFreeAgentToken } from './oauth';
+import {
+  flattenFreeAgentCategoriesResponse,
+  type FreeAgentCategoryRecord,
+} from './categories';
 
 type FreeAgentList<T> = Record<string, T[]>;
 
@@ -88,11 +92,9 @@ export class FreeAgentClient {
     return data.bank_transactions ?? [];
   }
 
-  async listCategories() {
-    const data = await this.request<FreeAgentList<Record<string, unknown>>>(
-      '/categories',
-    );
-    return data.categories ?? [];
+  async listCategories(): Promise<FreeAgentCategoryRecord[]> {
+    const data = await this.request<Record<string, unknown>>('/categories');
+    return flattenFreeAgentCategoriesResponse(data);
   }
 
   async listTransactionExplanations(bankTransactionUrl: string) {

@@ -44,6 +44,7 @@ const LAST_PRESETS: Array<{ id: LastSubPreset; label: string }> = [
   { id: 'last_quarter', label: 'Last quarter' },
   { id: 'last_12_months', label: 'Last 12 months' },
   { id: 'last_year', label: 'Last year' },
+  { id: 'last_financial_year', label: 'Last financial year' },
 ];
 
 const PERIOD_PRESETS: Array<{ id: PeriodSubPreset; label: string }> = [
@@ -51,6 +52,7 @@ const PERIOD_PRESETS: Array<{ id: PeriodSubPreset; label: string }> = [
   { id: 'month_to_date', label: 'Month to date' },
   { id: 'quarter_to_date', label: 'Quarter to date' },
   { id: 'year_to_date', label: 'Year to date' },
+  { id: 'financial_year_to_date', label: 'Financial year to date' },
 ];
 
 function parseIsoDate(iso: string) {

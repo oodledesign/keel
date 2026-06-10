@@ -417,7 +417,7 @@ export const suggestTransactionCategoriesAction = enhanceAction(
       }
       if (!categories.length) {
         throw new Error(
-          'No categories found. Sync FreeAgent or add categories first.',
+          'No categories found. Run Sync now to import categories from FreeAgent.',
         );
       }
       if (!transactions?.length) {

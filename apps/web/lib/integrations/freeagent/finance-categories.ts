@@ -18,11 +18,14 @@ export function freeAgentCategoryDisplayName(cat: Record<string, unknown>): stri
 export function categoryKindFromFreeAgent(
   cat: Record<string, unknown>,
 ): 'income' | 'expense' {
+  if (cat._defaultKind === 'income') return 'income';
+  if (cat._defaultKind === 'expense') return 'expense';
+
   if (cat.is_income === true || cat.income === true) return 'income';
   if (cat.is_expense === true || cat.expense === true) return 'expense';
 
   const group = String(
-    cat.group ?? cat.category_group ?? cat.type ?? '',
+    cat.group ?? cat.category_group ?? cat.group_description ?? cat.type ?? '',
   ).toLowerCase();
 
   if (
@@ -56,18 +59,32 @@ export async function loadFinanceCategoriesForAccount(
 ) {
   const freeAgentConnected = await hasFreeAgentFinanceConnection(db, accountId);
 
-  let query = db
-    .from('finance_categories')
-    .select('id, name, kind, color, freeagent_category_url')
-    .eq('account_id', accountId)
-    .order('kind')
-    .order('name');
+  const baseQuery = () =>
+    db
+      .from('finance_categories')
+      .select('id, name, kind, color, freeagent_category_url')
+      .eq('account_id', accountId)
+      .order('kind')
+      .order('name');
 
   if (freeAgentConnected) {
-    query = query.not('freeagent_category_url', 'is', null);
+    const { data, error } = await baseQuery().not(
+      'freeagent_category_url',
+      'is',
+      null,
+    );
+    if (error) throw error;
+    if ((data ?? []).length > 0) {
+      return data ?? [];
+    }
+
+    // FreeAgent connected but categories not synced yet — show all until sync runs.
+    const { data: fallback, error: fallbackError } = await baseQuery();
+    if (fallbackError) throw fallbackError;
+    return fallback ?? [];
   }
 
-  const { data, error } = await query;
+  const { data, error } = await baseQuery();
   if (error) throw error;
   return data ?? [];
 }

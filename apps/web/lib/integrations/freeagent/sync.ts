@@ -9,10 +9,13 @@ import {
 } from './client';
 import {
   buildCategoryUrlToIdMap,
-  categoryKindFromFreeAgent,
-  freeAgentCategoryDisplayName,
   removeKeelDefaultCategories,
 } from './finance-categories';
+import {
+  freeAgentCategoryDisplayName,
+  freeAgentCategoryKind,
+  type FreeAgentCategoryRecord,
+} from './categories';
 
 type ConnectionRow = {
   id: string;
@@ -102,11 +105,13 @@ async function syncFreeAgentCategories(
   db: SupabaseClient,
   accountId: string,
   client: FreeAgentClient,
-) {
+): Promise<number> {
   const faCategories = await client.listCategories();
+  let synced = 0;
 
   for (const cat of faCategories) {
-    const url = String(cat.url ?? '');
+    const record = cat as FreeAgentCategoryRecord;
+    const url = String(record.url ?? '');
     const faId = parseFreeAgentId(url);
     if (!url || !faId) continue;
 
@@ -119,8 +124,8 @@ async function syncFreeAgentCategories(
 
     const payload = {
       account_id: accountId,
-      name: freeAgentCategoryDisplayName(cat),
-      kind: categoryKindFromFreeAgent(cat),
+      name: freeAgentCategoryDisplayName(record),
+      kind: freeAgentCategoryKind(record),
       freeagent_category_url: url,
       freeagent_category_id: faId,
       is_system: false,
@@ -131,17 +136,20 @@ async function syncFreeAgentCategories(
     } else {
       await db.from('finance_categories').insert(payload);
     }
+    synced++;
   }
 
-  if (faCategories.length > 0) {
+  if (synced > 0) {
     await removeKeelDefaultCategories(db, accountId);
   }
+
+  return synced;
 }
 
 export async function syncFreeAgentToKeel(
   db: SupabaseClient,
   accountId: string,
-): Promise<{ imported: number; bankAccounts: number; categorised: number }> {
+): Promise<{ imported: number; bankAccounts: number; categorised: number; categoriesSynced: number }> {
   const { data: connection, error } = await db
     .from('finance_connections')
     .select('*')
@@ -165,7 +173,7 @@ export async function syncFreeAgentToKeel(
     })
     .eq('id', connection.id);
 
-  await syncFreeAgentCategories(db, accountId, client);
+  const categoriesSynced = await syncFreeAgentCategories(db, accountId, client);
   const categoryUrlToId = await buildCategoryUrlToIdMap(db, accountId);
 
   const faBankAccounts = await client.listBankAccounts();
@@ -308,7 +316,7 @@ export async function syncFreeAgentToKeel(
     .update({ last_sync_at: new Date().toISOString() })
     .eq('id', connection.id);
 
-  return { imported, bankAccounts: faBankAccounts.length, categorised };
+  return { imported, bankAccounts: faBankAccounts.length, categorised, categoriesSynced };
 }
 
 export async function pushCategoryToFreeAgent(

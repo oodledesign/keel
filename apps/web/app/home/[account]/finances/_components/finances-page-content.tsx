@@ -294,6 +294,11 @@ export function FinancesPageContent({
         const parts = [
           `${result.imported} new transaction${result.imported === 1 ? '' : 's'}`,
         ];
+        if (result.categoriesSynced > 0) {
+          parts.push(
+            `${result.categoriesSynced} categor${result.categoriesSynced === 1 ? 'y' : 'ies'} from FreeAgent`,
+          );
+        }
         if (result.categorised > 0) {
           parts.push(
             `${result.categorised} categor${result.categorised === 1 ? 'y' : 'ies'} imported from FreeAgent`,
