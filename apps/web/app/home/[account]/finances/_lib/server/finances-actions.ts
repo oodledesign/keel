@@ -200,7 +200,9 @@ export const categorizeFinanceTransactionAction = enhanceAction(
 export const syncFreeAgentAction = enhanceAction(
   async (input) => {
     const client = getSupabaseServerClient();
-    const result = await syncFreeAgentToKeel(client, input.accountId);
+    const result = await syncFreeAgentToKeel(client, input.accountId, {
+      mode: 'full',
+    });
     revalidateFinances(input.accountSlug);
     return result;
   },

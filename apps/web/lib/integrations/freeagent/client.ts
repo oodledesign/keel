@@ -78,13 +78,19 @@ export class FreeAgentClient {
     return data.bank_accounts ?? [];
   }
 
-  async listBankTransactions(bankAccountUrl: string, page = 1) {
+  async listBankTransactions(
+    bankAccountUrl: string,
+    page = 1,
+    options?: { fromDate?: string; toDate?: string },
+  ) {
     const env = getFreeAgentEnv();
     const url = new URL(`${env.apiBase}/bank_transactions`);
     url.searchParams.set('bank_account', bankAccountUrl);
     url.searchParams.set('page', String(page));
     url.searchParams.set('per_page', '100');
     url.searchParams.set('view', 'all');
+    if (options?.fromDate) url.searchParams.set('from_date', options.fromDate);
+    if (options?.toDate) url.searchParams.set('to_date', options.toDate);
 
     const data = await this.request<FreeAgentList<Record<string, unknown>>>(
       url.toString(),

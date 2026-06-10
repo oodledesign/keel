@@ -31,6 +31,23 @@ type FreeAgentExplanationSummary = {
   categoryUrl: string | null;
 };
 
+export type SyncFreeAgentMode = 'full' | 'incremental';
+
+export type SyncFreeAgentOptions = {
+  mode?: SyncFreeAgentMode;
+  /** YYYY-MM-DD — incremental mode defaults from last_sync_at. */
+  fromDate?: string;
+};
+
+export type SyncFreeAgentResult = {
+  imported: number;
+  bankAccounts: number;
+  categorised: number;
+  categoriesSynced: number;
+  mode: SyncFreeAgentMode;
+  fromDate: string | null;
+};
+
 async function saveTokens(
   db: SupabaseClient,
   connectionId: string,
@@ -66,13 +83,16 @@ function explanationCategoryUrl(explanation: Record<string, unknown>): string | 
 async function fetchExplanationMapForBankAccount(
   client: FreeAgentClient,
   bankAccountUrl: string,
+  options?: { fromDate?: string; maxPages?: number },
 ): Promise<Map<string, FreeAgentExplanationSummary>> {
   const map = new Map<string, FreeAgentExplanationSummary>();
+  const maxPages = options?.maxPages ?? 50;
 
-  for (let page = 1; page <= 50; page++) {
+  for (let page = 1; page <= maxPages; page++) {
     const explanations = await client.listTransactionExplanationsForBankAccount(
       bankAccountUrl,
       page,
+      options?.fromDate ? { fromDate: options.fromDate } : undefined,
     );
     if (explanations.length === 0) break;
 
@@ -146,10 +166,33 @@ async function syncFreeAgentCategories(
   return synced;
 }
 
+function incrementalSyncFromDate(lastSyncAt: string | null | undefined): string {
+  const today = new Date();
+  const cap = new Date(today);
+  cap.setDate(cap.getDate() - 90);
+
+  let from = new Date(today);
+  if (lastSyncAt) {
+    from = new Date(lastSyncAt);
+    from.setDate(from.getDate() - 2);
+  } else {
+    from.setDate(from.getDate() - 14);
+  }
+
+  if (from < cap) {
+    from = cap;
+  }
+
+  return from.toISOString().slice(0, 10);
+}
+
 export async function syncFreeAgentToKeel(
   db: SupabaseClient,
   accountId: string,
-): Promise<{ imported: number; bankAccounts: number; categorised: number; categoriesSynced: number }> {
+  options: SyncFreeAgentOptions = {},
+): Promise<SyncFreeAgentResult> {
+  const mode = options.mode ?? 'full';
+  const isIncremental = mode === 'incremental';
   const { data: connection, error } = await db
     .from('finance_connections')
     .select('*')
@@ -173,7 +216,16 @@ export async function syncFreeAgentToKeel(
     })
     .eq('id', connection.id);
 
-  const categoriesSynced = await syncFreeAgentCategories(db, accountId, client);
+  const fromDate = isIncremental
+    ? (options.fromDate ?? incrementalSyncFromDate(connection.last_sync_at as string | null))
+    : null;
+  const maxTxPages = isIncremental ? 5 : 20;
+  const maxExplanationPages = isIncremental ? 5 : 50;
+
+  let categoriesSynced = 0;
+  if (!isIncremental) {
+    categoriesSynced = await syncFreeAgentCategories(db, accountId, client);
+  }
   const categoryUrlToId = await buildCategoryUrlToIdMap(db, accountId);
 
   const faBankAccounts = await client.listBankAccounts();
@@ -185,7 +237,13 @@ export async function syncFreeAgentToKeel(
     const baId = parseFreeAgentId(baUrl);
     if (!baUrl) continue;
 
-    const explanationMap = await fetchExplanationMapForBankAccount(client, baUrl);
+    const explanationMap = await fetchExplanationMapForBankAccount(
+      client,
+      baUrl,
+      isIncremental
+        ? { fromDate: fromDate ?? undefined, maxPages: maxExplanationPages }
+        : { maxPages: maxExplanationPages },
+    );
 
     const { data: bankRow } = await db
       .from('finance_bank_accounts')
@@ -221,8 +279,12 @@ export async function syncFreeAgentToKeel(
 
     if (!bankAccountId) continue;
 
-    for (let page = 1; page <= 20; page++) {
-      const transactions = await client.listBankTransactions(baUrl, page);
+    for (let page = 1; page <= maxTxPages; page++) {
+      const transactions = await client.listBankTransactions(
+        baUrl,
+        page,
+        fromDate ? { fromDate } : undefined,
+      );
       if (transactions.length === 0) break;
 
       for (const tx of transactions) {
@@ -313,10 +375,24 @@ export async function syncFreeAgentToKeel(
 
   await db
     .from('finance_connections')
-    .update({ last_sync_at: new Date().toISOString() })
+    .update({
+      last_sync_at: new Date().toISOString(),
+      sync_state: {
+        lastMode: mode,
+        lastFromDate: fromDate,
+        lastCronError: null,
+      },
+    })
     .eq('id', connection.id);
 
-  return { imported, bankAccounts: faBankAccounts.length, categorised, categoriesSynced };
+  return {
+    imported,
+    bankAccounts: faBankAccounts.length,
+    categorised,
+    categoriesSynced,
+    mode,
+    fromDate,
+  };
 }
 
 export async function pushCategoryToFreeAgent(

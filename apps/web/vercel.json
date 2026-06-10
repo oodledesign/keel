@@ -18,6 +18,10 @@
     {
       "path": "/api/cron/rankly-pagespeed",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/finance-freeagent-sync",
+      "schedule": "0 6 * * *"
     }
   ]
 }
