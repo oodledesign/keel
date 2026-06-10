@@ -12,19 +12,36 @@ export type FreeAgentOAuthStatePayload = {
   exp: number;
 };
 
-function getSecret() {
-  const secret =
-    process.env.FREEAGENT_OAUTH_STATE_SECRET?.trim() ??
-    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-  if (!secret) throw new Error('Missing OAuth state secret');
-  return secret;
+function stateSecret() {
+  const freeAgentExplicit = process.env.FREEAGENT_OAUTH_STATE_SECRET?.trim();
+  if (freeAgentExplicit && freeAgentExplicit.length >= 16) {
+    return freeAgentExplicit;
+  }
+
+  const explicit = process.env.OAUTH_STATE_SECRET?.trim();
+  if (explicit && explicit.length >= 16) {
+    return explicit;
+  }
+
+  const tokenKey = process.env.TOKEN_ENCRYPTION_KEY?.trim();
+  if (!tokenKey || tokenKey.length < 16) {
+    throw new Error(
+      'OAUTH_STATE_SECRET or TOKEN_ENCRYPTION_KEY is required for FreeAgent OAuth state',
+    );
+  }
+
+  return createHmac('sha256', tokenKey)
+    .update('keel-freeagent-oauth-state-v1')
+    .digest('hex');
 }
 
 function signPayload(payload: string) {
-  return createHmac('sha256', getSecret()).update(payload).digest('base64url');
+  return createHmac('sha256', stateSecret()).update(payload).digest('base64url');
 }
 
-export function signFreeAgentOAuthState(input: Omit<FreeAgentOAuthStatePayload, 'exp'> & { exp?: number }) {
+export function signFreeAgentOAuthState(
+  input: Omit<FreeAgentOAuthStatePayload, 'exp'> & { exp?: number },
+) {
   const payload: FreeAgentOAuthStatePayload = {
     ...input,
     exp: input.exp ?? Date.now() + STATE_TTL_MS,
