@@ -17,9 +17,8 @@ import 'server-only';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
-import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
+import { loadSignatureRenderOptions } from './render-context';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
-
 import {
   renderTemplate,
   type SignaturesStaffRow,
@@ -217,7 +216,7 @@ export async function syncStaffFromM365(
 
         const { data: existing } = await db
           .from('staff')
-          .select('id, signature_status')
+          .select('id, signature_status, branch_id, signature_email')
           .eq('account_id', accountId)
           .eq('email', email)
           .maybeSingle();
@@ -231,14 +230,17 @@ export async function syncStaffFromM365(
           department: u.department?.trim() ?? null,
           phone_direct: phoneDirect,
           phone_mobile: phoneMobile,
-          branch: null as string | null,
           photo_url: photoUrl,
         };
 
         if (existing?.id) {
           const { error: updErr } = await db
             .from('staff')
-            .update(baseRow)
+            .update({
+              ...baseRow,
+              branch_id: existing.branch_id ?? null,
+              signature_email: existing.signature_email ?? null,
+            })
             .eq('id', existing.id);
 
           if (updErr) {
@@ -249,6 +251,7 @@ export async function syncStaffFromM365(
         } else {
           const { error: insErr } = await db.from('staff').insert({
             ...baseRow,
+            branch: null,
             signature_status: 'pending',
           });
 
@@ -405,14 +408,8 @@ async function pushSignatureToStaffWithActor(
   }
 
   /** Rendered HTML for when Graph exposes a supported signature property (see TODO below). */
-  const [departmentBadgeUrl, brand] = await Promise.all([
-    loadDepartmentBadgeUrl(accountId, staff.department),
-    loadAccountBrandResolved(accountId),
-  ]);
-  const renderedHtml = renderTemplate(templateHtml, staff, {
-    awardBadgeUrl: departmentBadgeUrl,
-    brand,
-  });
+  const renderOptions = await loadSignatureRenderOptions(accountId, staff);
+  const renderedHtml = renderTemplate(templateHtml, staff, renderOptions);
   let graphError: string | null = null;
 
   try {

@@ -4,11 +4,7 @@ import { createSign, createPrivateKey } from 'node:crypto';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
-import {
-  loadAccountBrandResolved,
-  type AccountBrandResolved,
-} from '~/lib/brand/account-brand';
-
+import { loadSignatureRenderOptions } from './render-context';
 import { getSignaturesSupabaseClient } from './graph';
 import {
   isMissingRelationError,
@@ -455,13 +451,12 @@ export async function syncStaffFromGoogleWorkspace(
           department: org?.department?.trim() ?? null,
           phone_direct: pickPhone(user, 'work'),
           phone_mobile: pickPhone(user, 'mobile'),
-          branch: null as string | null,
           photo_url: photoUrl,
         };
 
         const { data: existing } = await db
           .from('staff')
-          .select('id')
+          .select('id, branch_id, signature_email')
           .eq('account_id', accountId)
           .eq('email', email)
           .maybeSingle();
@@ -469,7 +464,11 @@ export async function syncStaffFromGoogleWorkspace(
         if (existing?.id) {
           const { error: updErr } = await db
             .from('staff')
-            .update(baseRow)
+            .update({
+              ...baseRow,
+              branch_id: existing.branch_id ?? null,
+              signature_email: existing.signature_email ?? null,
+            })
             .eq('id', existing.id);
           if (updErr) {
             errors.push(`${email}: ${updErr.message}`);
@@ -479,6 +478,7 @@ export async function syncStaffFromGoogleWorkspace(
         } else {
           const { error: insErr } = await db.from('staff').insert({
             ...baseRow,
+            branch: null,
             signature_status: 'pending',
           });
           if (insErr) {
@@ -634,14 +634,8 @@ export async function pushSignatureToGoogleStaff(
     return { success: false, error: msg };
   }
 
-  const [departmentBadgeUrl, brand] = await Promise.all([
-    loadDepartmentBadgeUrl(accountId, staff.department),
-    loadAccountBrandResolved(accountId),
-  ]);
-  const renderedHtml = renderTemplate(templateHtml, staff, {
-    awardBadgeUrl: departmentBadgeUrl,
-    brand: brand as AccountBrandResolved,
-  });
+  const renderOptions = await loadSignatureRenderOptions(accountId, staff);
+  const renderedHtml = renderTemplate(templateHtml, staff, renderOptions);
 
   let graphError: string | null = null;
 

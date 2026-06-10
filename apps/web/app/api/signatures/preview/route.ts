@@ -3,11 +3,10 @@ import { type NextRequest, NextResponse } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
+import { loadSignatureRenderOptions } from '~/lib/signatures/render-context';
 import { jsonErr } from '~/lib/rankly/api-response';
 import { assertAccountMember } from '~/lib/signatures/account-access';
 import {
-  loadDepartmentBadgeUrl,
   type SignaturesStaffRow,
   getSignaturesSupabaseClient,
   renderTemplate,
@@ -67,17 +66,11 @@ export async function GET(request: NextRequest) {
       return jsonErr('NOT_FOUND', 'Template not found', 404);
     }
 
-    const [departmentBadgeUrl, brand] = await Promise.all([
-      loadDepartmentBadgeUrl(
-        accountId,
-        (staffRow as SignaturesStaffRow).department,
-      ),
-      loadAccountBrandResolved(accountId),
-    ]);
+    const renderOptions = await loadSignatureRenderOptions(accountId, staffRow as SignaturesStaffRow);
     const html = renderTemplate(
       templateRow.html_template as string,
       staffRow as SignaturesStaffRow,
-      { awardBadgeUrl: departmentBadgeUrl, brand },
+      renderOptions,
     );
 
     return new NextResponse(html, {

@@ -28,6 +28,7 @@ import {
 import { toast } from '@kit/ui/sonner';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
+import type { AccountBranch } from '~/lib/brand/account-branches';
 
 import {
   pushStaffSignatureAction,
@@ -39,21 +40,30 @@ import type {
 } from '../_lib/server/signatures-data';
 
 const NO_TEMPLATE = '__none__';
+const NO_BRANCH = '__none__';
 
 export function SignatureStaffEditor({
   accountId,
   staff,
   templates,
+  branches,
 }: {
   accountId: string;
   staff: SignatureStaff;
   templates: SignatureTemplate[];
+  branches: AccountBranch[];
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [pushing, setPushing] = useState(false);
   const [templateId, setTemplateId] = useState(staff.template_id ?? NO_TEMPLATE);
+  const [branchId, setBranchId] = useState(staff.branch_id ?? NO_BRANCH);
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
+
+  const selectedBranch = useMemo(
+    () => branches.find((b) => b.id === branchId) ?? null,
+    [branchId, branches],
+  );
 
   const previewUrl = useMemo(() => {
     const selectedTemplate = templateId === NO_TEMPLATE ? null : templateId;
@@ -90,7 +100,8 @@ export function SignatureStaffEditor({
         department: String(formData.get('department') ?? ''),
         phone_direct: String(formData.get('phone_direct') ?? ''),
         phone_mobile: String(formData.get('phone_mobile') ?? ''),
-        branch: String(formData.get('branch') ?? ''),
+        signature_email: String(formData.get('signature_email') ?? ''),
+        branch_id: branchId === NO_BRANCH ? null : branchId,
         photoDataUrl,
         templateId: templateId === NO_TEMPLATE ? null : templateId,
       });
@@ -135,10 +146,54 @@ export function SignatureStaffEditor({
               <Field name="full_name" label="Full name" defaultValue={staff.full_name} />
               <Field name="job_title" label="Job title" defaultValue={staff.job_title} />
               <Field name="department" label="Department" defaultValue={staff.department} />
-              <Field name="branch" label="Branch" defaultValue={staff.branch} />
-              <Field name="phone_direct" label="Direct phone" defaultValue={staff.phone_direct} />
+              <div className="space-y-2">
+                <Label>Branch</Label>
+                <Select value={branchId} onValueChange={setBranchId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_BRANCH}>
+                      Default branch
+                    </SelectItem>
+                    {branches.map((branch) => (
+                      <SelectItem key={branch.id} value={branch.id}>
+                        {branch.name}
+                        {branch.isDefault ? ' (default)' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedBranch ? (
+                  <p className="text-xs text-muted-foreground">
+                    {selectedBranch.address || 'No branch address set'}
+                    {selectedBranch.phone ? ` · ${selectedBranch.phone}` : ''}
+                    {selectedBranch.email ? ` · ${selectedBranch.email}` : ''}
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Uses the default branch from Brand settings when none is selected.
+                  </p>
+                )}
+              </div>
+              <Field
+                name="phone_direct"
+                label="Direct phone (override)"
+                defaultValue={staff.phone_direct}
+                hint="Leave blank to use the branch phone number."
+              />
               <Field name="phone_mobile" label="Mobile phone" defaultValue={staff.phone_mobile} />
+              <Field
+                name="signature_email"
+                label="Signature email (override)"
+                defaultValue={staff.signature_email}
+                hint="Leave blank to use synced email, then branch email."
+              />
             </div>
+
+            <p className="text-xs text-muted-foreground">
+              Synced login email: {staff.email}
+            </p>
 
             <div className="space-y-2">
               <Label>Photo upload</Label>
@@ -185,7 +240,7 @@ export function SignatureStaffEditor({
                     <DialogTitle>Push this signature?</DialogTitle>
                     <DialogDescription>
                       Keel will send the currently assigned template to this
-                      staff member&apos;s Microsoft mailbox.
+                      staff member&apos;s mailbox.
                     </DialogDescription>
                   </DialogHeader>
                   <DialogFooter>
@@ -228,15 +283,18 @@ function Field({
   name,
   label,
   defaultValue,
+  hint,
 }: {
   name: string;
   label: string;
   defaultValue: string | null;
+  hint?: string;
 }) {
   return (
     <div className="space-y-2">
       <Label htmlFor={name}>{label}</Label>
       <Input id={name} name={name} defaultValue={defaultValue ?? ''} />
+      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
     </div>
   );
 }

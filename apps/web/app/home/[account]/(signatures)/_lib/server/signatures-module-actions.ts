@@ -11,6 +11,7 @@ import { isRedirectError } from 'next/dist/client/components/redirect-error';
 
 import pathsConfig from '~/config/paths.config';
 import { isSignaturesModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
+import { loadAccountBranchById } from '~/lib/brand/account-branches';
 import {
   disconnectGoogleWorkspace,
   connectGoogleWorkspace,
@@ -155,13 +156,24 @@ export const updateSignatureStaff = enhanceAction(
       );
     }
 
+    let branchName: string | null = null;
+    if (input.branch_id) {
+      const branch = await loadAccountBranchById(input.accountId, input.branch_id);
+      if (!branch) {
+        throw new Error('Branch not found');
+      }
+      branchName = branch.name;
+    }
+
     const update = {
       full_name: input.full_name,
       job_title: input.job_title,
       department: input.department,
       phone_direct: input.phone_direct,
       phone_mobile: input.phone_mobile,
-      branch: input.branch,
+      branch_id: input.branch_id ?? null,
+      branch: branchName,
+      signature_email: input.signature_email,
       ...(photoUrl ? { photo_url: photoUrl } : {}),
     };
 

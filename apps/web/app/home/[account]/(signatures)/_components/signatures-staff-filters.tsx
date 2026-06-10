@@ -19,7 +19,7 @@ export function SignaturesStaffFilters({
   branches,
   departments,
 }: {
-  branches: string[];
+  branches: Array<{ id: string; name: string }>;
   departments: string[];
 }) {
   const router = useRouter();
@@ -53,8 +53,8 @@ export function SignaturesStaffFilters({
           <SelectContent>
             <SelectItem value={ALL}>All branches</SelectItem>
             {branches.map((branch) => (
-              <SelectItem key={branch} value={branch}>
-                {branch}
+              <SelectItem key={branch.id} value={branch.id}>
+                {branch.name}
               </SelectItem>
             ))}
           </SelectContent>

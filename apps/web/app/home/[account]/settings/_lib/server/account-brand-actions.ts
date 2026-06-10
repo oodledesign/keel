@@ -107,6 +107,8 @@ export const saveAccountBrandSettings = enhanceAction(
       secondary_color: input.secondary_color ?? null,
       accent_color: input.accent_color ?? null,
       logo_url: logoUrl,
+      website_url: input.website_url?.trim() || null,
+      address: input.address?.trim() || null,
     };
 
     const { error } = await admin.from('account_brand_settings').upsert(payload, {
@@ -120,6 +122,9 @@ export const saveAccountBrandSettings = enhanceAction(
     revalidatePath(workPath(pathsConfig.app.accountSettings, accountSlug));
     revalidatePath(workPath(pathsConfig.app.accountBrandSettings, accountSlug));
     revalidatePath(workPath(pathsConfig.app.accountInvoices, accountSlug));
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug),
+    );
     return { ok: true as const };
   },
   { schema: saveAccountBrandSettingsSchema },

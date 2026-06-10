@@ -13,6 +13,8 @@ export type AccountBrandSettingsRow = {
   secondary_color: string | null;
   accent_color: string | null;
   logo_url: string | null;
+  website_url: string | null;
+  address: string | null;
 };
 
 /**
@@ -24,6 +26,8 @@ export type AccountBrandResolved = {
   secondary_color: string;
   accent_color: string;
   logo_url: string | null;
+  website_url: string | null;
+  address: string | null;
 };
 
 function resolveBrand(
@@ -36,6 +40,8 @@ function resolveBrand(
     secondary_color: row?.secondary_color?.trim() || DEFAULT_BRAND_SECONDARY,
     accent_color: row?.accent_color?.trim() || DEFAULT_BRAND_ACCENT,
     logo_url: row?.logo_url?.trim() || null,
+    website_url: row?.website_url?.trim() || null,
+    address: row?.address?.trim() || null,
   };
 }
 
@@ -46,7 +52,7 @@ export async function loadAccountBrandResolved(
   const { data, error } = await admin
     .from('account_brand_settings')
     .select(
-      'account_id, primary_color, secondary_color, accent_color, logo_url',
+      'account_id, primary_color, secondary_color, accent_color, logo_url, website_url, address',
     )
     .eq('account_id', accountId)
     .maybeSingle();

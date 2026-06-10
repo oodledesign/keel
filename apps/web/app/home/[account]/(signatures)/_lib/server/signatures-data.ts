@@ -31,9 +31,10 @@ export const MINIMAL_SIGNATURE_TEMPLATE = `<!-- Keel Signatures minimal template
 /**
  * Executive banner — portrait left, brand-coloured panel right (email-safe tables + inline CSS).
  * Workspace brand: {{brand_primary_color}}, {{brand_secondary_color}}, {{brand_accent_color}}, {{brand_logo_url}} (Settings → Brand).
- * Placeholders: {{photo_url}}, {{full_name}}, {{credentials}}, {{job_title}}, {{email}}, {{website}},
- * {{address}}, {{company_logo_url}}, {{award_badge_url}}, plus {{phone_direct}}, {{phone_mobile}}, {{department}}, {{branch}}.
- * Optional fields (credentials, website, address, logos, badge) render empty until you paste URLs/text in the template or extend staff sync.
+ * Company contact: {{website}} (Settings → Brand), {{address}} (branch or brand fallback).
+ * Placeholders: {{photo_url}}, {{full_name}}, {{credentials}}, {{job_title}}, {{email}},
+ * {{award_badge_url}}, plus {{phone_direct}}, {{phone_mobile}}, {{department}}, {{branch}}.
+ * Phone, email, and address use the staff member's branch (Settings → Brand → Branches) when not overridden on their profile.
  */
 export const DEFAULT_SIGNATURE_TEMPLATE = `<!-- Keel Signatures — executive banner (Outlook-safe table layout) -->
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;max-width:560px;font-family:Arial,Helvetica,sans-serif;">
@@ -53,8 +54,7 @@ export const DEFAULT_SIGNATURE_TEMPLATE = `<!-- Keel Signatures — executive ba
             </div>
           </td>
           <td style="vertical-align:top;text-align:right;width:132px;padding:0;line-height:0;">
-            <img src="{{brand_logo_url}}" alt="" width="120" style="display:block;max-width:120px;height:auto;margin-left:auto;border:0;margin-bottom:8px;" />
-            <img src="{{company_logo_url}}" alt="" width="120" style="display:block;max-width:120px;height:auto;margin-left:auto;border:0;" />
+            <img src="{{brand_logo_url}}" alt="" width="120" style="display:block;max-width:120px;height:auto;margin-left:auto;border:0;" />
           </td>
         </tr>
       </table>
@@ -111,6 +111,9 @@ export type SignatureStaff = {
   phone_direct: string | null;
   phone_mobile: string | null;
   branch: string | null;
+  branch_id: string | null;
+  branch_name?: string | null;
+  signature_email: string | null;
   photo_url: string | null;
   signature_status: SignatureStatus;
   signature_pushed_at: string | null;
@@ -234,7 +237,7 @@ export async function loadDepartments(accountId: string) {
 
   return [...new Set((data ?? []).map((row: any) => String(row.department).trim()))]
     .filter(Boolean)
-    .sort((a, b) => a.localeCompare(b));
+    .sort((a: string, b: string) => a.localeCompare(b));
 }
 
 export async function loadStaffRows(
@@ -252,7 +255,7 @@ export async function loadStaffRows(
     .order('full_name', { ascending: true });
 
   if (filters?.branch) {
-    query = query.eq('branch', filters.branch);
+    query = query.eq('branch_id', filters.branch);
   }
   if (filters?.department) {
     query = query.eq('department', filters.department);
@@ -267,7 +270,17 @@ export async function loadStaffRows(
     throw new Error(error.message);
   }
 
-  return decorateStaffWithTemplates((data ?? []) as SignatureStaff[]);
+  const { loadAccountBranches } = await import('~/lib/brand/account-branches');
+  const branches = await loadAccountBranches(accountId);
+  const branchNameById = new Map(branches.map((b) => [b.id, b.name]));
+
+  const rows = ((data ?? []) as SignatureStaff[]).map((row) => ({
+    ...row,
+    branch_name: row.branch_id ? branchNameById.get(row.branch_id) ?? null : null,
+    branch: row.branch_id ? branchNameById.get(row.branch_id) ?? row.branch : row.branch,
+  }));
+
+  return decorateStaffWithTemplates(rows);
 }
 
 async function decorateStaffWithTemplates(rows: SignatureStaff[]) {
@@ -359,7 +372,9 @@ export async function loadStaffDetail(accountId: string, staffId: string) {
   }
 
   const templates = await loadTemplates(accountId);
-  return { staff: decorated, templates };
+  const { loadAccountBranches } = await import('~/lib/brand/account-branches');
+  const branches = await loadAccountBranches(accountId);
+  return { staff: decorated, templates, branches };
 }
 
 export async function loadTemplateDetail(accountId: string, templateId: string) {

@@ -45,6 +45,8 @@ export function BrandSettingsForm({
   const [primary, setPrimary] = useState(initialBrand.primary_color);
   const [secondary, setSecondary] = useState(initialBrand.secondary_color);
   const [accent, setAccent] = useState(initialBrand.accent_color);
+  const [websiteUrl, setWebsiteUrl] = useState(initialBrand.website_url ?? '');
+  const [address, setAddress] = useState(initialBrand.address ?? '');
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
   const [clearLogo, setClearLogo] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -76,6 +78,8 @@ export function BrandSettingsForm({
           ? normalizeHex(secondary)
           : null,
         accent_color: accent.trim() ? normalizeHex(accent) : null,
+        website_url: websiteUrl.trim() || null,
+        address: address.trim() || null,
         logoDataUrl: logoDataUrl ?? undefined,
         clearLogo: clearLogo || undefined,
       });
@@ -91,7 +95,7 @@ export function BrandSettingsForm({
   };
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6">
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
       <div className="text-sm text-muted-foreground">
         <Link href={settingsHref} className="text-[var(--keel-teal)] hover:underline">
           ← Back to settings
@@ -126,6 +130,36 @@ export function BrandSettingsForm({
           onChange={setAccent}
           disabled={!canEdit}
         />
+
+        <div className="space-y-2">
+          <Label htmlFor="brand-website">Company website</Label>
+          <p className="text-xs text-muted-foreground">
+            Shown in email signatures as{' '}
+            <code className="text-[11px]">{'{{website}}'}</code> (e.g. www.example.com).
+          </p>
+          <Input
+            id="brand-website"
+            value={websiteUrl}
+            onChange={(e) => setWebsiteUrl(e.target.value)}
+            placeholder="www.yourcompany.com"
+            disabled={!canEdit}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="brand-address">Default company address</Label>
+          <p className="text-xs text-muted-foreground">
+            Fallback for signatures when a branch has no address. Branch addresses
+            are set under Branches below.
+          </p>
+          <Input
+            id="brand-address"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="123 High Street, London, SW1A 1AA"
+            disabled={!canEdit}
+          />
+        </div>
 
         <div className="space-y-2">
           <Label>Logo</Label>

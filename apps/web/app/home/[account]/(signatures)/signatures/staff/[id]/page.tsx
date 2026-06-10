@@ -32,6 +32,7 @@ export default async function SignatureStaffDetailPage({
         accountId={accountId}
         staff={detail.staff}
         templates={detail.templates}
+        branches={detail.branches}
       />
     </ModuleDataSection>
   );

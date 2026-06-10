@@ -9,6 +9,8 @@ export const saveAccountBrandSettingsSchema = z.object({
   primary_color: hex6,
   secondary_color: hex6.optional().nullable(),
   accent_color: hex6.optional().nullable(),
+  website_url: z.string().trim().max(500).optional().nullable(),
+  address: z.string().trim().max(1000).optional().nullable(),
   logoDataUrl: z.string().optional().nullable(),
   clearLogo: z.boolean().optional(),
 });

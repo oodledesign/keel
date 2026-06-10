@@ -59,7 +59,8 @@ export const updateStaffActionSchema = z.object({
   department: emptyToNull,
   phone_direct: emptyToNull,
   phone_mobile: emptyToNull,
-  branch: emptyToNull,
+  branch_id: z.string().uuid().nullable().optional(),
+  signature_email: emptyToNull,
   photoDataUrl: z.string().optional().nullable(),
   templateId: z.string().uuid().nullable().optional(),
 });
