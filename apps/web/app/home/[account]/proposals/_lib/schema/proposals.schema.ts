@@ -5,6 +5,12 @@ const optionalNullableString = z.string().nullable().optional();
 
 const proposalStatus = z.enum(['draft', 'sent', 'read', 'approved', 'declined']);
 
+export const ProposalContextRefSchema = z.object({
+  type: z.enum(['note', 'file']),
+  id: z.string().uuid(),
+  title: z.string().max(500),
+});
+
 const clientOrDealRefine = <T extends z.ZodTypeAny>(schema: T) =>
   schema.superRefine((data, ctx) => {
     const row = data as { client_id?: string | null; deal_id?: string | null };
@@ -58,6 +64,7 @@ export const CreateProposalSchema = clientOrDealRefine(
     currency: z.string().optional().default('gbp'),
     expires_at: optionalNullableString,
     private_note: optionalNullableString,
+    context_refs: z.array(ProposalContextRefSchema).optional(),
   }),
 );
 
@@ -77,6 +84,7 @@ export const UpdateProposalSchema = z.object({
   email_subject: optionalNullableString,
   email_body: optionalNullableString,
   email_signature: optionalNullableString,
+  context_refs: z.array(ProposalContextRefSchema).optional(),
 });
 
 export const DeleteProposalSchema = z.object({

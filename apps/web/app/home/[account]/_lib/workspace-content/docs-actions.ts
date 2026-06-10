@@ -10,7 +10,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import pathsConfig from '~/config/paths.config';
 
 import { ACCOUNT_DOCS_BUCKET } from './docs-constants';
-import { DOC_TYPE_OPTIONS } from './types';
+import { DOC_TYPE_OPTIONS, NOTE_FILE_CATEGORY_OPTIONS } from './types';
 
 const LinkSchema = z
   .object({
@@ -58,6 +58,7 @@ const SaveWrittenDocSchema = z.object({
   title: z.string().max(500),
   content: z.string().optional(),
   docType: z.enum(DOC_TYPE_OPTIONS).nullable().optional(),
+  category: z.enum(NOTE_FILE_CATEGORY_OPTIONS).optional(),
   tags: z.array(z.string()).optional(),
   link: LinkSchema,
 });
@@ -74,6 +75,7 @@ export const saveWrittenWorkspaceDocAction = enhanceAction(
       content: data.content ?? '',
       kind: 'written' as const,
       doc_type: data.docType ?? 'general',
+      category: data.category ?? 'idea',
       tags,
       user_id: user.id,
       ...linkCols,
@@ -109,6 +111,7 @@ const RegisterUploadSchema = z.object({
   accountSlug: z.string().min(1),
   title: z.string().max(500),
   docType: z.enum(DOC_TYPE_OPTIONS).nullable().optional(),
+  category: z.enum(NOTE_FILE_CATEGORY_OPTIONS).optional(),
   tags: z.array(z.string()).optional(),
   link: LinkSchema,
   filePath: z.string().min(1),
@@ -134,6 +137,7 @@ export const registerUploadedWorkspaceDocAction = enhanceAction(
         title: data.title.trim() || 'Uploaded file',
         kind: 'uploaded',
         doc_type: data.docType ?? 'general',
+        category: data.category ?? 'idea',
         tags,
         file_path: data.filePath,
         storage_path: data.filePath,

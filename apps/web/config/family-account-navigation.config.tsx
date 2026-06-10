@@ -80,7 +80,7 @@ export function buildFamilySpaceNavChildren(
     notes: () =>
       access.canViewDashboard && isFamilyNavModuleEnabled(ms, 'notes')
         ? {
-            label: 'Notes',
+            label: 'Notes and files',
             path: createPath(pathsConfig.app.accountNotes, account),
             Icon: <StickyNote className={iconClasses} />,
           }

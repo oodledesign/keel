@@ -5,12 +5,19 @@ export type ProposalTranscript = {
   content: string;
 };
 
+export type ProposalContextNote = {
+  title: string;
+  content: string;
+  type: 'note' | 'file';
+};
+
 export type ProposalGenerateParams = {
   recipientName: string;
   recipientCompany?: string | null;
   accountName: string;
   senderName: string;
   transcripts: ProposalTranscript[];
+  contextNotes?: ProposalContextNote[];
   referenceProposalHtml?: string | null;
   /** Total deal value in pounds (GBP), if known. */
   dealValue?: number | null;
@@ -32,7 +39,7 @@ Use these sections in order, each as an <h2> heading followed by <p> and/or <ul>
 
 Rules:
 - British English spelling and tone: professional, warm, direct.
-- Base scope and pricing on the meeting transcripts and any reference proposal provided.
+- Base scope and pricing on the meeting transcripts, notes/files context, and any reference proposal provided.
 - Payment Plan must show clear milestone labels and percentages (e.g. "50% on signing, 50% on delivery").
 - Use only h2, p, ul, li, strong, em — no tables, images, or inline styles.
 - Do not invent facts not supported by the inputs; where details are missing, use sensible UK freelance defaults and keep language tentative ("typically", "we can agree").
@@ -46,6 +53,13 @@ function buildProposalUserPayload(params: ProposalGenerateParams) {
     )
     .join('\n\n');
 
+  const contextNotes = (params.contextNotes ?? [])
+    .map(
+      (n, i) =>
+        `### ${n.type === 'file' ? 'File' : 'Note'} ${i + 1}: ${n.title}\n${n.content.slice(0, 40_000)}`,
+    )
+    .join('\n\n');
+
   return {
     recipient_name: params.recipientName,
     recipient_company: params.recipientCompany?.trim() || null,
@@ -54,6 +68,7 @@ function buildProposalUserPayload(params: ProposalGenerateParams) {
     deal_value_gbp: params.dealValue ?? null,
     reference_proposal_html: params.referenceProposalHtml?.trim() || null,
     meeting_transcripts: transcripts || '(none provided)',
+    notes_and_files_context: contextNotes || '(none provided)',
   };
 }
 

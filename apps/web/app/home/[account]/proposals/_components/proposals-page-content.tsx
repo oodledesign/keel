@@ -31,6 +31,10 @@ import { listClients } from '~/home/[account]/clients/_lib/server/server-actions
 import { ClientCombobox } from '~/home/[account]/jobs/_components/client-combobox';
 import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
 import { listMeetingTranscripts } from '~/home/[account]/meeting-transcripts/_lib/server/server-actions';
+import {
+  listNotesAndFilesForContextAction,
+  loadNotesAndFilesContentAction,
+} from '~/home/[account]/_lib/workspace-content/notes-files-actions';
 
 import { getErrorMessage } from '../_lib/error-message';
 import {
@@ -132,6 +136,16 @@ export function ProposalsPageContent({
   const [aiDealId, setAiDealId] = useState('');
   const [aiTranscripts, setAiTranscripts] = useState<Array<{ id: string; title: string; content: string }>>([]);
   const [aiSelectedTranscriptIds, setAiSelectedTranscriptIds] = useState<string[]>([]);
+  const [aiNotesFiles, setAiNotesFiles] = useState<
+    Array<{
+      id: string;
+      type: 'note' | 'file';
+      title: string;
+      categoryLabel: string;
+      preview: string;
+    }>
+  >([]);
+  const [aiSelectedNotesFileKeys, setAiSelectedNotesFileKeys] = useState<string[]>([]);
   const [aiReferenceProposals, setAiReferenceProposals] = useState<Array<{ id: string; title: string | null }>>([]);
   const [aiReferenceProposalId, setAiReferenceProposalId] = useState('');
   const [aiGenerating, setAiGenerating] = useState(false);
@@ -244,25 +258,44 @@ export function ProposalsPageContent({
     if (!clientId && !dealId) {
       setAiTranscripts([]);
       setAiSelectedTranscriptIds([]);
+      setAiNotesFiles([]);
+      setAiSelectedNotesFileKeys([]);
       return;
     }
 
     let cancelled = false;
-    void listMeetingTranscripts({ accountId, clientId, dealId })
-      .then((rows) => {
+    void Promise.all([
+      listMeetingTranscripts({ accountId, clientId, dealId }),
+      listNotesAndFilesForContextAction({
+        accountId,
+        clientId,
+        dealId,
+      }),
+    ])
+      .then(([transcriptRows, notesFilesResult]) => {
         if (cancelled) return;
-        const mapped = (rows ?? []).map((row: { id: string; title: string; content: string }) => ({
-          id: row.id,
-          title: row.title,
-          content: row.content,
-        }));
+        const mapped = (transcriptRows ?? []).map(
+          (row: { id: string; title: string; content: string }) => ({
+            id: row.id,
+            title: row.title,
+            content: row.content,
+          }),
+        );
         setAiTranscripts(mapped);
         setAiSelectedTranscriptIds(mapped.map((t: { id: string }) => t.id));
+
+        const items = notesFilesResult.items ?? [];
+        setAiNotesFiles(items);
+        setAiSelectedNotesFileKeys(
+          items.map((item) => `${item.type}:${item.id}`),
+        );
       })
       .catch(() => {
         if (!cancelled) {
           setAiTranscripts([]);
           setAiSelectedTranscriptIds([]);
+          setAiNotesFiles([]);
+          setAiSelectedNotesFileKeys([]);
         }
       });
 
@@ -313,7 +346,7 @@ export function ProposalsPageContent({
     const clientId = createMode === 'client' ? selectedClientId : undefined;
     const dealId = createMode === 'deal' ? selectedDealId : undefined;
     if (!clientId && !dealId) {
-      toast.error(createMode === 'client' ? 'Please select a client' : 'Please select a deal');
+      toast.error(createMode === 'client' ? 'Please select a client' : 'Please select a lead');
       return;
     }
 
@@ -325,7 +358,7 @@ export function ProposalsPageContent({
         client_id: clientId ?? null,
         deal_id: dealId ?? null,
         recipient_name: deal?.contactName || null,
-        title: deal ? `Proposal for ${deal.contactName || deal.companyName || 'deal'}` : undefined,
+        title: deal ? `Proposal for ${deal.contactName || deal.companyName || 'lead'}` : undefined,
       });
       if (proposal?.id) {
         setCreateSheetOpen(false);
@@ -347,11 +380,11 @@ export function ProposalsPageContent({
     const clientId = aiMode === 'client' ? aiClientId : undefined;
     const dealId = aiMode === 'deal' ? aiDealId : undefined;
     if (!clientId && !dealId) {
-      toast.error('Select a client or deal');
+      toast.error('Select a client or lead');
       return;
     }
-    if (aiSelectedTranscriptIds.length === 0) {
-      toast.error('Select at least one transcript');
+    if (aiSelectedTranscriptIds.length === 0 && aiSelectedNotesFileKeys.length === 0) {
+      toast.error('Select at least one transcript or note/file');
       return;
     }
 
@@ -377,6 +410,24 @@ export function ProposalsPageContent({
         .filter((t) => aiSelectedTranscriptIds.includes(t.id))
         .map((t) => ({ title: t.title, content: t.content }));
 
+      const selectedRefs = aiNotesFiles
+        .filter((item) => aiSelectedNotesFileKeys.includes(`${item.type}:${item.id}`))
+        .map((item) => ({ type: item.type, id: item.id, title: item.title }));
+
+      let contextNotes: Array<{ title: string; content: string; type: 'note' | 'file' }> =
+        [];
+      if (selectedRefs.length > 0) {
+        const loaded = await loadNotesAndFilesContentAction({
+          accountId,
+          refs: selectedRefs,
+        });
+        contextNotes = (loaded.items ?? []).map((item, i) => ({
+          title: selectedRefs[i]?.title ?? item.title,
+          content: item.content,
+          type: item.type,
+        }));
+      }
+
       const response = await fetch('/api/proposals/generate', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -387,6 +438,7 @@ export function ProposalsPageContent({
           accountName,
           senderName,
           transcripts,
+          contextNotes,
           referenceProposalHtml,
           dealValue: deal?.value ?? null,
         }),
@@ -427,6 +479,7 @@ export function ProposalsPageContent({
         title: `Proposal for ${recipientName}`,
         content_html: contentHtml,
         recipient_name: recipientName,
+        context_refs: selectedRefs,
         total_pence: deal?.value ? Math.round(deal.value * 100) : null,
       });
 
@@ -628,7 +681,7 @@ export function ProposalsPageContent({
                   createMode === 'deal' ? 'bg-[var(--keel-teal)] text-[#09111F]' : 'text-zinc-300'
                 }`}
               >
-                Deal
+                Lead
               </button>
             </div>
 
@@ -647,16 +700,16 @@ export function ProposalsPageContent({
               </div>
             ) : (
               <div>
-                <Label>Deal</Label>
+                <Label>Lead</Label>
                 <select
                   value={selectedDealId}
                   onChange={(e) => setSelectedDealId(e.target.value)}
                   className="mt-1 w-full rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-3 py-2 text-sm text-white"
                 >
-                  <option value="">Select deal</option>
+                  <option value="">Select lead</option>
                   {deals.map((deal) => (
                     <option key={deal.id} value={deal.id}>
-                      {deal.contactName || deal.companyName || 'Deal'} — {formatPence(Math.round(deal.value * 100))}
+                      {deal.contactName || deal.companyName || 'Lead'} — {formatPence(Math.round(deal.value * 100))}
                     </option>
                   ))}
                 </select>
@@ -703,7 +756,7 @@ export function ProposalsPageContent({
                     aiMode === 'deal' ? 'bg-primary text-primary-foreground' : ''
                   }`}
                 >
-                  Deal
+                  Lead
                 </button>
               </div>
 
@@ -722,16 +775,16 @@ export function ProposalsPageContent({
                 </div>
               ) : (
                 <div>
-                  <Label>Deal</Label>
+                  <Label>Lead</Label>
                   <select
                     value={aiDealId}
                     onChange={(e) => setAiDealId(e.target.value)}
                     className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
                   >
-                    <option value="">Select deal</option>
+                    <option value="">Select lead</option>
                     {deals.map((deal) => (
                       <option key={deal.id} value={deal.id}>
-                        {deal.contactName || deal.companyName || 'Deal'}
+                        {deal.contactName || deal.companyName || 'Lead'}
                       </option>
                     ))}
                   </select>
@@ -759,6 +812,42 @@ export function ProposalsPageContent({
                         <span>{t.title}</span>
                       </label>
                     ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <Label>Notes and files</Label>
+                {aiNotesFiles.length === 0 ? (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    No notes or files linked to this client yet.
+                  </p>
+                ) : (
+                  <div className="mt-2 max-h-40 space-y-2 overflow-y-auto rounded-md border p-3">
+                    {aiNotesFiles.map((item) => {
+                      const key = `${item.type}:${item.id}`;
+                      return (
+                        <label key={key} className="flex items-start gap-2 text-sm">
+                          <Checkbox
+                            checked={aiSelectedNotesFileKeys.includes(key)}
+                            onCheckedChange={(checked) => {
+                              setAiSelectedNotesFileKeys((prev) =>
+                                checked
+                                  ? [...prev, key]
+                                  : prev.filter((k) => k !== key),
+                              );
+                            }}
+                          />
+                          <span>
+                            <span className="text-muted-foreground">
+                              {item.type === 'file' ? 'File' : 'Note'} ·{' '}
+                              {item.categoryLabel} ·{' '}
+                            </span>
+                            {item.title}
+                          </span>
+                        </label>
+                      );
+                    })}
                   </div>
                 )}
               </div>

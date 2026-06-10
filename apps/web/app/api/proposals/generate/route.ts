@@ -13,16 +13,29 @@ const transcriptSchema = z.object({
   content: z.string().min(1).max(120_000),
 });
 
-const generateSchema = z.object({
-  accountId: z.string().uuid(),
-  recipientName: z.string().min(1).max(500),
-  recipientCompany: z.string().max(500).nullable().optional(),
-  accountName: z.string().min(1).max(500),
-  senderName: z.string().min(1).max(500),
-  transcripts: z.array(transcriptSchema).min(1).max(20),
-  referenceProposalHtml: z.string().max(200_000).nullable().optional(),
-  dealValue: z.number().nonnegative().nullable().optional(),
+const contextNoteSchema = z.object({
+  title: z.string().min(1).max(500),
+  content: z.string().min(1).max(120_000),
+  type: z.enum(['note', 'file']),
 });
+
+const generateSchema = z
+  .object({
+    accountId: z.string().uuid(),
+    recipientName: z.string().min(1).max(500),
+    recipientCompany: z.string().max(500).nullable().optional(),
+    accountName: z.string().min(1).max(500),
+    senderName: z.string().min(1).max(500),
+    transcripts: z.array(transcriptSchema).max(20).default([]),
+    contextNotes: z.array(contextNoteSchema).max(20).optional(),
+    referenceProposalHtml: z.string().max(200_000).nullable().optional(),
+    dealValue: z.number().nonnegative().nullable().optional(),
+  })
+  .refine(
+    (data) =>
+      data.transcripts.length > 0 || (data.contextNotes?.length ?? 0) > 0,
+    { message: 'Provide at least one transcript or note/file for context' },
+  );
 
 async function assertInvoicesEditPermission(accountId: string, userId: string) {
   const client = getSupabaseServerClient();
@@ -81,6 +94,11 @@ export async function POST(request: NextRequest) {
       transcripts: parsed.data.transcripts.map((t) => ({
         title: t.title.trim(),
         content: t.content.trim(),
+      })),
+      contextNotes: parsed.data.contextNotes?.map((n) => ({
+        title: n.title.trim(),
+        content: n.content.trim(),
+        type: n.type,
       })),
       referenceProposalHtml: parsed.data.referenceProposalHtml?.trim() || null,
       dealValue: parsed.data.dealValue ?? null,

@@ -210,6 +210,7 @@ class ProposalsService {
         currency: input.currency ?? 'gbp',
         expires_at: input.expires_at ?? null,
         private_note: input.private_note ?? null,
+        context_refs: input.context_refs ?? [],
         email_subject: DEFAULT_PROPOSAL_EMAIL_SUBJECT,
         email_body: DEFAULT_PROPOSAL_EMAIL_BODY,
         email_signature: DEFAULT_PROPOSAL_EMAIL_SIGNATURE,
@@ -267,6 +268,7 @@ class ProposalsService {
     if (input.email_subject !== undefined) payload.email_subject = input.email_subject;
     if (input.email_body !== undefined) payload.email_body = input.email_body;
     if (input.email_signature !== undefined) payload.email_signature = input.email_signature;
+    if (input.context_refs !== undefined) payload.context_refs = input.context_refs;
 
     const { data, error } = await this.db
       .from('proposals')

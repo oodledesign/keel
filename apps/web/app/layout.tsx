@@ -3,6 +3,7 @@ import { cookies, headers } from 'next/headers';
 import { Toaster } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
+import { PwaRegister } from '~/components/pwa-register';
 import { RootProviders } from '~/components/root-providers';
 import { TextSizeSync } from '~/components/text-size-sync';
 import { getFontsClassName } from '~/lib/fonts';
@@ -36,6 +37,7 @@ export default async function RootLayout({
         <RootProviders theme={theme} lang={language} nonce={nonce}>
           {children}
         </RootProviders>
+        <PwaRegister />
 
         <Toaster richColors={true} theme={theme} position="top-center" />
       </body>

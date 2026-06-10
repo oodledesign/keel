@@ -8,6 +8,8 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 
+import { NOTE_FILE_CATEGORY_OPTIONS } from './types';
+
 const LinkSchema = z
   .object({
     type: z.enum(['project', 'job', 'client', 'property', 'task']),
@@ -23,6 +25,7 @@ const SaveNoteSchema = z.object({
   title: z.string().max(500).optional(),
   content: z.string(),
   isPinned: z.boolean().optional(),
+  category: z.enum(NOTE_FILE_CATEGORY_OPTIONS).optional(),
   tags: z.array(z.string()).optional(),
   link: LinkSchema,
 });
@@ -69,6 +72,7 @@ export const saveWorkspaceNoteAction = enhanceAction(
       title: data.title?.trim() ?? '',
       content: data.content,
       is_pinned: data.isPinned ?? false,
+      category: data.category ?? 'idea',
       tags,
       user_id: user.id,
       ...linkCols,

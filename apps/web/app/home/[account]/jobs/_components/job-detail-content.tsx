@@ -41,7 +41,6 @@ import {
 } from '../_lib/server/server-actions';
 import { getErrorMessage } from '../_lib/error-message';
 
-import { ContextWorkspaceDocs } from '../../_components/workspace-content/context-workspace-docs';
 import { ContextWorkspaceNotes } from '../../_components/workspace-content/context-workspace-notes';
 import type { LinkValue } from '../../_components/workspace-content/link-to-select';
 import type {
@@ -540,30 +539,21 @@ export function JobDetailContent({
             )}
 
             {!isContractorView && (
-              <TabsContent value="docs" className="mt-4 space-y-8">
+              <TabsContent value="docs" className="mt-4">
                 <section>
-                  <h3 className="mb-3 text-sm font-medium text-zinc-400">Notes</h3>
+                  <h3 className="mb-3 text-sm font-medium text-zinc-400">
+                    Notes and files
+                  </h3>
                   <ContextWorkspaceNotes
                     accountId={accountId}
                     accountSlug={accountSlug}
                     notes={workspaceNotes}
+                    docs={workspaceDocs}
                     tableAvailable={notesTableAvailable}
+                    docsTableAvailable={docsTableAvailable}
                     linkOptions={linkOptions}
                     defaultLink={defaultLink}
                     canEdit={canEditJobs}
-                  />
-                </section>
-                <section>
-                  <h3 className="mb-3 text-sm font-medium text-zinc-400">
-                    Documents
-                  </h3>
-                  <ContextWorkspaceDocs
-                    accountId={accountId}
-                    accountSlug={accountSlug}
-                    docs={workspaceDocs}
-                    tableAvailable={docsTableAvailable}
-                    linkOptions={linkOptions}
-                    defaultLink={defaultLink}
                   />
                 </section>
               </TabsContent>

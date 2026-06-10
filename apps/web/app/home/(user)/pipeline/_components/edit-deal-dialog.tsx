@@ -117,7 +117,7 @@ export function EditDealDialog({
       });
 
       if (!result.success) {
-        setError(result.error ?? 'Failed to update deal');
+        setError(result.error ?? 'Failed to update lead');
         return;
       }
 
@@ -145,7 +145,7 @@ export function EditDealDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto border-white/8 bg-[#0F1923] text-white sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Edit deal</DialogTitle>
+          <DialogTitle>Edit lead</DialogTitle>
           <DialogDescription className="text-zinc-400">
             Update contact, value, stage, and next action.
           </DialogDescription>
@@ -225,7 +225,7 @@ export function EditDealDialog({
 
           <div className="space-y-2">
             <Label htmlFor="edit-value" className="text-zinc-300">
-              Deal value (£)
+              Lead value (£)
             </Label>
             <Input
               id="edit-value"
@@ -248,7 +248,7 @@ export function EditDealDialog({
                 id="edit-nextAction"
                 name="nextAction"
                 defaultValue={deal.nextAction}
-                placeholder="Short description for this deal"
+                placeholder="Short description for this lead"
                 className="border-white/10 bg-white/5 text-white placeholder:text-zinc-600"
               />
             </div>

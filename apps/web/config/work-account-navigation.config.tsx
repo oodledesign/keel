@@ -250,7 +250,7 @@ export function buildWorkSpaceNavChildren(
     notes: () =>
       access.canViewDashboard && isWorkNavModuleEnabled(ms, 'notes')
         ? {
-            label: 'Notes',
+            label: 'Notes and files',
             path: createPath(pathsConfig.app.accountNotes, account),
             Icon: <StickyNote className={iconClasses} />,
           }

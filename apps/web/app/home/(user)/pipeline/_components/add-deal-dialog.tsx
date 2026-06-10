@@ -88,7 +88,7 @@ export function AddDealDialog({
       setError(
         workspaceScoped
           ? 'No workspace available for this pipeline.'
-          : 'Join or create a workspace before adding deals.',
+          : 'Join or create a workspace before adding leads.',
       );
       return;
     }
@@ -108,7 +108,7 @@ export function AddDealDialog({
       });
 
       if (!result.success) {
-        setError(result.error ?? 'Failed to create deal');
+        setError(result.error ?? 'Failed to create lead');
         return;
       }
 
@@ -141,16 +141,16 @@ export function AddDealDialog({
           className={workspaceBtnPrimaryMd}
         >
           <Plus className="h-4 w-4" />
-          Add Deal
+          Add lead
         </button>
       </DialogTrigger>
       <DialogContent className="border-white/8 bg-[#0F1923] text-white sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add a new deal</DialogTitle>
+          <DialogTitle>Add a new lead</DialogTitle>
           <DialogDescription className="text-zinc-400">
             {workspaceScoped
               ? 'Track a lead or opportunity for this workspace. Company name is optional.'
-              : 'Create a pipeline deal and assign it to a workspace.'}
+              : 'Create a pipeline lead and assign it to a workspace.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -226,7 +226,7 @@ export function AddDealDialog({
 
           <div className="space-y-2">
             <Label htmlFor="value" className="text-zinc-300">
-              Deal value (£)
+              Lead value (£)
             </Label>
             <Input
               id="value"
@@ -247,7 +247,7 @@ export function AddDealDialog({
               <Input
                 id="nextAction"
                 name="nextAction"
-                placeholder="Short description for this deal"
+                placeholder="Short description for this lead"
                 className="border-white/10 bg-white/5 text-white placeholder:text-zinc-600"
               />
             </div>
@@ -287,7 +287,7 @@ export function AddDealDialog({
                   Creating...
                 </>
               ) : (
-                'Create Deal'
+                'Create lead'
               )}
             </button>
           </DialogFooter>

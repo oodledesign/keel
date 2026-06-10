@@ -62,7 +62,7 @@ export function buildCommunitySpaceNavChildren(
     notes: () =>
       access.canViewDashboard && isCommunityNavModuleEnabled(ms, 'notes')
         ? {
-            label: 'Notes',
+            label: 'Notes and files',
             path: createPath(pathsConfig.app.accountNotes, account),
             Icon: <StickyNote className={iconClasses} />,
           }

@@ -7,10 +7,12 @@ import {
   parseTags,
   resolveNoteContext,
 } from './context-resolve';
-import type { NoteListItem } from './types';
+import type { NoteFileCategory, NoteListItem } from './types';
+import { NOTE_FILE_CATEGORY_OPTIONS } from './types';
 
 const NOTES_SELECT = `
-  id, title, content, is_pinned, tags,
+  id, title, content, is_pinned, category, tags,
+  is_public, public_token,
   job_id, project_id, client_id, client_org_id, property_id, task_id,
   created_at, updated_at,
   jobs(title),
@@ -19,6 +21,14 @@ const NOTES_SELECT = `
   properties(name),
   tasks(title)
 `;
+
+function parseCategory(value: unknown): NoteFileCategory {
+  const v = String(value ?? 'idea');
+  if ((NOTE_FILE_CATEGORY_OPTIONS as readonly string[]).includes(v)) {
+    return v as NoteFileCategory;
+  }
+  return 'idea';
+}
 
 function isTableMissing(error: { message?: string; code?: string } | null) {
   if (!error) return false;
@@ -40,6 +50,7 @@ function mapNoteRow(row: Record<string, unknown>): NoteListItem {
     title: displayTitle(titleRaw, content),
     content,
     isPinned: Boolean(row.is_pinned),
+    category: parseCategory(row.category),
     tags: parseTags(row.tags),
     projectId: (row.project_id as string | null) ?? null,
     jobId: (row.job_id as string | null) ?? null,
@@ -48,6 +59,8 @@ function mapNoteRow(row: Record<string, unknown>): NoteListItem {
     propertyId: (row.property_id as string | null) ?? null,
     taskId: (row.task_id as string | null) ?? null,
     context: resolveNoteContext(row as Parameters<typeof resolveNoteContext>[0]),
+    isPublic: Boolean(row.is_public),
+    publicToken: (row.public_token as string | null) ?? null,
     updatedAt: row.updated_at as string,
     createdAt: row.created_at as string,
   };

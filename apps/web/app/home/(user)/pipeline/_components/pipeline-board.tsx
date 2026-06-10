@@ -209,7 +209,7 @@ export function PipelineBoard({
             Pipeline
           </h1>
           <p className="mt-1 text-sm text-zinc-400">
-            {activeCount} active deals · {formatCurrency(totalValue)} total
+            {activeCount} active leads · {formatCurrency(totalValue)} total
             value
             {isPending && (
               <span className="ml-2 text-xs text-amber-400">Saving...</span>
@@ -344,7 +344,7 @@ function StageColumn({
         <div className="flex flex-1 flex-col gap-2">
           {deals.length === 0 ? (
             <div className="rounded-xl border border-dashed border-white/8 px-4 py-8 text-center text-xs text-zinc-600">
-              Drag deals here
+              Drag leads here
             </div>
           ) : (
             deals.map((deal) => (
@@ -420,7 +420,7 @@ function DealCard({
             onEdit();
           }}
           className="text-zinc-500 hover:text-zinc-300"
-          aria-label="Edit deal"
+          aria-label="Edit lead"
         >
           <MoreHorizontal className="h-4 w-4" />
         </button>

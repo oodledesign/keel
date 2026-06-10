@@ -12,7 +12,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 
 import type { Property, PropertyDocument } from '../../_lib/server/properties.service';
 import { PropertyFormModal } from '../../_components/property-form-modal';
-import { ContextWorkspaceDocs } from '../../../_components/workspace-content/context-workspace-docs';
 import { ContextWorkspaceNotes } from '../../../_components/workspace-content/context-workspace-notes';
 import type { LinkValue } from '../../../_components/workspace-content/link-to-select';
 import type {
@@ -191,29 +190,18 @@ export function PropertyDetailContent({
               </section>
               <section>
                 <h3 className="mb-3 text-sm font-medium text-white/50">
-                  Workspace notes
+                  Notes and files
                 </h3>
                 <ContextWorkspaceNotes
                   accountId={accountId}
                   accountSlug={accountSlug}
                   notes={workspaceNotes}
+                  docs={workspaceDocs}
                   tableAvailable={notesTableAvailable}
+                  docsTableAvailable={docsTableAvailable}
                   linkOptions={linkOptions}
                   defaultLink={defaultLink}
                   variant={notesVariant}
-                />
-              </section>
-              <section>
-                <h3 className="mb-3 text-sm font-medium text-white/50">
-                  Workspace documents
-                </h3>
-                <ContextWorkspaceDocs
-                  accountId={accountId}
-                  accountSlug={accountSlug}
-                  docs={workspaceDocs}
-                  tableAvailable={docsTableAvailable}
-                  linkOptions={linkOptions}
-                  defaultLink={defaultLink}
                 />
               </section>
             </TabsContent>

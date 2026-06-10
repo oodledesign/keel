@@ -41,7 +41,7 @@ async function TeamAccountPipelinePage({ params }: TeamAccountPipelinePageProps)
     <>
       <TeamAccountLayoutPageHeader
         title={<Trans i18nKey="common:routes.pipeline" />}
-        description="Track leads and opportunities for this workspace. Won deals can be turned into clients."
+        description="Track leads and opportunities for this workspace. Won leads can be turned into clients."
         account={accountSlug}
       />
 

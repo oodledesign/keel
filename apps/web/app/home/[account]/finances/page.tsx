@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
@@ -16,6 +17,7 @@ import {
   isPropertyNavModuleEnabled,
   isWorkNavModuleEnabled,
 } from '../_lib/server/account-modules';
+import { FinancesPageContent } from './_components/finances-page-content';
 
 interface FinancesPageProps {
   params: Promise<{ account: string }>;
@@ -55,18 +57,19 @@ async function FinancesPage({ params }: FinancesPageProps) {
     redirect(getDefaultAccountPath(accountSlug, workspace.account));
   }
 
+  const accountId = workspace.account.id as string;
+
   return (
     <>
       <TeamAccountLayoutPageHeader
         account={accountSlug}
         title="Finances"
-        description="Revenue, expenses, and financial overview."
+        description="Income, expenses, forecasts, and bank imports — with optional FreeAgent sync."
       />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-8 text-white lg:px-8">
-        <p className="max-w-xl text-sm text-zinc-400">
-          Finances overview is coming soon. Use Invoices for billing in the
-          meantime.
-        </p>
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-white">
+        <Suspense fallback={<p className="px-4 text-sm text-zinc-400">Loading…</p>}>
+          <FinancesPageContent accountId={accountId} accountSlug={accountSlug} />
+        </Suspense>
       </PageBody>
     </>
   );

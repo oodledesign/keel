@@ -1,3 +1,5 @@
+import { Suspense } from 'react';
+
 import { redirect } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
@@ -26,7 +28,7 @@ interface NotesPageProps {
 }
 
 export const generateMetadata = async () => ({
-  title: 'Notes',
+  title: 'Notes and files',
 });
 
 async function NotesPage({ params }: NotesPageProps) {
@@ -65,26 +67,30 @@ async function NotesPage({ params }: NotesPageProps) {
     <>
       <TeamAccountLayoutPageHeader
         account={data.accountSlug}
-        title="Notes"
+        title="Notes and files"
         description={
           spaceType === 'family'
-            ? 'Shared notes for your family.'
+            ? 'Shared notes and files for your family.'
             : spaceType === 'community'
-              ? 'Shared notes for your homegroup.'
+              ? 'Shared notes and files for your homegroup.'
               : spaceType === 'property'
-                ? 'Workspace notes linked to your properties.'
-                : 'Account notes linked to projects and clients.'
+                ? 'Notes and files linked to your properties.'
+                : 'Text notes and uploaded files linked to projects and clients.'
         }
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-white lg:px-8">
-        <NotesPageContent
-          accountId={data.accountId}
-          accountSlug={data.accountSlug}
-          notes={data.notes}
-          tableAvailable={data.tableAvailable}
-          variant={data.variant}
-          linkOptions={data.linkOptions}
-        />
+        <Suspense fallback={<p className="text-sm text-zinc-400">Loading…</p>}>
+          <NotesPageContent
+            accountId={data.accountId}
+            accountSlug={data.accountSlug}
+            notes={data.notes}
+            docs={data.docs}
+            tableAvailable={data.tableAvailable}
+            docsTableAvailable={data.docsTableAvailable}
+            variant={data.variant}
+            linkOptions={data.linkOptions}
+          />
+        </Suspense>
       </PageBody>
     </>
   );

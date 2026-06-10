@@ -2,6 +2,22 @@ export type WorkspaceNotesVariant = 'work' | 'property' | 'family' | 'community'
 
 export type WorkspaceDocsVariant = WorkspaceNotesVariant;
 
+export const NOTE_FILE_CATEGORY_OPTIONS = [
+  'meeting_transcript',
+  'idea',
+  'future',
+  'development',
+] as const;
+
+export type NoteFileCategory = (typeof NOTE_FILE_CATEGORY_OPTIONS)[number];
+
+export const NOTE_FILE_CATEGORY_LABELS: Record<NoteFileCategory, string> = {
+  meeting_transcript: 'Meeting transcript',
+  idea: 'Idea',
+  future: 'Future',
+  development: 'Development',
+};
+
 export type NoteContextLink = {
   type: 'project' | 'client' | 'property' | 'task' | 'job';
   id: string;
@@ -13,6 +29,7 @@ export type NoteListItem = {
   title: string;
   content: string;
   isPinned: boolean;
+  category: NoteFileCategory;
   tags: string[];
   projectId: string | null;
   jobId: string | null;
@@ -21,8 +38,16 @@ export type NoteListItem = {
   propertyId: string | null;
   taskId: string | null;
   context: NoteContextLink | null;
+  isPublic: boolean;
+  publicToken: string | null;
   updatedAt: string;
   createdAt: string;
+};
+
+export type ProposalContextRef = {
+  type: 'note' | 'file';
+  id: string;
+  title: string;
 };
 
 export type DocListItem = {
@@ -31,6 +56,7 @@ export type DocListItem = {
   content: string | null;
   kind: 'written' | 'uploaded';
   docType: string | null;
+  category: NoteFileCategory;
   isPinned: boolean;
   tags: string[];
   projectId: string | null;
@@ -44,6 +70,8 @@ export type DocListItem = {
   fileUrl: string | null;
   filePath: string | null;
   fileSizeBytes: number | null;
+  isPublic: boolean;
+  publicToken: string | null;
   updatedAt: string;
 };
 

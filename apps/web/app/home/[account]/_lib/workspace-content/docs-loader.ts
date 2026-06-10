@@ -3,10 +3,12 @@ import 'server-only';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { displayTitle, parseTags, resolveNoteContext } from './context-resolve';
-import type { DocListItem } from './types';
+import type { DocListItem, NoteFileCategory } from './types';
+import { NOTE_FILE_CATEGORY_OPTIONS } from './types';
 
 const DOCS_SELECT = `
-  id, title, content, kind, doc_type, is_pinned, tags,
+  id, title, content, kind, doc_type, category, is_pinned, tags,
+  is_public, public_token,
   job_id, project_id, client_id, client_org_id, property_id, task_id,
   mime_type, file_url, file_path, storage_path, file_size_bytes,
   updated_at,
@@ -16,6 +18,14 @@ const DOCS_SELECT = `
   properties(name),
   tasks(title)
 `;
+
+function parseCategory(value: unknown): NoteFileCategory {
+  const v = String(value ?? 'idea');
+  if ((NOTE_FILE_CATEGORY_OPTIONS as readonly string[]).includes(v)) {
+    return v as NoteFileCategory;
+  }
+  return 'idea';
+}
 
 function isTableMissing(error: { message?: string; code?: string } | null) {
   if (!error) return false;
@@ -43,6 +53,7 @@ function mapDocRow(row: Record<string, unknown>): DocListItem {
     content,
     kind: ((row.kind as string) ?? 'written') as 'written' | 'uploaded',
     docType: (row.doc_type as string | null) ?? null,
+    category: parseCategory(row.category),
     isPinned: Boolean(row.is_pinned),
     tags: parseTags(row.tags),
     projectId: (row.project_id as string | null) ?? null,
@@ -61,6 +72,8 @@ function mapDocRow(row: Record<string, unknown>): DocListItem {
         : row.file_size_bytes != null
           ? Number(row.file_size_bytes)
           : null,
+    isPublic: Boolean(row.is_public),
+    publicToken: (row.public_token as string | null) ?? null,
     updatedAt: row.updated_at as string,
   };
 }

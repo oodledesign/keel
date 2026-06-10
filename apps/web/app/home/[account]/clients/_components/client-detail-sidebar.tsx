@@ -22,7 +22,6 @@ import { ClientForm } from './client-form';
 import { ClientImageUploader } from './client-image-uploader';
 import { ClientInvoicesBlock } from './client-invoices-block';
 import { ClientJobHistoryBlock } from './client-job-history-block';
-import { ContextWorkspaceDocs } from '../../_components/workspace-content/context-workspace-docs';
 import { ContextWorkspaceNotes } from '../../_components/workspace-content/context-workspace-notes';
 import { MeetingTranscriptsBlock } from '../../_components/meeting-transcripts-block';
 import type { LinkValue } from '../../_components/workspace-content/link-to-select';
@@ -460,38 +459,23 @@ export function ClientDetailSidebar({
                       )}
                       {activeTab === 'notes' &&
                         (workspaceNotes && linkOptions && defaultLink ? (
-                          <div className="space-y-8">
-                            <section>
-                              <h3 className="mb-3 text-sm font-medium text-zinc-400">
-                                Notes
-                              </h3>
-                              <ContextWorkspaceNotes
-                                accountId={accountId}
-                                accountSlug={accountSlug}
-                                notes={workspaceNotes}
-                                tableAvailable={notesTableAvailable ?? true}
-                                linkOptions={linkOptions}
-                                defaultLink={defaultLink}
-                                variant={notesVariant}
-                                canEdit={canEditClients}
-                              />
-                            </section>
-                            {workspaceDocs ? (
-                              <section>
-                                <h3 className="mb-3 text-sm font-medium text-zinc-400">
-                                  Documents
-                                </h3>
-                                <ContextWorkspaceDocs
-                                  accountId={accountId}
-                                  accountSlug={accountSlug}
-                                  docs={workspaceDocs}
-                                  tableAvailable={docsTableAvailable ?? true}
-                                  linkOptions={linkOptions}
-                                  defaultLink={defaultLink}
-                                />
-                              </section>
-                            ) : null}
-                          </div>
+                          <section>
+                            <h3 className="mb-3 text-sm font-medium text-zinc-400">
+                              Notes and files
+                            </h3>
+                            <ContextWorkspaceNotes
+                              accountId={accountId}
+                              accountSlug={accountSlug}
+                              notes={workspaceNotes}
+                              docs={workspaceDocs ?? []}
+                              tableAvailable={notesTableAvailable ?? true}
+                              docsTableAvailable={docsTableAvailable ?? true}
+                              linkOptions={linkOptions}
+                              defaultLink={defaultLink}
+                              variant={notesVariant}
+                              canEdit={canEditClients}
+                            />
+                          </section>
                         ) : (
                           <ClientNotesBlock
                             accountId={accountId}

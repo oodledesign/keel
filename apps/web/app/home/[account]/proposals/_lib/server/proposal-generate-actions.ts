@@ -16,16 +16,32 @@ const transcriptSchema = z.object({
   content: z.string().min(1).max(120_000),
 });
 
-const generateProposalSchema = z.object({
-  accountId: z.string().uuid(),
-  recipientName: z.string().min(1).max(500),
-  recipientCompany: z.string().max(500).nullable().optional(),
-  accountName: z.string().min(1).max(500),
-  senderName: z.string().min(1).max(500),
-  transcripts: z.array(transcriptSchema).max(20),
-  referenceProposalHtml: z.string().max(200_000).nullable().optional(),
-  dealValue: z.number().nonnegative().nullable().optional(),
-});
+const generateProposalSchema = z
+  .object({
+    accountId: z.string().uuid(),
+    recipientName: z.string().min(1).max(500),
+    recipientCompany: z.string().max(500).nullable().optional(),
+    accountName: z.string().min(1).max(500),
+    senderName: z.string().min(1).max(500),
+    transcripts: z.array(transcriptSchema).max(20).default([]),
+    contextNotes: z
+      .array(
+        z.object({
+          title: z.string().min(1).max(500),
+          content: z.string().min(1).max(120_000),
+          type: z.enum(['note', 'file']),
+        }),
+      )
+      .max(20)
+      .optional(),
+    referenceProposalHtml: z.string().max(200_000).nullable().optional(),
+    dealValue: z.number().nonnegative().nullable().optional(),
+  })
+  .refine(
+    (data) =>
+      data.transcripts.length > 0 || (data.contextNotes?.length ?? 0) > 0,
+    { message: 'Provide at least one transcript or note/file for context' },
+  );
 
 async function assertInvoicesEditPermission(accountId: string, userId: string) {
   const client = getSupabaseServerClient();
@@ -70,6 +86,11 @@ export const generateProposalHtmlAction = enhanceAction(
       accountName: input.accountName.trim(),
       senderName: input.senderName.trim(),
       transcripts,
+      contextNotes: input.contextNotes?.map((n) => ({
+        title: n.title.trim(),
+        content: n.content.trim(),
+        type: n.type,
+      })),
       referenceProposalHtml: input.referenceProposalHtml?.trim() || null,
       dealValue: input.dealValue ?? null,
     });

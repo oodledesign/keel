@@ -191,14 +191,14 @@ function getTeamItems(account: string, spaceType: WorkspaceSpaceType) {
         href: `${accountPath(account, pathsConfig.app.accountTasks)}?create=task`,
       },
       {
-        key: 'doc',
-        label: 'New Doc',
+        key: 'file',
+        label: 'Upload file',
         icon: FileStack,
-        href: `${accountPath(account, pathsConfig.app.accountDocs)}/new`,
+        href: `${accountPath(account, pathsConfig.app.accountNotes)}?upload=1`,
       },
       {
         key: 'note',
-        label: 'New Note',
+        label: 'New note',
         icon: StickyNote,
         href: `${accountPath(account, pathsConfig.app.accountNotes)}/new`,
       },
@@ -231,10 +231,10 @@ function getTeamItems(account: string, spaceType: WorkspaceSpaceType) {
       href: `${accountPath(account, pathsConfig.app.accountInvoices)}?create=invoice`,
     },
     {
-      key: 'deal',
-      label: 'New Deal',
+      key: 'lead',
+      label: 'New lead',
       icon: Kanban,
-      href: `${accountPath(account, pathsConfig.app.accountPipeline)}?create=deal`,
+      href: `${accountPath(account, pathsConfig.app.accountPipeline)}?create=lead`,
     },
     {
       key: 'note',
@@ -243,10 +243,10 @@ function getTeamItems(account: string, spaceType: WorkspaceSpaceType) {
       href: `${accountPath(account, pathsConfig.app.accountNotes)}/new`,
     },
     {
-      key: 'doc',
-      label: 'New Doc',
+      key: 'file',
+      label: 'Upload file',
       icon: FileStack,
-      href: `${accountPath(account, pathsConfig.app.accountDocs)}/new`,
+      href: `${accountPath(account, pathsConfig.app.accountNotes)}?upload=1`,
     },
   ];
 }

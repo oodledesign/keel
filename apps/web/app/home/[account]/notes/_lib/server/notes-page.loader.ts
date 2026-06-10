@@ -8,6 +8,7 @@ import {
   linkOptionsForProfile,
   loadWorkspaceLinkOptions,
 } from '../../../_lib/workspace-content/link-options.loader';
+import { loadAccountDocs } from '../../../_lib/workspace-content/docs-loader';
 import { loadAccountNotes } from '../../../_lib/workspace-content/notes-loader';
 import type { NoteListItem } from '../../../_lib/workspace-content/types';
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
@@ -38,8 +39,9 @@ export async function loadNotesPageData(accountSlug: string) {
     business_type: workspace.businessType,
   });
 
-  const [{ notes, tableAvailable }, linkOpts] = await Promise.all([
+  const [{ notes, tableAvailable }, docsResult, linkOpts] = await Promise.all([
     loadAccountNotes(accountId),
+    loadAccountDocs(accountId),
     loadWorkspaceLinkOptions(accountId, profile),
   ]);
 
@@ -47,7 +49,9 @@ export async function loadNotesPageData(accountSlug: string) {
     accountId,
     accountSlug: workspace.account.slug ?? accountSlug,
     notes,
+    docs: docsResult.docs,
     tableAvailable,
+    docsTableAvailable: docsResult.tableAvailable,
     variant: notesVariantFromProfile(profile),
     linkOptions: linkOptionsForProfile(linkOpts, profile),
   };

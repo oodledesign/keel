@@ -54,6 +54,7 @@ type ProposalData = {
   currency: string | null;
   expires_at: string | null;
   private_note: string | null;
+  context_refs?: Array<{ type: 'note' | 'file'; id: string; title: string }>;
   email_subject: string | null;
   email_body: string | null;
   email_signature: string | null;
@@ -412,6 +413,32 @@ export function ProposalEditContent({
           </div>
 
           <aside className="space-y-4">
+            {(proposal.context_refs?.length ?? 0) > 0 ? (
+              <section className="rounded-xl border border-white/10 bg-[var(--workspace-shell-panel)] p-4">
+                <h2 className="text-sm font-semibold text-white">
+                  Referenced notes and files
+                </h2>
+                <p className="mt-1 text-xs text-zinc-400">
+                  Context used when building this proposal.
+                </p>
+                <ul className="mt-3 space-y-2">
+                  {(proposal.context_refs ?? []).map((ref) => (
+                    <li key={`${ref.type}-${ref.id}`}>
+                      <Link
+                        href={pathsConfig.app.accountNotes.replace(
+                          '[account]',
+                          accountSlug,
+                        )}
+                        className="text-sm text-[#5eead4] hover:underline"
+                      >
+                        {ref.type === 'file' ? 'File' : 'Note'}: {ref.title}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+
             <section className="rounded-xl border border-white/10 bg-[var(--workspace-shell-panel)] p-4">
               <h2 className="text-sm font-semibold text-white">Private note</h2>
               <p className="mt-1 text-xs text-zinc-400">

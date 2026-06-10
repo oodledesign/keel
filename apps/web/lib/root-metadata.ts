@@ -14,6 +14,12 @@ export const generateRootMetadata = (): Metadata => ({
   description: appConfig.description,
   metadataBase: new URL(appConfig.url),
   applicationName: appConfig.name,
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    title: appConfig.name,
+    statusBarStyle: 'black-translucent',
+  },
   openGraph: {
       url: appConfig.url,
       siteName: appConfig.name,
@@ -27,9 +33,9 @@ export const generateRootMetadata = (): Metadata => ({
   },
   icons: {
     icon: [
-      { url: brandConfig.logos.icon.light, type: 'image/png', sizes: 'any' },
-      { url: brandConfig.logos.icon.dark, type: 'image/png', sizes: 'any', media: '(prefers-color-scheme: dark)' },
+      { url: '/images/brand/favicon-32.png', type: 'image/png', sizes: '32x32' },
+      { url: brandConfig.logos.icon.light, type: 'image/png', sizes: '512x512' },
     ],
-    apple: brandConfig.logos.icon.light,
+    apple: '/images/brand/apple-touch-icon.png',
   },
 });

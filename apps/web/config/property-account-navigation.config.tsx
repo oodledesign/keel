@@ -1,7 +1,6 @@
 import {
   Building2,
   CheckSquare,
-  FileStack,
   LayoutDashboard,
   Settings,
   StickyNote,
@@ -79,14 +78,7 @@ export function buildPropertySpaceNavChildren(
             Icon: <Wallet className={iconClasses} />,
           }
         : null,
-    docs: () =>
-      access.canViewDashboard && isPropertyNavModuleEnabled(ms, 'docs')
-        ? {
-            label: 'Docs',
-            path: createPath(pathsConfig.app.accountDocs, account),
-            Icon: <FileStack className={iconClasses} />,
-          }
-        : null,
+    docs: () => null,
     tasks: () =>
       access.canViewDashboard && isPropertyNavModuleEnabled(ms, 'tasks')
         ? {
@@ -98,7 +90,7 @@ export function buildPropertySpaceNavChildren(
     notes: () =>
       access.canViewDashboard && isPropertyNavModuleEnabled(ms, 'notes')
         ? {
-            label: 'Notes',
+            label: 'Notes and files',
             path: createPath(pathsConfig.app.accountNotes, account),
             Icon: <StickyNote className={iconClasses} />,
           }
