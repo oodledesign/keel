@@ -25,6 +25,8 @@ export function siteCrawlPagesToCsv(pages: SiteCrawlPageRow[]): string {
     'Indexable',
     'Internal links out',
     'External links out',
+    'Schema types',
+    'Schema JSON',
     'Issues',
     'Crawl error',
   ];
@@ -43,6 +45,10 @@ export function siteCrawlPagesToCsv(pages: SiteCrawlPageRow[]): string {
       page.indexable ? 'yes' : 'no',
       page.internal_links_out,
       page.external_links_out,
+      (page.schema_types ?? []).join('; '),
+      page.schema_objects?.length
+        ? JSON.stringify(page.schema_objects)
+        : '',
       page.issues.map((issue) => SITE_CRAWL_ISSUE_LABELS[issue.code] ?? issue.code).join('; '),
       page.crawl_error ?? '',
     ]

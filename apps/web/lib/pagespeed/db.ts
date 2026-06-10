@@ -256,6 +256,7 @@ export async function loadPagespeedPageSnapshot(
     url: page.url,
     label: page.label,
     isHomepage: page.is_homepage,
+    lastScannedAt: latestFetchedAt(mobile, desktop),
     mobile: mobile
       ? mapResultRow(mobile, recommendationsByResult.get(mobile.id) ?? [])
       : null,
@@ -331,6 +332,19 @@ export async function loadPagespeedRecommendations(
   return grouped;
 }
 
+function latestFetchedAt(
+  mobile: PagespeedResultRow | undefined,
+  desktop: PagespeedResultRow | undefined,
+): string | null {
+  const timestamps = [mobile?.fetched_at, desktop?.fetched_at]
+    .filter(Boolean)
+    .map((value) => new Date(String(value)).getTime())
+    .filter((value) => !Number.isNaN(value));
+
+  if (!timestamps.length) return null;
+  return new Date(Math.max(...timestamps)).toISOString();
+}
+
 export async function loadPagespeedSnapshots(
   projectId: string,
 ): Promise<PagespeedSnapshot[]> {
@@ -350,6 +364,7 @@ export async function loadPagespeedSnapshots(
       url: page.url,
       label: page.label,
       isHomepage: page.is_homepage,
+      lastScannedAt: latestFetchedAt(mobile, desktop),
       mobile: mobile
         ? mapResultRow(mobile, recommendationsByResult.get(mobile.id) ?? [])
         : null,

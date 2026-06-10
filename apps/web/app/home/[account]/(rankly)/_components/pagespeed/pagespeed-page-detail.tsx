@@ -28,6 +28,13 @@ function formatMs(ms: number | null | undefined): string {
   return `${Math.round(ms)}ms`;
 }
 
+function formatScanDate(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleString();
+}
+
 function ScoreCard(props: {
   label: string;
   metrics: PagespeedSnapshot['mobile'];
@@ -96,7 +103,7 @@ function ScoreCard(props: {
       <p className="text-muted-foreground mt-3 text-xs">
         LCP {formatMs(props.metrics.lcpMs)}
         {props.metrics.fetchedAt
-          ? ` · Checked ${new Date(props.metrics.fetchedAt).toLocaleString()}`
+          ? ` · Checked ${formatScanDate(props.metrics.fetchedAt)}`
           : null}
       </p>
     </div>
@@ -130,6 +137,14 @@ export function PagespeedPageDetail(props: {
           >
             {props.snapshot.url.replace(/^https?:\/\//, '')}
           </a>
+          {props.snapshot.lastScannedAt ? (
+            <p className="text-muted-foreground mt-1 text-xs">
+              Last scanned{' '}
+              <time dateTime={props.snapshot.lastScannedAt}>
+                {formatScanDate(props.snapshot.lastScannedAt)}
+              </time>
+            </p>
+          ) : null}
         </div>
         <Link
           href={props.backHref}

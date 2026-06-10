@@ -3,10 +3,12 @@ import 'server-only';
 import { load } from 'cheerio';
 
 import { crawlFetch } from '~/lib/crawl/http-fetch';
+import { extractPageJsonLd } from '~/lib/crawl/json-ld';
 
 import { normaliseCrawlUrl, normaliseHost } from './domain';
-import type { CrawledPageResult, SiteCrawlIssue } from './types';
 import { detectPageIssues } from './issues';
+import { detectSchemaIssues } from './schema-issues';
+import type { CrawledPageResult, SiteCrawlIssue } from './types';
 
 function parseRobotsNoindex($: ReturnType<typeof load>): boolean {
   const robots = $('meta[name="robots"]').attr('content')?.toLowerCase() ?? '';
@@ -54,6 +56,8 @@ export async function fetchAndParsePage(
         internalLinks: [],
         issues,
         crawlError: null,
+        schemaTypes: [],
+        schemaObjects: [],
         fetchProfile: profile,
         botBlockedInitially,
       };
@@ -88,16 +92,20 @@ export async function fetchAndParsePage(
 
     const bodyText = $('body').text().replace(/\s+/g, ' ').trim();
     const wordCount = bodyText ? bodyText.split(' ').filter(Boolean).length : 0;
+    const jsonLd = extractPageJsonLd($);
 
-    const issues = detectPageIssues({
-      statusCode: response.status,
-      title,
-      metaDescription,
-      h1Count: h1s.length,
-      canonical,
-      indexable,
-      crawlFailed: false,
-    });
+    const issues = [
+      ...detectPageIssues({
+        statusCode: response.status,
+        title,
+        metaDescription,
+        h1Count: h1s.length,
+        canonical,
+        indexable,
+        crawlFailed: false,
+      }),
+      ...detectSchemaIssues(url, domain, jsonLd, response.status),
+    ];
 
     return {
       url,
@@ -115,6 +123,8 @@ export async function fetchAndParsePage(
       internalLinks: [...internalLinks],
       issues,
       crawlError: null,
+      schemaTypes: jsonLd.schemaTypes,
+      schemaObjects: jsonLd.schemaObjects,
       fetchProfile: profile,
       botBlockedInitially,
     };
@@ -141,6 +151,8 @@ export async function fetchAndParsePage(
       internalLinks: [],
       issues,
       crawlError: message,
+      schemaTypes: [],
+      schemaObjects: [],
     };
   }
 }

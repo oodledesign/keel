@@ -14,12 +14,14 @@ import {
 } from '@kit/ui/dropdown-menu';
 
 import { formatDuration } from '~/lib/videos/format';
+import { VIDEO_THUMB_PLACEHOLDER } from '~/lib/videos/thumbnail';
 import type { VideoRow } from '~/lib/videos/types';
 import pathsConfig from '~/config/paths.config';
 
 export function VideoCard(props: {
   accountSlug: string;
   video: VideoRow;
+  onPreview: (video: VideoRow) => void;
   onCopyEmbed: (video: VideoRow) => void;
   onCopyPublicLink: (video: VideoRow) => void;
   onRename: (video: VideoRow) => void;
@@ -27,9 +29,7 @@ export function VideoCard(props: {
   onDelete: (video: VideoRow) => void;
 }) {
   const { video } = props;
-  const thumb =
-    video.thumbnail_url ??
-    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="640" height="360"%3E%3Crect fill="%23111827" width="100%25" height="100%25"/%3E%3C/svg%3E';
+  const thumb = video.thumbnail_url ?? VIDEO_THUMB_PLACEHOLDER;
 
   const playerConfigPath = pathsConfig.app.accountVideoDetail
     .replace('[account]', props.accountSlug)
@@ -37,7 +37,12 @@ export function VideoCard(props: {
 
   return (
     <article className="group overflow-hidden rounded-xl border border-white/10 bg-black/20">
-      <div className="relative aspect-video overflow-hidden bg-black/40">
+      <button
+        type="button"
+        className="relative aspect-video w-full overflow-hidden bg-black/40 text-left"
+        onClick={() => props.onPreview(video)}
+        aria-label={`Play ${video.title}`}
+      >
         <Image
           src={thumb}
           alt={video.title}
@@ -62,7 +67,7 @@ export function VideoCard(props: {
             Failed
           </span>
         ) : null}
-      </div>
+      </button>
 
       <div className="flex items-start justify-between gap-2 p-3">
         <div className="min-w-0">
@@ -82,11 +87,9 @@ export function VideoCard(props: {
             <DropdownMenuItem onClick={() => props.onCopyEmbed(video)}>
               Copy embed code
             </DropdownMenuItem>
-            {video.public_share_enabled && video.public_share_token ? (
-              <DropdownMenuItem onClick={() => props.onCopyPublicLink(video)}>
-                Copy public link
-              </DropdownMenuItem>
-            ) : null}
+            <DropdownMenuItem onClick={() => props.onCopyPublicLink(video)}>
+              Copy public link
+            </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href={playerConfigPath}>Edit player config</Link>
             </DropdownMenuItem>

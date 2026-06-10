@@ -47,6 +47,13 @@ function formatMs(ms: number | null | undefined): string {
   return `${Math.round(ms)}ms`;
 }
 
+function formatScanDate(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleString();
+}
+
 function issueCount(metrics: PagespeedSnapshot['mobile']): number {
   if (!metrics || metrics.errorMsg) return 0;
   return metrics.recommendations.length;
@@ -220,6 +227,24 @@ export function PagespeedPanel(props: {
 
   return (
     <div className="space-y-6">
+      {props.settings?.lastCheckAt ? (
+        <p className="text-muted-foreground text-sm">
+          Last scan{' '}
+          <time dateTime={props.settings.lastCheckAt} className="text-white">
+            {formatScanDate(props.settings.lastCheckAt)}
+          </time>
+          {props.settings.nextCheckAt && interval !== 'manual' ? (
+            <>
+              {' '}
+              · Next scan{' '}
+              <time dateTime={props.settings.nextCheckAt}>
+                {new Date(props.settings.nextCheckAt).toLocaleDateString()}
+              </time>
+            </>
+          ) : null}
+        </p>
+      ) : null}
+
       <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
         <div className="space-y-2">
           <Label htmlFor="pagespeed-refresh-interval">Auto refresh</Label>
@@ -241,7 +266,7 @@ export function PagespeedPanel(props: {
           </select>
           <p className="text-muted-foreground text-xs">
             {props.settings?.lastCheckAt
-              ? `Last checked ${new Date(props.settings.lastCheckAt).toLocaleString()}`
+              ? `Project last checked ${formatScanDate(props.settings.lastCheckAt)}`
               : 'Not checked yet'}
             {props.settings?.nextCheckAt && interval !== 'manual'
               ? ` · Next ${new Date(props.settings.nextCheckAt).toLocaleDateString()}`
@@ -347,6 +372,18 @@ export function PagespeedPanel(props: {
                     >
                       {page.url.replace(/^https?:\/\//, '')}
                     </a>
+                    {page.lastScannedAt ? (
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        Last scanned{' '}
+                        <time dateTime={page.lastScannedAt}>
+                          {formatScanDate(page.lastScannedAt)}
+                        </time>
+                      </p>
+                    ) : (
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        Not scanned yet
+                      </p>
+                    )}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Button type="button" variant="outline" size="sm" asChild>

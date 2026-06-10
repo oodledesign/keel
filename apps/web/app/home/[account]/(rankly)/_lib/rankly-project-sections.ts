@@ -4,6 +4,7 @@ import {
   Gauge,
   Globe2,
   LayoutDashboard,
+  LayoutList,
   Network,
   ScanSearch,
   Search,
@@ -17,6 +18,7 @@ export type RanklySectionId =
   | 'keywords'
   | 'siteExplorer'
   | 'siteCrawler'
+  | 'pages'
   | 'pagespeed'
   | 'aiAudit'
   | 'briefs'
@@ -61,6 +63,14 @@ export const RANKLY_PROJECT_SECTIONS: RanklyProjectSection[] = [
     pathKey: 'siteCrawler',
     dashboardTitle: 'Site Crawler',
     dashboardBody: 'Internal crawl for broken links, metadata issues, and duplicates.',
+  },
+  {
+    id: 'pages',
+    navLabel: 'Pages',
+    icon: LayoutList,
+    pathKey: 'pages',
+    dashboardTitle: 'Pages',
+    dashboardBody: 'Unified page scores and page-specific recommendations from crawl and PageSpeed data.',
   },
   {
     id: 'pagespeed',

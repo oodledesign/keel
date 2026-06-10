@@ -72,6 +72,7 @@ export type PagespeedSnapshot = {
   url: string;
   label: string | null;
   isHomepage: boolean;
+  lastScannedAt: string | null;
   mobile: PagespeedMetricSet | null;
   desktop: PagespeedMetricSet | null;
 };

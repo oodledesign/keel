@@ -13,7 +13,11 @@ export type SiteCrawlIssueCode =
   | 'non_200_status'
   | 'crawl_failed'
   | 'duplicate_title'
-  | 'duplicate_meta';
+  | 'duplicate_meta'
+  | 'malformed_schema'
+  | 'missing_schema'
+  | 'schema_missing_type'
+  | 'schema_incomplete';
 
 export type SiteCrawlIssue = {
   code: SiteCrawlIssueCode;
@@ -60,6 +64,8 @@ export type SiteCrawlPageRow = {
   external_links_out: number;
   issues: SiteCrawlIssue[];
   crawl_error: string | null;
+  schema_types: string[];
+  schema_objects: Record<string, unknown>[];
   crawled_at: string;
 };
 
@@ -79,6 +85,8 @@ export type CrawledPageResult = {
   internalLinks: string[];
   issues: SiteCrawlIssue[];
   crawlError: string | null;
+  schemaTypes: string[];
+  schemaObjects: Record<string, unknown>[];
   fetchProfile?: 'rankly' | 'browser_fallback';
   botBlockedInitially?: boolean;
 };
@@ -101,4 +109,8 @@ export const SITE_CRAWL_ISSUE_LABELS: Record<SiteCrawlIssueCode, string> = {
   crawl_failed: 'Crawl failed',
   duplicate_title: 'Duplicate title',
   duplicate_meta: 'Duplicate meta description',
+  malformed_schema: 'Malformed JSON-LD',
+  missing_schema: 'Missing schema (homepage)',
+  schema_missing_type: 'Schema missing @type',
+  schema_incomplete: 'Incomplete schema',
 };

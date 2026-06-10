@@ -128,6 +128,8 @@ export async function insertSiteCrawlPage(
       external_links_out: page.externalLinksOut,
       issues: page.issues,
       crawl_error: page.crawlError,
+      schema_types: page.schemaTypes,
+      schema_objects: page.schemaObjects,
     },
     { onConflict: 'job_id,url' },
   );

@@ -5,11 +5,23 @@ export type RanklyProjectPaths = {
   keywords: string;
   siteExplorer: string;
   siteCrawler: string;
+  pages: string;
   pagespeed: string;
   aiAudit: string;
   briefs: string;
   clusters: string;
 };
+
+export function ranklyPagesDetailPath(
+  account: string,
+  projectId: string,
+  pageKey: string,
+) {
+  return pathsConfig.app.accountRanklyProjectPagesDetail
+    .replace('[account]', account)
+    .replace('[projectId]', projectId)
+    .replace('[pageKey]', pageKey);
+}
 
 export function ranklyPagespeedPagePath(
   account: string,
@@ -34,6 +46,7 @@ export function ranklyProjectPaths(
     keywords: replace(pathsConfig.app.accountRanklyProjectKeywords),
     siteExplorer: replace(pathsConfig.app.accountRanklyProjectSiteExplorer),
     siteCrawler: replace(pathsConfig.app.accountRanklyProjectSiteCrawler),
+    pages: replace(pathsConfig.app.accountRanklyProjectPages),
     pagespeed: replace(pathsConfig.app.accountRanklyProjectPagespeed),
     aiAudit: replace(pathsConfig.app.accountRanklyProjectAiAudit),
     briefs: replace(pathsConfig.app.accountRanklyProjectBriefs),

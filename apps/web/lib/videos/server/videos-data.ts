@@ -5,6 +5,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import type { VideoFolderRow, VideoRow } from '../types';
 import { decryptVideoSecret } from '../crypto-secrets';
+import { resolveVideoThumbnailUrl } from '../thumbnail';
 import { loadAccountVideoSettings } from './player-config-data';
 
 export async function loadVideoLibrary(accountId: string) {
@@ -26,9 +27,15 @@ export async function loadVideoLibrary(accountId: string) {
   if (foldersResult.error) throw new Error(foldersResult.error.message);
   if (videosResult.error) throw new Error(videosResult.error.message);
 
+  const cdnHostname = getBunnyCdnHostname();
+  const videos = ((videosResult.data ?? []) as VideoRow[]).map((video) => ({
+    ...video,
+    thumbnail_url: resolveVideoThumbnailUrl(video, cdnHostname),
+  }));
+
   return {
     folders: (foldersResult.data ?? []) as VideoFolderRow[],
-    videos: (videosResult.data ?? []) as VideoRow[],
+    videos,
   };
 }
 

@@ -32,6 +32,7 @@ import { FolderSidebar } from './folder-sidebar';
 import { UploadModal } from './upload-modal';
 import { VideoCard } from './video-card';
 import { VideoListRow } from './video-list-row';
+import { VideoPreviewDialog } from './video-preview-dialog';
 
 function folderBreadcrumb(
   folderId: string | null,
@@ -64,6 +65,7 @@ export function VideoLibraryClient(props: {
   const [sort, setSort] = useState<VideoSort>('newest');
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [previewVideo, setPreviewVideo] = useState<VideoRow | null>(null);
 
   const breadcrumb = folderBreadcrumb(selectedFolderId, props.folders);
   const presetsPath = pathsConfig.app.accountVideoPresets.replace(
@@ -123,7 +125,13 @@ export function VideoLibraryClient(props: {
 
   const copyPublicLink = async (video: VideoRow) => {
     if (!video.public_share_enabled || !video.public_share_token) {
-      toast.error('Enable the public link on the player config page first');
+      const playerConfigPath = pathsConfig.app.accountVideoDetail
+        .replace('[account]', props.accountSlug)
+        .replace('[videoId]', video.id);
+      toast.error(
+        'Turn on “Public link” on the player config page first, then copy it from here.',
+      );
+      router.push(playerConfigPath);
       return;
     }
 
@@ -345,6 +353,7 @@ export function VideoLibraryClient(props: {
                   key={video.id}
                   accountSlug={props.accountSlug}
                   video={video}
+                  onPreview={setPreviewVideo}
                   onCopyEmbed={copyEmbed}
                   onCopyPublicLink={copyPublicLink}
                   onRename={renameVideo}
@@ -360,6 +369,7 @@ export function VideoLibraryClient(props: {
                   key={video.id}
                   accountSlug={props.accountSlug}
                   video={video}
+                  onPreview={setPreviewVideo}
                   onCopyEmbed={copyEmbed}
                   onCopyPublicLink={copyPublicLink}
                   onRename={renameVideo}
@@ -378,6 +388,14 @@ export function VideoLibraryClient(props: {
         accountId={props.accountId}
         folders={props.folders}
         defaultFolderId={selectedFolderId}
+      />
+
+      <VideoPreviewDialog
+        video={previewVideo}
+        open={previewVideo != null}
+        onOpenChange={(open) => {
+          if (!open) setPreviewVideo(null);
+        }}
       />
     </div>
   );

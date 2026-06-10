@@ -3,6 +3,13 @@
 import { useMemo, useState } from 'react';
 
 import { Button } from '@kit/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@kit/ui/dialog';
 import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 
@@ -40,6 +47,80 @@ function IssueBadge({ code }: { code: SiteCrawlIssueCode }) {
   );
 }
 
+function SchemaTypeBadge({ type }: { type: string }) {
+  return (
+    <span className="inline-flex rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-xs text-sky-200">
+      {type}
+    </span>
+  );
+}
+
+function SchemaDetailDialog(props: {
+  page: SiteCrawlPageRow | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const objects = props.page?.schema_objects ?? [];
+  const types = props.page?.schema_types ?? [];
+  const schemaIssues = (props.page?.issues ?? []).filter((issue) =>
+    [
+      'malformed_schema',
+      'missing_schema',
+      'schema_missing_type',
+      'schema_incomplete',
+    ].includes(issue.code),
+  );
+
+  return (
+    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
+      <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto border-white/10 bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+        <DialogHeader>
+          <DialogTitle>Structured data</DialogTitle>
+          <DialogDescription className="break-all font-mono text-xs">
+            {props.page?.url}
+          </DialogDescription>
+        </DialogHeader>
+
+        {schemaIssues.length > 0 ? (
+          <div className="space-y-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+            <p className="text-sm font-medium text-amber-100">Schema issues</p>
+            <ul className="space-y-1 text-xs text-amber-100/90">
+              {schemaIssues.map((issue) => (
+                <li key={`${issue.code}-${issue.message}`}>
+                  {SITE_CRAWL_ISSUE_LABELS[issue.code]}: {issue.message}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {types.length > 0 ? (
+          <div className="flex flex-wrap gap-1">
+            {types.map((type) => (
+              <SchemaTypeBadge key={type} type={type} />
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground text-sm">No JSON-LD found on this page.</p>
+        )}
+
+        {objects.length > 0 ? (
+          <div className="space-y-3">
+            {objects.map((object, index) => (
+              <pre
+                key={`${props.page?.id}-schema-${index}`}
+                className="overflow-x-auto rounded-lg border border-white/10 bg-black/30 p-3 text-xs leading-relaxed"
+              >
+                {JSON.stringify(object, null, 2)}
+              </pre>
+            ))}
+          </div>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function SummaryCard(props: {
   label: string;
   value: number;
@@ -71,6 +152,7 @@ export function SiteCrawlerPanel(props: {
   const [issueFilter, setIssueFilter] = useState<SiteCrawlIssueCode | 'all'>(
     'all',
   );
+  const [schemaPage, setSchemaPage] = useState<SiteCrawlPageRow | null>(null);
   const [activeJobId, setActiveJobId] = useState<string | null>(
     props.latestJob &&
       (props.latestJob.status === 'pending' ||
@@ -129,6 +211,10 @@ export function SiteCrawlerPanel(props: {
     .filter(([, count]) => count > 0)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6) as Array<[SiteCrawlIssueCode, number]>;
+
+  const pagesWithSchema = props.pages.filter(
+    (page) => (page.schema_types ?? []).length > 0,
+  ).length;
 
   const crawlAccess = analyzeCrawlAccess(
     props.pages.map((page) => ({
@@ -192,10 +278,15 @@ export function SiteCrawlerPanel(props: {
 
       {props.latestJob?.status === 'done' ? (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <SummaryCard
               label="Pages crawled"
               value={props.latestJob.urls_crawled}
+            />
+            <SummaryCard
+              label="With schema"
+              value={pagesWithSchema}
+              hint="Pages with JSON-LD"
             />
             <SummaryCard
               label="Non-200 pages"
@@ -242,13 +333,14 @@ export function SiteCrawlerPanel(props: {
           ) : null}
 
           <div className="overflow-x-auto rounded-lg border border-white/10">
-            <table className="w-full min-w-[56rem] text-left text-sm">
+            <table className="w-full min-w-[64rem] text-left text-sm">
               <thead className="border-b border-white/10 bg-black/20 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3">URL</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Title</th>
                   <th className="px-4 py-3">H1</th>
+                  <th className="px-4 py-3">Schema</th>
                   <th className="px-4 py-3">Words</th>
                   <th className="px-4 py-3">Issues</th>
                 </tr>
@@ -257,14 +349,17 @@ export function SiteCrawlerPanel(props: {
                 {filteredPages.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={6}
+                      colSpan={7}
                       className="text-muted-foreground px-4 py-8 text-center"
                     >
                       No pages match this filter.
                     </td>
                   </tr>
                 ) : (
-                  filteredPages.map((page) => (
+                  filteredPages.map((page) => {
+                    const schemaTypes = page.schema_types ?? [];
+
+                    return (
                     <tr
                       key={page.id}
                       className="border-b border-white/5 align-top last:border-0"
@@ -283,6 +378,62 @@ export function SiteCrawlerPanel(props: {
                       <td className="max-w-[10rem] truncate px-4 py-3">
                         {page.h1 || '—'}
                       </td>
+                      <td className="max-w-[14rem] px-4 py-3">
+                        {schemaTypes.length === 0 ? (
+                          <div className="space-y-2">
+                            <span className="text-muted-foreground text-xs">—</span>
+                            {page.issues.some((issue) =>
+                              [
+                                'malformed_schema',
+                                'missing_schema',
+                                'schema_missing_type',
+                                'schema_incomplete',
+                              ].includes(issue.code),
+                            ) ? (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => setSchemaPage(page)}
+                              >
+                                View schema issues
+                              </Button>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="flex flex-wrap gap-1">
+                              {schemaTypes.slice(0, 3).map((type) => (
+                                <SchemaTypeBadge key={type} type={type} />
+                              ))}
+                              {schemaTypes.length > 3 ? (
+                                <span className="text-muted-foreground text-xs">
+                                  +{schemaTypes.length - 3}
+                                </span>
+                              ) : null}
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-xs"
+                              onClick={() => setSchemaPage(page)}
+                            >
+                              {page.issues.some((issue) =>
+                                [
+                                  'malformed_schema',
+                                  'missing_schema',
+                                  'schema_missing_type',
+                                  'schema_incomplete',
+                                ].includes(issue.code),
+                              )
+                                ? 'View issues & JSON-LD'
+                                : 'View JSON-LD'}
+                            </Button>
+                          </div>
+                        )}
+                      </td>
                       <td className="px-4 py-3 tabular-nums text-muted-foreground">
                         {page.word_count.toLocaleString()}
                       </td>
@@ -298,11 +449,20 @@ export function SiteCrawlerPanel(props: {
                         </div>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
           </div>
+
+          <SchemaDetailDialog
+            page={schemaPage}
+            open={schemaPage != null}
+            onOpenChange={(open) => {
+              if (!open) setSchemaPage(null);
+            }}
+          />
 
           <p className="text-muted-foreground text-xs">
             Last crawl {new Date(props.latestJob.finished_at ?? props.latestJob.created_at).toLocaleString()}
