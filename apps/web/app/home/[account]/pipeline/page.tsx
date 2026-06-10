@@ -49,6 +49,7 @@ async function TeamAccountPipelinePage({ params }: TeamAccountPipelinePageProps)
         <WorkspacePipelineBoardWrapper
           initialData={data}
           accountSlug={accountSlug}
+          accountId={accountId}
         />
       </PageBody>
     </>

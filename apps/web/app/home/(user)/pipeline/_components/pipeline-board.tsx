@@ -78,12 +78,14 @@ type Props = {
   onDealWon?: (deal: PipelineDeal) => void;
   /** When set, revalidates `/app/work/[account]/pipeline` after server actions */
   workspaceAccountSlug?: string;
+  workspaceAccountId?: string;
 };
 
 export function PipelineBoard({
   initialData,
   onDealWon,
   workspaceAccountSlug,
+  workspaceAccountId,
 }: Props) {
   const [deals, setDeals] = useState<PipelineDeal[]>(initialData.deals);
   const [filter, setFilter] = useState<string>('all');
@@ -252,6 +254,7 @@ export function PipelineBoard({
         }}
         onDealUpdated={handleDealUpdated}
         accountSlug={workspaceAccountSlug}
+        accountId={workspaceAccountId}
       />
 
       {/* Kanban */}

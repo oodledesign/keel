@@ -5,6 +5,7 @@ import {
   CheckSquare,
   ClipboardList,
   CreditCard,
+  FileSignature,
   FileText,
   Globe,
   Kanban,
@@ -220,6 +221,22 @@ export function buildWorkSpaceNavChildren(
             label: 'Invoices',
             path: createPath(pathsConfig.app.accountInvoices, account),
             Icon: <FileText className={iconClasses} />,
+          }
+        : null,
+    proposals: () =>
+      access.canViewInvoices && isWorkNavModuleEnabled(ms, 'proposals')
+        ? {
+            label: 'Proposals',
+            path: createPath(pathsConfig.app.accountProposals, account),
+            Icon: <PenLine className={iconClasses} />,
+          }
+        : null,
+    contracts: () =>
+      access.canViewInvoices && isWorkNavModuleEnabled(ms, 'contracts')
+        ? {
+            label: 'Contracts',
+            path: createPath(pathsConfig.app.accountContracts, account),
+            Icon: <FileSignature className={iconClasses} />,
           }
         : null,
     team: () =>

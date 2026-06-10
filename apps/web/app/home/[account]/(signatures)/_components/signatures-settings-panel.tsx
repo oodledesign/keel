@@ -1,18 +1,12 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { ChevronDown, PlugZap, Save, Trash2 } from 'lucide-react';
+import { PlugZap, Save, Trash2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@kit/ui/collapsible';
 import { toast } from '@kit/ui/sonner';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
@@ -206,8 +200,7 @@ export function SignaturesSettingsPanel({
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
-      <div className="space-y-6">
+    <div className="space-y-6">
         <Card className="border-white/10 bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
           <CardHeader>
             <CardTitle>Google Workspace connection</CardTitle>
@@ -425,67 +418,6 @@ export function SignaturesSettingsPanel({
             ) : null}
           </CardContent>
         </Card>
-      </div>
-
-      <Card className="border-white/10 bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-        <CardHeader>
-          <CardTitle>Google Workspace setup</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Collapsible>
-            <CollapsibleTrigger asChild>
-              <Button variant="outline" className="w-full justify-between">
-                Setup instructions
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="mt-4 space-y-3 rounded-2xl border border-white/10 bg-black/10 p-4 text-sm text-muted-foreground">
-              <p>
-                Enable Admin SDK and Gmail APIs in Google Cloud, create a service
-                account, and authorize domain-wide delegation in Google Admin
-                with Directory + Gmail settings scopes.
-              </p>
-              <p>
-                Set GOOGLE_SERVICE_ACCOUNT_JSON (or EMAIL + PRIVATE_KEY) in the
-                web app environment.
-              </p>
-              <p>
-                See SIGNATURES_GOOGLE_SETUP.md in the repo for the full checklist.
-              </p>
-            </CollapsibleContent>
-          </Collapsible>
-        </CardContent>
-      </Card>
-
-      <Card className="border-white/10 bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-        <CardHeader>
-          <CardTitle>Azure setup</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Collapsible>
-            <CollapsibleTrigger asChild>
-              <Button variant="outline" className="w-full justify-between">
-                Setup instructions
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="mt-4 space-y-3 rounded-2xl border border-white/10 bg-black/10 p-4 text-sm text-muted-foreground">
-              <p>
-                Create an Azure App Registration and add a web redirect URI for
-                <code className="mx-1 text-xs">/api/signatures/ms-callback</code>.
-              </p>
-              <p>
-                Configure delegated scopes: MailboxSettings.ReadWrite,
-                User.Read.All, ProfilePhoto.Read.All, and offline_access.
-              </p>
-              <p>
-                Set AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, and AZURE_REDIRECT_URI
-                in the web app environment.
-              </p>
-            </CollapsibleContent>
-          </Collapsible>
-        </CardContent>
-      </Card>
     </div>
   );
 }

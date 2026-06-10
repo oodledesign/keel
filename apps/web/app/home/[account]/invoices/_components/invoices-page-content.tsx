@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
-import { FileText, Filter, PlusCircle, Search } from 'lucide-react';
+import { FileText, PlusCircle, RefreshCw, Repeat, Search } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -22,35 +23,34 @@ import pathsConfig from '~/config/paths.config';
 import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
 import { ClientCombobox } from '~/home/[account]/jobs/_components/client-combobox';
 
-import { createInvoice, listInvoices } from '../_lib/server/server-actions';
+import { formatPence } from '../_lib/invoice-totals';
 import { getErrorMessage } from '../_lib/error-message';
+import {
+  createInvoice,
+  getInvoiceSummaryAction,
+  getInvoiceTabCountsAction,
+  listInvoices,
+  listRecurringSeriesAction,
+  updateRecurringSeriesStatusAction,
+} from '../_lib/server/server-actions';
+import { InvoiceRowMenu } from './invoice-row-menu';
+import { InvoiceStatusBadge } from './invoice-status-badge';
+import { InvoicesIncomeSummary } from './invoices-income-summary';
 
 type InvoiceRow = {
   id: string;
   invoice_number: string;
   status: string;
   due_at: string | null;
+  issued_at: string | null;
   total_pence: number;
-  created_at: string;
+  amount_paid_pence?: number;
+  recurring_series_id?: string | null;
   updated_at: string;
   clients: { display_name: string | null } | null;
 };
 
-const statusOptions = [
-  { value: '', label: 'All' },
-  { value: 'draft', label: 'Draft' },
-  { value: 'sent', label: 'Sent' },
-  { value: 'paid', label: 'Paid' },
-  { value: 'overdue', label: 'Overdue' },
-  { value: 'cancelled', label: 'Cancelled' },
-];
-
-function formatPence(pence: number) {
-  return new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: 'GBP',
-  }).format(pence / 100);
-}
+type TabKey = 'unpaid' | 'draft' | 'all' | 'recurring';
 
 function formatDate(value: string | null) {
   if (!value) return '—';
@@ -59,17 +59,6 @@ function formatDate(value: string | null) {
     month: 'short',
     year: 'numeric',
   });
-}
-
-/** Overdue: due_at < today and status is sent (V1: UI-computed only). */
-function displayStatus(inv: { status: string; due_at: string | null }): string {
-  if (inv.status !== 'sent') return inv.status;
-  if (!inv.due_at) return inv.status;
-  const due = new Date(inv.due_at);
-  const today = new Date();
-  due.setHours(0, 0, 0, 0);
-  today.setHours(0, 0, 0, 0);
-  return due < today ? 'overdue' : inv.status;
 }
 
 export function InvoicesPageContent({
@@ -88,47 +77,110 @@ export function InvoicesPageContent({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [tab, setTab] = useState<TabKey>('unpaid');
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
+  const [recurring, setRecurring] = useState<Array<Record<string, unknown>>>([]);
   const [total, setTotal] = useState(0);
+  const [counts, setCounts] = useState({ draft: 0, unpaid: 0, all: 0, recurring: 0 });
+  const [summary, setSummary] = useState<Awaited<ReturnType<typeof getInvoiceSummaryAction>> | null>(null);
+  const [summaryPeriod, setSummaryPeriod] = useState<'month_to_date' | 'last_30_days' | 'last_90_days'>('month_to_date');
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [searchDebounced, setSearchDebounced] = useState('');
   const [page, setPage] = useState(1);
-  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [clientFilter, setClientFilter] = useState('');
   const [creating, setCreating] = useState(false);
   const [createSheetOpen, setCreateSheetOpen] = useState(false);
   const [clientOptions, setClientOptions] = useState<{ id: string; display_name: string | null }[]>([]);
   const [clientsLoading, setClientsLoading] = useState(false);
-  const [clientsError, setClientsError] = useState<string | null>(null);
-  const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [selectedClientId, setSelectedClientId] = useState('');
   const pageSize = 20;
 
+  const fetchCounts = useCallback(async () => {
+    try {
+      const result = await getInvoiceTabCountsAction({ accountId });
+      setCounts(result as typeof counts);
+    } catch {
+      /* ignore */
+    }
+  }, [accountId]);
+
+  useEffect(() => {
+    if (!accountId) return;
+    listClients({ accountId, page: 1, pageSize: 100 })
+      .then((result) => {
+        const raw = result as { data?: unknown } | unknown[];
+        const list = Array.isArray(raw)
+          ? raw
+          : Array.isArray((raw as { data?: unknown })?.data)
+            ? (raw as { data: unknown[] }).data
+            : [];
+        setClientOptions((list ?? []) as { id: string; display_name: string | null }[]);
+      })
+      .catch(() => setClientOptions([]));
+  }, [accountId]);
+
+  const fetchSummary = useCallback(async () => {
+    try {
+      const result = await getInvoiceSummaryAction({ accountId, period: summaryPeriod });
+      setSummary(result as typeof summary);
+    } catch {
+      setSummary(null);
+    }
+  }, [accountId, summaryPeriod]);
+
   const fetchInvoices = useCallback(async () => {
+    if (tab === 'recurring') {
+      setLoading(true);
+      try {
+        const rows = await listRecurringSeriesAction({ accountId });
+        setRecurring((rows ?? []) as Array<Record<string, unknown>>);
+      } catch (error) {
+        toast.error(getErrorMessage(error));
+        setRecurring([]);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     setLoading(true);
     try {
+      const statusMap: Record<TabKey, string | undefined> = {
+        unpaid: 'unpaid',
+        draft: 'draft',
+        all: 'all',
+        recurring: undefined,
+      };
       const result = await listInvoices({
         accountId,
         page,
         pageSize,
         query: searchDebounced || undefined,
-        status: statusFilter || undefined,
+        status: statusMap[tab],
+        clientId: clientFilter || undefined,
       });
       if (result?.data !== undefined) {
         setInvoices((result.data ?? []) as unknown as InvoiceRow[]);
         setTotal(result.total ?? 0);
       }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to load invoices');
+    } catch (error) {
+      toast.error(getErrorMessage(error));
       setInvoices([]);
       setTotal(0);
     } finally {
       setLoading(false);
     }
-  }, [accountId, searchDebounced, page, pageSize, statusFilter]);
+  }, [accountId, clientFilter, page, pageSize, searchDebounced, tab]);
 
   useEffect(() => {
-    fetchInvoices();
-  }, [fetchInvoices]);
+    void fetchInvoices();
+    void fetchCounts();
+  }, [fetchInvoices, fetchCounts]);
+
+  useEffect(() => {
+    void fetchSummary();
+  }, [fetchSummary]);
 
   useEffect(() => {
     const t = setTimeout(() => setSearchDebounced(search), 300);
@@ -138,7 +190,6 @@ export function InvoicesPageContent({
   const openCreateSheet = useCallback(async () => {
     setCreateSheetOpen(true);
     setSelectedClientId('');
-    setClientsError(null);
     setClientsLoading(true);
     try {
       const result = await listClients({ accountId, page: 1, pageSize: 100 });
@@ -151,9 +202,8 @@ export function InvoicesPageContent({
       const options = (list ?? []) as { id: string; display_name: string | null }[];
       setClientOptions(options);
       if (options.length > 0) setSelectedClientId(options[0]!.id);
-    } catch (err) {
-      setClientsError(err instanceof Error ? err.message : 'Failed to load clients');
-      toast.error(getErrorMessage(err));
+    } catch (error) {
+      toast.error(getErrorMessage(error));
       setClientOptions([]);
     } finally {
       setClientsLoading(false);
@@ -161,19 +211,13 @@ export function InvoicesPageContent({
   }, [accountId]);
 
   useEffect(() => {
-    if (!canEditInvoices || searchParams.get('create') !== 'invoice') {
-      return;
-    }
-
+    if (!canEditInvoices || searchParams.get('create') !== 'invoice') return;
     void openCreateSheet();
-
     const nextParams = new URLSearchParams(searchParams.toString());
     nextParams.delete('create');
-    const nextPath = nextParams.toString()
-      ? `${pathname}?${nextParams.toString()}`
-      : pathname;
-
-    router.replace(nextPath, { scroll: false });
+    router.replace(nextParams.toString() ? `${pathname}?${nextParams}` : pathname, {
+      scroll: false,
+    });
   }, [canEditInvoices, openCreateSheet, pathname, router, searchParams]);
 
   const handleCreateInvoice = async () => {
@@ -183,273 +227,311 @@ export function InvoicesPageContent({
     }
     setCreating(true);
     try {
-      const invoice = await createInvoice({
-        accountId,
-        client_id: selectedClientId,
-      });
+      const invoice = await createInvoice({ accountId, client_id: selectedClientId });
       if (invoice?.id) {
         setCreateSheetOpen(false);
-        const editPath = pathsConfig.app.accountInvoiceEdit
-          .replace('[account]', accountSlug)
-          .replace('[id]', invoice.id);
-        router.push(editPath);
+        router.push(
+          pathsConfig.app.accountInvoiceEdit
+            .replace('[account]', accountSlug)
+            .replace('[id]', invoice.id),
+        );
       }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to create invoice');
+    } catch (error) {
+      toast.error(getErrorMessage(error));
     } finally {
       setCreating(false);
     }
   };
 
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const setStatusTab = (value: string) => {
-    setStatusFilter(value);
-    setPage(1);
-  };
   const editPathBase = pathsConfig.app.accountInvoiceEdit.replace('[account]', accountSlug);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const tabs: Array<{ key: TabKey; label: string; count?: number }> = [
+    { key: 'unpaid', label: 'Unpaid', count: counts.unpaid },
+    { key: 'draft', label: 'Draft', count: counts.draft },
+    { key: 'all', label: 'All invoices', count: counts.all },
+    { key: 'recurring', label: 'Recurring', count: counts.recurring },
+  ];
 
   if (!canViewInvoices) {
     return (
-      <div className="flex min-h-[60vh] w-full items-center justify-center rounded-lg border border-zinc-700 bg-[var(--workspace-shell-panel)] p-8">
-        <p className="text-center text-zinc-400">
-          You don&apos;t have access to invoices in this account.
-        </p>
+      <div className="flex min-h-[60vh] items-center justify-center p-8">
+        <p className="text-zinc-400">You don&apos;t have access to invoices in this account.</p>
       </div>
     );
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-1">
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-700 p-4 md:p-6">
-          <div className="inline-flex rounded-full border border-white/8 bg-[var(--workspace-control-surface)]/80 p-1 text-xs">
-            <button
-              type="button"
-              onClick={() => setStatusTab('')}
-              className={`px-3 py-1.5 font-medium transition-colors rounded-full ${
-                statusFilter === ''
-                  ? 'bg-[var(--keel-teal)] text-white'
-                  : 'text-zinc-300 hover:text-white'
-              }`}
-            >
-              All
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusTab('draft')}
-              className={`px-3 py-1.5 font-medium transition-colors rounded-full ${
-                statusFilter === 'draft'
-                  ? 'bg-[var(--keel-teal)] text-white'
-                  : 'text-zinc-300 hover:text-white'
-              }`}
-            >
-              Draft
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusTab('paid')}
-              className={`px-3 py-1.5 font-medium transition-colors rounded-full ${
-                statusFilter === 'paid'
-                  ? 'bg-[var(--keel-teal)] text-white'
-                  : 'text-zinc-300 hover:text-white'
-              }`}
-            >
-              Paid
-            </button>
-          </div>
+    <div className="flex min-h-0 flex-1 flex-col gap-4 px-4 md:px-6">
+      <InvoicesIncomeSummary
+        summary={summary}
+        period={summaryPeriod}
+        onPeriodChange={setSummaryPeriod}
+      />
 
-          <If condition={canEditInvoices}>
-            <Button
-              size="sm"
-              className="bg-[var(--keel-teal)] hover:bg-[#238b7f]"
-              onClick={openCreateSheet}
-              disabled={creating}
-            >
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Create invoice
-            </Button>
-          </If>
-        </div>
-
-        <Sheet open={createSheetOpen} onOpenChange={setCreateSheetOpen}>
-          <SheetContent className="border-zinc-700 bg-[var(--workspace-shell-panel)]">
-            <SheetHeader>
-              <SheetTitle className="text-white">Create invoice</SheetTitle>
-            </SheetHeader>
-            <div className="mt-6 space-y-4">
-              <div>
-                <Label className="text-zinc-300">Client (required)</Label>
-                <div className="mt-1">
-                  <ClientCombobox
-                    clients={clientOptions}
-                    value={selectedClientId}
-                    onValueChange={setSelectedClientId}
-                    loading={clientsLoading}
-                    placeholder="Search or select client"
-                    emptyMessage="No clients found."
-                    addClientHref={pathsConfig.app.accountClients.replace(
-                      '[account]',
-                      accountSlug,
-                    )}
-                  />
-                </div>
-                {clientsError && (
-                  <p className="mt-1.5 text-sm text-amber-500">{clientsError}</p>
-                )}
-              </div>
-              <Button
-                className="w-full bg-[var(--keel-teal)] hover:bg-[#238b7f]"
-                onClick={handleCreateInvoice}
-                disabled={creating || !selectedClientId}
+      <div className="rounded-2xl border border-white/8 bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/8 p-4">
+          <div className="inline-flex flex-wrap gap-1 rounded-full border border-white/8 bg-[var(--workspace-control-surface)]/80 p-1 text-xs">
+            {tabs.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => {
+                  setTab(item.key);
+                  setPage(1);
+                }}
+                className={`rounded-full px-3 py-1.5 font-medium transition-colors ${
+                  tab === item.key
+                    ? 'bg-[var(--keel-teal)] text-[#09111F]'
+                    : 'text-zinc-300 hover:text-white'
+                }`}
               >
-                {creating ? 'Creating…' : 'Create and edit'}
+                {item.label}
+                {item.count != null ? ` (${item.count})` : ''}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => void fetchInvoices()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh
+            </Button>
+            <If condition={canEditInvoices}>
+              <Button
+                size="sm"
+                className="bg-[var(--keel-teal)] text-[#09111F] hover:bg-[#6BD48F]"
+                onClick={openCreateSheet}
+              >
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Create invoice
               </Button>
-            </div>
-          </SheetContent>
-        </Sheet>
-
-        <div className="border-b border-zinc-700 px-4 py-3 md:px-6">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-            <Input
-              placeholder="Search by invoice number..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-white placeholder:text-zinc-500"
-            />
+            </If>
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-auto p-4 md:p-6">
+        {tab !== 'recurring' ? (
+          <div className="flex flex-wrap items-end gap-3 border-b border-white/8 px-4 py-3">
+            <div className="relative min-w-[220px] flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+              <Input
+                placeholder="Search invoice number..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <div className="min-w-[200px]">
+              <ClientCombobox
+                clients={clientOptions.length ? clientOptions : [{ id: '', display_name: 'All clients' }]}
+                value={clientFilter}
+                onValueChange={setClientFilter}
+                loading={false}
+                placeholder="Filter by client"
+                emptyMessage="No clients"
+                addClientHref={pathsConfig.app.accountClients.replace('[account]', accountSlug)}
+              />
+            </div>
+            {(search || clientFilter) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSearch('');
+                  setClientFilter('');
+                }}
+              >
+                Clear filters
+              </Button>
+            )}
+          </div>
+        ) : null}
+
+        <div className="overflow-auto p-4">
           {loading ? (
             <p className="text-zinc-400">Loading…</p>
-          ) : invoices.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-lg border border-zinc-700 bg-[var(--workspace-shell-panel)] py-12">
-              <FileText className="h-12 w-12 text-zinc-500" />
-              <p className="mt-2 text-zinc-400">
-                {searchDebounced || statusFilter
-                  ? 'No invoices match your filters.'
-                  : 'No invoices yet. Create your first invoice to get started.'}
-              </p>
-              <If condition={canEditInvoices}>
-                <Button
-                  size="sm"
-                  className="mt-4 bg-[var(--keel-teal)] hover:bg-[#238b7f]"
-                  onClick={openCreateSheet}
-                  disabled={creating}
-                >
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Create invoice
-                </Button>
-              </If>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm border-separate border-spacing-y-1 border-spacing-x-0">
+          ) : tab === 'recurring' ? (
+            recurring.length === 0 ? (
+              <div className="py-12 text-center text-zinc-400">
+                <Repeat className="mx-auto mb-3 h-10 w-10 opacity-50" />
+                No recurring series yet. Create one from an invoice via Make recurring.
+              </div>
+            ) : (
+              <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="text-zinc-400">
-                    <th className="pb-2 pr-4 font-medium">Number</th>
-                    <th className="pb-2 pr-4 font-medium">Client</th>
-                    <th className="pb-2 pr-4 font-medium">Total</th>
-                    <th className="pb-2 pr-4 font-medium">Due date</th>
-                    <th className="pb-2 pr-4 font-medium">Status</th>
-                    <th className="pb-2 pr-4 font-medium">Updated</th>
-                    <th className="pb-2"></th>
+                    <th className="pb-2 pr-4">Title</th>
+                    <th className="pb-2 pr-4">Client</th>
+                    <th className="pb-2 pr-4">Frequency</th>
+                    <th className="pb-2 pr-4">Next issue</th>
+                    <th className="pb-2 pr-4">Status</th>
+                    <th className="pb-2" />
                   </tr>
                 </thead>
                 <tbody>
-                  {invoices.map((inv) => (
-                    <tr
-                      key={inv.id}
-                      className="bg-[var(--workspace-shell-panel)]/70 hover:bg-[var(--workspace-shell-panel-hover)] transition-colors"
-                    >
-                      <td className="rounded-l-xl py-2.5 pl-3 pr-4 font-medium text-white">
-                        {inv.invoice_number}
+                  {recurring.map((series) => (
+                    <tr key={String(series.id)} className="border-t border-white/6">
+                      <td className="py-3 pr-4 text-white">{String(series.title ?? '—')}</td>
+                      <td className="py-3 pr-4 text-zinc-300">
+                        {(series.clients as { display_name?: string | null } | null)?.display_name ?? '—'}
                       </td>
-                      <td className="py-2.5 pr-4 text-zinc-300">
-                        {inv.clients?.display_name ?? '—'}
-                      </td>
-                      <td className="py-2.5 pr-4 text-zinc-300">
-                        {formatPence(inv.total_pence)}
-                      </td>
-                      <td className="py-2.5 pr-4 text-zinc-300">
-                        {formatDate(inv.due_at)}
-                      </td>
-                      <td className="py-2.5 pr-4">
-                        <span
-                          className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                            (() => {
-                              const status = displayStatus(inv);
-                              return status === 'paid'
-                                ? 'bg-[var(--keel-teal)]/20 text-[#5eead4]'
-                                : status === 'sent'
-                                  ? 'bg-blue-500/20 text-blue-400'
-                                  : status === 'draft'
-                                    ? 'bg-zinc-500/20 text-zinc-400'
-                                    : status === 'overdue'
-                                      ? 'bg-amber-500/20 text-amber-400'
-                                      : 'bg-zinc-600/20 text-zinc-400';
-                            })()
-                          }`}
-                        >
-                          {displayStatus(inv)}
-                        </span>
-                      </td>
-                      <td className="py-2.5 pr-4 text-zinc-500">
-                        {formatDate(inv.updated_at)}
-                      </td>
-                      <td className="rounded-r-xl py-2.5 pr-3">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-zinc-400 hover:text-white"
-                          onClick={() =>
-                            router.push(editPathBase.replace('[id]', inv.id))
-                          }
-                        >
-                          {canEditInvoices && inv.status === 'draft' && !canManageInvoiceStatus
-                            ? 'Edit'
-                            : canEditInvoices && inv.status === 'draft'
-                              ? 'Edit'
-                              : 'View'}
-                        </Button>
+                      <td className="py-3 pr-4 capitalize text-zinc-300">{String(series.frequency ?? '')}</td>
+                      <td className="py-3 pr-4 text-zinc-300">{formatDate(String(series.next_issue_at ?? ''))}</td>
+                      <td className="py-3 pr-4 capitalize text-zinc-300">{String(series.status ?? '')}</td>
+                      <td className="py-3">
+                        {canEditInvoices && series.status === 'active' ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={async () => {
+                              try {
+                                await updateRecurringSeriesStatusAction({
+                                  accountId,
+                                  seriesId: String(series.id),
+                                  status: 'paused',
+                                });
+                                toast.success('Series paused');
+                                void fetchInvoices();
+                              } catch (error) {
+                                toast.error(getErrorMessage(error));
+                              }
+                            }}
+                          >
+                            Pause
+                          </Button>
+                        ) : null}
+                        {canEditInvoices && series.status === 'paused' ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={async () => {
+                              try {
+                                await updateRecurringSeriesStatusAction({
+                                  accountId,
+                                  seriesId: String(series.id),
+                                  status: 'active',
+                                });
+                                toast.success('Series resumed');
+                                void fetchInvoices();
+                              } catch (error) {
+                                toast.error(getErrorMessage(error));
+                              }
+                            }}
+                          >
+                            Resume
+                          </Button>
+                        ) : null}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            )
+          ) : invoices.length === 0 ? (
+            <div className="flex flex-col items-center py-12 text-zinc-400">
+              <FileText className="mb-3 h-10 w-10 opacity-50" />
+              No invoices in this tab.
             </div>
+          ) : (
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="text-zinc-400">
+                  <th className="pb-2 pr-4 w-8" />
+                  <th className="pb-2 pr-4">Recipient</th>
+                  <th className="pb-2 pr-4">Invoice no</th>
+                  <th className="pb-2 pr-4">Issued on</th>
+                  <th className="pb-2 pr-4">Due on</th>
+                  <th className="pb-2 pr-4">Total</th>
+                  <th className="pb-2 pr-4">Status</th>
+                  <th className="pb-2 w-10" />
+                </tr>
+              </thead>
+              <tbody>
+                {invoices.map((inv) => (
+                  <tr key={inv.id} className="border-t border-white/6 hover:bg-white/3">
+                    <td className="py-3 pr-2">
+                      <input type="checkbox" className="rounded border-zinc-600" aria-label="Select invoice" />
+                    </td>
+                    <td className="py-3 pr-4 text-zinc-300">{inv.clients?.display_name ?? '—'}</td>
+                    <td className="py-3 pr-4">
+                      <Link href={editPathBase.replace('[id]', inv.id)} className="font-medium text-white hover:underline">
+                        {inv.invoice_number}
+                        {inv.recurring_series_id ? (
+                          <Repeat className="ml-1 inline h-3.5 w-3.5 text-zinc-400" />
+                        ) : null}
+                      </Link>
+                    </td>
+                    <td className="py-3 pr-4 text-zinc-400">{formatDate(inv.issued_at)}</td>
+                    <td className="py-3 pr-4 text-zinc-400">{formatDate(inv.due_at)}</td>
+                    <td className="py-3 pr-4 text-zinc-300">{formatPence(inv.total_pence)}</td>
+                    <td className="py-3 pr-4">
+                      <InvoiceStatusBadge
+                        status={inv.status}
+                        due_at={inv.due_at}
+                        amount_paid_pence={inv.amount_paid_pence}
+                        total_pence={inv.total_pence}
+                      />
+                    </td>
+                    <td className="py-3">
+                      <InvoiceRowMenu
+                        accountId={accountId}
+                        accountSlug={accountSlug}
+                        invoice={inv}
+                        canEditInvoices={canEditInvoices}
+                        canManageInvoiceStatus={canManageInvoiceStatus}
+                        onChanged={fetchInvoices}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
 
-          {!loading && total > 0 && (
+          {tab !== 'recurring' && !loading && total > 0 ? (
             <div className="mt-4 flex items-center justify-between text-sm text-zinc-500">
               <span>
                 Page {page} of {totalPages} ({total} invoices)
               </span>
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className="border-zinc-600 text-zinc-300"
-                >
+                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
                   Previous
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage((p) => p + 1)}
-                  className="border-zinc-600 text-zinc-300"
-                >
+                <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
                   Next
                 </Button>
               </div>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
+
+      <Sheet open={createSheetOpen} onOpenChange={setCreateSheetOpen}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Create invoice</SheetTitle>
+          </SheetHeader>
+          <div className="mt-6 space-y-4">
+            <div>
+              <Label>Client</Label>
+              <ClientCombobox
+                clients={clientOptions}
+                value={selectedClientId}
+                onValueChange={setSelectedClientId}
+                loading={clientsLoading}
+                placeholder="Select client"
+                emptyMessage="No clients"
+                addClientHref={pathsConfig.app.accountClients.replace('[account]', accountSlug)}
+              />
+            </div>
+            <Button
+              className="w-full bg-[var(--keel-teal)] text-[#09111F]"
+              onClick={handleCreateInvoice}
+              disabled={creating || !selectedClientId}
+            >
+              {creating ? 'Creating…' : 'Create and edit'}
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

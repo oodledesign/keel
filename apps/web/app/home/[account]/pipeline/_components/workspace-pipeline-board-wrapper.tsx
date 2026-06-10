@@ -9,11 +9,13 @@ import { PipelineBoard } from '~/home/(user)/pipeline/_components/pipeline-board
 type Props = {
   initialData: PipelineData;
   accountSlug: string;
+  accountId: string;
 };
 
 export function WorkspacePipelineBoardWrapper({
   initialData,
   accountSlug,
+  accountId,
 }: Props) {
   const router = useRouter();
 
@@ -32,6 +34,7 @@ export function WorkspacePipelineBoardWrapper({
       initialData={initialData}
       onDealWon={handleDealWon}
       workspaceAccountSlug={accountSlug}
+      workspaceAccountId={accountId}
     />
   );
 }

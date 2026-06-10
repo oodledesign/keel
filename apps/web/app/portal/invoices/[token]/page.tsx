@@ -4,7 +4,10 @@ import Link from 'next/link';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { computeInvoiceTotals } from '~/home/[account]/invoices/_lib/invoice-totals';
 import { reconcileInvoicePaymentByCheckoutSession } from '~/home/[account]/invoices/_lib/server/invoice-checkout';
+import { loadPaymentSettingsForPortal } from '~/home/[account]/invoices/_lib/server/invoice-payment-settings.service';
+import { markInvoiceReadByToken } from '~/home/[account]/invoices/_lib/server/invoice-v2.server';
 
 import { PortalInvoiceView } from './portal-invoice-view';
 
@@ -18,9 +21,7 @@ async function getInvoiceByToken(token: string) {
 
   const { data: invoice, error: invoiceError } = await client
     .from('invoices')
-    .select(
-      'id, invoice_number, status, due_at, total_pence, currency, notes, issued_at, paid_at, client_id',
-    )
+    .select('*')
     .eq('public_token', token)
     .maybeSingle();
 
@@ -31,7 +32,7 @@ async function getInvoiceByToken(token: string) {
   const [{ data: items }, { data: clientData }] = await Promise.all([
     client
       .from('invoice_items')
-      .select('description, quantity, unit_price_pence, total_pence')
+      .select('description, description_detail, quantity, unit_price_pence, total_pence')
       .eq('invoice_id', invoice.id)
       .order('sort_order', { ascending: true }),
     invoice.client_id
@@ -45,8 +46,22 @@ async function getInvoiceByToken(token: string) {
       : Promise.resolve({ data: null }),
   ]);
 
+  const totals = computeInvoiceTotals({
+    subtotal_pence: invoice.subtotal_pence ?? 0,
+    discount_type: invoice.discount_type,
+    discount_value: invoice.discount_value,
+    tax_rate_bp: invoice.tax_rate_bp,
+    late_fee_type: invoice.late_fee_type,
+    late_fee_value: invoice.late_fee_value,
+    deposit_type: invoice.deposit_type,
+    deposit_value: invoice.deposit_value,
+    due_at: invoice.due_at,
+    status: invoice.status,
+  });
+
   return {
     ...invoice,
+    ...totals,
     items: items ?? [],
     client: clientData ?? null,
   } as Record<string, unknown>;
@@ -60,14 +75,13 @@ export default async function PortalInvoicePage({
   const { paid, cancelled, session_id } = await searchParams;
   if (!token) notFound();
 
+  await markInvoiceReadByToken(token);
+
   let paymentReconciled = false;
 
   if (paid === '1' && session_id) {
     try {
-      const result = await reconcileInvoicePaymentByCheckoutSession(
-        session_id,
-        token,
-      );
+      const result = await reconcileInvoicePaymentByCheckoutSession(session_id, token);
       paymentReconciled = result.paid;
     } catch {
       paymentReconciled = false;
@@ -76,43 +90,48 @@ export default async function PortalInvoicePage({
 
   const invoice = await getInvoiceByToken(token);
   if (!invoice) notFound();
+
+  const accountId = String((invoice as { account_id?: string }).account_id ?? '');
+  const paymentSettings = accountId ? await loadPaymentSettingsForPortal(accountId) : null;
+
   const invoiceStatus = String((invoice as { status?: string }).status ?? '');
   const isPaid = invoiceStatus === 'paid';
-  const isCancelled = invoiceStatus === 'cancelled';
+  const isVoid = ['cancelled', 'void'].includes(invoiceStatus);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6">
-        <Link
-          href="/"
-          className="text-sm text-zinc-400 hover:text-white"
-        >
+        <Link href="/" className="text-sm text-zinc-400 hover:text-white">
           ← Back to home
         </Link>
       </div>
-      {paid === '1' && isPaid && (
+      {paid === '1' && isPaid ? (
         <div className="mb-6 rounded-lg border border-emerald-700 bg-[var(--keel-teal)]/10 px-4 py-3 text-[#5eead4]">
           Payment successful. Thank you.
         </div>
-      )}
-      {paid === '1' && !isPaid && (
+      ) : null}
+      {paid === '1' && !isPaid ? (
         <div className="mb-6 rounded-lg border border-amber-600/60 bg-amber-500/10 px-4 py-3 text-amber-300">
           {paymentReconciled
             ? 'Payment was received and is still syncing.'
             : 'Payment return detected, but the invoice has not been marked paid yet.'}
         </div>
-      )}
-      {cancelled === '1' && (
+      ) : null}
+      {cancelled === '1' ? (
         <div className="mb-6 rounded-lg border border-zinc-600 bg-zinc-800/50 px-4 py-3 text-zinc-400">
           Payment was cancelled.
         </div>
-      )}
-      {isCancelled && (
+      ) : null}
+      {isVoid ? (
         <div className="mb-6 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-red-200">
-          This invoice is cancelled and can no longer be paid.
+          This invoice is no longer payable.
         </div>
-      )}
-      <PortalInvoiceView invoice={invoice} token={token} />
+      ) : null}
+      <PortalInvoiceView
+        invoice={invoice}
+        token={token}
+        paymentSettings={paymentSettings}
+      />
     </div>
   );
 }

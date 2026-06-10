@@ -27,6 +27,7 @@ import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
 import { updateDeal } from '../actions';
 import type { PipelineDeal } from '../../_lib/server/pipeline.loader';
+import { MeetingTranscriptsBlock } from '~/home/[account]/_components/meeting-transcripts-block';
 
 const STAGES = [
   { key: 'lead', label: 'Lead' },
@@ -45,6 +46,7 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   onDealUpdated: (deal: PipelineDeal) => void;
   accountSlug?: string;
+  accountId?: string;
 };
 
 export function EditDealDialog({
@@ -54,6 +56,7 @@ export function EditDealDialog({
   onOpenChange,
   onDealUpdated,
   accountSlug,
+  accountId,
 }: Props) {
   const workspaceScoped = Boolean(accountSlug?.trim());
   const [isPending, startTransition] = useTransition();
@@ -140,7 +143,7 @@ export function EditDealDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-white/8 bg-[#0F1923] text-white sm:max-w-md">
+      <DialogContent className="max-h-[90vh] overflow-y-auto border-white/8 bg-[#0F1923] text-white sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Edit deal</DialogTitle>
           <DialogDescription className="text-zinc-400">
@@ -291,6 +294,16 @@ export function EditDealDialog({
             </button>
           </DialogFooter>
         </form>
+
+        {accountId && deal ? (
+          <div className="mt-4 border-t border-white/8 pt-4">
+            <MeetingTranscriptsBlock
+              accountId={accountId}
+              dealId={deal.id}
+              canEdit
+            />
+          </div>
+        ) : null}
       </DialogContent>
     </Dialog>
   );

@@ -19,6 +19,13 @@ import type {
   UpdateInvoiceInput,
   UpsertInvoiceItemsInput,
 } from '../schema/invoices.schema';
+import { computeInvoiceTotals } from '../invoice-totals';
+import {
+  DEFAULT_INVOICE_EMAIL_BODY,
+  DEFAULT_INVOICE_EMAIL_SIGNATURE,
+  DEFAULT_INVOICE_EMAIL_SUBJECT,
+} from '../invoice-smart-fields';
+import { recordInvoicePayment } from './invoice-v2.server';
 import {
   sendInvoiceIssuedEmail,
   sendInvoicePaidNotifications,
@@ -91,18 +98,45 @@ class InvoicesService {
 
   /** Recalculate and update invoice subtotal_pence and total_pence from items. */
   async computeTotals(invoiceId: string): Promise<{ subtotal_pence: number; total_pence: number }> {
+    const { data: invoice, error: invoiceError } = await this.db
+      .from('invoices')
+      .select('*')
+      .eq('id', invoiceId)
+      .single();
+    if (invoiceError) this.throwErr(invoiceError);
+
     const { data: items, error: itemsError } = await this.db
       .from('invoice_items')
       .select('total_pence')
       .eq('invoice_id', invoiceId);
     if (itemsError) this.throwErr(itemsError);
-    const total_pence = (items ?? []).reduce((sum: number, row: { total_pence: number }) => sum + row.total_pence, 0);
+    const subtotal_pence = (items ?? []).reduce(
+      (sum: number, row: { total_pence: number }) => sum + row.total_pence,
+      0,
+    );
+
+    const totals = computeInvoiceTotals({
+      subtotal_pence,
+      discount_type: invoice.discount_type,
+      discount_value: invoice.discount_value,
+      tax_rate_bp: invoice.tax_rate_bp,
+      late_fee_type: invoice.late_fee_type,
+      late_fee_value: invoice.late_fee_value,
+      deposit_type: invoice.deposit_type,
+      deposit_value: invoice.deposit_value,
+      due_at: invoice.due_at,
+      status: invoice.status,
+    });
+
     const { error: updateError } = await this.db
       .from('invoices')
-      .update({ subtotal_pence: total_pence, total_pence })
+      .update({
+        subtotal_pence: totals.subtotal_pence,
+        total_pence: totals.total_pence,
+      })
       .eq('id', invoiceId);
     if (updateError) this.throwErr(updateError);
-    return { subtotal_pence: total_pence, total_pence };
+    return { subtotal_pence: totals.subtotal_pence, total_pence: totals.total_pence };
   }
 
   /** Log an audit event for an invoice. */
@@ -126,7 +160,7 @@ class InvoicesService {
   async listInvoices(params: ListInvoicesInput) {
     await this.ensureUser();
 
-    const { accountId, page = 1, pageSize = 20, query, status } = params;
+    const { accountId, page = 1, pageSize = 20, query, status, clientId, dateFrom, dateTo, includeArchived } = params;
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
@@ -137,12 +171,26 @@ class InvoicesService {
       .order('created_at', { ascending: false })
       .range(from, to);
 
-    if (status === 'overdue') {
-      q = q
-        .eq('status', 'sent')
-        .lt('due_at', new Date().toISOString());
-    } else if (status) {
+    if (!includeArchived) {
+      q = q.is('archived_at', null);
+    }
+
+    if (status === 'unpaid') {
+      q = q.in('status', ['sent', 'read']);
+    } else if (status === 'overdue') {
+      q = q.in('status', ['sent', 'read']).lt('due_at', new Date().toISOString());
+    } else if (status && status !== 'all') {
       q = q.eq('status', status);
+    }
+
+    if (clientId) {
+      q = q.eq('client_id', clientId);
+    }
+    if (dateFrom) {
+      q = q.gte('issued_at', dateFrom);
+    }
+    if (dateTo) {
+      q = q.lte('issued_at', dateTo);
     }
     if (query?.trim()) {
       const term = `%${query.trim()}%`;
@@ -197,6 +245,11 @@ class InvoicesService {
         subtotal_pence: 0,
         total_pence: 0,
         notes: input.notes ?? null,
+        title: input.title ?? null,
+        reference_number: input.reference_number ?? null,
+        email_subject: DEFAULT_INVOICE_EMAIL_SUBJECT,
+        email_body: DEFAULT_INVOICE_EMAIL_BODY,
+        email_signature: DEFAULT_INVOICE_EMAIL_SIGNATURE,
         created_by: user.id,
       })
       .select()
@@ -224,13 +277,27 @@ class InvoicesService {
       .single();
     if (existingInvoiceError) this.throwErr(existingInvoiceError);
     if (existingInvoice?.status !== 'draft') {
-      throw new Error('Sent, paid, or cancelled invoices can no longer be edited');
+      throw new Error('Sent, paid, or void invoices can no longer be edited');
     }
 
     const payload: Record<string, unknown> = {};
     if (input.client_id !== undefined) payload.client_id = input.client_id;
     if (input.due_at !== undefined) payload.due_at = input.due_at;
     if (input.notes !== undefined) payload.notes = input.notes;
+    if (input.title !== undefined) payload.title = input.title;
+    if (input.reference_number !== undefined) payload.reference_number = input.reference_number;
+    if (input.footer_message !== undefined) payload.footer_message = input.footer_message;
+    if (input.private_note !== undefined) payload.private_note = input.private_note;
+    if (input.discount_type !== undefined) payload.discount_type = input.discount_type;
+    if (input.discount_value !== undefined) payload.discount_value = input.discount_value;
+    if (input.tax_rate_bp !== undefined) payload.tax_rate_bp = input.tax_rate_bp;
+    if (input.deposit_type !== undefined) payload.deposit_type = input.deposit_type;
+    if (input.deposit_value !== undefined) payload.deposit_value = input.deposit_value;
+    if (input.late_fee_type !== undefined) payload.late_fee_type = input.late_fee_type;
+    if (input.late_fee_value !== undefined) payload.late_fee_value = input.late_fee_value;
+    if (input.email_subject !== undefined) payload.email_subject = input.email_subject;
+    if (input.email_body !== undefined) payload.email_body = input.email_body;
+    if (input.email_signature !== undefined) payload.email_signature = input.email_signature;
 
     const { data, error } = await this.db
       .from('invoices')
@@ -248,7 +315,14 @@ class InvoicesService {
       payload: Object.keys(payload),
       actorId: user.id,
     });
-    return data;
+
+    await this.computeTotals(input.invoiceId);
+    const { data: refreshed } = await this.db
+      .from('invoices')
+      .select('*')
+      .eq('id', input.invoiceId)
+      .single();
+    return refreshed ?? data;
   }
 
   async deleteInvoice(params: DeleteInvoiceInput) {
@@ -299,6 +373,7 @@ class InvoicesService {
       job_id: item.job_id ?? null,
       sort_order: item.sort_order ?? index,
       description: item.description,
+      description_detail: item.description_detail ?? null,
       quantity: item.quantity,
       unit_price_pence: item.unit_price_pence,
       total_pence: item.quantity * item.unit_price_pence,
@@ -336,8 +411,12 @@ class InvoicesService {
       throw new Error('Only sent invoices can be cancelled');
     }
 
-    if (input.status === 'paid' && oldStatus !== 'sent') {
+    if (input.status === 'paid' && !['sent', 'read'].includes(oldStatus ?? '')) {
       throw new Error('Only sent invoices can be marked as paid');
+    }
+
+    if (input.status === 'void' && !['sent', 'read'].includes(oldStatus ?? '')) {
+      throw new Error('Only sent invoices can be voided');
     }
 
     if (input.status === 'paid' && !paymentMethod) {
@@ -347,6 +426,11 @@ class InvoicesService {
     const payload: Record<string, unknown> = { status: input.status };
     if (input.status === 'paid') {
       payload.paid_at = existing?.paid_at ?? new Date().toISOString();
+    }
+    if (input.status === 'void') {
+      payload.paid_at = null;
+      payload.stripe_payment_intent_id = null;
+      payload.stripe_checkout_session_id = null;
     }
     if (input.status === 'cancelled') {
       payload.paid_at = null;
@@ -376,6 +460,23 @@ class InvoicesService {
     });
 
     if (input.status === 'paid' && paymentMethod) {
+      const { data: invoiceRow } = await this.db
+        .from('invoices')
+        .select('total_pence, amount_paid_pence')
+        .eq('id', input.invoiceId)
+        .single();
+      const remaining =
+        (invoiceRow?.total_pence ?? 0) - (invoiceRow?.amount_paid_pence ?? 0);
+      if (remaining > 0) {
+        await recordInvoicePayment({
+          accountId: input.accountId,
+          invoiceId: input.invoiceId,
+          amount_pence: remaining,
+          payment_method: paymentMethod,
+          actorId: user.id,
+        });
+      }
+
       await this.logEvent({
         accountId: input.accountId,
         invoiceId: input.invoiceId,
@@ -408,6 +509,51 @@ class InvoicesService {
       .eq('account_id', input.accountId)
       .single();
     if (fetchError || !invoice) this.throwErr(fetchError, 'Invoice not found');
+
+    const emailPatch: Record<string, unknown> = {};
+    if (input.email_subject) emailPatch.email_subject = input.email_subject;
+    if (input.email_body) emailPatch.email_body = input.email_body;
+    if (input.email_signature) emailPatch.email_signature = input.email_signature;
+
+    if (Object.keys(emailPatch).length > 0) {
+      await this.db
+        .from('invoices')
+        .update(emailPatch)
+        .eq('id', input.invoiceId)
+        .eq('account_id', input.accountId);
+    }
+
+    const senderInfo = {
+      first_name: user.user_metadata?.first_name ?? null,
+      last_name: user.user_metadata?.last_name ?? null,
+      email: user.email ?? null,
+    };
+
+    if (input.send_test_to_self) {
+      const testEmail = user.email;
+      if (!testEmail) throw new Error('No email on your account for test send');
+
+      let testToken = invoice.public_token;
+      if (!testToken) {
+        const { randomBytes } = await import('crypto');
+        testToken = randomBytes(32).toString('hex');
+        await this.db
+          .from('invoices')
+          .update({ public_token: testToken })
+          .eq('id', input.invoiceId)
+          .eq('account_id', input.accountId);
+      }
+
+      await sendInvoiceIssuedEmail({
+        accountId: input.accountId,
+        invoiceId: input.invoiceId,
+        recipientEmail: testEmail,
+        testOnly: true,
+        sender: senderInfo,
+      });
+      return { test_sent: true };
+    }
+
     if (invoice.status !== 'draft') throw new Error('Only draft invoices can be sent');
 
     let public_token = invoice.public_token;
@@ -445,6 +591,7 @@ class InvoicesService {
         accountId: input.accountId,
         invoiceId: input.invoiceId,
         recipientEmail: input.sent_to_email,
+        sender: senderInfo,
       });
     } catch {
       // Keep the invoice in sent state even if email delivery fails.
@@ -489,7 +636,7 @@ class InvoicesService {
       .single();
     if (error || !invoice) this.throwErr(error, 'Invoice not found');
 
-    if (invoice.status !== 'sent') {
+    if (invoice.status !== 'sent' && invoice.status !== 'read') {
       throw new Error('You can only create a payment link for a sent invoice');
     }
 

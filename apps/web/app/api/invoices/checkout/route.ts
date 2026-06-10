@@ -5,13 +5,16 @@ import { createInvoiceCheckoutSessionByToken } from '~/home/[account]/invoices/_
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const token = searchParams.get('token');
+  const deposit = searchParams.get('deposit') === '1';
 
   if (!token) {
     return NextResponse.json({ error: 'Missing token' }, { status: 400 });
   }
 
   try {
-    const url = await createInvoiceCheckoutSessionByToken(token);
+    const url = await createInvoiceCheckoutSessionByToken(token, {
+      payDepositOnly: deposit,
+    });
     return NextResponse.redirect(url, { status: 303 });
   } catch (error) {
     const message =

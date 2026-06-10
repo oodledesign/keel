@@ -6,7 +6,9 @@ import { useState } from 'react';
 import {
   BriefcaseBusiness,
   Clock3,
+  FileSignature,
   FileText,
+  PenLine,
   Plus,
   UserRoundPlus,
 } from 'lucide-react';
@@ -32,6 +34,22 @@ const items = [
     icon: FileText,
     href: pathsConfig.app.accountInvoices,
     tone: 'from-blue-500/20 to-blue-500/5 text-blue-300',
+  },
+  {
+    key: 'proposal',
+    title: 'New Proposal',
+    description: 'Draft a client proposal',
+    icon: PenLine,
+    href: pathsConfig.app.accountProposals,
+    tone: 'from-emerald-500/20 to-emerald-500/5 text-emerald-300',
+  },
+  {
+    key: 'contract',
+    title: 'New Contract',
+    description: 'Create a services agreement',
+    icon: FileSignature,
+    href: pathsConfig.app.accountContracts,
+    tone: 'from-amber-500/20 to-amber-500/5 text-amber-300',
   },
   {
     key: 'client',

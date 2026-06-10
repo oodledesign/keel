@@ -34,6 +34,7 @@ export type AccountModuleKey =
 /** Nav label "Projects" maps to module_key `jobs` in account_module_settings. */
 export function resolveAccountModuleKey(navKey: string): string {
   if (navKey === 'projects') return 'jobs';
+  if (navKey === 'proposals' || navKey === 'contracts') return 'invoices';
   return navKey;
 }
 

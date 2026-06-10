@@ -7,8 +7,15 @@ type InvoiceForPdf = {
   status: string;
   due_at: string | null;
   total_pence: number;
+  subtotal_pence?: number;
+  discount_pence?: number;
+  tax_pence?: number;
+  late_fee_pence?: number;
+  deposit_due_pence?: number;
   currency: string;
   notes: string | null;
+  footer_message?: string | null;
+  brand_name?: string | null;
   items: Array<{
     description: string;
     quantity: number;
@@ -26,6 +33,14 @@ type InvoiceForPdf = {
     city?: string | null;
     postcode?: string | null;
     country?: string | null;
+  } | null;
+  bank?: {
+    bank_account_name?: string | null;
+    bank_sort_code?: string | null;
+    bank_account_number?: string | null;
+    bank_iban?: string | null;
+    bank_bic?: string | null;
+    bank_transfer_instructions?: string | null;
   } | null;
 };
 
@@ -69,6 +84,11 @@ export async function buildInvoicePdf(invoice: InvoiceForPdf): Promise<Uint8Arra
     y -= size + 2;
   };
 
+  if (invoice.brand_name) {
+    drawText(invoice.brand_name, margin, 14, { bold: true });
+    y -= 4;
+  }
+
   drawText(`Invoice ${invoice.invoice_number}`, margin, 20, { bold: true });
   y -= 8;
 
@@ -84,22 +104,12 @@ export async function buildInvoicePdf(invoice: InvoiceForPdf): Promise<Uint8Arra
     drawText(name, margin, 10);
     if (invoice.client.company_name) drawText(invoice.client.company_name, margin, 10);
     if (invoice.client.email) drawText(invoice.client.email, margin, 10);
-    const addr = [
-      invoice.client.address_line_1,
-      invoice.client.address_line_2,
-      [invoice.client.city, invoice.client.postcode].filter(Boolean).join(' '),
-      invoice.client.country,
-    ]
-      .filter(Boolean)
-      .join(', ');
-    if (addr) drawText(addr, margin, 10);
     y -= 16;
   }
 
   drawText('Line items', margin, 12, { bold: true });
   y -= 6;
 
-  const tableTop = y;
   const col1 = margin;
   const col2 = width - margin - 80;
   const col3 = width - margin - 55;
@@ -120,12 +130,46 @@ export async function buildInvoicePdf(invoice: InvoiceForPdf): Promise<Uint8Arra
   }
 
   y -= 8;
+  if ((invoice.discount_pence ?? 0) > 0) {
+    page.drawText(`Discount: -${formatPence(invoice.discount_pence ?? 0)}`, { x: col3, y, size: 10, font, color: rgb(0.2, 0.2, 0.2) });
+    y -= 12;
+  }
+  if ((invoice.tax_pence ?? 0) > 0) {
+    page.drawText(`Tax: ${formatPence(invoice.tax_pence ?? 0)}`, { x: col3, y, size: 10, font, color: rgb(0.2, 0.2, 0.2) });
+    y -= 12;
+  }
+  if ((invoice.late_fee_pence ?? 0) > 0) {
+    page.drawText(`Late fee: ${formatPence(invoice.late_fee_pence ?? 0)}`, { x: col3, y, size: 10, font, color: rgb(0.2, 0.2, 0.2) });
+    y -= 12;
+  }
   page.drawText(`Total: ${formatPence(invoice.total_pence)}`, { x: col3, y, size: 11, font: fontBold, color: rgb(0.1, 0.1, 0.1) });
   y -= 16;
+
+  if ((invoice.deposit_due_pence ?? 0) > 0) {
+    drawText(`Deposit due: ${formatPence(invoice.deposit_due_pence ?? 0)}`, margin, 10);
+  }
 
   if (invoice.notes) {
     drawText('Notes', margin, 10, { bold: true });
     drawText(invoice.notes.slice(0, 500), margin, 9);
+  }
+
+  if (invoice.footer_message) {
+    drawText(invoice.footer_message.slice(0, 500), margin, 9);
+  }
+
+  if (invoice.bank?.bank_account_number || invoice.bank?.bank_iban) {
+    y -= 8;
+    drawText('Bank transfer details', margin, 11, { bold: true });
+    if (invoice.bank.bank_account_name) drawText(`Account name: ${invoice.bank.bank_account_name}`, margin, 9);
+    if (invoice.bank.bank_sort_code) drawText(`Sort code: ${invoice.bank.bank_sort_code}`, margin, 9);
+    if (invoice.bank.bank_account_number) drawText(`Account number: ${invoice.bank.bank_account_number}`, margin, 9);
+    if (invoice.bank.bank_iban) drawText(`IBAN: ${invoice.bank.bank_iban}`, margin, 9);
+    if (invoice.bank.bank_bic) drawText(`BIC: ${invoice.bank.bank_bic}`, margin, 9);
+    drawText(`Reference: ${invoice.invoice_number}`, margin, 9);
+    if (invoice.bank.bank_transfer_instructions) {
+      drawText(invoice.bank.bank_transfer_instructions.slice(0, 300), margin, 9);
+    }
   }
 
   return doc.save();

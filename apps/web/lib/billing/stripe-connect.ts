@@ -33,7 +33,8 @@ type DynamicSupabaseClient = SupabaseClient & {
 };
 
 export type StripeConnectState = {
-  businessId: string;
+  businessId?: string;
+  accountId?: string;
   userId: string;
   exp: number;
 };
@@ -126,10 +127,10 @@ export function verifyStripeConnectState(
     ) as StripeConnectState;
 
     if (
-      typeof parsed.businessId !== 'string' ||
       typeof parsed.userId !== 'string' ||
       typeof parsed.exp !== 'number' ||
-      Date.now() > parsed.exp
+      Date.now() > parsed.exp ||
+      (!parsed.businessId && !parsed.accountId)
     ) {
       return null;
     }
@@ -144,11 +145,28 @@ export async function buildStripeConnectSettingsRedirect(
   client: SupabaseClient,
   params: {
     origin: string;
-    businessId: string | null;
+    businessId?: string | null;
+    accountId?: string | null;
     query: Record<string, string>;
   },
 ): Promise<string> {
-  const qs = new URLSearchParams({ section: 'business', ...params.query });
+  const qs = new URLSearchParams(params.query);
+
+  if (params.accountId) {
+    const db = client as DynamicSupabaseClient;
+    const accountResult = await db
+      .from('accounts')
+      .select('slug')
+      .eq('id', params.accountId)
+      .maybeSingle();
+
+    const account = accountResult.data as { slug?: string | null } | null;
+    if (account?.slug) {
+      return `${params.origin}/app/work/${account.slug}/settings/payments?${qs.toString()}`;
+    }
+  }
+
+  qs.set('section', 'business');
 
   if (params.businessId) {
     const db = client as DynamicSupabaseClient;

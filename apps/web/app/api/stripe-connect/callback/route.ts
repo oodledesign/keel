@@ -48,12 +48,14 @@ export async function GET(request: Request) {
       stripeError: errorParam,
       errorDescription,
       businessId: state?.businessId ?? null,
+      accountId: state?.accountId ?? null,
     });
 
     return NextResponse.redirect(
       await buildStripeConnectSettingsRedirect(admin, {
         origin,
         businessId: state?.businessId ?? null,
+        accountId: state?.accountId ?? null,
         query: { stripe_connect_error: message },
       }),
     );
@@ -120,26 +122,47 @@ export async function GET(request: Request) {
 
     const connectedAccount = await stripe.accounts.retrieve(connectedAccountId);
     const db = admin as unknown as DynamicAdmin;
-    const { error: upsertError } = await db.from('agency_stripe').upsert(
-      {
-        business_id: state.businessId,
-        stripe_account_id: connectedAccountId,
-        stripe_account_email: connectedAccount.email ?? null,
-        stripe_connect_enabled: true,
-        stripe_pay_now_enabled: true,
-      },
-      { onConflict: 'business_id' },
-    );
 
-    if (upsertError) {
-      console.error('Failed to save Stripe Connect account:', upsertError);
-      return redirectWithError('save_failed');
+    if (state.accountId) {
+      const { error: upsertError } = await db.from('account_payment_settings').upsert(
+        {
+          account_id: state.accountId,
+          stripe_account_id: connectedAccountId,
+          stripe_connect_enabled: true,
+          stripe_pay_now_enabled: true,
+        },
+        { onConflict: 'account_id' },
+      );
+
+      if (upsertError) {
+        console.error('Failed to save account payment settings:', upsertError);
+        return redirectWithError('save_failed');
+      }
+    } else if (state.businessId) {
+      const { error: upsertError } = await db.from('agency_stripe').upsert(
+        {
+          business_id: state.businessId,
+          stripe_account_id: connectedAccountId,
+          stripe_account_email: connectedAccount.email ?? null,
+          stripe_connect_enabled: true,
+          stripe_pay_now_enabled: true,
+        },
+        { onConflict: 'business_id' },
+      );
+
+      if (upsertError) {
+        console.error('Failed to save Stripe Connect account:', upsertError);
+        return redirectWithError('save_failed');
+      }
+    } else {
+      return redirectWithError('invalid_state');
     }
 
     return NextResponse.redirect(
       await buildStripeConnectSettingsRedirect(admin, {
         origin,
-        businessId: state.businessId,
+        businessId: state.businessId ?? null,
+        accountId: state.accountId ?? null,
         query: { stripe_connected: '1' },
       }),
     );

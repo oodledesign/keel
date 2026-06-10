@@ -5,6 +5,11 @@ import Stripe from 'stripe';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { sendInvoicePaidNotifications } from './invoice-notifications';
+import {
+  getCheckoutAmountPence,
+  recordInvoicePayment,
+} from './invoice-v2.server';
+import { loadPaymentSettingsForPortal } from './invoice-payment-settings.service';
 
 const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY;
 
@@ -39,7 +44,7 @@ async function applyPaidCheckoutSession(
   const admin = getSupabaseServerAdminClient();
   const { data: invoice, error: invoiceError } = await admin
     .from('invoices')
-    .select('id, account_id, status, public_token')
+    .select('id, account_id, status, public_token, total_pence, amount_paid_pence')
     .eq('id', invoiceId)
     .maybeSingle();
 
@@ -53,20 +58,25 @@ async function applyPaidCheckoutSession(
 
   if (invoice.status !== 'paid') {
     const paymentIntentId = getPaymentIntentId(session);
+    const amount = session.amount_total ?? Math.max(
+      0,
+      (invoice.total_pence ?? 0) - (invoice.amount_paid_pence ?? 0),
+    );
 
-    const { error: updateError } = await admin
-      .from('invoices')
-      .update({
-        status: 'paid',
-        paid_at: new Date().toISOString(),
-        stripe_payment_intent_id: paymentIntentId,
-        stripe_checkout_session_id: session.id,
-      })
-      .eq('id', invoice.id);
+    await recordInvoicePayment({
+      accountId: invoice.account_id,
+      invoiceId: invoice.id,
+      amount_pence: amount,
+      payment_method: 'stripe',
+      stripe_checkout_session_id: session.id,
+      stripe_payment_intent_id: paymentIntentId,
+      actorId: null,
+    });
 
-    if (updateError) {
-      return { paid: false, reason: 'update_failed' as const };
-    }
+    await admin.from('invoices').update({
+      stripe_payment_intent_id: paymentIntentId,
+      stripe_checkout_session_id: session.id,
+    }).eq('id', invoice.id);
 
     await admin.from('invoice_events').insert({
       account_id: invoice.account_id,
@@ -90,32 +100,41 @@ async function applyPaidCheckoutSession(
   return { paid: true, reason: 'paid' as const, invoiceId: invoice.id };
 }
 
-/**
- * Create a Stripe Checkout Session for an invoice (portal: by token).
- * Callable without auth; invoice is looked up by public_token.
- * Returns the session URL to redirect the client.
- */
-export async function createInvoiceCheckoutSessionByToken(token: string): Promise<string> {
+export async function createInvoiceCheckoutSessionByToken(
+  token: string,
+  options?: { payDepositOnly?: boolean },
+): Promise<string> {
   const stripe = getStripeClient();
   const admin = getSupabaseServerAdminClient();
 
   const { data: invoice, error: invError } = await admin
     .from('invoices')
-    .select('id, account_id, client_id, total_pence, currency, status')
+    .select('*')
     .eq('public_token', token)
     .single();
 
   if (invError || !invoice) {
     throw new Error('Invoice not found');
   }
-  if (invoice.status === 'cancelled') {
-    throw new Error('This invoice has been cancelled');
+  if (['cancelled', 'void'].includes(invoice.status)) {
+    throw new Error('This invoice is no longer payable');
   }
-  if (invoice.status !== 'sent') {
+  if (!['sent', 'read'].includes(invoice.status)) {
     throw new Error('This invoice is not available for payment');
   }
-  if (invoice.total_pence <= 0) {
-    throw new Error('Invoice total must be greater than zero');
+
+  const paymentSettings = await loadPaymentSettingsForPortal(invoice.account_id);
+  if (
+    !paymentSettings?.stripe_connect_enabled ||
+    !paymentSettings.stripe_account_id ||
+    !paymentSettings.stripe_pay_now_enabled
+  ) {
+    throw new Error('Card payments are not enabled for this invoice');
+  }
+
+  const amount = getCheckoutAmountPence(invoice, options?.payDepositOnly ?? false);
+  if (amount <= 0) {
+    throw new Error('Nothing left to pay on this invoice');
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.VERCEL_URL ?? 'http://localhost:3000';
@@ -130,10 +149,10 @@ export async function createInvoiceCheckoutSessionByToken(token: string): Promis
       {
         price_data: {
           currency: (invoice.currency ?? 'gbp').toLowerCase(),
-          unit_amount: invoice.total_pence,
+          unit_amount: amount,
           product_data: {
-            name: `Invoice ${invoice.id}`,
-            description: 'Invoice payment',
+            name: `Invoice ${invoice.invoice_number}`,
+            description: options?.payDepositOnly ? 'Deposit payment' : 'Invoice payment',
           },
         },
         quantity: 1,
@@ -145,6 +164,12 @@ export async function createInvoiceCheckoutSessionByToken(token: string): Promis
     metadata: {
       invoice_id: invoice.id,
       account_id: invoice.account_id,
+      pay_deposit_only: options?.payDepositOnly ? '1' : '0',
+    },
+    payment_intent_data: {
+      transfer_data: {
+        destination: paymentSettings.stripe_account_id,
+      },
     },
   });
 

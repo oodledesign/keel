@@ -9,6 +9,13 @@ import {
 } from '~/lib/brand/account-brand';
 import pathsConfig from '~/config/paths.config';
 
+import {
+  DEFAULT_INVOICE_EMAIL_BODY,
+  DEFAULT_INVOICE_EMAIL_SIGNATURE,
+  DEFAULT_INVOICE_EMAIL_SUBJECT,
+  renderSmartFields,
+} from '../invoice-smart-fields';
+
 type PaymentMethod = 'stripe' | 'cash' | 'bank_transfer';
 
 function formatPence(pence: number) {
@@ -174,6 +181,12 @@ export async function sendInvoiceIssuedEmail(params: {
   accountId: string;
   invoiceId: string;
   recipientEmail: string;
+  testOnly?: boolean;
+  sender?: {
+    first_name?: string | null;
+    last_name?: string | null;
+    email?: string | null;
+  } | null;
 }) {
   const sender = process.env.EMAIL_SENDER;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
@@ -187,7 +200,7 @@ export async function sendInvoiceIssuedEmail(params: {
   const { data: invoice, error: invoiceError } = await admin
     .from('invoices')
     .select(
-      'id, account_id, client_id, invoice_number, total_pence, due_at, public_token',
+      'id, account_id, client_id, invoice_number, total_pence, due_at, public_token, currency, email_subject, email_body, email_signature',
     )
     .eq('id', params.invoiceId)
     .eq('account_id', params.accountId)
@@ -205,19 +218,32 @@ export async function sendInvoiceIssuedEmail(params: {
       .maybeSingle(),
     admin
       .from('clients')
-      .select('display_name, first_name, last_name')
+      .select('display_name, first_name, last_name, company_name, email')
       .eq('id', invoice.client_id)
       .maybeSingle(),
   ]);
 
-  const clientName =
-    client?.display_name ??
-    [client?.first_name, client?.last_name].filter(Boolean).join(' ') ??
-    'there';
   const portalInvoiceUrl = new URL(
     `/portal/invoices/${invoice.public_token}`,
     siteUrl,
   ).href;
+
+  const smartCtx = {
+    client,
+    invoice,
+    sender: params.sender ?? null,
+    accountName: account?.name ?? productName,
+  };
+
+  const subjectTemplate =
+    invoice.email_subject?.trim() || DEFAULT_INVOICE_EMAIL_SUBJECT;
+  const bodyTemplate = invoice.email_body?.trim() || DEFAULT_INVOICE_EMAIL_BODY;
+  const signatureTemplate =
+    invoice.email_signature?.trim() || DEFAULT_INVOICE_EMAIL_SIGNATURE;
+
+  const subject = renderSmartFields(subjectTemplate, smartCtx);
+  const bodyText = renderSmartFields(bodyTemplate, smartCtx);
+  const signature = renderSmartFields(signatureTemplate, smartCtx);
   const dueDate = invoice.due_at
     ? new Date(invoice.due_at).toLocaleDateString('en-GB')
     : '—';
@@ -225,19 +251,22 @@ export async function sendInvoiceIssuedEmail(params: {
 
   const brand = await loadAccountBrandResolved(params.accountId);
   const issuedInner = `
-      <h2 style="margin:0 0 16px">Your invoice is ready</h2>
-      <p>Hi ${clientName},</p>
-      <p>You have received invoice <strong>${invoice.invoice_number}</strong> from <strong>${account?.name ?? productName}</strong>.</p>
-      <p><strong>Total:</strong> ${amount}<br /><strong>Due date:</strong> ${dueDate}</p>
-      <p>View and pay your invoice here: <a href="${portalInvoiceUrl}">${portalInvoiceUrl}</a></p>
-      <p>Thanks,<br />${productName}</p>
+      <h2 style="margin:0 0 16px">${subject}</h2>
+      <p>${bodyText.replace(/\n/g, '<br />')}</p>
+      <div style="margin:24px 0;padding:16px;border:1px solid #e5e7eb;border-radius:12px;background:#f9fafb">
+        <p style="margin:0 0 8px"><strong>Invoice ${invoice.invoice_number}</strong></p>
+        <p style="margin:0 0 4px"><strong>Total:</strong> ${amount}</p>
+        <p style="margin:0"><strong>Due date:</strong> ${dueDate}</p>
+        <p style="margin:16px 0 0"><a href="${portalInvoiceUrl}">View and pay invoice</a></p>
+      </div>
+      <p>${signature.replace(/\n/g, '<br />')}</p>
   `;
 
   const mailer = await getMailer();
   await mailer.sendEmail({
     from: sender,
     to: params.recipientEmail,
-    subject: `Invoice ${invoice.invoice_number} from ${account?.name ?? productName}`,
+    subject: params.testOnly ? `[Test] ${subject}` : subject,
     html: wrapEmailHtmlWithBrand({
       brand,
       innerHtml: issuedInner,

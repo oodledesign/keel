@@ -9,7 +9,7 @@ import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.l
 import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard';
 import { loadInvoicesPageData } from '../../_lib/server/invoices-page.loader';
 import { getInvoice } from '../../_lib/server/server-actions';
-import { InvoiceEditContent } from '../../_components/invoice-edit-content';
+import { InvoiceEditIndyContent } from '../../_components/invoice-edit-indy-content';
 
 interface InvoiceEditPageProps {
   params: Promise<{ account: string; id: string }>;
@@ -55,7 +55,7 @@ async function InvoiceEditPage({ params }: InvoiceEditPageProps) {
       />
 
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
-        <InvoiceEditContent
+        <InvoiceEditIndyContent
           accountSlug={accountSlug}
           accountId={accountId}
           invoice={invoice as Record<string, unknown>}

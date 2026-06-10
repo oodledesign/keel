@@ -24,6 +24,7 @@ import { ClientInvoicesBlock } from './client-invoices-block';
 import { ClientJobHistoryBlock } from './client-job-history-block';
 import { ContextWorkspaceDocs } from '../../_components/workspace-content/context-workspace-docs';
 import { ContextWorkspaceNotes } from '../../_components/workspace-content/context-workspace-notes';
+import { MeetingTranscriptsBlock } from '../../_components/meeting-transcripts-block';
 import type { LinkValue } from '../../_components/workspace-content/link-to-select';
 import type {
   DocListItem,
@@ -70,7 +71,7 @@ type PortalStatus = {
   isMember: boolean;
 };
 
-type DetailTab = 'activity' | 'contacts' | 'jobs' | 'invoices' | 'notes' | 'tasks';
+type DetailTab = 'activity' | 'contacts' | 'jobs' | 'invoices' | 'transcripts' | 'notes' | 'tasks';
 
 type ClientJobSummary = {
   id: string;
@@ -390,6 +391,7 @@ export function ClientDetailSidebar({
                           ...(client.client_type === 'business' ? [['contacts', 'Contacts']] : []),
                           ['jobs', 'Jobs'],
                           ['invoices', 'Invoices'],
+                          ['transcripts', 'Transcripts'],
                           ['notes', 'Notes'],
                           ['tasks', 'Tasks'],
                         ] as [DetailTab, string][]
@@ -447,6 +449,13 @@ export function ClientDetailSidebar({
                           accountSlug={accountSlug}
                           accountId={accountId}
                           clientId={client.id}
+                        />
+                      )}
+                      {activeTab === 'transcripts' && (
+                        <MeetingTranscriptsBlock
+                          accountId={accountId}
+                          clientId={client.id}
+                          canEdit={canEditClients}
                         />
                       )}
                       {activeTab === 'notes' &&
