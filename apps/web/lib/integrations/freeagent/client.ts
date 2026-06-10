@@ -106,6 +106,25 @@ export class FreeAgentClient {
     return data.bank_transaction_explanations ?? [];
   }
 
+  async listTransactionExplanationsForBankAccount(
+    bankAccountUrl: string,
+    page = 1,
+    options?: { fromDate?: string; toDate?: string },
+  ) {
+    const env = getFreeAgentEnv();
+    const url = new URL(`${env.apiBase}/bank_transaction_explanations`);
+    url.searchParams.set('bank_account', bankAccountUrl);
+    url.searchParams.set('page', String(page));
+    url.searchParams.set('per_page', '100');
+    if (options?.fromDate) url.searchParams.set('from_date', options.fromDate);
+    if (options?.toDate) url.searchParams.set('to_date', options.toDate);
+
+    const data = await this.request<FreeAgentList<Record<string, unknown>>>(
+      url.toString(),
+    );
+    return data.bank_transaction_explanations ?? [];
+  }
+
   async createTransactionExplanation(body: Record<string, unknown>) {
     return this.request<{ bank_transaction_explanation: Record<string, unknown> }>(
       '/bank_transaction_explanations',

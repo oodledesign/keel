@@ -167,7 +167,9 @@ export function FinancesPageContent({
       startTransition(async () => {
         try {
           await syncFreeAgentAction({ accountId, accountSlug });
-          toast.success('Transactions imported from FreeAgent');
+          toast.success(
+            'FreeAgent synced — transactions and categories imported',
+          );
           await refresh({ background: true });
         } catch {
           toast.error('Connected, but initial sync failed — try Sync now');
@@ -289,9 +291,15 @@ export function FinancesPageContent({
       try {
         const result = await syncFreeAgentAction({ accountId, accountSlug });
         await refresh({ background: true });
-        toast.success(
-          `Synced ${result.imported} new transaction${result.imported === 1 ? '' : 's'}`,
-        );
+        const parts = [
+          `${result.imported} new transaction${result.imported === 1 ? '' : 's'}`,
+        ];
+        if (result.categorised > 0) {
+          parts.push(
+            `${result.categorised} categor${result.categorised === 1 ? 'y' : 'ies'} imported from FreeAgent`,
+          );
+        }
+        toast.success(`Synced ${parts.join(', ')}`);
       } catch (e) {
         toast.error(e instanceof Error ? e.message : 'Sync failed');
       }
@@ -533,8 +541,8 @@ function FreeAgentPanel({
           <h3 className="font-medium text-white">FreeAgent</h3>
           <p className="text-sm text-zinc-400">
             {data?.connection
-              ? `Connected to ${data.connection.freeagent_company_name ?? 'FreeAgent'}. Keel is your UI; FreeAgent stays the ledger. Categories you set here sync back to FreeAgent when the transaction and category are linked.`
-              : 'Connect FreeAgent to import bank transactions. Categorise in Keel and sync back.'}
+              ? `Connected to ${data.connection.freeagent_company_name ?? 'FreeAgent'}. Keel is your UI; FreeAgent stays the ledger. Categories sync from FreeAgent on each sync. When you categorise here, Keel writes a bank transaction explanation in FreeAgent (fully explained, not a draft).`
+              : 'Connect FreeAgent to import bank transactions and categories. Categorise in Keel and sync explanations back to FreeAgent.'}
           </p>
         </div>
         <div className="flex gap-2">

@@ -7,6 +7,12 @@ import {
   parseFreeAgentId,
   poundsToPence,
 } from './client';
+import {
+  buildCategoryUrlToIdMap,
+  categoryKindFromFreeAgent,
+  freeAgentCategoryDisplayName,
+  removeKeelDefaultCategories,
+} from './finance-categories';
 
 type ConnectionRow = {
   id: string;
@@ -15,6 +21,11 @@ type ConnectionRow = {
   refresh_token: string;
   token_expires_at: string;
   freeagent_company_url: string | null;
+};
+
+type FreeAgentExplanationSummary = {
+  explanationUrl: string;
+  categoryUrl: string | null;
 };
 
 async function saveTokens(
@@ -41,16 +52,96 @@ function clientFromConnection(db: SupabaseClient, row: ConnectionRow) {
   );
 }
 
-function categoryKindFromFreeAgent(cat: Record<string, unknown>): 'income' | 'expense' {
-  const group = String(cat.group ?? cat.category_group ?? '').toLowerCase();
-  if (group.includes('income') || group.includes('sales')) return 'income';
-  return 'expense';
+function explanationCategoryUrl(explanation: Record<string, unknown>): string | null {
+  const category = explanation.category;
+  if (typeof category === 'string' && category.trim()) {
+    return category.trim();
+  }
+  return null;
+}
+
+async function fetchExplanationMapForBankAccount(
+  client: FreeAgentClient,
+  bankAccountUrl: string,
+): Promise<Map<string, FreeAgentExplanationSummary>> {
+  const map = new Map<string, FreeAgentExplanationSummary>();
+
+  for (let page = 1; page <= 50; page++) {
+    const explanations = await client.listTransactionExplanationsForBankAccount(
+      bankAccountUrl,
+      page,
+    );
+    if (explanations.length === 0) break;
+
+    for (const explanation of explanations) {
+      const bankTransactionUrl = String(explanation.bank_transaction ?? '').trim();
+      const explanationUrl = String(explanation.url ?? '').trim();
+      if (!bankTransactionUrl || !explanationUrl) continue;
+
+      const categoryUrl = explanationCategoryUrl(explanation);
+      const existing = map.get(bankTransactionUrl);
+
+      if (!existing) {
+        map.set(bankTransactionUrl, { explanationUrl, categoryUrl });
+        continue;
+      }
+
+      // Prefer an explanation that carries an explicit category.
+      if (!existing.categoryUrl && categoryUrl) {
+        map.set(bankTransactionUrl, { explanationUrl, categoryUrl });
+      }
+    }
+
+    if (explanations.length < 100) break;
+  }
+
+  return map;
+}
+
+async function syncFreeAgentCategories(
+  db: SupabaseClient,
+  accountId: string,
+  client: FreeAgentClient,
+) {
+  const faCategories = await client.listCategories();
+
+  for (const cat of faCategories) {
+    const url = String(cat.url ?? '');
+    const faId = parseFreeAgentId(url);
+    if (!url || !faId) continue;
+
+    const { data: existing } = await db
+      .from('finance_categories')
+      .select('id')
+      .eq('account_id', accountId)
+      .eq('freeagent_category_url', url)
+      .maybeSingle();
+
+    const payload = {
+      account_id: accountId,
+      name: freeAgentCategoryDisplayName(cat),
+      kind: categoryKindFromFreeAgent(cat),
+      freeagent_category_url: url,
+      freeagent_category_id: faId,
+      is_system: false,
+    };
+
+    if (existing?.id) {
+      await db.from('finance_categories').update(payload).eq('id', existing.id);
+    } else {
+      await db.from('finance_categories').insert(payload);
+    }
+  }
+
+  if (faCategories.length > 0) {
+    await removeKeelDefaultCategories(db, accountId);
+  }
 }
 
 export async function syncFreeAgentToKeel(
   db: SupabaseClient,
   accountId: string,
-): Promise<{ imported: number; bankAccounts: number }> {
+): Promise<{ imported: number; bankAccounts: number; categorised: number }> {
   const { data: connection, error } = await db
     .from('finance_connections')
     .select('*')
@@ -74,41 +165,19 @@ export async function syncFreeAgentToKeel(
     })
     .eq('id', connection.id);
 
-  const faCategories = await client.listCategories();
-  for (const cat of faCategories) {
-    const url = String(cat.url ?? '');
-    const faId = parseFreeAgentId(url);
-    if (!url || !faId) continue;
-
-    const { data: existing } = await db
-      .from('finance_categories')
-      .select('id')
-      .eq('account_id', accountId)
-      .eq('freeagent_category_url', url)
-      .maybeSingle();
-
-    const payload = {
-      account_id: accountId,
-      name: String(cat.name ?? cat.description ?? 'Category'),
-      kind: categoryKindFromFreeAgent(cat),
-      freeagent_category_url: url,
-      freeagent_category_id: faId,
-    };
-
-    if (existing?.id) {
-      await db.from('finance_categories').update(payload).eq('id', existing.id);
-    } else {
-      await db.from('finance_categories').insert(payload);
-    }
-  }
+  await syncFreeAgentCategories(db, accountId, client);
+  const categoryUrlToId = await buildCategoryUrlToIdMap(db, accountId);
 
   const faBankAccounts = await client.listBankAccounts();
   let imported = 0;
+  let categorised = 0;
 
   for (const ba of faBankAccounts) {
     const baUrl = String(ba.url ?? '');
     const baId = parseFreeAgentId(baUrl);
     if (!baUrl) continue;
+
+    const explanationMap = await fetchExplanationMapForBankAccount(client, baUrl);
 
     const { data: bankRow } = await db
       .from('finance_bank_accounts')
@@ -161,12 +230,22 @@ export async function syncFreeAgentToKeel(
           tx.description ?? tx.full_description ?? tx.comment ?? '',
         );
 
+        const faExplanation = explanationMap.get(txUrl);
+        const categoryId =
+          faExplanation?.categoryUrl != null
+            ? (categoryUrlToId.get(faExplanation.categoryUrl) ?? null)
+            : null;
+
         const { data: existingTx } = await db
           .from('finance_transactions')
-          .select('id, category_id, freeagent_explanation_url')
+          .select('id, category_id, freeagent_explanation_url, sync_status')
           .eq('account_id', accountId)
           .eq('freeagent_transaction_url', txUrl)
           .maybeSingle();
+
+        const preserveLocalCategory =
+          existingTx?.sync_status === 'pending_push' ||
+          existingTx?.sync_status === 'local';
 
         const payload = {
           account_id: accountId,
@@ -178,7 +257,18 @@ export async function syncFreeAgentToKeel(
           source: 'freeagent' as const,
           external_id: `freeagent:${txId}`,
           freeagent_transaction_url: txUrl,
-          sync_status: 'synced' as const,
+          freeagent_explanation_url: faExplanation?.explanationUrl ?? null,
+          category_id:
+            preserveLocalCategory && existingTx?.category_id
+              ? existingTx.category_id
+              : categoryId,
+          sync_status:
+            preserveLocalCategory && existingTx?.category_id
+              ? existingTx.sync_status
+              : categoryId
+                ? ('synced' as const)
+                : ('synced' as const),
+          sync_error: null,
         };
 
         if (existingTx?.id) {
@@ -189,11 +279,18 @@ export async function syncFreeAgentToKeel(
               description: payload.description,
               amount_pence: payload.amount_pence,
               bank_account_id: bankAccountId,
+              freeagent_explanation_url: payload.freeagent_explanation_url,
+              category_id: payload.category_id,
+              sync_status: payload.sync_status,
+              sync_error: null,
             })
             .eq('id', existingTx.id);
+
+          if (categoryId && !preserveLocalCategory) categorised++;
         } else {
           await db.from('finance_transactions').insert(payload);
           imported++;
+          if (categoryId) categorised++;
         }
       }
 
@@ -211,7 +308,7 @@ export async function syncFreeAgentToKeel(
     .update({ last_sync_at: new Date().toISOString() })
     .eq('id', connection.id);
 
-  return { imported, bankAccounts: faBankAccounts.length };
+  return { imported, bankAccounts: faBankAccounts.length, categorised };
 }
 
 export async function pushCategoryToFreeAgent(

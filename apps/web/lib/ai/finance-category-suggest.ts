@@ -19,7 +19,7 @@ export type CategorySuggestion = {
   reason?: string;
 };
 
-const SYSTEM_PROMPT = `You categorise UK small-business bank transactions.
+const SYSTEM_PROMPT = `You categorise UK small-business bank transactions using the provided chart of accounts (often from FreeAgent).
 
 Given a list of categories and uncategorised transactions, return ONLY valid JSON (no markdown):
 {
@@ -34,9 +34,9 @@ Given a list of categories and uncategorised transactions, return ONLY valid JSO
 }
 
 Rules:
-- Use categoryId from the provided list only.
+- Use categoryId from the provided list only — pick the closest FreeAgent-style category name.
 - Match income (positive amounts) to income categories, expenses (negative) to expense categories.
-- Prefer specific categories over generic ones when confident.
+- Prefer specific categories (e.g. "Computer Software", "Subscriptions") over broad ones.
 - Use null categoryId when genuinely uncertain.`;
 
 export async function suggestTransactionCategories(input: {
@@ -118,6 +118,27 @@ export async function suggestTransactionCategories(input: {
   }
 }
 
+function findCategoryByNames(
+  categories: CategoryOption[],
+  names: string[],
+): CategoryOption | undefined {
+  for (const name of names) {
+    const exact = categories.find(
+      (c) => c.name.toLowerCase() === name.toLowerCase(),
+    );
+    if (exact) return exact;
+  }
+
+  for (const name of names) {
+    const partial = categories.find((c) =>
+      c.name.toLowerCase().includes(name.toLowerCase()),
+    );
+    if (partial) return partial;
+  }
+
+  return undefined;
+}
+
 function heuristicCategorySuggestions(input: {
   categories: CategoryOption[];
   transactions: TransactionForSuggest[];
@@ -127,12 +148,47 @@ function heuristicCategorySuggestions(input: {
     expense: input.categories.filter((c) => c.kind === 'expense'),
   };
 
-  const rules: Array<{ pattern: RegExp; categoryName: string; kind: 'income' | 'expense' }> = [
-    { pattern: /stripe|paypal|payment|invoice|client|sales/i, categoryName: 'Sales', kind: 'income' },
-    { pattern: /refund|rebate/i, categoryName: 'Other income', kind: 'income' },
-    { pattern: /aws|azure|google cloud|github|notion|slack|zoom|adobe|subscription|saas/i, categoryName: 'Software & subscriptions', kind: 'expense' },
-    { pattern: /train|uber|taxi|fuel|parking|hotel|flight|travel/i, categoryName: 'Travel', kind: 'expense' },
-    { pattern: /amazon|office|stationery|post|courier/i, categoryName: 'Office & admin', kind: 'expense' },
+  const rules: Array<{
+    pattern: RegExp;
+    categoryNames: string[];
+    kind: 'income' | 'expense';
+  }> = [
+    {
+      pattern: /stripe|paypal|payment|invoice|client|sales/i,
+      categoryNames: ['Sales', 'Other income'],
+      kind: 'income',
+    },
+    {
+      pattern: /refund|rebate/i,
+      categoryNames: ['Other income', 'Refund'],
+      kind: 'income',
+    },
+    {
+      pattern:
+        /anthropic|openai|aws|azure|google cloud|github|notion|slack|zoom|adobe|subscription|saas|relume|skool|software/i,
+      categoryNames: [
+        'Computer Software',
+        'Subscriptions',
+        'Software & subscriptions',
+        'Other Computer Costs',
+      ],
+      kind: 'expense',
+    },
+    {
+      pattern: /train|uber|taxi|fuel|parking|hotel|flight|travel/i,
+      categoryNames: ['Travel', 'Motor Expenses'],
+      kind: 'expense',
+    },
+    {
+      pattern: /amazon|office|stationery|post|courier|web hosting/i,
+      categoryNames: [
+        'Office Costs',
+        'Stationery',
+        'Web Hosting',
+        'Office & admin',
+      ],
+      kind: 'expense',
+    },
   ];
 
   return input.transactions.map((tx) => {
@@ -141,9 +197,7 @@ function heuristicCategorySuggestions(input: {
     for (const rule of rules) {
       if (rule.kind !== kind) continue;
       if (!rule.pattern.test(desc)) continue;
-      const cat = byKind[kind].find(
-        (c) => c.name.toLowerCase() === rule.categoryName.toLowerCase(),
-      );
+      const cat = findCategoryByNames(byKind[kind], rule.categoryNames);
       if (cat) {
         return {
           transactionId: tx.id,
@@ -154,14 +208,11 @@ function heuristicCategorySuggestions(input: {
       }
     }
 
-    const fallback = byKind[kind].find((c) =>
-      c.name.toLowerCase().includes('uncategor'),
-    );
     return {
       transactionId: tx.id,
-      categoryId: fallback?.id ?? byKind[kind][0]?.id ?? null,
+      categoryId: null,
       confidence: 'low' as const,
-      reason: 'Heuristic fallback',
+      reason: 'No confident match',
     };
   });
 }

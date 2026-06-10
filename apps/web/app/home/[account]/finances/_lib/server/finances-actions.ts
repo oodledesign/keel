@@ -18,6 +18,10 @@ import {
   pushCategoryToFreeAgent,
   syncFreeAgentToKeel,
 } from '~/lib/integrations/freeagent/sync';
+import {
+  hasFreeAgentFinanceConnection,
+  loadFinanceCategoriesForAccount,
+} from '~/lib/integrations/freeagent/finance-categories';
 import { isFreeAgentConfigured } from '~/lib/integrations/freeagent/env';
 
 const DEFAULT_CATEGORIES = [
@@ -40,6 +44,21 @@ function revalidateFinances(accountSlug: string) {
 
 export async function ensureDefaultFinanceCategories(accountId: string) {
   const client = getSupabaseServerClient();
+
+  if (await hasFreeAgentFinanceConnection(client, accountId)) {
+    return;
+  }
+
+  const { count: linkedCount } = await client
+    .from('finance_categories')
+    .select('id', { count: 'exact', head: true })
+    .eq('account_id', accountId)
+    .not('freeagent_category_url', 'is', null);
+
+  if ((linkedCount ?? 0) > 0) {
+    return;
+  }
+
   const { count, error: countError } = await client
     .from('finance_categories')
     .select('id', { count: 'exact', head: true })
@@ -87,17 +106,12 @@ export const loadFinancesDashboardAction = enhanceAction(
 
     const [
       { data: transactions, error: txError },
-      { data: categories },
+      categories,
       { data: bankAccounts },
       { data: connection },
     ] = await Promise.all([
       txQuery,
-      client
-        .from('finance_categories')
-        .select('id, name, kind, color, freeagent_category_url')
-        .eq('account_id', input.accountId)
-        .order('kind')
-        .order('name'),
+      loadFinanceCategoriesForAccount(client, input.accountId),
       client
         .from('finance_bank_accounts')
         .select('id, name, currency, source, last_synced_at')
@@ -391,26 +405,17 @@ export const suggestTransactionCategoriesAction = enhanceAction(
         txQuery = txQuery.lte('transaction_date', input.dateTo.trim());
       }
 
-      const [
-        { data: transactions, error: txError },
-        { data: categories, error: categoriesError },
-      ] = await Promise.all([
+      const [transactionsResult, categories] = await Promise.all([
         txQuery,
-        client
-          .from('finance_categories')
-          .select('id, name, kind')
-          .eq('account_id', input.accountId)
-          .order('kind')
-          .order('name'),
+        loadFinanceCategoriesForAccount(client, input.accountId),
       ]);
+
+      const { data: transactions, error: txError } = transactionsResult;
 
       if (txError) {
         throw new Error(txError.message || 'Could not load transactions');
       }
-      if (categoriesError) {
-        throw new Error(categoriesError.message || 'Could not load categories');
-      }
-      if (!categories?.length) {
+      if (!categories.length) {
         throw new Error(
           'No categories found. Sync FreeAgent or add categories first.',
         );
