@@ -133,6 +133,7 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
         <DashboardPageContent
           accountName={data.userFirstName ?? data.accountSlug}
           metrics={data.metrics}
+          financeTrend={data.financeTrend}
           statusSummary={data.statusSummary}
           activeJobs={data.activeJobsList}
           recentInvoices={data.recentInvoices}

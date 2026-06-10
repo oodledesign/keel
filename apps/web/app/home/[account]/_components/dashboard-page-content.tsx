@@ -13,30 +13,27 @@ import {
   TriangleAlert,
   Users,
 } from 'lucide-react';
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  XAxis,
-  Tooltip as RechartsTooltip,
-  ResponsiveContainer,
-} from 'recharts';
 
 import { Badge } from '@kit/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 
 import type {
+  DashboardFinanceMonth,
   DashboardInvoiceSummary,
   DashboardJobSummary,
   DashboardMetrics,
   DashboardStatusSummary,
 } from '../_lib/server/dashboard-page.loader';
+import {
+  FinanceMonthRail,
+  FinanceTrendBarChart,
+} from '~/components/finance/finance-charts';
 
 type DashboardPageContentProps = {
   accountName: string;
   metrics: DashboardMetrics;
+  financeTrend: DashboardFinanceMonth[];
   statusSummary: DashboardStatusSummary;
   activeJobs: DashboardJobSummary[];
   teamMembers: Array<{
@@ -54,6 +51,7 @@ const panelClass =
 export function DashboardPageContent({
   accountName,
   metrics,
+  financeTrend,
   statusSummary,
   activeJobs,
   teamMembers,
@@ -94,20 +92,32 @@ export function DashboardPageContent({
     };
   }, [statusSummary, totalProjects]);
 
-  const revenueTrendData = useMemo(
-    () => buildRevenueTrendData(metrics.totalRevenuePence / 100),
-    [metrics.totalRevenuePence],
-  );
+  const revenueTrendData = useMemo(() => {
+    if (financeTrend.length > 0) return financeTrend;
+    return buildRevenueTrendFallback(metrics.totalRevenuePence / 100);
+  }, [financeTrend, metrics.totalRevenuePence]);
 
-  const monthRailData = useMemo(
-    () =>
-      buildMonthRailData({
-        currentRevenue: metrics.totalRevenuePence / 100,
-        currentHours: metrics.hoursLogged,
-        currentJobsCompleted: statusSummary.completed,
-      }),
-    [metrics.totalRevenuePence, metrics.hoursLogged, statusSummary.completed],
-  );
+  const monthRailData = useMemo(() => {
+    if (financeTrend.length > 0) return [...financeTrend].reverse().slice(0, 3);
+    return buildMonthRailFallback({
+      currentRevenue: metrics.totalRevenuePence / 100,
+      currentHours: metrics.hoursLogged,
+      currentJobsCompleted: statusSummary.completed,
+    });
+  }, [
+    financeTrend,
+    metrics.totalRevenuePence,
+    metrics.hoursLogged,
+    statusSummary.completed,
+  ]);
+
+  const totalRevenueLabel = metrics.hasFinanceData
+    ? formatCurrency(metrics.financeIncomePence / 100)
+    : formatCurrency(metrics.totalRevenuePence / 100);
+
+  const totalRevenueHelper = metrics.hasFinanceData
+    ? 'Finance income this month'
+    : 'Paid invoices this month';
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6 bg-[radial-gradient(circle_at_18%_0%,rgba(42,157,143,0.1),transparent_35%),radial-gradient(circle_at_82%_6%,rgba(15,27,53,0.35),transparent_40%)] px-4 pb-10 pt-5 text-white md:px-6 lg:px-8">
@@ -115,8 +125,8 @@ export function DashboardPageContent({
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Total Revenue"
-          value={formatCurrency(metrics.totalRevenuePence / 100)}
-          helper="Paid invoices this month"
+          value={totalRevenueLabel}
+          helper={totalRevenueHelper}
           tone="teal"
           icon={BarChart3}
         />
@@ -205,6 +215,7 @@ export function DashboardPageContent({
               <OverviewTab
                 revenueTrendData={revenueTrendData}
                 monthRailData={monthRailData}
+                hasFinanceData={metrics.hasFinanceData}
               />
             </TabsContent>
 
@@ -457,21 +468,26 @@ function StatusBar({
 function OverviewTab({
   revenueTrendData,
   monthRailData,
+  hasFinanceData,
 }: {
   revenueTrendData: Array<{
     month: string;
-    revenue: number;
+    income: number;
     expenses: number;
-    profit: number;
-    isCurrent: boolean;
+    net: number;
+    isCurrent?: boolean;
   }>;
   monthRailData: Array<{
     month: string;
-    revenue: number;
-    jobsCompleted: number;
-    hoursWorked: number;
-    isCurrent: boolean;
+    income?: number;
+    expenses?: number;
+    net?: number;
+    revenue?: number;
+    jobsCompleted?: number;
+    hoursWorked?: number;
+    isCurrent?: boolean;
   }>;
+  hasFinanceData: boolean;
 }) {
   return (
     <Card className={panelClass}>
@@ -479,17 +495,19 @@ function OverviewTab({
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
             <CardTitle className="text-sm font-semibold text-white">
-              Revenue Trend
+              {hasFinanceData ? 'Income & expenses' : 'Revenue trend'}
             </CardTitle>
             <p className="mt-1 text-xs text-violet-200/70">
-              Monthly revenue overview for the last 6 months
+              {hasFinanceData
+                ? 'Monthly finance data from your connected accounts'
+                : 'Monthly revenue overview for the last 6 months'}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-4 text-xs text-violet-100/80">
             <div className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-violet-400" />
-              <span>Profit</span>
+              <span className="h-2.5 w-2.5 rounded-full bg-[#2A9D8F]" />
+              <span>Income</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full bg-[#176A72]" />
@@ -501,100 +519,64 @@ function OverviewTab({
 
       <CardContent>
         <div className="grid gap-6 md:grid-cols-[minmax(0,1fr),320px] md:items-start">
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={revenueTrendData} barCategoryGap="28%">
-                <CartesianGrid
-                  vertical={false}
-                  stroke="rgba(255,255,255,0.05)"
-                />
-                <XAxis
-                  dataKey="month"
-                  tickLine={false}
-                  axisLine={false}
-                  tick={{ fill: '#8FA1BC', fontSize: 12 }}
-                />
-                <RechartsTooltip
-                  cursor={{ fill: 'rgba(255,255,255,0.035)' }}
-                  contentStyle={{
-                    backgroundColor: '#0B1524',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    borderRadius: 12,
-                    fontSize: 12,
-                    color: '#F7F9FC',
-                    boxShadow: '0 12px 30px rgba(2, 8, 23, 0.35)',
-                  }}
-                  labelStyle={{ color: '#F7F9FC', fontWeight: 600 }}
-                  itemStyle={{ color: '#D7DEEE' }}
-                  formatter={(value: number, name: string) => [
-                    formatCurrency(Number(value)),
-                    name === 'profit' ? 'Profit' : 'Expenses',
-                  ]}
-                />
-                <Bar
-                  dataKey="expenses"
-                  stackId="revenue"
-                  radius={[0, 0, 10, 10]}
-                >
-                  {revenueTrendData.map((entry) => (
-                    <Cell
-                      key={`${entry.month}-expenses`}
-                      fill={entry.isCurrent ? '#3C8D63' : '#176A72'}
-                    />
-                  ))}
-                </Bar>
-                <Bar
-                  dataKey="profit"
-                  stackId="revenue"
-                  radius={[10, 10, 0, 0]}
-                >
-                  {revenueTrendData.map((entry) => (
-                    <Cell
-                      key={`${entry.month}-profit`}
-                      fill={entry.isCurrent ? '#A78BFA' : '#7C3AED'}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <FinanceTrendBarChart data={revenueTrendData} variant="grouped" />
 
-          <div className="space-y-3">
-            {monthRailData.map((month, index) => (
-              <div
-                key={month.month}
-                className={`rounded-2xl border px-4 py-4 ${
-                  month.isCurrent || index === 0
-                    ? 'border-violet-400/60 bg-[var(--workspace-shell-panel)] shadow-[0_0_0_1px_rgba(167,139,250,0.16)]'
-                    : 'border-white/6 bg-[var(--workspace-shell-panel)]'
-                }`}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-semibold text-white">{month.month}</p>
-                  <span className="text-sm font-semibold text-violet-300">
-                    {formatCurrency(month.revenue)}
-                  </span>
-                </div>
-                <div className="mt-4 grid gap-2 text-xs text-violet-100/80">
-                  <div className="flex items-center justify-between">
-                    <span className="text-violet-200/70">Revenue</span>
-                    <span>{formatCurrency(month.revenue)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-violet-200/70">Jobs Completed</span>
-                    <span>{month.jobsCompleted}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-violet-200/70">Hours Worked</span>
-                    <span>{month.hoursWorked}h</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          {hasFinanceData ? (
+            <FinanceMonthRail data={revenueTrendData} />
+          ) : (
+            <LegacyMonthRail data={monthRailData} />
+          )}
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function LegacyMonthRail({
+  data,
+}: {
+  data: Array<{
+    month: string;
+    revenue: number;
+    jobsCompleted: number;
+    hoursWorked: number;
+    isCurrent: boolean;
+  }>;
+}) {
+  return (
+    <div className="space-y-3">
+      {data.map((month, index) => (
+        <div
+          key={month.month}
+          className={`rounded-2xl border px-4 py-4 ${
+            month.isCurrent || index === 0
+              ? 'border-violet-400/60 bg-[var(--workspace-shell-panel)] shadow-[0_0_0_1px_rgba(167,139,250,0.16)]'
+              : 'border-white/6 bg-[var(--workspace-shell-panel)]'
+          }`}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-white">{month.month}</p>
+            <span className="text-sm font-semibold text-violet-300">
+              {formatCurrency(month.revenue)}
+            </span>
+          </div>
+          <div className="mt-4 grid gap-2 text-xs text-violet-100/80">
+            <div className="flex items-center justify-between">
+              <span className="text-violet-200/70">Revenue</span>
+              <span>{formatCurrency(month.revenue)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-violet-200/70">Jobs Completed</span>
+              <span>{month.jobsCompleted}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-violet-200/70">Hours Worked</span>
+              <span>{month.hoursWorked}h</span>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -920,7 +902,7 @@ function mockMetric(
   return 85 + (hash % 10);
 }
 
-function buildRevenueTrendData(currentRevenue: number) {
+function buildRevenueTrendFallback(currentRevenue: number) {
   const now = new Date();
   const formatter = new Intl.DateTimeFormat('en-GB', { month: 'short' });
   const fallback = currentRevenue > 0 ? currentRevenue : 48392;
@@ -929,20 +911,20 @@ function buildRevenueTrendData(currentRevenue: number) {
   return multipliers.map((multiplier, index) => {
     const monthsAgo = multipliers.length - 1 - index;
     const date = new Date(now.getFullYear(), now.getMonth() - monthsAgo, 1);
-    const revenue = Math.round(fallback * multiplier);
-    const baseRevenue = Math.round(revenue * 0.43);
+    const income = Math.round(fallback * multiplier);
+    const expenses = Math.round(income * 0.43);
 
     return {
       month: formatter.format(date),
-      revenue,
-      expenses: baseRevenue,
-      profit: revenue - baseRevenue,
+      income,
+      expenses,
+      net: income - expenses,
       isCurrent: monthsAgo === 0,
     };
   });
 }
 
-function buildMonthRailData(params: {
+function buildMonthRailFallback(params: {
   currentRevenue: number;
   currentHours: number;
   currentJobsCompleted: number;

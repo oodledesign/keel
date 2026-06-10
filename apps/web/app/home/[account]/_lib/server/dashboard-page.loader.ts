@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
+import { aggregateTransactionsByMonth } from '~/lib/date-range/analytics-date-range';
 
 import { loadTeamWorkspace } from './team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from './workspace-route-guard';
@@ -49,9 +50,22 @@ export type DashboardInvoiceSummary = {
   status: string;
 };
 
+export type DashboardFinanceMonth = {
+  month: string;
+  income: number;
+  expenses: number;
+  net: number;
+  isCurrent: boolean;
+};
+
 export type DashboardMetrics = {
   /** Sum of paid invoice totals (pence) for the current calendar month. */
   totalRevenuePence: number;
+  /** Finance income (pence) for the current calendar month, when available. */
+  financeIncomePence: number;
+  financeExpensePence: number;
+  financeNetPence: number;
+  hasFinanceData: boolean;
   activeProjects: number;
   totalClients: number;
   hoursLogged: number;
@@ -62,6 +76,7 @@ export type DashboardPageData = {
   accountSlug: string;
   userFirstName: string | null;
   metrics: DashboardMetrics;
+  financeTrend: DashboardFinanceMonth[];
   statusSummary: DashboardStatusSummary;
   activeJobsList: DashboardJobSummary[];
   recentInvoices: DashboardInvoiceSummary[];
@@ -124,6 +139,12 @@ export async function loadDashboardPageData(
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
   const monthStartIso = monthStart.toISOString();
+  const monthStartDate = monthStart.toISOString().slice(0, 10);
+
+  const financeTrendStart = new Date();
+  financeTrendStart.setMonth(financeTrendStart.getMonth() - 5);
+  financeTrendStart.setDate(1);
+  const financeTrendStartIso = financeTrendStart.toISOString().slice(0, 10);
 
   const weekStart = new Date();
   const day = weekStart.getDay();
@@ -144,6 +165,8 @@ export async function loadDashboardPageData(
     recentInvoicesResult,
     paidInvoicesMonthResult,
     hoursJobsResult,
+    financeMonthResult,
+    financeTrendResult,
   ] = await Promise.all([
     client
       .from('jobs')
@@ -208,12 +231,24 @@ export async function loadDashboardPageData(
       .eq('account_id', accountId)
       .gte('updated_at', weekStartIso)
       .not('actual_minutes', 'is', null),
+    client
+      .from('finance_transactions')
+      .select('amount_pence')
+      .eq('account_id', accountId)
+      .gte('transaction_date', monthStartDate),
+    client
+      .from('finance_transactions')
+      .select('transaction_date, amount_pence')
+      .eq('account_id', accountId)
+      .gte('transaction_date', financeTrendStartIso)
+      .order('transaction_date', { ascending: true }),
   ]);
 
   const jobsUnavailable = isTableMissingFromApi(activeJobsResult.error);
   const invoicesUnavailable = isTableMissingFromApi(
     recentInvoicesResult.error,
   );
+  const financeUnavailable = isTableMissingFromApi(financeMonthResult.error);
 
   if (activeJobsResult.error && !jobsUnavailable) {
     throw activeJobsResult.error;
@@ -268,6 +303,32 @@ export async function loadDashboardPageData(
         0,
       );
 
+  let financeIncomePence = 0;
+  let financeExpensePence = 0;
+  if (!financeUnavailable) {
+    for (const row of financeMonthResult.data ?? []) {
+      const pence = (row.amount_pence as number | null) ?? 0;
+      if (pence >= 0) financeIncomePence += pence;
+      else financeExpensePence += Math.abs(pence);
+    }
+  }
+
+  const financeTrend = financeUnavailable
+    ? []
+    : aggregateTransactionsByMonth(
+        (financeTrendResult.data ?? []).map((row) => ({
+          transaction_date: row.transaction_date as string,
+          amount_pence: (row.amount_pence as number | null) ?? 0,
+        })),
+        6,
+      );
+
+  const hasFinanceData =
+    !financeUnavailable &&
+    ((financeTrendResult.data?.length ?? 0) > 0 ||
+      financeIncomePence > 0 ||
+      financeExpensePence > 0);
+
   const hoursLogged = jobsUnavailable
     ? 0
     : Math.round(
@@ -281,6 +342,10 @@ export async function loadDashboardPageData(
 
   const metrics: DashboardMetrics = {
     totalRevenuePence,
+    financeIncomePence,
+    financeExpensePence,
+    financeNetPence: financeIncomePence - financeExpensePence,
+    hasFinanceData,
     activeProjects: activeProjectsCount,
     totalClients,
     hoursLogged,
@@ -332,6 +397,7 @@ export async function loadDashboardPageData(
     accountSlug: account.slug ?? accountSlug,
     userFirstName,
     metrics,
+    financeTrend,
     statusSummary,
     activeJobsList,
     recentInvoices,

@@ -9,6 +9,7 @@ import {
   ArrowUpRight,
   Link2,
   RefreshCw,
+  Sparkles,
   Upload,
 } from 'lucide-react';
 
@@ -32,15 +33,27 @@ import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
+import {
+  AnalyticsDateRangePicker,
+  DEFAULT_DATE_RANGE,
+  type DateRangeSelection,
+} from '~/components/date-range/analytics-date-range-picker';
+import {
+  FinanceNetLineChart,
+  FinanceTrendBarChart,
+} from '~/components/finance/finance-charts';
+import { resolveAnalyticsDateRange } from '~/lib/date-range/analytics-date-range';
 import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
 
 import {
+  applySuggestedCategoriesAction,
   categorizeFinanceTransactionAction,
   createManualTransactionAction,
   disconnectFreeAgentAction,
   importCsvTransactionsAction,
   loadFinancesDashboardAction,
   suggestCsvMappingAction,
+  suggestTransactionCategoriesAction,
   syncFreeAgentAction,
 } from '../_lib/server/finances-actions';
 
@@ -49,14 +62,16 @@ const panelClass =
 
 type DashboardData = Awaited<ReturnType<typeof loadFinancesDashboardAction>>;
 
-function defaultDateRange() {
-  const to = new Date();
-  const from = new Date();
-  from.setMonth(from.getMonth() - 3);
-  return {
-    from: from.toISOString().slice(0, 10),
-    to: to.toISOString().slice(0, 10),
-  };
+type CategorySuggestion = {
+  transactionId: string;
+  categoryId: string | null;
+  confidence: string;
+  reason?: string;
+};
+
+function initialDateRange() {
+  const resolved = resolveAnalyticsDateRange(DEFAULT_DATE_RANGE);
+  return { from: resolved.fromIso, to: resolved.toIso };
 }
 
 function parseCsv(text: string): { headers: string[]; rows: string[][] } {
@@ -94,10 +109,11 @@ export function FinancesPageContent({
   const [pending, startTransition] = useTransition();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<DashboardData | null>(null);
-  const [dateFrom, setDateFrom] = useState(defaultDateRange().from);
-  const [dateTo, setDateTo] = useState(defaultDateRange().to);
+  const [dateFrom, setDateFrom] = useState(initialDateRange().from);
+  const [dateTo, setDateTo] = useState(initialDateRange().to);
   const [importOpen, setImportOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<CategorySuggestion[]>([]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -143,6 +159,57 @@ export function FinancesPageContent({
       );
     }
   }, [accountId, accountSlug, refresh, router, searchParams]);
+
+  const chartData = useMemo(() => {
+    if (!data?.transactions?.length) return [];
+    const months = new Map<
+      string,
+      { month: string; income: number; expenses: number; net: number }
+    >();
+    const formatter = new Intl.DateTimeFormat('en-GB', { month: 'short' });
+
+    for (const tx of data.transactions) {
+      const key = String(tx.transaction_date).slice(0, 7);
+      if (!months.has(key)) {
+        const [y, m] = key.split('-').map(Number);
+        months.set(key, {
+          month: formatter.format(new Date(y!, m! - 1, 1)),
+          income: 0,
+          expenses: 0,
+          net: 0,
+        });
+      }
+      const row = months.get(key)!;
+      const p = tx.amount_pence as number;
+      if (p >= 0) row.income += p / 100;
+      else row.expenses += Math.abs(p) / 100;
+      row.net = row.income - row.expenses;
+    }
+
+    return [...months.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([, v]) => v);
+  }, [data?.transactions]);
+
+  const uncategorizedCount = useMemo(
+    () => (data?.transactions ?? []).filter((tx) => !tx.category_id).length,
+    [data?.transactions],
+  );
+
+  const suggestionMap = useMemo(
+    () => new Map(aiSuggestions.map((s) => [s.transactionId, s])),
+    [aiSuggestions],
+  );
+
+  const onDateRangeApply = (
+    from: string,
+    to: string,
+    _selection: DateRangeSelection,
+  ) => {
+    setDateFrom(from);
+    setDateTo(to);
+    setAiSuggestions([]);
+  };
 
   const forecast = useMemo(() => {
     if (!data?.transactions?.length) return null;
@@ -200,39 +267,64 @@ export function FinancesPageContent({
     });
   };
 
+  const onSuggestCategories = () => {
+    startTransition(async () => {
+      try {
+        const result = await suggestTransactionCategoriesAction({
+          accountId,
+          dateFrom,
+          dateTo,
+        });
+        setAiSuggestions(result.suggestions);
+        if (!result.suggestions.length) {
+          toast.message('No uncategorised transactions to suggest for');
+        } else {
+          toast.success(
+            `Suggested categories for ${result.suggestions.filter((s) => s.categoryId).length} transactions`,
+          );
+        }
+      } catch {
+        toast.error('Could not suggest categories');
+      }
+    });
+  };
+
+  const onApplySuggestions = () => {
+    const applicable = aiSuggestions.filter((s) => s.categoryId);
+    if (!applicable.length) {
+      toast.error('No suggestions to apply');
+      return;
+    }
+    startTransition(async () => {
+      try {
+        const result = await applySuggestedCategoriesAction({
+          accountId,
+          accountSlug,
+          pushToFreeAgent: Boolean(data?.connection),
+          suggestions: applicable.map((s) => ({
+            transactionId: s.transactionId,
+            categoryId: s.categoryId,
+          })),
+        });
+        setAiSuggestions([]);
+        await refresh();
+        toast.success(`Applied ${result.applied} categories`);
+      } catch {
+        toast.error('Could not apply suggestions');
+      }
+    });
+  };
+
   const connectUrl = `/api/integrations/freeagent/start?account=${encodeURIComponent(accountSlug)}`;
 
   return (
     <div className="space-y-6 px-4 lg:px-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <div>
-            <Label className="text-zinc-400">From</Label>
-            <Input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="mt-1 border-white/10 bg-[var(--workspace-shell-panel)] text-white"
-            />
-          </div>
-          <div>
-            <Label className="text-zinc-400">To</Label>
-            <Input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="mt-1 border-white/10 bg-[var(--workspace-shell-panel)] text-white"
-            />
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            className="border-white/10"
-            onClick={() => void refresh()}
-          >
-            Apply
-          </Button>
-        </div>
+        <AnalyticsDateRangePicker
+          fromIso={dateFrom}
+          toIso={dateTo}
+          onApply={onDateRangeApply}
+        />
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
@@ -273,6 +365,21 @@ export function FinancesPageContent({
           tone={(data?.summary.netPence ?? 0) >= 0 ? 'positive' : 'negative'}
         />
       </div>
+
+      {chartData.length > 0 ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className={cn(panelClass, 'p-4')}>
+            <h3 className="text-sm font-medium text-white">Income vs expenses</h3>
+            <p className="mb-4 text-xs text-zinc-400">By month in selected range</p>
+            <FinanceTrendBarChart data={chartData} variant="grouped" />
+          </div>
+          <div className={cn(panelClass, 'p-4')}>
+            <h3 className="text-sm font-medium text-white">Net trend</h3>
+            <p className="mb-4 text-xs text-zinc-400">Monthly net after expenses</p>
+            <FinanceNetLineChart data={chartData} />
+          </div>
+        </div>
+      ) : null}
 
       {forecast ? (
         <div className={cn(panelClass, 'p-4')}>
@@ -344,8 +451,36 @@ export function FinancesPageContent({
       </div>
 
       <div className={cn(panelClass, 'overflow-hidden')}>
-        <div className="border-b border-white/6 px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/6 px-4 py-3">
           <h3 className="font-medium text-white">Transactions</h3>
+          <div className="flex flex-wrap gap-2">
+            {uncategorizedCount > 0 ? (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="border-white/10"
+                  disabled={pending}
+                  onClick={onSuggestCategories}
+                >
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Suggest categories ({uncategorizedCount})
+                </Button>
+                {aiSuggestions.length > 0 ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="bg-[#2A9D8F] text-white hover:bg-[#238b7f]"
+                    disabled={pending}
+                    onClick={onApplySuggestions}
+                  >
+                    Apply suggestions
+                  </Button>
+                ) : null}
+              </>
+            ) : null}
+          </div>
         </div>
         {loading ? (
           <p className="p-4 text-sm text-zinc-400">Loading…</p>
@@ -372,6 +507,10 @@ export function FinancesPageContent({
                   const cat = data.categories.find(
                     (c) => c.id === tx.category_id,
                   );
+                  const suggestion = suggestionMap.get(tx.id as string);
+                  const suggestedCat = suggestion?.categoryId
+                    ? data.categories.find((c) => c.id === suggestion.categoryId)
+                    : null;
                   return (
                     <tr key={tx.id as string} className="border-b border-white/4">
                       <td className="whitespace-nowrap px-4 py-2 text-zinc-300">
@@ -379,6 +518,12 @@ export function FinancesPageContent({
                       </td>
                       <td className="max-w-xs truncate px-4 py-2 text-white">
                         {String(tx.description)}
+                        {suggestedCat && !tx.category_id ? (
+                          <span className="mt-1 block text-xs text-[#5eead4]">
+                            AI suggests: {String(suggestedCat.name)}
+                            {suggestion?.confidence ? ` (${suggestion.confidence})` : ''}
+                          </span>
+                        ) : null}
                       </td>
                       <td
                         className={cn(

@@ -13,6 +13,7 @@ import {
   suggestCsvColumnMapping,
   type CsvColumnMapping,
 } from '~/lib/ai/finance-csv-map';
+import { suggestTransactionCategories } from '~/lib/ai/finance-category-suggest';
 import {
   pushCategoryToFreeAgent,
   syncFreeAgentToKeel,
@@ -31,6 +32,9 @@ const DEFAULT_CATEGORIES = [
 function revalidateFinances(accountSlug: string) {
   revalidatePath(
     pathsConfig.app.accountFinances.replace('[account]', accountSlug),
+  );
+  revalidatePath(
+    pathsConfig.app.accountHome.replace('[account]', accountSlug),
   );
 }
 
@@ -354,6 +358,110 @@ export const createManualTransactionAction = enhanceAction(
       transactionDate: z.string(),
       description: z.string().max(500),
       amountPence: z.number().int(),
+    }),
+  },
+);
+
+export const suggestTransactionCategoriesAction = enhanceAction(
+  async (input) => {
+    await ensureDefaultFinanceCategories(input.accountId);
+    const client = getSupabaseServerClient();
+
+    let txQuery = client
+      .from('finance_transactions')
+      .select('id, description, amount_pence, category_id')
+      .eq('account_id', input.accountId)
+      .is('category_id', null)
+      .order('transaction_date', { ascending: false })
+      .limit(input.limit ?? 40);
+
+    if (input.dateFrom) txQuery = txQuery.gte('transaction_date', input.dateFrom);
+    if (input.dateTo) txQuery = txQuery.lte('transaction_date', input.dateTo);
+
+    const [{ data: transactions, error: txError }, { data: categories }] =
+      await Promise.all([
+        txQuery,
+        client
+          .from('finance_categories')
+          .select('id, name, kind')
+          .eq('account_id', input.accountId)
+          .order('kind')
+          .order('name'),
+      ]);
+
+    if (txError) throw txError;
+    if (!transactions?.length) {
+      return { suggestions: [] };
+    }
+
+    const suggestions = await suggestTransactionCategories({
+      categories: (categories ?? []).map((c) => ({
+        id: c.id as string,
+        name: c.name as string,
+        kind: c.kind as 'income' | 'expense',
+      })),
+      transactions: transactions.map((t) => ({
+        id: t.id as string,
+        description: String(t.description),
+        amountPence: t.amount_pence as number,
+      })),
+    });
+
+    return { suggestions };
+  },
+  {
+    schema: z.object({
+      accountId: z.string().uuid(),
+      dateFrom: z.string().optional(),
+      dateTo: z.string().optional(),
+      limit: z.number().int().min(1).max(50).optional(),
+    }),
+  },
+);
+
+export const applySuggestedCategoriesAction = enhanceAction(
+  async (input) => {
+    const client = getSupabaseServerClient();
+    let applied = 0;
+
+    for (const item of input.suggestions) {
+      if (!item.categoryId) continue;
+      const { error } = await client
+        .from('finance_transactions')
+        .update({
+          category_id: item.categoryId,
+          sync_status: input.pushToFreeAgent ? 'pending_push' : 'local',
+        })
+        .eq('id', item.transactionId)
+        .eq('account_id', input.accountId)
+        .is('category_id', null);
+
+      if (error) throw error;
+
+      if (input.pushToFreeAgent) {
+        await pushCategoryToFreeAgent(
+          client,
+          input.accountId,
+          item.transactionId,
+        );
+      }
+      applied++;
+    }
+
+    revalidateFinances(input.accountSlug);
+    return { applied };
+  },
+  {
+    schema: z.object({
+      accountId: z.string().uuid(),
+      accountSlug: z.string().min(1),
+      pushToFreeAgent: z.boolean().optional().default(true),
+      suggestions: z.array(
+        z.object({
+          transactionId: z.string().uuid(),
+          categoryId: z.string().uuid().nullable(),
+        }),
+      ),
     }),
   },
 );
