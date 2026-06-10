@@ -18,12 +18,6 @@ export const heading = inter;
  * @name getFontsClassName
  * @description Get the class name for the root layout.
  */
-export function getFontsClassName(theme?: string) {
-  const dark = theme === 'dark';
-  const light = !dark;
-
-  return cn(inter.variable, {
-    dark,
-    light,
-  });
+export function getFontsClassName(_theme?: string) {
+  return cn(inter.variable, { dark: true });
 }

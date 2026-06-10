@@ -36,6 +36,10 @@
 }
 
 @layer base {
+  html {
+    color-scheme: dark;
+  }
+
   /* Accessibility: text size (uses rem so all text scales) */
   html.text-size-small {
     font-size: 87.5%; /* 14px if browser default is 16px */

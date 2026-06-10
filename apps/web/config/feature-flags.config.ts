@@ -59,7 +59,7 @@ const FeatureFlagsSchema = z.object({
 const featuresFlagConfig = FeatureFlagsSchema.parse({
   enableThemeToggle: getBoolean(
     process.env.NEXT_PUBLIC_ENABLE_THEME_TOGGLE,
-    true,
+    false,
   ),
   enableAccountDeletion: getBoolean(
     process.env.NEXT_PUBLIC_ENABLE_PERSONAL_ACCOUNT_DELETION,

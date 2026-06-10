@@ -15,6 +15,8 @@ export const generateRootMetadata = (): Metadata => ({
   metadataBase: new URL(appConfig.url),
   applicationName: appConfig.name,
   manifest: '/manifest.webmanifest',
+  colorScheme: 'dark',
+  themeColor: appConfig.themeColorDark,
   appleWebApp: {
     capable: true,
     title: appConfig.name,

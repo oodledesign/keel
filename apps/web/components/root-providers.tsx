@@ -12,8 +12,8 @@ import { VersionUpdater } from '@kit/ui/version-updater';
 
 import { AnalyticsProvider } from '~/components/analytics-provider';
 import { AuthProvider } from '~/components/auth-provider';
-import appConfig from '~/config/app.config';
 import featuresFlagConfig from '~/config/feature-flags.config';
+import { APP_THEME } from '~/lib/app-theme';
 import { i18nResolver } from '~/lib/i18n/i18n.resolver';
 import { getI18nSettings } from '~/lib/i18n/i18n.settings';
 
@@ -30,7 +30,7 @@ type RootProvidersProps = React.PropsWithChildren<{
 
 export function RootProviders({
   lang,
-  theme = appConfig.theme,
+  theme: _theme = APP_THEME,
   nonce,
   children,
 }: RootProvidersProps) {
@@ -45,9 +45,10 @@ export function RootProviders({
               <AuthProvider>
                 <ThemeProvider
                   attribute="class"
-                  enableSystem
+                  enableSystem={false}
                   disableTransitionOnChange
-                  defaultTheme={theme}
+                  defaultTheme={APP_THEME}
+                  forcedTheme={APP_THEME}
                   enableColorScheme={false}
                   nonce={nonce}
                 >
