@@ -1,6 +1,11 @@
-import type { VideoPlayerConfigValues } from './player-config-types';
+import type { VideoPlayerConfigValues, PlayerPreload } from './player-config-types';
 
 const EMBED_BASE = 'https://iframe.mediadelivery.net/embed';
+
+/** Bunny embed only accepts preload=true|false, not HTML5 metadata/auto strings. */
+export function mapPreloadForBunnyEmbed(preload: PlayerPreload): boolean {
+  return preload === 'auto';
+}
 
 export function aspectRatioPadding(ratio: string): string {
   switch (ratio) {
@@ -39,7 +44,7 @@ export function buildEmbedUrl(
   url.searchParams.set('autoplay', config.autoplay ? 'true' : 'false');
   url.searchParams.set('loop', config.loop ? 'true' : 'false');
   url.searchParams.set('muted', config.muted ? 'true' : 'false');
-  url.searchParams.set('preload', config.preload);
+  url.searchParams.set('preload', mapPreloadForBunnyEmbed(config.preload) ? 'true' : 'false');
   url.searchParams.set('responsive', config.responsive ? 'true' : 'false');
   url.searchParams.set('controls', config.show_controls ? 'true' : 'false');
   url.searchParams.set('playButton', config.show_play_button ? 'true' : 'false');

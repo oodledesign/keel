@@ -4,7 +4,7 @@ import { createBunnyStreamClient } from '@kit/bunny';
 
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { mapBunnyStatusToVideoStatus } from '~/lib/videos/map-bunny-status';
-import { getBunnyCdnHostname } from '~/lib/videos/server/videos-data';
+import { resolveBunnyCdnHostname } from '~/lib/videos/server/videos-data';
 import { requireVideoById } from '~/lib/videos/server/videos-access';
 
 export const runtime = 'nodejs';
@@ -36,7 +36,9 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     );
 
     const status = mapBunnyStatusToVideoStatus(bunnyVideo.status);
-    const cdnHostname = getBunnyCdnHostname();
+    const cdnHostname = await resolveBunnyCdnHostname(
+      String(video.bunny_library_id),
+    );
     const thumbnailUrl =
       bunnyVideo.thumbnailUrl ??
       (cdnHostname

@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-import { ChevronDown, ChevronLeft } from 'lucide-react';
+import { ChevronDown, ChevronLeft, Loader2 } from 'lucide-react';
 import type { DateRange } from 'react-day-picker';
 
 import { Button } from '@kit/ui/button';
@@ -70,14 +70,17 @@ export function AnalyticsDateRangePicker({
   fromIso,
   toIso,
   onApply,
+  isLoading = false,
   className,
 }: {
   fromIso: string;
   toIso: string;
   onApply: (fromIso: string, toIso: string, selection: DateRangeSelection) => void;
+  isLoading?: boolean;
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
   const [view, setView] = useState<SidebarView>('main');
   const [draft, setDraft] = useState<DateRangeSelection>(() =>
     selectionFromIso(fromIso, toIso),
@@ -125,9 +128,16 @@ export function AnalyticsDateRangePicker({
       };
     }
     const resolved = resolveAnalyticsDateRange(next);
+    setIsApplying(true);
     onApply(resolved.fromIso, resolved.toIso, next);
     setOpen(false);
   };
+
+  const pickerBusy = isLoading || isApplying;
+
+  useEffect(() => {
+    if (!isLoading) setIsApplying(false);
+  }, [isLoading]);
 
   const pickLastPreset = (id: LastSubPreset) => {
     setDraft({
@@ -146,19 +156,32 @@ export function AnalyticsDateRangePicker({
   const showLastControls = draft.preset === 'last' && !draft.lastSubPreset;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setIsApplying(false);
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           type="button"
           variant="outline"
+          disabled={pickerBusy}
           className={cn(
             'border-white/10 bg-[var(--workspace-shell-panel)] text-white hover:bg-white/5',
+            pickerBusy && 'opacity-90',
             className,
           )}
           onClick={openPicker}
         >
+          {pickerBusy ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin text-[#5eead4]" />
+          ) : null}
           {appliedLabel}
-          <ChevronDown className="ml-2 h-4 w-4 opacity-60" />
+          {!pickerBusy ? (
+            <ChevronDown className="ml-2 h-4 w-4 opacity-60" />
+          ) : null}
         </Button>
       </PopoverTrigger>
       <PopoverContent
@@ -340,9 +363,17 @@ export function AnalyticsDateRangePicker({
                   type="button"
                   size="sm"
                   className="bg-[#2A9D8F] text-white hover:bg-[#238b7f]"
+                  disabled={pickerBusy}
                   onClick={apply}
                 >
-                  Apply
+                  {pickerBusy ? (
+                    <>
+                      <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                      Applying…
+                    </>
+                  ) : (
+                    'Apply'
+                  )}
                 </Button>
               </div>
             </div>

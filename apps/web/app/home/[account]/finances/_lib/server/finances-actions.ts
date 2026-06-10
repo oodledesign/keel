@@ -40,14 +40,18 @@ function revalidateFinances(accountSlug: string) {
 
 export async function ensureDefaultFinanceCategories(accountId: string) {
   const client = getSupabaseServerClient();
-  const { count } = await client
+  const { count, error: countError } = await client
     .from('finance_categories')
     .select('id', { count: 'exact', head: true })
     .eq('account_id', accountId);
 
+  if (countError) {
+    throw new Error(countError.message || 'Could not load finance categories');
+  }
+
   if ((count ?? 0) > 0) return;
 
-  await client.from('finance_categories').insert(
+  const { error: insertError } = await client.from('finance_categories').insert(
     DEFAULT_CATEGORIES.map((c) => ({
       account_id: accountId,
       name: c.name,
@@ -55,6 +59,10 @@ export async function ensureDefaultFinanceCategories(accountId: string) {
       is_system: true,
     })),
   );
+
+  if (insertError && !insertError.message.includes('duplicate')) {
+    throw new Error(insertError.message || 'Could not create default categories');
+  }
 }
 
 export const loadFinancesDashboardAction = enhanceAction(
@@ -364,22 +372,29 @@ export const createManualTransactionAction = enhanceAction(
 
 export const suggestTransactionCategoriesAction = enhanceAction(
   async (input) => {
-    await ensureDefaultFinanceCategories(input.accountId);
-    const client = getSupabaseServerClient();
+    try {
+      await ensureDefaultFinanceCategories(input.accountId);
+      const client = getSupabaseServerClient();
 
-    let txQuery = client
-      .from('finance_transactions')
-      .select('id, description, amount_pence, category_id')
-      .eq('account_id', input.accountId)
-      .is('category_id', null)
-      .order('transaction_date', { ascending: false })
-      .limit(input.limit ?? 40);
+      let txQuery = client
+        .from('finance_transactions')
+        .select('id, description, amount_pence, category_id')
+        .eq('account_id', input.accountId)
+        .is('category_id', null)
+        .order('transaction_date', { ascending: false })
+        .limit(input.limit ?? 40);
 
-    if (input.dateFrom) txQuery = txQuery.gte('transaction_date', input.dateFrom);
-    if (input.dateTo) txQuery = txQuery.lte('transaction_date', input.dateTo);
+      if (input.dateFrom?.trim()) {
+        txQuery = txQuery.gte('transaction_date', input.dateFrom.trim());
+      }
+      if (input.dateTo?.trim()) {
+        txQuery = txQuery.lte('transaction_date', input.dateTo.trim());
+      }
 
-    const [{ data: transactions, error: txError }, { data: categories }] =
-      await Promise.all([
+      const [
+        { data: transactions, error: txError },
+        { data: categories, error: categoriesError },
+      ] = await Promise.all([
         txQuery,
         client
           .from('finance_categories')
@@ -389,25 +404,41 @@ export const suggestTransactionCategoriesAction = enhanceAction(
           .order('name'),
       ]);
 
-    if (txError) throw txError;
-    if (!transactions?.length) {
-      return { suggestions: [] };
+      if (txError) {
+        throw new Error(txError.message || 'Could not load transactions');
+      }
+      if (categoriesError) {
+        throw new Error(categoriesError.message || 'Could not load categories');
+      }
+      if (!categories?.length) {
+        throw new Error(
+          'No categories found. Sync FreeAgent or add categories first.',
+        );
+      }
+      if (!transactions?.length) {
+        return { suggestions: [] as const };
+      }
+
+      const suggestions = await suggestTransactionCategories({
+        categories: categories.map((c) => ({
+          id: c.id as string,
+          name: c.name as string,
+          kind: c.kind as 'income' | 'expense',
+        })),
+        transactions: transactions.map((t) => ({
+          id: t.id as string,
+          description: String(t.description),
+          amountPence: t.amount_pence as number,
+        })),
+      });
+
+      return { suggestions };
+    } catch (err) {
+      console.error('[suggestTransactionCategoriesAction]', err);
+      throw err instanceof Error
+        ? err
+        : new Error('Could not suggest categories');
     }
-
-    const suggestions = await suggestTransactionCategories({
-      categories: (categories ?? []).map((c) => ({
-        id: c.id as string,
-        name: c.name as string,
-        kind: c.kind as 'income' | 'expense',
-      })),
-      transactions: transactions.map((t) => ({
-        id: t.id as string,
-        description: String(t.description),
-        amountPence: t.amount_pence as number,
-      })),
-    });
-
-    return { suggestions };
   },
   {
     schema: z.object({
@@ -423,6 +454,8 @@ export const applySuggestedCategoriesAction = enhanceAction(
   async (input) => {
     const client = getSupabaseServerClient();
     let applied = 0;
+    let pushed = 0;
+    let pushFailed = 0;
 
     for (const item of input.suggestions) {
       if (!item.categoryId) continue;
@@ -436,20 +469,23 @@ export const applySuggestedCategoriesAction = enhanceAction(
         .eq('account_id', input.accountId)
         .is('category_id', null);
 
-      if (error) throw error;
+      if (error) throw new Error(error.message || 'Could not update category');
+
+      applied++;
 
       if (input.pushToFreeAgent) {
-        await pushCategoryToFreeAgent(
+        const synced = await pushCategoryToFreeAgent(
           client,
           input.accountId,
           item.transactionId,
         );
+        if (synced) pushed++;
+        else pushFailed++;
       }
-      applied++;
     }
 
     revalidateFinances(input.accountSlug);
-    return { applied };
+    return { applied, pushed, pushFailed };
   },
   {
     schema: z.object({

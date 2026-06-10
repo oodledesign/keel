@@ -18,6 +18,8 @@ export type VideoRow = {
   public_share_token: string | null;
   created_at: string;
   updated_at: string;
+  /** Populated server-side for library UI; not stored in the database. */
+  thumbnail_candidates?: string[];
 };
 
 export type VideoFolderRow = {

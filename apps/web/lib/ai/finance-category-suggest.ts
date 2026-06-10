@@ -45,55 +45,60 @@ export async function suggestTransactionCategories(input: {
 }): Promise<CategorySuggestion[]> {
   if (!input.transactions.length) return [];
 
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!apiKey) {
-    return heuristicCategorySuggestions(input);
-  }
-
-  const model =
-    process.env.ANTHROPIC_MODEL?.trim() || 'claude-sonnet-4-20250514';
-
-  const payload = {
-    categories: input.categories.map((c) => ({
-      id: c.id,
-      name: c.name,
-      kind: c.kind,
-    })),
-    transactions: input.transactions.map((t) => ({
-      id: t.id,
-      description: t.description,
-      amountPence: t.amountPence,
-      direction: t.amountPence >= 0 ? 'income' : 'expense',
-    })),
-  };
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 4096,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: JSON.stringify(payload) }],
-    }),
-  });
-
-  if (!res.ok) {
-    return heuristicCategorySuggestions(input);
-  }
-
-  const data = (await res.json()) as {
-    content?: Array<{ type: string; text?: string }>;
-  };
-  const text = data.content?.find((c) => c.type === 'text')?.text ?? '';
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) return heuristicCategorySuggestions(input);
-
   try {
+    const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
+    if (!apiKey) {
+      return heuristicCategorySuggestions(input);
+    }
+
+    const model =
+      process.env.ANTHROPIC_MODEL?.trim() || 'claude-sonnet-4-20250514';
+
+    const payload = {
+      categories: input.categories.map((c) => ({
+        id: c.id,
+        name: c.name,
+        kind: c.kind,
+      })),
+      transactions: input.transactions.map((t) => ({
+        id: t.id,
+        description: t.description,
+        amountPence: t.amountPence,
+        direction: t.amountPence >= 0 ? 'income' : 'expense',
+      })),
+    };
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 4096,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: JSON.stringify(payload) }],
+      }),
+    });
+
+    if (!res.ok) {
+      console.warn(
+        '[finance-category-suggest] Anthropic request failed:',
+        res.status,
+        (await res.text()).slice(0, 200),
+      );
+      return heuristicCategorySuggestions(input);
+    }
+
+    const data = (await res.json()) as {
+      content?: Array<{ type: string; text?: string }>;
+    };
+    const text = data.content?.find((c) => c.type === 'text')?.text ?? '';
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return heuristicCategorySuggestions(input);
+
     const parsed = JSON.parse(jsonMatch[0]) as {
       suggestions?: CategorySuggestion[];
     };
@@ -107,7 +112,8 @@ export async function suggestTransactionCategories(input: {
         confidence: s.confidence ?? 'medium',
         reason: s.reason,
       }));
-  } catch {
+  } catch (err) {
+    console.warn('[finance-category-suggest] Falling back to heuristics:', err);
     return heuristicCategorySuggestions(input);
   }
 }

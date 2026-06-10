@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -56,6 +56,7 @@ import {
   suggestTransactionCategoriesAction,
   syncFreeAgentAction,
 } from '../_lib/server/finances-actions';
+import { FinancesDashboardSkeleton } from './finances-dashboard-skeleton';
 
 const panelClass =
   'rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)]';
@@ -108,28 +109,53 @@ export function FinancesPageContent({
   const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [data, setData] = useState<DashboardData | null>(null);
+  const refreshRequestIdRef = useRef(0);
   const [dateFrom, setDateFrom] = useState(initialDateRange().from);
   const [dateTo, setDateTo] = useState(initialDateRange().to);
   const [importOpen, setImportOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<CategorySuggestion[]>([]);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await loadFinancesDashboardAction({
-        accountId,
-        dateFrom,
-        dateTo,
-      });
-      setData(result);
-    } catch {
-      toast.error('Could not load finances');
-    } finally {
-      setLoading(false);
-    }
-  }, [accountId, dateFrom, dateTo]);
+  const refresh = useCallback(
+    async (options?: { background?: boolean }) => {
+      const requestId = ++refreshRequestIdRef.current;
+
+      if (options?.background) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+        setLoadFailed(false);
+      }
+      try {
+        const result = await loadFinancesDashboardAction({
+          accountId,
+          dateFrom,
+          dateTo,
+        });
+        if (requestId !== refreshRequestIdRef.current) {
+          return;
+        }
+        setData(result);
+        setLoadFailed(false);
+      } catch {
+        if (requestId !== refreshRequestIdRef.current) {
+          return;
+        }
+        setLoadFailed(true);
+        toast.error('Could not load finances');
+      } finally {
+        if (requestId !== refreshRequestIdRef.current) {
+          return;
+        }
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [accountId, dateFrom, dateTo],
+  );
 
   useEffect(() => {
     void refresh();
@@ -142,7 +168,7 @@ export function FinancesPageContent({
         try {
           await syncFreeAgentAction({ accountId, accountSlug });
           toast.success('Transactions imported from FreeAgent');
-          await refresh();
+          await refresh({ background: true });
         } catch {
           toast.error('Connected, but initial sync failed — try Sync now');
         }
@@ -206,6 +232,7 @@ export function FinancesPageContent({
     to: string,
     _selection: DateRangeSelection,
   ) => {
+    setLoading(true);
     setDateFrom(from);
     setDateTo(to);
     setAiSuggestions([]);
@@ -245,8 +272,12 @@ export function FinancesPageContent({
           categoryId,
           pushToFreeAgent: Boolean(data?.connection),
         });
-        await refresh();
-        toast.success('Category updated');
+        await refresh({ background: true });
+        toast.success(
+          data?.connection
+            ? 'Category updated and queued for FreeAgent sync'
+            : 'Category updated',
+        );
       } catch {
         toast.error('Could not update category');
       }
@@ -257,7 +288,7 @@ export function FinancesPageContent({
     startTransition(async () => {
       try {
         const result = await syncFreeAgentAction({ accountId, accountSlug });
-        await refresh();
+        await refresh({ background: true });
         toast.success(
           `Synced ${result.imported} new transaction${result.imported === 1 ? '' : 's'}`,
         );
@@ -275,16 +306,18 @@ export function FinancesPageContent({
           dateFrom,
           dateTo,
         });
-        setAiSuggestions(result.suggestions);
-        if (!result.suggestions.length) {
-          toast.message('No uncategorised transactions to suggest for');
+        setAiSuggestions(result.suggestions ?? []);
+        if (!result.suggestions?.length) {
+          toast.info('No uncategorised transactions to suggest for');
         } else {
           toast.success(
             `Suggested categories for ${result.suggestions.filter((s) => s.categoryId).length} transactions`,
           );
         }
-      } catch {
-        toast.error('Could not suggest categories');
+      } catch (e) {
+        toast.error(
+          e instanceof Error ? e.message : 'Could not suggest categories',
+        );
       }
     });
   };
@@ -307,22 +340,36 @@ export function FinancesPageContent({
           })),
         });
         setAiSuggestions([]);
-        await refresh();
-        toast.success(`Applied ${result.applied} categories`);
-      } catch {
-        toast.error('Could not apply suggestions');
+        await refresh({ background: true });
+        if (result.pushFailed > 0) {
+          toast.warning(
+            `Applied ${result.applied} categories. ${result.pushFailed} could not sync to FreeAgent — check the Source column.`,
+          );
+        } else if (result.pushed > 0) {
+          toast.success(
+            `Applied ${result.applied} categories and synced ${result.pushed} to FreeAgent`,
+          );
+        } else {
+          toast.success(`Applied ${result.applied} categories`);
+        }
+      } catch (e) {
+        toast.error(
+          e instanceof Error ? e.message : 'Could not apply suggestions',
+        );
       }
     });
   };
 
   const connectUrl = `/api/integrations/freeagent/start?account=${encodeURIComponent(accountSlug)}`;
+  const showSkeleton = loading || data === null;
 
   return (
-    <div className="space-y-6 px-4 lg:px-8">
+    <div className="space-y-6 px-4 lg:px-8" aria-busy={showSkeleton}>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <AnalyticsDateRangePicker
           fromIso={dateFrom}
           toIso={dateTo}
+          isLoading={showSkeleton}
           onApply={onDateRangeApply}
         />
         <div className="flex flex-wrap gap-2">
@@ -330,6 +377,7 @@ export function FinancesPageContent({
             type="button"
             variant="outline"
             className="border-white/10"
+            disabled={showSkeleton}
             onClick={() => setImportOpen(true)}
           >
             <Upload className="mr-2 h-4 w-4" />
@@ -338,6 +386,7 @@ export function FinancesPageContent({
           <Button
             type="button"
             className="bg-[#2A9D8F] text-white hover:bg-[#238b7f]"
+            disabled={showSkeleton}
             onClick={() => setManualOpen(true)}
           >
             Add transaction
@@ -345,241 +394,111 @@ export function FinancesPageContent({
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <SummaryCard
-          label="Income"
-          value={formatPence(data?.summary.incomePence ?? 0)}
-          icon={ArrowDownLeft}
-          tone="positive"
-        />
-        <SummaryCard
-          label="Expenses"
-          value={formatPence(data?.summary.expensePence ?? 0)}
-          icon={ArrowUpRight}
-          tone="negative"
-        />
-        <SummaryCard
-          label="Net"
-          value={formatPence(data?.summary.netPence ?? 0)}
-          icon={ArrowDownLeft}
-          tone={(data?.summary.netPence ?? 0) >= 0 ? 'positive' : 'negative'}
-        />
-      </div>
-
-      {chartData.length > 0 ? (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className={cn(panelClass, 'p-4')}>
-            <h3 className="text-sm font-medium text-white">Income vs expenses</h3>
-            <p className="mb-4 text-xs text-zinc-400">By month in selected range</p>
-            <FinanceTrendBarChart data={chartData} variant="grouped" />
-          </div>
-          <div className={cn(panelClass, 'p-4')}>
-            <h3 className="text-sm font-medium text-white">Net trend</h3>
-            <p className="mb-4 text-xs text-zinc-400">Monthly net after expenses</p>
-            <FinanceNetLineChart data={chartData} />
-          </div>
+      {showSkeleton ? (
+        <FinancesDashboardSkeleton />
+      ) : loadFailed ? (
+        <div className={cn(panelClass, 'p-6 text-center')}>
+          <p className="text-sm text-zinc-400">Could not load finance data.</p>
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-4 border-white/10"
+            onClick={() => void refresh()}
+          >
+            Try again
+          </Button>
         </div>
-      ) : null}
-
-      {forecast ? (
-        <div className={cn(panelClass, 'p-4')}>
-          <h3 className="text-sm font-medium text-white">Forecast (monthly average)</h3>
-          <p className="mt-2 text-sm text-zinc-400">
-            Based on selected range: ~{formatPence(forecast.avgIncomePence)} income,{' '}
-            ~{formatPence(forecast.avgExpensePence)} expenses → projected net{' '}
-            <span className="text-[#5eead4]">
-              {formatPence(forecast.projectedNetPence)}
-            </span>{' '}
-            / month
-          </p>
-        </div>
-      ) : null}
-
-      <div className={cn(panelClass, 'p-4')}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h3 className="font-medium text-white">FreeAgent</h3>
-            <p className="text-sm text-zinc-400">
-              {data?.connection
-                ? `Connected to ${data.connection.freeagent_company_name ?? 'FreeAgent'}. Keel is your UI; FreeAgent stays the ledger.`
-                : 'Connect FreeAgent to import bank transactions. Categorise in Keel and sync back.'}
-            </p>
+      ) : (
+        <div
+          className={cn(
+            'space-y-6 transition-opacity duration-200',
+            refreshing && 'pointer-events-none opacity-50',
+          )}
+        >
+          <div className="grid gap-4 sm:grid-cols-3">
+            <SummaryCard
+              label="Income"
+              value={formatPence(data.summary.incomePence)}
+              icon={ArrowDownLeft}
+              tone="positive"
+            />
+            <SummaryCard
+              label="Expenses"
+              value={formatPence(data.summary.expensePence)}
+              icon={ArrowUpRight}
+              tone="negative"
+            />
+            <SummaryCard
+              label="Net"
+              value={formatPence(data.summary.netPence)}
+              icon={ArrowDownLeft}
+              tone={data.summary.netPence >= 0 ? 'positive' : 'negative'}
+            />
           </div>
-          <div className="flex gap-2">
-            {data?.connection ? (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="border-white/10"
-                  disabled={pending}
-                  onClick={onSync}
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Sync now
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="text-zinc-400"
-                  disabled={pending}
-                  onClick={() =>
-                    startTransition(async () => {
-                      await disconnectFreeAgentAction({ accountId, accountSlug });
-                      await refresh();
-                      toast.success('Disconnected');
-                    })
-                  }
-                >
-                  Disconnect
-                </Button>
-              </>
-            ) : data?.freeAgentConfigured ? (
-              <Button type="button" asChild className="bg-[#2A9D8F] text-white">
-                <a href={connectUrl}>
-                  <Link2 className="mr-2 h-4 w-4" />
-                  Connect FreeAgent
-                </a>
-              </Button>
-            ) : (
-              <p className="text-xs text-zinc-500">
-                Set FREEAGENT_CLIENT_ID and FREEAGENT_CLIENT_SECRET to enable.
+
+          {chartData.length > 0 ? (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className={cn(panelClass, 'p-4')}>
+                <h3 className="text-sm font-medium text-white">Income vs expenses</h3>
+                <p className="mb-4 text-xs text-zinc-400">By month in selected range</p>
+                <FinanceTrendBarChart data={chartData} variant="grouped" />
+              </div>
+              <div className={cn(panelClass, 'p-4')}>
+                <h3 className="text-sm font-medium text-white">Net trend</h3>
+                <p className="mb-4 text-xs text-zinc-400">Monthly net after expenses</p>
+                <FinanceNetLineChart data={chartData} />
+              </div>
+            </div>
+          ) : null}
+
+          {forecast ? (
+            <div className={cn(panelClass, 'p-4')}>
+              <h3 className="text-sm font-medium text-white">Forecast (monthly average)</h3>
+              <p className="mt-2 text-sm text-zinc-400">
+                Based on selected range: ~{formatPence(forecast.avgIncomePence)} income,{' '}
+                ~{formatPence(forecast.avgExpensePence)} expenses → projected net{' '}
+                <span className="text-[#5eead4]">
+                  {formatPence(forecast.projectedNetPence)}
+                </span>{' '}
+                / month
               </p>
-            )}
-          </div>
-        </div>
-      </div>
+            </div>
+          ) : null}
 
-      <div className={cn(panelClass, 'overflow-hidden')}>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/6 px-4 py-3">
-          <h3 className="font-medium text-white">Transactions</h3>
-          <div className="flex flex-wrap gap-2">
-            {uncategorizedCount > 0 ? (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="border-white/10"
-                  disabled={pending}
-                  onClick={onSuggestCategories}
-                >
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Suggest categories ({uncategorizedCount})
-                </Button>
-                {aiSuggestions.length > 0 ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="bg-[#2A9D8F] text-white hover:bg-[#238b7f]"
-                    disabled={pending}
-                    onClick={onApplySuggestions}
-                  >
-                    Apply suggestions
-                  </Button>
-                ) : null}
-              </>
-            ) : null}
-          </div>
+          <FreeAgentPanel
+            data={data}
+            connectUrl={connectUrl}
+            pending={pending}
+            onSync={onSync}
+            onDisconnect={() =>
+              startTransition(async () => {
+                await disconnectFreeAgentAction({ accountId, accountSlug });
+                await refresh({ background: true });
+                toast.success('Disconnected');
+              })
+            }
+          />
+
+          <TransactionsPanel
+            data={data}
+            loading={false}
+            pending={pending}
+            uncategorizedCount={uncategorizedCount}
+            aiSuggestions={aiSuggestions}
+            suggestionMap={suggestionMap}
+            onSuggestCategories={onSuggestCategories}
+            onApplySuggestions={onApplySuggestions}
+            onCategorize={onCategorize}
+          />
         </div>
-        {loading ? (
-          <p className="p-4 text-sm text-zinc-400">Loading…</p>
-        ) : !data?.transactions.length ? (
-          <p className="p-4 text-sm text-zinc-400">
-            No transactions in this range. Import a CSV, connect FreeAgent, or add
-            manually.
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-white/6 text-left text-zinc-400">
-                  <th className="px-4 py-2 font-medium">Date</th>
-                  <th className="px-4 py-2 font-medium">Description</th>
-                  <th className="px-4 py-2 font-medium">Amount</th>
-                  <th className="px-4 py-2 font-medium">Category</th>
-                  <th className="px-4 py-2 font-medium">Source</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.transactions.map((tx) => {
-                  const pence = tx.amount_pence as number;
-                  const cat = data.categories.find(
-                    (c) => c.id === tx.category_id,
-                  );
-                  const suggestion = suggestionMap.get(tx.id as string);
-                  const suggestedCat = suggestion?.categoryId
-                    ? data.categories.find((c) => c.id === suggestion.categoryId)
-                    : null;
-                  return (
-                    <tr key={tx.id as string} className="border-b border-white/4">
-                      <td className="whitespace-nowrap px-4 py-2 text-zinc-300">
-                        {String(tx.transaction_date)}
-                      </td>
-                      <td className="max-w-xs truncate px-4 py-2 text-white">
-                        {String(tx.description)}
-                        {suggestedCat && !tx.category_id ? (
-                          <span className="mt-1 block text-xs text-[#5eead4]">
-                            AI suggests: {String(suggestedCat.name)}
-                            {suggestion?.confidence ? ` (${suggestion.confidence})` : ''}
-                          </span>
-                        ) : null}
-                      </td>
-                      <td
-                        className={cn(
-                          'whitespace-nowrap px-4 py-2 font-medium',
-                          pence >= 0 ? 'text-emerald-400' : 'text-red-300',
-                        )}
-                      >
-                        {formatPence(Math.abs(pence))}
-                        {pence < 0 ? ' out' : ' in'}
-                      </td>
-                      <td className="px-4 py-2">
-                        <Select
-                          value={(tx.category_id as string | null) ?? 'none'}
-                          onValueChange={(v) =>
-                            onCategorize(
-                              tx.id as string,
-                              v === 'none' ? null : v,
-                            )
-                          }
-                          disabled={pending}
-                        >
-                          <SelectTrigger className="h-8 w-44 border-white/10 bg-transparent text-xs text-white">
-                            <SelectValue placeholder="Category" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Uncategorised</SelectItem>
-                            {(data.categories ?? []).map((c) => (
-                              <SelectItem key={c.id as string} value={c.id as string}>
-                                {String(c.name)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {cat?.name ? (
-                          <span className="sr-only">{String(cat.name)}</span>
-                        ) : null}
-                      </td>
-                      <td className="px-4 py-2 text-xs capitalize text-zinc-500">
-                        {String(tx.source)}
-                        {tx.sync_status === 'push_failed' ? ' · sync failed' : ''}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      )}
 
       <CsvImportSheet
         open={importOpen}
         onOpenChange={setImportOpen}
         accountId={accountId}
         accountSlug={accountSlug}
-        onImported={() => void refresh()}
+        onImported={() => void refresh({ background: true })}
       />
 
       <ManualTransactionSheet
@@ -588,8 +507,216 @@ export function FinancesPageContent({
         accountId={accountId}
         accountSlug={accountSlug}
         categories={data?.categories ?? []}
-        onSaved={() => void refresh()}
+        onSaved={() => void refresh({ background: true })}
       />
+    </div>
+  );
+}
+
+function FreeAgentPanel({
+  data,
+  connectUrl,
+  pending,
+  onSync,
+  onDisconnect,
+}: {
+  data: DashboardData | null;
+  connectUrl: string;
+  pending: boolean;
+  onSync: () => void;
+  onDisconnect: () => void;
+}) {
+  return (
+    <div className={cn(panelClass, 'p-4')}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="font-medium text-white">FreeAgent</h3>
+          <p className="text-sm text-zinc-400">
+            {data?.connection
+              ? `Connected to ${data.connection.freeagent_company_name ?? 'FreeAgent'}. Keel is your UI; FreeAgent stays the ledger. Categories you set here sync back to FreeAgent when the transaction and category are linked.`
+              : 'Connect FreeAgent to import bank transactions. Categorise in Keel and sync back.'}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          {data?.connection ? (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                className="border-white/10"
+                disabled={pending}
+                onClick={onSync}
+              >
+                <RefreshCw
+                  className={cn('mr-2 h-4 w-4', pending && 'animate-spin')}
+                />
+                Sync now
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-zinc-400"
+                disabled={pending}
+                onClick={onDisconnect}
+              >
+                Disconnect
+              </Button>
+            </>
+          ) : data?.freeAgentConfigured ? (
+            <Button type="button" asChild className="bg-[#2A9D8F] text-white">
+              <a href={connectUrl}>
+                <Link2 className="mr-2 h-4 w-4" />
+                Connect FreeAgent
+              </a>
+            </Button>
+          ) : (
+            <p className="text-xs text-zinc-500">
+              Set FREEAGENT_CLIENT_ID and FREEAGENT_CLIENT_SECRET to enable.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TransactionsPanel({
+  data,
+  loading,
+  pending,
+  uncategorizedCount,
+  aiSuggestions,
+  suggestionMap,
+  onSuggestCategories,
+  onApplySuggestions,
+  onCategorize,
+}: {
+  data: DashboardData | null;
+  loading: boolean;
+  pending: boolean;
+  uncategorizedCount: number;
+  aiSuggestions: CategorySuggestion[];
+  suggestionMap: Map<string, CategorySuggestion>;
+  onSuggestCategories: () => void;
+  onApplySuggestions: () => void;
+  onCategorize: (transactionId: string, categoryId: string | null) => void;
+}) {
+  return (
+    <div className={cn(panelClass, 'overflow-hidden')}>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/6 px-4 py-3">
+        <h3 className="font-medium text-white">Transactions</h3>
+        <div className="flex flex-wrap gap-2">
+          {uncategorizedCount > 0 ? (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="border-white/10"
+                disabled={pending || loading}
+                onClick={onSuggestCategories}
+              >
+                <Sparkles className="mr-2 h-4 w-4" />
+                Suggest categories ({uncategorizedCount})
+              </Button>
+              {aiSuggestions.length > 0 ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  className="bg-[#2A9D8F] text-white hover:bg-[#238b7f]"
+                  disabled={pending || loading}
+                  onClick={onApplySuggestions}
+                >
+                  Apply suggestions
+                </Button>
+              ) : null}
+            </>
+          ) : null}
+        </div>
+      </div>
+      {!data?.transactions.length ? (
+        <p className="p-4 text-sm text-zinc-400">
+          No transactions in this range. Import a CSV, connect FreeAgent, or add
+          manually.
+        </p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-white/6 text-left text-zinc-400">
+                <th className="px-4 py-2 font-medium">Date</th>
+                <th className="px-4 py-2 font-medium">Description</th>
+                <th className="px-4 py-2 font-medium">Amount</th>
+                <th className="px-4 py-2 font-medium">Category</th>
+                <th className="px-4 py-2 font-medium">Source</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.transactions.map((tx) => {
+                const pence = tx.amount_pence as number;
+                const cat = data.categories.find((c) => c.id === tx.category_id);
+                const suggestion = suggestionMap.get(tx.id as string);
+                const suggestedCat = suggestion?.categoryId
+                  ? data.categories.find((c) => c.id === suggestion.categoryId)
+                  : null;
+                return (
+                  <tr key={tx.id as string} className="border-b border-white/4">
+                    <td className="whitespace-nowrap px-4 py-2 text-zinc-300">
+                      {String(tx.transaction_date)}
+                    </td>
+                    <td className="max-w-xs truncate px-4 py-2 text-white">
+                      {String(tx.description)}
+                      {suggestedCat && !tx.category_id ? (
+                        <span className="mt-1 block text-xs text-[#5eead4]">
+                          AI suggests: {String(suggestedCat.name)}
+                          {suggestion?.confidence ? ` (${suggestion.confidence})` : ''}
+                        </span>
+                      ) : null}
+                    </td>
+                    <td
+                      className={cn(
+                        'whitespace-nowrap px-4 py-2 font-medium',
+                        pence >= 0 ? 'text-emerald-400' : 'text-red-300',
+                      )}
+                    >
+                      {formatPence(Math.abs(pence))}
+                      {pence < 0 ? ' out' : ' in'}
+                    </td>
+                    <td className="px-4 py-2">
+                      <Select
+                        value={(tx.category_id as string | null) ?? 'none'}
+                        onValueChange={(v) =>
+                          onCategorize(tx.id as string, v === 'none' ? null : v)
+                        }
+                        disabled={pending}
+                      >
+                        <SelectTrigger className="h-8 w-44 border-white/10 bg-transparent text-xs text-white">
+                          <SelectValue placeholder="Category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Uncategorised</SelectItem>
+                          {(data.categories ?? []).map((c) => (
+                            <SelectItem key={c.id as string} value={c.id as string}>
+                              {String(c.name)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {cat?.name ? (
+                        <span className="sr-only">{String(cat.name)}</span>
+                      ) : null}
+                    </td>
+                    <td className="px-4 py-2 text-xs capitalize text-zinc-500">
+                      {String(tx.source)}
+                      {tx.sync_status === 'push_failed' ? ' · sync failed' : ''}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

@@ -218,7 +218,7 @@ export async function pushCategoryToFreeAgent(
   db: SupabaseClient,
   accountId: string,
   transactionId: string,
-): Promise<void> {
+): Promise<boolean> {
   const { data: connection } = await db
     .from('finance_connections')
     .select('*')
@@ -226,18 +226,18 @@ export async function pushCategoryToFreeAgent(
     .eq('provider', 'freeagent')
     .maybeSingle();
 
-  if (!connection) return;
+  if (!connection) return false;
 
   const { data: tx, error: txError } = await db
     .from('finance_transactions')
     .select(
-      'id, amount_pence, description, freeagent_transaction_url, freeagent_explanation_url, category_id',
+      'id, amount_pence, description, transaction_date, freeagent_transaction_url, freeagent_explanation_url, category_id',
     )
     .eq('id', transactionId)
     .eq('account_id', accountId)
     .maybeSingle();
 
-  if (txError || !tx?.freeagent_transaction_url || !tx.category_id) return;
+  if (txError || !tx?.freeagent_transaction_url || !tx.category_id) return false;
 
   const { data: category } = await db
     .from('finance_categories')
@@ -253,7 +253,7 @@ export async function pushCategoryToFreeAgent(
         sync_error: 'Category is not linked to FreeAgent',
       })
       .eq('id', transactionId);
-    return;
+    return false;
   }
 
   const client = clientFromConnection(db, connection as ConnectionRow);
@@ -265,7 +265,7 @@ export async function pushCategoryToFreeAgent(
       category: category.freeagent_category_url,
       description: tx.description || 'Categorised in Keel',
       gross_value: grossValue,
-      dated_on: new Date().toISOString().slice(0, 10),
+      dated_on: String(tx.transaction_date ?? new Date().toISOString().slice(0, 10)),
     };
 
     if (tx.freeagent_explanation_url) {
@@ -286,13 +286,14 @@ export async function pushCategoryToFreeAgent(
           sync_error: null,
         })
         .eq('id', transactionId);
-      return;
+      return true;
     }
 
     await db
       .from('finance_transactions')
       .update({ sync_status: 'synced', sync_error: null })
       .eq('id', transactionId);
+    return true;
   } catch (err) {
     await db
       .from('finance_transactions')
@@ -301,6 +302,6 @@ export async function pushCategoryToFreeAgent(
         sync_error: err instanceof Error ? err.message : 'Sync failed',
       })
       .eq('id', transactionId);
-    throw err;
+    return false;
   }
 }

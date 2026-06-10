@@ -1,12 +1,18 @@
 import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { createBunnyStreamClient } from '@kit/bunny';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import type { VideoFolderRow, VideoRow } from '../types';
 import { decryptVideoSecret } from '../crypto-secrets';
-import { resolveVideoThumbnailUrl } from '../thumbnail';
+import {
+  resolveVideoThumbnailCandidates,
+  resolveVideoThumbnailUrl,
+} from '../thumbnail';
 import { loadAccountVideoSettings } from './player-config-data';
+
+let cachedCdnHostname: string | null | undefined;
 
 export async function loadVideoLibrary(accountId: string) {
   const client = getSupabaseServerClient() as SupabaseClient;
@@ -27,10 +33,11 @@ export async function loadVideoLibrary(accountId: string) {
   if (foldersResult.error) throw new Error(foldersResult.error.message);
   if (videosResult.error) throw new Error(videosResult.error.message);
 
-  const cdnHostname = getBunnyCdnHostname();
+  const cdnHostname = await resolveBunnyCdnHostname();
   const videos = ((videosResult.data ?? []) as VideoRow[]).map((video) => ({
     ...video,
     thumbnail_url: resolveVideoThumbnailUrl(video, cdnHostname),
+    thumbnail_candidates: resolveVideoThumbnailCandidates(video, cdnHostname),
   }));
 
   return {
@@ -74,4 +81,25 @@ export async function resolveAccountBunnyApiKey(
 
 export function getBunnyCdnHostname() {
   return process.env.BUNNY_STREAM_CDN_HOSTNAME?.trim() ?? '';
+}
+
+export async function resolveBunnyCdnHostname(libraryId?: string) {
+  const fromEnv = getBunnyCdnHostname();
+  if (fromEnv) {
+    return fromEnv;
+  }
+
+  if (cachedCdnHostname !== undefined) {
+    return cachedCdnHostname ?? '';
+  }
+
+  try {
+    const bunny = createBunnyStreamClient();
+    const library = await bunny.getLibrary(libraryId ?? getDefaultBunnyLibraryId());
+    cachedCdnHostname = library.hostname;
+  } catch {
+    cachedCdnHostname = null;
+  }
+
+  return cachedCdnHostname ?? '';
 }

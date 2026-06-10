@@ -4,10 +4,13 @@ import { type NextRequest, NextResponse } from 'next/server';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { createBunnyStreamClient } from '@kit/bunny';
+
 import {
   clientIpFromRequest,
   isRateLimited,
 } from '~/lib/rate-limit/in-memory';
+import { resolveBunnyCdnHostname } from '~/lib/videos/server/videos-data';
 
 export const runtime = 'nodejs';
 
@@ -138,9 +141,25 @@ export async function POST(request: NextRequest) {
   const patch: Record<string, unknown> = { status: nextStatus };
 
   if (nextStatus === 'ready') {
-    const cdnHostname = process.env.BUNNY_STREAM_CDN_HOSTNAME?.trim();
+    const libraryId = payload.VideoLibraryId
+      ? String(payload.VideoLibraryId)
+      : undefined;
+    const cdnHostname = await resolveBunnyCdnHostname(libraryId);
     if (cdnHostname) {
-      patch.thumbnail_url = `https://${cdnHostname.replace(/^https?:\/\//, '')}/${bunnyVideoId}/0.jpg`;
+      const host = cdnHostname.replace(/^https?:\/\//, '').replace(/\/$/, '');
+      patch.thumbnail_url = `https://${host}/${bunnyVideoId}/thumbnail.jpg`;
+    } else {
+      try {
+        const bunnyVideo = await createBunnyStreamClient().getVideo(
+          libraryId ?? '',
+          bunnyVideoId,
+        );
+        if (bunnyVideo.thumbnailUrl) {
+          patch.thumbnail_url = bunnyVideo.thumbnailUrl;
+        }
+      } catch {
+        // Best-effort thumbnail sync; status still updates.
+      }
     }
   }
 

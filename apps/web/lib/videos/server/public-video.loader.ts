@@ -3,6 +3,11 @@ import 'server-only';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { resolveEffectivePlayerConfig } from './player-config-data';
+import { resolveBunnyCdnHostname } from './videos-data';
+import {
+  resolveVideoThumbnailCandidates,
+  resolveVideoThumbnailUrl,
+} from '../thumbnail';
 import type { VideoRow } from '../types';
 import type { VideoPlayerConfigValues } from '../player-config-types';
 
@@ -38,8 +43,20 @@ export async function loadPublicVideoByToken(
     video.id,
   );
 
+  const cdnHostname = await resolveBunnyCdnHostname(video.bunny_library_id);
+  const thumbnail_url =
+    resolveVideoThumbnailUrl(video, cdnHostname) ?? video.thumbnail_url;
+  const thumbnail_candidates = resolveVideoThumbnailCandidates(
+    { ...video, thumbnail_url },
+    cdnHostname,
+  );
+
   return {
-    video,
+    video: {
+      ...video,
+      thumbnail_url,
+      thumbnail_candidates,
+    },
     config: resolved.config,
   };
 }

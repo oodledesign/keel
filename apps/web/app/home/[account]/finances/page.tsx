@@ -18,6 +18,7 @@ import {
   isWorkNavModuleEnabled,
 } from '../_lib/server/account-modules';
 import { FinancesPageContent } from './_components/finances-page-content';
+import { FinancesDashboardSkeleton } from './_components/finances-dashboard-skeleton';
 
 interface FinancesPageProps {
   params: Promise<{ account: string }>;
@@ -67,7 +68,7 @@ async function FinancesPage({ params }: FinancesPageProps) {
         description="Income, expenses, forecasts, and bank imports — with optional FreeAgent sync."
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-white">
-        <Suspense fallback={<p className="px-4 text-sm text-zinc-400">Loading…</p>}>
+        <Suspense fallback={<FinancesDashboardSkeleton />}>
           <FinancesPageContent accountId={accountId} accountSlug={accountSlug} />
         </Suspense>
       </PageBody>

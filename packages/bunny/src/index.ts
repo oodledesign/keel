@@ -153,6 +153,16 @@ export class BunnyStreamClient {
     return mapBunnyVideo(raw);
   }
 
+  async getLibrary(libraryId: string): Promise<{ hostname: string | null }> {
+    const raw = await this.request<{ Hostname?: string; hostname?: string }>(
+      `/library/${libraryId}`,
+    );
+
+    return {
+      hostname: raw.Hostname?.trim() || raw.hostname?.trim() || null,
+    };
+  }
+
   async deleteVideo(libraryId: string, videoId: string): Promise<void> {
     await this.request<void>(`/library/${libraryId}/videos/${videoId}`, {
       method: 'DELETE',
@@ -201,7 +211,12 @@ export class BunnyStreamClient {
     if (config?.autoplay) url.searchParams.set('autoplay', 'true');
     if (config?.muted) url.searchParams.set('muted', 'true');
     if (config?.loop) url.searchParams.set('loop', 'true');
-    if (config?.preload) url.searchParams.set('preload', config.preload);
+    if (config?.preload != null) {
+      url.searchParams.set(
+        'preload',
+        config.preload === 'auto' ? 'true' : 'false',
+      );
+    }
     if (config?.responsive === false) url.searchParams.set('responsive', 'false');
     if (config?.token) url.searchParams.set('token', config.token);
 
@@ -214,6 +229,9 @@ export class BunnyStreamClient {
     time = 0,
   ): string {
     const host = cdnHostname.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    if (time === 0) {
+      return `https://${host}/${videoId}/thumbnail.jpg`;
+    }
     return `https://${host}/${videoId}/${time}.jpg`;
   }
 

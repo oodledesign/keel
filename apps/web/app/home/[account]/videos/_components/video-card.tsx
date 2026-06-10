@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { Loader2, MoreHorizontal, Play } from 'lucide-react';
 
@@ -14,9 +13,10 @@ import {
 } from '@kit/ui/dropdown-menu';
 
 import { formatDuration } from '~/lib/videos/format';
-import { VIDEO_THUMB_PLACEHOLDER } from '~/lib/videos/thumbnail';
 import type { VideoRow } from '~/lib/videos/types';
 import pathsConfig from '~/config/paths.config';
+
+import { VideoThumbnail } from './video-thumbnail';
 
 export function VideoCard(props: {
   accountSlug: string;
@@ -29,7 +29,6 @@ export function VideoCard(props: {
   onDelete: (video: VideoRow) => void;
 }) {
   const { video } = props;
-  const thumb = video.thumbnail_url ?? VIDEO_THUMB_PLACEHOLDER;
 
   const playerConfigPath = pathsConfig.app.accountVideoDetail
     .replace('[account]', props.accountSlug)
@@ -43,11 +42,9 @@ export function VideoCard(props: {
         onClick={() => props.onPreview(video)}
         aria-label={`Play ${video.title}`}
       >
-        <Image
-          src={thumb}
+        <VideoThumbnail
+          candidates={video.thumbnail_candidates ?? []}
           alt={video.title}
-          fill
-          unoptimized
           className="object-cover transition group-hover:scale-[1.02]"
         />
         <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition group-hover:bg-black/30 group-hover:opacity-100">
