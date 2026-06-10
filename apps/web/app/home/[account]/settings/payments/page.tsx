@@ -9,10 +9,10 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import {
   getDefaultAccountPath,
   getTeamAccountAccess,
-} from '../../../_lib/role-access';
-import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard';
-import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
+} from '../../_lib/role-access';
+import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
+import { redirectIfSpaceNotIn } from '../../_lib/server/workspace-route-guard';
+import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
 import { PaymentSettingsForm } from './_components/payment-settings-form';
 
 export const generateMetadata = async () => ({ title: 'Payment settings' });
@@ -35,7 +35,16 @@ export default async function PaymentSettingsPage(props: PaymentSettingsPageProp
   );
 
   if (!access.canViewSettings) {
-    redirect(getDefaultAccountPath(account, workspace.account));
+    redirect(
+      getDefaultAccountPath(
+        account,
+        workspace.account as {
+          permissions?: string[] | null;
+          role?: string | null;
+          company_role?: string | null;
+        },
+      ),
+    );
   }
 
   const accountId = workspace.account.id as string;
