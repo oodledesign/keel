@@ -78,6 +78,7 @@
     "@kit/monitoring": "workspace:*",
     "@kit/next": "workspace:*",
     "@kit/notifications": "workspace:*",
+    "@kit/policies": "workspace:*",
     "@kit/shared": "workspace:*",
     "@kit/supabase": "workspace:*",
     "@kit/team-accounts": "workspace:*",

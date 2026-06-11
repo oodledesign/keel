@@ -13,7 +13,7 @@ import { HomeLayoutPageHeader } from '../../_components/home-page-header';
 import {
   PlatformSupportReplyForm,
   PlatformSupportTicketThread,
-} from './_components/platform-support-ticket-detail';
+} from '../_components/platform-support-ticket-detail';
 
 export const metadata = { title: 'Support ticket' };
 

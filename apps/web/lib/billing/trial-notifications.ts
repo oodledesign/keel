@@ -4,8 +4,6 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
-import { sendPlatformEmail } from '~/lib/server/send-platform-email';
-
 import pathsConfig from '~/config/paths.config';
 
 export type BillingNotificationType =

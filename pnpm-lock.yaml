@@ -338,6 +338,9 @@ importers:
       '@kit/notifications':
         specifier: workspace:*
         version: link:../../packages/features/notifications
+      '@kit/policies':
+        specifier: workspace:*
+        version: link:../../packages/policies
       '@kit/shared':
         specifier: workspace:*
         version: link:../../packages/shared

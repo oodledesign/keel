@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 
-import { toast } from 'sonner';
+import { toast } from '@kit/ui/sonner';
 
 import { Button } from '@kit/ui/button';
 import {
