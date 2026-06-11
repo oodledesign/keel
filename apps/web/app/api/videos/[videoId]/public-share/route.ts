@@ -2,10 +2,8 @@ import { type NextRequest } from 'next/server';
 import { z } from 'zod';
 
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
-import {
-  buildPublicVideoWatchUrl,
-  generatePublicShareToken,
-} from '~/lib/videos/public-share';
+import { buildPublicVideoWatchUrl } from '~/lib/videos/public-share';
+import { generatePublicShareToken } from '~/lib/videos/public-share.server';
 import { requireVideoById } from '~/lib/videos/server/videos-access';
 
 export const runtime = 'nodejs';

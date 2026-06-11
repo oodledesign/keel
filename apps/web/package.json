@@ -6,8 +6,8 @@
   "type": "module",
   "scripts": {
     "analyze": "ANALYZE=true pnpm run build",
-    "build": "next build",
-    "build:test": "NODE_ENV=test next build",
+    "build": "next build --webpack",
+    "build:test": "NODE_ENV=test next build --webpack",
     "clean": "git clean -xdf .next .turbo node_modules",
     "dev": "pnpm exec next dev --webpack",
     "dev:staging": "cp .env.staging .env.development.local && pnpm exec next dev --webpack",

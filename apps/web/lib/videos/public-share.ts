@@ -1,9 +1,3 @@
-import { randomBytes } from 'node:crypto';
-
-export function generatePublicShareToken() {
-  return randomBytes(24).toString('base64url');
-}
-
 export function getSiteOrigin() {
   const configured = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '');
   if (configured) return configured;

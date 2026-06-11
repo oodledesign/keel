@@ -296,21 +296,16 @@ async function getRedirects() {
     },
   ];
 
-  // Temporarily redirect all marketing pages to home (remove when re-enabling)
+  // Legacy marketing pages still disabled; segment landings, pricing, contact, FAQ, and legal stay public.
   const marketingRedirects = [
-    '/faq',
     '/blog',
     '/blog/:path*',
     '/docs',
     '/docs/:path*',
     '/changelog',
     '/changelog/:path*',
-    '/contact',
     '/about',
     '/careers',
-    '/privacy-policy',
-    '/terms-of-service',
-    '/cookie-policy',
   ].map((source) => ({
     source,
     destination: '/',
