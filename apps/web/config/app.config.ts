@@ -64,14 +64,18 @@ const AppConfigSchema = z
   );
 
 const appConfig = AppConfigSchema.parse({
-  name: process.env.NEXT_PUBLIC_PRODUCT_NAME,
-  title: process.env.NEXT_PUBLIC_SITE_TITLE,
-  description: process.env.NEXT_PUBLIC_SITE_DESCRIPTION,
-  url: process.env.NEXT_PUBLIC_SITE_URL,
+  name: process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Keel',
+  title: process.env.NEXT_PUBLIC_SITE_TITLE ?? 'Keel',
+  description:
+    process.env.NEXT_PUBLIC_SITE_DESCRIPTION ?? 'Keel is your new Life OS.',
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000',
   locale: process.env.NEXT_PUBLIC_DEFAULT_LOCALE,
-  theme: process.env.NEXT_PUBLIC_DEFAULT_THEME_MODE,
-  themeColor: process.env.NEXT_PUBLIC_THEME_COLOR,
-  themeColorDark: process.env.NEXT_PUBLIC_THEME_COLOR_DARK,
+  theme: (process.env.NEXT_PUBLIC_DEFAULT_THEME_MODE ?? 'light') as
+    | 'light'
+    | 'dark'
+    | 'system',
+  themeColor: process.env.NEXT_PUBLIC_THEME_COLOR ?? '#ffffff',
+  themeColorDark: process.env.NEXT_PUBLIC_THEME_COLOR_DARK ?? '#0a0a0a',
   production,
 });
 

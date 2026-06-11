@@ -26,10 +26,21 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# Env files — never commit secrets, staging/prod configs, or templates
+# Env files with secrets or local overrides (never commit)
+**/.env.local
+**/.env.*.local
+**/.env.development
+**/.env.test
+**/.env.staging
+**/.env.local.example
+apps/e2e/.env
+
+# Secret or environment-specific env files
 **/.env
 **/.env.*
-**/.env*.local
+
+# Public shared config (no secrets) — safe to commit for builds and local dev
+!apps/web/.env
 
 # vercel
 .vercel
