@@ -31,9 +31,34 @@ async function getUser(request: NextRequest, response: NextResponse) {
   }
 }
 
+function createForwardHeaders(request: NextRequest) {
+  const requestHeaders = new Headers(request.headers);
+  const pathname = request.nextUrl.pathname;
+
+  requestHeaders.set('x-pathname', pathname);
+
+  if (isServerAction(request)) {
+    requestHeaders.set('x-action-path', pathname);
+  }
+
+  return requestHeaders;
+}
+
+function createNextResponse(
+  request: NextRequest,
+  init?: ResponseInit,
+) {
+  return NextResponse.next({
+    ...init,
+    request: {
+      headers: createForwardHeaders(request),
+    },
+  });
+}
+
 export async function proxy(request: NextRequest) {
   const secureHeaders = await createResponseWithSecureHeaders();
-  const response = NextResponse.next(secureHeaders);
+  const response = createNextResponse(request, secureHeaders);
 
   // set a unique request ID for each request
   // this helps us log and trace requests
@@ -54,15 +79,6 @@ export async function proxy(request: NextRequest) {
       return patternHandlerResponse;
     }
   }
-
-  // append the action path to the request headers
-  // which is useful for knowing the action path in server actions
-  if (isServerAction(request)) {
-    csrfResponse.headers.set('x-action-path', request.nextUrl.pathname);
-  }
-
-  // append pathname for server-side billing guards
-  csrfResponse.headers.set('x-pathname', request.nextUrl.pathname);
 
   // if no pattern handler returned a response,
   // return the session response

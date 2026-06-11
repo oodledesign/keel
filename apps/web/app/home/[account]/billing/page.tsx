@@ -1,5 +1,3 @@
-import { redirect } from 'next/navigation';
-
 import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
 
 import { resolveProductPlan } from '@kit/billing-gateway';
@@ -18,7 +16,7 @@ import { cn } from '@kit/ui/utils';
 import billingConfig from '~/config/billing.config';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
-import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access';
+import { getTeamAccountAccess } from '../_lib/role-access';
 
 // local imports
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
@@ -61,7 +59,21 @@ async function TeamAccountBillingPage({
   );
 
   if (!access.canViewBilling) {
-    redirect(getDefaultAccountPath(account, workspace.account));
+    return (
+      <>
+        <TeamAccountLayoutPageHeader
+          account={account}
+          title={<Trans i18nKey={'common:routes.billing'} />}
+          description={<AppBreadcrumbs />}
+        />
+
+        <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-[var(--workspace-shell-text)] lg:px-6">
+          <div className={cn('flex max-w-2xl flex-col space-y-4')}>
+            <CannotManageBillingAlert />
+          </div>
+        </PageBody>
+      </>
+    );
   }
 
   const accountId = workspace.account.id;

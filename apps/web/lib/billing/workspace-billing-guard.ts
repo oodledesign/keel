@@ -13,6 +13,25 @@ import { requiredEntitlementForProfile } from './keel-plan-catalog';
 
 const BILLING_PATH_SEGMENTS = ['/billing', '/billing/return'];
 
+function isBillingRoute(pathname: string, accountSlug: string): boolean {
+  if (!pathname) {
+    return false;
+  }
+
+  if (BILLING_PATH_SEGMENTS.some((segment) => pathname.includes(segment))) {
+    return true;
+  }
+
+  const billingBase = pathsConfig.app.accountBilling.replace(
+    '[account]',
+    accountSlug,
+  );
+
+  return (
+    pathname === billingBase || pathname.startsWith(`${billingBase}/`)
+  );
+}
+
 export async function redirectIfWorkspaceBillingRequired(
   client: SupabaseClient,
   userId: string,
@@ -27,10 +46,7 @@ export async function redirectIfWorkspaceBillingRequired(
     return;
   }
 
-  const isBillingRoute = BILLING_PATH_SEGMENTS.some((segment) =>
-    pathname.includes(segment),
-  );
-  if (isBillingRoute) {
+  if (isBillingRoute(pathname, accountSlug)) {
     return;
   }
 

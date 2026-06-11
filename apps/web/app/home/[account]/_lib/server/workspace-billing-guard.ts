@@ -19,6 +19,7 @@ export async function enforceWorkspaceBilling(accountSlug: string) {
   const pathname =
     headerStore.get('x-pathname') ??
     headerStore.get('x-url') ??
+    headerStore.get('next-url') ??
     headerStore.get('referer') ??
     '';
 
