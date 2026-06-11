@@ -11,7 +11,7 @@ export const metadata = { title: 'People — Keel' };
 
 async function PeoplePageContent() {
   const data = await loadPeopleListPageData();
-  return <PeoplePageClient people={data.people} />;
+  return <PeoplePageClient people={data.people} viewer={data.viewer} />;
 }
 
 function PeoplePage() {

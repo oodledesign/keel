@@ -58,6 +58,7 @@ export async function createPersonAction(input: unknown) {
       phone: parsed.phone,
       generalNotes: parsed.generalNotes,
       catchupCadenceDays: parsed.catchupCadenceDays ?? null,
+      circleTier: parsed.circleTier,
     });
     revalidatePeople(id);
     return { success: true as const, id, error: null };
@@ -81,6 +82,7 @@ export async function updatePersonAction(input: unknown) {
       phone: parsed.phone,
       generalNotes: parsed.generalNotes,
       catchupCadenceDays: parsed.catchupCadenceDays ?? null,
+      circleTier: parsed.circleTier,
     });
     revalidatePeople(parsed.id);
     return { success: true as const, error: null };

@@ -19,6 +19,10 @@ import {
   formatGbp,
   planIdForInterval,
 } from '~/lib/billing/pricing-marketing';
+import { getSegmentPricingComparison } from '~/lib/marketing/pricing-comparison';
+import type { SegmentSlug } from '~/lib/marketing/segment-landing-pages';
+
+import { PricingComparisonTable } from '../../_components/pricing-comparison-table';
 
 type WorkspaceCategory = 'community' | 'business' | 'property';
 
@@ -26,6 +30,12 @@ const CATEGORY_LABELS: Record<WorkspaceCategory, string> = {
   community: 'Community',
   business: 'Business',
   property: 'Property',
+};
+
+const CATEGORY_SEGMENT: Record<WorkspaceCategory, SegmentSlug> = {
+  community: 'community',
+  business: 'work',
+  property: 'property',
 };
 
 export function KeelPricingPage() {
@@ -39,6 +49,16 @@ export function KeelPricingPage() {
       return plan.profile === 'work_design';
     });
   }, [category]);
+
+  const pricingComparison = useMemo(
+    () => getSegmentPricingComparison(CATEGORY_SEGMENT[category]),
+    [category],
+  );
+
+  const personalComparison = useMemo(
+    () => getSegmentPricingComparison('personal'),
+    [],
+  );
 
   return (
     <div className="space-y-16">
@@ -82,6 +102,12 @@ export function KeelPricingPage() {
         <div className="mx-auto max-w-md">
           <FreePlanCard />
         </div>
+        {personalComparison ? (
+          <PricingComparisonTable
+            comparison={personalComparison}
+            className="mt-4"
+          />
+        ) : null}
       </PricingSection>
 
       <PricingSection
@@ -111,6 +137,10 @@ export function KeelPricingPage() {
             <WorkspacePlanCard key={plan.productId} plan={plan} interval={interval} />
           ))}
         </div>
+
+        {pricingComparison ? (
+          <PricingComparisonTable comparison={pricingComparison} className="mt-4" />
+        ) : null}
       </PricingSection>
 
       <PricingSection

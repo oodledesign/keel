@@ -9,6 +9,17 @@ export const RELATIONSHIP_PRESETS = [
   'Other',
 ] as const;
 
+export const PERSON_CIRCLE_TIERS = [
+  'core',
+  'close',
+  'friends',
+  'community',
+] as const;
+
+export type PersonCircleTier = (typeof PERSON_CIRCLE_TIERS)[number];
+
+export const DEFAULT_PERSON_CIRCLE_TIER: PersonCircleTier = 'friends';
+
 export const CATCHUP_CADENCE_OPTIONS = [
   { label: 'Off', value: null },
   { label: 'Weekly', value: 7 },
@@ -36,6 +47,7 @@ export const CreatePersonSchema = z.object({
   phone: z.string().trim().max(50).optional().nullable(),
   generalNotes: z.string().trim().max(5000).optional().nullable(),
   catchupCadenceDays: z.number().int().positive().optional().nullable(),
+  circleTier: z.enum(PERSON_CIRCLE_TIERS).optional(),
 });
 
 export const UpdatePersonSchema = CreatePersonSchema.extend({
@@ -131,6 +143,7 @@ export type PersonRow = {
   general_notes: string | null;
   catchup_cadence_days: number | null;
   last_catchup_on: string | null;
+  circle_tier: PersonCircleTier;
   created_at: string;
   updated_at: string;
 };

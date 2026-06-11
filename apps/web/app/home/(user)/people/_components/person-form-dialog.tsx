@@ -23,9 +23,11 @@ import { Textarea } from '@kit/ui/textarea';
 
 import {
   CATCHUP_CADENCE_OPTIONS,
+  DEFAULT_PERSON_CIRCLE_TIER,
   RELATIONSHIP_PRESETS,
   type PersonRow,
 } from '../_lib/schema/people.schema';
+import { CIRCLE_TIER_OPTIONS } from '../_lib/circle-tiers';
 import {
   createPersonAction,
   updatePersonAction,
@@ -52,6 +54,7 @@ export function PersonFormDialog({
   const [phone, setPhone] = useState('');
   const [generalNotes, setGeneralNotes] = useState('');
   const [cadence, setCadence] = useState<string>('off');
+  const [circleTier, setCircleTier] = useState(DEFAULT_PERSON_CIRCLE_TIER);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -68,6 +71,7 @@ export function PersonFormDialog({
         ? String(person.catchup_cadence_days)
         : 'off',
     );
+    setCircleTier(person?.circle_tier ?? DEFAULT_PERSON_CIRCLE_TIER);
     setError(null);
   }, [open, person]);
 
@@ -85,6 +89,7 @@ export function PersonFormDialog({
         phone: phone || null,
         generalNotes: generalNotes || null,
         catchupCadenceDays: cadenceDays,
+        circleTier,
       };
 
       const result = isEdit && person
@@ -148,6 +153,31 @@ export function PersonFormDialog({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="grid gap-2">
+            <Label>Circle of trust</Label>
+            <Select
+              value={circleTier}
+              onValueChange={(value) =>
+                setCircleTier(value as typeof circleTier)
+              }
+            >
+              <SelectTrigger className="border-white/10 bg-[var(--workspace-shell-panel)] text-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="border-white/10 bg-[#0F1B35] text-white">
+                {CIRCLE_TIER_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-zinc-500">
+              {CIRCLE_TIER_OPTIONS.find((option) => option.value === circleTier)
+                ?.description}
+            </p>
           </div>
 
           <div className="grid gap-2 sm:grid-cols-2">

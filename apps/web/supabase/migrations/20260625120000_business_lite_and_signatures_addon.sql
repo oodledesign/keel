@@ -1,5 +1,20 @@
 -- Business Lite (free apps shell) + Signatures as a paid add-on (not bundled in full business seed).
 
+-- 0) Allow onboard/backfill entitlement sources used by Business Lite
+ALTER TABLE public.account_entitlements
+  DROP CONSTRAINT IF EXISTS account_entitlements_source_check;
+
+ALTER TABLE public.account_entitlements
+  ADD CONSTRAINT account_entitlements_source_check
+  CHECK (source IN (
+    'stripe',
+    'admin_grant',
+    'trial',
+    'super_admin',
+    'onboard',
+    'backfill'
+  ));
+
 -- 1) businesses.type: allow 'lite'
 DO $$
 BEGIN
@@ -8,6 +23,8 @@ BEGIN
     WHERE table_schema = 'public' AND table_name = 'businesses'
   ) THEN
     ALTER TABLE public.businesses DROP CONSTRAINT IF EXISTS businesses_type_valid;
+    ALTER TABLE public.businesses DROP CONSTRAINT IF EXISTS businesses_type_check;
+
     ALTER TABLE public.businesses ADD CONSTRAINT businesses_type_valid CHECK (
       type IN ('design', 'property', 'other', 'lite')
     );

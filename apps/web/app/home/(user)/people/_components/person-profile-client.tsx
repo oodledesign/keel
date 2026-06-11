@@ -54,6 +54,7 @@ import {
 } from '../_lib/actions/people-actions';
 import type { PersonProfile } from '../_lib/server/people.service';
 import { DATE_KINDS } from '../_lib/schema/people.schema';
+import { CircleTierBadge } from './circle-tier-badge';
 import { PersonFormDialog } from './person-form-dialog';
 
 const panelClass =
@@ -135,7 +136,8 @@ export function PersonProfileClient({ person }: Props) {
               {person.nickname && person.full_name !== person.nickname && (
                 <p className="text-sm text-zinc-400">{person.full_name}</p>
               )}
-              <div className="mt-2 flex flex-wrap gap-2 text-sm text-zinc-400">
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-zinc-400">
+                <CircleTierBadge tier={person.circle_tier} showFullLabel />
                 {person.relationship_label && (
                   <span className="rounded-full bg-white/5 px-2.5 py-0.5">
                     {person.relationship_label}

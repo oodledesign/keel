@@ -8,6 +8,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Cake,
   CalendarClock,
+  LayoutGrid,
+  Orbit,
   Plus,
   Search,
   UserRound,
@@ -27,15 +29,32 @@ import { cn } from '@kit/ui/utils';
 import pathsConfig from '~/config/paths.config';
 
 import type { PersonListItem } from '../_lib/server/people.service';
+import {
+  CIRCLE_TIER_OPTIONS,
+  CIRCLE_TIER_ORDER,
+  getCircleTierMeta,
+} from '../_lib/circle-tiers';
+import type { PersonCircleTier } from '../_lib/schema/people.schema';
+import { CircleTierBadge } from './circle-tier-badge';
+import { PeopleOrbitView } from './people-orbit-view';
+import { PersonAvatar } from './person-avatar';
 import { PersonFormDialog } from './person-form-dialog';
 
 const panelClass =
   'rounded-2xl border border-white/[0.08] bg-[var(--workspace-shell-panel)]';
 
-type SortKey = 'recent' | 'name' | 'catchup';
+type SortKey = 'recent' | 'name' | 'catchup' | 'circle';
+
+type CircleFilter = 'all' | PersonCircleTier;
+
+type ViewMode = 'list' | 'orbit';
 
 type Props = {
   people: PersonListItem[];
+  viewer: {
+    name: string;
+    avatarUrl: string | null;
+  };
 };
 
 function displayName(p: PersonListItem) {
@@ -52,11 +71,13 @@ function formatLastMet(last: string | null) {
   });
 }
 
-export function PeoplePageClient({ people }: Props) {
+export function PeoplePageClient({ people, viewer }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [search, setSearch] = useState('');
-  const [sort, setSort] = useState<SortKey>('recent');
+  const [viewMode, setViewMode] = useState<ViewMode>('orbit');
+  const [sort, setSort] = useState<SortKey>('circle');
+  const [circleFilter, setCircleFilter] = useState<CircleFilter>('all');
   const [showCreate, setShowCreate] = useState(
     searchParams.get('create') === 'person',
   );
@@ -75,23 +96,41 @@ export function PeoplePageClient({ people }: Props) {
       );
     }
 
-    list = [...list].sort((a, b) => {
-      if (sort === 'name') {
-        return displayName(a).localeCompare(displayName(b));
-      }
-      if (sort === 'catchup') {
-        if (a.catchupOverdue !== b.catchupOverdue) {
-          return a.catchupOverdue ? -1 : 1;
+    if (circleFilter !== 'all') {
+      list = list.filter((p) => p.circle_tier === circleFilter);
+    }
+
+    if (sort !== 'circle') {
+      list = [...list].sort((a, b) => {
+        if (sort === 'name') {
+          return displayName(a).localeCompare(displayName(b));
         }
-        return displayName(a).localeCompare(displayName(b));
-      }
-      return (
-        new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-      );
-    });
+        if (sort === 'catchup') {
+          if (a.catchupOverdue !== b.catchupOverdue) {
+            return a.catchupOverdue ? -1 : 1;
+          }
+          return displayName(a).localeCompare(displayName(b));
+        }
+        return (
+          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+        );
+      });
+    }
 
     return list;
-  }, [people, search, sort]);
+  }, [people, search, sort, circleFilter]);
+
+  const groupedByCircle = useMemo(() => {
+    if (sort !== 'circle') return null;
+
+    return CIRCLE_TIER_ORDER.map((tier) => ({
+      tier,
+      meta: getCircleTierMeta(tier),
+      people: filtered
+        .filter((person) => person.circle_tier === tier)
+        .sort((a, b) => displayName(a).localeCompare(displayName(b))),
+    })).filter((group) => group.people.length > 0);
+  }, [filtered, sort]);
 
   const onCreated = (id: string) => {
     startTransition(() => {
@@ -107,8 +146,8 @@ export function PeoplePageClient({ people }: Props) {
             People
           </h1>
           <p className="mt-1 max-w-xl text-sm text-zinc-400">
-            Stay close to the people who matter — notes, dates, gift ideas, and
-            memories in one place.
+            Stay close to the people who matter — organise your circle of trust,
+            track dates, gift ideas, and catchups.
           </p>
         </div>
         <Button
@@ -130,16 +169,62 @@ export function PeoplePageClient({ people }: Props) {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
-          <SelectTrigger className="w-full border-white/10 bg-[var(--workspace-shell-panel)] text-white sm:w-[180px]">
-            <SelectValue placeholder="Sort" />
+        <Select value={circleFilter} onValueChange={(v) => setCircleFilter(v as CircleFilter)}>
+          <SelectTrigger className="w-full border-white/10 bg-[var(--workspace-shell-panel)] text-white sm:w-[170px]">
+            <SelectValue placeholder="Circle" />
           </SelectTrigger>
           <SelectContent className="border-white/10 bg-[#0F1B35] text-white">
-            <SelectItem value="recent">Recently updated</SelectItem>
-            <SelectItem value="name">Name A–Z</SelectItem>
-            <SelectItem value="catchup">Needs catchup</SelectItem>
+            <SelectItem value="all">All circles</SelectItem>
+            {CIRCLE_TIER_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
+        {viewMode === 'list' ? (
+          <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
+            <SelectTrigger className="w-full border-white/10 bg-[var(--workspace-shell-panel)] text-white sm:w-[180px]">
+              <SelectValue placeholder="Sort" />
+            </SelectTrigger>
+            <SelectContent className="border-white/10 bg-[#0F1B35] text-white">
+              <SelectItem value="circle">By circle</SelectItem>
+              <SelectItem value="recent">Recently updated</SelectItem>
+              <SelectItem value="name">Name A–Z</SelectItem>
+              <SelectItem value="catchup">Needs catchup</SelectItem>
+            </SelectContent>
+          </Select>
+        ) : null}
+        <div className="inline-flex rounded-lg border border-white/10 bg-[var(--workspace-shell-panel)] p-1">
+          <button
+            type="button"
+            onClick={() => setViewMode('orbit')}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition',
+              viewMode === 'orbit'
+                ? 'bg-[var(--keel-teal)] text-[#0B132B]'
+                : 'text-zinc-400 hover:text-white',
+            )}
+            aria-pressed={viewMode === 'orbit'}
+          >
+            <Orbit className="h-4 w-4" />
+            Orbit
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('list')}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition',
+              viewMode === 'list'
+                ? 'bg-[var(--keel-teal)] text-[#0B132B]'
+                : 'text-zinc-400 hover:text-white',
+            )}
+            aria-pressed={viewMode === 'list'}
+          >
+            <LayoutGrid className="h-4 w-4" />
+            List
+          </button>
+        </div>
       </div>
 
       {filtered.length === 0 ? (
@@ -172,6 +257,29 @@ export function PeoplePageClient({ people }: Props) {
             </Button>
           )}
         </div>
+      ) : viewMode === 'orbit' ? (
+        <PeopleOrbitView people={filtered} viewer={viewer} />
+      ) : groupedByCircle ? (
+        <div className="space-y-8">
+          {groupedByCircle.map((group) => (
+            <section key={group.tier}>
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <CircleTierBadge tier={group.tier} showFullLabel />
+                <span className="text-sm text-zinc-500">
+                  {group.meta.description}
+                </span>
+                <span className="text-xs text-zinc-600">
+                  ({group.people.length})
+                </span>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {group.people.map((person) => (
+                  <PersonCard key={person.id} person={person} />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((person) => (
@@ -202,14 +310,17 @@ function PersonCard({ person }: { person: PersonListItem }) {
       )}
     >
       <div className="flex items-start gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--keel-teal)]/15 text-lg font-semibold text-[#5eead4]">
-          {name.charAt(0).toUpperCase()}
-        </div>
+        <PersonAvatar
+          name={name}
+          avatarUrl={person.avatar_url}
+          tier={person.circle_tier}
+        />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="truncate text-base font-semibold text-white group-hover:text-[#5eead4]">
               {name}
             </h3>
+            <CircleTierBadge tier={person.circle_tier} />
             {person.relationship_label && (
               <span className="rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-zinc-400">
                 {person.relationship_label}

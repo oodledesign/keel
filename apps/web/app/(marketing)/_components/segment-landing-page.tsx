@@ -10,7 +10,10 @@ import {
   buildPricingSignupUrl,
   formatGbp,
 } from '~/lib/billing/pricing-marketing';
+import { getSegmentPricingComparison } from '~/lib/marketing/pricing-comparison';
 import type { SegmentLandingConfig } from '~/lib/marketing/segment-landing-pages';
+
+import { PricingComparisonTable } from './pricing-comparison-table';
 
 type SegmentLandingPageProps = {
   config: SegmentLandingConfig;
@@ -24,6 +27,7 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
     planId: config.pricingPlans.find((p) => p.highlighted)?.planId ??
       config.pricingPlans.find((p) => p.priceGbp > 0)?.planId,
   });
+  const pricingComparison = getSegmentPricingComparison(config.slug);
 
   return (
     <main className="relative overflow-hidden bg-[radial-gradient(circle_at_15%_10%,rgba(42,157,143,0.18),transparent_45%),radial-gradient(circle_at_85%_0%,rgba(37,99,235,0.22),transparent_42%),linear-gradient(180deg,#05050b_0%,#080711_45%,#070612_100%)] text-white">
@@ -258,6 +262,13 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
             );
           })}
         </div>
+
+        {pricingComparison ? (
+          <PricingComparisonTable
+            comparison={pricingComparison}
+            className="mt-10"
+          />
+        ) : null}
 
         <p className="mt-8 text-center text-sm text-violet-200/70">
           <Link href="/pricing" className="underline underline-offset-2 hover:text-white">

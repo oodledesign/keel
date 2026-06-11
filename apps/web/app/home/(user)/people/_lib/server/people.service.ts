@@ -7,10 +7,12 @@ import { createAccountsApi } from '@kit/accounts/api';
 import type {
   CatchupRow,
   GiftIdeaRow,
+  PersonCircleTier,
   PersonDateRow,
   PersonNoteRow,
   PersonRow,
 } from '../schema/people.schema';
+import { DEFAULT_PERSON_CIRCLE_TIER } from '../schema/people.schema';
 
 export type PersonListItem = PersonRow & {
   dates: PersonDateRow[];
@@ -163,15 +165,19 @@ class PeopleService {
     }
 
     return rows.map((p) => {
+      const person = {
+        ...p,
+        circle_tier: p.circle_tier ?? DEFAULT_PERSON_CIRCLE_TIER,
+      };
       const personDates = datesByPerson.get(p.id) ?? [];
       const daysUntilBirthday = computeDaysUntilBirthday(personDates);
       return {
-        ...p,
+        ...person,
         dates: personDates,
         catchupOverdue: computeCatchupOverdue(
-          p.last_catchup_on,
-          p.catchup_cadence_days,
-          p.created_at,
+          person.last_catchup_on,
+          person.catchup_cadence_days,
+          person.created_at,
         ),
         birthdayThisWeek: isBirthdayWithinDays(personDates, 7),
         daysUntilBirthday,
@@ -190,7 +196,11 @@ class PeopleService {
     if (error) throw error;
     if (!person) return null;
 
-    const p = person as PersonRow;
+    const p = {
+      ...(person as PersonRow),
+      circle_tier:
+        (person as PersonRow).circle_tier ?? DEFAULT_PERSON_CIRCLE_TIER,
+    };
 
     const [datesRes, giftsRes, catchupsRes, notesRes] = await Promise.all([
       this.db.from('personal_person_dates').select('*').eq('person_id', personId).order('month').order('day'),
@@ -232,6 +242,7 @@ class PeopleService {
       phone?: string | null;
       generalNotes?: string | null;
       catchupCadenceDays?: number | null;
+      circleTier?: PersonCircleTier;
     },
   ): Promise<string> {
     const { data, error } = await this.db
@@ -246,6 +257,7 @@ class PeopleService {
         phone: input.phone ?? null,
         general_notes: input.generalNotes ?? null,
         catchup_cadence_days: input.catchupCadenceDays ?? null,
+        circle_tier: input.circleTier ?? DEFAULT_PERSON_CIRCLE_TIER,
       })
       .select('id')
       .single();
@@ -265,6 +277,7 @@ class PeopleService {
       phone?: string | null;
       generalNotes?: string | null;
       catchupCadenceDays?: number | null;
+      circleTier?: PersonCircleTier;
     },
   ): Promise<void> {
     const { error } = await this.db
@@ -277,6 +290,7 @@ class PeopleService {
         phone: input.phone ?? null,
         general_notes: input.generalNotes ?? null,
         catchup_cadence_days: input.catchupCadenceDays ?? null,
+        circle_tier: input.circleTier ?? DEFAULT_PERSON_CIRCLE_TIER,
       })
       .eq('id', input.id)
       .eq('user_id', userId);
