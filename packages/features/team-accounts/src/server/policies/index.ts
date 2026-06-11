@@ -1,6 +1,7 @@
 // Invitation policies
 export { createInvitationsPolicyEvaluator } from './invitation-policies';
 export { createInvitationContextBuilder } from './invitation-context-builder';
+export { invitationPolicyRegistry } from './policies';
 export type { FeaturePolicyInvitationContext } from './feature-policy-invitation-context';
 
 // Create account policies

@@ -52,6 +52,7 @@ import {
   disconnectFreeAgentAction,
   importCsvTransactionsAction,
   loadFinancesDashboardAction,
+  setFinanceTransferAction,
   suggestCsvMappingAction,
   suggestTransactionCategoriesAction,
   syncFreeAgentAction,
@@ -197,6 +198,8 @@ export function FinancesPageContent({
     const formatter = new Intl.DateTimeFormat('en-GB', { month: 'short' });
 
     for (const tx of data.transactions) {
+      if (tx.is_transfer) continue;
+
       const key = String(tx.transaction_date).slice(0, 7);
       if (!months.has(key)) {
         const [y, m] = key.split('-').map(Number);
@@ -220,7 +223,10 @@ export function FinancesPageContent({
   }, [data?.transactions]);
 
   const uncategorizedCount = useMemo(
-    () => (data?.transactions ?? []).filter((tx) => !tx.category_id).length,
+    () =>
+      (data?.transactions ?? []).filter(
+        (tx) => !tx.category_id && !tx.is_transfer,
+      ).length,
     [data?.transactions],
   );
 
@@ -244,6 +250,8 @@ export function FinancesPageContent({
     if (!data?.transactions?.length) return null;
     const months = new Map<string, { income: number; expense: number }>();
     for (const tx of data.transactions) {
+      if (tx.is_transfer) continue;
+
       const key = String(tx.transaction_date).slice(0, 7);
       const row = months.get(key) ?? { income: 0, expense: 0 };
       const p = tx.amount_pence as number;
@@ -263,6 +271,27 @@ export function FinancesPageContent({
       projectedNetPence: Math.round(avgIncome - avgExpense),
     };
   }, [data?.transactions]);
+
+  const onSetTransfer = (transactionId: string, isTransfer: boolean) => {
+    startTransition(async () => {
+      try {
+        await setFinanceTransferAction({
+          accountId,
+          accountSlug,
+          transactionId,
+          isTransfer,
+        });
+        await refresh({ background: true });
+        toast.success(
+          isTransfer
+            ? 'Marked as transfer — excluded from income and expenses'
+            : 'Transfer removed — included in totals again',
+        );
+      } catch {
+        toast.error('Could not update transaction');
+      }
+    });
+  };
 
   const onCategorize = (transactionId: string, categoryId: string | null) => {
     startTransition(async () => {
@@ -449,6 +478,13 @@ export function FinancesPageContent({
             />
           </div>
 
+          {data.summary.transferPence > 0 ? (
+            <p className="text-sm text-zinc-400">
+              {formatPence(data.summary.transferPence)} in internal transfers excluded
+              from income and expenses.
+            </p>
+          ) : null}
+
           {chartData.length > 0 ? (
             <div className="grid gap-4 lg:grid-cols-2">
               <div className={cn(panelClass, 'p-4')}>
@@ -502,6 +538,7 @@ export function FinancesPageContent({
             onSuggestCategories={onSuggestCategories}
             onApplySuggestions={onApplySuggestions}
             onCategorize={onCategorize}
+            onSetTransfer={onSetTransfer}
           />
         </div>
       )}
@@ -603,6 +640,7 @@ function TransactionsPanel({
   onSuggestCategories,
   onApplySuggestions,
   onCategorize,
+  onSetTransfer,
 }: {
   data: DashboardData | null;
   loading: boolean;
@@ -613,6 +651,7 @@ function TransactionsPanel({
   onSuggestCategories: () => void;
   onApplySuggestions: () => void;
   onCategorize: (transactionId: string, categoryId: string | null) => void;
+  onSetTransfer: (transactionId: string, isTransfer: boolean) => void;
 }) {
   return (
     <div className={cn(panelClass, 'overflow-hidden')}>
@@ -660,6 +699,7 @@ function TransactionsPanel({
                 <th className="px-4 py-2 font-medium">Date</th>
                 <th className="px-4 py-2 font-medium">Description</th>
                 <th className="px-4 py-2 font-medium">Amount</th>
+                <th className="px-4 py-2 font-medium">Type</th>
                 <th className="px-4 py-2 font-medium">Category</th>
                 <th className="px-4 py-2 font-medium">Source</th>
               </tr>
@@ -667,19 +707,26 @@ function TransactionsPanel({
             <tbody>
               {data.transactions.map((tx) => {
                 const pence = tx.amount_pence as number;
+                const isTransfer = Boolean(tx.is_transfer);
                 const cat = data.categories.find((c) => c.id === tx.category_id);
                 const suggestion = suggestionMap.get(tx.id as string);
                 const suggestedCat = suggestion?.categoryId
                   ? data.categories.find((c) => c.id === suggestion.categoryId)
                   : null;
                 return (
-                  <tr key={tx.id as string} className="border-b border-white/4">
+                  <tr
+                    key={tx.id as string}
+                    className={cn(
+                      'border-b border-white/4',
+                      isTransfer && 'bg-white/[0.02]',
+                    )}
+                  >
                     <td className="whitespace-nowrap px-4 py-2 text-zinc-300">
                       {String(tx.transaction_date)}
                     </td>
                     <td className="max-w-xs truncate px-4 py-2 text-white">
                       {String(tx.description)}
-                      {suggestedCat && !tx.category_id ? (
+                      {suggestedCat && !tx.category_id && !isTransfer ? (
                         <span className="mt-1 block text-xs text-[#5eead4]">
                           AI suggests: {String(suggestedCat.name)}
                           {suggestion?.confidence ? ` (${suggestion.confidence})` : ''}
@@ -689,11 +736,32 @@ function TransactionsPanel({
                     <td
                       className={cn(
                         'whitespace-nowrap px-4 py-2 font-medium',
-                        pence >= 0 ? 'text-emerald-400' : 'text-red-300',
+                        isTransfer
+                          ? 'text-zinc-400'
+                          : pence >= 0
+                            ? 'text-emerald-400'
+                            : 'text-red-300',
                       )}
                     >
                       {formatPence(Math.abs(pence))}
-                      {pence < 0 ? ' out' : ' in'}
+                      {isTransfer ? ' transfer' : pence < 0 ? ' out' : ' in'}
+                    </td>
+                    <td className="px-4 py-2">
+                      <Select
+                        value={isTransfer ? 'transfer' : 'normal'}
+                        onValueChange={(v) =>
+                          onSetTransfer(tx.id as string, v === 'transfer')
+                        }
+                        disabled={pending}
+                      >
+                        <SelectTrigger className="h-8 w-32 border-white/10 bg-transparent text-xs text-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="normal">Income / expense</SelectItem>
+                          <SelectItem value="transfer">Transfer</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </td>
                     <td className="px-4 py-2">
                       <Select
@@ -701,7 +769,7 @@ function TransactionsPanel({
                         onValueChange={(v) =>
                           onCategorize(tx.id as string, v === 'none' ? null : v)
                         }
-                        disabled={pending}
+                        disabled={pending || isTransfer}
                       >
                         <SelectTrigger className="h-8 w-44 border-white/10 bg-transparent text-xs text-white">
                           <SelectValue placeholder="Category" />

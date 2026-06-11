@@ -7,16 +7,22 @@ import Link from 'next/link';
 import {
   Building2,
   CheckSquare,
+  TrendingDown,
+  TrendingUp,
   UserRound,
   Users,
+  Wallet,
   Wrench,
 } from 'lucide-react';
 
 import { Badge } from '@kit/ui/badge';
-import { Card, CardContent, CardHeader } from '@kit/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 
 import pathsConfig from '~/config/paths.config';
+import { FinanceTrendBarChart } from '~/components/finance/finance-charts';
+
+import type { FinanceDashboardSummary } from '../_lib/server/property-dashboard.loader';
 
 import type { GroupMember, GroupTask } from '../_lib/server/group-dashboard.loader';
 import type { PropertyStatusCounts } from '../_lib/server/property-dashboard.loader';
@@ -28,6 +34,8 @@ interface PropertyBusinessDashboardProps {
   openTasksCount: number;
   members: GroupMember[];
   recentTasks: GroupTask[];
+  financesEnabled?: boolean;
+  financeSummary?: FinanceDashboardSummary;
 }
 
 const panelClass =
@@ -51,6 +59,8 @@ export function PropertyBusinessDashboard({
   openTasksCount,
   members,
   recentTasks,
+  financesEnabled = false,
+  financeSummary,
 }: PropertyBusinessDashboardProps) {
   const [activeTab, setActiveTab] = useState<'tasks' | 'members'>('tasks');
 
@@ -121,7 +131,7 @@ export function PropertyBusinessDashboard({
         ))}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className={`grid gap-3 ${financesEnabled ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-3'}`}>
         <ShortcutCard
           href={accountPath(accountSlug, pathsConfig.app.accountProperties)}
           icon={Building2}
@@ -143,7 +153,23 @@ export function PropertyBusinessDashboard({
           description="Open jobs and work orders"
           accent="orange"
         />
+        {financesEnabled ? (
+          <ShortcutCard
+            href={accountPath(accountSlug, pathsConfig.app.accountFinances)}
+            icon={Wallet}
+            title="Finances"
+            description="Income, expenses, and FreeAgent sync"
+            accent="teal"
+          />
+        ) : null}
       </div>
+
+      {financesEnabled && financeSummary ? (
+        <FinanceOverviewPanel
+          accountSlug={accountSlug}
+          summary={financeSummary}
+        />
+      ) : null}
 
       <Card className={panelClass}>
         <Tabs
@@ -178,6 +204,119 @@ export function PropertyBusinessDashboard({
       </Card>
     </div>
   );
+}
+
+function FinanceOverviewPanel({
+  accountSlug,
+  summary,
+}: {
+  accountSlug: string;
+  summary: FinanceDashboardSummary;
+}) {
+  const financesPath = accountPath(accountSlug, pathsConfig.app.accountFinances);
+
+  return (
+    <Card className={panelClass}>
+      <CardHeader className="flex flex-row items-start justify-between gap-4 border-b border-white/6 pb-4">
+        <div>
+          <CardTitle className="text-base font-semibold text-white">
+            Finances this month
+          </CardTitle>
+          <p className="mt-1 text-xs text-white/45">
+            {summary.hasFinanceData
+              ? 'Track income and expenses — connect FreeAgent for automatic sync'
+              : 'Import transactions or connect FreeAgent to get started'}
+          </p>
+        </div>
+        <Link
+          href={financesPath}
+          className="text-xs font-medium text-[#5eead4] hover:underline"
+        >
+          Open finances →
+        </Link>
+      </CardHeader>
+      <CardContent className="space-y-4 p-4">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <FinanceStatCard
+            label="Income"
+            value={formatCurrency(summary.financeIncomePence / 100)}
+            icon={TrendingUp}
+            tone="teal"
+          />
+          <FinanceStatCard
+            label="Expenses"
+            value={formatCurrency(summary.financeExpensePence / 100)}
+            icon={TrendingDown}
+            tone="amber"
+          />
+          <FinanceStatCard
+            label="Net"
+            value={formatCurrency(summary.financeNetPence / 100)}
+            icon={Wallet}
+            tone={summary.financeNetPence >= 0 ? 'teal' : 'rose'}
+          />
+        </div>
+        {summary.financeTrend.length > 0 ? (
+          <div className="rounded-xl border border-white/6 bg-white/[0.02] p-3">
+            <FinanceTrendBarChart data={summary.financeTrend} />
+          </div>
+        ) : (
+          <div className="rounded-xl border border-dashed border-white/10 py-8 text-center">
+            <Wallet className="mx-auto mb-2 h-8 w-8 text-white/20" />
+            <p className="text-sm text-white/40">No transactions yet</p>
+            <Link
+              href={financesPath}
+              className="mt-2 inline-block text-xs text-[#5eead4] hover:underline"
+            >
+              Set up finances or connect FreeAgent
+            </Link>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function FinanceStatCard({
+  label,
+  value,
+  icon: Icon,
+  tone,
+}: {
+  label: string;
+  value: string;
+  icon: React.ComponentType<{ className?: string }>;
+  tone: 'teal' | 'amber' | 'rose';
+}) {
+  const styles = {
+    teal: { bg: 'bg-[#2A9D8F]/15', text: 'text-[#5eead4]' },
+    amber: { bg: 'bg-amber-500/15', text: 'text-amber-400' },
+    rose: { bg: 'bg-rose-500/15', text: 'text-rose-300' },
+  }[tone];
+
+  return (
+    <div className="rounded-xl border border-white/6 bg-white/[0.02] p-3">
+      <div className="mb-2 flex items-center gap-2">
+        <span
+          className={`flex h-7 w-7 items-center justify-center rounded-lg ${styles.bg}`}
+        >
+          <Icon className={`h-3.5 w-3.5 ${styles.text}`} />
+        </span>
+        <p className="text-[10px] font-medium uppercase tracking-wide text-white/45">
+          {label}
+        </p>
+      </div>
+      <p className="text-lg font-bold tracking-tight text-white">{value}</p>
+    </div>
+  );
+}
+
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat('en-GB', {
+    style: 'currency',
+    currency: 'GBP',
+    maximumFractionDigits: 0,
+  }).format(amount);
 }
 
 function ShortcutCard({

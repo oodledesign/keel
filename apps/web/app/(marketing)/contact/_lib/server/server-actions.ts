@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 
-import { getMailer } from '@kit/mailers';
+import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 import { enhanceAction } from '@kit/next/actions';
 
 import { ContactEmailSchema } from '../contact-email.schema';
@@ -25,13 +25,13 @@ const emailFrom = z
 
 export const sendContactEmail = enhanceAction(
   async (data) => {
-    const mailer = await getMailer();
-
-    await mailer.sendEmail({
-      to: contactEmail,
-      from: emailFrom,
-      subject: 'Contact Form Submission',
-      html: `
+    await sendPlatformEmail({
+      type: 'contact_form',
+      mail: {
+        to: contactEmail,
+        from: emailFrom,
+        subject: 'Contact Form Submission',
+        html: `
         <p>
           You have received a new contact form submission.
         </p>
@@ -40,6 +40,7 @@ export const sendContactEmail = enhanceAction(
         <p>Email: ${data.email}</p>
         <p>Message: ${data.message}</p>
       `,
+      },
     });
 
     return {};

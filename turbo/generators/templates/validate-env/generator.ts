@@ -139,9 +139,9 @@ const Schema: Record<string, z.ZodType> = {
       description: `This is a shared secret that you must set in your Lemon Squeezy account when you create an API Key`,
     })
     .min(1),
-  MAILER_PROVIDER: z.enum(['nodemailer', 'resend'], {
-    message: 'Mailer provider must be nodemailer or resend',
-    description: `This is the mailer provider you want to use for sending emails. nodemailer is a generic SMTP mailer, resend is a service.`,
+  MAILER_PROVIDER: z.enum(['nodemailer', 'resend', 'ses'], {
+    message: 'Mailer provider must be nodemailer, resend, or ses',
+    description: `Email provider: ses (Amazon SES API), nodemailer (SMTP, e.g. local Inbucket), or resend (legacy).`,
   }),
 };
 

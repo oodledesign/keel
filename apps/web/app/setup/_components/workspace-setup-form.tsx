@@ -24,6 +24,7 @@ import {
   completeWorkspaceSetup,
   type WorkspaceSetupSelection,
 } from '../_lib/server/workspace-setup.actions';
+import type { SetupIntent } from '~/lib/billing/pricing-marketing';
 
 type DraftWorkspace = {
   id: string;
@@ -52,12 +53,40 @@ function newDraft(profile: WorkspaceProfile, propertyMode = false): DraftWorkspa
   };
 }
 
-export function WorkspaceSetupForm() {
-  const [drafts, setDrafts] = useState<DraftWorkspace[]>([
+function initialDrafts(intent?: SetupIntent): DraftWorkspace[] {
+  const drafts: DraftWorkspace[] = [
     newDraft('work_design'),
     newDraft('family'),
     newDraft('community'),
-  ]);
+  ];
+
+  if (!intent?.profile) {
+    return drafts;
+  }
+
+  if (intent.profile === 'work_property') {
+    return drafts.map((draft) =>
+      draft.profile === 'work_design'
+        ? {
+            ...draft,
+            enabled: true,
+            propertyMode: true,
+            profile: 'work_property',
+            name: DEFAULT_NAMES.work_property,
+          }
+        : draft,
+    );
+  }
+
+  return drafts.map((draft) =>
+    draft.profile === intent.profile ? { ...draft, enabled: true } : draft,
+  );
+}
+
+export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
+  const [drafts, setDrafts] = useState<DraftWorkspace[]>(() =>
+    initialDrafts(props.intent),
+  );
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -105,7 +134,16 @@ export function WorkspaceSetupForm() {
     setError(null);
     startTransition(async () => {
       try {
-        const result = await completeWorkspaceSetup(selected);
+        const result = await completeWorkspaceSetup(selected, {
+          billingIntent:
+            props.intent?.productId && props.intent.planId
+              ? {
+                  productId: props.intent.productId,
+                  planId: props.intent.planId,
+                  interval: props.intent.interval,
+                }
+              : undefined,
+        });
         if (result?.error) {
           setError(result.error);
           return;
@@ -137,6 +175,11 @@ export function WorkspaceSetupForm() {
           Let&apos;s set up your workspaces. Pick one or more — you can add more
           later from the workspace menu.
         </p>
+        {props.intent?.productId && props.intent.planId ? (
+          <p className="text-sm text-[#2A9D8F]">
+            Your selected plan will be ready to start after workspace setup.
+          </p>
+        ) : null}
       </header>
 
       <div className="space-y-4">
@@ -189,10 +232,12 @@ export function WorkspaceSetupForm() {
                   </span>
                   <span className="mt-1 block text-sm text-zinc-400">
                     {isBusiness
-                      ? 'Manage clients, projects, pipeline and invoicing'
+                      ? draft.profile === 'work_property'
+                        ? 'From £19/mo — up to 5 properties, tenants & maintenance'
+                        : 'From £29/mo — clients, projects, pipeline & invoicing'
                       : draft.profile === 'family'
-                        ? 'Household tasks, calendar and meal planning'
-                        : 'Shared tasks, notes and group coordination'}
+                        ? 'Free — household tasks, calendar and meal planning'
+                        : 'From £12/mo — shared schedule, tasks and notes'}
                   </span>
                 </span>
                 <span

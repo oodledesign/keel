@@ -6,6 +6,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import { aggregateTransactionsByMonth } from '~/lib/date-range/analytics-date-range';
+import { accumulateFinanceTotals } from '~/lib/finance/transaction-totals';
 
 import { loadTeamWorkspace } from './team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from './workspace-route-guard';
@@ -233,12 +234,12 @@ export async function loadDashboardPageData(
       .not('actual_minutes', 'is', null),
     client
       .from('finance_transactions')
-      .select('amount_pence')
+      .select('amount_pence, is_transfer')
       .eq('account_id', accountId)
       .gte('transaction_date', monthStartDate),
     client
       .from('finance_transactions')
-      .select('transaction_date, amount_pence')
+      .select('transaction_date, amount_pence, is_transfer')
       .eq('account_id', accountId)
       .gte('transaction_date', financeTrendStartIso)
       .order('transaction_date', { ascending: true }),
@@ -306,11 +307,14 @@ export async function loadDashboardPageData(
   let financeIncomePence = 0;
   let financeExpensePence = 0;
   if (!financeUnavailable) {
-    for (const row of financeMonthResult.data ?? []) {
-      const pence = (row.amount_pence as number | null) ?? 0;
-      if (pence >= 0) financeIncomePence += pence;
-      else financeExpensePence += Math.abs(pence);
-    }
+    const totals = accumulateFinanceTotals(
+      (financeMonthResult.data ?? []).map((row) => ({
+        amount_pence: (row.amount_pence as number | null) ?? 0,
+        is_transfer: row.is_transfer as boolean | null | undefined,
+      })),
+    );
+    financeIncomePence = totals.incomePence;
+    financeExpensePence = totals.expensePence;
   }
 
   const financeTrend = financeUnavailable
@@ -319,6 +323,7 @@ export async function loadDashboardPageData(
         (financeTrendResult.data ?? []).map((row) => ({
           transaction_date: row.transaction_date as string,
           amount_pence: (row.amount_pence as number | null) ?? 0,
+          is_transfer: row.is_transfer as boolean | null | undefined,
         })),
         6,
       );

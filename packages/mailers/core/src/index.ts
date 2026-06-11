@@ -10,3 +10,4 @@ export function getMailer() {
 }
 
 export { MAILER_PROVIDER };
+export { sanitizeEmailSender } from '@kit/mailers-shared';

@@ -5,35 +5,47 @@ import { createAuthCallbackService } from '@kit/supabase/auth';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
+import { resolvePostAuthLandingPath } from '~/lib/dashboard-shortcuts/resolve-post-auth-landing';
 
 const HOME = pathsConfig.app.home;
 
+async function landingAfterAuth(
+  client: ReturnType<typeof getSupabaseServerClient>,
+  nextPath: string | null | undefined,
+) {
+  const {
+    data: { user },
+  } = await client.auth.getUser();
+
+  if (!user) return nextPath ?? HOME;
+
+  return resolvePostAuthLandingPath(client, user.id, nextPath, HOME);
+}
+
 export async function GET(request: NextRequest) {
-  const service = createAuthCallbackService(getSupabaseServerClient());
+  const client = getSupabaseServerClient();
+  const service = createAuthCallbackService(client);
   const url = new URL(request.url);
   const tokenHash = url.searchParams.get('token_hash');
   const type = url.searchParams.get('type');
   const code = url.searchParams.get('code');
 
-  const params = {
+  const baseParams = {
     joinTeamPath: pathsConfig.app.joinTeam,
     redirectPath: HOME,
   };
 
-  // Email confirmation / magic link: server received token in query
   if (tokenHash && type) {
-    const redirectUrl = await service.verifyTokenHash(request, params);
-    return redirect(redirectUrl.toString());
+    const redirectUrl = await service.verifyTokenHash(request, baseParams);
+    const nextFromVerify = `${redirectUrl.pathname}${redirectUrl.search}`;
+    return redirect(await landingAfterAuth(client, nextFromVerify));
   }
 
-  // OAuth / PKCE: code exchange
   if (code) {
-    const { nextPath } = await service.exchangeCodeForSession(request, params);
-    return redirect(nextPath);
+    const { nextPath } = await service.exchangeCodeForSession(request, baseParams);
+    return redirect(await landingAfterAuth(client, nextPath));
   }
 
-  // No code and no token in query: Supabase may have put token in URL fragment (#).
-  // Return a page that verifies on the client and redirects.
   const html = `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><title>Signing in...</title></head>

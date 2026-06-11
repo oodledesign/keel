@@ -24,12 +24,16 @@ import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
 import { loadTeamAccountBillingPage } from '../_lib/server/team-account-billing-page.loader';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../_lib/server/workspace-route-guard';
-import { TeamAccountCheckoutForm } from './_components/team-account-checkout-form';
+import { KeelWorkspaceCheckoutForm } from './_components/keel-workspace-checkout-form';
+import { KeelAddonCheckoutSection } from './_components/keel-addon-checkout-section';
+import { loadWorkspaceAddonState } from '~/lib/billing/workspace-addon-state.loader';
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 import { createBillingPortalSession } from './_lib/server/server-actions';
 
 interface TeamAccountBillingPageProps {
   params: Promise<{ account: string }>;
+  searchParams: Promise<{ addon?: string; setup?: string }>;
 }
 
 export const generateMetadata = async () => {
@@ -41,10 +45,13 @@ export const generateMetadata = async () => {
   };
 };
 
-async function TeamAccountBillingPage({ params }: TeamAccountBillingPageProps) {
+async function TeamAccountBillingPage({
+  params,
+  searchParams,
+}: TeamAccountBillingPageProps) {
   const account = (await params).account;
+  const query = await searchParams;
   const workspace = await loadTeamWorkspace(account);
-  redirectIfSpaceNotIn(workspace, account, ['work']);
   const access = getTeamAccountAccess(
     workspace.account as {
       permissions?: string[] | null;
@@ -80,6 +87,15 @@ async function TeamAccountBillingPage({ params }: TeamAccountBillingPageProps) {
 
   const shouldShowBillingPortal = canManageBilling && customerId;
 
+  const user = await requireUserInServerComponent();
+  const billingClient = getSupabaseServerClient();
+  const addonState = await loadWorkspaceAddonState(
+    billingClient,
+    user.id,
+    accountId,
+    workspace.workspaceProfile,
+  );
+
   return (
     <>
       <TeamAccountLayoutPageHeader
@@ -95,11 +111,21 @@ async function TeamAccountBillingPage({ params }: TeamAccountBillingPageProps) {
               condition={canManageBilling}
               fallback={<CannotManageBillingAlert />}
             >
-              <TeamAccountCheckoutForm
+              <KeelWorkspaceCheckoutForm
                 customerId={customerId}
                 accountId={accountId}
+                workspaceProfile={workspace.workspaceProfile}
               />
             </If>
+          </If>
+
+          <If condition={canManageBilling && addonState.workspacePaid}>
+            <KeelAddonCheckoutSection
+              accountId={accountId}
+              workspacePaid={addonState.workspacePaid}
+              activeAddons={addonState.addons}
+              highlightAddon={query.addon ?? null}
+            />
           </If>
 
           <If condition={subscription}>

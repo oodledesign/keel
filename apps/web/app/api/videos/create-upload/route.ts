@@ -3,6 +3,8 @@ import { z } from 'zod';
 
 import { createBunnyStreamClient } from '@kit/bunny';
 
+import { assertVideoCreateAllowed } from '~/lib/billing/entitlements';
+
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import {
   getBunnyCdnHostname,
@@ -34,6 +36,27 @@ export async function POST(request: NextRequest) {
     }
     if (access.error === 'FORBIDDEN') {
       return jsonErr('FORBIDDEN', 'Not a member of this account', 403);
+    }
+
+    const accountId = parsed.data.accountId;
+
+    const { count: videoCount } = await access.client
+      .from('videos')
+      .select('id', { count: 'exact', head: true })
+      .eq('account_id', accountId);
+
+    const limitCheck = await assertVideoCreateAllowed(
+      access.client,
+      accountId,
+      videoCount ?? 0,
+    );
+
+    if (!limitCheck.allowed) {
+      return jsonErr(
+        'PLAN_LIMIT',
+        limitCheck.reason ?? 'Video limit reached for your plan',
+        402,
+      );
     }
 
     const libraryId =

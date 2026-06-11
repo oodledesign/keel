@@ -23,4 +23,10 @@ mailerRegistry.register('resend', async () => {
   return createResendMailer();
 });
 
+mailerRegistry.register('ses', async () => {
+  const { createSesMailer } = await import('@kit/ses');
+
+  return createSesMailer();
+});
+
 export { mailerRegistry };

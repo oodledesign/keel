@@ -4,15 +4,18 @@ import { useMemo } from 'react';
 
 import Link from 'next/link';
 
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Cake, CalendarClock, Users } from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
 
 import pathsConfig from '~/config/paths.config';
 
+import { DashboardShortcutsBar } from '~/components/dashboard-shortcuts/dashboard-shortcuts-bar';
+
 import type {
   KeelDashboardData,
   PersonalCalendarEvent,
+  PersonalPeopleUpcomingItem,
   WorkspaceOverviewCard,
 } from '../../_lib/server/keel-dashboard.loader';
 
@@ -37,11 +40,17 @@ export function KeelDashboard({ data }: Props) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-8 px-4 pb-12 pt-6 text-white md:px-6 lg:px-8">
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-          {greeting}, {data.userName}
-        </h1>
-        <p className="mt-1 text-sm font-normal text-white/60">{data.dateLabel}</p>
+      <header className="space-y-4">
+        <DashboardShortcutsBar
+          shortcuts={data.dashboardShortcuts}
+          settingsHref={pathsConfig.app.personalAccountSettings}
+        />
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+            {greeting}, {data.userName}
+          </h1>
+          <p className="mt-1 text-sm font-normal text-white/60">{data.dateLabel}</p>
+        </div>
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
@@ -67,6 +76,26 @@ export function KeelDashboard({ data }: Props) {
               </div>
             ) : (
               <EmptyPanel message="No upcoming tasks scheduled." />
+            )}
+          </DashboardSection>
+
+          <DashboardSection title="Upcoming with people">
+            {data.peopleUpcoming.length > 0 ? (
+              <div className={`${panelClass} divide-y divide-white/[0.06]`}>
+                {data.peopleUpcoming.map((item) => (
+                  <PeopleUpcomingRow key={item.id} item={item} />
+                ))}
+              </div>
+            ) : (
+              <EmptyPanel message="Add people to track birthdays and catchups.">
+                <Link
+                  href={pathsConfig.app.personalPeople}
+                  className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-[#2A9D8F] hover:text-[#34b3a4]"
+                >
+                  Open People
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </EmptyPanel>
             )}
           </DashboardSection>
         </div>
@@ -110,10 +139,13 @@ function DashboardSection(props: React.PropsWithChildren<{ title: string }>) {
   );
 }
 
-function EmptyPanel(props: { message: string }) {
+function EmptyPanel(
+  props: React.PropsWithChildren<{ message: string }>,
+) {
   return (
     <div className={`${panelClass} px-4 py-8 text-center text-sm text-white/50`}>
       {props.message}
+      {props.children}
     </div>
   );
 }
@@ -135,6 +167,33 @@ function CalendarEventRow(props: { event: PersonalCalendarEvent }) {
         </span>
       </div>
     </div>
+  );
+}
+
+function PeopleUpcomingRow(props: { item: PersonalPeopleUpcomingItem }) {
+  const Icon =
+    props.item.kind === 'catchup'
+      ? CalendarClock
+      : props.item.kind === 'birthday'
+        ? Cake
+        : Users;
+
+  return (
+    <Link
+      href={props.item.href}
+      className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/[0.02]"
+    >
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--keel-teal)]/10 text-[#5eead4]">
+        <Icon className="h-4 w-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium text-white">
+          {props.item.name}
+        </p>
+        <p className="text-xs text-zinc-400">{props.item.label}</p>
+      </div>
+      <ArrowRight className="h-4 w-4 shrink-0 text-zinc-500" />
+    </Link>
   );
 }
 

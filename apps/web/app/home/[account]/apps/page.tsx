@@ -11,7 +11,10 @@ import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access
 import { isWorkNavModuleEnabled } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../_lib/server/workspace-route-guard';
-import { WorkspaceAppsGrid } from './_components/workspace-apps-grid';
+import { KeelAppsMarketplace } from './_components/keel-apps-marketplace';
+import { loadWorkspaceAddonState } from '~/lib/billing/workspace-addon-state.loader';
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 interface WorkspaceAppsPageProps {
   params: Promise<{ account: string }>;
@@ -37,9 +40,18 @@ async function WorkspaceAppsPage({ params }: WorkspaceAppsPageProps) {
   const appsEnabled = isWorkNavModuleEnabled(workspace.moduleSettings, 'apps');
   const apps = buildWorkAppLinks(accountSlug, workspace.moduleSettings);
 
-  if (!access.canViewDashboard || !appsEnabled || apps.length === 0) {
+  if (!access.canViewDashboard || !appsEnabled) {
     redirect(getDefaultAccountPath(accountSlug, workspace.account));
   }
+
+  const user = await requireUserInServerComponent();
+  const client = getSupabaseServerClient();
+  const addonState = await loadWorkspaceAddonState(
+    client,
+    user.id,
+    workspace.account.id as string,
+    workspace.workspaceProfile,
+  );
 
   return (
     <>
@@ -50,7 +62,12 @@ async function WorkspaceAppsPage({ params }: WorkspaceAppsPageProps) {
       />
       <PageBody className="space-y-6 bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
         <div className="space-y-6 px-4 lg:px-0">
-          <WorkspaceAppsGrid apps={apps} />
+          <KeelAppsMarketplace
+            accountSlug={accountSlug}
+            installedApps={apps}
+            workspacePaid={addonState.workspacePaid}
+            activeAddons={addonState.addons}
+          />
           <p className="text-muted-foreground text-xs">
             Need another app? Manage modules in{' '}
             <a

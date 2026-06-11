@@ -18,6 +18,7 @@
     "@kit/nodemailer": "workspace:*",
     "@kit/prettier-config": "workspace:*",
     "@kit/resend": "workspace:*",
+    "@kit/ses": "workspace:*",
     "@kit/shared": "workspace:*",
     "@kit/tsconfig": "workspace:*",
     "@types/node": "catalog:",

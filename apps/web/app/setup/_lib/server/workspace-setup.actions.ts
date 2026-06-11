@@ -11,6 +11,7 @@ import {
   type WorkspaceProfile,
 } from '~/home/[account]/_lib/server/workspace-profile';
 import pathsConfig from '~/config/paths.config';
+import { requiredEntitlementForProfile } from '~/lib/billing/keel-plan-catalog';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 export type WorkspaceSetupSelection = {
@@ -47,7 +48,19 @@ async function uniqueSlug(
 
 export async function completeWorkspaceSetup(
   selections: WorkspaceSetupSelection[],
-): Promise<{ error?: string; success?: boolean; redirectTo?: string }> {
+  options?: {
+    billingIntent?: {
+      productId: string;
+      planId: string;
+      interval?: 'month' | 'year';
+    };
+  },
+): Promise<{
+  error?: string;
+  success?: boolean;
+  redirectTo?: string;
+  billingRequired?: boolean;
+}> {
   if (!selections.length) {
     return { error: 'Select at least one workspace type.' };
   }
@@ -63,6 +76,7 @@ export async function completeWorkspaceSetup(
   const useCommunity = selections.some((s) => s.profile === 'community');
 
   let firstTeamSlug: string | null = null;
+  let firstPaidSlug: string | null = null;
 
   for (const sel of selections) {
     const name = sel.name.trim();
@@ -93,6 +107,13 @@ export async function completeWorkspaceSetup(
     if (!firstTeamSlug && createdSlug) {
       firstTeamSlug = createdSlug;
     }
+    if (
+      !firstPaidSlug &&
+      createdSlug &&
+      requiredEntitlementForProfile(sel.profile)
+    ) {
+      firstPaidSlug = createdSlug;
+    }
   }
 
   await client.from('user_settings').upsert({
@@ -121,9 +142,31 @@ export async function completeWorkspaceSetup(
     );
   }
 
-  const redirectTo = firstTeamSlug
-    ? pathsConfig.app.accountHome.replace('[account]', firstTeamSlug)
-    : pathsConfig.app.home;
+  const redirectTo = firstPaidSlug
+    ? (() => {
+        const billingPath = pathsConfig.app.accountBilling.replace(
+          '[account]',
+          firstPaidSlug!,
+        );
+        const query = new URLSearchParams({ setup: '1' });
+        if (options?.billingIntent?.productId) {
+          query.set('product', options.billingIntent.productId);
+        }
+        if (options?.billingIntent?.planId) {
+          query.set('plan', options.billingIntent.planId);
+        }
+        if (options?.billingIntent?.interval) {
+          query.set('interval', options.billingIntent.interval);
+        }
+        return `${billingPath}?${query.toString()}`;
+      })()
+    : firstTeamSlug
+      ? pathsConfig.app.accountHome.replace('[account]', firstTeamSlug)
+      : pathsConfig.app.home;
 
-  return { success: true, redirectTo };
+  return {
+    success: true,
+    redirectTo,
+    billingRequired: Boolean(firstPaidSlug),
+  };
 }

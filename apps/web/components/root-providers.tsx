@@ -12,6 +12,7 @@ import { VersionUpdater } from '@kit/ui/version-updater';
 
 import { AnalyticsProvider } from '~/components/analytics-provider';
 import { AuthProvider } from '~/components/auth-provider';
+import { QuickActionProvider } from '~/components/quick-action/quick-action-provider';
 import featuresFlagConfig from '~/config/feature-flags.config';
 import { APP_THEME } from '~/lib/app-theme';
 import { i18nResolver } from '~/lib/i18n/i18n.resolver';
@@ -43,17 +44,19 @@ export function RootProviders({
           <ReactQueryProvider>
             <I18nProvider settings={i18nSettings} resolver={i18nResolver}>
               <AuthProvider>
-                <ThemeProvider
-                  attribute="class"
-                  enableSystem={false}
-                  disableTransitionOnChange
-                  defaultTheme={APP_THEME}
-                  forcedTheme={APP_THEME}
-                  enableColorScheme={false}
-                  nonce={nonce}
-                >
-                  {children}
-                </ThemeProvider>
+                <QuickActionProvider>
+                  <ThemeProvider
+                    attribute="class"
+                    enableSystem={false}
+                    disableTransitionOnChange
+                    defaultTheme={APP_THEME}
+                    forcedTheme={APP_THEME}
+                    enableColorScheme={false}
+                    nonce={nonce}
+                  >
+                    {children}
+                  </ThemeProvider>
+                </QuickActionProvider>
               </AuthProvider>
 
               <If condition={featuresFlagConfig.enableVersionUpdater}>

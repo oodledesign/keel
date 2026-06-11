@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
 
+import { redirectIfAddonNotAllowed } from '~/lib/billing/require-addon-access';
 import { isVideosModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
 import { getDefaultAccountPath } from '~/home/[account]/_lib/role-access';
 import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
@@ -34,6 +35,12 @@ export default async function VideosPage({ params }: VideosPageProps) {
       ),
     );
   }
+
+  redirectIfAddonNotAllowed(
+    account,
+    workspace.account.id as string,
+    'addon_videos',
+  );
 
   const accountId = workspace.account.id as string;
   const { folders, videos } = await loadVideoLibrary(accountId);

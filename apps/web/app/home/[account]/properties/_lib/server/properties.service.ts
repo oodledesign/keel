@@ -142,6 +142,28 @@ export function createPropertiesService(client: SupabaseClient) {
       currentValue?: number | null;
       notes?: string | null;
     }): Promise<Property> {
+      const { count, error: countError } = await client
+        .from('properties')
+        .select('id', { count: 'exact', head: true })
+        .eq('account_id', input.accountId)
+        .neq('status', 'archived');
+
+      if (countError) {
+        throw new Error(countError.message);
+      }
+
+      const { assertPropertyCreateAllowed } = await import(
+        '~/lib/billing/entitlements'
+      );
+      const gate = await assertPropertyCreateAllowed(
+        client,
+        input.accountId,
+        count ?? 0,
+      );
+      if (!gate.allowed) {
+        throw new Error(gate.reason ?? 'Property limit reached for your plan.');
+      }
+
       const { data, error } = await client
         .from('properties')
         .insert({

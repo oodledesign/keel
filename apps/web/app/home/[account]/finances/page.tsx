@@ -13,10 +13,10 @@ import {
   redirectIfSpaceNotIn,
 } from '../_lib/server/workspace-route-guard';
 import {
-  getSpaceTypeFromAccount,
   isPropertyNavModuleEnabled,
   isWorkNavModuleEnabled,
 } from '../_lib/server/account-modules';
+import { spaceTypeFromProfile } from '../_lib/workspace-profile';
 import { FinancesPageContent } from './_components/finances-page-content';
 import { FinancesDashboardSkeleton } from './_components/finances-dashboard-skeleton';
 
@@ -37,9 +37,7 @@ async function FinancesPage({ params }: FinancesPageProps) {
     BUSINESS_WORKSPACE_SPACE_TYPES,
   );
 
-  const spaceType = getSpaceTypeFromAccount(
-    workspace.account as { space_type?: string | null },
-  );
+  const spaceType = spaceTypeFromProfile(workspace.workspaceProfile);
 
   const access = getTeamAccountAccess(
     workspace.account as {

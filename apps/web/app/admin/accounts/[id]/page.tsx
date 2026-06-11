@@ -2,7 +2,11 @@ import { cache } from 'react';
 
 import { AdminAccountPage } from '@kit/admin/components/admin-account-page';
 import { AdminGuard } from '@kit/admin/components/admin-guard';
+import { PageBody } from '@kit/ui/page';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
+
+import { AdminBillingGrantsPanel } from './_components/admin-billing-grants-panel';
+import { loadAdminAccountBillingState } from './_lib/load-admin-account-billing';
 
 interface Params {
   params: Promise<{
@@ -22,8 +26,25 @@ export const generateMetadata = async (props: Params) => {
 async function AccountPage(props: Params) {
   const params = await props.params;
   const account = await loadAccount(params.id);
+  const billing = await loadAdminAccountBillingState(params.id);
+  const isPersonal = account.is_personal_account;
 
-  return <AdminAccountPage account={account} />;
+  return (
+    <>
+      <AdminAccountPage account={account} />
+      {!isPersonal ? (
+        <PageBody className="border-t py-4">
+          <div className="mx-auto max-w-3xl px-4">
+            <AdminBillingGrantsPanel
+              accountId={params.id}
+              entitlements={billing.entitlements}
+              billingExempt={billing.billingExempt}
+            />
+          </div>
+        </PageBody>
+      ) : null}
+    </>
+  );
 }
 
 export default AdminGuard(AccountPage);

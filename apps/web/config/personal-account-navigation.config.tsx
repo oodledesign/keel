@@ -1,4 +1,4 @@
-import { CalendarDays, LayoutDashboard, Settings } from 'lucide-react';
+import { CalendarDays, LayoutDashboard, Settings, Users } from 'lucide-react';
 import { z } from 'zod';
 
 import { NavigationConfigSchema } from '@kit/ui/navigation-schema';
@@ -41,6 +41,11 @@ export function buildPersonalHomeNavRoutes() {
           path: pathsConfig.app.personalPlanner,
           Icon: <CalendarDays className={iconClasses} />,
         },
+        {
+          label: 'People',
+          path: pathsConfig.app.personalPeople,
+          Icon: <Users className={iconClasses} />,
+        },
       ],
     },
   ];
@@ -65,3 +70,63 @@ export function parsePersonalAccountNavigationConfig(
 export const personalAccountNavigationConfig = parsePersonalAccountNavigationConfig(
   buildPersonalHomeNavRoutes(),
 );
+
+export type PersonalShortcutRoute = {
+  label: string;
+  path: string;
+  description?: string;
+  keywords?: string[];
+};
+
+/**
+ * Routes eligible as personal dashboard shortcuts.
+ * Sidebar entries are included automatically; add supplements here for
+ * personal pages not yet in the sidebar (they appear in the shortcut picker too).
+ */
+export function buildPersonalShortcutRoutes(): PersonalShortcutRoute[] {
+  const fromNav: PersonalShortcutRoute[] = [];
+
+  for (const group of buildPersonalHomeNavRoutes()) {
+    for (const child of group.children ?? []) {
+      if (!child.path) continue;
+      fromNav.push({
+        label: child.label,
+        path: child.path,
+        keywords: [child.label.toLowerCase()],
+      });
+    }
+  }
+
+  const supplements: PersonalShortcutRoute[] = [
+    {
+      label: 'Tasks',
+      path: `${pathsConfig.app.home}/tasks`,
+      keywords: ['tasks', 'todo'],
+    },
+    {
+      label: 'Pipeline',
+      path: `${pathsConfig.app.home}/pipeline`,
+      keywords: ['pipeline', 'leads'],
+    },
+  ];
+
+  const seen = new Set<string>();
+  const merged: PersonalShortcutRoute[] = [];
+
+  for (const route of [...fromNav, ...supplements]) {
+    if (seen.has(route.path)) continue;
+    seen.add(route.path);
+
+    const meta =
+      route.path === pathsConfig.app.personalPeople
+        ? {
+            description: 'Friends, family, and catchups',
+            keywords: ['people', 'contacts', 'family', 'friends', 'crm'],
+          }
+        : {};
+
+    merged.push({ ...route, ...meta });
+  }
+
+  return merged;
+}

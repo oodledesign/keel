@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { getMailer } from '@kit/mailers';
+import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import {
@@ -133,15 +133,19 @@ export async function sendProposalIssuedEmail(params: {
       <p>${signature.replace(/\n/g, '<br />')}</p>
   `;
 
-  const mailer = await getMailer();
-  await mailer.sendEmail({
-    from: sender,
-    to: params.recipientEmail,
-    subject: params.testOnly ? `[Test] ${subject}` : subject,
-    html: wrapEmailHtmlWithBrand({
-      brand,
-      innerHtml: issuedInner,
-    }),
+  await sendPlatformEmail({
+    type: 'proposal',
+    accountId: params.accountId,
+    mail: {
+      from: sender,
+      to: params.recipientEmail,
+      subject: params.testOnly ? `[Test] ${subject}` : subject,
+      html: wrapEmailHtmlWithBrand({
+        brand,
+        innerHtml: issuedInner,
+      }),
+    },
+    metadata: { proposal_id: params.proposalId, event: 'issued' },
   });
 }
 
@@ -209,13 +213,17 @@ export async function sendProposalApprovedOwnerNotification(params: {
     <p>Open your workspace to review next steps and send the contract if needed.</p>
   `;
 
-  const mailer = await getMailer();
   for (const email of ownerAdminEmails) {
-    await mailer.sendEmail({
-      from: sender,
-      to: email,
-      subject: `${productName}: Proposal approved — ${title}`,
-      html: wrapEmailHtmlWithBrand({ brand, innerHtml }),
+    await sendPlatformEmail({
+      type: 'proposal',
+      accountId: params.accountId,
+      mail: {
+        from: sender,
+        to: email,
+        subject: `${productName}: Proposal approved — ${title}`,
+        html: wrapEmailHtmlWithBrand({ brand, innerHtml }),
+      },
+      metadata: { proposal_id: params.proposalId, event: 'approved' },
     });
   }
 }
@@ -252,13 +260,17 @@ export async function sendProposalCommentOwnerNotification(params: {
     <blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #2A9D8F;background:#f9fafb">${params.body.trim().replace(/\n/g, '<br />')}</blockquote>
   `;
 
-  const mailer = await getMailer();
   for (const email of ownerAdminEmails) {
-    await mailer.sendEmail({
-      from: sender,
-      to: email,
-      subject: `${productName}: Comment on ${title}`,
-      html: wrapEmailHtmlWithBrand({ brand, innerHtml }),
+    await sendPlatformEmail({
+      type: 'proposal',
+      accountId: params.accountId,
+      mail: {
+        from: sender,
+        to: email,
+        subject: `${productName}: New comment on ${title}`,
+        html: wrapEmailHtmlWithBrand({ brand, innerHtml }),
+      },
+      metadata: { proposal_id: params.proposalId, event: 'comment' },
     });
   }
 }

@@ -20,6 +20,12 @@ import { workspaceColorForSpaceType } from '~/home/(user)/_lib/workspace-accent'
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import type { PersonalNavWorkspace } from '~/config/personal-account-navigation.config';
+import pathsConfig from '~/config/paths.config';
+
+import {
+  createPeopleService,
+} from '../../people/_lib/server/people.service';
+import { loadPersonalDashboardShortcuts } from '~/lib/dashboard-shortcuts/load-shortcuts';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -58,13 +64,23 @@ export type WorkspaceOverviewCard = {
   stats: WorkspaceOverviewStat[];
 };
 
+export type PersonalPeopleUpcomingItem = {
+  id: string;
+  name: string;
+  kind: 'catchup' | 'birthday' | 'anniversary';
+  label: string;
+  href: string;
+};
+
 export type KeelDashboardData = {
   userName: string;
   dateLabel: string;
   workspaces: PersonalNavWorkspace[];
+  dashboardShortcuts: import('~/lib/dashboard-shortcuts/types').ResolvedShortcut[];
   todaysFocus: PersonalDashboardTask[];
   upcoming: PersonalDashboardTask[];
   myDayEvents: PersonalCalendarEvent[];
+  peopleUpcoming: PersonalPeopleUpcomingItem[];
   workspaceOverview: WorkspaceOverviewCard[];
 };
 
@@ -116,6 +132,12 @@ function formatTimeLabel(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit' });
+}
+
+function parseYmdLocal(ymd: string): Date {
+  const p = parseDueDateParts(ymd);
+  if (!p) return new Date(NaN);
+  return new Date(p.y, p.m - 1, p.d, 12, 0, 0, 0);
 }
 
 function weekFromNowIso() {
@@ -515,13 +537,85 @@ export const loadKeelDashboard = cache(async (): Promise<KeelDashboardData> => {
     bizIdsByWorkspace,
   );
 
+  let peopleUpcoming: PersonalPeopleUpcomingItem[] = [];
+  try {
+    const peopleService = createPeopleService(client);
+    const people = await peopleService.listPeople(userId);
+    const items: PersonalPeopleUpcomingItem[] = [];
+
+    for (const p of people) {
+      const name = p.nickname?.trim() || p.full_name;
+      const href = `${pathsConfig.app.personalPeople}/${p.id}`;
+
+      if (p.catchupOverdue) {
+        items.push({
+          id: `${p.id}-catchup`,
+          name,
+          kind: 'catchup',
+          label: 'Catch up due',
+          href,
+        });
+      }
+
+      if (p.daysUntilBirthday !== null && p.daysUntilBirthday <= 7) {
+        items.push({
+          id: `${p.id}-birthday`,
+          name,
+          kind: 'birthday',
+          label:
+            p.daysUntilBirthday === 0
+              ? 'Birthday today'
+              : `Birthday in ${p.daysUntilBirthday} days`,
+          href,
+        });
+      }
+
+      const anniversary = p.dates.find((d) => d.kind === 'anniversary');
+      if (anniversary) {
+        const today = todayLocalYmd();
+        const year = new Date().getFullYear();
+        const ref = `${year}-${String(anniversary.month).padStart(2, '0')}-${String(anniversary.day).padStart(2, '0')}`;
+        const diff = Math.round(
+          (parseYmdLocal(ref).getTime() - parseYmdLocal(today).getTime()) /
+            (1000 * 60 * 60 * 24),
+        );
+        if (diff >= 0 && diff <= 7) {
+          items.push({
+            id: `${p.id}-anniversary`,
+            name,
+            kind: 'anniversary',
+            label:
+              diff === 0
+                ? 'Anniversary today'
+                : `Anniversary in ${diff} days`,
+            href,
+          });
+        }
+      }
+    }
+
+    peopleUpcoming = items.slice(0, 8);
+  } catch {
+    peopleUpcoming = [];
+  }
+
+  let dashboardShortcuts: Awaited<ReturnType<typeof loadPersonalDashboardShortcuts>> =
+    [];
+  try {
+    dashboardShortcuts = await loadPersonalDashboardShortcuts(client, userId);
+  } catch {
+    dashboardShortcuts = [];
+  }
+
   return {
     userName,
     dateLabel: formatDateLabel(),
     workspaces,
+    dashboardShortcuts,
     todaysFocus,
     upcoming,
     myDayEvents,
+    peopleUpcoming,
     workspaceOverview,
   };
 });

@@ -19,7 +19,8 @@
     "./hooks/*": "./src/hooks/*.ts",
     "./database": "./src/database.types.ts",
     "./auth": "./src/auth.ts",
-    "./types": "./src/types.ts"
+    "./types": "./src/types.ts",
+    "./platform-email-log": "./src/platform-email-log.ts"
   },
   "dependencies": {
     "@kit/shared": "workspace:*"

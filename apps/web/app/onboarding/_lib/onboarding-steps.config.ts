@@ -19,7 +19,6 @@ const ADMIN_STEPS: StepDef[] = [
     canSkip: true,
   },
   { step: 2, title: 'Personal Details', key: 'personal' },
-  { step: 3, title: 'Subscription', key: 'subscription', canSkip: false },
 ];
 
 const STAFF_STEPS: StepDef[] = [

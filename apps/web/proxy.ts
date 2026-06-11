@@ -10,6 +10,7 @@ import { createMiddlewareClient } from '@kit/supabase/middleware-client';
 
 import appConfig from '~/config/app.config';
 import pathsConfig from '~/config/paths.config';
+import { getUserDefaultLandingPath } from '~/lib/dashboard-shortcuts/load-shortcuts';
 
 const CSRF_SECRET_COOKIE = 'csrfSecret';
 const NEXT_ACTION_HEADER = 'next-action';
@@ -59,6 +60,9 @@ export async function proxy(request: NextRequest) {
   if (isServerAction(request)) {
     csrfResponse.headers.set('x-action-path', request.nextUrl.pathname);
   }
+
+  // append pathname for server-side billing guards
+  csrfResponse.headers.set('x-pathname', request.nextUrl.pathname);
 
   // if no pattern handler returned a response,
   // return the session response
@@ -187,10 +191,26 @@ async function getPatterns() {
         // If user is logged in and does not need to verify MFA,
         // redirect to home page.
         if (!isVerifyMfa) {
-          const nextPath = getSafeRedirectPath(
-            req.nextUrl.searchParams.get('next'),
-            pathsConfig.app.home,
-          );
+          const nextParam = req.nextUrl.searchParams.get('next');
+          const client = createMiddlewareClient(req, res);
+          const {
+            data: { user },
+          } = await client.auth.getUser();
+
+          let nextPath = getSafeRedirectPath(nextParam, pathsConfig.app.home);
+
+          if (
+            user &&
+            (!nextParam?.trim() ||
+              nextPath === pathsConfig.app.home ||
+              nextPath === '/')
+          ) {
+            try {
+              nextPath = await getUserDefaultLandingPath(client, user.id);
+            } catch {
+              nextPath = pathsConfig.app.home;
+            }
+          }
 
           return NextResponse.redirect(
             new URL(nextPath, req.nextUrl.origin).href,

@@ -80,7 +80,7 @@ function Home() {
                 </Link>
               </Button>
               <Button asChild variant="outline" size="lg" className="h-11 rounded-full border-violet-300/25 bg-[#100d1f]/70 px-6 text-violet-100 hover:bg-[#17122e]">
-                <Link href={pathsConfig.auth.signIn}>See dashboard</Link>
+                <Link href="/pricing">View pricing</Link>
               </Button>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { SignUpMethodsContainer } from '@kit/auth/sign-up';
+import { getSafeRedirectPath } from '@kit/shared/utils';
 import { Button } from '@kit/ui/button';
 import { Heading } from '@kit/ui/heading';
 import { Trans } from '@kit/ui/trans';
@@ -10,6 +11,12 @@ import pathsConfig from '~/config/paths.config';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
+interface SignUpPageProps {
+  searchParams: Promise<{
+    next?: string;
+  }>;
+}
+
 export const generateMetadata = async () => {
   const i18n = await createI18nServerInstance();
 
@@ -18,12 +25,14 @@ export const generateMetadata = async () => {
   };
 };
 
-const paths = {
-  callback: pathsConfig.auth.callback,
-  appHome: pathsConfig.app.home,
-};
+async function SignUpPage({ searchParams }: SignUpPageProps) {
+  const { next } = await searchParams;
 
-async function SignUpPage() {
+  const paths = {
+    callback: pathsConfig.auth.callback,
+    appHome: getSafeRedirectPath(next, pathsConfig.app.home),
+  };
+
   return (
     <>
       <div className={'flex flex-col items-center gap-1'}>

@@ -14,6 +14,7 @@ import {
   type CsvColumnMapping,
 } from '~/lib/ai/finance-csv-map';
 import { suggestTransactionCategories } from '~/lib/ai/finance-category-suggest';
+import { accumulateFinanceTotals } from '~/lib/finance/transaction-totals';
 import {
   pushCategoryToFreeAgent,
   syncFreeAgentToKeel,
@@ -95,7 +96,7 @@ export const loadFinancesDashboardAction = enhanceAction(
     let txQuery = client
       .from('finance_transactions')
       .select(
-        'id, transaction_date, description, amount_pence, category_id, source, sync_status, bank_account_id',
+        'id, transaction_date, description, amount_pence, category_id, is_transfer, source, sync_status, bank_account_id',
       )
       .eq('account_id', input.accountId)
       .order('transaction_date', { ascending: false })
@@ -130,13 +131,12 @@ export const loadFinancesDashboardAction = enhanceAction(
 
     if (txError) throw txError;
 
-    let incomePence = 0;
-    let expensePence = 0;
-    for (const tx of transactions ?? []) {
-      const pence = tx.amount_pence as number;
-      if (pence >= 0) incomePence += pence;
-      else expensePence += Math.abs(pence);
-    }
+    const totals = accumulateFinanceTotals(
+      (transactions ?? []).map((tx) => ({
+        amount_pence: tx.amount_pence as number,
+        is_transfer: tx.is_transfer as boolean | null | undefined,
+      })),
+    );
 
     return {
       transactions: transactions ?? [],
@@ -144,9 +144,10 @@ export const loadFinancesDashboardAction = enhanceAction(
       bankAccounts: bankAccounts ?? [],
       connection: connection ?? null,
       summary: {
-        incomePence,
-        expensePence,
-        netPence: incomePence - expensePence,
+        incomePence: totals.incomePence,
+        expensePence: totals.expensePence,
+        netPence: totals.netPence,
+        transferPence: totals.transferPence,
       },
       freeAgentConfigured: isFreeAgentConfigured(),
     };
@@ -156,6 +157,39 @@ export const loadFinancesDashboardAction = enhanceAction(
       accountId: z.string().uuid(),
       dateFrom: z.string().optional(),
       dateTo: z.string().optional(),
+    }),
+  },
+);
+
+export const setFinanceTransferAction = enhanceAction(
+  async (input) => {
+    const client = getSupabaseServerClient();
+
+    const { error } = await client
+      .from('finance_transactions')
+      .update({
+        is_transfer: input.isTransfer,
+        ...(input.isTransfer
+          ? {
+              category_id: null,
+              sync_status: 'local',
+            }
+          : {}),
+      })
+      .eq('id', input.transactionId)
+      .eq('account_id', input.accountId);
+
+    if (error) throw error;
+
+    revalidateFinances(input.accountSlug);
+    return { ok: true };
+  },
+  {
+    schema: z.object({
+      accountId: z.string().uuid(),
+      accountSlug: z.string().min(1),
+      transactionId: z.string().uuid(),
+      isTransfer: z.boolean(),
     }),
   },
 );
@@ -394,8 +428,9 @@ export const suggestTransactionCategoriesAction = enhanceAction(
 
       let txQuery = client
         .from('finance_transactions')
-        .select('id, description, amount_pence, category_id')
+        .select('id, description, amount_pence, category_id, is_transfer')
         .eq('account_id', input.accountId)
+        .eq('is_transfer', false)
         .is('category_id', null)
         .order('transaction_date', { ascending: false })
         .limit(input.limit ?? 40);

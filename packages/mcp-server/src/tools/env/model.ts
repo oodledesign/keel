@@ -845,13 +845,14 @@ export const envVariables: EnvVariableModel[] = [
   {
     name: 'MAILER_PROVIDER',
     displayName: 'Mailer Provider',
-    description: 'Your email service provider. Options: nodemailer or resend.',
+    description:
+      'Email provider: ses (Amazon SES API), nodemailer (SMTP / local Inbucket), or resend (legacy).',
     category: 'Email',
     required: true,
     type: 'enum',
-    values: ['nodemailer', 'resend'],
+    values: ['nodemailer', 'resend', 'ses'],
     validate: ({ value }) => {
-      return z.enum(['nodemailer', 'resend']).safeParse(value);
+      return z.enum(['nodemailer', 'resend', 'ses']).safeParse(value);
     },
   },
   {

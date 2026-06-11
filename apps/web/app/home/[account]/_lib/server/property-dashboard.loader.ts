@@ -6,6 +6,12 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import type { GroupDashboardData } from './group-dashboard.loader';
 import { loadGroupDashboardData } from './group-dashboard.loader';
+import {
+  loadFinanceDashboardSummary,
+  type FinanceDashboardSummary,
+} from './finance-dashboard-summary.loader';
+
+export type { FinanceDashboardSummary };
 
 export type PropertyStatusCounts = {
   total: number;
@@ -19,6 +25,7 @@ export type PropertyDashboardData = GroupDashboardData & {
   propertyCounts: PropertyStatusCounts;
   openMaintenanceJobs: number;
   openTasksCount: number;
+  financeSummary: FinanceDashboardSummary;
 };
 
 function isTableMissing(error: { message?: string; code?: string } | null) {
@@ -44,7 +51,7 @@ export const loadPropertyDashboardData = cache(
 
     const accountId = (accountRow as { id?: string } | null)?.id;
 
-    const [groupData, propertiesResult, jobsResult, projectsResult] =
+    const [groupData, propertiesResult, jobsResult, projectsResult, financeSummary] =
       await Promise.all([
         loadGroupDashboardData(accountSlug),
         accountId
@@ -66,6 +73,15 @@ export const loadPropertyDashboardData = cache(
               .select('id')
               .eq('account_id', accountId)
           : Promise.resolve({ data: [], error: null }),
+        accountId
+          ? loadFinanceDashboardSummary(client, accountId)
+          : Promise.resolve({
+              financeIncomePence: 0,
+              financeExpensePence: 0,
+              financeNetPence: 0,
+              hasFinanceData: false,
+              financeTrend: [],
+            }),
       ]);
 
     type PropertyRow = { status?: string | null };
@@ -110,6 +126,7 @@ export const loadPropertyDashboardData = cache(
       propertyCounts,
       openMaintenanceJobs,
       openTasksCount,
+      financeSummary,
     };
   },
 );

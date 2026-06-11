@@ -176,6 +176,14 @@ async function getRewrites() {
         destination: '/home/planner',
       },
       {
+        source: '/app/people',
+        destination: '/home/people',
+      },
+      {
+        source: '/app/people/:path*',
+        destination: '/home/people/:path*',
+      },
+      {
         source: '/app/clients',
         destination: '/home/clients',
       },
@@ -186,6 +194,10 @@ async function getRewrites() {
       {
         source: '/app/support',
         destination: '/home/support',
+      },
+      {
+        source: '/app/support/:path*',
+        destination: '/home/support/:path*',
       },
       {
         source: '/app',
@@ -233,6 +245,16 @@ async function getRedirects() {
       permanent: false,
     },
     {
+      source: '/home/people',
+      destination: '/app/people',
+      permanent: false,
+    },
+    {
+      source: '/home/people/:path*',
+      destination: '/app/people/:path*',
+      permanent: false,
+    },
+    {
       source: '/home/clients',
       destination: '/app/clients',
       permanent: false,
@@ -245,6 +267,11 @@ async function getRedirects() {
     {
       source: '/home/support',
       destination: '/app/support',
+      permanent: false,
+    },
+    {
+      source: '/home/support/:path*',
+      destination: '/app/support/:path*',
       permanent: false,
     },
     {
@@ -279,7 +306,6 @@ async function getRedirects() {
     '/changelog',
     '/changelog/:path*',
     '/contact',
-    '/pricing',
     '/about',
     '/careers',
     '/privacy-policy',

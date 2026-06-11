@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { getMailer } from '@kit/mailers';
+import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import {
@@ -105,15 +105,19 @@ export async function sendContractIssuedEmail(params: {
       <p>${signature.replace(/\n/g, '<br />')}</p>
   `;
 
-  const mailer = await getMailer();
-  await mailer.sendEmail({
-    from: sender,
-    to: params.recipientEmail,
-    subject: params.testOnly ? `[Test] ${subject}` : subject,
-    html: wrapEmailHtmlWithBrand({
-      brand,
-      innerHtml: issuedInner,
-    }),
+  await sendPlatformEmail({
+    type: 'contract',
+    accountId: params.accountId,
+    mail: {
+      from: sender,
+      to: params.recipientEmail,
+      subject: params.testOnly ? `[Test] ${subject}` : subject,
+      html: wrapEmailHtmlWithBrand({
+        brand,
+        innerHtml: issuedInner,
+      }),
+    },
+    metadata: { contract_id: params.contractId, event: 'issued' },
   });
 }
 
@@ -222,27 +226,36 @@ export async function sendContractSignedNotifications(params: {
     innerHtml: ownerInner,
   });
 
-  const mailer = await getMailer();
   const emailJobs: Promise<unknown>[] = [];
 
   if (clientEmail) {
     emailJobs.push(
-      mailer.sendEmail({
-        from: sender,
-        to: clientEmail,
-        subject: customerSubject,
-        html: customerHtml,
+      sendPlatformEmail({
+        type: 'contract',
+        accountId: params.accountId,
+        mail: {
+          from: sender,
+          to: clientEmail,
+          subject: customerSubject,
+          html: customerHtml,
+        },
+        metadata: { contract_id: params.contractId, event: 'signed_customer' },
       }),
     );
   }
 
   for (const email of ownerAdminEmails) {
     emailJobs.push(
-      mailer.sendEmail({
-        from: sender,
-        to: email,
-        subject: ownerSubject,
-        html: ownerHtml,
+      sendPlatformEmail({
+        type: 'contract',
+        accountId: params.accountId,
+        mail: {
+          from: sender,
+          to: email,
+          subject: ownerSubject,
+          html: ownerHtml,
+        },
+        metadata: { contract_id: params.contractId, event: 'signed_owner' },
       }),
     );
   }

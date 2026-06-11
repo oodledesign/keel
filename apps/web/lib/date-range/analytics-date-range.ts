@@ -298,7 +298,11 @@ export function formatDateRangeLabel(selection: DateRangeSelection): string {
 }
 
 export function aggregateTransactionsByMonth(
-  transactions: Array<{ transaction_date: string; amount_pence: number }>,
+  transactions: Array<{
+    transaction_date: string;
+    amount_pence: number;
+    is_transfer?: boolean | null;
+  }>,
   months = 6,
 ): Array<{
   month: string;
@@ -336,6 +340,8 @@ export function aggregateTransactionsByMonth(
   const bucketMap = new Map(buckets.map((b) => [b.monthKey, b]));
 
   for (const tx of transactions) {
+    if (tx.is_transfer) continue;
+
     const key = String(tx.transaction_date).slice(0, 7);
     const bucket = bucketMap.get(key);
     if (!bucket) continue;

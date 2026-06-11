@@ -24,6 +24,7 @@ import { TeamAccountLayoutMobileNavigation } from './_components/team-account-la
 import { TeamAccountLayoutSidebar } from './_components/team-account-layout-sidebar';
 import { TeamAccountNavigationMenu } from './_components/team-account-navigation-menu';
 import { loadTeamWorkspace } from './_lib/server/team-account-workspace.loader';
+import { enforceWorkspaceBilling } from './_lib/server/workspace-billing-guard';
 import { loadWorkspaceSwitcherAccounts } from '../_lib/server/workspace-switcher.loader';
 import { loadWorkNavCounts } from './_lib/server/work-nav-counts.loader';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
@@ -78,6 +79,8 @@ async function SidebarLayout({
   if (!data) {
     redirect('/');
   }
+
+  await enforceWorkspaceBilling(account);
 
   const workspaceProfile = data.workspaceProfile;
   const accounts =
@@ -162,6 +165,12 @@ async function HeaderLayout({
     loadTeamWorkspace(account),
     loadWorkspaceSwitcherAccounts(client, user.id),
   ]);
+
+  if (!data) {
+    redirect('/');
+  }
+
+  await enforceWorkspaceBilling(account);
 
   const workspaceProfile = data.workspaceProfile;
   const accounts = switcherAccounts;

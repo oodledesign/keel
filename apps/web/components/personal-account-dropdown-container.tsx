@@ -11,7 +11,7 @@ import pathsConfig from '~/config/paths.config';
 const paths = {
   home: pathsConfig.app.home,
   personalAccountSettings: pathsConfig.app.personalAccountSettings,
-  support: '/docs',
+  support: pathsConfig.app.personalPlatformSupport,
 };
 
 const features = {

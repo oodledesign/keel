@@ -254,6 +254,12 @@ function getTeamItems(account: string, spaceType: WorkspaceSpaceType) {
 function getPersonalItems() {
   return [
     {
+      key: 'person',
+      label: 'Add person',
+      icon: UserRoundPlus,
+      href: `${pathsConfig.app.personalPeople}?create=person`,
+    },
+    {
       key: 'task',
       label: 'New Task',
       icon: CheckSquare,
