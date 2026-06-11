@@ -1,9 +1,22 @@
-import { createBunnyStreamClient } from '@kit/bunny';
-
 import type { VideoRow } from './types';
 
 function normalizeCdnHost(cdnHostname: string) {
   return cdnHostname.replace(/^https?:\/\//, '').replace(/\/$/, '');
+}
+
+function buildBunnyThumbnailUrl(
+  bunnyVideoId: string,
+  cdnHostname: string,
+  time = 0,
+) {
+  const host = normalizeCdnHost(cdnHostname);
+  if (!host || !bunnyVideoId) return null;
+
+  if (time === 0) {
+    return `https://${host}/${bunnyVideoId}/thumbnail.jpg`;
+  }
+
+  return `https://${host}/${bunnyVideoId}/${time}.jpg`;
 }
 
 export function buildBunnyThumbnailCandidates(
@@ -45,10 +58,7 @@ export function resolveVideoThumbnailUrl(
     return null;
   }
 
-  return createBunnyStreamClient().getThumbnailUrl(
-    hostname,
-    video.bunny_video_id,
-  );
+  return buildBunnyThumbnailUrl(video.bunny_video_id, hostname);
 }
 
 export function resolveVideoThumbnailCandidates(
