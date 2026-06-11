@@ -56,6 +56,7 @@ import type { PersonProfile } from '../_lib/server/people.service';
 import { DATE_KINDS } from '../_lib/schema/people.schema';
 import { CircleTierBadge } from './circle-tier-badge';
 import { PersonFormDialog } from './person-form-dialog';
+import { PersonImageUploader } from './person-image-uploader';
 
 const panelClass =
   'rounded-2xl border border-white/[0.08] bg-[var(--workspace-shell-panel)]';
@@ -128,8 +129,13 @@ export function PersonProfileClient({ person }: Props) {
       <div className={cn(panelClass, 'p-6')}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-4">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[var(--keel-teal)]/15 text-2xl font-bold text-[#5eead4]">
-              {name.charAt(0).toUpperCase()}
+            <div className="shrink-0">
+              <PersonImageUploader
+                accountId={person.account_id}
+                personId={person.id}
+                avatarUrl={person.avatar_url}
+                onUpdated={() => router.refresh()}
+              />
             </div>
             <div>
               <h1 className="text-2xl font-semibold">{name}</h1>
@@ -468,6 +474,7 @@ export function PersonProfileClient({ person }: Props) {
         open={editOpen}
         onOpenChange={setEditOpen}
         person={person}
+        onPhotoUpdated={() => router.refresh()}
       />
 
       <LogCatchupDialog

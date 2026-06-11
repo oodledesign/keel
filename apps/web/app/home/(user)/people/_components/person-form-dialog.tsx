@@ -32,12 +32,14 @@ import {
   createPersonAction,
   updatePersonAction,
 } from '../_lib/actions/people-actions';
+import { PersonImageUploader } from './person-image-uploader';
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   person?: PersonRow | null;
   onSaved?: (id: string) => void;
+  onPhotoUpdated?: () => void;
 };
 
 export function PersonFormDialog({
@@ -45,6 +47,7 @@ export function PersonFormDialog({
   onOpenChange,
   person,
   onSaved,
+  onPhotoUpdated,
 }: Props) {
   const isEdit = Boolean(person);
   const [fullName, setFullName] = useState('');
@@ -116,6 +119,21 @@ export function PersonFormDialog({
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
+          {isEdit && person ? (
+            <div className="flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.02] p-4">
+              <PersonImageUploader
+                accountId={person.account_id}
+                personId={person.id}
+                avatarUrl={person.avatar_url}
+                onUpdated={() => onPhotoUpdated?.()}
+              />
+              <p className="text-xs leading-relaxed text-zinc-500">
+                Click to add or change their photo. Shown in list and orbit
+                views.
+              </p>
+            </div>
+          ) : null}
+
           <div className="grid gap-2">
             <Label htmlFor="fullName">Name</Label>
             <Input
