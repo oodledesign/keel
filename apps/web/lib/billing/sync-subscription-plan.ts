@@ -5,7 +5,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { UpsertSubscriptionParams } from '@kit/billing/types';
 
 import { findPlanByStripePriceId } from './keel-plan-catalog';
+import { markBusinessUpgradedFromLite } from './business-lite';
 import { syncAddonModulesFromEntitlements } from './sync-addon-modules-from-entitlements';
+import { syncFullBusinessModules } from './sync-workspace-modules-from-plan';
 
 /**
  * After Stripe webhook upserts a subscription, sync Keel entitlements and plan limits.
@@ -110,6 +112,11 @@ export async function syncKeelPlanFromSubscription(
         { onConflict: 'account_id' },
       );
       workspacePlanSynced = true;
+
+      if (plan.family === 'business') {
+        await markBusinessUpgradedFromLite(admin, accountId);
+        await syncFullBusinessModules(admin, accountId);
+      }
     } else if (plan.family === 'addon_videos') {
       const { data: existing } = await admin
         .from('account_plan_limits')

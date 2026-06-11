@@ -29,6 +29,7 @@ export async function loadWorkspaceAddonState(
   );
 
   const addonKeys: KeelAddonKey[] = [
+    'addon_signatures',
     'addon_rankly',
     'addon_feedflow',
     'addon_videos',

@@ -81,7 +81,8 @@
     "socialFeeds": "Social feeds",
     "widgets": "Widgets",
     "reviews": "Reviews",
-    "rankly": "Rankly"
+    "rankly": "Rankly",
+    "messages": "Messages"
   },
   "roles": {
     "owner": { "label": "Owner" },

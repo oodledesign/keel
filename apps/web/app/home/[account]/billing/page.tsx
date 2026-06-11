@@ -25,13 +25,14 @@ import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader'
 import { KeelWorkspaceCheckoutForm } from './_components/keel-workspace-checkout-form';
 import { KeelAddonCheckoutSection } from './_components/keel-addon-checkout-section';
 import { loadWorkspaceAddonState } from '~/lib/billing/workspace-addon-state.loader';
+import { hasBusinessLiteEntitlement } from '~/lib/billing/business-lite';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 import { createBillingPortalSession } from './_lib/server/server-actions';
 
 interface TeamAccountBillingPageProps {
   params: Promise<{ account: string }>;
-  searchParams: Promise<{ addon?: string; setup?: string }>;
+  searchParams: Promise<{ addon?: string; setup?: string; upgrade?: string }>;
 }
 
 export const generateMetadata = async () => {
@@ -108,6 +109,13 @@ async function TeamAccountBillingPage({
     workspace.workspaceProfile,
   );
 
+  const isBusinessLite = await hasBusinessLiteEntitlement(billingClient, accountId);
+  const showWorkspaceCheckout =
+    !hasBillingData && addonState.workspacePaid && isBusinessLite;
+  const showLegacyWorkspaceCheckout =
+    !hasBillingData && !addonState.workspacePaid;
+  const isUpgradeIntent = query.upgrade === '1';
+
   return (
     <>
       <TeamAccountLayoutPageHeader
@@ -118,7 +126,7 @@ async function TeamAccountBillingPage({
 
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-[var(--workspace-shell-text)] lg:px-6">
         <div className={cn('flex max-w-2xl flex-col space-y-4')}>
-          <If condition={!hasBillingData}>
+          <If condition={showLegacyWorkspaceCheckout}>
             <If
               condition={canManageBilling}
               fallback={<CannotManageBillingAlert />}
@@ -129,6 +137,15 @@ async function TeamAccountBillingPage({
                 workspaceProfile={workspace.workspaceProfile}
               />
             </If>
+          </If>
+
+          <If condition={showWorkspaceCheckout && canManageBilling}>
+            <KeelWorkspaceCheckoutForm
+              customerId={customerId}
+              accountId={accountId}
+              workspaceProfile={workspace.workspaceProfile}
+              upgradeFromLite={isUpgradeIntent}
+            />
           </If>
 
           <If condition={canManageBilling && addonState.workspacePaid}>

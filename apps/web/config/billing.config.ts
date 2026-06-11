@@ -58,6 +58,33 @@ export default createBillingSchema({
       ],
     },
     {
+      id: 'keel-business-lite',
+      name: 'Business Lite',
+      description: 'Free apps workspace — install Signatures, Rankly, and other add-ons',
+      currency: KEEL_BILLING_CURRENCY,
+      plans: [
+        {
+          id: 'business-lite-free',
+          name: 'Lite',
+          paymentType: 'recurring',
+          interval: 'month',
+          lineItems: [
+            {
+              id: KEEL_STRIPE_PRICES.business_lite_monthly,
+              name: 'Business Lite',
+              cost: 0,
+              type: 'flat',
+            },
+          ],
+        },
+      ],
+      features: [
+        'Apps marketplace access',
+        'Team & brand settings',
+        'Pay only for the apps you use',
+      ],
+    },
+    {
       id: 'keel-business-solo',
       name: 'Business Solo',
       description: 'Full business workspace for one person',
@@ -274,6 +301,33 @@ export default createBillingSchema({
         'Bulk tenant & maintenance workflows',
         'Portfolio finances & reporting',
         'Document vault per property',
+      ],
+    },
+    {
+      id: 'keel-addon-signatures',
+      name: 'Signatures',
+      description: 'Branded email signatures for Microsoft 365 and Google Workspace',
+      currency: KEEL_BILLING_CURRENCY,
+      plans: [
+        {
+          id: 'signatures-monthly',
+          name: 'Signatures Monthly',
+          paymentType: 'recurring',
+          interval: 'month',
+          lineItems: [
+            {
+              id: KEEL_STRIPE_PRICES.addon_signatures_monthly,
+              name: 'Signatures',
+              cost: 9,
+              type: 'flat',
+            },
+          ],
+        },
+      ],
+      features: [
+        'Staff directory sync',
+        'Template library',
+        'Push to mailboxes',
       ],
     },
     {

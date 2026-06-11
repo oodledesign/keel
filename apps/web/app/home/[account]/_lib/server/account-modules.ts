@@ -21,6 +21,8 @@ export type AccountModuleKey =
   | 'pipeline'
   | 'notes'
   | 'docs'
+  | 'sops'
+  | 'messages'
   | 'finances'
   | 'feedflow'
   | 'rankly'

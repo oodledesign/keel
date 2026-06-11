@@ -57,13 +57,15 @@ export function databaseModuleKeysForProfile(
         'team',
         'notes',
         'docs',
+        'sops',
+        'messages',
         'finances',
-        'videos',
         'apps',
-        'feedflow',
-        'rankly',
-        'signatures',
         'settings',
       ];
   }
+}
+
+export function databaseModuleKeysForBusinessLite(): readonly string[] {
+  return ['dashboard', 'apps', 'settings', 'team'];
 }

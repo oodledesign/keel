@@ -132,6 +132,24 @@ function Home() {
             </article>
           ))}
         </div>
+
+        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { href: '/personal', title: 'Personal & family', copy: 'Free tasks, planner, and shared household tools.' },
+            { href: '/work', title: 'Business', copy: 'CRM, jobs, invoices, and client portal for service teams.' },
+            { href: '/property', title: 'Property', copy: 'Tenants, maintenance, and portfolio finances.' },
+            { href: '/community', title: 'Community', copy: 'Schedules and tasks for clubs and homegroups.' },
+          ].map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="rounded-2xl border border-violet-300/10 bg-white/[0.03] p-5 transition hover:border-violet-300/25 hover:bg-white/[0.05]"
+            >
+              <h3 className="font-heading text-lg font-semibold text-white">{item.title}</h3>
+              <p className="mt-2 text-sm text-violet-100/75">{item.copy}</p>
+            </Link>
+          ))}
+        </div>
       </section>
 
       <section className="border-t border-violet-200/10 bg-[#070610]/80 py-20">

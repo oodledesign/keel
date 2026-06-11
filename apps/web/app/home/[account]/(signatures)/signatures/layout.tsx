@@ -13,6 +13,8 @@ import { SignaturesNav } from '../_components/signatures-nav';
 import { isSignaturesPostgrestSchemaError } from '../_lib/signatures-postgrest-schema-error';
 import { isSignaturesUxPreviewEnabled } from '~/lib/signatures/ux-preview';
 
+import { redirectIfAddonNotAllowed } from '~/lib/billing/require-addon-access';
+
 import { getSignaturesMailProvider, isSignaturesMailConnected } from '~/lib/signatures/signatures-provider';
 
 type SignaturesLayoutProps = React.PropsWithChildren<{
@@ -26,6 +28,12 @@ export default async function SignaturesLayout({
   const { account } = await params;
   const workspace = await loadTeamWorkspace(account);
   redirectIfSpaceNotIn(workspace, account, ['work']);
+
+  await redirectIfAddonNotAllowed(
+    account,
+    workspace.account.id as string,
+    'addon_signatures',
+  );
 
   if (!isSignaturesModuleEnabled(workspace.moduleSettings)) {
     return (

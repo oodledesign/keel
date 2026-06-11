@@ -16,6 +16,10 @@ export const KEEL_STRIPE_PRICES = {
     'STRIPE_PRICE_COMMUNITY_YEARLY',
     'price_keel_community_yearly',
   ),
+  business_lite_monthly: price(
+    'STRIPE_PRICE_BUSINESS_LITE_MONTHLY',
+    'price_keel_business_lite_monthly',
+  ),
   business_solo_monthly: price(
     'STRIPE_PRICE_BUSINESS_SOLO_MONTHLY',
     'price_keel_business_solo_monthly',
@@ -55,6 +59,10 @@ export const KEEL_STRIPE_PRICES = {
   property_portfolio_yearly: price(
     'STRIPE_PRICE_PROPERTY_PORTFOLIO_YEARLY',
     'price_keel_property_portfolio_yearly',
+  ),
+  addon_signatures_monthly: price(
+    'STRIPE_PRICE_ADDON_SIGNATURES_MONTHLY',
+    'price_keel_addon_signatures_monthly',
   ),
   addon_rankly_monthly: price(
     'STRIPE_PRICE_ADDON_RANKLY_MONTHLY',

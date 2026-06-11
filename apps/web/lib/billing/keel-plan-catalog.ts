@@ -5,10 +5,12 @@ import { KEEL_STRIPE_PRICES } from './stripe-price-ids';
 export type KeelPlanFamily =
   | 'community'
   | 'business'
+  | 'business_lite'
   | 'property'
   | 'addon_rankly'
   | 'addon_feedflow'
-  | 'addon_videos';
+  | 'addon_videos'
+  | 'addon_signatures';
 
 export type KeelPlanLimits = {
   maxMembers: number | null;
@@ -44,6 +46,18 @@ const COMMUNITY: KeelPlanDefinition[] = [
     entitlementKey: 'workspace_community',
     limits: { maxMembers: 3, maxProperties: null, maxVideos: null },
     workspaceProfiles: ['community'],
+  },
+];
+
+const BUSINESS_LITE: KeelPlanDefinition[] = [
+  {
+    productId: 'keel-business-lite',
+    planId: 'business-lite-free',
+    stripePriceId: KEEL_STRIPE_PRICES.business_lite_monthly,
+    family: 'business_lite',
+    entitlementKey: 'workspace_business_lite',
+    limits: { maxMembers: 3, maxProperties: null, maxVideos: null },
+    workspaceProfiles: ['work_design'],
   },
 ];
 
@@ -145,6 +159,14 @@ const PROPERTY: KeelPlanDefinition[] = [
 
 const ADDONS: KeelPlanDefinition[] = [
   {
+    productId: 'keel-addon-signatures',
+    planId: 'signatures-monthly',
+    stripePriceId: KEEL_STRIPE_PRICES.addon_signatures_monthly,
+    family: 'addon_signatures',
+    entitlementKey: 'addon_signatures',
+    limits: { maxMembers: null, maxProperties: null, maxVideos: null },
+  },
+  {
     productId: 'keel-addon-rankly',
     planId: 'rankly-monthly',
     stripePriceId: KEEL_STRIPE_PRICES.addon_rankly_monthly,
@@ -196,6 +218,7 @@ const ADDONS: KeelPlanDefinition[] = [
 
 export const KEEL_PLAN_CATALOG: KeelPlanDefinition[] = [
   ...COMMUNITY,
+  ...BUSINESS_LITE,
   ...BUSINESS,
   ...PROPERTY,
   ...ADDONS,
@@ -239,7 +262,8 @@ export function catalogPlansForWorkspaceProfile(
   return KEEL_PLAN_CATALOG.filter(
     (plan) =>
       plan.workspaceProfiles?.includes(profile) &&
-      !plan.productId.startsWith('keel-addon'),
+      !plan.productId.startsWith('keel-addon') &&
+      plan.family !== 'business_lite',
   );
 }
 
@@ -267,7 +291,11 @@ export function catalogPlansForAddonProduct(productId: string): KeelPlanDefiniti
   return KEEL_PLAN_CATALOG.filter((plan) => plan.productId === productId);
 }
 
-export type KeelAddonKey = 'addon_rankly' | 'addon_feedflow' | 'addon_videos';
+export type KeelAddonKey =
+  | 'addon_signatures'
+  | 'addon_rankly'
+  | 'addon_feedflow'
+  | 'addon_videos';
 
 export const KEEL_ADDON_CATALOG: Array<{
   key: KeelAddonKey;
@@ -276,6 +304,13 @@ export const KEEL_ADDON_CATALOG: Array<{
   description: string;
   fromPriceGbp: number;
 }> = [
+  {
+    key: 'addon_signatures',
+    productId: 'keel-addon-signatures',
+    name: 'Signatures',
+    description: 'Branded email signatures with Microsoft 365 and Google Workspace.',
+    fromPriceGbp: 9,
+  },
   {
     key: 'addon_rankly',
     productId: 'keel-addon-rankly',

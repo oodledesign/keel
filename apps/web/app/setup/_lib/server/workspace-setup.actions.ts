@@ -17,7 +17,45 @@ import { requireUserInServerComponent } from '~/lib/server/require-user-in-serve
 export type WorkspaceSetupSelection = {
   profile: WorkspaceProfile;
   name: string;
+  /** Business workspaces only: lite (free apps shell) vs full CRM (paid). */
+  businessMode?: 'lite' | 'full';
 };
+
+function businessTypeForSelection(sel: WorkspaceSetupSelection): string | null {
+  if (sel.profile === 'work_property') return 'property';
+  if (sel.profile === 'work_design') {
+    return sel.businessMode === 'full' ? 'other' : 'lite';
+  }
+  return businessTypeForProfile(sel.profile);
+}
+
+function requiresBillingAfterSetup(
+  sel: WorkspaceSetupSelection,
+  billingIntent?: { productId: string; planId: string },
+): boolean {
+  const required = requiredEntitlementForProfile(sel.profile);
+  if (!required) {
+    return false;
+  }
+
+  if (sel.profile === 'work_design') {
+    if (sel.businessMode === 'full') {
+      return true;
+    }
+
+    const productId = billingIntent?.productId ?? '';
+    if (
+      productId.startsWith('keel-business-') &&
+      productId !== 'keel-business-lite'
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  return true;
+}
 
 function slugifyName(name: string): string {
   return name
@@ -87,7 +125,7 @@ export async function completeWorkspaceSetup(
     const baseSlug = slugifyName(name);
     const slug = await uniqueSlug(admin, baseSlug);
     const spaceType = spaceTypeForProfile(sel.profile);
-    const businessType = businessTypeForProfile(sel.profile);
+    const businessType = businessTypeForSelection(sel);
 
     const { data: account, error } = await admin.rpc('create_team_account', {
       account_name: name,
@@ -110,7 +148,7 @@ export async function completeWorkspaceSetup(
     if (
       !firstPaidSlug &&
       createdSlug &&
-      requiredEntitlementForProfile(sel.profile)
+      requiresBillingAfterSetup(sel, options?.billingIntent)
     ) {
       firstPaidSlug = createdSlug;
     }

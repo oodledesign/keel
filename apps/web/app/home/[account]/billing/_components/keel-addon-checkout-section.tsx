@@ -46,12 +46,14 @@ type KeelAddonCheckoutSectionProps = {
 };
 
 function defaultProductForAddon(key: KeelAddonKey): string {
+  if (key === 'addon_signatures') return 'keel-addon-signatures';
   if (key === 'addon_videos') return 'keel-addon-videos-starter';
   if (key === 'addon_feedflow') return 'keel-addon-feedflow';
   return 'keel-addon-rankly';
 }
 
 function addonKeyFromHighlight(value: string | null | undefined): KeelAddonKey | null {
+  if (value === 'signatures') return 'addon_signatures';
   if (value === 'rankly') return 'addon_rankly';
   if (value === 'feedflow') return 'addon_feedflow';
   if (value === 'videos') return 'addon_videos';
@@ -112,8 +114,8 @@ export function KeelAddonCheckoutSection({
         <CardHeader>
           <CardTitle>Add-ons</CardTitle>
           <CardDescription>
-            Subscribe to a workspace plan first, then add Rankly, Feedflow, or
-            Videos.
+            Subscribe to a workspace plan first, then add Signatures, Rankly,
+            Feedflow, or Videos.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -133,7 +135,7 @@ export function KeelAddonCheckoutSection({
       </CardHeader>
 
       <CardContent className="space-y-6">
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {KEEL_ADDON_CATALOG.map((addon) => {
             const active = activeAddons[addon.key];
             const selected = selectedKey === addon.key;

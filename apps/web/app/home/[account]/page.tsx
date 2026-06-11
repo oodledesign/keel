@@ -5,7 +5,10 @@ import { PageBody } from '@kit/ui/page';
 
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { isBusinessLiteWorkspace } from '~/lib/billing/is-business-lite-workspace';
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { BusinessLiteDashboard } from './_components/business-lite-dashboard';
 import { DashboardPageContent } from './_components/dashboard-page-content';
 import { FamilyDashboard } from './_components/family-dashboard';
 import { HomegroupDashboard } from './_components/homegroup-dashboard';
@@ -13,6 +16,7 @@ import { PropertyBusinessDashboard } from './_components/property-business-dashb
 import { TeamAccountLayoutPageHeader } from './_components/team-account-layout-page-header';
 import { WorkspaceDashboardShortcutsBar } from './_components/workspace-dashboard-shortcuts-bar';
 import { getDefaultAccountPath, getTeamAccountAccess } from './_lib/role-access';
+import { buildWorkAppLinks } from '~/config/work-account-navigation.config';
 import { spaceTypeFromProfile } from './_lib/workspace-profile';
 import { isPropertyNavModuleEnabled } from './_lib/server/account-modules';
 import { loadDashboardPageData } from './_lib/server/dashboard-page.loader';
@@ -54,6 +58,15 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
     (workspace.account as { name?: string | null }).name?.trim() ||
     account;
   const accountId = (workspace.account as { id: string }).id;
+
+  const billingClient = getSupabaseServerClient();
+  const isLiteWorkspace =
+    spaceType === 'work' &&
+    (await isBusinessLiteWorkspace(
+      billingClient,
+      accountId,
+      workspace.businessType,
+    ));
 
   const shortcutsBar = (
     <Suspense fallback={null}>
@@ -132,6 +145,37 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
         <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
           {shortcutsBar}
           <HomegroupDashboard {...communityData} />
+        </PageBody>
+      </>
+    );
+  }
+
+  if (isLiteWorkspace) {
+    const userRecord = workspace.user as { user_metadata?: { first_name?: string } };
+    const userFirstName =
+      typeof userRecord?.user_metadata?.first_name === 'string'
+        ? userRecord.user_metadata.first_name.trim()
+        : null;
+    const installedApps = buildWorkAppLinks(account, workspace.moduleSettings);
+
+    return (
+      <>
+        <TeamAccountLayoutPageHeader
+          account={account}
+          title={
+            userFirstName ? `Welcome back, ${userFirstName}` : accountLabel
+          }
+          description="Your apps workspace — install add-ons or upgrade to full business."
+        />
+        <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
+          {shortcutsBar}
+          <BusinessLiteDashboard
+            accountSlug={account}
+            accountName={accountLabel}
+            userFirstName={userFirstName}
+            canManageBilling={access.canViewBilling}
+            installedApps={installedApps}
+          />
         </PageBody>
       </>
     );

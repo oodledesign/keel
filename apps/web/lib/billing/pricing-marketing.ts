@@ -50,6 +50,17 @@ export const MARKETING_WORKSPACE_PLANS: MarketingWorkspacePlan[] = [
     features: ['Shared schedule & events', 'Group tasks & notes', '3 members included'],
   },
   {
+    productId: 'keel-business-lite',
+    monthlyPlanId: 'business-lite-free',
+    yearlyPlanId: 'business-lite-free',
+    profile: 'work_design',
+    name: 'Business Lite',
+    description: 'Free apps workspace — add Signatures, Rankly, and more.',
+    monthlyPriceGbp: 0,
+    yearlyPriceGbp: 0,
+    features: ['Apps marketplace', 'Team & brand settings', 'Pay per app add-on'],
+  },
+  {
     productId: 'keel-business-solo',
     monthlyPlanId: 'business-solo-monthly',
     yearlyPlanId: 'business-solo-yearly',

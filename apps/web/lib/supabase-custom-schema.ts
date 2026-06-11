@@ -4,7 +4,7 @@
  */
 export function supabaseCustomSchema(
   client: unknown,
-  schema: 'rankly' | 'feedflow' | 'signatures',
+  schema: 'rankly' | 'feedflow' | 'signatures' | 'sops',
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): any {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

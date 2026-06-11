@@ -74,12 +74,12 @@ export function KeelAppsMarketplace({
         <div>
           <h2 className="text-lg font-semibold">Available add-ons</h2>
           <p className="text-muted-foreground text-sm">
-            Subscribe per workspace. Rankly, Feedflow, and Videos unlock when
-            billing is active.
+            Subscribe per workspace. Add-ons unlock when your workspace is active
+            (Business Lite is free).
           </p>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {KEEL_ADDON_CATALOG.map((addon) => {
             const active = activeAddons[addon.key];
             const addonSlug = addon.key.replace('addon_', '');

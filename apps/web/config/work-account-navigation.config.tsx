@@ -12,7 +12,9 @@ import {
   LayoutDashboard,
   LayoutGrid,
   LifeBuoy,
+  ListChecks,
   MessageSquareText,
+  MessageSquare,
   PenLine,
   Settings,
   Share2,
@@ -253,6 +255,24 @@ export function buildWorkSpaceNavChildren(
             label: 'Notes and files',
             path: createPath(pathsConfig.app.accountNotes, account),
             Icon: <StickyNote className={iconClasses} />,
+          }
+        : null,
+    sops: () =>
+      access.canViewDashboard && isWorkNavModuleEnabled(ms, 'sops')
+        ? {
+            label: 'SOPs',
+            path: createPath(pathsConfig.app.accountSops, account),
+            Icon: <ListChecks className={iconClasses} />,
+            description: 'Repeatable processes and checklists for your team.',
+          }
+        : null,
+    messages: () =>
+      access.canViewMessages && isWorkNavModuleEnabled(ms, 'messages')
+        ? {
+            label: 'Messages',
+            path: createPath(pathsConfig.app.accountMessages, account),
+            Icon: <MessageSquare className={iconClasses} />,
+            description: 'Chat with your team and clients.',
           }
         : null,
     finances: () =>

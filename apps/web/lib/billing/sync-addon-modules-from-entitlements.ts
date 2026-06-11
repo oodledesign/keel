@@ -8,6 +8,7 @@ import type { KeelAddonKey } from './keel-plan-catalog';
 
 /** Maps paid add-on entitlements to `account_module_settings.module_key` values. */
 const ADDON_ENTITLEMENT_MODULES: Record<KeelAddonKey, string[]> = {
+  addon_signatures: ['signatures'],
   addon_rankly: ['rankly'],
   addon_feedflow: ['feedflow'],
   addon_videos: ['videos'],

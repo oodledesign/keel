@@ -104,6 +104,7 @@ export const loadUserSubscriptionsHub = cache(
     }
 
     const addonLabels: Record<string, string> = {
+      addon_signatures: 'Signatures',
       addon_rankly: 'Rankly',
       addon_feedflow: 'Feedflow',
       addon_videos: 'Videos',
@@ -120,21 +121,27 @@ export const loadUserSubscriptionsHub = cache(
         (s) => s.status === 'active' || s.status === 'trialing',
       );
 
+      const required = requiredEntitlementForProfile(profile);
+      const accountEntitlements = entitlementsByAccount.get(account.id) ?? [];
+
       let planLabel: string | null = null;
       if (activeSub?.variantId) {
         const plan = findPlanByStripePriceId(activeSub.variantId);
         planLabel = plan?.productId.replace('keel-', '').replace(/-/g, ' ') ?? null;
+      } else if (accountEntitlements.includes('workspace_business_lite')) {
+        planLabel = 'Business Lite';
       }
 
-      const required = requiredEntitlementForProfile(profile);
-      const accountEntitlements = entitlementsByAccount.get(account.id) ?? [];
       const addons = accountEntitlements
         .filter((k) => k.startsWith('addon_'))
         .map((k) => addonLabels[k] ?? k);
 
       const isFreeWorkspace = required === null;
       const hasEntitlement =
-        required != null && accountEntitlements.includes(required);
+        required == null ||
+        accountEntitlements.includes(required) ||
+        (profile === 'work_design' &&
+          accountEntitlements.includes('workspace_business_lite'));
 
       return {
         accountId: account.id,

@@ -9,9 +9,10 @@ export function SiteFooter() {
     <Footer
       logo={<AppLogo className="w-[85px] md:w-[95px]" />}
       description={
-        <>
-          <p>Simple, accessible business management for tradespeople who value clarity and peace of mind.</p>
-        </>
+        <p>
+          Keel is the Life CRM — one calm system for personal life, business, property, and
+          community. Simple pricing, no clutter.
+        </p>
       }
       copyright={
         <Trans
@@ -24,17 +25,31 @@ export function SiteFooter() {
       }
       sections={[
         {
-          heading: <Trans i18nKey="marketing:product" />,
+          heading: 'Solutions',
           links: [
-            { href: '/#built-for', label: <Trans i18nKey="marketing:features" /> },
-            { href: '/#pricing', label: <Trans i18nKey="marketing:pricing" /> },
-            { href: '/#integrations', label: <Trans i18nKey="marketing:integrations" /> },
-            { href: '/#testimonials', label: <Trans i18nKey="marketing:testimonials" /> },
+            { href: '/personal', label: 'Personal & family' },
+            { href: '/work', label: 'Business' },
+            { href: '/property', label: 'Property' },
+            { href: '/community', label: 'Community' },
           ],
         },
-        // Company & Legal sections hidden while other marketing pages are disabled
-        // { heading: 'Company', links: [...], },
-        // { heading: <Trans i18nKey="marketing:legal" />, links: [...], },
+        {
+          heading: <Trans i18nKey="marketing:product" />,
+          links: [
+            { href: '/pricing', label: <Trans i18nKey="marketing:pricing" /> },
+            { href: '/faq', label: 'FAQ' },
+            { href: '/contact', label: <Trans i18nKey="marketing:team" /> },
+            { href: '/blog', label: 'Blog' },
+          ],
+        },
+        {
+          heading: <Trans i18nKey="marketing:legal" />,
+          links: [
+            { href: '/privacy-policy', label: 'Privacy policy' },
+            { href: '/terms-of-service', label: 'Terms of service' },
+            { href: '/cookie-policy', label: 'Cookie policy' },
+          ],
+        },
       ]}
     />
   );

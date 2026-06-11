@@ -510,7 +510,16 @@ export function JobDetailContent({
             </TabsContent>
 
             <TabsContent value="messages" className="mt-4">
-              <p className="text-sm text-zinc-500">Messages coming soon.</p>
+              <p className="text-sm text-zinc-400">
+                Message your team and client about this project.
+              </p>
+              <Button asChild className="mt-3" variant="outline">
+                <Link
+                  href={`/app/work/${accountSlug}/messages${jobId ? `?threadJob=${jobId}` : ''}`}
+                >
+                  Open messages
+                </Link>
+              </Button>
             </TabsContent>
 
             <TabsContent value="visits" className="mt-4">

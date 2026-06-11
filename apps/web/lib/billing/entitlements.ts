@@ -127,6 +127,12 @@ export async function canAccessPaidWorkspace(
     return true;
   }
 
+  if (profile === 'work_design') {
+    if (await hasEntitlement(client, accountId, 'workspace_business_lite')) {
+      return true;
+    }
+  }
+
   return hasActiveWorkspaceSubscription(client, accountId);
 }
 
@@ -134,7 +140,11 @@ export async function canUseAddon(
   client: SupabaseClient,
   userId: string,
   accountId: string,
-  addonKey: 'addon_rankly' | 'addon_feedflow' | 'addon_videos',
+  addonKey:
+    | 'addon_signatures'
+    | 'addon_rankly'
+    | 'addon_feedflow'
+    | 'addon_videos',
 ): Promise<boolean> {
   if (await isSuperAdmin(client)) {
     return true;

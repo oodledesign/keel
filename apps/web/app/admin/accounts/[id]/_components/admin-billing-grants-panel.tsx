@@ -21,11 +21,13 @@ type EntitlementRow = {
 
 const WORKSPACE_ENTITLEMENTS = [
   { key: 'workspace_community', label: 'Community workspace' },
+  { key: 'workspace_business_lite', label: 'Business Lite (apps shell)' },
   { key: 'workspace_business', label: 'Business workspace' },
   { key: 'workspace_property', label: 'Property workspace' },
 ];
 
 const ADDON_ENTITLEMENTS = [
+  { key: 'addon_signatures', label: 'Signatures' },
   { key: 'addon_rankly', label: 'Rankly' },
   { key: 'addon_feedflow', label: 'Feedflow' },
   { key: 'addon_videos', label: 'Videos' },

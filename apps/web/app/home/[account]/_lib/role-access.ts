@@ -63,6 +63,9 @@ export function getTeamAccountAccess(input?: TeamAccountAccessInput) {
   const canEditInvoices = isOwner || isAdmin || isStaff;
 
   const canViewDashboard = isOwner || isAdmin || isStaff;
+  const canViewMessages =
+    isOwner || isAdmin || isStaff || isContractor || isClient;
+  const canMessageClients = isOwner || isAdmin || isStaff;
   const canViewSchedule = canViewProjects && !isClient;
   const canViewMembers = canManageMembers;
   const canViewSettings = canManageSettings;
@@ -94,6 +97,8 @@ export function getTeamAccountAccess(input?: TeamAccountAccessInput) {
     canViewInvoices,
     canEditInvoices,
     canViewDashboard,
+    canViewMessages,
+    canMessageClients,
     canViewSchedule,
     canViewMembers,
     canViewSettings,
@@ -125,6 +130,11 @@ function normalizeRole(
     default:
       return null;
   }
+}
+
+/** Team-only messaging when the viewer cannot message clients. */
+export function isInternalTeamMessageRole(role: string | null) {
+  return role === 'owner' || role === 'admin' || role === 'staff';
 }
 
 export function getDefaultAccountPath(

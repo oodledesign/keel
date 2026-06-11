@@ -23,7 +23,7 @@ export type WorkspaceProfile =
   | 'family'
   | 'community';
 
-export type BusinessType = 'design' | 'property' | 'other';
+export type BusinessType = 'design' | 'property' | 'other' | 'lite';
 
 export function normalizeBusinessType(
   raw: string | null | undefined,
@@ -31,7 +31,12 @@ export function normalizeBusinessType(
   const v = (raw ?? '').trim().toLowerCase();
   if (v === 'property') return 'property';
   if (v === 'design') return 'design';
+  if (v === 'lite') return 'lite';
   return 'other';
+}
+
+export function isBusinessLiteType(raw: string | null | undefined): boolean {
+  return normalizeBusinessType(raw) === 'lite';
 }
 
 /**

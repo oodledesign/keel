@@ -32,6 +32,7 @@ type DraftWorkspace = {
   name: string;
   enabled: boolean;
   propertyMode?: boolean;
+  fullBusinessMode?: boolean;
 };
 
 const DEFAULT_NAMES: Record<WorkspaceProfile, string> = {
@@ -50,6 +51,7 @@ function newDraft(profile: WorkspaceProfile, propertyMode = false): DraftWorkspa
     name: DEFAULT_NAMES[resolved],
     enabled: false,
     propertyMode,
+    fullBusinessMode: false,
   };
 }
 
@@ -79,7 +81,16 @@ function initialDrafts(intent?: SetupIntent): DraftWorkspace[] {
   }
 
   return drafts.map((draft) =>
-    draft.profile === intent.profile ? { ...draft, enabled: true } : draft,
+    draft.profile === intent.profile
+      ? {
+          ...draft,
+          enabled: true,
+          fullBusinessMode:
+            intent.profile === 'work_design' &&
+            Boolean(intent.productId?.startsWith('keel-business-')) &&
+            intent.productId !== 'keel-business-lite',
+        }
+      : draft,
   );
 }
 
@@ -124,7 +135,12 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
   const submit = () => {
     const selected: WorkspaceSetupSelection[] = drafts
       .filter((d) => d.enabled)
-      .map((d) => ({ profile: d.profile, name: d.name.trim() }));
+      .map((d) => ({
+        profile: d.profile,
+        name: d.name.trim(),
+        businessMode:
+          d.profile === 'work_design' && d.fullBusinessMode ? 'full' : 'lite',
+      }));
 
     if (selected.length === 0) {
       setError('Select at least one workspace to continue.');
@@ -234,7 +250,9 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
                     {isBusiness
                       ? draft.profile === 'work_property'
                         ? 'From £19/mo — up to 5 properties, tenants & maintenance'
-                        : 'From £29/mo — clients, projects, pipeline & invoicing'
+                        : draft.fullBusinessMode
+                          ? 'From £29/mo — clients, projects, pipeline & invoicing'
+                          : 'Free — install Signatures, Rankly, and other apps'
                       : draft.profile === 'family'
                         ? 'Free — household tasks, calendar and meal planning'
                         : 'From £12/mo — shared schedule, tasks and notes'}
@@ -256,17 +274,41 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
               {draft.enabled ? (
                 <div className="mt-4 space-y-3 border-t border-white/[0.08] pt-4">
                   {isBusiness ? (
-                    <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
-                      <input
-                        type="checkbox"
-                        checked={draft.profile === 'work_property'}
-                        onChange={(e) =>
-                          setBusinessProperty(draft.id, e.target.checked)
-                        }
-                        className="rounded border-white/20"
-                      />
-                      Property — track properties, tenants and maintenance
-                    </label>
+                    <div className="space-y-2">
+                      <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
+                        <input
+                          type="checkbox"
+                          checked={draft.profile === 'work_property'}
+                          onChange={(e) =>
+                            setBusinessProperty(draft.id, e.target.checked)
+                          }
+                          className="rounded border-white/20"
+                        />
+                        Property — track properties, tenants and maintenance
+                      </label>
+                      {draft.profile === 'work_design' ? (
+                        <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
+                          <input
+                            type="checkbox"
+                            checked={!!draft.fullBusinessMode}
+                            onChange={(e) =>
+                              setDrafts((prev) =>
+                                prev.map((d) =>
+                                  d.id === draft.id
+                                    ? {
+                                        ...d,
+                                        fullBusinessMode: e.target.checked,
+                                      }
+                                    : d,
+                                ),
+                              )
+                            }
+                            className="rounded border-white/20"
+                          />
+                          Full business CRM — clients, jobs, invoices (from £29/mo)
+                        </label>
+                      ) : null}
+                    </div>
                   ) : null}
                   <label className="block text-xs font-medium uppercase tracking-wide text-zinc-500">
                     Workspace name
