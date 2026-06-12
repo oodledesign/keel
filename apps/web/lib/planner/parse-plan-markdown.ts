@@ -6,11 +6,94 @@ export type ParsedScheduleBlock = {
   raw: string;
 };
 
-const timeLineRe =
-  /^(\d{1,2}):(\d{2})\s*[–-]\s*(\d{1,2}):(\d{2})\s*·\s*(.+)$/;
+export type ScheduleSegment = {
+  timeLabel: string;
+  startMinutes: number | null;
+  endMinutes: number | null;
+  title: string;
+  meta: string[];
+  isCalendarEvent: boolean;
+};
 
-const calendarLineRe =
-  /^(\d{1,2}):(\d{2})\s*[–-]\s*(\d{1,2}):(\d{2})\s*·\s*📅\s*(.+)$/;
+// Matches "8:30am", "08:30", "10am", "5:30 pm" — a bare number without
+// minutes or am/pm is rejected so durations like "~90min" never match.
+const TIME_PART = String.raw`\d{1,2}:\d{2}\s*(?:am|pm)?|\d{1,2}\s*(?:am|pm)`;
+const RANGE_SOURCE = `(${TIME_PART})\\s*[–—-]\\s*(${TIME_PART})\\s*·\\s*`;
+
+function parseClockMinutes(raw: string): number | null {
+  const m = /^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i.exec(raw.trim());
+  if (!m?.[1]) return null;
+
+  let hours = Number(m[1]);
+  const minutes = Number(m[2] ?? '0');
+  const meridiem = m[3]?.toLowerCase();
+
+  if (meridiem === 'pm' && hours < 12) hours += 12;
+  if (meridiem === 'am' && hours === 12) hours = 0;
+  if (hours > 23 || minutes > 59) return null;
+
+  return hours * 60 + minutes;
+}
+
+function compactTime(raw: string): string {
+  return raw.replace(/\s+/g, '').toLowerCase();
+}
+
+/**
+ * Split text into individual schedule blocks. Handles AI output where several
+ * "8:30am–10:00am · Task · meta" entries run together in one paragraph.
+ * Returns [] when the text does not start with a time range.
+ */
+export function splitScheduleSegments(text: string): ScheduleSegment[] {
+  const re = new RegExp(RANGE_SOURCE, 'gi');
+  const matches = Array.from(text.matchAll(re));
+  if (matches.length === 0) return [];
+
+  const first = matches[0];
+  if (first?.index === undefined || first.index > 8) return [];
+
+  const segments: ScheduleSegment[] = [];
+
+  for (let i = 0; i < matches.length; i += 1) {
+    const match = matches[i];
+    if (match?.index === undefined) continue;
+    const [full, rawStart, rawEnd] = match;
+    if (!rawStart || !rawEnd) continue;
+
+    const bodyStart = match.index + full.length;
+    const next = matches[i + 1];
+    const bodyEnd = next?.index !== undefined ? next.index : text.length;
+    const body = text
+      .slice(bodyStart, bodyEnd)
+      .trim()
+      .replace(/[·\s]+$/, '')
+      .trim();
+    if (!body) continue;
+
+    const isCalendarEvent = body.includes('📅');
+    const parts = body
+      .replace(/📅/g, '')
+      .split('·')
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    const title = parts[0] ?? body;
+    const meta = parts
+      .slice(1)
+      .filter((part) => !/^no project$/i.test(part));
+
+    segments.push({
+      timeLabel: `${compactTime(rawStart)}–${compactTime(rawEnd)}`,
+      startMinutes: parseClockMinutes(rawStart),
+      endMinutes: parseClockMinutes(rawEnd),
+      title,
+      meta,
+      isCalendarEvent,
+    });
+  }
+
+  return segments;
+}
 
 export function parseDayScheduleFromMarkdown(
   markdown: string,
@@ -23,36 +106,29 @@ export function parseDayScheduleFromMarkdown(
 
   for (const rawLine of markdown.split('\n')) {
     const line = rawLine.trim();
-    const calendarMatch = calendarLineRe.exec(line);
-    const taskMatch = calendarMatch ? null : timeLineRe.exec(line);
-    const match = calendarMatch ?? taskMatch;
-    if (!match) continue;
+    for (const segment of splitScheduleSegments(line)) {
+      if (segment.startMinutes === null || segment.endMinutes === null) continue;
+      if (segment.endMinutes <= segment.startMinutes) continue;
 
-    const [, sh, sm, eh, em, rawBody] = match;
-    if (!sh || !sm || !eh || !em || !rawBody) continue;
+      const start = new Date(base);
+      const end = new Date(base);
+      start.setHours(0, segment.startMinutes, 0, 0);
+      end.setHours(0, segment.endMinutes, 0, 0);
 
-    const start = new Date(base);
-    const end = new Date(base);
-    start.setHours(Number(sh), Number(sm), 0, 0);
-    end.setHours(Number(eh), Number(em), 0, 0);
-    if (end <= start) continue;
-
-    blocks.push({
-      title: rawBody.replace(/\s*·\s*.+$/, '').trim(),
-      start: start.toISOString(),
-      end: end.toISOString(),
-      isCalendarEvent: Boolean(calendarMatch),
-      raw: line,
-    });
+      blocks.push({
+        title: segment.title,
+        start: start.toISOString(),
+        end: end.toISOString(),
+        isCalendarEvent: segment.isCalendarEvent,
+        raw: line,
+      });
+    }
   }
 
   return blocks.sort(
     (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime(),
   );
 }
-
-const pushLineRe =
-  /^(\d{1,2}):(\d{2})\s*[–-]\s*(\d{1,2}):(\d{2})\s*·\s*(?!📅)(.+?)(?:\s*·\s*.+)?$/;
 
 export function parseScheduledBlocksForCalendarPush(
   markdown: string,
@@ -67,7 +143,7 @@ export function parseScheduledBlocksForCalendarPush(
 
   for (const rawLine of markdown.split('\n')) {
     const line = rawLine.trim();
-    const heading = /^###\s+(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i.exec(
+    const heading = /^#{2,4}\s+(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i.exec(
       line,
     );
     if (heading) {
@@ -81,22 +157,23 @@ export function parseScheduledBlocksForCalendarPush(
       continue;
     }
 
-    const match = pushLineRe.exec(line);
-    if (!match) continue;
+    for (const segment of splitScheduleSegments(line)) {
+      // Calendar events already exist in Google Calendar — don't duplicate.
+      if (segment.isCalendarEvent) continue;
+      if (segment.startMinutes === null || segment.endMinutes === null) continue;
+      if (segment.endMinutes <= segment.startMinutes) continue;
 
-    const [, sh, sm, eh, em, rawTitle] = match;
-    if (!sh || !sm || !eh || !em || !rawTitle) continue;
-    const start = new Date(currentDate);
-    const end = new Date(currentDate);
-    start.setHours(Number(sh), Number(sm), 0, 0);
-    end.setHours(Number(eh), Number(em), 0, 0);
-    if (end <= start) continue;
+      const start = new Date(currentDate);
+      const end = new Date(currentDate);
+      start.setHours(0, segment.startMinutes, 0, 0);
+      end.setHours(0, segment.endMinutes, 0, 0);
 
-    blocks.push({
-      title: rawTitle.trim(),
-      start: start.toISOString(),
-      end: end.toISOString(),
-    });
+      blocks.push({
+        title: segment.title,
+        start: start.toISOString(),
+        end: end.toISOString(),
+      });
+    }
   }
 
   return blocks;

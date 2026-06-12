@@ -5,7 +5,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from '@kit/ui/sonner';
 
 import type { PlannerCalendarEvent } from '~/lib/integrations/google-calendar/types';
+import { savePlannerPlanAction } from '~/lib/planner/plan-actions';
 import {
+  plannerScopeKey,
   saveStoredPlan,
   toLocalDateYmd,
 } from '~/lib/planner/plan-storage';
@@ -52,7 +54,9 @@ export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
     Set<string>
   >(new Set());
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(allTaskIds);
-  const [planMarkdown, setPlanMarkdown] = useState('');
+  const [planMarkdown, setPlanMarkdown] = useState(
+    initialData.savedPlanMarkdown ?? '',
+  );
   const [isGenerating, setIsGenerating] = useState(false);
   const [lastPayload, setLastPayload] = useState<PlannerGeneratePayload | null>(
     null,
@@ -141,11 +145,32 @@ export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
       }
 
       if (accumulated.trim()) {
-        saveStoredPlan(initialData.scope, toLocalDateYmd(new Date(date)), {
+        const dateYmd = toLocalDateYmd(new Date(date));
+
+        saveStoredPlan(initialData.scope, dateYmd, {
           markdown: accumulated,
           updatedAt: new Date().toISOString(),
           mode,
         });
+
+        const result = await savePlannerPlanAction({
+          scopeKey: plannerScopeKey(initialData.scope),
+          planDate: dateYmd,
+          mode,
+          markdown: accumulated,
+        });
+
+        if (result.success) {
+          toast.success(
+            mode === 'day'
+              ? 'Plan saved — see it on the Today view'
+              : 'Plan saved',
+          );
+        } else {
+          toast.error(
+            'Plan generated but could not be saved. It is kept in this browser only.',
+          );
+        }
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not generate plan');

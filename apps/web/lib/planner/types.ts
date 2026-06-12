@@ -56,6 +56,8 @@ export type PlannerPageData = {
   };
   taskTree: PlannerWorkspaceNode[];
   sopSuggestions: SopSuggestion[];
+  /** Saved day plan for today (from the database), if one exists. */
+  savedPlanMarkdown: string | null;
   dayViewHref: string;
   planViewHref: string;
   settingsHref: string;
@@ -71,6 +73,8 @@ export type DayViewData = {
   };
   tasksDueToday: PlannerTask[];
   sopSuggestions: SopSuggestion[];
+  /** Saved day plan for today (from the database), if one exists. */
+  planMarkdown: string | null;
   planViewHref: string;
   settingsHref: string;
 };

@@ -27,6 +27,7 @@ import {
   flattenPlannerTasks,
   tasksDueOnDate,
 } from './build-task-tree';
+import { plannerScopeKey } from './plan-storage';
 import { recommendSopsForTasks } from './sop-recommendations';
 import type { DayViewData, PlannerPageData, PlannerScope, SopSuggestion } from './types';
 
@@ -68,6 +69,41 @@ async function loadScopedTasks(
   return loadTasksForTeamAccount(scope.accountId);
 }
 
+type PlannerPlanQuery = {
+  select: (columns: string) => PlannerPlanQuery;
+  eq: (column: string, value: string) => PlannerPlanQuery;
+  maybeSingle: () => Promise<{ data: unknown }>;
+};
+
+/**
+ * Loads the saved day-mode plan for the given scope and date, if one exists.
+ * Week plans are skipped: the Today view only renders single-day schedules.
+ */
+async function loadSavedDayPlanMarkdown(
+  client: unknown,
+  userId: string,
+  scope: PlannerScope,
+  dateYmd: string,
+): Promise<string | null> {
+  try {
+    const { data } = await (
+      client as { from: (name: string) => PlannerPlanQuery }
+    )
+      .from('planner_plans')
+      .select('markdown, mode')
+      .eq('user_id', userId)
+      .eq('scope_key', plannerScopeKey(scope))
+      .eq('plan_date', dateYmd)
+      .maybeSingle();
+
+    const row = data as { markdown?: string | null; mode?: string } | null;
+    if (!row?.markdown || row.mode !== 'day') return null;
+    return row.markdown;
+  } catch {
+    return null;
+  }
+}
+
 function sopHref(scope: PlannerScope, playbookId: string) {
   if (scope.kind !== 'workspace') return '#';
   return pathsConfig.app.accountSopsPlaybook
@@ -83,9 +119,10 @@ async function buildPlannerBundle(scope: PlannerScope) {
     user.id,
   );
 
-  const [tasks, calendar] = await Promise.all([
+  const [tasks, calendar, savedPlanMarkdown] = await Promise.all([
     loadScopedTasks(scope, includeWorkspaceTasks),
     getGoogleCalendarConnectionStatus(client, user.id),
+    loadSavedDayPlanMarkdown(client, user.id, scope, todayLocalYmd()),
   ]);
 
   const taskTree = buildTaskTree(tasks);
@@ -119,6 +156,7 @@ async function buildPlannerBundle(scope: PlannerScope) {
     calendar,
     taskTree,
     sopSuggestions,
+    savedPlanMarkdown,
     dayViewHref,
     planViewHref,
     settingsHref,
@@ -140,6 +178,7 @@ export const loadPersonalDayViewData = cache(async (): Promise<DayViewData> => {
     calendar: bundle.calendar,
     tasksDueToday,
     sopSuggestions: [],
+    planMarkdown: bundle.savedPlanMarkdown,
     planViewHref: bundle.planViewHref,
     settingsHref: bundle.settingsHref,
   };
@@ -190,6 +229,7 @@ export const loadWorkspaceDayViewData = cache(
       calendar: bundle.calendar,
       tasksDueToday,
       sopSuggestions,
+      planMarkdown: bundle.savedPlanMarkdown,
       planViewHref: bundle.planViewHref,
       settingsHref: bundle.settingsHref,
     };

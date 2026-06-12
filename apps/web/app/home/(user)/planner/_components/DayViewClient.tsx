@@ -33,15 +33,20 @@ function formatTime(iso: string) {
 
 export function DayViewClient({ initialData, dayViewHref }: Props) {
   const dateYmd = toLocalDateYmd();
-  const [planMarkdown, setPlanMarkdown] = useState('');
+  const [planMarkdown, setPlanMarkdown] = useState(
+    initialData.planMarkdown ?? '',
+  );
   const [calendarEvents, setCalendarEvents] = useState<PlannerCalendarEvent[]>(
     [],
   );
 
+  // Fall back to a locally-stored plan when nothing is saved server-side
+  // (covers plans generated before database persistence existed).
   useEffect(() => {
+    if (initialData.planMarkdown) return;
     const stored = loadStoredPlan(initialData.scope, dateYmd);
-    setPlanMarkdown(stored?.markdown ?? '');
-  }, [initialData.scope, dateYmd]);
+    if (stored?.markdown) setPlanMarkdown(stored.markdown);
+  }, [initialData.planMarkdown, initialData.scope, dateYmd]);
 
   useEffect(() => {
     let cancelled = false;
