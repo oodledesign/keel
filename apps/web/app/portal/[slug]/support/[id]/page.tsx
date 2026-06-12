@@ -8,16 +8,16 @@ import { loadClientPortalContext } from '../../_lib/server/client-portal.loader'
 import { createClientPortalService } from '../../_lib/server/client-portal.service';
 
 interface PortalSupportDetailPageProps {
-  params: Promise<{ clientSlug: string; id: string }>;
+  params: Promise<{ slug: string; id: string }>;
 }
 
 export async function generateMetadata({
   params,
 }: PortalSupportDetailPageProps) {
-  const { clientSlug, id } = await params;
+  const { slug, id } = await params;
 
   try {
-    const ctx = await loadClientPortalContext(clientSlug);
+    const ctx = await loadClientPortalContext(slug);
     const service = createClientPortalService(getSupabaseServerClient());
     const ticket = await service.getTicket(ctx.clientOrgId, id);
 
@@ -34,8 +34,8 @@ export async function generateMetadata({
 export default async function PortalSupportDetailPage({
   params,
 }: PortalSupportDetailPageProps) {
-  const { clientSlug, id } = await params;
-  const ctx = await loadClientPortalContext(clientSlug);
+  const { slug, id } = await params;
+  const ctx = await loadClientPortalContext(slug);
   const service = createClientPortalService(getSupabaseServerClient());
 
   const [ticket, messages] = await Promise.all([
@@ -52,7 +52,7 @@ export default async function PortalSupportDetailPage({
       ticket={ticket}
       initialMessages={messages}
       clientOrgId={ctx.clientOrgId}
-      clientSlug={clientSlug}
+      clientSlug={slug}
     />
   );
 }

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ExternalLink, Globe, LifeBuoy, Megaphone, CreditCard } from 'lucide-react';
+import { CreditCard, ExternalLink, Globe, LifeBuoy, Megaphone } from 'lucide-react';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { Button } from '@kit/ui/button';
@@ -13,33 +13,30 @@ import {
   formatPortalDate,
   formatPortalMoney,
   portalExternalHref,
-} from './_components/portal-badges';
-import { loadClientPortalContext } from './_lib/server/client-portal.loader';
-import { createClientPortalService } from './_lib/server/client-portal.service';
+} from './portal-badges';
+import { loadClientPortalContext } from '../_lib/server/client-portal.loader';
+import { createClientPortalService } from '../_lib/server/client-portal.service';
 
-interface PortalOverviewPageProps {
-  params: Promise<{ clientSlug: string }>;
-}
-
-export default async function PortalOverviewPage({
-  params,
-}: PortalOverviewPageProps) {
-  const { clientSlug } = await params;
-  const ctx = await loadClientPortalContext(clientSlug);
+export default async function ClientPortalOverviewPage({
+  slug,
+}: {
+  slug: string;
+}) {
+  const ctx = await loadClientPortalContext(slug);
   const service = createClientPortalService(getSupabaseServerClient());
   const overview = await service.getOverview(ctx.clientOrgId);
 
   const supportHref = pathsConfig.app.clientPortalSupport.replace(
     '[clientSlug]',
-    clientSlug,
+    slug,
   );
   const websiteHref = pathsConfig.app.clientPortalWebsite.replace(
     '[clientSlug]',
-    clientSlug,
+    slug,
   );
   const billingHref = pathsConfig.app.clientPortalBilling.replace(
     '[clientSlug]',
-    clientSlug,
+    slug,
   );
 
   const cmsUrl = overview.website

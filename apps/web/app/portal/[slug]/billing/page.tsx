@@ -15,7 +15,7 @@ import { createClientPortalService } from '../_lib/server/client-portal.service'
 import type { PortalInvoice } from '../_lib/server/client-portal.service';
 
 interface PortalBillingPageProps {
-  params: Promise<{ clientSlug: string }>;
+  params: Promise<{ slug: string }>;
 }
 
 function formatInvoiceTotal(pence: number, currency: string | null) {
@@ -25,8 +25,8 @@ function formatInvoiceTotal(pence: number, currency: string | null) {
 export default async function PortalBillingPage({
   params,
 }: PortalBillingPageProps) {
-  const { clientSlug } = await params;
-  const ctx = await loadClientPortalContext(clientSlug);
+  const { slug } = await params;
+  const ctx = await loadClientPortalContext(slug);
   const service = createClientPortalService(getSupabaseServerClient());
   const { subscription, invoices } = await service.getBilling(ctx.clientOrgId);
 

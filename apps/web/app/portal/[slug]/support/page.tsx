@@ -5,7 +5,7 @@ import { loadClientPortalContext } from '../_lib/server/client-portal.loader';
 import { createClientPortalService } from '../_lib/server/client-portal.service';
 
 interface PortalSupportPageProps {
-  params: Promise<{ clientSlug: string }>;
+  params: Promise<{ slug: string }>;
 }
 
 export const generateMetadata = async () => ({ title: 'Support' });
@@ -13,14 +13,14 @@ export const generateMetadata = async () => ({ title: 'Support' });
 export default async function PortalSupportPage({
   params,
 }: PortalSupportPageProps) {
-  const { clientSlug } = await params;
-  const ctx = await loadClientPortalContext(clientSlug);
+  const { slug } = await params;
+  const ctx = await loadClientPortalContext(slug);
   const service = createClientPortalService(getSupabaseServerClient());
   const tickets = await service.listTickets(ctx.clientOrgId);
 
   return (
     <PortalSupportListContent
-      clientSlug={clientSlug}
+      clientSlug={slug}
       initialTickets={tickets}
     />
   );

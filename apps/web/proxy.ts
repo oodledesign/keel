@@ -10,6 +10,11 @@ import { createMiddlewareClient } from '@kit/supabase/middleware-client';
 
 import appConfig from '~/config/app.config';
 import pathsConfig from '~/config/paths.config';
+import {
+  AGENCY_PORTAL_REQUEST_HEADER,
+  buildAgencyPortalRewritePath,
+  extractAgencyPortalSlug,
+} from '~/lib/agency-portal-host';
 import { getUserDefaultLandingPath } from '~/lib/dashboard-shortcuts/load-shortcuts';
 
 const CSRF_SECRET_COOKIE = 'csrfSecret';
@@ -56,7 +61,40 @@ function createNextResponse(
   });
 }
 
+function rewriteAgencyPortalRequest(request: NextRequest) {
+  const slug = extractAgencyPortalSlug(request.nextUrl.hostname);
+
+  if (!slug) {
+    return null;
+  }
+
+  const rewriteUrl = request.nextUrl.clone();
+  rewriteUrl.pathname = buildAgencyPortalRewritePath(
+    slug,
+    request.nextUrl.pathname,
+  );
+
+  const requestHeaders = createForwardHeaders(request);
+  requestHeaders.set(AGENCY_PORTAL_REQUEST_HEADER, '1');
+
+  const response = NextResponse.rewrite(rewriteUrl, {
+    request: {
+      headers: requestHeaders,
+    },
+  });
+
+  setRequestId(request);
+
+  return response;
+}
+
 export async function proxy(request: NextRequest) {
+  const agencyPortalResponse = rewriteAgencyPortalRequest(request);
+
+  if (agencyPortalResponse) {
+    return withCsrfMiddleware(request, agencyPortalResponse);
+  }
+
   const secureHeaders = await createResponseWithSecureHeaders();
   const response = createNextResponse(request, secureHeaders);
 

@@ -18,14 +18,14 @@ import { loadClientPortalContext } from '../_lib/server/client-portal.loader';
 import { createClientPortalService } from '../_lib/server/client-portal.service';
 
 interface PortalWebsitePageProps {
-  params: Promise<{ clientSlug: string }>;
+  params: Promise<{ slug: string }>;
 }
 
 export default async function PortalWebsitePage({
   params,
 }: PortalWebsitePageProps) {
-  const { clientSlug } = await params;
-  const ctx = await loadClientPortalContext(clientSlug);
+  const { slug } = await params;
+  const ctx = await loadClientPortalContext(slug);
   const service = createClientPortalService(getSupabaseServerClient());
   const website = await service.getWebsite(ctx.clientOrgId);
 

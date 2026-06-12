@@ -2,7 +2,7 @@ import { PortalSupportNewForm } from '../../_components/portal-support-content';
 import { loadClientPortalContext } from '../../_lib/server/client-portal.loader';
 
 interface PortalSupportNewPageProps {
-  params: Promise<{ clientSlug: string }>;
+  params: Promise<{ slug: string }>;
 }
 
 export const generateMetadata = async () => ({ title: 'Raise a ticket' });
@@ -10,8 +10,8 @@ export const generateMetadata = async () => ({ title: 'Raise a ticket' });
 export default async function PortalSupportNewPage({
   params,
 }: PortalSupportNewPageProps) {
-  const { clientSlug } = await params;
-  const ctx = await loadClientPortalContext(clientSlug);
+  const { slug } = await params;
+  const ctx = await loadClientPortalContext(slug);
 
   return (
     <div className="space-y-6">
@@ -25,7 +25,7 @@ export default async function PortalSupportNewPage({
       <PortalSupportNewForm
         clientOrgId={ctx.clientOrgId}
         accountId={ctx.accountId}
-        clientSlug={clientSlug}
+        clientSlug={slug}
       />
     </div>
   );
