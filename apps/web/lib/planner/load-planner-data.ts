@@ -98,21 +98,28 @@ async function loadSavedDayPlanMarkdown(
   userId: string,
   scope: PlannerScope,
   dateYmd: string,
-): Promise<string | null> {
+): Promise<{ markdown: string; updatedAt: string | null } | null> {
   try {
     const { data } = await (
       client as { from: (name: string) => PlannerPlanQuery }
     )
       .from('planner_plans')
-      .select('markdown, mode')
+      .select('markdown, mode, updated_at')
       .eq('user_id', userId)
       .eq('scope_key', plannerScopeKey(scope))
       .eq('plan_date', dateYmd)
       .maybeSingle();
 
-    const row = data as { markdown?: string | null; mode?: string } | null;
+    const row = data as {
+      markdown?: string | null;
+      mode?: string;
+      updated_at?: string | null;
+    } | null;
     if (!row?.markdown || row.mode !== 'day') return null;
-    return row.markdown;
+    return {
+      markdown: row.markdown,
+      updatedAt: row.updated_at ?? null,
+    };
   } catch {
     return null;
   }
@@ -215,7 +222,7 @@ async function buildPlannerBundle(scope: PlannerScope) {
     user.id,
   );
 
-  const [tasks, calendar, savedPlanMarkdown] = await Promise.all([
+  const [tasks, calendar, savedPlan] = await Promise.all([
     loadScopedTasks(scope, includeWorkspaceTasks),
     getGoogleCalendarConnectionStatus(client, user.id),
     loadSavedDayPlanMarkdown(client, user.id, scope, todayLocalYmd()),
@@ -252,7 +259,8 @@ async function buildPlannerBundle(scope: PlannerScope) {
     calendar,
     taskTree,
     sopSuggestions,
-    savedPlanMarkdown,
+    savedPlanMarkdown: savedPlan?.markdown ?? null,
+    savedPlanUpdatedAt: savedPlan?.updatedAt ?? null,
     dayViewHref,
     planViewHref,
     settingsHref,
@@ -278,6 +286,7 @@ export const loadPersonalDayViewData = cache(async (): Promise<DayViewData> => {
     openTasksForReplan,
     sopSuggestions: [],
     planMarkdown: bundle.savedPlanMarkdown,
+    planUpdatedAt: bundle.savedPlanUpdatedAt,
     pipeline,
     planViewHref: bundle.planViewHref,
     settingsHref: bundle.settingsHref,
@@ -332,6 +341,7 @@ export const loadWorkspaceDayViewData = cache(
       openTasksForReplan: flattenPlannerTasks(bundle.taskTree),
       sopSuggestions,
       planMarkdown: bundle.savedPlanMarkdown,
+    planUpdatedAt: bundle.savedPlanUpdatedAt,
       pipeline,
       planViewHref: bundle.planViewHref,
       settingsHref: bundle.settingsHref,

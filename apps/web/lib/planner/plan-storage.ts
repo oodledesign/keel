@@ -1,4 +1,5 @@
 import type { PlannerScope } from './types';
+import { parseDayScheduleFromMarkdown } from './parse-plan-markdown';
 
 export type StoredPlan = {
   markdown: string;
@@ -47,4 +48,37 @@ export function saveStoredPlan(
     planStorageKey(scope, dateYmd),
     JSON.stringify(plan),
   );
+}
+
+function scheduleBlockCount(markdown: string, dateIso: string): number {
+  return parseDayScheduleFromMarkdown(markdown, dateIso).length;
+}
+
+/** Prefer the plan that parses to the most schedule blocks, then the newest copy. */
+export function pickBestPlanMarkdown(
+  serverMarkdown: string | null | undefined,
+  serverUpdatedAt: string | null | undefined,
+  stored: StoredPlan | null,
+  dateYmd: string,
+): string {
+  const serverMd = serverMarkdown?.trim() ?? '';
+  const storedMd = stored?.markdown?.trim() ?? '';
+  if (!serverMd) return storedMd;
+  if (!storedMd) return serverMd;
+
+  const dateIso = `${dateYmd}T12:00:00`;
+  const serverBlocks = scheduleBlockCount(serverMd, dateIso);
+  const storedBlocks = scheduleBlockCount(storedMd, dateIso);
+
+  if (storedBlocks > serverBlocks) return storedMd;
+  if (serverBlocks > storedBlocks) return serverMd;
+
+  const serverTime = serverUpdatedAt ? Date.parse(serverUpdatedAt) : 0;
+  const storedTime =
+    stored?.updatedAt && Number.isFinite(Date.parse(stored.updatedAt))
+      ? Date.parse(stored.updatedAt)
+      : 0;
+  if (Number.isFinite(storedTime) && storedTime > serverTime) return storedMd;
+
+  return serverMd;
 }

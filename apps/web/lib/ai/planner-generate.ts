@@ -10,6 +10,7 @@ Prioritisation rules:
 - Schedule deep focus work (design, writing, strategy, complex problems) during the user's preferred deep work window.
 - Schedule admin, emails, and quick tasks in lower-energy periods.
 - Never schedule more than 90 minutes of unbroken deep work — insert a short break.
+- When the plan spans midday, always include an explicit lunch break block (e.g. 12:00–13:00 · Lunch break).
 - Use Eisenhower Matrix logic: urgent+important first, important-not-urgent next.
 - Batch tasks from the same project together to reduce context-switching.
 - Treat Family and Personal workspace tasks with equal weight to work tasks.

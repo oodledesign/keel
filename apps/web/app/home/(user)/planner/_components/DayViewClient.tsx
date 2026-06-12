@@ -22,6 +22,7 @@ import type { PlannerCalendarEvent } from '~/lib/integrations/google-calendar/ty
 import { parseDayScheduleFromMarkdown } from '~/lib/planner/parse-plan-markdown';
 import {
   loadStoredPlan,
+  pickBestPlanMarkdown,
   toLocalDateYmd,
 } from '~/lib/planner/plan-storage';
 import type {
@@ -31,6 +32,7 @@ import type {
 } from '~/lib/planner/types';
 
 import { createTask, updateTask } from '../../_lib/actions/task-actions';
+import { PlannerRemindersToggle } from './PlannerRemindersToggle';
 import { PlannerViewTabs } from './PlannerViewTabs';
 import { ReplanDialog } from './ReplanDialog';
 import { SopSuggestionsStrip } from './SopSuggestionsStrip';
@@ -91,13 +93,24 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
     return () => clearInterval(id);
   }, []);
 
-  // Fall back to a locally-stored plan when nothing is saved server-side
-  // (covers plans generated before database persistence existed).
+  // Merge server-saved plan with localStorage — prefer whichever parses more blocks
+  // (covers stale DB copies and plans saved before server persistence existed).
   useEffect(() => {
-    if (initialData.planMarkdown) return;
     const stored = loadStoredPlan(initialData.scope, dateYmd);
-    if (stored?.markdown) setPlanMarkdown(stored.markdown);
-  }, [initialData.planMarkdown, initialData.scope, dateYmd]);
+    setPlanMarkdown(
+      pickBestPlanMarkdown(
+        initialData.planMarkdown,
+        initialData.planUpdatedAt,
+        stored,
+        dateYmd,
+      ),
+    );
+  }, [
+    initialData.planMarkdown,
+    initialData.planUpdatedAt,
+    initialData.scope,
+    dateYmd,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -258,11 +271,14 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
               : dateLabel}
           </p>
         </div>
-        <PlannerViewTabs
-          dayHref={dayViewHref}
-          planHref={initialData.planViewHref}
-          active="day"
-        />
+        <div className="flex flex-col items-start gap-3 sm:items-end">
+          <PlannerViewTabs
+            dayHref={dayViewHref}
+            planHref={initialData.planViewHref}
+            active="day"
+          />
+          <PlannerRemindersToggle />
+        </div>
       </header>
 
       <NowBar

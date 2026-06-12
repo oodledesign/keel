@@ -23,7 +23,16 @@ export const BREAK_TITLE_RE =
 // Matches "8:30am", "08:30", "10am", "5:30 pm" — a bare number without
 // minutes or am/pm is rejected so durations like "~90min" never match.
 const TIME_PART = String.raw`\d{1,2}:\d{2}\s*(?:am|pm)?|\d{1,2}\s*(?:am|pm)`;
-const RANGE_SOURCE = `(${TIME_PART})\\s*[–—-]\\s*(${TIME_PART})\\s*·\\s*`;
+/** After the end time, accept middle dot, bullet, dash, colon, or whitespace before the title. */
+const RANGE_SOURCE = `(${TIME_PART})\\s*[–—-]\\s*(${TIME_PART})\\s*(?:[·•—\\-:]\\s*|\\s+)`;
+
+function normalizeScheduleLine(line: string): string {
+  return line
+    .replace(/\*\*/g, '')
+    .replace(/^[-*+]\s+/, '')
+    .replace(/^\[[ x]\]\s+/i, '')
+    .trim();
+}
 
 function parseClockMinutes(raw: string): number | null {
   const m = /^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i.exec(raw.trim());
@@ -81,12 +90,10 @@ function compactTime(raw: string): string {
  * Returns [] when the text does not start with a time range.
  */
 export function splitScheduleSegments(text: string): ScheduleSegment[] {
+  const normalized = normalizeScheduleLine(text);
   const re = new RegExp(RANGE_SOURCE, 'gi');
-  const matches = Array.from(text.matchAll(re));
+  const matches = Array.from(normalized.matchAll(re));
   if (matches.length === 0) return [];
-
-  const first = matches[0];
-  if (first?.index === undefined || first.index > 8) return [];
 
   const segments: ScheduleSegment[] = [];
 
@@ -98,8 +105,8 @@ export function splitScheduleSegments(text: string): ScheduleSegment[] {
 
     const bodyStart = match.index + full.length;
     const next = matches[i + 1];
-    const bodyEnd = next?.index !== undefined ? next.index : text.length;
-    const body = text
+    const bodyEnd = next?.index !== undefined ? next.index : normalized.length;
+    const body = normalized
       .slice(bodyStart, bodyEnd)
       .trim()
       .replace(/[·\s]+$/, '')
@@ -145,14 +152,26 @@ export function parseDayScheduleFromMarkdown(
 
   for (const rawLine of markdown.split('\n')) {
     const line = rawLine.trim();
+    if (!line || /^#{1,6}\s/.test(line)) continue;
+
     for (const segment of splitScheduleSegments(line)) {
       if (segment.startMinutes === null || segment.endMinutes === null) continue;
       if (segment.endMinutes <= segment.startMinutes) continue;
 
       const start = new Date(base);
       const end = new Date(base);
-      start.setHours(0, segment.startMinutes, 0, 0);
-      end.setHours(0, segment.endMinutes, 0, 0);
+      start.setHours(
+        Math.floor(segment.startMinutes / 60),
+        segment.startMinutes % 60,
+        0,
+        0,
+      );
+      end.setHours(
+        Math.floor(segment.endMinutes / 60),
+        segment.endMinutes % 60,
+        0,
+        0,
+      );
 
       blocks.push({
         title: segment.title,
@@ -197,6 +216,8 @@ export function parseScheduledBlocksForCalendarPush(
       continue;
     }
 
+    if (/^#{1,6}\s/.test(line)) continue;
+
     for (const segment of splitScheduleSegments(line)) {
       // Calendar events already exist in Google Calendar — don't duplicate.
       if (segment.isCalendarEvent) continue;
@@ -205,8 +226,18 @@ export function parseScheduledBlocksForCalendarPush(
 
       const start = new Date(currentDate);
       const end = new Date(currentDate);
-      start.setHours(0, segment.startMinutes, 0, 0);
-      end.setHours(0, segment.endMinutes, 0, 0);
+      start.setHours(
+        Math.floor(segment.startMinutes / 60),
+        segment.startMinutes % 60,
+        0,
+        0,
+      );
+      end.setHours(
+        Math.floor(segment.endMinutes / 60),
+        segment.endMinutes % 60,
+        0,
+        0,
+      );
 
       blocks.push({
         title: segment.title,

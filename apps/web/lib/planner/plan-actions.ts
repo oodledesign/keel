@@ -9,6 +9,8 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import pathsConfig from '~/config/paths.config';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
+import { syncPlannerRemindersForPlan } from './reminder-sync';
+
 const SavePlannerPlanSchema = z.object({
   scopeKey: z.string().regex(/^(personal|workspace:.+)$/),
   planDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -48,6 +50,19 @@ export async function savePlannerPlanAction(
     );
 
     if (error) return { success: false as const, error: error.message };
+
+    try {
+      await syncPlannerRemindersForPlan(
+        client,
+        user.id,
+        parsed.scopeKey,
+        parsed.planDate,
+        parsed.markdown,
+        parsed.mode,
+      );
+    } catch {
+      // Plan saved; reminder queue sync is best-effort.
+    }
 
     if (parsed.scopeKey === 'personal') {
       revalidatePath(pathsConfig.app.personalPlannerDay);

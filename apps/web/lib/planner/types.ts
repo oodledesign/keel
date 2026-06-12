@@ -58,6 +58,7 @@ export type PlannerPageData = {
   sopSuggestions: SopSuggestion[];
   /** Saved day plan for today (from the database), if one exists. */
   savedPlanMarkdown: string | null;
+  savedPlanUpdatedAt: string | null;
   dayViewHref: string;
   planViewHref: string;
   settingsHref: string;
@@ -103,6 +104,7 @@ export type DayViewData = {
   sopSuggestions: SopSuggestion[];
   /** Saved day plan for today (from the database), if one exists. */
   planMarkdown: string | null;
+  planUpdatedAt: string | null;
   /** Compact pipeline overview, when the scope has an active pipeline. */
   pipeline: DayViewPipeline | null;
   planViewHref: string;

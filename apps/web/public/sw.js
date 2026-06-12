@@ -1,4 +1,4 @@
-const CACHE = 'keel-static-v3';
+const CACHE = 'keel-static-v4';
 const PRECACHE = ['/manifest.webmanifest', '/images/brand/pwa-icon-512.png'];
 
 self.addEventListener('message', (event) => {
@@ -76,4 +76,56 @@ self.addEventListener('fetch', (event) => {
       ),
     );
   }
+});
+
+self.addEventListener('push', (event) => {
+  let payload = {
+    title: 'Keel',
+    body: 'Something is coming up on your plan',
+    url: '/app/planner/day',
+    tag: 'planner-reminder',
+  };
+
+  try {
+    const data = event.data?.json();
+    if (data && typeof data === 'object') {
+      payload = { ...payload, ...data };
+    }
+  } catch {
+    const text = event.data?.text()?.trim();
+    if (text) payload.body = text;
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: '/images/brand/pwa-icon-192.png',
+      badge: '/images/brand/pwa-icon-192.png',
+      tag: payload.tag,
+      data: { url: payload.url },
+    }),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl =
+    (event.notification.data && event.notification.data.url) ||
+    '/app/planner/day';
+
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        for (const client of clientList) {
+          if ('focus' in client) {
+            return client.focus();
+          }
+        }
+        if (self.clients.openWindow) {
+          return self.clients.openWindow(targetUrl);
+        }
+        return undefined;
+      }),
+  );
 });
