@@ -33,7 +33,7 @@ export const MARKETING_FREE_TIER = {
   features: [
     'Personal tasks, planner & pipeline',
     'One family workspace included',
-    'No card required',
+    'No credit card required',
   ],
 } as const;
 
@@ -119,6 +119,22 @@ export const MARKETING_WORKSPACE_PLANS: MarketingWorkspacePlan[] = [
   },
 ];
 
+/** Core Videos capabilities shown on pricing and marketing (all tiers). */
+export const VIDEOS_MARKETING_CORE_FEATURES = [
+  'Private & public visibility',
+  'Shareable public watch links',
+  'Custom branded player presets',
+  'Iframe, HTML5 & JS embed codes',
+  'Webflow, WordPress & any CMS',
+] as const;
+
+function videosMarketingFeatures(
+  videoLimit: string,
+  ...extras: string[]
+): string[] {
+  return [videoLimit, ...VIDEOS_MARKETING_CORE_FEATURES, ...extras];
+}
+
 export const MARKETING_ADDON_PLANS: MarketingAddonPlan[] = [
   {
     productId: 'keel-addon-rankly',
@@ -140,33 +156,33 @@ export const MARKETING_ADDON_PLANS: MarketingAddonPlan[] = [
     productId: 'keel-addon-videos-starter',
     planId: 'videos-starter-monthly',
     name: 'Videos Starter',
-    description: 'Up to 5 hosted videos.',
+    description: 'Up to 5 hosted videos with embeds & sharing.',
     monthlyPriceGbp: 5,
-    features: ['Embeds & presets', 'Per workspace'],
+    features: videosMarketingFeatures('Up to 5 hosted videos'),
   },
   {
     productId: 'keel-addon-videos-growth',
     planId: 'videos-growth-monthly',
     name: 'Videos Growth',
-    description: 'Up to 20 hosted videos.',
+    description: 'Up to 20 hosted videos for growing libraries.',
     monthlyPriceGbp: 12,
-    features: ['Analytics & presets', 'Per workspace'],
+    features: videosMarketingFeatures('Up to 20 hosted videos', 'View analytics'),
   },
   {
     productId: 'keel-addon-videos-pro',
     planId: 'videos-pro-monthly',
     name: 'Videos Pro',
-    description: 'Up to 49 hosted videos.',
+    description: 'Up to 49 hosted videos with full player control.',
     monthlyPriceGbp: 29,
-    features: ['Custom presets & branding', 'Per workspace'],
+    features: videosMarketingFeatures('Up to 49 hosted videos'),
   },
   {
     productId: 'keel-addon-videos-studio',
     planId: 'videos-studio-monthly',
     name: 'Videos Studio',
-    description: 'Up to 100 hosted videos.',
+    description: 'Up to 100 hosted videos for large libraries.',
     monthlyPriceGbp: 47,
-    features: ['Priority encoding', 'Per workspace'],
+    features: videosMarketingFeatures('Up to 100 hosted videos', 'Priority encoding'),
   },
 ];
 

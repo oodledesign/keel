@@ -6,10 +6,11 @@ import { triggerHapticFeedback } from '~/lib/haptics';
 
 type HapticLinkProps = React.ComponentProps<typeof Link>;
 
-export function HapticLink({ onClick, ...props }: HapticLinkProps) {
+export function HapticLink({ onClick, prefetch = false, ...props }: HapticLinkProps) {
   return (
     <Link
       {...props}
+      prefetch={prefetch}
       onClick={(event) => {
         triggerHapticFeedback();
         onClick?.(event);

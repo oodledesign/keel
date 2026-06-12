@@ -1,6 +1,7 @@
 'use client';
 
 import { ProfileAccountDropdownContainer } from '~/components/personal-account-dropdown-container';
+import { PullToRefresh } from '~/components/pull-to-refresh';
 import {
   useWorkspaceMobileNav,
   WorkspaceMobileBottomNav,
@@ -32,20 +33,28 @@ export function PersonalHomeMobileChrome({
 
   return (
     <>
-      <WorkspaceMobileHeaderBar>
-        <p className="min-w-0 flex-1 truncate text-sm font-semibold text-white">
-          Personal
-        </p>
-        <WorkspaceMobileTopActions
-          variant="personal"
-          userId={userId}
-          accountId={workspace.workspace?.id}
-        />
-        <ProfileAccountDropdownContainer
-          user={workspace.user}
-          account={workspace.workspace}
-        />
-      </WorkspaceMobileHeaderBar>
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden max-lg:flex">
+        <WorkspaceMobileHeaderBar>
+          <p className="min-w-0 flex-1 truncate text-sm font-semibold text-white">
+            Personal
+          </p>
+          <WorkspaceMobileTopActions
+            variant="personal"
+            userId={userId}
+            accountId={workspace.workspace?.id}
+          />
+          <ProfileAccountDropdownContainer
+            user={workspace.user}
+            account={workspace.workspace}
+            showProfileName={false}
+            className="shrink-0"
+          />
+        </WorkspaceMobileHeaderBar>
+
+        <PullToRefresh className="pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-0">
+          {children}
+        </PullToRefresh>
+      </div>
 
       <WorkspaceMobileMenu
         account=""
@@ -55,10 +64,6 @@ export function PersonalHomeMobileChrome({
         open={menuOpen}
         onOpenChange={setMenuOpen}
       />
-
-      <div className="pb-[calc(3.75rem+env(safe-area-inset-bottom))] lg:pb-0">
-        {children}
-      </div>
 
       <WorkspaceMobileBottomNav
         account=""

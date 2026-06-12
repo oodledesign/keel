@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import {
+  Briefcase,
   Building2,
   Calendar,
   ClipboardList,
@@ -64,7 +65,12 @@ export type SegmentLandingConfig = {
   pricingPlans: SegmentPricingCard[];
   pricingNote: string;
   faqs: SegmentFaq[];
-  relatedSegments: Array<{ slug: SegmentSlug; label: string; description: string }>;
+  relatedSegments: Array<{
+    slug: SegmentSlug;
+    label: string;
+    description: string;
+    icon: LucideIcon;
+  }>;
   signupProfile?: WorkspaceProfile;
 };
 
@@ -108,6 +114,13 @@ function freePersonalCard(): SegmentPricingCard {
 
 const ALL_SEGMENTS: SegmentSlug[] = ['personal', 'work', 'property', 'community'];
 
+const SEGMENT_ICONS: Record<SegmentSlug, LucideIcon> = {
+  personal: Home,
+  work: Briefcase,
+  property: Building2,
+  community: Users,
+};
+
 function relatedExcept(current: SegmentSlug) {
   const map: Record<
     SegmentSlug,
@@ -133,6 +146,7 @@ function relatedExcept(current: SegmentSlug) {
 
   return ALL_SEGMENTS.filter((slug) => slug !== current).map((slug) => ({
     slug,
+    icon: SEGMENT_ICONS[slug],
     ...map[slug],
   }));
 }
@@ -162,9 +176,9 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
         'Keel gives you one calm place for your to-dos, goals, appointments, and household coordination — without paying for another subscription.',
     },
     stats: [
-      { value: 'Free', label: 'Personal & one family workspace' },
-      { value: '1 place', label: 'Tasks, planner, people & notes' },
-      { value: 'No card', label: 'Start in minutes' },
+      { value: '£0', label: 'Forever — personal & family' },
+      { value: '100%', label: 'Free — no hidden fees' },
+      { value: 'No credit card', label: 'Get started in minutes' },
     ],
     features: [
       {

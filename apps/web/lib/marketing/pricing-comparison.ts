@@ -146,6 +146,7 @@ function workComparison(): SegmentPricingComparison {
           },
           {
             feature: 'Videos hosting',
+            hint: 'Private/public, public links, branded players — Webflow, WordPress & more. From £5/mo.',
             values: v('add-on', 'add-on', 'add-on', 'add-on'),
           },
         ],

@@ -20,6 +20,7 @@ type SegmentLandingPageProps = {
 };
 
 export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
+  const isPersonal = config.slug === 'personal';
   const primarySignup = buildPricingSignupUrl({
     profile: config.signupProfile,
     productId: config.pricingPlans.find((p) => p.highlighted)?.productId ??
@@ -53,6 +54,19 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
               <p className="max-w-xl text-base leading-relaxed text-violet-100/85 md:text-lg">
                 {config.hero.subtitle}
               </p>
+              {isPersonal ? (
+                <p className="inline-flex flex-wrap items-center gap-2 text-sm font-medium text-[#7ee8d8]">
+                  <span className="rounded-full border border-[#2A9D8F]/35 bg-[#2A9D8F]/10 px-3 py-1">
+                    Completely free
+                  </span>
+                  <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-violet-100/90">
+                    No credit card
+                  </span>
+                  <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-violet-100/90">
+                    No time limit
+                  </span>
+                </p>
+              ) : null}
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
@@ -62,7 +76,7 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
                 className="h-11 rounded-full bg-gradient-to-r from-[#2A9D8F] to-[#2563EB] px-6 text-white hover:opacity-95"
               >
                 <Link href={primarySignup}>
-                  {config.slug === 'personal' ? 'Start free' : 'Start 14-day trial'}
+                  {isPersonal ? 'Get free access' : 'Start 14-day trial'}
                   <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Link>
               </Button>
@@ -72,7 +86,9 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
                 size="lg"
                 className="h-11 rounded-full border-white/20 bg-white/5 px-6 text-white hover:bg-white/10"
               >
-                <Link href="/pricing">Compare all pricing</Link>
+                <Link href={isPersonal ? '#pricing' : '/pricing'}>
+                  {isPersonal ? 'See what’s included free' : 'Compare all pricing'}
+                </Link>
               </Button>
             </div>
           </div>
@@ -189,9 +205,16 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
       >
         <div className="mb-10 text-center">
           <h2 id="pricing-heading" className="font-heading text-3xl font-semibold text-white md:text-4xl">
-            Simple, transparent pricing
+            {isPersonal
+              ? 'Completely free for personal & family'
+              : 'Simple, transparent pricing'}
           </h2>
           <p className="mx-auto mt-3 max-w-2xl text-violet-100/80">{config.pricingNote}</p>
+          {isPersonal ? (
+            <p className="mx-auto mt-2 max-w-2xl text-sm font-medium text-[#7ee8d8]">
+              £0 forever · No credit card · No trial countdown
+            </p>
+          ) : null}
         </div>
 
         <div
@@ -254,7 +277,11 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
                     variant={plan.highlighted ? 'default' : 'outline'}
                   >
                     <Link href={signupUrl}>
-                      {plan.priceGbp === 0 ? 'Start free' : 'Start 14-day trial'}
+                      {plan.priceGbp === 0
+                        ? isPersonal
+                          ? 'Get free access'
+                          : 'Start free'
+                        : 'Start 14-day trial'}
                     </Link>
                   </Button>
                 </div>
@@ -311,24 +338,35 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
           Other Keel workspaces
         </h2>
         <div className="mt-6 grid gap-4 md:grid-cols-3">
-          {config.relatedSegments.map((segment) => (
-            <Link
-              key={segment.slug}
-              href={`/${segment.slug}`}
-              className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition hover:border-[#2A9D8F]/40 hover:bg-white/[0.05]"
-            >
-              <p className="font-medium text-white">{segment.label}</p>
-              <p className="mt-1 text-sm text-violet-100/75">{segment.description}</p>
-            </Link>
-          ))}
+          {config.relatedSegments.map((segment) => {
+            const SegmentIcon = segment.icon;
+
+            return (
+              <Link
+                key={segment.slug}
+                href={`/${segment.slug}`}
+                className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition hover:border-[#2A9D8F]/40 hover:bg-white/[0.05]"
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-[#2A9D8F]">
+                  <SegmentIcon className="h-5 w-5" aria-hidden />
+                </span>
+                <p className="mt-4 font-medium text-white">{segment.label}</p>
+                <p className="mt-1 text-sm text-violet-100/75">{segment.description}</p>
+              </Link>
+            );
+          })}
         </div>
 
         <div className="mt-16 rounded-2xl border border-white/10 bg-gradient-to-br from-[#0F1B35] to-[#0B132B] px-8 py-12 text-center">
           <h2 className="font-heading text-3xl font-semibold text-white">
-            Ready to get organised with Keel?
+            {isPersonal
+              ? 'Ready for your free Life CRM?'
+              : 'Ready to get organised with Keel?'}
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-violet-100/80">
-            Join thousands using Keel as their Life CRM — personal life and work in one account.
+            {isPersonal
+              ? 'Personal and family workspaces stay free — no credit card, no subscription, no catch.'
+              : 'Join thousands using Keel as their Life CRM — personal life and work in one account.'}
           </p>
           <Button
             asChild
@@ -336,7 +374,7 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
             className="mt-6 rounded-full bg-[#2A9D8F] px-7 text-[#0B132B] hover:bg-[#238b7f] hover:text-white"
           >
             <Link href={primarySignup}>
-              {config.slug === 'personal' ? 'Create your free account' : 'Start your trial'}
+              {isPersonal ? 'Get free access' : 'Start your trial'}
             </Link>
           </Button>
           <p className="mt-4 text-xs text-violet-200/60">

@@ -1,4 +1,4 @@
-import { Metadata } from 'next';
+import { Metadata, Viewport } from 'next';
 
 import appConfig from '~/config/app.config';
 import { brandConfig } from '~/config/brand.config';
@@ -15,8 +15,6 @@ export const generateRootMetadata = (): Metadata => ({
   metadataBase: new URL(appConfig.url),
   applicationName: appConfig.name,
   manifest: '/manifest.webmanifest',
-  colorScheme: 'dark',
-  themeColor: appConfig.themeColorDark,
   appleWebApp: {
     capable: true,
     title: appConfig.name,
@@ -40,4 +38,9 @@ export const generateRootMetadata = (): Metadata => ({
     ],
     apple: '/images/brand/apple-touch-icon.png',
   },
+});
+
+export const generateRootViewport = (): Viewport => ({
+  colorScheme: 'dark',
+  themeColor: appConfig.themeColorDark,
 });

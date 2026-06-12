@@ -21,6 +21,7 @@ const features = {
 export function ProfileAccountDropdownContainer(props: {
   user?: JWTUserData | null;
   showProfileName?: boolean;
+  className?: string;
 
   account?: {
     id: string | null;
@@ -38,7 +39,7 @@ export function ProfileAccountDropdownContainer(props: {
 
   return (
     <PersonalAccountDropdown
-      className={'w-full'}
+      className={props.className ?? 'w-full'}
       paths={paths}
       features={features}
       user={userData}

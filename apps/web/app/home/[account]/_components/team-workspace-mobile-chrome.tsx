@@ -1,6 +1,7 @@
 'use client';
 
 import { ProfileAccountDropdownContainer } from '~/components/personal-account-dropdown-container';
+import { PullToRefresh } from '~/components/pull-to-refresh';
 import {
   useWorkspaceMobileNav,
   WorkspaceMobileBottomNav,
@@ -41,22 +42,33 @@ export function TeamWorkspaceMobileChrome({
 
   return (
     <>
-      <WorkspaceMobileHeaderBar>
-        <WorkspaceMobileHeaderSelector
-          account={account}
-          userId={user.id}
-          accounts={accounts}
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden max-lg:flex">
+        <WorkspaceMobileHeaderBar>
+          <WorkspaceMobileHeaderSelector
+            account={account}
+            userId={user.id}
+            accounts={accounts}
+          />
+          <WorkspaceMobileTopActions
+            variant="team"
+            userId={user.id}
+            accountId={accountId}
+            accountSlug={account}
+            spaceType={spaceType}
+            showNewMenu={showNewMenu}
+          />
+          <ProfileAccountDropdownContainer
+          user={user}
+          account={undefined}
+          showProfileName={false}
+          className="shrink-0"
         />
-        <WorkspaceMobileTopActions
-          variant="team"
-          userId={user.id}
-          accountId={accountId}
-          accountSlug={account}
-          spaceType={spaceType}
-          showNewMenu={showNewMenu}
-        />
-        <ProfileAccountDropdownContainer user={user} account={undefined} />
-      </WorkspaceMobileHeaderBar>
+        </WorkspaceMobileHeaderBar>
+
+        <PullToRefresh className="pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-0">
+          {children}
+        </PullToRefresh>
+      </div>
 
       <WorkspaceMobileMenu
         account={account}
@@ -66,10 +78,6 @@ export function TeamWorkspaceMobileChrome({
         open={menuOpen}
         onOpenChange={setMenuOpen}
       />
-
-      <div className="pb-[calc(3.75rem+env(safe-area-inset-bottom))] lg:pb-0">
-        {children}
-      </div>
 
       <WorkspaceMobileBottomNav
         account={account}

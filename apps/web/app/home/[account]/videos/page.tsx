@@ -50,7 +50,7 @@ export default async function VideosPage({ params }: VideosPageProps) {
       <TeamAccountLayoutPageHeader
         account={account}
         title="Videos"
-        description="Upload, organize, and embed hosted videos for this workspace."
+        description="Upload, organise, and embed hosted videos — private or public, with branded players and share links for any website."
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-[var(--workspace-shell-text)] lg:px-6">
         <VideoLibraryClient

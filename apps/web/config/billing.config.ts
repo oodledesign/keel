@@ -397,12 +397,19 @@ export default createBillingSchema({
           ],
         },
       ],
-      features: ['Up to 5 hosted videos', 'Embeds & presets'],
+      features: [
+        'Up to 5 hosted videos',
+        'Private & public visibility',
+        'Shareable public watch links',
+        'Custom branded player presets',
+        'Iframe, HTML5 & JS embed codes',
+        'Webflow, WordPress & any CMS',
+      ],
     },
     {
       id: 'keel-addon-videos-growth',
       name: 'Videos Growth',
-      description: 'Growing video libraries',
+      description: 'Growing video libraries with analytics',
       currency: KEEL_BILLING_CURRENCY,
       plans: [
         {
@@ -420,12 +427,20 @@ export default createBillingSchema({
           ],
         },
       ],
-      features: ['Up to 20 hosted videos', 'Analytics & presets'],
+      features: [
+        'Up to 20 hosted videos',
+        'Private & public visibility',
+        'Shareable public watch links',
+        'Custom branded player presets',
+        'Iframe, HTML5 & JS embed codes',
+        'Webflow, WordPress & any CMS',
+        'View analytics',
+      ],
     },
     {
       id: 'keel-addon-videos-pro',
       name: 'Videos Pro',
-      description: 'Professional video hosting',
+      description: 'Professional video hosting with full player control',
       currency: KEEL_BILLING_CURRENCY,
       plans: [
         {
@@ -443,12 +458,19 @@ export default createBillingSchema({
           ],
         },
       ],
-      features: ['Up to 49 hosted videos', 'Custom presets & branding'],
+      features: [
+        'Up to 49 hosted videos',
+        'Private & public visibility',
+        'Shareable public watch links',
+        'Custom branded player presets',
+        'Iframe, HTML5 & JS embed codes',
+        'Webflow, WordPress & any CMS',
+      ],
     },
     {
       id: 'keel-addon-videos-studio',
       name: 'Videos Studio',
-      description: 'Large video libraries',
+      description: 'Large video libraries with priority encoding',
       currency: KEEL_BILLING_CURRENCY,
       plans: [
         {
@@ -466,7 +488,15 @@ export default createBillingSchema({
           ],
         },
       ],
-      features: ['Up to 100 hosted videos', 'Priority encoding'],
+      features: [
+        'Up to 100 hosted videos',
+        'Private & public visibility',
+        'Shareable public watch links',
+        'Custom branded player presets',
+        'Iframe, HTML5 & JS embed codes',
+        'Webflow, WordPress & any CMS',
+        'Priority encoding',
+      ],
     },
   ],
 });

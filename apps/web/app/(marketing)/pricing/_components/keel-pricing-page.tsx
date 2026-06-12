@@ -74,8 +74,8 @@ export function KeelPricingPage() {
             size="lg"
             className="h-11 rounded-full bg-gradient-to-r from-[#2A9D8F] to-[#2563EB] px-6 text-white hover:opacity-95"
           >
-            <Link href={buildPricingSignupUrl({})}>
-              Start free
+            <Link href={buildPricingSignupUrl({ profile: 'family' })}>
+              Get free access
               <ArrowRight className="ml-1.5 h-4 w-4" />
             </Link>
           </Button>
@@ -97,7 +97,7 @@ export function KeelPricingPage() {
 
       <PricingSection
         title="Always free"
-        subtitle="No card required — upgrade only when you add a paid workspace"
+        subtitle="No credit card required — upgrade only when you add a paid workspace"
       >
         <div className="mx-auto max-w-md">
           <FreePlanCard />
@@ -145,7 +145,7 @@ export function KeelPricingPage() {
 
       <PricingSection
         title="Add-ons"
-        subtitle="Optional modules billed separately per workspace (after your workspace exists)"
+        subtitle="Optional modules billed separately per workspace. Videos includes private/public sharing, public links, branded players, and embeds for Webflow, WordPress, and any site."
       >
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {MARKETING_ADDON_PLANS.map((plan) => (
@@ -223,7 +223,7 @@ function FreePlanCard() {
           className="w-full rounded-full border-white/20 bg-white/10 text-white hover:bg-white/15"
           variant="outline"
         >
-          <Link href={buildPricingSignupUrl({ profile: 'family' })}>Start free</Link>
+          <Link href={buildPricingSignupUrl({ profile: 'family' })}>Get free access</Link>
         </Button>
       </div>
     </article>

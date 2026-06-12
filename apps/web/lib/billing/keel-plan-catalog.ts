@@ -329,7 +329,8 @@ export const KEEL_ADDON_CATALOG: Array<{
     key: 'addon_videos',
     productId: 'keel-addon-videos-starter',
     name: 'Videos',
-    description: 'Hosted video library with embeds and player presets.',
+    description:
+      'Hosted video with private/public controls, public links, branded players, and embeds for Webflow, WordPress & more.',
     fromPriceGbp: 5,
   },
 ];

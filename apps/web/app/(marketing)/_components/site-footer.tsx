@@ -10,7 +10,7 @@ export function SiteFooter() {
       logo={<AppLogo className="w-[85px] md:w-[95px]" />}
       description={
         <p>
-          Keel is the Life CRM — one calm system for personal life, business, property, and
+          Keel is the Life CRM — one system for personal life, business, property, and
           community. Simple pricing, no clutter.
         </p>
       }
@@ -36,9 +36,10 @@ export function SiteFooter() {
         {
           heading: <Trans i18nKey="marketing:product" />,
           links: [
+            { href: '/apps', label: 'Apps' },
             { href: '/pricing', label: <Trans i18nKey="marketing:pricing" /> },
             { href: '/faq', label: 'FAQ' },
-            { href: '/contact', label: <Trans i18nKey="marketing:team" /> },
+            { href: '/contact', label: <Trans i18nKey="marketing:contact" /> },
             { href: '/blog', label: 'Blog' },
           ],
         },

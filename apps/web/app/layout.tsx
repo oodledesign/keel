@@ -8,13 +8,15 @@ import { RootProviders } from '~/components/root-providers';
 import { TextSizeSync } from '~/components/text-size-sync';
 import { getFontsClassName } from '~/lib/fonts';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
-import { generateRootMetadata } from '~/lib/root-metadata';
+import { generateRootMetadata, generateRootViewport } from '~/lib/root-metadata';
 import { getRootTheme } from '~/lib/root-theme';
 import { APP_THEME } from '~/lib/app-theme';
 
 import '../styles/globals.css';
 
 export const generateMetadata = () => generateRootMetadata();
+
+export const generateViewport = () => generateRootViewport();
 
 export default async function RootLayout({
   children,
@@ -50,7 +52,7 @@ function getRootClassName(theme: string, textSizeClass: string) {
   const fontsClassName = getFontsClassName(theme);
 
   return cn(
-    'bg-background min-h-screen antialiased md:overscroll-y-none',
+    'bg-background min-h-screen overscroll-y-none antialiased',
     fontsClassName,
     textSizeClass,
   );
