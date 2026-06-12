@@ -38,9 +38,14 @@ export const DIETARY_OPTIONS = [
 ] as const;
 export type DietaryOption = (typeof DIETARY_OPTIONS)[number];
 
+export const AccountSlugFieldSchema = z.object({
+  accountSlug: z.string().min(1).optional(),
+});
+
 export type RecipeRow = {
   id: string;
   user_id: string;
+  account_id: string | null;
   name: string;
   description: string | null;
   ingredients: string[];
@@ -57,7 +62,9 @@ export type RecipeRow = {
 };
 
 export type MealPreferencesRow = {
+  id?: string;
   user_id: string;
+  account_id: string | null;
   dietary_requirements: string[];
   priorities: string[];
   disliked_ingredients: string[];
@@ -70,6 +77,7 @@ export type MealPreferencesRow = {
 export type MealEntryRow = {
   id: string;
   user_id: string;
+  account_id: string | null;
   plan_date: string;
   meal_type: MealType;
   recipe_id: string | null;
@@ -79,7 +87,7 @@ export type MealEntryRow = {
   updated_at: string;
 };
 
-export const RecipeInputSchema = z.object({
+export const RecipeInputSchema = AccountSlugFieldSchema.extend({
   id: z.string().uuid().optional(),
   name: z.string().trim().min(1, 'Name is required').max(160),
   description: z.string().trim().max(1_000).optional().nullable(),
@@ -94,7 +102,7 @@ export const RecipeInputSchema = z.object({
 });
 export type RecipeInput = z.infer<typeof RecipeInputSchema>;
 
-export const MealPreferencesInputSchema = z.object({
+export const MealPreferencesInputSchema = AccountSlugFieldSchema.extend({
   dietary_requirements: z
     .array(z.string().trim().min(1).max(60))
     .max(40)
@@ -109,7 +117,7 @@ export const MealPreferencesInputSchema = z.object({
 });
 export type MealPreferencesInput = z.infer<typeof MealPreferencesInputSchema>;
 
-export const SetMealEntrySchema = z.object({
+export const SetMealEntrySchema = AccountSlugFieldSchema.extend({
   planDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   mealType: z.enum(MEAL_TYPES).default('dinner'),
   title: z.string().trim().max(200).default(''),
@@ -118,13 +126,13 @@ export const SetMealEntrySchema = z.object({
 });
 export type SetMealEntryInput = z.infer<typeof SetMealEntrySchema>;
 
-export const ClearMealEntrySchema = z.object({
+export const ClearMealEntrySchema = AccountSlugFieldSchema.extend({
   planDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   mealType: z.enum(MEAL_TYPES).default('dinner'),
 });
 export type ClearMealEntryInput = z.infer<typeof ClearMealEntrySchema>;
 
-export const ApplyGeneratedWeekSchema = z.object({
+export const ApplyGeneratedWeekSchema = AccountSlugFieldSchema.extend({
   entries: z
     .array(
       z.object({
@@ -142,9 +150,24 @@ export type ApplyGeneratedWeekInput = z.infer<typeof ApplyGeneratedWeekSchema>;
 
 export type MealPlanView = 'week' | 'month';
 
+export const DeleteRecipeSchema = AccountSlugFieldSchema.extend({
+  recipeId: z.string().uuid(),
+});
+export type DeleteRecipeInput = z.infer<typeof DeleteRecipeSchema>;
+
+export const ToggleRecipeFavoriteSchema = AccountSlugFieldSchema.extend({
+  recipeId: z.string().uuid(),
+  isFavorite: z.boolean(),
+});
+export type ToggleRecipeFavoriteInput = z.infer<
+  typeof ToggleRecipeFavoriteSchema
+>;
+
 export type FamilyMealData = {
   recipes: RecipeRow[];
   preferences: MealPreferencesRow;
+  accountSlug?: string;
+  basePath: string;
   view: MealPlanView;
   /** Active week (Mon) when view=week, or the month’s first day when view=month. */
   periodStart: string;

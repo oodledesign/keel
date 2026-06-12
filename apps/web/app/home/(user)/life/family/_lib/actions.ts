@@ -9,17 +9,20 @@ import { requireUserInServerComponent } from '~/lib/server/require-user-in-serve
 import {
   ApplyGeneratedWeekSchema,
   ClearMealEntrySchema,
+  DeleteRecipeSchema,
   MealPreferencesInputSchema,
   RecipeInputSchema,
   SetMealEntrySchema,
+  ToggleRecipeFavoriteSchema,
   type ApplyGeneratedWeekInput,
   type ClearMealEntryInput,
+  type DeleteRecipeInput,
   type MealPreferencesInput,
   type RecipeInput,
   type SetMealEntryInput,
+  type ToggleRecipeFavoriteInput,
 } from './schema/family-meal.schema';
-
-const FAMILY_PATH = '/home/life/family';
+import { resolveMealPlanScope } from './server/family-meal.scope';
 
 type ActionResult<T = undefined> =
   | { success: true; data: T }
@@ -42,23 +45,25 @@ export async function saveMealPreferencesAction(
   try {
     const parsed = MealPreferencesInputSchema.parse(input);
     const client = getSupabaseServerClient();
-    const user = await requireUserInServerComponent();
+    const scope = await resolveMealPlanScope(parsed.accountSlug);
 
-    const { error } = await client.from('family_meal_preferences').upsert(
-      {
-        user_id: user.id,
-        dietary_requirements: parsed.dietary_requirements,
-        priorities: parsed.priorities,
-        disliked_ingredients: parsed.disliked_ingredients,
-        household_size: parsed.household_size,
-        notes: parsed.notes ?? null,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id' },
-    );
+    const row = {
+      user_id: scope.userId,
+      account_id: scope.kind === 'workspace' ? scope.accountId : null,
+      dietary_requirements: parsed.dietary_requirements,
+      priorities: parsed.priorities,
+      disliked_ingredients: parsed.disliked_ingredients,
+      household_size: parsed.household_size,
+      notes: parsed.notes ?? null,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await client.from('family_meal_preferences').upsert(row, {
+      onConflict: scope.kind === 'workspace' ? 'account_id' : 'user_id',
+    });
 
     if (error) return fail(error);
-    revalidatePath(FAMILY_PATH);
+    revalidatePath(scope.revalidatePath);
     return ok(undefined);
   } catch (err) {
     return fail(err);
@@ -71,10 +76,11 @@ export async function upsertRecipeAction(
   try {
     const parsed = RecipeInputSchema.parse(input);
     const client = getSupabaseServerClient();
-    const user = await requireUserInServerComponent();
+    const scope = await resolveMealPlanScope(parsed.accountSlug);
 
     const values = {
-      user_id: user.id,
+      user_id: scope.userId,
+      account_id: scope.kind === 'workspace' ? scope.accountId : null,
       name: parsed.name,
       description: parsed.description ?? null,
       ingredients: parsed.ingredients,
@@ -89,15 +95,22 @@ export async function upsertRecipeAction(
     };
 
     if (parsed.id) {
-      const { data, error } = await client
+      let updateQuery = client
         .from('family_recipes')
         .update(values)
-        .eq('id', parsed.id)
-        .eq('user_id', user.id)
-        .select('id')
-        .single();
+        .eq('id', parsed.id);
+
+      if (scope.kind === 'workspace') {
+        updateQuery = updateQuery.eq('account_id', scope.accountId);
+      } else {
+        updateQuery = updateQuery
+          .eq('user_id', scope.userId)
+          .is('account_id', null);
+      }
+
+      const { data, error } = await updateQuery.select('id').single();
       if (error) return fail(error);
-      revalidatePath(FAMILY_PATH);
+      revalidatePath(scope.revalidatePath);
       return ok({ id: (data as { id: string }).id });
     }
 
@@ -107,7 +120,7 @@ export async function upsertRecipeAction(
       .select('id')
       .single();
     if (error) return fail(error);
-    revalidatePath(FAMILY_PATH);
+    revalidatePath(scope.revalidatePath);
     return ok({ id: (data as { id: string }).id });
   } catch (err) {
     return fail(err);
@@ -115,18 +128,29 @@ export async function upsertRecipeAction(
 }
 
 export async function deleteRecipeAction(
-  recipeId: string,
+  input: DeleteRecipeInput,
 ): Promise<ActionResult> {
   try {
+    const parsed = DeleteRecipeSchema.parse(input);
     const client = getSupabaseServerClient();
-    const user = await requireUserInServerComponent();
-    const { error } = await client
+    const scope = await resolveMealPlanScope(parsed.accountSlug);
+
+    let deleteQuery = client
       .from('family_recipes')
       .delete()
-      .eq('id', recipeId)
-      .eq('user_id', user.id);
+      .eq('id', parsed.recipeId);
+
+    if (scope.kind === 'workspace') {
+      deleteQuery = deleteQuery.eq('account_id', scope.accountId);
+    } else {
+      deleteQuery = deleteQuery
+        .eq('user_id', scope.userId)
+        .is('account_id', null);
+    }
+
+    const { error } = await deleteQuery;
     if (error) return fail(error);
-    revalidatePath(FAMILY_PATH);
+    revalidatePath(scope.revalidatePath);
     return ok(undefined);
   } catch (err) {
     return fail(err);
@@ -134,19 +158,32 @@ export async function deleteRecipeAction(
 }
 
 export async function toggleRecipeFavoriteAction(
-  recipeId: string,
-  isFavorite: boolean,
+  input: ToggleRecipeFavoriteInput,
 ): Promise<ActionResult> {
   try {
+    const parsed = ToggleRecipeFavoriteSchema.parse(input);
     const client = getSupabaseServerClient();
-    const user = await requireUserInServerComponent();
-    const { error } = await client
+    const scope = await resolveMealPlanScope(parsed.accountSlug);
+
+    let updateQuery = client
       .from('family_recipes')
-      .update({ is_favorite: isFavorite, updated_at: new Date().toISOString() })
-      .eq('id', recipeId)
-      .eq('user_id', user.id);
+      .update({
+        is_favorite: parsed.isFavorite,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', parsed.recipeId);
+
+    if (scope.kind === 'workspace') {
+      updateQuery = updateQuery.eq('account_id', scope.accountId);
+    } else {
+      updateQuery = updateQuery
+        .eq('user_id', scope.userId)
+        .is('account_id', null);
+    }
+
+    const { error } = await updateQuery;
     if (error) return fail(error);
-    revalidatePath(FAMILY_PATH);
+    revalidatePath(scope.revalidatePath);
     return ok(undefined);
   } catch (err) {
     return fail(err);
@@ -159,11 +196,12 @@ export async function setMealEntryAction(
   try {
     const parsed = SetMealEntrySchema.parse(input);
     const client = getSupabaseServerClient();
-    const user = await requireUserInServerComponent();
+    const scope = await resolveMealPlanScope(parsed.accountSlug);
 
     const { error } = await client.from('family_meal_plan_entries').upsert(
       {
-        user_id: user.id,
+        user_id: scope.userId,
+        account_id: scope.kind === 'workspace' ? scope.accountId : null,
         plan_date: parsed.planDate,
         meal_type: parsed.mealType,
         title: parsed.title,
@@ -171,11 +209,16 @@ export async function setMealEntryAction(
         notes: parsed.notes ?? null,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: 'user_id,plan_date,meal_type' },
+      {
+        onConflict:
+          scope.kind === 'workspace'
+            ? 'account_id,plan_date,meal_type'
+            : 'user_id,plan_date,meal_type',
+      },
     );
 
     if (error) return fail(error);
-    revalidatePath(FAMILY_PATH);
+    revalidatePath(scope.revalidatePath);
     return ok(undefined);
   } catch (err) {
     return fail(err);
@@ -188,17 +231,23 @@ export async function clearMealEntryAction(
   try {
     const parsed = ClearMealEntrySchema.parse(input);
     const client = getSupabaseServerClient();
-    const user = await requireUserInServerComponent();
+    const scope = await resolveMealPlanScope(parsed.accountSlug);
 
-    const { error } = await client
+    let query = client
       .from('family_meal_plan_entries')
       .delete()
-      .eq('user_id', user.id)
       .eq('plan_date', parsed.planDate)
       .eq('meal_type', parsed.mealType);
 
+    if (scope.kind === 'workspace') {
+      query = query.eq('account_id', scope.accountId);
+    } else {
+      query = query.eq('user_id', scope.userId).is('account_id', null);
+    }
+
+    const { error } = await query;
     if (error) return fail(error);
-    revalidatePath(FAMILY_PATH);
+    revalidatePath(scope.revalidatePath);
     return ok(undefined);
   } catch (err) {
     return fail(err);
@@ -211,11 +260,13 @@ export async function applyGeneratedWeekAction(
   try {
     const parsed = ApplyGeneratedWeekSchema.parse(input);
     const client = getSupabaseServerClient();
-    const user = await requireUserInServerComponent();
+    const scope = await resolveMealPlanScope(parsed.accountSlug);
 
     const now = new Date().toISOString();
+    const accountId = scope.kind === 'workspace' ? scope.accountId : null;
     const rows = parsed.entries.map((entry) => ({
-      user_id: user.id,
+      user_id: scope.userId,
+      account_id: accountId,
       plan_date: entry.planDate,
       meal_type: entry.mealType,
       title: entry.title,
@@ -224,12 +275,15 @@ export async function applyGeneratedWeekAction(
       updated_at: now,
     }));
 
-    const { error } = await client
-      .from('family_meal_plan_entries')
-      .upsert(rows, { onConflict: 'user_id,plan_date,meal_type' });
+    const { error } = await client.from('family_meal_plan_entries').upsert(rows, {
+      onConflict:
+        scope.kind === 'workspace'
+          ? 'account_id,plan_date,meal_type'
+          : 'user_id,plan_date,meal_type',
+    });
 
     if (error) return fail(error);
-    revalidatePath(FAMILY_PATH);
+    revalidatePath(scope.revalidatePath);
     return ok(undefined);
   } catch (err) {
     return fail(err);

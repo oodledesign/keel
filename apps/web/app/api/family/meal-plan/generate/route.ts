@@ -5,6 +5,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { generateMealPlan } from '~/lib/ai/meal-plan-generate';
 import { chunkDates } from '~/home/(user)/life/family/_lib/server/family-meal.dates';
+import { resolveMealPlanScope } from '~/home/(user)/life/family/_lib/server/family-meal.scope';
 import type {
   MealPreferencesRow,
   RecipeRow,
@@ -14,6 +15,7 @@ export const dynamic = 'force-dynamic';
 
 const requestSchema = z.object({
   mode: z.enum(['generate', 'fill']).default('generate'),
+  accountSlug: z.string().min(1).optional(),
   dates: z
     .array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/))
     .min(1)
@@ -38,16 +40,37 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const scope = await resolveMealPlanScope(parsed.data.accountSlug);
+
+  const preferencesQuery =
+    scope.kind === 'workspace'
+      ? client
+          .from('family_meal_preferences')
+          .select('*')
+          .eq('account_id', scope.accountId)
+          .maybeSingle()
+      : client
+          .from('family_meal_preferences')
+          .select('*')
+          .eq('user_id', user.id)
+          .is('account_id', null)
+          .maybeSingle();
+
+  const recipesQuery =
+    scope.kind === 'workspace'
+      ? client
+          .from('family_recipes')
+          .select('id, name, tags, meal_type')
+          .eq('account_id', scope.accountId)
+      : client
+          .from('family_recipes')
+          .select('id, name, tags, meal_type')
+          .eq('user_id', user.id)
+          .is('account_id', null);
+
   const [{ data: prefData }, { data: recipeData }] = await Promise.all([
-    client
-      .from('family_meal_preferences')
-      .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle(),
-    client
-      .from('family_recipes')
-      .select('id, name, tags, meal_type')
-      .eq('user_id', user.id),
+    preferencesQuery,
+    recipesQuery,
   ]);
 
   const preferences = prefData as MealPreferencesRow | null;

@@ -31,6 +31,7 @@ import {
   shiftMonth,
   toYmd,
   weekdayLabel,
+  mealPlanUrl,
 } from '../_lib/server/family-meal.dates';
 import type {
   MealEntryRow,
@@ -58,6 +59,8 @@ type Props = {
   entries: MealEntryRow[];
   recipes: RecipeRow[];
   preferences: MealPreferencesRow;
+  basePath: string;
+  accountSlug?: string;
   onChanged: () => void;
 };
 
@@ -81,13 +84,6 @@ function rangeLabel(dates: string[]): string {
   return `${fmt(first)} – ${fmt(last)}`;
 }
 
-function familyMealUrl(view: MealPlanView, weekStart: string, monthKey: string) {
-  if (view === 'month') {
-    return `/home/life/family?view=month&month=${monthKey}`;
-  }
-  return `/home/life/family?view=week&week=${weekStart}`;
-}
-
 export function MealPlanPanel({
   view,
   weekStart,
@@ -97,9 +93,12 @@ export function MealPlanPanel({
   entries,
   recipes,
   preferences,
+  basePath,
+  accountSlug,
   onChanged,
 }: Props) {
   const router = useRouter();
+  const scopeFields = accountSlug ? { accountSlug } : {};
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [inlineEditDate, setInlineEditDate] = useState<string | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
@@ -131,30 +130,30 @@ export function MealPlanPanel({
   );
 
   function setView(next: MealPlanView) {
-    router.push(familyMealUrl(next, weekStart, monthKey));
+    router.push(mealPlanUrl(basePath, next, weekStart, monthKey));
   }
 
   function goPrev() {
     if (view === 'month') {
       router.push(
-        `/home/life/family?view=month&month=${shiftMonth(monthKey, -1)}`,
+        mealPlanUrl(basePath, 'month', weekStart, shiftMonth(monthKey, -1)),
       );
       return;
     }
     router.push(
-      `/home/life/family?view=week&week=${shiftWeek(weekStart, -1)}`,
+      mealPlanUrl(basePath, 'week', shiftWeek(weekStart, -1), monthKey),
     );
   }
 
   function goNext() {
     if (view === 'month') {
       router.push(
-        `/home/life/family?view=month&month=${shiftMonth(monthKey, 1)}`,
+        mealPlanUrl(basePath, 'month', weekStart, shiftMonth(monthKey, 1)),
       );
       return;
     }
     router.push(
-      `/home/life/family?view=week&week=${shiftWeek(weekStart, 1)}`,
+      mealPlanUrl(basePath, 'week', shiftWeek(weekStart, 1), monthKey),
     );
   }
 
@@ -177,6 +176,7 @@ export function MealPlanPanel({
         const result = await clearMealEntryAction({
           planDate: date,
           mealType: 'dinner',
+          ...scopeFields,
         });
         if (!result.success) throw new Error(result.error);
       } else {
@@ -186,6 +186,7 @@ export function MealPlanPanel({
           title,
           recipeId: draftRecipeId,
           notes: null,
+          ...scopeFields,
         });
         if (!result.success) throw new Error(result.error);
       }
@@ -204,6 +205,7 @@ export function MealPlanPanel({
       const result = await clearMealEntryAction({
         planDate: date,
         mealType: 'dinner',
+        ...scopeFields,
       });
       if (!result.success) throw new Error(result.error);
       setInlineEditDate(null);
@@ -231,7 +233,7 @@ export function MealPlanPanel({
         const response = await fetch('/api/family/meal-plan/generate', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ mode, dates: chunk }),
+          body: JSON.stringify({ mode, dates: chunk, ...scopeFields }),
         });
         const body = (await response.json()) as {
           meals?: GeneratedMeal[];
@@ -255,6 +257,7 @@ export function MealPlanPanel({
           notes: meal.description || null,
           recipeId: meal.recipeId ?? null,
         })),
+        ...scopeFields,
       });
       if (!result.success) {
         throw new Error(result.error);
@@ -614,6 +617,7 @@ export function MealPlanPanel({
         date={editingDate}
         entry={editingDate ? (entriesByDate.get(editingDate) ?? null) : null}
         recipes={recipes}
+        accountSlug={accountSlug}
         onSaved={onChanged}
       />
     </div>

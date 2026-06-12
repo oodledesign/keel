@@ -37,9 +37,15 @@ const PLACEHOLDER_TASKS = [
 
 type Props = {
   initialData: FamilyMealData;
+  showHouseholdTasks?: boolean;
+  compactHeader?: boolean;
 };
 
-export function FamilyPageClient({ initialData }: Props) {
+export function FamilyPageClient({
+  initialData,
+  showHouseholdTasks = true,
+  compactHeader = false,
+}: Props) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('plan');
 
@@ -49,17 +55,19 @@ export function FamilyPageClient({ initialData }: Props) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6 bg-transparent px-4 pb-12 pt-6 text-white md:px-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-            Family
-          </h1>
-          <p className="mt-1 text-sm text-zinc-400">
-            Plan meals by the week or month, keep your recipes, and share
-            household tasks
-          </p>
+      {!compactHeader ? (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+              Family
+            </h1>
+            <p className="mt-1 text-sm text-zinc-400">
+              Plan meals by the week or month, keep your recipes, and share
+              household tasks
+            </p>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="flex w-full max-w-md rounded-xl border border-white/8 bg-[var(--workspace-shell-panel)] p-1 text-sm">
         {TABS.map(({ id, label, Icon }) => (
@@ -86,7 +94,12 @@ export function FamilyPageClient({ initialData }: Props) {
       </div>
 
       {tab === 'plan' ? (
-        <div className="grid gap-6 lg:grid-cols-[1fr,300px]">
+        <div
+          className={cn(
+            'grid gap-6',
+            showHouseholdTasks && 'lg:grid-cols-[1fr,300px]',
+          )}
+        >
           <MealPlanPanel
             view={initialData.view}
             weekStart={initialData.weekStart}
@@ -96,9 +109,12 @@ export function FamilyPageClient({ initialData }: Props) {
             entries={initialData.entries}
             recipes={initialData.recipes}
             preferences={initialData.preferences}
+            basePath={initialData.basePath}
+            accountSlug={initialData.accountSlug}
             onChanged={refresh}
           />
 
+          {showHouseholdTasks ? (
           <section>
             <h2 className="mb-3 text-sm font-semibold text-zinc-300">
               Household tasks
@@ -145,16 +161,22 @@ export function FamilyPageClient({ initialData }: Props) {
               ))}
             </div>
           </section>
+          ) : null}
         </div>
       ) : null}
 
       {tab === 'recipes' ? (
-        <RecipeLibrary recipes={initialData.recipes} onChanged={refresh} />
+        <RecipeLibrary
+          recipes={initialData.recipes}
+          accountSlug={initialData.accountSlug}
+          onChanged={refresh}
+        />
       ) : null}
 
       {tab === 'preferences' ? (
         <MealPreferencesPanel
           preferences={initialData.preferences}
+          accountSlug={initialData.accountSlug}
           onSaved={refresh}
         />
       ) : null}

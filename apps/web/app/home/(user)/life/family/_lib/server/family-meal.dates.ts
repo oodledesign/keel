@@ -116,6 +116,18 @@ export function monthCalendarGrid(monthKey: string): MonthCalendarCell[] {
   return cells;
 }
 
+export function mealPlanUrl(
+  basePath: string,
+  view: 'week' | 'month',
+  weekStart: string,
+  monthKey: string,
+): string {
+  if (view === 'month') {
+    return `${basePath}?view=month&month=${monthKey}`;
+  }
+  return `${basePath}?view=week&week=${weekStart}`;
+}
+
 export function chunkDates(dates: string[], size: number): string[][] {
   const chunks: string[][] = [];
   for (let i = 0; i < dates.length; i += size) {

@@ -2,6 +2,9 @@ import { redirect } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
 
+import { FamilyPageClient } from '~/home/(user)/life/family/_components/FamilyPageClient';
+import { loadFamilyMealData } from '~/home/(user)/life/family/_lib/server/family-meal.loader';
+import type { MealPlanView } from '~/home/(user)/life/family/_lib/schema/family-meal.schema';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
@@ -13,7 +16,10 @@ import { redirectIfSpaceNotIn } from '../_lib/server/workspace-route-guard';
 
 interface FamilyMealPlanPageProps {
   params: Promise<{ account: string }>;
+  searchParams: Promise<{ week?: string; month?: string; view?: string }>;
 }
+
+export const dynamic = 'force-dynamic';
 
 export const generateMetadata = async () => {
   const i18n = await createI18nServerInstance();
@@ -21,8 +27,18 @@ export const generateMetadata = async () => {
   return { title: `${title} – Meal plan` };
 };
 
-async function FamilyMealPlanPage({ params }: FamilyMealPlanPageProps) {
+function parseView(value: string | undefined): MealPlanView {
+  return value === 'month' ? 'month' : 'week';
+}
+
+async function FamilyMealPlanPage({
+  params,
+  searchParams,
+}: FamilyMealPlanPageProps) {
   const { account: slug } = await params;
+  const { week, month, view: viewParam } = await searchParams;
+  const view = parseView(viewParam);
+
   const workspace = await loadTeamWorkspace(slug);
   redirectIfSpaceNotIn(workspace, slug, ['family']);
   const access = getTeamAccountAccess(
@@ -40,6 +56,21 @@ async function FamilyMealPlanPage({ params }: FamilyMealPlanPageProps) {
     redirect(getDefaultAccountPath(slug, workspace.account));
   }
 
+  const weekStart =
+    view === 'week' && /^\d{4}-\d{2}-\d{2}$/.test(week ?? '')
+      ? week
+      : undefined;
+
+  const monthKey =
+    view === 'month' && /^\d{4}-\d{2}$/.test(month ?? '') ? month : undefined;
+
+  const data = await loadFamilyMealData({
+    accountSlug: slug,
+    view,
+    weekStart,
+    monthKey,
+  });
+
   return (
     <>
       <TeamAccountLayoutPageHeader
@@ -47,11 +78,12 @@ async function FamilyMealPlanPage({ params }: FamilyMealPlanPageProps) {
         title="Meal plan"
         description="Plan meals together in your family space."
       />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
-        <p className="text-muted-foreground max-w-xl text-sm">
-          Meal planning is coming soon. You will be able to add recipes and a
-          weekly plan everyone can see.
-        </p>
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-0 text-[var(--workspace-shell-text)] lg:px-0">
+        <FamilyPageClient
+          initialData={data}
+          showHouseholdTasks={false}
+          compactHeader
+        />
       </PageBody>
     </>
   );

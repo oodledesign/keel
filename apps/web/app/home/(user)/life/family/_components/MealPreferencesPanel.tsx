@@ -23,10 +23,16 @@ import {
 
 type Props = {
   preferences: MealPreferencesRow;
+  accountSlug?: string;
   onSaved: () => void;
 };
 
-export function MealPreferencesPanel({ preferences, onSaved }: Props) {
+export function MealPreferencesPanel({
+  preferences,
+  accountSlug,
+  onSaved,
+}: Props) {
+  const scopeFields = accountSlug ? { accountSlug } : {};
   const [dietary, setDietary] = useState<string[]>(
     preferences.dietary_requirements,
   );
@@ -76,6 +82,7 @@ export function MealPreferencesPanel({ preferences, onSaved }: Props) {
         disliked_ingredients: dislikes,
         household_size: householdSize,
         notes: notes.trim() || null,
+        ...scopeFields,
       });
       if (!result.success) {
         toast.error(result.error);

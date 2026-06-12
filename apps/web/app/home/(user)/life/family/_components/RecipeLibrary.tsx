@@ -25,10 +25,12 @@ import { ACCENT, panelClass, totalTimeLabel } from './meal-ui';
 
 type Props = {
   recipes: RecipeRow[];
+  accountSlug?: string;
   onChanged: () => void;
 };
 
-export function RecipeLibrary({ recipes, onChanged }: Props) {
+export function RecipeLibrary({ recipes, accountSlug, onChanged }: Props) {
+  const scopeFields = accountSlug ? { accountSlug } : {};
   const [query, setQuery] = useState('');
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -66,7 +68,10 @@ export function RecipeLibrary({ recipes, onChanged }: Props) {
 
   function handleDelete(recipe: RecipeRow) {
     startTransition(async () => {
-      const result = await deleteRecipeAction(recipe.id);
+      const result = await deleteRecipeAction({
+        recipeId: recipe.id,
+        ...scopeFields,
+      });
       if (!result.success) {
         toast.error(result.error);
         return;
@@ -78,10 +83,11 @@ export function RecipeLibrary({ recipes, onChanged }: Props) {
 
   function handleFavorite(recipe: RecipeRow) {
     startTransition(async () => {
-      const result = await toggleRecipeFavoriteAction(
-        recipe.id,
-        !recipe.is_favorite,
-      );
+      const result = await toggleRecipeFavoriteAction({
+        recipeId: recipe.id,
+        isFavorite: !recipe.is_favorite,
+        ...scopeFields,
+      });
       if (!result.success) {
         toast.error(result.error);
         return;
@@ -254,6 +260,7 @@ export function RecipeLibrary({ recipes, onChanged }: Props) {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         recipe={editing}
+        accountSlug={accountSlug}
         onSaved={onChanged}
       />
     </div>

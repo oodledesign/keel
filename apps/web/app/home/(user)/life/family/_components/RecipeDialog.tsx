@@ -30,6 +30,7 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   recipe: RecipeRow | null;
+  accountSlug?: string;
   onSaved: () => void;
 };
 
@@ -50,7 +51,13 @@ function toForm(recipe: RecipeRow | null) {
   };
 }
 
-export function RecipeDialog({ open, onOpenChange, recipe, onSaved }: Props) {
+export function RecipeDialog({
+  open,
+  onOpenChange,
+  recipe,
+  accountSlug,
+  onSaved,
+}: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto border-white/10 bg-[var(--workspace-shell-panel)] text-white sm:max-w-lg">
@@ -58,6 +65,7 @@ export function RecipeDialog({ open, onOpenChange, recipe, onSaved }: Props) {
           <RecipeForm
             key={recipe?.id ?? 'new'}
             recipe={recipe}
+            accountSlug={accountSlug}
             onClose={() => onOpenChange(false)}
             onSaved={onSaved}
           />
@@ -69,13 +77,16 @@ export function RecipeDialog({ open, onOpenChange, recipe, onSaved }: Props) {
 
 function RecipeForm({
   recipe,
+  accountSlug,
   onClose,
   onSaved,
 }: {
   recipe: RecipeRow | null;
+  accountSlug?: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const scopeFields = accountSlug ? { accountSlug } : {};
   const [form, setForm] = useState(() => toForm(recipe));
   const [customTag, setCustomTag] = useState('');
   const [isPending, startTransition] = useTransition();
@@ -127,7 +138,7 @@ function RecipeForm({
     };
 
     startTransition(async () => {
-      const result = await upsertRecipeAction(payload);
+      const result = await upsertRecipeAction({ ...payload, ...scopeFields });
       if (!result.success) {
         toast.error(result.error);
         return;

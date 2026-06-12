@@ -24,6 +24,7 @@ type Props = {
   date: string | null;
   entry: MealEntryRow | null;
   recipes: RecipeRow[];
+  accountSlug?: string;
   onSaved: () => void;
 };
 
@@ -42,6 +43,7 @@ export function MealDayEditDialog({
   date,
   entry,
   recipes,
+  accountSlug,
   onSaved,
 }: Props) {
   return (
@@ -53,6 +55,7 @@ export function MealDayEditDialog({
             date={date}
             entry={entry}
             recipes={recipes}
+            accountSlug={accountSlug}
             onClose={() => onOpenChange(false)}
             onSaved={onSaved}
           />
@@ -66,15 +69,18 @@ function MealDayEditForm({
   date,
   entry,
   recipes,
+  accountSlug,
   onClose,
   onSaved,
 }: {
   date: string;
   entry: MealEntryRow | null;
   recipes: RecipeRow[];
+  accountSlug?: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const scopeFields = accountSlug ? { accountSlug } : {};
   const [title, setTitle] = useState(entry?.title ?? '');
   const [recipeId, setRecipeId] = useState<string | null>(
     entry?.recipe_id ?? null,
@@ -105,6 +111,7 @@ function MealDayEditForm({
         title: trimmed,
         recipeId,
         notes: null,
+        ...scopeFields,
       });
       if (!result.success) {
         toast.error(result.error);
@@ -120,6 +127,7 @@ function MealDayEditForm({
       const result = await clearMealEntryAction({
         planDate: date,
         mealType: 'dinner',
+        ...scopeFields,
       });
       if (!result.success) {
         toast.error(result.error);
