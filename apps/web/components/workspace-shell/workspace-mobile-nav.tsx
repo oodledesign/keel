@@ -202,7 +202,9 @@ export function WorkspaceMobileBottomNav({
               title={tab.label}
               className={cn(
                 'flex h-9 w-9 items-center justify-center rounded-full transition-colors',
-                active ? 'text-[#5eead4]' : 'text-zinc-400 hover:text-zinc-200',
+                active
+                  ? 'bg-[var(--keel-teal)]/15 text-[#5eead4]'
+                  : 'text-zinc-400 hover:bg-white/[0.08] hover:text-zinc-200',
               )}
             >
               <span className="flex h-5 w-5 items-center justify-center [&>svg]:h-[18px] [&>svg]:w-[18px]">

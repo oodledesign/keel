@@ -15,6 +15,7 @@ import {
   buildAgencyPortalRewritePath,
   extractAgencyPortalSlug,
 } from '~/lib/agency-portal-host';
+import { resolveAppSubdomainRedirect } from '~/lib/app-subdomain-host';
 import { getUserDefaultLandingPath } from '~/lib/dashboard-shortcuts/load-shortcuts';
 
 const CSRF_SECRET_COOKIE = 'csrfSecret';
@@ -61,6 +62,16 @@ function createNextResponse(
   });
 }
 
+function redirectAppSubdomainRequest(request: NextRequest) {
+  const target = resolveAppSubdomainRedirect(request.nextUrl);
+
+  if (!target) {
+    return null;
+  }
+
+  return NextResponse.redirect(target, 307);
+}
+
 function rewriteAgencyPortalRequest(request: NextRequest) {
   const slug = extractAgencyPortalSlug(request.nextUrl.hostname);
 
@@ -89,6 +100,12 @@ function rewriteAgencyPortalRequest(request: NextRequest) {
 }
 
 export async function proxy(request: NextRequest) {
+  const appHostRedirect = redirectAppSubdomainRequest(request);
+
+  if (appHostRedirect) {
+    return withCsrfMiddleware(request, appHostRedirect);
+  }
+
   const agencyPortalResponse = rewriteAgencyPortalRequest(request);
 
   if (agencyPortalResponse) {

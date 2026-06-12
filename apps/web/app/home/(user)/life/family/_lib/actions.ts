@@ -1,7 +1,5 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
-
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
@@ -22,7 +20,7 @@ import {
   type SetMealEntryInput,
   type ToggleRecipeFavoriteInput,
 } from './schema/family-meal.schema';
-import { resolveMealPlanScope } from './server/family-meal.scope';
+import { resolveMealPlanScope, revalidateMealPlanPaths } from './server/family-meal.scope';
 
 type ActionResult<T = undefined> =
   | { success: true; data: T }
@@ -33,10 +31,88 @@ function ok<T>(data: T): ActionResult<T> {
 }
 
 function fail(error: unknown): ActionResult<never> {
+  if (error && typeof error === 'object' && 'message' in error) {
+    return {
+      success: false,
+      error: String((error as { message: string }).message),
+    };
+  }
+
   return {
     success: false,
     error: error instanceof Error ? error.message : 'Something went wrong',
   };
+}
+
+type MealPreferenceValues = {
+  user_id: string;
+  account_id: string | null;
+  dietary_requirements: string[];
+  priorities: string[];
+  disliked_ingredients: string[];
+  household_size: number;
+  notes: string | null;
+  updated_at: string;
+};
+
+async function persistMealPreferences(
+  client: ReturnType<typeof getSupabaseServerClient>,
+  scope: Awaited<ReturnType<typeof resolveMealPlanScope>>,
+  values: Omit<MealPreferenceValues, 'user_id' | 'account_id' | 'updated_at'>,
+) {
+  const row: MealPreferenceValues = {
+    user_id: scope.userId,
+    account_id: scope.kind === 'workspace' ? scope.accountId : null,
+    ...values,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (scope.kind === 'workspace') {
+    const { data: existing, error: readError } = await client
+      .from('family_meal_preferences')
+      .select('id')
+      .eq('account_id', scope.accountId)
+      .maybeSingle();
+
+    if (readError) throw readError;
+
+    if (existing) {
+      const { error } = await client
+        .from('family_meal_preferences')
+        .update(row)
+        .eq('account_id', scope.accountId);
+
+      if (error) throw error;
+      return;
+    }
+
+    const { error } = await client.from('family_meal_preferences').insert(row);
+    if (error) throw error;
+    return;
+  }
+
+  const { data: existing, error: readError } = await client
+    .from('family_meal_preferences')
+    .select('id')
+    .eq('user_id', scope.userId)
+    .is('account_id', null)
+    .maybeSingle();
+
+  if (readError) throw readError;
+
+  if (existing) {
+    const { error } = await client
+      .from('family_meal_preferences')
+      .update(row)
+      .eq('user_id', scope.userId)
+      .is('account_id', null);
+
+    if (error) throw error;
+    return;
+  }
+
+  const { error } = await client.from('family_meal_preferences').insert(row);
+  if (error) throw error;
 }
 
 export async function saveMealPreferencesAction(
@@ -47,23 +123,15 @@ export async function saveMealPreferencesAction(
     const client = getSupabaseServerClient();
     const scope = await resolveMealPlanScope(parsed.accountSlug);
 
-    const row = {
-      user_id: scope.userId,
-      account_id: scope.kind === 'workspace' ? scope.accountId : null,
+    await persistMealPreferences(client, scope, {
       dietary_requirements: parsed.dietary_requirements,
       priorities: parsed.priorities,
       disliked_ingredients: parsed.disliked_ingredients,
       household_size: parsed.household_size,
       notes: parsed.notes ?? null,
-      updated_at: new Date().toISOString(),
-    };
-
-    const { error } = await client.from('family_meal_preferences').upsert(row, {
-      onConflict: scope.kind === 'workspace' ? 'account_id' : 'user_id',
     });
 
-    if (error) return fail(error);
-    revalidatePath(scope.revalidatePath);
+    revalidateMealPlanPaths(scope);
     return ok(undefined);
   } catch (err) {
     return fail(err);
@@ -110,7 +178,7 @@ export async function upsertRecipeAction(
 
       const { data, error } = await updateQuery.select('id').single();
       if (error) return fail(error);
-      revalidatePath(scope.revalidatePath);
+      revalidateMealPlanPaths(scope);
       return ok({ id: (data as { id: string }).id });
     }
 
@@ -120,7 +188,7 @@ export async function upsertRecipeAction(
       .select('id')
       .single();
     if (error) return fail(error);
-    revalidatePath(scope.revalidatePath);
+    revalidateMealPlanPaths(scope);
     return ok({ id: (data as { id: string }).id });
   } catch (err) {
     return fail(err);
@@ -150,7 +218,7 @@ export async function deleteRecipeAction(
 
     const { error } = await deleteQuery;
     if (error) return fail(error);
-    revalidatePath(scope.revalidatePath);
+    revalidateMealPlanPaths(scope);
     return ok(undefined);
   } catch (err) {
     return fail(err);
@@ -183,7 +251,7 @@ export async function toggleRecipeFavoriteAction(
 
     const { error } = await updateQuery;
     if (error) return fail(error);
-    revalidatePath(scope.revalidatePath);
+    revalidateMealPlanPaths(scope);
     return ok(undefined);
   } catch (err) {
     return fail(err);
@@ -218,7 +286,7 @@ export async function setMealEntryAction(
     );
 
     if (error) return fail(error);
-    revalidatePath(scope.revalidatePath);
+    revalidateMealPlanPaths(scope);
     return ok(undefined);
   } catch (err) {
     return fail(err);
@@ -247,7 +315,7 @@ export async function clearMealEntryAction(
 
     const { error } = await query;
     if (error) return fail(error);
-    revalidatePath(scope.revalidatePath);
+    revalidateMealPlanPaths(scope);
     return ok(undefined);
   } catch (err) {
     return fail(err);
@@ -283,7 +351,7 @@ export async function applyGeneratedWeekAction(
     });
 
     if (error) return fail(error);
-    revalidatePath(scope.revalidatePath);
+    revalidateMealPlanPaths(scope);
     return ok(undefined);
   } catch (err) {
     return fail(err);

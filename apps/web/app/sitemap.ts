@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 
-import appConfig from '~/config/app.config';
+import { getMarketingSiteOrigin } from '~/lib/app-host-routing';
 
 const MARKETING_PATHS = [
   '',
@@ -25,7 +25,7 @@ const MARKETING_PATHS = [
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = appConfig.url.replace(/\/$/, '');
+  const base = getMarketingSiteOrigin().replace(/\/$/, '');
   const now = new Date();
 
   return MARKETING_PATHS.map((path) => ({

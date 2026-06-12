@@ -1,9 +1,11 @@
 /** Canonical app origin for auth, onboarding, and workspace routes. */
 export function getAppSiteOrigin(): string {
-  const configured = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, '');
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_SITE_URL?.replace(/\/+$/, '') ??
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, '');
 
-  if (configured) {
-    return configured;
+  if (appUrl) {
+    return appUrl;
   }
 
   return 'http://localhost:3000';

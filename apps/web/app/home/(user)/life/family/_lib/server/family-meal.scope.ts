@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { revalidatePath } from 'next/cache';
+
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
@@ -24,6 +26,13 @@ export type MealPlanScope =
 
 const PERSONAL_BASE_PATH = '/app/life/family';
 const PERSONAL_REVALIDATE_PATH = '/home/life/family';
+
+export function revalidateMealPlanPaths(scope: MealPlanScope) {
+  revalidatePath(scope.revalidatePath);
+
+  // Public /app/* URLs rewrite to /home/* — invalidate both route caches.
+  revalidatePath(scope.basePath);
+}
 
 export async function resolveMealPlanScope(
   accountSlug?: string,

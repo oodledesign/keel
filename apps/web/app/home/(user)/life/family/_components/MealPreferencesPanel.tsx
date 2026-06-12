@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 
 import { Minus, Plus, X } from 'lucide-react';
 
@@ -49,6 +49,21 @@ export function MealPreferencesPanel({
   const [customDietary, setCustomDietary] = useState('');
   const [dislikeInput, setDislikeInput] = useState('');
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setDietary(preferences.dietary_requirements);
+    setPriorities(preferences.priorities);
+    setDislikes(preferences.disliked_ingredients);
+    setHouseholdSize(preferences.household_size);
+    setNotes(preferences.notes ?? '');
+  }, [
+    preferences.updated_at,
+    preferences.dietary_requirements,
+    preferences.priorities,
+    preferences.disliked_ingredients,
+    preferences.household_size,
+    preferences.notes,
+  ]);
 
   function toggle(
     value: string,
