@@ -9,7 +9,6 @@ import {
 } from '~/lib/planner/load-planner-data';
 import pathsConfig from '~/config/paths.config';
 
-import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
 import { DayViewClient } from '~/home/(user)/planner/_components/DayViewClient';
 
 interface WorkspacePlannerDayPageProps {
@@ -35,16 +34,9 @@ async function WorkspacePlannerDayPage({ params }: WorkspacePlannerDayPageProps)
   );
 
   return (
-    <>
-      <TeamAccountLayoutPageHeader
-        title="Today"
-        description="Your schedule and tasks due today."
-        account={accountSlug}
-      />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 text-white lg:px-6">
-        <DayViewClient initialData={data} dayViewHref={dayViewHref} />
-      </PageBody>
-    </>
+    <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 text-white lg:px-6">
+      <DayViewClient initialData={data} dayViewHref={dayViewHref} />
+    </PageBody>
   );
 }
 

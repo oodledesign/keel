@@ -40,6 +40,37 @@ function parseClockMinutes(raw: string): number | null {
   return hours * 60 + minutes;
 }
 
+/** When the end time omits am/pm (e.g. 12:00–1:00), infer PM so the block is not dropped. */
+function resolveRangeMinutes(rawStart: string, rawEnd: string) {
+  let startMinutes = parseClockMinutes(rawStart);
+  let endMinutes = parseClockMinutes(rawEnd);
+  if (startMinutes === null || endMinutes === null) {
+    return { startMinutes, endMinutes };
+  }
+
+  const endHasMeridiem = /(?:am|pm)\s*$/i.test(rawEnd.trim());
+  const startHasMeridiem = /(?:am|pm)\s*$/i.test(rawStart.trim());
+
+  if (endMinutes <= startMinutes && !endHasMeridiem) {
+    // 12:00–1:00 → treat 1:00 as 13:00 when start is midday or afternoon
+    if (startMinutes >= 11 * 60 || startHasMeridiem) {
+      endMinutes += 12 * 60;
+    }
+  }
+
+  if (endMinutes <= startMinutes && endHasMeridiem && !startHasMeridiem) {
+    // 11:50–1:00pm → start is AM unless we infer from end
+    if (parseClockMinutes(`${rawStart.trim()}pm`) !== null) {
+      const pmStart = parseClockMinutes(`${rawStart.trim()}pm`);
+      if (pmStart !== null && pmStart < endMinutes) {
+        startMinutes = pmStart;
+      }
+    }
+  }
+
+  return { startMinutes, endMinutes };
+}
+
 function compactTime(raw: string): string {
   return raw.replace(/\s+/g, '').toLowerCase();
 }
@@ -87,10 +118,12 @@ export function splitScheduleSegments(text: string): ScheduleSegment[] {
       .slice(1)
       .filter((part) => !/^no project$/i.test(part));
 
+    const { startMinutes, endMinutes } = resolveRangeMinutes(rawStart, rawEnd);
+
     segments.push({
       timeLabel: `${compactTime(rawStart)}–${compactTime(rawEnd)}`,
-      startMinutes: parseClockMinutes(rawStart),
-      endMinutes: parseClockMinutes(rawEnd),
+      startMinutes,
+      endMinutes,
       title,
       meta,
       isCalendarEvent,
