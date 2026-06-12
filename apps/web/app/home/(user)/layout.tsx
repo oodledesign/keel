@@ -18,9 +18,16 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { HomeMenuNavigation } from './_components/home-menu-navigation';
 import { HomeMobileNavigation } from './_components/home-mobile-navigation';
+import { PersonalHomeMobileChrome } from './_components/personal-home-mobile-chrome';
 import { HomeSidebar } from './_components/home-sidebar';
 import { loadUserWorkspace } from './_lib/server/load-user-workspace';
 import { loadPersonalSidebarWorkspaces } from './_lib/server/personal-sidebar-workspaces.loader';
+import { flattenPersonalNavLinks } from './_lib/flatten-personal-nav-links';
+import {
+  buildPersonalHomeNavRoutes,
+  parsePersonalAccountNavigationConfig,
+} from '~/config/personal-account-navigation.config';
+import { loadWorkspaceSwitcherAccounts } from '~/home/_lib/server/workspace-switcher.loader';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 import {
   userRequiresWorkspaceSetup,
@@ -49,17 +56,23 @@ async function SidebarLayout({ children }: React.PropsWithChildren) {
   let sharedWorkspaces: Awaited<
     ReturnType<typeof loadPersonalSidebarWorkspaces>
   > = [];
+  let switcherAccounts: Awaited<
+    ReturnType<typeof loadWorkspaceSwitcherAccounts>
+  > = [];
   let state: Awaited<ReturnType<typeof getLayoutState>>;
   try {
-    [workspace, sharedWorkspaces, state] = await Promise.all([
+    const client = (await import('@kit/supabase/server-client')).getSupabaseServerClient();
+    [workspace, sharedWorkspaces, state, switcherAccounts] = await Promise.all([
       loadUserWorkspace(),
       loadPersonalSidebarWorkspaces(),
       getLayoutState(),
+      loadWorkspaceSwitcherAccounts(client, user.id),
     ]);
   } catch (e) {
     if (isRedirectError(e)) throw e;
     workspace = null;
     sharedWorkspaces = [];
+    switcherAccounts = [];
     state = await getLayoutState();
   }
 
@@ -70,6 +83,10 @@ async function SidebarLayout({ children }: React.PropsWithChildren) {
       </SidebarProvider>
     );
   }
+
+  const personalNavLinks = flattenPersonalNavLinks(
+    parsePersonalAccountNavigationConfig(buildPersonalHomeNavRoutes()),
+  );
 
   return (
     <UserWorkspaceContextProvider value={workspace}>
@@ -85,16 +102,22 @@ async function SidebarLayout({ children }: React.PropsWithChildren) {
             />
           </PageNavigation>
 
-          <PageMobileNavigation className={'flex items-center justify-between'}>
-            <MobileNavigation workspace={workspace} />
-          </PageMobileNavigation>
+          <PageMobileNavigation className="hidden" />
 
-          <WorkspaceTopBar
-            variant="personal"
-            userId={workspace.user.id}
-            accountId={workspace.workspace?.id}
-          />
-          {children}
+          <PersonalHomeMobileChrome
+            workspace={workspace}
+            navLinks={personalNavLinks}
+            switcherAccounts={switcherAccounts}
+          >
+            <div className="hidden lg:block">
+              <WorkspaceTopBar
+                variant="personal"
+                userId={workspace.user.id}
+                accountId={workspace.workspace?.id}
+              />
+            </div>
+            {children}
+          </PersonalHomeMobileChrome>
         </Page>
       </SidebarProvider>
     </UserWorkspaceContextProvider>

@@ -124,7 +124,9 @@ export function PersonFormDialog({
               <PersonImageUploader
                 accountId={person.account_id}
                 personId={person.id}
+                personName={person.nickname?.trim() || person.full_name}
                 avatarUrl={person.avatar_url}
+                size="md"
                 onUpdated={() => onPhotoUpdated?.()}
               />
               <p className="text-xs leading-relaxed text-zinc-500">

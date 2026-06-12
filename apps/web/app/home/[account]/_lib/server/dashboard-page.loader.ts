@@ -7,6 +7,8 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import pathsConfig from '~/config/paths.config';
 import { aggregateTransactionsByMonth } from '~/lib/date-range/analytics-date-range';
 import { accumulateFinanceTotals } from '~/lib/finance/transaction-totals';
+import { displayTitle } from '../workspace-content/context-resolve';
+import { toIsoDateString } from '../../../_lib/due-date-ymd';
 
 import { loadTeamWorkspace } from './team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from './workspace-route-guard';
@@ -72,14 +74,32 @@ export type DashboardMetrics = {
   hoursLogged: number;
 };
 
+export type DashboardNoteSummary = {
+  id: string;
+  title: string;
+  excerpt: string;
+  updatedAt: string;
+};
+
+export type DashboardTaskSummary = {
+  id: string;
+  title: string;
+  dueDate: string | null;
+  status: string;
+  projectName: string | null;
+};
+
 export type DashboardPageData = {
   accountId: string;
   accountSlug: string;
+  accountName: string;
   userFirstName: string | null;
   metrics: DashboardMetrics;
   financeTrend: DashboardFinanceMonth[];
   statusSummary: DashboardStatusSummary;
   activeJobsList: DashboardJobSummary[];
+  upcomingTasks: DashboardTaskSummary[];
+  recentNotes: DashboardNoteSummary[];
   recentInvoices: DashboardInvoiceSummary[];
   teamMembers: Array<{
     userId: string;
@@ -103,6 +123,7 @@ export async function loadDashboardPageData(
   const account = workspace.account as {
     id: string;
     slug: string | null;
+    name?: string | null;
   };
 
   const user = workspace.user as {
@@ -168,6 +189,8 @@ export async function loadDashboardPageData(
     hoursJobsResult,
     financeMonthResult,
     financeTrendResult,
+    projectsResult,
+    notesResult,
   ] = await Promise.all([
     client
       .from('jobs')
@@ -243,6 +266,16 @@ export async function loadDashboardPageData(
       .eq('account_id', accountId)
       .gte('transaction_date', financeTrendStartIso)
       .order('transaction_date', { ascending: true }),
+    client
+      .from('projects')
+      .select('id, name')
+      .eq('account_id', accountId),
+    client
+      .from('notes')
+      .select('id, title, content, updated_at')
+      .eq('account_id', accountId)
+      .order('updated_at', { ascending: false })
+      .limit(8),
   ]);
 
   const jobsUnavailable = isTableMissingFromApi(activeJobsResult.error);
@@ -397,14 +430,71 @@ export async function loadDashboardPageData(
     status: (row.status as string | null) ?? 'draft',
   }));
 
+  const notesUnavailable = isTableMissingFromApi(notesResult.error);
+  const recentNotes: DashboardNoteSummary[] = notesUnavailable
+    ? []
+    : (notesResult.data ?? []).map((row) => {
+        const content = (row.content as string | null) ?? '';
+        const titleRaw = (row.title as string | null) ?? '';
+        const title = displayTitle(titleRaw, content);
+        const plain = content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        return {
+          id: row.id as string,
+          title,
+          excerpt: plain.slice(0, 120) || 'No content yet',
+          updatedAt: row.updated_at as string,
+        };
+      });
+
+  const projectRows = (projectsResult.data ?? []) as Array<{
+    id: string;
+    name?: string | null;
+  }>;
+  const projectIds = projectRows.map((p) => p.id);
+  const projectNameMap = new Map(
+    projectRows.map((p) => [p.id, p.name ?? 'Project']),
+  );
+
+  let upcomingTasks: DashboardTaskSummary[] = [];
+  if (projectIds.length > 0) {
+    const { data: taskRows, error: tasksError } = await client
+      .from('tasks')
+      .select('id, title, status, due_date, project_id')
+      .in('project_id', projectIds)
+      .is('parent_task_id', null)
+      .not('status', 'eq', 'done')
+      .order('due_date', { ascending: true, nullsFirst: false })
+      .limit(4);
+
+    if (!isTableMissingFromApi(tasksError) && tasksError) {
+      throw tasksError;
+    }
+
+    upcomingTasks = (taskRows ?? []).map((t) => ({
+      id: t.id as string,
+      title: (t.title as string | null) ?? 'Untitled task',
+      dueDate: toIsoDateString(t.due_date as string | null | undefined),
+      status: (t.status as string | null) ?? 'todo',
+      projectName: t.project_id
+        ? (projectNameMap.get(t.project_id as string) ?? null)
+        : null,
+    }));
+  }
+
+  const accountName =
+    account.name?.trim() || account.slug || accountSlug;
+
   return {
     accountId,
     accountSlug: account.slug ?? accountSlug,
+    accountName,
     userFirstName,
     metrics,
     financeTrend,
     statusSummary,
     activeJobsList,
+    upcomingTasks,
+    recentNotes,
     recentInvoices,
     teamMembers: teamMembers.map((m) => ({
       userId: m.user_id,

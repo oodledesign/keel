@@ -9,21 +9,20 @@ import { TeamAccountWorkspaceContextProvider } from '@kit/team-accounts/componen
 import { Page, PageMobileNavigation, PageNavigation } from '@kit/ui/page';
 import { SidebarProvider } from '@kit/ui/shadcn-sidebar';
 
-import { AppLogo } from '~/components/app-logo';
-import { APP_LOGO_SHELL_CLASSNAME } from '~/lib/app-logo-shell';
-import { ProfileAccountDropdownContainer } from '~/components/personal-account-dropdown-container';
 import { getTeamAccountSidebarConfig } from '~/config/team-account-navigation.config';
 import type { WorkNavCounts } from '~/config/work-account-navigation.config';
-import pathsConfig from '~/config/paths.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 // local imports
 import { TeamWorkspaceTopBarSlot } from '~/components/workspace-shell/workspace-top-bar-slot';
 
-import { TeamAccountLayoutMobileNavigation } from './_components/team-account-layout-mobile-navigation';
 import { TeamAccountLayoutSidebar } from './_components/team-account-layout-sidebar';
+import { TeamWorkspaceMobileChrome } from './_components/team-workspace-mobile-chrome';
+import { flattenTeamNavLinks } from './_lib/flatten-team-nav-links';
 import { TeamAccountNavigationMenu } from './_components/team-account-navigation-menu';
+import { getTeamAccountAccess } from './_lib/role-access';
 import { loadTeamWorkspace } from './_lib/server/team-account-workspace.loader';
+import { spaceTypeFromProfile } from './_lib/workspace-profile';
 import { enforceWorkspaceBilling } from './_lib/server/workspace-billing-guard';
 import { loadWorkspaceSwitcherAccounts } from '../_lib/server/workspace-switcher.loader';
 import { loadWorkNavCounts } from './_lib/server/work-nav-counts.loader';
@@ -86,6 +85,24 @@ async function SidebarLayout({
   const accounts =
     switcherAccounts.length > 0 ? switcherAccounts : [];
 
+  const accountAccess = data.account as {
+    permissions?: string[] | null;
+    role?: string | null;
+    company_role?: string | null;
+  };
+
+  const mobileNavLinks = flattenTeamNavLinks(
+    getTeamAccountSidebarConfig(
+      account,
+      accountAccess,
+      data.moduleSettings,
+      workspaceProfile,
+      navCounts,
+    ),
+  );
+
+  const access = getTeamAccountAccess(accountAccess);
+
   return (
     <TeamAccountWorkspaceContextProvider value={data}>
       <SidebarProvider defaultOpen={state.open}>
@@ -102,47 +119,24 @@ async function SidebarLayout({
               moduleSettings={data.moduleSettings}
               workspaceProfile={workspaceProfile}
               navCounts={navCounts}
-              accountAccess={
-                data.account as {
-                  permissions?: string[] | null;
-                  role?: string | null;
-                  company_role?: string | null;
-                }
-              }
+              accountAccess={accountAccess}
             />
           </PageNavigation>
 
-          <PageMobileNavigation className="flex items-center justify-between bg-[var(--workspace-shell-header)] px-4 py-2 text-[var(--workspace-shell-text)] border-b border-white/6 lg:px-0">
-            <AppLogo
-              className={APP_LOGO_SHELL_CLASSNAME}
-              href={pathsConfig.app.accountHome.replace('[account]', account)}
-            />
+          <PageMobileNavigation className="hidden lg:px-0" />
 
-            <div className={'flex items-center gap-x-3'}>
-              <TeamAccountLayoutMobileNavigation
-                userId={data.user.id}
-                accounts={accounts}
-                account={account}
-                workspaceProfile={workspaceProfile}
-                moduleSettings={data.moduleSettings}
-                navCounts={navCounts}
-                accountAccess={
-                  data.account as {
-                    permissions?: string[] | null;
-                    role?: string | null;
-                    company_role?: string | null;
-                  }
-                }
-              />
-              <ProfileAccountDropdownContainer
-                user={data.user}
-                account={undefined}
-              />
-            </div>
-          </PageMobileNavigation>
-
-          <TeamWorkspaceTopBarSlot account={account} />
-          {children}
+          <TeamWorkspaceMobileChrome
+            account={account}
+            accountId={data.account.id}
+            user={data.user}
+            accounts={accounts}
+            navLinks={mobileNavLinks}
+            spaceType={spaceTypeFromProfile(workspaceProfile)}
+            showNewMenu={access.canUseQuickCreate}
+          >
+            <TeamWorkspaceTopBarSlot account={account} />
+            {children}
+          </TeamWorkspaceMobileChrome>
         </Page>
       </SidebarProvider>
     </TeamAccountWorkspaceContextProvider>
@@ -183,6 +177,24 @@ async function HeaderLayout({
     return {} as WorkNavCounts;
   });
 
+  const accountAccess = data.account as {
+    permissions?: string[] | null;
+    role?: string | null;
+    company_role?: string | null;
+  };
+
+  const mobileNavLinks = flattenTeamNavLinks(
+    getTeamAccountSidebarConfig(
+      account,
+      accountAccess,
+      data.moduleSettings,
+      workspaceProfile,
+      navCounts,
+    ),
+  );
+
+  const access = getTeamAccountAccess(accountAccess);
+
   return (
     <TeamAccountWorkspaceContextProvider value={data}>
       <Page style={'header'}>
@@ -190,36 +202,19 @@ async function HeaderLayout({
           <TeamAccountNavigationMenu workspace={data} />
         </PageNavigation>
 
-        <PageMobileNavigation className="flex items-center justify-between bg-[var(--workspace-shell-header)] px-4 py-2 text-[var(--workspace-shell-text)] border-b border-white/6 lg:px-0">
-          <AppLogo
-            className={APP_LOGO_SHELL_CLASSNAME}
-            href={pathsConfig.app.accountHome.replace('[account]', account)}
-          />
+        <PageMobileNavigation className="hidden lg:px-0" />
 
-          <div className={'flex items-center gap-x-3 group-data-[mobile:hidden]'}>
-            <TeamAccountLayoutMobileNavigation
-              userId={data.user.id}
-              accounts={accounts}
-              account={account}
-              workspaceProfile={workspaceProfile}
-              moduleSettings={data.moduleSettings}
-              navCounts={navCounts}
-              accountAccess={
-                data.account as {
-                  permissions?: string[] | null;
-                  role?: string | null;
-                  company_role?: string | null;
-                }
-              }
-            />
-            <ProfileAccountDropdownContainer
-              user={data.user}
-              account={undefined}
-            />
-          </div>
-        </PageMobileNavigation>
-
-        {children}
+        <TeamWorkspaceMobileChrome
+          account={account}
+          accountId={data.account.id}
+          user={data.user}
+          accounts={accounts}
+          navLinks={mobileNavLinks}
+          spaceType={spaceTypeFromProfile(workspaceProfile)}
+          showNewMenu={access.canUseQuickCreate}
+        >
+          {children}
+        </TeamWorkspaceMobileChrome>
       </Page>
     </TeamAccountWorkspaceContextProvider>
   );

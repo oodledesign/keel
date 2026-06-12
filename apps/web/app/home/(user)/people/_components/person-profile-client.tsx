@@ -133,6 +133,7 @@ export function PersonProfileClient({ person }: Props) {
               <PersonImageUploader
                 accountId={person.account_id}
                 personId={person.id}
+                personName={name}
                 avatarUrl={person.avatar_url}
                 onUpdated={() => router.refresh()}
               />

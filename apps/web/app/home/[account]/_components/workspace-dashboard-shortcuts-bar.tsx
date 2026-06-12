@@ -8,11 +8,17 @@ import { requireUserInServerComponent } from '~/lib/server/require-user-in-serve
 type Props = {
   accountId: string;
   accountSlug: string;
+  accountName?: string;
+  compact?: boolean;
+  className?: string;
 };
 
 export async function WorkspaceDashboardShortcutsBar({
   accountId,
   accountSlug,
+  accountName,
+  compact,
+  className,
 }: Props) {
   const client = getSupabaseServerClient();
   const user = await requireUserInServerComponent();
@@ -30,7 +36,9 @@ export async function WorkspaceDashboardShortcutsBar({
         '[account]',
         accountSlug,
       )}
-      className="mb-4 pt-4 md:px-6 lg:px-8"
+      stripWorkspacePrefix={accountName}
+      compact={compact}
+      className={className ?? 'mb-4 pt-4 md:px-6 lg:px-8'}
     />
   );
 }

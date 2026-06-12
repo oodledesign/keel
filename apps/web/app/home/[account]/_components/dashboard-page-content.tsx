@@ -23,8 +23,11 @@ import type {
   DashboardInvoiceSummary,
   DashboardJobSummary,
   DashboardMetrics,
+  DashboardNoteSummary,
   DashboardStatusSummary,
+  DashboardTaskSummary,
 } from '../_lib/server/dashboard-page.loader';
+import { BusinessDashboardMobile } from './business-dashboard-mobile';
 import {
   FinanceMonthRail,
   FinanceTrendBarChart,
@@ -32,10 +35,13 @@ import {
 
 type DashboardPageContentProps = {
   accountName: string;
+  accountSlug: string;
   metrics: DashboardMetrics;
   financeTrend: DashboardFinanceMonth[];
   statusSummary: DashboardStatusSummary;
   activeJobs: DashboardJobSummary[];
+  upcomingTasks: DashboardTaskSummary[];
+  recentNotes: DashboardNoteSummary[];
   teamMembers: Array<{
     userId: string;
     name: string | null;
@@ -43,6 +49,7 @@ type DashboardPageContentProps = {
     role: string | null;
   }>;
   recentInvoices: DashboardInvoiceSummary[];
+  shortcutsBar?: React.ReactNode;
 };
 
 const panelClass =
@@ -50,12 +57,16 @@ const panelClass =
 
 export function DashboardPageContent({
   accountName,
+  accountSlug,
   metrics,
   financeTrend,
   statusSummary,
   activeJobs,
+  upcomingTasks,
+  recentNotes,
   teamMembers,
   recentInvoices,
+  shortcutsBar,
 }: DashboardPageContentProps) {
   const [activeTab, setActiveTab] = useState<
     'overview' | 'projects' | 'team' | 'invoices'
@@ -120,7 +131,19 @@ export function DashboardPageContent({
     : 'Paid invoices this month';
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 bg-[radial-gradient(circle_at_18%_0%,rgba(42,157,143,0.1),transparent_35%),radial-gradient(circle_at_82%_6%,rgba(15,27,53,0.35),transparent_40%)] px-4 pb-10 pt-5 text-white md:px-6 lg:px-8">
+    <>
+      {shortcutsBar ? (
+        <BusinessDashboardMobile
+          accountSlug={accountSlug}
+          metrics={metrics}
+          financeTrend={financeTrend}
+          upcomingTasks={upcomingTasks}
+          recentNotes={recentNotes}
+          shortcutsBar={shortcutsBar}
+        />
+      ) : null}
+
+      <div className="hidden min-h-0 flex-1 flex-col gap-6 bg-[radial-gradient(circle_at_18%_0%,rgba(42,157,143,0.1),transparent_35%),radial-gradient(circle_at_82%_6%,rgba(15,27,53,0.35),transparent_40%)] px-4 pb-10 pt-5 text-white md:flex md:px-6 lg:px-8">
       {/* Top stats */}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
@@ -237,7 +260,8 @@ export function DashboardPageContent({
           </Tabs>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </>
   );
 }
 

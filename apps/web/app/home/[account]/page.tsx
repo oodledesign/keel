@@ -73,6 +73,7 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
       <WorkspaceDashboardShortcutsBar
         accountId={accountId}
         accountSlug={account}
+        accountName={accountLabel}
       />
     </Suspense>
   );
@@ -183,6 +184,28 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
 
   const data = await loadDashboardPageData(account);
 
+  const shortcutsBarMobile = (
+    <Suspense fallback={null}>
+      <WorkspaceDashboardShortcutsBar
+        accountId={accountId}
+        accountSlug={account}
+        accountName={data.accountName}
+        compact
+        className="px-0 pt-0"
+      />
+    </Suspense>
+  );
+
+  const shortcutsBarDesktop = (
+    <Suspense fallback={null}>
+      <WorkspaceDashboardShortcutsBar
+        accountId={accountId}
+        accountSlug={account}
+        accountName={data.accountName}
+      />
+    </Suspense>
+  );
+
   return (
     <>
       <TeamAccountLayoutPageHeader
@@ -195,16 +218,20 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
         description="Your business overview for this month."
       />
 
-      <PageBody className="bg-[var(--workspace-shell-canvas)]">
-        {shortcutsBar}
+      <PageBody className="bg-[var(--workspace-shell-canvas)] p-0 md:p-0">
+        <div className="hidden md:block">{shortcutsBarDesktop}</div>
         <DashboardPageContent
           accountName={data.userFirstName ?? data.accountSlug}
+          accountSlug={data.accountSlug}
           metrics={data.metrics}
           financeTrend={data.financeTrend}
           statusSummary={data.statusSummary}
           activeJobs={data.activeJobsList}
+          upcomingTasks={data.upcomingTasks}
+          recentNotes={data.recentNotes}
           recentInvoices={data.recentInvoices}
           teamMembers={data.teamMembers}
+          shortcutsBar={shortcutsBarMobile}
         />
       </PageBody>
     </>
