@@ -14,6 +14,50 @@ import type {
 } from './types';
 import { parseStoredShortcuts } from './types';
 
+export async function loadPersonalMobileNavShortcuts(
+  client: SupabaseClient,
+  userId: string,
+): Promise<ResolvedShortcut[]> {
+  const { data } = await client
+    .from('user_settings')
+    .select('personal_mobile_nav_shortcuts')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  const stored = parseStoredShortcuts(
+    (data as { personal_mobile_nav_shortcuts?: unknown } | null)
+      ?.personal_mobile_nav_shortcuts,
+  );
+
+  if (stored.length === 0) return [];
+
+  const catalog = await buildPersonalShortcutCatalog(client, userId);
+  return resolveStoredShortcuts(stored, catalog);
+}
+
+export async function loadWorkspaceMobileNavShortcuts(
+  client: SupabaseClient,
+  userId: string,
+  accountId: string,
+  accountSlug: string,
+): Promise<ResolvedShortcut[]> {
+  const { data } = await client
+    .from('workspace_dashboard_shortcuts')
+    .select('mobile_nav_shortcuts')
+    .eq('user_id', userId)
+    .eq('account_id', accountId)
+    .maybeSingle();
+
+  const stored = parseStoredShortcuts(
+    (data as { mobile_nav_shortcuts?: unknown } | null)?.mobile_nav_shortcuts,
+  );
+
+  if (stored.length === 0) return [];
+
+  const catalog = await buildWorkspaceShortcutCatalog(client, accountSlug);
+  return resolveStoredShortcuts(stored, catalog);
+}
+
 export async function loadPersonalDashboardShortcuts(
   client: SupabaseClient,
   userId: string,
@@ -107,6 +151,7 @@ export async function loadPersonalShortcutsSettings(
   userId: string,
 ): Promise<{
   shortcuts: StoredShortcut[];
+  mobileNavShortcuts: StoredShortcut[];
   defaultLanding: DefaultLandingPreference;
   workspaceOptions: Array<{ slug: string; name: string }>;
 }> {
@@ -114,7 +159,7 @@ export async function loadPersonalShortcutsSettings(
     client
       .from('user_settings')
       .select(
-        'personal_dashboard_shortcuts, default_landing_type, default_workspace_slug',
+        'personal_dashboard_shortcuts, personal_mobile_nav_shortcuts, default_landing_type, default_workspace_slug',
       )
       .eq('user_id', userId)
       .maybeSingle(),
@@ -123,12 +168,14 @@ export async function loadPersonalShortcutsSettings(
 
   const row = settingsRes.data as {
     personal_dashboard_shortcuts?: unknown;
+    personal_mobile_nav_shortcuts?: unknown;
     default_landing_type?: string | null;
     default_workspace_slug?: string | null;
   } | null;
 
   return {
     shortcuts: parseStoredShortcuts(row?.personal_dashboard_shortcuts),
+    mobileNavShortcuts: parseStoredShortcuts(row?.personal_mobile_nav_shortcuts),
     defaultLanding: {
       type:
         row?.default_landing_type === 'workspace' ? 'workspace' : 'personal',
@@ -147,10 +194,10 @@ export async function loadWorkspaceShortcutsSettings(
   client: SupabaseClient,
   userId: string,
   accountId: string,
-): Promise<{ shortcuts: StoredShortcut[] }> {
+): Promise<{ shortcuts: StoredShortcut[]; mobileNavShortcuts: StoredShortcut[] }> {
   const { data } = await client
     .from('workspace_dashboard_shortcuts')
-    .select('shortcuts')
+    .select('shortcuts, mobile_nav_shortcuts')
     .eq('user_id', userId)
     .eq('account_id', accountId)
     .maybeSingle();
@@ -158,6 +205,9 @@ export async function loadWorkspaceShortcutsSettings(
   return {
     shortcuts: parseStoredShortcuts(
       (data as { shortcuts?: unknown } | null)?.shortcuts,
+    ),
+    mobileNavShortcuts: parseStoredShortcuts(
+      (data as { mobile_nav_shortcuts?: unknown } | null)?.mobile_nav_shortcuts,
     ),
   };
 }

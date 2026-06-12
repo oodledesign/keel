@@ -12,6 +12,7 @@ import { SidebarProvider } from '@kit/ui/shadcn-sidebar';
 
 import { AppLogo } from '~/components/app-logo';
 import { WorkspaceTopBar } from '~/components/workspace-shell/workspace-top-bar';
+import pathsConfig from '~/config/paths.config';
 import { APP_LOGO_SHELL_CLASSNAME } from '~/lib/app-logo-shell';
 import { personalAccountNavigationConfig } from '~/config/personal-account-navigation.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
@@ -27,6 +28,8 @@ import {
   buildPersonalHomeNavRoutes,
   parsePersonalAccountNavigationConfig,
 } from '~/config/personal-account-navigation.config';
+import { loadPersonalMobileNavShortcuts } from '~/lib/dashboard-shortcuts/load-shortcuts';
+import { resolveMobileBottomNavTabs } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
 import { loadWorkspaceSwitcherAccounts } from '~/home/_lib/server/workspace-switcher.loader';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 import {
@@ -60,8 +63,11 @@ async function SidebarLayout({ children }: React.PropsWithChildren) {
     ReturnType<typeof loadWorkspaceSwitcherAccounts>
   > = [];
   let state: Awaited<ReturnType<typeof getLayoutState>>;
+  let client: Awaited<
+    ReturnType<(typeof import('@kit/supabase/server-client'))['getSupabaseServerClient']>
+  > | null = null;
   try {
-    const client = (await import('@kit/supabase/server-client')).getSupabaseServerClient();
+    client = (await import('@kit/supabase/server-client')).getSupabaseServerClient();
     [workspace, sharedWorkspaces, state, switcherAccounts] = await Promise.all([
       loadUserWorkspace(),
       loadPersonalSidebarWorkspaces(),
@@ -87,6 +93,14 @@ async function SidebarLayout({ children }: React.PropsWithChildren) {
   const personalNavLinks = flattenPersonalNavLinks(
     parsePersonalAccountNavigationConfig(buildPersonalHomeNavRoutes()),
   );
+  const mobileNavShortcuts = client
+    ? await loadPersonalMobileNavShortcuts(client, user.id)
+    : [];
+  const bottomNavTabs = resolveMobileBottomNavTabs({
+    homePath: pathsConfig.app.home,
+    navLinks: personalNavLinks,
+    shortcuts: mobileNavShortcuts,
+  });
 
   return (
     <UserWorkspaceContextProvider value={workspace}>
@@ -107,6 +121,7 @@ async function SidebarLayout({ children }: React.PropsWithChildren) {
           <PersonalHomeMobileChrome
             workspace={workspace}
             navLinks={personalNavLinks}
+            bottomNavTabs={bottomNavTabs}
             switcherAccounts={switcherAccounts}
           >
             <div className="hidden lg:block">

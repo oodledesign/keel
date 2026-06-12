@@ -55,17 +55,21 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
                 {config.hero.subtitle}
               </p>
               {isPersonal ? (
-                <p className="inline-flex flex-wrap items-center gap-2 text-sm font-medium text-[#7ee8d8]">
-                  <span className="rounded-full border border-[#2A9D8F]/35 bg-[#2A9D8F]/10 px-3 py-1">
-                    Completely free
-                  </span>
-                  <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-violet-100/90">
-                    No credit card
-                  </span>
-                  <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-violet-100/90">
-                    No time limit
-                  </span>
-                </p>
+                <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-violet-100/90">
+                  {[
+                    'Completely free',
+                    'No credit card',
+                    'No time limit',
+                  ].map((label) => (
+                    <li key={label} className="inline-flex items-center gap-1.5">
+                      <Check
+                        className="h-4 w-4 shrink-0 text-[#2A9D8F]"
+                        aria-hidden
+                      />
+                      <span>{label}</span>
+                    </li>
+                  ))}
+                </ul>
               ) : null}
             </div>
 

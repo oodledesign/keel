@@ -333,7 +333,7 @@ export default createBillingSchema({
     {
       id: 'keel-addon-rankly',
       name: 'Rankly',
-      description: 'SEO rankings, PageSpeed, and keyword research',
+      description: 'SEO rankings, PageSpeed scheduling, AI insights, and keyword research',
       currency: KEEL_BILLING_CURRENCY,
       plans: [
         {
@@ -351,7 +351,14 @@ export default createBillingSchema({
           ],
         },
       ],
-      features: ['Rank tracking', 'PageSpeed scans', 'Site explorer & briefs'],
+      features: [
+        'Rank tracking & alerts',
+        'Scheduled PageSpeed Insights',
+        'Notifications on score drops',
+        'AI insights & audits',
+        'Site explorer & briefs',
+        'Backlinks (coming soon)',
+      ],
     },
     {
       id: 'keel-addon-feedflow',

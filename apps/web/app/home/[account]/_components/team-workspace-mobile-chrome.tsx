@@ -10,6 +10,7 @@ import {
   WorkspaceMobileMenu,
   type MobileNavLink,
 } from '~/components/workspace-shell/workspace-mobile-nav';
+import type { MobileBottomNavTab } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
 import { WorkspaceMobileTopActions } from '~/components/workspace-shell/workspace-top-bar-actions';
 import pathsConfig from '~/config/paths.config';
 import type { WorkspaceSpaceType } from '~/home/[account]/_lib/server/account-modules';
@@ -22,6 +23,7 @@ type TeamWorkspaceMobileChromeProps = {
   user: JWTUserData;
   accounts: WorkspaceSwitcherAccount[];
   navLinks: MobileNavLink[];
+  bottomNavTabs: MobileBottomNavTab[];
   spaceType: WorkspaceSpaceType;
   showNewMenu?: boolean;
   children: React.ReactNode;
@@ -33,6 +35,7 @@ export function TeamWorkspaceMobileChrome({
   user,
   accounts,
   navLinks,
+  bottomNavTabs,
   spaceType,
   showNewMenu,
   children,
@@ -80,9 +83,8 @@ export function TeamWorkspaceMobileChrome({
       />
 
       <WorkspaceMobileBottomNav
-        account={account}
         homePath={homePath}
-        navLinks={navLinks}
+        bottomNavTabs={bottomNavTabs}
         menuOpen={menuOpen}
         onMenuOpenChange={setMenuOpen}
       />

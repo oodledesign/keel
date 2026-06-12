@@ -1,11 +1,14 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   BarChart3,
+  Gauge,
   Globe,
+  Link2,
   Lock,
   MessageSquareText,
   PenLine,
   Share2,
+  Sparkles,
   Video,
 } from 'lucide-react';
 
@@ -133,13 +136,16 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
     productId: 'keel-addon-rankly',
     planId: 'rankly-monthly',
     seo: {
-      title: 'Keel Rankly — SEO Rank Tracking, Audits & Content Briefs',
+      title: 'Keel Rankly — SEO Rank Tracking, PageSpeed & AI Insights',
       description:
-        'Track keyword rankings, run PageSpeed scans, explore site structure, and generate content briefs — £36/mo per workspace inside Keel.',
+        'Track keyword rankings, schedule PageSpeed Insights scans with drop alerts, run AI SEO audits, and explore site structure — £36/mo per workspace inside Keel. Backlink analysis coming soon.',
       keywords: [
         'SEO rank tracker UK',
         'keyword rank tracking software',
-        'PageSpeed monitoring',
+        'PageSpeed Insights monitoring',
+        'PageSpeed schedule alerts',
+        'SEO AI insights',
+        'backlink analysis tool',
         'SEO content briefs',
         'site explorer SEO tool',
       ],
@@ -147,9 +153,9 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
     hero: {
       eyebrow: 'Keel app',
       title: 'Your SEO command centre with',
-      titleAccent: 'rankings, audits & briefs',
+      titleAccent: 'rankings, PageSpeed & AI insights',
       subtitle:
-        'Rankly brings rank tracking, PageSpeed, site explorer, clustering, and AI-assisted briefs into the same workspace where you run client work.',
+        'Rankly brings rank tracking, scheduled PageSpeed Insights, score-drop notifications, AI audits, and content briefs into the same workspace where you run client work.',
     },
     features: [
       {
@@ -157,6 +163,18 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
         title: 'Rank tracking',
         description:
           'Monitor keyword positions over time with project-level dashboards and alerts when rankings move.',
+      },
+      {
+        icon: Gauge,
+        title: 'PageSpeed Insights',
+        description:
+          'Run Google PageSpeed Insights on your key pages, schedule scans (daily, weekly, or monthly), and get notified when performance scores drop.',
+      },
+      {
+        icon: Sparkles,
+        title: 'AI insights',
+        description:
+          'AI-powered SEO audits surface scored recommendations, competitor context, and fix suggestions your team can act on.',
       },
       {
         icon: Globe,
@@ -169,6 +187,12 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
         title: 'Content briefs & clusters',
         description:
           'Turn keyword research into actionable briefs and topic clusters your team can execute on.',
+      },
+      {
+        icon: Link2,
+        title: 'Backlinks',
+        description:
+          'Backlink profile analysis is coming soon — track referring domains and authority alongside your other SEO metrics.',
       },
     ],
     steps: [
@@ -193,9 +217,19 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
           'Rankly is billed per Keel workspace (£36/mo). Team members on that workspace can access projects according to their role.',
       },
       {
-        question: 'Does Rankly replace Ahrefs or Semrush?',
+        question: 'Does Rankly include PageSpeed monitoring?',
         answer:
-          'Rankly focuses on rank tracking, on-site exploration, PageSpeed, and briefs tied to your client delivery — many teams use it alongside broader research tools.',
+          'Yes. Rankly runs Google PageSpeed Insights on your tracked pages. Set a refresh schedule (daily, weekly, or monthly) and get notified when scores drop so you can fix regressions quickly.',
+      },
+      {
+        question: 'What are AI insights in Rankly?',
+        answer:
+          'AI insights are SEO audit reports that score your site, highlight issues, and suggest fixes — with competitor and backlink context where available.',
+      },
+      {
+        question: 'When will backlink analysis be available?',
+        answer:
+          'Backlink analysis is on the Rankly roadmap and coming soon. Existing audits already surface backlink counts from available data sources today.',
       },
       {
         question: 'Can agencies use Rankly for multiple clients?',

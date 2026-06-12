@@ -19,6 +19,9 @@ import { TeamWorkspaceTopBarSlot } from '~/components/workspace-shell/workspace-
 import { TeamAccountLayoutSidebar } from './_components/team-account-layout-sidebar';
 import { TeamWorkspaceMobileChrome } from './_components/team-workspace-mobile-chrome';
 import { flattenTeamNavLinks } from './_lib/flatten-team-nav-links';
+import { loadWorkspaceMobileNavShortcuts } from '~/lib/dashboard-shortcuts/load-shortcuts';
+import { resolveMobileBottomNavTabs } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
+import pathsConfig from '~/config/paths.config';
 import { TeamAccountNavigationMenu } from './_components/team-account-navigation-menu';
 import { getTeamAccountAccess } from './_lib/role-access';
 import { loadTeamWorkspace } from './_lib/server/team-account-workspace.loader';
@@ -101,6 +104,19 @@ async function SidebarLayout({
     ),
   );
 
+  const mobileNavShortcuts = await loadWorkspaceMobileNavShortcuts(
+    client,
+    user.id,
+    data.account.id,
+    account,
+  );
+  const homePath = pathsConfig.app.accountHome.replace('[account]', account);
+  const bottomNavTabs = resolveMobileBottomNavTabs({
+    homePath,
+    navLinks: mobileNavLinks,
+    shortcuts: mobileNavShortcuts,
+  });
+
   const access = getTeamAccountAccess(accountAccess);
 
   return (
@@ -131,6 +147,7 @@ async function SidebarLayout({
             user={data.user}
             accounts={accounts}
             navLinks={mobileNavLinks}
+            bottomNavTabs={bottomNavTabs}
             spaceType={spaceTypeFromProfile(workspaceProfile)}
             showNewMenu={access.canUseQuickCreate}
           >
@@ -193,6 +210,19 @@ async function HeaderLayout({
     ),
   );
 
+  const mobileNavShortcuts = await loadWorkspaceMobileNavShortcuts(
+    client,
+    user.id,
+    data.account.id,
+    account,
+  );
+  const homePath = pathsConfig.app.accountHome.replace('[account]', account);
+  const bottomNavTabs = resolveMobileBottomNavTabs({
+    homePath,
+    navLinks: mobileNavLinks,
+    shortcuts: mobileNavShortcuts,
+  });
+
   const access = getTeamAccountAccess(accountAccess);
 
   return (
@@ -210,6 +240,7 @@ async function HeaderLayout({
           user={data.user}
           accounts={accounts}
           navLinks={mobileNavLinks}
+          bottomNavTabs={bottomNavTabs}
           spaceType={spaceTypeFromProfile(workspaceProfile)}
           showNewMenu={access.canUseQuickCreate}
         >

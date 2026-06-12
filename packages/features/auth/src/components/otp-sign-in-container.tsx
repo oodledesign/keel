@@ -115,6 +115,8 @@ export function OtpSignInContainer(props: OtpSignInContainerProps) {
                 <InputOTP
                   maxLength={6}
                   {...field}
+                  autoComplete="one-time-code"
+                  autoFocus
                   disabled={verifyMutation.isPending}
                 >
                   <InputOTPGroup>

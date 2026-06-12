@@ -23,6 +23,7 @@ export async function WorkspaceDashboardShortcutsSection({
       accountId={accountId}
       accountSlug={accountSlug}
       initialShortcuts={data.shortcuts}
+      initialMobileNavShortcuts={data.mobileNavShortcuts}
     />
   );
 }

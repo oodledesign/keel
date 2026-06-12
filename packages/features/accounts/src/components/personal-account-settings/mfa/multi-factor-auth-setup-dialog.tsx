@@ -193,7 +193,13 @@ function MultiFactorAuthSetupForm({
                       }
                     >
                       <FormControl>
-                        <InputOTP {...field} maxLength={6} minLength={6}>
+                        <InputOTP
+                          {...field}
+                          autoComplete="one-time-code"
+                          autoFocus
+                          maxLength={6}
+                          minLength={6}
+                        >
                           <InputOTPGroup>
                             <InputOTPSlot index={0} />
                             <InputOTPSlot index={1} />

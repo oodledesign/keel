@@ -25,16 +25,21 @@ import type {
 
 type Props = {
   initialShortcuts: StoredShortcut[];
+  initialMobileNavShortcuts: StoredShortcut[];
   initialDefaultLanding: DefaultLandingPreference;
   workspaceOptions: Array<{ slug: string; name: string }>;
 };
 
 export function PersonalDashboardShortcutsSettingsForm({
   initialShortcuts,
+  initialMobileNavShortcuts,
   initialDefaultLanding,
   workspaceOptions,
 }: Props) {
   const [shortcuts, setShortcuts] = useState(initialShortcuts);
+  const [mobileNavShortcuts, setMobileNavShortcuts] = useState(
+    initialMobileNavShortcuts,
+  );
   const [landingType, setLandingType] = useState(initialDefaultLanding.type);
   const [workspaceSlug, setWorkspaceSlug] = useState(
     initialDefaultLanding.workspaceSlug ?? '',
@@ -44,7 +49,7 @@ export function PersonalDashboardShortcutsSettingsForm({
   const saveAll = () => {
     startTransition(async () => {
       const [shortcutsRes, landingRes] = await Promise.all([
-        savePersonalDashboardShortcutsAction(shortcuts),
+        savePersonalDashboardShortcutsAction(shortcuts, mobileNavShortcuts),
         saveDefaultLandingAction({
           type: landingType,
           workspaceSlug: landingType === 'workspace' ? workspaceSlug : null,
@@ -138,6 +143,27 @@ export function PersonalDashboardShortcutsSettingsForm({
           scope="personal"
           shortcuts={shortcuts}
           onChange={setShortcuts}
+        />
+      </section>
+
+      <section className="space-y-4 border-t border-white/10 pt-8">
+        <div>
+          <h2 className="text-base font-semibold text-white">
+            Mobile bottom navigation
+          </h2>
+          <p className="mt-1 text-sm text-zinc-400">
+            Choose up to three icon shortcuts beside Home and Menu on your phone.
+            Leave empty for Home and Menu only.
+          </p>
+        </div>
+
+        <DashboardShortcutsEditor
+          scope="personal"
+          shortcuts={mobileNavShortcuts}
+          onChange={setMobileNavShortcuts}
+          maxShortcuts={3}
+          helperText="Pick up to 3 pages for the floating bar on mobile."
+          emptyText="No mobile shortcuts — only Home and Menu will show."
         />
       </section>
 

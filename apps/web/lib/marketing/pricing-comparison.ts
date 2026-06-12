@@ -138,6 +138,7 @@ function workComparison(): SegmentPricingComparison {
           },
           {
             feature: 'Rankly SEO',
+            hint: 'Rank tracking, scheduled PageSpeed, drop alerts, AI insights. Backlinks coming soon.',
             values: v('add-on', 'add-on', 'add-on', 'add-on'),
           },
           {

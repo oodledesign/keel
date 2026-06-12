@@ -315,7 +315,8 @@ export const KEEL_ADDON_CATALOG: Array<{
     key: 'addon_rankly',
     productId: 'keel-addon-rankly',
     name: 'Rankly',
-    description: 'SEO rankings, PageSpeed, site explorer, and content briefs.',
+    description:
+      'SEO rankings, scheduled PageSpeed Insights, AI audits, and content briefs. Backlinks coming soon.',
     fromPriceGbp: 36,
   },
   {

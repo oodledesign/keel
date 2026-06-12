@@ -11,6 +11,8 @@ export type StoredShortcut = z.infer<typeof StoredShortcutSchema>;
 
 export const StoredShortcutsArraySchema = z.array(StoredShortcutSchema).max(12);
 
+export const MobileNavShortcutsArraySchema = z.array(StoredShortcutSchema).max(3);
+
 export type ShortcutCatalogItem = {
   catalogId: string;
   label: string;

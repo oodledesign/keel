@@ -12,6 +12,7 @@ export async function PersonalDashboardShortcutsSection() {
   return (
     <PersonalDashboardShortcutsSettingsForm
       initialShortcuts={data.shortcuts}
+      initialMobileNavShortcuts={data.mobileNavShortcuts}
       initialDefaultLanding={data.defaultLanding}
       workspaceOptions={data.workspaceOptions}
     />

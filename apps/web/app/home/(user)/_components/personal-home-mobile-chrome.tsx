@@ -9,6 +9,7 @@ import {
   WorkspaceMobileMenu,
   type MobileNavLink,
 } from '~/components/workspace-shell/workspace-mobile-nav';
+import type { MobileBottomNavTab } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
 import { WorkspaceMobileTopActions } from '~/components/workspace-shell/workspace-top-bar-actions';
 import pathsConfig from '~/config/paths.config';
 import type { UserWorkspace } from '../_lib/server/load-user-workspace';
@@ -17,6 +18,7 @@ import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-swit
 type PersonalHomeMobileChromeProps = {
   workspace: UserWorkspace;
   navLinks: MobileNavLink[];
+  bottomNavTabs: MobileBottomNavTab[];
   switcherAccounts: WorkspaceSwitcherAccount[];
   children: React.ReactNode;
 };
@@ -24,6 +26,7 @@ type PersonalHomeMobileChromeProps = {
 export function PersonalHomeMobileChrome({
   workspace,
   navLinks,
+  bottomNavTabs,
   switcherAccounts,
   children,
 }: PersonalHomeMobileChromeProps) {
@@ -66,9 +69,8 @@ export function PersonalHomeMobileChrome({
       />
 
       <WorkspaceMobileBottomNav
-        account=""
         homePath={homePath}
-        navLinks={navLinks}
+        bottomNavTabs={bottomNavTabs}
         menuOpen={menuOpen}
         onMenuOpenChange={setMenuOpen}
       />

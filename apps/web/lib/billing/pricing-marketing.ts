@@ -142,7 +142,14 @@ export const MARKETING_ADDON_PLANS: MarketingAddonPlan[] = [
     name: 'Rankly',
     description: 'SEO suite per workspace.',
     monthlyPriceGbp: 36,
-    features: ['Rank tracking', 'PageSpeed scans', 'Site explorer & briefs'],
+    features: [
+      'Rank tracking & alerts',
+      'Scheduled PageSpeed Insights',
+      'Notifications on score drops',
+      'AI insights & audits',
+      'Site explorer & briefs',
+      'Backlinks (coming soon)',
+    ],
   },
   {
     productId: 'keel-addon-feedflow',

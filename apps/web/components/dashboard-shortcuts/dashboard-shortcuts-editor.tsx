@@ -24,6 +24,8 @@ type Props = {
   shortcuts: StoredShortcut[];
   onChange: (shortcuts: StoredShortcut[]) => void;
   maxShortcuts?: number;
+  helperText?: string;
+  emptyText?: string;
 };
 
 export function DashboardShortcutsEditor({
@@ -32,6 +34,8 @@ export function DashboardShortcutsEditor({
   shortcuts,
   onChange,
   maxShortcuts = 12,
+  helperText,
+  emptyText = 'No shortcuts configured yet.',
 }: Props) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -96,7 +100,7 @@ export function DashboardShortcutsEditor({
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-zinc-400">
-          Pin up to {maxShortcuts} quick links on your dashboard.
+          {helperText ?? `Pin up to ${maxShortcuts} quick links on your dashboard.`}
         </p>
         <Button
           type="button"
@@ -113,7 +117,7 @@ export function DashboardShortcutsEditor({
 
       {shortcuts.length === 0 ? (
         <div className="rounded-xl border border-dashed border-white/10 px-4 py-8 text-center text-sm text-zinc-500">
-          No shortcuts configured yet.
+          {emptyText}
         </div>
       ) : (
         <ul className="space-y-2">

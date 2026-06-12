@@ -9,6 +9,7 @@ import { loadUserWorkspaceAccounts } from '~/home/_lib/server/workspace-scope';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import {
+  MobileNavShortcutsArraySchema,
   StoredShortcutsArraySchema,
   type DefaultLandingType,
   type StoredShortcut,
@@ -26,9 +27,13 @@ function revalidateWorkspaceDashboard(slug: string) {
 
 export async function savePersonalDashboardShortcutsAction(
   shortcuts: StoredShortcut[],
+  mobileNavShortcuts?: StoredShortcut[],
 ) {
   try {
     const parsed = StoredShortcutsArraySchema.parse(shortcuts);
+    const parsedMobile = mobileNavShortcuts
+      ? MobileNavShortcutsArraySchema.parse(mobileNavShortcuts)
+      : undefined;
     const client = getSupabaseServerClient();
     const user = await requireUserInServerComponent();
 
@@ -36,6 +41,9 @@ export async function savePersonalDashboardShortcutsAction(
       {
         user_id: user.id,
         personal_dashboard_shortcuts: parsed,
+        ...(parsedMobile !== undefined
+          ? { personal_mobile_nav_shortcuts: parsedMobile }
+          : {}),
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'user_id' },
@@ -107,9 +115,13 @@ export async function saveWorkspaceDashboardShortcutsAction(input: {
   accountId: string;
   accountSlug: string;
   shortcuts: StoredShortcut[];
+  mobileNavShortcuts?: StoredShortcut[];
 }) {
   try {
     const parsed = StoredShortcutsArraySchema.parse(input.shortcuts);
+    const parsedMobile = input.mobileNavShortcuts
+      ? MobileNavShortcutsArraySchema.parse(input.mobileNavShortcuts)
+      : undefined;
     const client = getSupabaseServerClient();
     const user = await requireUserInServerComponent();
 
@@ -118,6 +130,9 @@ export async function saveWorkspaceDashboardShortcutsAction(input: {
         user_id: user.id,
         account_id: input.accountId,
         shortcuts: parsed,
+        ...(parsedMobile !== undefined
+          ? { mobile_nav_shortcuts: parsedMobile }
+          : {}),
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'user_id,account_id' },
