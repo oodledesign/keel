@@ -410,6 +410,10 @@ type Props = {
   workspaceAccountId?: string;
   /** Required for workspace AI extract link in Add Task dialog. */
   workspaceAccountSlug?: string;
+  /** Personal: include workspace-linked tasks (from user settings). */
+  includeWorkspaceTasks?: boolean;
+  /** Personal: `all`, `personal`, or a workspace slug (from URL or settings). */
+  initialWorkspaceFilter?: string;
 };
 
 export function TasksPageClient({
@@ -417,12 +421,21 @@ export function TasksPageClient({
   variant = 'personal',
   workspaceAccountId,
   workspaceAccountSlug,
+  includeWorkspaceTasks = true,
+  initialWorkspaceFilter = 'all',
 }: Props) {
   const router = useRouter();
   const [tasks, setTasks] = useState<TasksPageTask[]>(initialTasks);
   const [view, setView] = useState<TaskViewMode>('list');
-  const [filter, setFilter] = useState<'all' | 'work' | 'life'>(
-    variant === 'workspace' ? 'work' : 'all',
+  const [filter, setFilter] = useState<'all' | 'work' | 'life'>(() =>
+    variant === 'workspace'
+      ? 'work'
+      : includeWorkspaceTasks
+        ? 'all'
+        : 'life',
+  );
+  const [workspaceFilter, setWorkspaceFilter] = useState<string>(
+    initialWorkspaceFilter,
   );
   const [statusFilter, setStatusFilter] = useState<'active' | 'completed'>(
     'active',
@@ -475,6 +488,26 @@ export function TasksPageClient({
     return [...set.entries()].sort((a, b) => a[1].localeCompare(b[1]));
   }, [tasks]);
 
+  const workspaceFilterOptions = useMemo(() => {
+    const map = new Map<
+      string,
+      { slug: string | null; name: string; color: string }
+    >();
+    for (const t of tasks) {
+      if (t.workspaceName) {
+        const key = t.workspaceSlug ?? `name:${t.workspaceName}`;
+        if (!map.has(key)) {
+          map.set(key, {
+            slug: t.workspaceSlug,
+            name: t.workspaceName,
+            color: t.workspaceColor ?? '#64748B',
+          });
+        }
+      }
+    }
+    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [tasks]);
+
   const matchesBaseFilters = useCallback(
     (t: TasksPageTask) => {
       if (
@@ -483,6 +516,13 @@ export function TasksPageClient({
         t.context !== filter
       ) {
         return false;
+      }
+      if (variant === 'personal' && workspaceFilter !== 'all') {
+        if (workspaceFilter === 'personal') {
+          if (t.context !== 'life') return false;
+        } else if (t.workspaceSlug !== workspaceFilter) {
+          return false;
+        }
       }
       if (clientFilter !== 'all') {
         if (clientFilter === '__none__') {
@@ -505,7 +545,7 @@ export function TasksPageClient({
       }
       return true;
     },
-    [variant, filter, clientFilter, search, dueDateFilter, todayKey],
+    [variant, filter, workspaceFilter, clientFilter, search, dueDateFilter, todayKey],
   );
 
   const filteredForList = useMemo(() => {
@@ -677,7 +717,9 @@ export function TasksPageClient({
     const base =
       variant === 'workspace'
         ? `${activeCount} active tasks linked to this workspace`
-        : `${activeCount} active tasks across work and life`;
+        : includeWorkspaceTasks
+          ? `${activeCount} active tasks across personal life and your workspaces`
+          : `${activeCount} active personal tasks`;
     if (overdueCount > 0) {
       return `${base} · ${overdueCount} overdue`;
     }
@@ -716,6 +758,36 @@ export function TasksPageClient({
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {variant === 'personal' &&
+          includeWorkspaceTasks &&
+          workspaceFilterOptions.length > 0 ? (
+            <Select
+              value={workspaceFilter}
+              onValueChange={(value) => {
+                setWorkspaceFilter(value);
+                if (value === 'personal') {
+                  setFilter('life');
+                } else if (value !== 'all') {
+                  setFilter('work');
+                }
+              }}
+            >
+              <SelectTrigger className="h-9 w-[200px] border-white/8 bg-[var(--workspace-shell-panel)] text-xs text-white">
+                <SelectValue placeholder="All workspaces" />
+              </SelectTrigger>
+              <SelectContent className="border-white/10 bg-[#1A2535] text-white">
+                <SelectItem value="all">All workspaces</SelectItem>
+                <SelectItem value="personal">Personal only</SelectItem>
+                {workspaceFilterOptions.map((ws) =>
+                  ws.slug ? (
+                    <SelectItem key={ws.slug} value={ws.slug}>
+                      {ws.name}
+                    </SelectItem>
+                  ) : null,
+                )}
+              </SelectContent>
+            </Select>
+          ) : null}
           {clientOptions.length > 0 && (
             <Select value={clientFilter} onValueChange={setClientFilter}>
               <SelectTrigger className="h-9 w-[180px] border-white/8 bg-[var(--workspace-shell-panel)] text-xs text-white">

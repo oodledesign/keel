@@ -12,6 +12,7 @@ const PathsSchema = z.object({
   app: z.object({
     home: z.string().min(1),
     personalPlanner: z.string().min(1),
+    personalPlannerDay: z.string().min(1),
     personalPeople: z.string().min(1),
     personalPeopleDetail: z.string().min(1),
     personalAccountSettings: z.string().min(1),
@@ -44,6 +45,8 @@ const PathsSchema = z.object({
     accountSchedule: z.string().min(1),
     accountTasks: z.string().min(1),
     accountTasksExtract: z.string().min(1),
+    accountPlanner: z.string().min(1),
+    accountPlannerDay: z.string().min(1),
     accountPipeline: z.string().min(1),
     accountJobDetail: z.string().min(1),
     accountJobEdit: z.string().min(1),
@@ -125,6 +128,7 @@ const pathsConfig = PathsSchema.parse({
   app: {
     home: '/app',
     personalPlanner: '/app/planner',
+    personalPlannerDay: '/app/planner/day',
     personalPeople: '/app/people',
     personalPeopleDetail: '/app/people/[personId]',
     personalAccountSettings: '/app/settings',
@@ -157,6 +161,8 @@ const pathsConfig = PathsSchema.parse({
     accountSchedule: `/app/work/[account]/schedule`,
     accountTasks: `/app/work/[account]/tasks`,
     accountTasksExtract: `/app/work/[account]/tasks/extract`,
+    accountPlanner: `/app/work/[account]/planner`,
+    accountPlannerDay: `/app/work/[account]/planner/day`,
     accountPipeline: `/app/work/[account]/pipeline`,
     accountJobDetail: `/app/work/[account]/jobs/[id]`,
     accountJobEdit: `/app/work/[account]/jobs/[id]/edit`,

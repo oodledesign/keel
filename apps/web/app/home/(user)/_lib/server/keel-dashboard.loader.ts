@@ -26,6 +26,7 @@ import {
   createPeopleService,
 } from '../../people/_lib/server/people.service';
 import { loadPersonalDashboardShortcuts } from '~/lib/dashboard-shortcuts/load-shortcuts';
+import { loadPersonalIncludeWorkspaceTasks } from '~/lib/personal-preferences/load-unified-tasks-preference';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -77,6 +78,7 @@ export type KeelDashboardData = {
   dateLabel: string;
   workspaces: PersonalNavWorkspace[];
   dashboardShortcuts: import('~/lib/dashboard-shortcuts/types').ResolvedShortcut[];
+  includeWorkspaceTasks: boolean;
   todaysFocus: PersonalDashboardTask[];
   upcoming: PersonalDashboardTask[];
   myDayEvents: PersonalCalendarEvent[];
@@ -601,19 +603,30 @@ export const loadKeelDashboard = cache(async (): Promise<KeelDashboardData> => {
 
   let dashboardShortcuts: Awaited<ReturnType<typeof loadPersonalDashboardShortcuts>> =
     [];
+  let includeWorkspaceTasks = true;
   try {
-    dashboardShortcuts = await loadPersonalDashboardShortcuts(client, userId);
+    [dashboardShortcuts, includeWorkspaceTasks] = await Promise.all([
+      loadPersonalDashboardShortcuts(client, userId),
+      loadPersonalIncludeWorkspaceTasks(client, userId),
+    ]);
   } catch {
     dashboardShortcuts = [];
+    includeWorkspaceTasks = true;
   }
+
+  const filterPersonalOnly = (tasks: PersonalDashboardTask[]) =>
+    includeWorkspaceTasks
+      ? tasks
+      : tasks.filter((t) => t.workspaceSlug === null);
 
   return {
     userName,
     dateLabel: formatDateLabel(),
     workspaces,
     dashboardShortcuts,
-    todaysFocus,
-    upcoming,
+    includeWorkspaceTasks,
+    todaysFocus: filterPersonalOnly(todaysFocus),
+    upcoming: filterPersonalOnly(upcoming),
     myDayEvents,
     peopleUpcoming,
     workspaceOverview,

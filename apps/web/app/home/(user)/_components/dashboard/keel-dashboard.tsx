@@ -20,6 +20,7 @@ import type {
 } from '../../_lib/server/keel-dashboard.loader';
 
 import { PersonalDashboardTaskRow } from './personal-dashboard-task-row';
+import { ConnectedWorkspacesBar } from './connected-workspaces-bar';
 
 const panelClass =
   'rounded-2xl border border-white/[0.08] bg-[var(--workspace-shell-panel)]';
@@ -51,11 +52,23 @@ export function KeelDashboard({ data }: Props) {
           </h1>
           <p className="mt-1 text-sm font-normal text-white/60">{data.dateLabel}</p>
         </div>
+        <ConnectedWorkspacesBar
+          cards={data.workspaceOverview}
+          includeWorkspaceTasks={data.includeWorkspaceTasks}
+          settingsHref={pathsConfig.app.personalAccountSettings}
+        />
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <div className="flex flex-col gap-6">
-          <DashboardSection title="Today's Focus">
+          <DashboardSection
+            title="Today's Focus"
+            subtitle={
+              data.includeWorkspaceTasks
+                ? 'Due today across personal life and your workspaces'
+                : 'Due today in your personal life areas'
+            }
+          >
             {data.todaysFocus.length > 0 ? (
               <div className="space-y-2">
                 {data.todaysFocus.map((task) => (
@@ -67,7 +80,14 @@ export function KeelDashboard({ data }: Props) {
             )}
           </DashboardSection>
 
-          <DashboardSection title="Upcoming">
+          <DashboardSection
+            title="Upcoming"
+            subtitle={
+              data.includeWorkspaceTasks
+                ? 'Next up everywhere you work in Keel'
+                : 'Next up in your personal areas'
+            }
+          >
             {data.upcoming.length > 0 ? (
               <div className="space-y-2">
                 {data.upcoming.map((task) => (
@@ -128,12 +148,19 @@ export function KeelDashboard({ data }: Props) {
   );
 }
 
-function DashboardSection(props: React.PropsWithChildren<{ title: string }>) {
+function DashboardSection(
+  props: React.PropsWithChildren<{ title: string; subtitle?: string }>,
+) {
   return (
     <section>
-      <h2 className="mb-3 text-base font-semibold tracking-tight text-white">
-        {props.title}
-      </h2>
+      <div className="mb-3">
+        <h2 className="text-base font-semibold tracking-tight text-white">
+          {props.title}
+        </h2>
+        {props.subtitle ? (
+          <p className="mt-0.5 text-xs text-white/45">{props.subtitle}</p>
+        ) : null}
+      </div>
       {props.children}
     </section>
   );

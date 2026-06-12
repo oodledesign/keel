@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 
+import Link from 'next/link';
+
 import { ChevronDown, ChevronRight, Flag, FolderKanban } from 'lucide-react';
 
 import { Badge } from '@kit/ui/badge';
@@ -17,12 +19,14 @@ import type {
   PlannerProjectNode,
   PlannerTask,
   PlannerWorkspaceNode,
-} from '../_lib/server/planner.loader';
+} from '~/lib/planner/types';
 
 type Props = {
   taskTree: PlannerWorkspaceNode[];
   selectedTaskIds: Set<string>;
   onSelectedTaskIdsChange: (ids: Set<string>) => void;
+  includeWorkspaceTasks: boolean;
+  settingsHref: string;
 };
 
 const priorityClass: Record<PlannerTask['priority'], string> = {
@@ -36,6 +40,8 @@ export function TaskSelectorTree({
   taskTree,
   selectedTaskIds,
   onSelectedTaskIdsChange,
+  includeWorkspaceTasks,
+  settingsHref,
 }: Props) {
   function toggle(ids: string[], checked: boolean) {
     const next = new Set(selectedTaskIds);
@@ -59,6 +65,14 @@ export function TaskSelectorTree({
           </h2>
           <p className="mt-1 text-xs text-white/45">
             {selectedCount} of {allCount} open tasks selected.
+            {!includeWorkspaceTasks ? (
+              <>
+                {' '}
+                <Link href={settingsHref} className="text-[#5eead4] hover:underline">
+                  Workspace tasks off
+                </Link>
+              </>
+            ) : null}
           </p>
         </div>
         {allCount > 0 ? (

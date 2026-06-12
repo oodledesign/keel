@@ -27,6 +27,7 @@ type Props = {
   initialShortcuts: StoredShortcut[];
   initialMobileNavShortcuts: StoredShortcut[];
   initialDefaultLanding: DefaultLandingPreference;
+  initialIncludeWorkspaceTasks: boolean;
   workspaceOptions: Array<{ slug: string; name: string }>;
 };
 
@@ -34,6 +35,7 @@ export function PersonalDashboardShortcutsSettingsForm({
   initialShortcuts,
   initialMobileNavShortcuts,
   initialDefaultLanding,
+  initialIncludeWorkspaceTasks,
   workspaceOptions,
 }: Props) {
   const [shortcuts, setShortcuts] = useState(initialShortcuts);
@@ -44,12 +46,19 @@ export function PersonalDashboardShortcutsSettingsForm({
   const [workspaceSlug, setWorkspaceSlug] = useState(
     initialDefaultLanding.workspaceSlug ?? '',
   );
+  const [includeWorkspaceTasks, setIncludeWorkspaceTasks] = useState(
+    initialIncludeWorkspaceTasks,
+  );
   const [pending, startTransition] = useTransition();
 
   const saveAll = () => {
     startTransition(async () => {
       const [shortcutsRes, landingRes] = await Promise.all([
-        savePersonalDashboardShortcutsAction(shortcuts, mobileNavShortcuts),
+        savePersonalDashboardShortcutsAction(
+          shortcuts,
+          mobileNavShortcuts,
+          includeWorkspaceTasks,
+        ),
         saveDefaultLandingAction({
           type: landingType,
           workspaceSlug: landingType === 'workspace' ? workspaceSlug : null,
@@ -126,6 +135,37 @@ export function PersonalDashboardShortcutsSettingsForm({
             </div>
           ) : null}
         </div>
+      </section>
+
+      <section className="space-y-4 border-t border-white/10 pt-8">
+        <div>
+          <h2 className="text-base font-semibold text-white">
+            Unified task view
+          </h2>
+          <p className="mt-1 text-sm text-zinc-400">
+            Your personal home can show tasks from every workspace in one list —
+            or keep work tasks inside each workspace only.
+          </p>
+        </div>
+
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-[var(--workspace-shell-panel)] px-4 py-3">
+          <input
+            type="checkbox"
+            checked={includeWorkspaceTasks}
+            onChange={(e) => setIncludeWorkspaceTasks(e.target.checked)}
+            className="mt-1 h-4 w-4 rounded border-white/20 bg-transparent accent-[var(--keel-teal)]"
+          />
+          <span className="min-w-0">
+            <span className="block text-sm font-medium text-white">
+              Show tasks from all workspaces on personal home
+            </span>
+            <span className="mt-0.5 block text-xs text-zinc-400">
+              When on, Today&apos;s Focus, Upcoming, and the Tasks page include
+              work linked to your team workspaces. When off, only personal life
+              areas appear there — workspace tasks stay in each workspace.
+            </span>
+          </span>
+        </label>
       </section>
 
       <section className="space-y-4 border-t border-white/10 pt-8">

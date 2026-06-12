@@ -128,11 +128,11 @@ function relatedExcept(current: SegmentSlug) {
   > = {
     personal: {
       label: 'Personal & family',
-      description: 'Free Life CRM for tasks, planner, and shared family routines.',
+      description: 'Free hub — tasks and planner connected across every workspace.',
     },
     work: {
       label: 'Business workspace',
-      description: 'CRM, jobs, invoices, and client portal for service businesses.',
+      description: 'Full CRM that plugs into your Life CRM — not a separate silo.',
     },
     property: {
       label: 'Property management',
@@ -155,37 +155,51 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
   personal: {
     slug: 'personal',
     seo: {
-      title: 'Keel Personal — Free Life CRM for Tasks, Planner & Family',
+      title: 'Keel Personal — Free Life CRM Hub for Every Workspace',
       description:
-        'Organise your personal life with Keel: free tasks, planner, pipeline, and a family workspace with shared calendar, meal planning, shopping lists, and notes. No credit card required.',
+        'Free personal home that connects tasks, planner, and shortcuts across business, family, property, and community workspaces. One Life CRM — not separate apps. No credit card required.',
       keywords: [
+        'connected CRM',
+        'Life CRM',
         'personal CRM',
         'life organizer app',
+        'unified task manager',
+        'work and personal CRM',
         'family task manager',
-        'shared family calendar UK',
         'free planner app',
         'household organisation software',
-        'Life CRM',
       ],
     },
     hero: {
-      eyebrow: 'Personal & family',
-      title: 'Your free Life CRM for',
-      titleAccent: 'tasks, plans, and family life',
+      eyebrow: 'Personal & family — your free hub',
+      title: 'One free home for',
+      titleAccent: 'life, work, and every workspace',
       subtitle:
-        'Keel gives you one calm place for your to-dos, goals, appointments, and household coordination — without paying for another subscription.',
+        'Keel is not a siloed CRM. Your personal home unifies tasks, today’s focus, and AI planning across business, family, and community spaces — while personal and family stay completely free.',
     },
     stats: [
       { value: '£0', label: 'Forever — personal & family' },
-      { value: '100%', label: 'Free — no hidden fees' },
+      { value: '1 hub', label: 'All workspaces connected' },
       { value: 'No credit card', label: 'Get started in minutes' },
     ],
     features: [
       {
         icon: ClipboardList,
-        title: 'Personal tasks & planner',
+        title: 'Tasks across every workspace',
         description:
-          'Capture what matters today, this week, and later. Keel keeps priorities visible so nothing important slips through.',
+          'See work, family, and personal tasks in one list from your free home — filter by workspace when you want focus, or keep the full picture.',
+      },
+      {
+        icon: Calendar,
+        title: 'Planner & today view',
+        description:
+          'AI day planning pulls open tasks and calendar from all your spaces. Today view shows your schedule and due items without clutter.',
+      },
+      {
+        icon: Home,
+        title: 'Connected workspace overview',
+        description:
+          'Glance at open tasks and next events per workspace, jump in with one click, and pin any page to your dashboard shortcuts.',
       },
       {
         icon: Users,
@@ -194,28 +208,10 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
           'Remember context for friends, family, and collaborators — follow-ups, birthdays, and notes in one timeline.',
       },
       {
-        icon: Calendar,
+        icon: ShoppingCart,
         title: 'Family calendar & routines',
         description:
-          'Share schedules, school events, and appointments in a family workspace everyone can see.',
-      },
-      {
-        icon: ShoppingCart,
-        title: 'Meal plan & shopping lists',
-        description:
-          'Plan meals and sync shopping lists so the whole household stays aligned on food and errands.',
-      },
-      {
-        icon: FileText,
-        title: 'Shared notes & files',
-        description:
-          'Store recipes, school letters, and household documents where the family can find them.',
-      },
-      {
-        icon: Home,
-        title: 'Household dashboard',
-        description:
-          'See what needs attention across personal and family spaces from a single home screen.',
+          'Share schedules, school events, meal plans, and shopping lists in a family workspace — still visible from your personal home.',
       },
     ],
     steps: [
@@ -226,7 +222,7 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
       {
         title: 'Set up your spaces',
         description:
-          'Use your personal command centre and add a family workspace when you are ready.',
+          'Start with your free personal home, then plug in family, business, or community workspaces — all stay connected.',
       },
       {
         title: 'Invite family members',
@@ -249,9 +245,14 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
           'Yes. Invite family members to your family workspace. They can view shared calendars, tasks, meal plans, and shopping lists without needing their own subscription.',
       },
       {
-        question: 'How is Keel different from a generic to-do app?',
+        question: 'How is Keel different from a generic to-do app or CRM?',
         answer:
-          'Keel is a Life CRM — it connects people, plans, and priorities together. You get tasks and a planner plus relationship context, shared family tools, and optional work or community workspaces in the same account.',
+          'Most CRMs only handle work — Keel is a Life CRM. Your free personal home connects tasks, planner, shortcuts, and today’s focus across every workspace. Business CRM features live inside the same account, not a separate silo.',
+      },
+      {
+        question: 'Can I see work tasks from my personal home?',
+        answer:
+          'Yes. By default your personal home and task list span every workspace you belong to. You can turn workspace tasks off in settings when you want personal-only focus.',
       },
       {
         question: 'Can I use Keel for freelance work on the free plan?',
@@ -266,32 +267,39 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
   work: {
     slug: 'work',
     seo: {
-      title: 'Keel for Business — CRM, Jobs, Invoices & Client Portal',
+      title: 'Keel for Business — Connected CRM Inside Your Life CRM',
       description:
-        'Run your service business on Keel: clients, pipeline, jobs, invoices, proposals, contracts, messaging, SOPs, and client portal. Free Business Lite or from £29/mo with a 14-day trial.',
+        'Business CRM, jobs, invoices, and client portal that connects to your personal Keel home — one login, unified tasks and planning. Not another siloed CRM. Free Business Lite or from £29/mo.',
       keywords: [
+        'connected business CRM',
+        'Life CRM for business',
         'small business CRM UK',
+        'work and personal unified',
         'trade business software',
-        'invoicing and job management',
-        'client portal for small business',
-        'service business workspace',
         'solopreneur CRM',
         'agency project management',
+        'CRM not siloed',
       ],
     },
     hero: {
-      eyebrow: 'Business workspace',
-      title: 'Run clients, jobs, and cash flow from',
-      titleAccent: 'one business workspace',
+      eyebrow: 'Business workspace — connected, not siloed',
+      title: 'A full business CRM that stays',
+      titleAccent: 'connected to your life',
       subtitle:
-        'Built for solopreneurs, agencies, and service teams who want CRM, delivery, and billing without juggling five different apps.',
+        'Run clients, jobs, and billing in a proper workspace — while your personal home still sees today’s tasks, planner, and shortcuts across work and life. One account, not five apps.',
     },
     stats: [
       { value: '£0', label: 'Business Lite — apps & team' },
-      { value: '14 days', label: 'Free trial on paid plans' },
       { value: '1 login', label: 'Personal + business together' },
+      { value: 'Connected', label: 'Tasks & planner span workspaces' },
     ],
     features: [
+      {
+        icon: Home,
+        title: 'CRM inside your Life CRM',
+        description:
+          'Unlike HubSpot or Pipedrive, Keel business workspaces plug into your free personal home — unified tasks, today view, and AI planner across work and life.',
+      },
       {
         icon: Users,
         title: 'Clients & pipeline',
@@ -352,6 +360,16 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
     pricingNote:
       'Add-ons such as Rankly (SEO), Feedflow (reviews), Videos, and Signatures (£9/mo) attach per workspace after signup. Annual billing saves about two months.',
     faqs: [
+      {
+        question: 'How is Keel different from other CRMs?',
+        answer:
+          'Traditional CRMs silo work away from the rest of your life. Keel is a Life CRM — your business workspace connects to a free personal home where tasks, planner, shortcuts, and today’s focus span every workspace. One login, one mental model.',
+      },
+      {
+        question: 'Can I plan my day across business and personal tasks?',
+        answer:
+          'Yes. Keel Planner and Today view pull from all workspaces you enable. Solopreneurs see client work and personal errands in one AI-generated schedule — then push blocks to Google Calendar.',
+      },
       {
         question: 'What is the difference between Business Lite and Solo?',
         answer:

@@ -1,6 +1,10 @@
 'use client';
 
+import Link from 'next/link';
+
 import { cn } from '@kit/ui/utils';
+
+import pathsConfig from '~/config/paths.config';
 
 import type { PersonalDashboardTask } from '../../_lib/server/keel-dashboard.loader';
 
@@ -35,7 +39,11 @@ export function PersonalDashboardTaskRow(props: {
           {task.title}
         </p>
         <div className="mt-1 flex flex-wrap items-center gap-2">
-          <WorkspaceChip name={task.workspaceName} color={task.workspaceColor} />
+          <WorkspaceChip
+            name={task.workspaceName}
+            color={task.workspaceColor}
+            slug={task.workspaceSlug}
+          />
           {task.dueLabel ? (
             <span
               className={cn(
@@ -60,16 +68,28 @@ export function PersonalDashboardTaskRow(props: {
   );
 }
 
-function WorkspaceChip(props: { name: string; color: string }) {
-  return (
-    <span
-      className="inline-flex max-w-[140px] items-center gap-1.5 rounded-md border border-white/10 px-1.5 py-0.5 text-[11px] font-medium text-white/90"
-    >
+function WorkspaceChip(props: { name: string; color: string; slug: string | null }) {
+  const inner = (
+    <>
       <span
         className="h-2 w-2 shrink-0 rounded-full"
         style={{ backgroundColor: props.color }}
       />
       <span className="truncate">{props.name}</span>
-    </span>
+    </>
   );
+
+  const className =
+    'inline-flex max-w-[140px] items-center gap-1.5 rounded-md border border-white/10 px-1.5 py-0.5 text-[11px] font-medium text-white/90';
+
+  if (props.slug) {
+    const href = pathsConfig.app.accountHome.replace('[account]', props.slug);
+    return (
+      <Link href={href} className={cn(className, 'transition-colors hover:bg-white/[0.04]')}>
+        {inner}
+      </Link>
+    );
+  }
+
+  return <span className={className}>{inner}</span>;
 }

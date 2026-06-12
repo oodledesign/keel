@@ -14,6 +14,7 @@ import { getSegmentPricingComparison } from '~/lib/marketing/pricing-comparison'
 import type { SegmentLandingConfig } from '~/lib/marketing/segment-landing-pages';
 
 import { PricingComparisonTable } from './pricing-comparison-table';
+import { InterconnectedWorkspacesSection } from './interconnected-workspaces-section';
 
 type SegmentLandingPageProps = {
   config: SegmentLandingConfig;
@@ -138,6 +139,16 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
         </div>
       </section>
 
+      <InterconnectedWorkspacesSection
+        variant={
+          config.slug === 'personal'
+            ? 'personal'
+            : config.slug === 'work'
+              ? 'work'
+              : 'default'
+        }
+      />
+
       {/* Features */}
       <section
         id="features"
@@ -149,7 +160,11 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
             Everything you need for {config.hero.eyebrow.toLowerCase()}
           </h2>
           <p className="mt-3 text-violet-100/80">
-            Keel modules work together — clients, jobs, documents, and conversations stay linked so you spend less time searching and more time delivering.
+            {config.slug === 'personal'
+              ? 'Modules connect through your personal home — tasks, planner, and shortcuts span every workspace you add.'
+              : config.slug === 'work'
+                ? 'Your business CRM runs inside Keel’s connected Life CRM — clients, jobs, and invoices link back to one account, not a separate silo.'
+                : 'Keel modules work together — and every workspace stays connected to your personal home for tasks, planning, and shortcuts.'}
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -339,8 +354,12 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
       {/* Related + CTA */}
       <section className="relative mx-auto w-full max-w-7xl px-6 py-20">
         <h2 className="font-heading text-2xl font-semibold text-white">
-          Other Keel workspaces
+          More Keel workspaces — all connected
         </h2>
+        <p className="mt-2 max-w-2xl text-sm text-violet-100/70">
+          Add business, property, or community spaces anytime. Your personal home
+          keeps tasks, planner, and shortcuts unified across every workspace.
+        </p>
         <div className="mt-6 grid gap-4 md:grid-cols-3">
           {config.relatedSegments.map((segment) => {
             const SegmentIcon = segment.icon;

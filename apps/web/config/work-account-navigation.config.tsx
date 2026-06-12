@@ -18,6 +18,7 @@ import {
   PenLine,
   Settings,
   Share2,
+  Sparkles,
   StickyNote,
   Users,
   Video,
@@ -168,6 +169,15 @@ export function buildWorkSpaceNavChildren(
             Icon: <CheckSquare className={iconClasses} />,
           }
         : null,
+    planner: () =>
+      access.canViewDashboard && isWorkNavModuleEnabled(ms, 'tasks')
+        ? {
+            label: 'Planner',
+            path: createPath(pathsConfig.app.accountPlannerDay, account),
+            Icon: <Sparkles className={iconClasses} />,
+            description: 'Today view and AI day planning for this workspace.',
+          }
+        : null,
     schedule: () =>
       access.canViewSchedule && isWorkNavModuleEnabled(ms, 'schedule')
         ? {
@@ -306,6 +316,13 @@ export function buildWorkSpaceNavChildren(
     if (!factory) continue;
     const item = factory();
     if (item) items.push(item);
+    if (key === 'tasks') {
+      const plannerFactory = registry.planner;
+      if (plannerFactory) {
+        const planner = plannerFactory();
+        if (planner) items.push(planner);
+      }
+    }
   }
 
   return items;

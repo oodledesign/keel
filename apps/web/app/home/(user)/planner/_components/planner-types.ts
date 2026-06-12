@@ -1,7 +1,7 @@
 import type {
   PlannerPageData,
   PlannerTask,
-} from '../_lib/server/planner.loader';
+} from '~/lib/planner/types';
 import type { PlannerCalendarEvent } from '~/lib/integrations/google-calendar/types';
 
 export type PlanningMode = 'day' | 'week';

@@ -14,6 +14,7 @@ export async function PersonalDashboardShortcutsSection() {
       initialShortcuts={data.shortcuts}
       initialMobileNavShortcuts={data.mobileNavShortcuts}
       initialDefaultLanding={data.defaultLanding}
+      initialIncludeWorkspaceTasks={data.includeWorkspaceTasks}
       workspaceOptions={data.workspaceOptions}
     />
   );

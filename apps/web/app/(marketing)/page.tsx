@@ -7,10 +7,12 @@ import { Button } from '@kit/ui/button';
 import pathsConfig from '~/config/paths.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
+import { InterconnectedWorkspacesSection } from './_components/interconnected-workspaces-section';
+
 export const metadata = {
   title: 'Keel - The Life CRM',
   description:
-    'Keel is the Life CRM for real life. One calm command center for work, family, community, and relationships.',
+    'Keel is the Life CRM that connects personal life, business, family, and community in one account — not another siloed CRM. One home for tasks, planner, and every workspace.',
 };
 
 const features = [
@@ -68,7 +70,7 @@ function Home() {
                 .
               </h1>
               <p className="max-w-xl text-base leading-relaxed text-violet-100/85 md:text-lg">
-                Keel is the Life CRM for solopreneurs, families, parents, community leaders, and anyone who wants better follow-through with less mental load.
+                Keel is the Life CRM that connects work, family, and community in one account — with a personal home that sees tasks and plans across every workspace. Not another siloed CRM.
               </p>
             </div>
 
@@ -93,10 +95,26 @@ function Home() {
                 <LayoutDashboard className="h-4 w-4 text-violet-200/80" />
               </div>
               <div className="space-y-3">
-                {['09:00 Parent-teacher check-in prep', '11:30 Follow up on proposal + community event notes', '15:00 Review monthly bills and send 2 reminders'].map((item) => (
-                  <div key={item} className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3">
+                {[
+                  { time: '09:00', text: 'School run prep', tag: 'Personal', color: '#7C3AED' },
+                  { time: '11:30', text: 'Follow up Acme proposal', tag: 'Business', color: '#2563EB' },
+                  { time: '15:00', text: 'Community event notes', tag: 'Community', color: '#2A9D8F' },
+                ].map((item) => (
+                  <div key={item.text} className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3">
                     <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-violet-300" />
-                    <p className="text-sm text-violet-50/90">{item}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-violet-50/90">
+                        <span className="font-mono text-xs text-violet-300/70">{item.time}</span>
+                        {' '}
+                        {item.text}
+                      </p>
+                      <span
+                        className="mt-1 inline-flex items-center gap-1 rounded-md border border-white/10 px-1.5 py-0.5 text-[10px] font-medium text-white/70"
+                      >
+                        <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: item.color }} />
+                        {item.tag}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -114,13 +132,15 @@ function Home() {
         </div>
       </section>
 
+      <InterconnectedWorkspacesSection />
+
       <section className="relative mx-auto w-full max-w-7xl px-6 pb-24">
         <div className="mb-8">
           <h2 className="font-heading text-3xl font-semibold text-white md:text-4xl">
-            Designed to remove cognitive load.
+            Everything connects through your personal home.
           </h2>
           <p className="mt-3 max-w-2xl text-violet-100/80">
-            Keel keeps your priorities visible: what needs action now, what can wait, and what is drifting.
+            Keel keeps priorities visible across workspaces — what needs action now, what can wait, and what is drifting — without switching apps or losing context.
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
@@ -135,8 +155,8 @@ function Home() {
 
         <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { href: '/personal', title: 'Personal & family', copy: 'Free tasks, planner, and shared household tools.' },
-            { href: '/work', title: 'Business', copy: 'CRM, jobs, invoices, and client portal for service teams.' },
+            { href: '/personal', title: 'Personal & family', copy: 'Free hub — tasks, planner, and shortcuts across all workspaces.' },
+            { href: '/work', title: 'Business', copy: 'CRM inside your Life CRM — not a separate silo.' },
             { href: '/property', title: 'Property', copy: 'Tenants, maintenance, and portfolio finances.' },
             { href: '/community', title: 'Community', copy: 'Schedules and tasks for clubs and homegroups.' },
           ].map((item) => (

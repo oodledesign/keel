@@ -153,13 +153,14 @@ export async function loadPersonalShortcutsSettings(
   shortcuts: StoredShortcut[];
   mobileNavShortcuts: StoredShortcut[];
   defaultLanding: DefaultLandingPreference;
+  includeWorkspaceTasks: boolean;
   workspaceOptions: Array<{ slug: string; name: string }>;
 }> {
   const [settingsRes, workspaces] = await Promise.all([
     client
       .from('user_settings')
       .select(
-        'personal_dashboard_shortcuts, personal_mobile_nav_shortcuts, default_landing_type, default_workspace_slug',
+        'personal_dashboard_shortcuts, personal_mobile_nav_shortcuts, default_landing_type, default_workspace_slug, personal_include_workspace_tasks',
       )
       .eq('user_id', userId)
       .maybeSingle(),
@@ -171,6 +172,7 @@ export async function loadPersonalShortcutsSettings(
     personal_mobile_nav_shortcuts?: unknown;
     default_landing_type?: string | null;
     default_workspace_slug?: string | null;
+    personal_include_workspace_tasks?: boolean | null;
   } | null;
 
   return {
@@ -181,6 +183,7 @@ export async function loadPersonalShortcutsSettings(
         row?.default_landing_type === 'workspace' ? 'workspace' : 'personal',
       workspaceSlug: row?.default_workspace_slug?.trim() || null,
     },
+    includeWorkspaceTasks: row?.personal_include_workspace_tasks !== false,
     workspaceOptions: workspaces
       .filter((w) => w.slug)
       .map((w) => ({

@@ -23,6 +23,7 @@ import { getSegmentPricingComparison } from '~/lib/marketing/pricing-comparison'
 import type { SegmentSlug } from '~/lib/marketing/segment-landing-pages';
 
 import { PricingComparisonTable } from '../../_components/pricing-comparison-table';
+import { InterconnectedWorkspacesSection } from '../../_components/interconnected-workspaces-section';
 
 type WorkspaceCategory = 'community' | 'business' | 'property';
 
@@ -64,9 +65,9 @@ export function KeelPricingPage() {
     <div className="space-y-16">
       <section className="text-center">
         <p className="mx-auto max-w-2xl text-lg leading-relaxed text-violet-100/85">
-          Start free with personal and family workspaces. Subscribe when you create a
-          community, business, or property workspace — one plan per workspace, all
-          managed from your Keel account.
+          Start free with personal and family workspaces — your hub for every
+          connected space. Subscribe when you add community, business, or
+          property workspaces. One Life CRM account, not a pile of siloed tools.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Button
@@ -92,6 +93,8 @@ export function KeelPricingPage() {
           14-day trial on your first paid workspace · Annual plans save ~2 months
         </p>
       </section>
+
+      <InterconnectedWorkspacesSection className="rounded-3xl border border-white/10" />
 
       <BillingIntervalToggle interval={interval} onChange={setInterval} />
 

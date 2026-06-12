@@ -28,6 +28,7 @@ function revalidateWorkspaceDashboard(slug: string) {
 export async function savePersonalDashboardShortcutsAction(
   shortcuts: StoredShortcut[],
   mobileNavShortcuts?: StoredShortcut[],
+  includeWorkspaceTasks?: boolean,
 ) {
   try {
     const parsed = StoredShortcutsArraySchema.parse(shortcuts);
@@ -44,6 +45,9 @@ export async function savePersonalDashboardShortcutsAction(
         ...(parsedMobile !== undefined
           ? { personal_mobile_nav_shortcuts: parsedMobile }
           : {}),
+        ...(includeWorkspaceTasks !== undefined
+          ? { personal_include_workspace_tasks: includeWorkspaceTasks }
+          : {}),
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'user_id' },
@@ -52,11 +56,42 @@ export async function savePersonalDashboardShortcutsAction(
     if (error) return { success: false as const, error: error.message };
 
     revalidatePersonalDashboard();
+    revalidatePath(`${pathsConfig.app.home}/tasks`);
     return { success: true as const, error: null };
   } catch (err) {
     return {
       success: false as const,
       error: err instanceof Error ? err.message : 'Could not save shortcuts',
+    };
+  }
+}
+
+export async function savePersonalIncludeWorkspaceTasksAction(
+  includeWorkspaceTasks: boolean,
+) {
+  try {
+    const client = getSupabaseServerClient();
+    const user = await requireUserInServerComponent();
+
+    const { error } = await client.from('user_settings').upsert(
+      {
+        user_id: user.id,
+        personal_include_workspace_tasks: includeWorkspaceTasks,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id' },
+    );
+
+    if (error) return { success: false as const, error: error.message };
+
+    revalidatePersonalDashboard();
+    revalidatePath(`${pathsConfig.app.home}/tasks`);
+    revalidatePath(pathsConfig.app.personalAccountSettings);
+    return { success: true as const, error: null };
+  } catch (err) {
+    return {
+      success: false as const,
+      error: err instanceof Error ? err.message : 'Could not save preference',
     };
   }
 }

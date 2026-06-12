@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { CalendarCheck2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
@@ -7,7 +9,7 @@ import { Button } from '@kit/ui/button';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 import type { PlannerCalendarEvent } from '~/lib/integrations/google-calendar/types';
 
-import type { PlannerWorkspaceNode } from '../_lib/server/planner.loader';
+import type { PlannerWorkspaceNode } from '~/lib/planner/types';
 import { CalendarEventsSection } from './CalendarEventsSection';
 import { PlanningModeToggle } from './PlanningModeToggle';
 import { PreferencesSection } from './PreferencesSection';
@@ -33,6 +35,8 @@ type Props = {
   selectedTaskIds: Set<string>;
   onSelectedTaskIdsChange: (ids: Set<string>) => void;
   selectedTaskCount: number;
+  includeWorkspaceTasks: boolean;
+  settingsHref: string;
   onGenerate: () => void;
   isGenerating: boolean;
 };
@@ -66,6 +70,8 @@ export function PlannerInputPanel(props: Props) {
         taskTree={props.taskTree}
         selectedTaskIds={props.selectedTaskIds}
         onSelectedTaskIdsChange={props.onSelectedTaskIdsChange}
+        includeWorkspaceTasks={props.includeWorkspaceTasks}
+        settingsHref={props.settingsHref}
       />
 
       <Button

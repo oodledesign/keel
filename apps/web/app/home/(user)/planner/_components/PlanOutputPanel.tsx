@@ -2,12 +2,15 @@
 
 import { useMemo, useState } from 'react';
 
+import Link from 'next/link';
+
 import { Loader2, RefreshCcw, Send } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
+import { parseScheduledBlocksForCalendarPush } from '~/lib/planner/parse-plan-markdown';
 
 import { PlanOutputRenderer } from './PlanOutputRenderer';
 import type { PlanningMode } from './planner-types';
@@ -19,6 +22,7 @@ type Props = {
   isGenerating: boolean;
   onRegenerate: () => void;
   canRegenerate: boolean;
+  dayViewHref?: string;
 };
 
 export function PlanOutputPanel({
@@ -28,10 +32,11 @@ export function PlanOutputPanel({
   isGenerating,
   onRegenerate,
   canRegenerate,
+  dayViewHref,
 }: Props) {
   const [isPushing, setIsPushing] = useState(false);
   const blocks = useMemo(
-    () => parseScheduledBlocks(markdown, date),
+    () => parseScheduledBlocksForCalendarPush(markdown, date),
     [date, markdown],
   );
   const complete = markdown.trim().length > 0 && !isGenerating;
@@ -120,6 +125,16 @@ export function PlanOutputPanel({
 
       {complete ? (
         <div className="mt-4 flex flex-wrap gap-2">
+          {dayViewHref && mode === 'day' ? (
+            <Button
+              asChild
+              type="button"
+              variant="outline"
+              className="border-white/10"
+            >
+              <Link href={dayViewHref}>Open today view</Link>
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="outline"
@@ -143,72 +158,4 @@ export function PlanOutputPanel({
       ) : null}
     </section>
   );
-}
-
-const lineRe =
-  /^(\d{1,2}):(\d{2})\s*[–-]\s*(\d{1,2}):(\d{2})\s*·\s*(?!📅)(.+?)(?:\s*·\s*.+)?$/;
-
-function parseScheduledBlocks(markdown: string, dateIso: string) {
-  const base = new Date(dateIso);
-  if (Number.isNaN(base.getTime())) return [];
-
-  let currentDate = new Date(base);
-  const blocks: Array<{ title: string; start: string; end: string }> = [];
-  const dayOffsets = weekDayOffsets(base);
-
-  for (const rawLine of markdown.split('\n')) {
-    const line = rawLine.trim();
-    const heading = /^###\s+(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i.exec(
-      line,
-    );
-    if (heading) {
-      const dayName = heading[1];
-      if (!dayName) continue;
-      const offset = dayOffsets[dayName.toLowerCase()];
-      if (offset !== undefined) {
-        currentDate = new Date(base);
-        currentDate.setDate(base.getDate() + offset);
-      }
-      continue;
-    }
-
-    const match = lineRe.exec(line);
-    if (!match) continue;
-
-    const [, sh, sm, eh, em, rawTitle] = match;
-    if (!sh || !sm || !eh || !em || !rawTitle) continue;
-    const start = new Date(currentDate);
-    const end = new Date(currentDate);
-    start.setHours(Number(sh), Number(sm), 0, 0);
-    end.setHours(Number(eh), Number(em), 0, 0);
-    if (end <= start) continue;
-
-    blocks.push({
-      title: rawTitle.trim(),
-      start: start.toISOString(),
-      end: end.toISOString(),
-    });
-  }
-
-  return blocks;
-}
-
-function weekDayOffsets(base: Date) {
-  const dayNames = [
-    'sunday',
-    'monday',
-    'tuesday',
-    'wednesday',
-    'thursday',
-    'friday',
-    'saturday',
-  ];
-  const offsets: Record<string, number> = {};
-  for (let i = 0; i < 7; i += 1) {
-    const d = new Date(base);
-    d.setDate(base.getDate() + i);
-    const dayName = dayNames[d.getDay()];
-    if (dayName) offsets[dayName] = i;
-  }
-  return offsets;
 }

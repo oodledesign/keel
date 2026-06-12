@@ -101,7 +101,20 @@ export function buildPersonalShortcutRoutes(): PersonalShortcutRoute[] {
     {
       label: 'Tasks',
       path: `${pathsConfig.app.home}/tasks`,
-      keywords: ['tasks', 'todo'],
+      description: 'All your tasks across personal life and every workspace',
+      keywords: ['tasks', 'todo', 'workspaces', 'unified'],
+    },
+    {
+      label: 'Planner',
+      path: pathsConfig.app.personalPlanner,
+      description: 'AI day planning across personal life and workspaces',
+      keywords: ['planner', 'plan', 'schedule', 'today'],
+    },
+    {
+      label: 'Today',
+      path: pathsConfig.app.personalPlannerDay,
+      description: 'Minimal today view — schedule and due tasks',
+      keywords: ['today', 'day view', 'schedule'],
     },
     {
       label: 'Pipeline',
