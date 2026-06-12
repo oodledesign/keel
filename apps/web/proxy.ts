@@ -15,7 +15,12 @@ import {
   buildAgencyPortalRewritePath,
   extractAgencyPortalSlug,
 } from '~/lib/agency-portal-host';
-import { resolveAppSubdomainRedirect } from '~/lib/app-subdomain-host';
+import {
+  isAppRoute,
+  isMarketingRoute,
+  resolveAppSubdomainRedirect,
+} from '~/lib/app-subdomain-host';
+import { getAppSiteOrigin, getMarketingSiteOrigin } from '~/lib/app-host-routing';
 import { getUserDefaultLandingPath } from '~/lib/dashboard-shortcuts/load-shortcuts';
 
 const CSRF_SECRET_COOKIE = 'csrfSecret';
@@ -72,6 +77,32 @@ function redirectAppSubdomainRequest(request: NextRequest) {
   return NextResponse.redirect(target, 307);
 }
 
+function redirectAgencyHostAppRoutes(request: NextRequest) {
+  const slug = extractAgencyPortalSlug(request.nextUrl.hostname);
+
+  if (!slug) {
+    return null;
+  }
+
+  const { pathname, search } = request.nextUrl;
+
+  if (isAppRoute(pathname)) {
+    return NextResponse.redirect(
+      `${getAppSiteOrigin()}${pathname}${search}`,
+      307,
+    );
+  }
+
+  if (pathname !== '/' && isMarketingRoute(pathname)) {
+    return NextResponse.redirect(
+      `${getMarketingSiteOrigin()}${pathname}${search}`,
+      307,
+    );
+  }
+
+  return null;
+}
+
 function rewriteAgencyPortalRequest(request: NextRequest) {
   const slug = extractAgencyPortalSlug(request.nextUrl.hostname);
 
@@ -104,6 +135,12 @@ export async function proxy(request: NextRequest) {
 
   if (appHostRedirect) {
     return withCsrfMiddleware(request, appHostRedirect);
+  }
+
+  const agencyAppRedirect = redirectAgencyHostAppRoutes(request);
+
+  if (agencyAppRedirect) {
+    return withCsrfMiddleware(request, agencyAppRedirect);
   }
 
   const agencyPortalResponse = rewriteAgencyPortalRequest(request);

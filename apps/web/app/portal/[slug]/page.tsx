@@ -1,7 +1,5 @@
-import { headers } from 'next/headers';
-
 import { getAgencyBrandingBySlug } from '~/lib/agency-branding';
-import { AGENCY_PORTAL_REQUEST_HEADER } from '~/lib/agency-portal-host';
+import { isAgencyPortalRequest } from '~/lib/agency-portal-request';
 
 import ClientPortalOverviewPage from './_components/client-portal-overview-page';
 
@@ -11,10 +9,8 @@ interface PortalSlugPageProps {
 
 export default async function PortalSlugPage({ params }: PortalSlugPageProps) {
   const { slug } = await params;
-  const requestHeaders = await headers();
-  const isAgencyPortal = requestHeaders.get(AGENCY_PORTAL_REQUEST_HEADER) === '1';
 
-  if (isAgencyPortal) {
+  if (await isAgencyPortalRequest(slug)) {
     const branding = await getAgencyBrandingBySlug(slug);
     const brandName = branding?.brand_name?.trim() || 'Agency';
 

@@ -27,6 +27,9 @@ export type ResolvedShortcut = {
   label: string;
   href: string;
   description?: string;
+  avatarUrl?: string | null;
+  avatarColor?: string;
+  avatarFallback?: string;
 };
 
 export type DefaultLandingType = 'personal' | 'workspace';

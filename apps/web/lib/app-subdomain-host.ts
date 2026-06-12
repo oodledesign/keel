@@ -2,6 +2,7 @@ import {
   buildAppSiteUrl,
   getAppSiteOrigin,
   getMarketingSiteOrigin,
+  isAppMarketingHostSplitEnabled,
 } from '~/lib/app-host-routing';
 
 /** Reserved on keelos.so — hosts the authenticated Keel app, not agency portals. */
@@ -89,14 +90,7 @@ export function shouldSplitAppAndMarketingHosts(): boolean {
     return false;
   }
 
-  const appHost = hostFromOrigin(getAppSiteOrigin());
-  const marketingHost = hostFromOrigin(getMarketingSiteOrigin());
-
-  if (!appHost || !marketingHost) {
-    return false;
-  }
-
-  return appHost !== marketingHost;
+  return isAppMarketingHostSplitEnabled();
 }
 
 /**

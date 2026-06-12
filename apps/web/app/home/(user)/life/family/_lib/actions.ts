@@ -6,6 +6,7 @@ import { requireUserInServerComponent } from '~/lib/server/require-user-in-serve
 
 import {
   ApplyGeneratedWeekSchema,
+  BulkAddGeneratedRecipesSchema,
   ClearMealEntrySchema,
   DeleteRecipeSchema,
   MealPreferencesInputSchema,
@@ -13,6 +14,7 @@ import {
   SetMealEntrySchema,
   ToggleRecipeFavoriteSchema,
   type ApplyGeneratedWeekInput,
+  type BulkAddGeneratedRecipesInput,
   type ClearMealEntryInput,
   type DeleteRecipeInput,
   type MealPreferencesInput,
@@ -353,6 +355,42 @@ export async function applyGeneratedWeekAction(
     if (error) return fail(error);
     revalidateMealPlanPaths(scope);
     return ok(undefined);
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+export async function bulkAddGeneratedRecipesAction(
+  input: BulkAddGeneratedRecipesInput,
+): Promise<ActionResult<{ added: number }>> {
+  try {
+    const parsed = BulkAddGeneratedRecipesSchema.parse(input);
+    const client = getSupabaseServerClient();
+    const scope = await resolveMealPlanScope(parsed.accountSlug);
+    const now = new Date().toISOString();
+
+    const rows = parsed.recipes.map((recipe) => ({
+      user_id: scope.userId,
+      account_id: scope.kind === 'workspace' ? scope.accountId : null,
+      name: recipe.name,
+      description: recipe.description ?? null,
+      ingredients: recipe.ingredients,
+      instructions: recipe.instructions ?? null,
+      tags: recipe.tags,
+      meal_type: recipe.meal_type,
+      prep_minutes: recipe.prep_minutes ?? null,
+      cook_minutes: recipe.cook_minutes ?? null,
+      servings: recipe.servings ?? null,
+      is_favorite: false,
+      source: 'ai' as const,
+      updated_at: now,
+    }));
+
+    const { error } = await client.from('family_recipes').insert(rows);
+    if (error) return fail(error);
+
+    revalidateMealPlanPaths(scope);
+    return ok({ added: rows.length });
   } catch (err) {
     return fail(err);
   }

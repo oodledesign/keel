@@ -168,6 +168,7 @@ export function FamilyPageClient({
       {tab === 'recipes' ? (
         <RecipeLibrary
           recipes={initialData.recipes}
+          preferences={initialData.preferences}
           accountSlug={initialData.accountSlug}
           onChanged={refresh}
         />

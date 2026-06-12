@@ -102,7 +102,7 @@ const columns: ColumnDef<AdminUserRow>[] = [
     cell: ({ row }) => (
       <Link
         className="hover:underline"
-        href={`/admin/accounts/${row.original.id}`}
+        href={`/admin/accounts/${row.original.personalAccountId ?? row.original.id}`}
       >
         {row.original.email ?? '—'}
       </Link>
@@ -136,7 +136,11 @@ const columns: ColumnDef<AdminUserRow>[] = [
     header: '',
     cell: ({ row }) => (
       <Button asChild variant="outline" size="sm">
-        <Link href={`/admin/accounts/${row.original.id}`}>View account</Link>
+        <Link
+          href={`/admin/accounts/${row.original.personalAccountId ?? row.original.id}`}
+        >
+          View account
+        </Link>
       </Button>
     ),
   },

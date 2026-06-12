@@ -6,6 +6,7 @@ import pathsConfig from '~/config/paths.config';
 import { loadUserWorkspaceAccounts } from '~/home/_lib/server/workspace-scope';
 
 import { buildPersonalShortcutCatalog, buildWorkspaceShortcutCatalog } from './build-catalog';
+import { enrichPersonalShortcutsWithWorkspaceAvatars } from './enrich-workspace-shortcut-avatars';
 import { resolveStoredShortcuts } from './resolve-shortcuts';
 import type {
   DefaultLandingPreference,
@@ -75,8 +76,13 @@ export async function loadPersonalDashboardShortcuts(
 
   if (stored.length === 0) return [];
 
-  const catalog = await buildPersonalShortcutCatalog(client, userId);
-  return resolveStoredShortcuts(stored, catalog);
+  const [catalog, workspaces] = await Promise.all([
+    buildPersonalShortcutCatalog(client, userId),
+    loadUserWorkspaceAccounts(client, userId),
+  ]);
+  const resolved = resolveStoredShortcuts(stored, catalog);
+
+  return enrichPersonalShortcutsWithWorkspaceAvatars(resolved, workspaces);
 }
 
 export async function loadWorkspaceDashboardShortcuts(

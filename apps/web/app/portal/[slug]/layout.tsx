@@ -1,12 +1,11 @@
 import { ReactNode } from 'react';
 
-import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { getAgencyBrandingBySlug } from '~/lib/agency-branding';
-import { AGENCY_PORTAL_REQUEST_HEADER } from '~/lib/agency-portal-host';
+import { isAgencyPortalRequest } from '~/lib/agency-portal-request';
 
 import { AgencyPortalShell } from './_components/agency-portal-shell';
 import { PortalShell } from './_components/portal-shell';
@@ -17,19 +16,13 @@ interface PortalSlugLayoutProps {
   params: Promise<{ slug: string }>;
 }
 
-async function isAgencyPortalRequest() {
-  const requestHeaders = await headers();
-
-  return requestHeaders.get(AGENCY_PORTAL_REQUEST_HEADER) === '1';
-}
-
 export default async function PortalSlugLayout({
   children,
   params,
 }: PortalSlugLayoutProps) {
   const { slug } = await params;
 
-  if (await isAgencyPortalRequest()) {
+  if (await isAgencyPortalRequest(slug)) {
     const branding = await getAgencyBrandingBySlug(slug);
 
     if (!branding) {
@@ -59,7 +52,7 @@ export async function generateMetadata({
 }) {
   const { slug } = await params;
 
-  if (await isAgencyPortalRequest()) {
+  if (await isAgencyPortalRequest(slug)) {
     const branding = await getAgencyBrandingBySlug(slug);
 
     if (!branding) {

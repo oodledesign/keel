@@ -7,6 +7,7 @@ import {
   Pencil,
   Plus,
   Search,
+  Sparkles,
   Star,
   Trash2,
   Users,
@@ -21,19 +22,22 @@ import { cn } from '@kit/ui/utils';
 import { deleteRecipeAction, toggleRecipeFavoriteAction } from '../_lib/actions';
 import type { RecipeRow } from '../_lib/schema/family-meal.schema';
 import { RecipeDialog } from './RecipeDialog';
+import { RecipeGenerateDialog } from './RecipeGenerateDialog';
 import { ACCENT, panelClass, totalTimeLabel } from './meal-ui';
 
 type Props = {
   recipes: RecipeRow[];
+  preferences: import('../_lib/schema/family-meal.schema').MealPreferencesRow;
   accountSlug?: string;
   onChanged: () => void;
 };
 
-export function RecipeLibrary({ recipes, accountSlug, onChanged }: Props) {
+export function RecipeLibrary({ recipes, preferences, accountSlug, onChanged }: Props) {
   const scopeFields = accountSlug ? { accountSlug } : {};
   const [query, setQuery] = useState('');
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [generateOpen, setGenerateOpen] = useState(false);
   const [editing, setEditing] = useState<RecipeRow | null>(null);
   const [, startTransition] = useTransition();
 
@@ -108,14 +112,20 @@ export function RecipeLibrary({ recipes, accountSlug, onChanged }: Props) {
             className="pl-9"
           />
         </div>
-        <Button
-          onClick={openNew}
-          style={{ backgroundColor: ACCENT }}
-          className="text-white hover:opacity-90"
-        >
-          <Plus className="mr-1.5 h-4 w-4" />
-          Add recipe
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setGenerateOpen(true)}>
+            <Sparkles className="mr-1.5 h-4 w-4" />
+            Generate with AI
+          </Button>
+          <Button
+            onClick={openNew}
+            style={{ backgroundColor: ACCENT }}
+            className="text-white hover:opacity-90"
+          >
+            <Plus className="mr-1.5 h-4 w-4" />
+            Add recipe
+          </Button>
+        </div>
       </div>
 
       {allTags.length > 0 ? (
@@ -255,6 +265,15 @@ export function RecipeLibrary({ recipes, accountSlug, onChanged }: Props) {
           })}
         </div>
       )}
+
+      <RecipeGenerateDialog
+        open={generateOpen}
+        onOpenChange={setGenerateOpen}
+        preferences={preferences}
+        recipes={recipes}
+        accountSlug={accountSlug}
+        onSaved={onChanged}
+      />
 
       <RecipeDialog
         open={dialogOpen}

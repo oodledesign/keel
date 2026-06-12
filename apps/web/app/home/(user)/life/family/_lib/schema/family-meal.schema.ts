@@ -163,6 +163,26 @@ export type ToggleRecipeFavoriteInput = z.infer<
   typeof ToggleRecipeFavoriteSchema
 >;
 
+export const GeneratedRecipeDraftSchema = z.object({
+  name: z.string().trim().min(1).max(160),
+  description: z.string().trim().max(1_000).optional().nullable(),
+  ingredients: z.array(z.string().trim().min(1).max(200)).max(80).default([]),
+  instructions: z.string().trim().max(8_000).optional().nullable(),
+  tags: z.array(z.string().trim().min(1).max(40)).max(20).default([]),
+  meal_type: z.enum(RECIPE_MEAL_TYPES).default('dinner'),
+  prep_minutes: z.number().int().min(0).max(1_440).optional().nullable(),
+  cook_minutes: z.number().int().min(0).max(1_440).optional().nullable(),
+  servings: z.number().int().min(1).max(50).optional().nullable(),
+  inspiration: z.string().trim().max(300).optional().nullable(),
+});
+
+export const BulkAddGeneratedRecipesSchema = AccountSlugFieldSchema.extend({
+  recipes: z.array(GeneratedRecipeDraftSchema).min(1).max(10),
+});
+export type BulkAddGeneratedRecipesInput = z.infer<
+  typeof BulkAddGeneratedRecipesSchema
+>;
+
 export type FamilyMealData = {
   recipes: RecipeRow[];
   preferences: MealPreferencesRow;

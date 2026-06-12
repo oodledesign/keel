@@ -4,6 +4,7 @@ import Link from 'next/link';
 
 import { ArrowUpRight } from 'lucide-react';
 
+import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
 import { cn } from '@kit/ui/utils';
 
 import type { ResolvedShortcut } from '~/lib/dashboard-shortcuts/types';
@@ -75,6 +76,19 @@ export function DashboardShortcutsBar({
                 )}
                 title={shortcut.description}
               >
+                {shortcut.avatarFallback ? (
+                  <Avatar className="h-5 w-5 shrink-0 rounded-md">
+                    <AvatarImage src={shortcut.avatarUrl ?? undefined} alt="" />
+                    <AvatarFallback
+                      className="rounded-md text-[9px] font-semibold text-white"
+                      style={{
+                        backgroundColor: shortcut.avatarColor ?? '#64748B',
+                      }}
+                    >
+                      {shortcut.avatarFallback}
+                    </AvatarFallback>
+                  </Avatar>
+                ) : null}
                 <span className="truncate">{label}</span>
                 <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-zinc-500 group-hover:text-[#5eead4]" />
               </HapticLink>

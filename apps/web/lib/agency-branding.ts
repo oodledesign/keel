@@ -2,7 +2,7 @@ import 'server-only';
 
 import { cache } from 'react';
 
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 export type AgencyBranding = {
   id: string;
@@ -20,17 +20,28 @@ export type AgencyBranding = {
 
 export const getAgencyBrandingBySlug = cache(
   async (slug: string): Promise<AgencyBranding | null> => {
-    const client = getSupabaseServerClient();
+    const normalized = slug.trim().toLowerCase();
+
+    if (!normalized) {
+      return null;
+    }
+
+    const client = getSupabaseServerAdminClient();
 
     const { data, error } = await client
       .from('agency_branding')
       .select(
         'id, business_id, brand_name, custom_domain, logo_url, favicon_url, primary_colour, support_email, slug, created_at, updated_at',
       )
-      .eq('slug', slug)
+      .eq('slug', normalized)
       .maybeSingle();
 
-    if (error || !data) {
+    if (error) {
+      console.error('[agency-branding] lookup failed:', error.message);
+      return null;
+    }
+
+    if (!data) {
       return null;
     }
 
