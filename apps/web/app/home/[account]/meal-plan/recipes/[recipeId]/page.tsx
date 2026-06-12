@@ -7,10 +7,10 @@ import { loadFamilyRecipeById } from '~/home/(user)/life/family/_lib/server/fami
 import { resolveMealPlanScope } from '~/home/(user)/life/family/_lib/server/family-meal.scope';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
-import { getDefaultAccountPath, getTeamAccountAccess } from '../../_lib/role-access';
-import { isAccountModuleEnabled } from '../../_lib/server/account-modules';
-import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../../_lib/server/workspace-route-guard';
+import { getDefaultAccountPath, getTeamAccountAccess } from '../../../_lib/role-access';
+import { isAccountModuleEnabled } from '../../../_lib/server/account-modules';
+import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
+import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard';
 
 interface WorkspaceRecipeDetailPageProps {
   params: Promise<{ account: string; recipeId: string }>;

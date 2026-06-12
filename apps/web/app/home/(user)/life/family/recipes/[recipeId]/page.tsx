@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation';
 
-import { RecipeDetailPage } from '../_components/RecipeDetailPage';
-import { loadFamilyRecipeById } from '../_lib/server/family-meal.loader';
-import { resolveMealPlanScope } from '../_lib/server/family-meal.scope';
+import { RecipeDetailPage } from '~/home/(user)/life/family/_components/RecipeDetailPage';
+import { loadFamilyRecipeById } from '~/home/(user)/life/family/_lib/server/family-meal.loader';
+import { resolveMealPlanScope } from '~/home/(user)/life/family/_lib/server/family-meal.scope';
 
 export const dynamic = 'force-dynamic';
 
