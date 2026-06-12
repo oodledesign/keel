@@ -2,6 +2,8 @@ import 'server-only';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
+
 /** Defaults match the executive signature banner before custom brand is saved. */
 export const DEFAULT_BRAND_PRIMARY = '#0D2344';
 export const DEFAULT_BRAND_SECONDARY = '#FFFFFF';
@@ -39,7 +41,7 @@ function resolveBrand(
     primary_color: row?.primary_color?.trim() || DEFAULT_BRAND_PRIMARY,
     secondary_color: row?.secondary_color?.trim() || DEFAULT_BRAND_SECONDARY,
     accent_color: row?.accent_color?.trim() || DEFAULT_BRAND_ACCENT,
-    logo_url: row?.logo_url?.trim() || null,
+    logo_url: toSupabasePublicStorageUrl(row?.logo_url?.trim()) || null,
     website_url: row?.website_url?.trim() || null,
     address: row?.address?.trim() || null,
   };
@@ -62,7 +64,24 @@ export async function loadAccountBrandResolved(
   }
 
   const base = data as AccountBrandSettingsRow | null;
-  return resolveBrand(base ? { ...base, account_id: accountId } : null, accountId);
+  let logoUrl =
+    toSupabasePublicStorageUrl(base?.logo_url?.trim()) || null;
+
+  if (!logoUrl) {
+    const { data: accountRow } = await admin
+      .from('accounts')
+      .select('picture_url')
+      .eq('id', accountId)
+      .maybeSingle();
+    logoUrl = toSupabasePublicStorageUrl(
+      (accountRow?.picture_url as string | null | undefined)?.trim(),
+    );
+  }
+
+  return resolveBrand(
+    base ? { ...base, account_id: accountId, logo_url: logoUrl } : null,
+    accountId,
+  );
 }
 
 /**

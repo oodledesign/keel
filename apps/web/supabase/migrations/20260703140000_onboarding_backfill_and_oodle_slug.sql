@@ -6,9 +6,24 @@ UPDATE public.accounts_memberships
 SET onboarding_completed = true
 WHERE onboarding_completed = false;
 
+-- Remote may have timestamp triggers without matching columns (schema drift).
+ALTER TABLE public.agency_branding
+  ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now(),
+  ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+
+ALTER TABLE public.workspace_dashboard_shortcuts
+  ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+
+DROP TRIGGER IF EXISTS agency_branding_set_timestamps ON public.agency_branding;
+CREATE TRIGGER agency_branding_set_timestamps
+  BEFORE INSERT OR UPDATE ON public.agency_branding
+  FOR EACH ROW EXECUTE FUNCTION public.trigger_set_timestamps();
+
 DO $$
 DECLARE
   v_account_id uuid;
+  v_other_oodle_id uuid;
+  v_archive_slug text;
   v_has_personal_mobile boolean;
   v_has_workspace_mobile boolean;
 BEGIN
@@ -22,13 +37,37 @@ BEGIN
     RETURN;
   END IF;
 
-  IF EXISTS (
-    SELECT 1
-    FROM public.accounts
-    WHERE slug = 'oodle'
-      AND id <> v_account_id
-  ) THEN
-    RAISE EXCEPTION 'Cannot rename oodle-1 → oodle: slug oodle is already taken';
+  SELECT id INTO v_other_oodle_id
+  FROM public.accounts
+  WHERE slug = 'oodle'
+    AND id <> v_account_id
+  LIMIT 1;
+
+  -- Free the slug when an older duplicate workspace already uses "oodle".
+  IF v_other_oodle_id IS NOT NULL THEN
+    v_archive_slug := 'oodle-legacy-' || substr(v_other_oodle_id::text, 1, 8);
+
+    UPDATE public.accounts
+    SET slug = v_archive_slug
+    WHERE id = v_other_oodle_id;
+
+    UPDATE public.businesses
+    SET slug = v_archive_slug
+    WHERE account_id = v_other_oodle_id
+      AND slug = 'oodle';
+
+    IF to_regclass('public.agency_branding') IS NOT NULL THEN
+      UPDATE public.agency_branding
+      SET slug = v_archive_slug
+      WHERE business_id = v_other_oodle_id
+        AND slug = 'oodle';
+    END IF;
+
+    UPDATE public.user_settings
+    SET default_workspace_slug = v_archive_slug
+    WHERE default_workspace_slug = 'oodle';
+
+    RAISE NOTICE 'Archived duplicate workspace % → %', v_other_oodle_id, v_archive_slug;
   END IF;
 
   UPDATE public.accounts

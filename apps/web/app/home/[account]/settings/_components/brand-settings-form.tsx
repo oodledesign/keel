@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -18,35 +18,11 @@ import type { AccountBrandResolved } from '~/lib/brand/account-brand';
 
 import { saveAccountBrandSettings } from '../_lib/server/account-brand-actions';
 
-const MAX_LOGO_SIZE_BYTES = 5 * 1024 * 1024;
-
 function normalizeHex(input: string): string {
   const t = input.trim();
   if (/^#[0-9A-Fa-f]{6}$/.test(t)) return t;
   if (/^[0-9A-Fa-f]{6}$/.test(t)) return `#${t}`;
   return t;
-}
-
-async function uploadBrandLogo(accountId: string, file: File) {
-  const formData = new FormData();
-  formData.append('accountId', accountId);
-  formData.append('file', file);
-
-  const response = await fetch('/api/brand/upload-logo', {
-    method: 'POST',
-    body: formData,
-  });
-
-  const payload = (await response.json().catch(() => null)) as {
-    error?: string;
-    logoUrl?: string;
-  } | null;
-
-  if (!response.ok || !payload?.logoUrl) {
-    throw new Error(payload?.error || 'Failed to upload logo');
-  }
-
-  return payload.logoUrl;
 }
 
 export function BrandSettingsForm({
@@ -71,63 +47,11 @@ export function BrandSettingsForm({
   const [accent, setAccent] = useState(initialBrand.accent_color);
   const [websiteUrl, setWebsiteUrl] = useState(initialBrand.website_url ?? '');
   const [address, setAddress] = useState(initialBrand.address ?? '');
-  const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
-  const [pendingLogoPreviewUrl, setPendingLogoPreviewUrl] = useState<
-    string | null
-  >(null);
-  const [clearLogo, setClearLogo] = useState(false);
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (!pendingLogoFile) {
-      setPendingLogoPreviewUrl(null);
-      return;
-    }
-
-    const previewUrl = URL.createObjectURL(pendingLogoFile);
-    setPendingLogoPreviewUrl(previewUrl);
-
-    return () => {
-      URL.revokeObjectURL(previewUrl);
-    };
-  }, [pendingLogoFile]);
-
-  const previewLogo = useMemo(() => {
-    if (clearLogo) return null;
-    if (pendingLogoPreviewUrl) return pendingLogoPreviewUrl;
-    return initialBrand.logo_url;
-  }, [clearLogo, initialBrand.logo_url, pendingLogoPreviewUrl]);
-
-  const onLogoFile = (file: File | null) => {
-    setClearLogo(false);
-
-    if (!file) {
-      setPendingLogoFile(null);
-      return;
-    }
-
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please choose a PNG, JPG, or WebP image.');
-      return;
-    }
-
-    if (file.size > MAX_LOGO_SIZE_BYTES) {
-      toast.error('Logo is too large. Max size is 5MB.');
-      return;
-    }
-
-    setPendingLogoFile(file);
-  };
 
   const save = async () => {
     setSaving(true);
     try {
-      let logoUrl: string | undefined;
-
-      if (pendingLogoFile) {
-        logoUrl = await uploadBrandLogo(accountId, pendingLogoFile);
-      }
-
       await saveAccountBrandSettings({
         accountId,
         primary_color: normalizeHex(primary),
@@ -137,12 +61,8 @@ export function BrandSettingsForm({
         accent_color: accent.trim() ? normalizeHex(accent) : null,
         website_url: websiteUrl.trim() || null,
         address: address.trim() || null,
-        logoUrl,
-        clearLogo: clearLogo || undefined,
       });
       toast.success('Brand settings saved');
-      setPendingLogoFile(null);
-      setClearLogo(false);
       router.refresh();
     } catch (e) {
       toast.error(getErrorMessage(e));
@@ -161,9 +81,17 @@ export function BrandSettingsForm({
 
       {!canEdit ? (
         <p className="rounded-xl border border-white/10 bg-black/10 px-4 py-3 text-sm text-muted-foreground">
-          Only workspace owners and admins can edit brand colours and logo.
+          Only workspace owners and admins can edit brand colours.
         </p>
       ) : null}
+
+      <p className="rounded-xl border border-white/10 bg-black/10 px-4 py-3 text-sm text-muted-foreground">
+        Upload your business logo under{' '}
+        <Link href={settingsHref} className="text-[var(--keel-teal)] hover:underline">
+          General settings
+        </Link>
+        . It appears in the sidebar workspace switcher, emails, and signature templates.
+      </p>
 
       <div className="grid gap-5 rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-6">
         <ColorField
@@ -216,43 +144,6 @@ export function BrandSettingsForm({
             placeholder="123 High Street, London, SW1A 1AA"
             disabled={!canEdit}
           />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Logo</Label>
-          <p className="text-xs text-muted-foreground">
-            Used in invoice emails and signature templates (
-            <code className="text-[11px]">{'{{brand_logo_url}}'}</code>). PNG or
-            JPG recommended.
-          </p>
-          {previewLogo ? (
-            <div className="mt-2 rounded-xl border border-white/10 bg-black/10 p-4">
-              <img
-                src={previewLogo}
-                alt="Brand logo preview"
-                className="max-h-16 w-auto object-contain"
-              />
-            </div>
-          ) : null}
-          <Input
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            onChange={(e) => onLogoFile(e.target.files?.[0] ?? null)}
-            disabled={!canEdit}
-          />
-          {initialBrand.logo_url && canEdit ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setClearLogo(true);
-                setPendingLogoFile(null);
-              }}
-            >
-              Remove logo
-            </Button>
-          ) : null}
         </div>
 
         {canEdit ? (

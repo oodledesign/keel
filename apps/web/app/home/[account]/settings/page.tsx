@@ -14,6 +14,7 @@ import { Trans } from '@kit/ui/trans';
 
 import featuresFlagConfig from '~/config/feature-flags.config';
 import pathsConfig from '~/config/paths.config';
+import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access';
@@ -61,11 +62,12 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
   }
 
   const data = await api.getTeamAccount(slug);
+  const brand = await loadAccountBrandResolved(data.id);
 
   const account = {
     id: data.id,
     name: data.name,
-    pictureUrl: data.picture_url,
+    pictureUrl: data.picture_url ?? brand.logo_url,
     slug: data.slug as string,
     primaryOwnerUserId: data.primary_owner_user_id,
   };
@@ -147,8 +149,8 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
             <div>
               <h2 className="text-base font-semibold">Brand appearance</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Colours and logo used on invoice emails, signature templates, and
-                other branded surfaces.
+                Colours for invoice emails, signature templates, and other branded
+                surfaces. Upload your logo under General settings below.
               </p>
             </div>
             <Link

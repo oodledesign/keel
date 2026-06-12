@@ -1,4 +1,5 @@
 -- Repair established workspaces after admin grants: skip /setup bounce and align lite → full business.
+-- Version bumped from 20260612120000 (conflicted with create_video_hosting).
 
 UPDATE public.accounts_memberships am
 SET onboarding_completed = true

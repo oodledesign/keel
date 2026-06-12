@@ -84,6 +84,7 @@ export async function loadWorkspaceSwitcherAccounts(
 
   const accountIds = teamAccounts.map((a) => a.id);
   const businessTypeByAccount = new Map<string, string>();
+  const brandLogoByAccount = new Map<string, string>();
 
   if (accountIds.length > 0) {
     const { data: bizRows } = await client
@@ -96,6 +97,25 @@ export async function loadWorkspaceSwitcherAccounts(
       const typ = (row as { type?: string }).type;
       if (aid && typ && !businessTypeByAccount.has(aid)) {
         businessTypeByAccount.set(aid, typ);
+      }
+    }
+
+    const missingPictureIds = teamAccounts
+      .filter((acc) => !acc.picture_url)
+      .map((acc) => acc.id);
+
+    if (missingPictureIds.length > 0) {
+      const { data: brandRows } = await client
+        .from('account_brand_settings')
+        .select('account_id, logo_url')
+        .in('account_id', missingPictureIds);
+
+      for (const row of brandRows ?? []) {
+        const aid = (row as { account_id?: string }).account_id;
+        const logo = (row as { logo_url?: string | null }).logo_url;
+        if (aid && logo) {
+          brandLogoByAccount.set(aid, logo);
+        }
       }
     }
   }
@@ -111,7 +131,7 @@ export async function loadWorkspaceSwitcherAccounts(
       label,
       slug: acc.slug!,
       value: acc.slug!,
-      image: acc.picture_url,
+      image: acc.picture_url ?? brandLogoByAccount.get(acc.id) ?? null,
       profile,
       typeLabel: workspaceTypeLabel(profile),
       accentColor: workspaceColorForSpaceType(spaceTypeFromProfile(profile)),

@@ -28,19 +28,12 @@ export const saveAccountBrandSettings = enhanceAction(
       .eq('account_id', input.accountId)
       .maybeSingle();
 
-    let logoUrl: string | null = (existing?.logo_url as string | null) ?? null;
-    if (input.clearLogo) {
-      logoUrl = null;
-    } else if (input.logoUrl) {
-      logoUrl = input.logoUrl;
-    }
-
     const payload = {
       account_id: input.accountId,
       primary_color: input.primary_color,
       secondary_color: input.secondary_color ?? null,
       accent_color: input.accent_color ?? null,
-      logo_url: logoUrl,
+      logo_url: (existing?.logo_url as string | null) ?? null,
       website_url: input.website_url?.trim() || null,
       address: input.address?.trim() || null,
     };
