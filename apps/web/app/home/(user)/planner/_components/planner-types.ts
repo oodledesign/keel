@@ -36,6 +36,11 @@ export type PlannerGeneratePayload = {
   user_context: string;
   calendar_events: Array<Omit<PlannerCalendarEvent, 'id'>>;
   tasks: PlannerPayloadTask[];
+  replan?: {
+    current_time: string;
+    existing_plan_markdown: string;
+    notes: string;
+  };
 };
 
 export type PlannerPageClientProps = {

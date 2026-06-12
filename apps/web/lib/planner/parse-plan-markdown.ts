@@ -3,6 +3,7 @@ export type ParsedScheduleBlock = {
   start: string;
   end: string;
   isCalendarEvent: boolean;
+  isBreak: boolean;
   raw: string;
 };
 
@@ -13,7 +14,11 @@ export type ScheduleSegment = {
   title: string;
   meta: string[];
   isCalendarEvent: boolean;
+  isBreak: boolean;
 };
+
+export const BREAK_TITLE_RE =
+  /^(break|buffer|lunch|breakfast|dinner|rest|day wrap[\s-]?up|wind[\s-]?down)/i;
 
 // Matches "8:30am", "08:30", "10am", "5:30 pm" — a bare number without
 // minutes or am/pm is rejected so durations like "~90min" never match.
@@ -89,6 +94,7 @@ export function splitScheduleSegments(text: string): ScheduleSegment[] {
       title,
       meta,
       isCalendarEvent,
+      isBreak: !isCalendarEvent && BREAK_TITLE_RE.test(title),
     });
   }
 
@@ -120,6 +126,7 @@ export function parseDayScheduleFromMarkdown(
         start: start.toISOString(),
         end: end.toISOString(),
         isCalendarEvent: segment.isCalendarEvent,
+        isBreak: segment.isBreak,
         raw: line,
       });
     }

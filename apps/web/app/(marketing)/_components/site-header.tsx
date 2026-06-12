@@ -12,8 +12,8 @@ export function SiteHeader(props: { user?: JWTUserData | null }) {
     <Header
       className="border-b border-violet-200/10 bg-[#070612]/90 backdrop-blur-xl"
       logo={
-        <div className="flex items-center pb-1">
-          <AppLogo className={APP_LOGO_SHELL_CLASSNAME} />
+        <div className="flex items-center justify-start pb-1">
+          <AppLogo href="/" className={APP_LOGO_SHELL_CLASSNAME} />
         </div>
       }
       navigation={<SiteNavigation />}

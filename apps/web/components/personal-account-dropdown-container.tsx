@@ -15,7 +15,7 @@ const paths = {
 };
 
 const features = {
-  enableThemeToggle: featuresFlagConfig.enableThemeToggle,
+  enableThemeToggle: false,
 };
 
 export function ProfileAccountDropdownContainer(props: {

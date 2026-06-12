@@ -107,10 +107,8 @@ function PlanParagraph({
   return <p className="text-sm leading-relaxed text-white/70">{children}</p>;
 }
 
-const BREAK_TITLE_RE = /^(break|buffer|lunch|day wrap[\s-]?up|wind[\s-]?down)/i;
-
 function ScheduleSegmentRow({ segment }: { segment: ScheduleSegment }) {
-  const isBreak = !segment.isCalendarEvent && BREAK_TITLE_RE.test(segment.title);
+  const isBreak = segment.isBreak;
 
   return (
     <div

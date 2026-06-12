@@ -5,11 +5,19 @@ import { cache } from 'react';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import {
+  loadPipelineData,
+  loadPipelineDataForAccount,
+  type PipelineDeal,
+} from '~/home/(user)/_lib/server/pipeline.loader';
+import {
   loadTasksForTeamAccount,
   loadTasksForUser,
 } from '~/home/(user)/_lib/server/tasks.loader';
 import { todayLocalYmd } from '~/home/_lib/due-date-ymd';
-import { isWorkNavModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
+import {
+  isWorkModuleEnabled,
+  isWorkNavModuleEnabled,
+} from '~/home/[account]/_lib/server/account-modules';
 import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
 import {
   BUSINESS_WORKSPACE_SPACE_TYPES,
@@ -29,7 +37,13 @@ import {
 } from './build-task-tree';
 import { plannerScopeKey } from './plan-storage';
 import { recommendSopsForTasks } from './sop-recommendations';
-import type { DayViewData, PlannerPageData, PlannerScope, SopSuggestion } from './types';
+import type {
+  DayViewData,
+  DayViewPipeline,
+  PlannerPageData,
+  PlannerScope,
+  SopSuggestion,
+} from './types';
 
 async function loadPlaybooksForAccount(accountId: string) {
   try {
@@ -104,6 +118,88 @@ async function loadSavedDayPlanMarkdown(
   }
 }
 
+const PIPELINE_OPEN_STAGES: ReadonlyArray<{ key: string; label: string }> = [
+  { key: 'lead', label: 'Lead' },
+  { key: 'qualified', label: 'Qualified' },
+  { key: 'call_booked', label: 'Call booked' },
+  { key: 'proposal_sent', label: 'Proposal sent' },
+  { key: 'negotiation', label: 'Negotiation' },
+];
+
+function summarisePipelineDeals(
+  deals: PipelineDeal[],
+  href: string,
+): DayViewPipeline | null {
+  const openKeys = new Set(PIPELINE_OPEN_STAGES.map((s) => s.key));
+  const openDeals = deals.filter((deal) => openKeys.has(deal.stage));
+  if (openDeals.length === 0) return null;
+
+  const stageLabel = (key: string) =>
+    PIPELINE_OPEN_STAGES.find((s) => s.key === key)?.label ?? key;
+
+  const stages = PIPELINE_OPEN_STAGES.map((stage) => {
+    const stageDeals = openDeals.filter((deal) => deal.stage === stage.key);
+    return {
+      key: stage.key,
+      label: stage.label,
+      count: stageDeals.length,
+      value: stageDeals.reduce((sum, deal) => sum + deal.value, 0),
+    };
+  }).filter((stage) => stage.count > 0);
+
+  const today = todayLocalYmd();
+  const needsAction = openDeals
+    .filter((deal) => deal.nextAction.trim() && deal.nextActionDate)
+    .filter((deal) => (deal.nextActionDate as string) <= today)
+    .sort((a, b) =>
+      (a.nextActionDate as string).localeCompare(b.nextActionDate as string),
+    )
+    .slice(0, 4)
+    .map((deal) => ({
+      id: deal.id,
+      name:
+        [deal.contactName, deal.companyName].filter(Boolean).join(' · ') ||
+        'Untitled deal',
+      stageLabel: stageLabel(deal.stage),
+      nextAction: deal.nextAction,
+      nextActionDate: deal.nextActionDate,
+      overdue: (deal.nextActionDate as string) < today,
+      value: deal.value,
+    }));
+
+  return {
+    href,
+    openCount: openDeals.length,
+    openValue: openDeals.reduce((sum, deal) => sum + deal.value, 0),
+    stages,
+    needsAction,
+  };
+}
+
+async function loadDayViewPipeline(
+  scope: PlannerScope,
+): Promise<DayViewPipeline | null> {
+  try {
+    if (scope.kind === 'personal') {
+      const { deals } = await loadPipelineData();
+      return summarisePipelineDeals(deals, `${pathsConfig.app.home}/pipeline`);
+    }
+
+    const workspace = await loadTeamWorkspace(scope.accountSlug);
+    if (!isWorkModuleEnabled(workspace.moduleSettings, 'pipeline')) {
+      return null;
+    }
+
+    const { deals } = await loadPipelineDataForAccount(scope.accountId);
+    return summarisePipelineDeals(
+      deals,
+      pathsConfig.app.accountPipeline.replace('[account]', scope.accountSlug),
+    );
+  } catch {
+    return null;
+  }
+}
+
 function sopHref(scope: PlannerScope, playbookId: string) {
   if (scope.kind !== 'workspace') return '#';
   return pathsConfig.app.accountSopsPlaybook
@@ -170,6 +266,8 @@ export const loadPersonalPlannerPageData = cache(async (): Promise<PlannerPageDa
 export const loadPersonalDayViewData = cache(async (): Promise<DayViewData> => {
   const bundle = await buildPlannerBundle({ kind: 'personal' });
   const tasksDueToday = tasksDueOnDate(bundle.taskTree, todayLocalYmd());
+  const pipeline = await loadDayViewPipeline(bundle.scope);
+  const openTasksForReplan = flattenPlannerTasks(bundle.taskTree);
 
   return {
     userId: bundle.userId,
@@ -177,8 +275,10 @@ export const loadPersonalDayViewData = cache(async (): Promise<DayViewData> => {
     includeWorkspaceTasks: bundle.includeWorkspaceTasks,
     calendar: bundle.calendar,
     tasksDueToday,
+    openTasksForReplan,
     sopSuggestions: [],
     planMarkdown: bundle.savedPlanMarkdown,
+    pipeline,
     planViewHref: bundle.planViewHref,
     settingsHref: bundle.settingsHref,
   };
@@ -211,6 +311,7 @@ export const loadWorkspaceDayViewData = cache(
   async (accountSlug: string): Promise<DayViewData> => {
     const bundle = await loadWorkspacePlannerPageData(accountSlug);
     const tasksDueToday = tasksDueOnDate(bundle.taskTree, todayLocalYmd());
+    const pipeline = await loadDayViewPipeline(bundle.scope);
     let sopSuggestions = bundle.sopSuggestions;
 
     if (bundle.scope.kind === 'workspace') {
@@ -228,8 +329,10 @@ export const loadWorkspaceDayViewData = cache(
       includeWorkspaceTasks: bundle.includeWorkspaceTasks,
       calendar: bundle.calendar,
       tasksDueToday,
+      openTasksForReplan: flattenPlannerTasks(bundle.taskTree),
       sopSuggestions,
       planMarkdown: bundle.savedPlanMarkdown,
+      pipeline,
       planViewHref: bundle.planViewHref,
       settingsHref: bundle.settingsHref,
     };

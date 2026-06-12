@@ -90,12 +90,14 @@ export function WorkspaceMobileMenu({
           </HapticButton>
         </div>
 
-        <div className="border-b border-white/10 px-4 py-4">
+        <div className="border-b border-white/10 px-4 py-3">
           <WorkspaceAccountsSelector
             selectedAccount={account}
             userId={userId}
             accounts={accounts}
             className="w-full max-w-none justify-between px-0"
+            variant="inline"
+            onNavigate={close}
           />
         </div>
 
@@ -181,10 +183,10 @@ export function WorkspaceMobileBottomNav({
 
   return (
     <nav
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:hidden"
       aria-label="Primary"
     >
-      <div className="pointer-events-auto mx-auto flex h-12 max-w-md items-center justify-around rounded-full border border-white/10 bg-[#1A2535]/98 px-2 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+      <div className="pointer-events-auto flex h-11 items-center gap-0.5 rounded-full border border-white/10 bg-[#1A2535]/98 px-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl">
         {bottomNavTabs.map((tab) => {
           const active =
             pathname === tab.path ||
@@ -199,11 +201,11 @@ export function WorkspaceMobileBottomNav({
               aria-label={tab.label}
               title={tab.label}
               className={cn(
-                'flex h-10 w-10 items-center justify-center rounded-full transition-colors',
+                'flex h-9 w-9 items-center justify-center rounded-full transition-colors',
                 active ? 'text-[#5eead4]' : 'text-zinc-400 hover:text-zinc-200',
               )}
             >
-              <span className="flex h-6 w-6 items-center justify-center [&>svg]:h-5 [&>svg]:w-5">
+              <span className="flex h-5 w-5 items-center justify-center [&>svg]:h-[18px] [&>svg]:w-[18px]">
                 {tab.Icon}
               </span>
             </HapticLink>
@@ -214,10 +216,10 @@ export function WorkspaceMobileBottomNav({
           type="button"
           aria-expanded={menuOpen}
           aria-label="Open menu"
-          className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-400 hover:text-zinc-200"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-400 hover:text-zinc-200"
           onClick={() => onMenuOpenChange(true)}
         >
-          <Menu className="h-5 w-5" />
+          <Menu className="h-[18px] w-[18px]" />
         </HapticButton>
       </div>
     </nav>
@@ -237,7 +239,7 @@ export function WorkspaceMobileHeaderBar({
   return (
     <header
       className={cn(
-        'z-30 flex h-12 shrink-0 items-center gap-2 border-b border-white/8 bg-[var(--workspace-shell-header)] px-3 lg:hidden',
+        'sticky top-0 z-30 flex h-12 shrink-0 items-center gap-2 border-b border-white/8 bg-[var(--workspace-shell-header)] px-3 lg:hidden',
         className,
       )}
     >

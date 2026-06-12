@@ -183,14 +183,20 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
 
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+        className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
       >
         <div
           className={cn(
-            'min-h-full rounded-t-[1.25rem] bg-[var(--workspace-shell-canvas)] shadow-[0_-1px_0_rgba(255,255,255,0.06)]',
-            !isDragging && 'transition-transform duration-200 ease-out',
+            'rounded-t-[1.25rem] bg-[var(--workspace-shell-canvas)] shadow-[0_-1px_0_rgba(255,255,255,0.06)]',
+            !isDragging && pullDistance === 0 && !refreshing
+              ? ''
+              : !isDragging && 'transition-transform duration-200 ease-out',
           )}
-          style={{ transform: `translateY(${contentOffset}px)` }}
+          style={
+            contentOffset > 0
+              ? { transform: `translateY(${contentOffset}px)` }
+              : undefined
+          }
         >
           {children}
         </div>

@@ -3,6 +3,9 @@
 import { ProfileAccountDropdownContainer } from '~/components/personal-account-dropdown-container';
 import { PullToRefresh } from '~/components/pull-to-refresh';
 import {
+  buildPersonalSwitcherAccounts,
+} from '~/components/workspace-shell/workspace-accounts-selector';
+import {
   useWorkspaceMobileNav,
   WorkspaceMobileBottomNav,
   WorkspaceMobileHeaderBar,
@@ -33,7 +36,7 @@ export function TeamWorkspaceMobileChrome({
   account,
   accountId,
   user,
-  accounts,
+  accounts: rawAccounts,
   navLinks,
   bottomNavTabs,
   spaceType,
@@ -42,10 +45,11 @@ export function TeamWorkspaceMobileChrome({
 }: TeamWorkspaceMobileChromeProps) {
   const { menuOpen, setMenuOpen } = useWorkspaceMobileNav();
   const homePath = pathsConfig.app.accountHome.replace('[account]', account);
+  const accounts = buildPersonalSwitcherAccounts(rawAccounts);
 
   return (
     <>
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden max-lg:flex">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden max-lg:flex">
         <WorkspaceMobileHeaderBar>
           <WorkspaceMobileHeaderSelector
             account={account}
@@ -68,7 +72,7 @@ export function TeamWorkspaceMobileChrome({
         />
         </WorkspaceMobileHeaderBar>
 
-        <PullToRefresh className="pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-0">
+        <PullToRefresh className="min-w-0 pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">
           {children}
         </PullToRefresh>
       </div>

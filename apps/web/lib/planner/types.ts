@@ -63,6 +63,32 @@ export type PlannerPageData = {
   settingsHref: string;
 };
 
+export type DayViewPipelineStage = {
+  key: string;
+  label: string;
+  count: number;
+  value: number;
+};
+
+export type DayViewPipelineDeal = {
+  id: string;
+  name: string;
+  stageLabel: string;
+  nextAction: string;
+  nextActionDate: string | null;
+  overdue: boolean;
+  value: number;
+};
+
+export type DayViewPipeline = {
+  href: string;
+  openCount: number;
+  openValue: number;
+  stages: DayViewPipelineStage[];
+  /** Deals whose next action is due today or overdue. */
+  needsAction: DayViewPipelineDeal[];
+};
+
 export type DayViewData = {
   userId: string;
   scope: PlannerScope;
@@ -72,9 +98,13 @@ export type DayViewData = {
     configured: boolean;
   };
   tasksDueToday: PlannerTask[];
+  /** Open tasks in scope — used when re-planning the rest of the day. */
+  openTasksForReplan: PlannerTask[];
   sopSuggestions: SopSuggestion[];
   /** Saved day plan for today (from the database), if one exists. */
   planMarkdown: string | null;
+  /** Compact pipeline overview, when the scope has an active pipeline. */
+  pipeline: DayViewPipeline | null;
   planViewHref: string;
   settingsHref: string;
 };

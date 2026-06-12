@@ -38,6 +38,7 @@ export function PersonalAccountDropdown({
   paths,
   features,
   account,
+  menuClassName,
 }: {
   user: JWTUserData;
 
@@ -62,6 +63,7 @@ export function PersonalAccountDropdown({
   showProfileName?: boolean;
 
   className?: string;
+  menuClassName?: string;
 }) {
   const { data: personalAccountData } = usePersonalAccountData(
     user.id,
@@ -139,12 +141,17 @@ export function PersonalAccountDropdown({
         </If>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent className={'xl:min-w-[15rem]!'}>
+      <DropdownMenuContent
+        className={cn(
+          'xl:min-w-[15rem]! border-white/10 bg-[#0B132B] text-white',
+          menuClassName,
+        )}
+      >
         <DropdownMenuItem className={'h-10! rounded-none'}>
           <div
             className={'flex flex-col justify-start truncate text-left text-xs'}
           >
-            <div className={'text-muted-foreground'}>
+            <div className={'text-white/50'}>
               <Trans i18nKey={'common:signedInAs'} />
             </div>
 

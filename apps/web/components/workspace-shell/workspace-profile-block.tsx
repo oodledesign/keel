@@ -17,7 +17,7 @@ const paths = {
 };
 
 const features = {
-  enableThemeToggle: featureFlagsConfig.enableThemeToggle,
+  enableThemeToggle: false,
 };
 
 /**

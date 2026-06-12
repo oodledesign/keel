@@ -40,7 +40,7 @@ export function KeelDashboard({ data }: Props) {
   const greeting = useMemo(() => getGreeting(), []);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-8 px-4 pb-12 pt-6 text-white md:px-6 lg:px-8">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-8 overflow-x-hidden px-4 pb-12 pt-6 text-white md:px-6 lg:px-8">
       <header className="space-y-4">
         <DashboardShortcutsBar
           shortcuts={data.dashboardShortcuts}
@@ -52,11 +52,6 @@ export function KeelDashboard({ data }: Props) {
           </h1>
           <p className="mt-1 text-sm font-normal text-white/60">{data.dateLabel}</p>
         </div>
-        <ConnectedWorkspacesBar
-          cards={data.workspaceOverview}
-          includeWorkspaceTasks={data.includeWorkspaceTasks}
-          settingsHref={pathsConfig.app.personalAccountSettings}
-        />
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
@@ -144,6 +139,12 @@ export function KeelDashboard({ data }: Props) {
           <EmptyPanel message="Join or create a workspace to see an overview here." />
         )}
       </DashboardSection>
+
+      <ConnectedWorkspacesBar
+        cards={data.workspaceOverview}
+        includeWorkspaceTasks={data.includeWorkspaceTasks}
+        settingsHref={pathsConfig.app.personalAccountSettings}
+      />
     </div>
   );
 }
@@ -232,33 +233,35 @@ function WorkspaceOverviewCardView(props: { card: WorkspaceOverviewCard }) {
   return (
     <div className={panelClass}>
       <div className="flex flex-col gap-4 p-5">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-10 w-10 rounded-xl">
-            <AvatarImage src={card.pictureUrl ?? undefined} alt="" />
-            <AvatarFallback
-              className="rounded-xl text-sm font-semibold text-white"
-              style={{ backgroundColor: card.color }}
-            >
-              {initial}
-            </AvatarFallback>
-          </Avatar>
-          <h3 className="text-base font-semibold text-white">{card.name}</h3>
-        </div>
-
         <dl className="grid grid-cols-2 gap-3">
-          {card.stats.map((stat) => (
-            <div
-              key={stat.label}
-              className="rounded-lg border border-white/[0.06] bg-[var(--workspace-shell-canvas)] px-3 py-2"
-            >
-              <dt className="text-[10px] font-medium uppercase tracking-wide text-white/45">
-                {stat.label}
-              </dt>
-              <dd className="mt-0.5 text-lg font-semibold text-white">
-                {stat.value}
-              </dd>
-            </div>
-          ))}
+          {card.stats.map((stat) => {
+            const isPipeline = stat.label === 'Pipeline value';
+
+            return (
+              <div
+                key={stat.label}
+                className="rounded-lg border border-white/[0.06] bg-[var(--workspace-shell-canvas)] px-3 py-2"
+              >
+                <dt className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wide text-white/45">
+                  {isPipeline ? (
+                    <Avatar className="h-5 w-5 rounded-md">
+                      <AvatarImage src={card.pictureUrl ?? undefined} alt="" />
+                      <AvatarFallback
+                        className="rounded-md text-[9px] font-semibold text-white"
+                        style={{ backgroundColor: card.color }}
+                      >
+                        {initial}
+                      </AvatarFallback>
+                    </Avatar>
+                  ) : null}
+                  <span>{isPipeline ? 'Pipeline' : stat.label}</span>
+                </dt>
+                <dd className="mt-0.5 text-lg font-semibold text-white">
+                  {stat.value}
+                </dd>
+              </div>
+            );
+          })}
         </dl>
 
         <Link

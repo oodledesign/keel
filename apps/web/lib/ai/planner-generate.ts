@@ -56,7 +56,15 @@ For week planning:
 ### Weekly notes
 [Overall load observations — keep this concise]
 
-Be direct and practical. Use plain time ranges. If the user is overcommitted, say so clearly. Keep notes brief — maximum 3 bullet points.`;
+Be direct and practical. Use plain time ranges. If the user is overcommitted, say so clearly. Keep notes brief — maximum 3 bullet points.
+
+Mid-day re-planning:
+If the payload contains a "replan" object, the user is partway through their day and needs the remainder re-planned. In that case:
+- "replan.current_time" is the time right now. Never schedule a new block that starts before it.
+- "replan.existing_plan_markdown" is the plan they were following. Reproduce blocks from it that END before current_time exactly as they were, in their original sections, so the day's history stays visible. Drop or reschedule everything else.
+- "replan.notes" is the user explaining where they are in the day, what they did not get to, and what new things must be fitted in. Treat these notes as the highest-priority input: reschedule unfinished work, add the new items, and drop what no longer fits into "### Not scheduled today" with a reason.
+- If a block is in progress at current_time, end it at current_time and reschedule its remainder.
+- Keep the same markdown format as a normal day plan, still ending at the user's working-hours end.`;
 
 export async function streamPlannerMarkdown(payload: unknown) {
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
