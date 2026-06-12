@@ -40,6 +40,31 @@ function inferAppOriginFromMarketing(siteUrl: string, marketingUrl: string): str
   }
 }
 
+function inferAppOriginFromWwwMarketing(marketingUrl: string): string | null {
+  if (process.env.NODE_ENV !== 'production') {
+    return null;
+  }
+
+  const marketingHost = hostFromOrigin(marketingUrl);
+
+  if (!marketingHost?.startsWith('www.')) {
+    return null;
+  }
+
+  const apex = marketingHost.slice(4);
+
+  if (!apex || apex.includes('localhost')) {
+    return null;
+  }
+
+  try {
+    const protocol = new URL(marketingUrl).protocol;
+    return `${protocol}//app.${apex}`;
+  } catch {
+    return null;
+  }
+}
+
 /** Canonical app origin for auth, onboarding, and workspace routes. */
 export function getAppSiteOrigin(): string {
   const explicitApp = process.env.NEXT_PUBLIC_APP_SITE_URL?.replace(/\/+$/, '');
@@ -49,7 +74,7 @@ export function getAppSiteOrigin(): string {
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, '');
-  const marketingUrl = process.env.NEXT_PUBLIC_MARKETING_SITE_URL?.replace(/\/+$/, '');
+  const marketingUrl = getMarketingSiteOrigin();
 
   if (siteUrl) {
     const siteHost = hostFromOrigin(siteUrl);
@@ -58,7 +83,13 @@ export function getAppSiteOrigin(): string {
       return siteUrl;
     }
 
-    if (marketingUrl) {
+    const inferredFromMarketing = inferAppOriginFromWwwMarketing(marketingUrl);
+
+    if (inferredFromMarketing) {
+      return inferredFromMarketing;
+    }
+
+    if (marketingUrl && siteUrl === marketingUrl) {
       const inferred = inferAppOriginFromMarketing(siteUrl, marketingUrl);
 
       if (inferred) {

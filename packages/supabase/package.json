@@ -14,6 +14,7 @@
     "./server-admin-client": "./src/clients/server-admin-client.ts",
     "./middleware-client": "./src/clients/middleware-client.ts",
     "./browser-client": "./src/clients/browser-client.ts",
+    "./get-supabase-auth-cookie-options": "./src/get-supabase-auth-cookie-options.ts",
     "./check-requires-mfa": "./src/check-requires-mfa.ts",
     "./require-user": "./src/require-user.ts",
     "./hooks/*": "./src/hooks/*.ts",

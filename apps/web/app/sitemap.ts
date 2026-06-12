@@ -1,37 +1,14 @@
 import type { MetadataRoute } from 'next';
 
-import { getMarketingSiteOrigin } from '~/lib/app-host-routing';
+import { buildMarketingSitemap } from '~/lib/seo/marketing-sitemap';
+import { isSearchIndexingAllowed } from '~/lib/seo/search-indexing';
 
-const MARKETING_PATHS = [
-  '',
-  '/personal',
-  '/work',
-  '/property',
-  '/community',
-  '/apps',
-  '/apps/signatures',
-  '/apps/rankly',
-  '/apps/feedflow',
-  '/apps/videos',
-  '/pricing',
-  '/faq',
-  '/contact',
-  '/blog',
-  '/docs',
-  '/changelog',
-  '/privacy-policy',
-  '/terms-of-service',
-  '/cookie-policy',
-];
+export const dynamic = 'force-dynamic';
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const base = getMarketingSiteOrigin().replace(/\/$/, '');
-  const now = new Date();
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  if (!isSearchIndexingAllowed()) {
+    return [];
+  }
 
-  return MARKETING_PATHS.map((path) => ({
-    url: `${base}${path || '/'}`,
-    lastModified: now,
-    changeFrequency: path === '' || path.startsWith('/personal') || path.startsWith('/work') ? 'weekly' : 'monthly',
-    priority: path === '' ? 1 : path.match(/^\/(personal|work|property|community)$/) ? 0.9 : 0.7,
-  }));
+  return buildMarketingSitemap();
 }

@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation';
 import {
   ChevronLeft,
   ChevronRight,
-  Loader2,
   Sparkles,
   Wand2,
   X,
@@ -18,14 +17,9 @@ import { Input } from '@kit/ui/input';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
-import {
-  applyGeneratedWeekAction,
-  clearMealEntryAction,
-  setMealEntryAction,
-} from '../_lib/actions';
+import { clearMealEntryAction, setMealEntryAction } from '../_lib/actions';
 import {
   addDays,
-  chunkDates,
   monthCalendarGrid,
   monthLabel,
   shiftMonth,
@@ -40,15 +34,8 @@ import type {
   RecipeRow,
 } from '../_lib/schema/family-meal.schema';
 import { MealDayEditDialog } from './MealDayEditDialog';
+import { MealPlanGenerateDialog } from './MealPlanGenerateDialog';
 import { ACCENT, panelClass, titleCase } from './meal-ui';
-
-type GeneratedMeal = {
-  date: string;
-  title: string;
-  description: string;
-  tags: string[];
-  recipeId: string | null;
-};
 
 type Props = {
   view: MealPlanView;
@@ -104,7 +91,10 @@ export function MealPlanPanel({
   const [draftTitle, setDraftTitle] = useState('');
   const [draftRecipeId, setDraftRecipeId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [generateDialog, setGenerateDialog] = useState<{
+    open: boolean;
+    mode: 'fill' | 'generate';
+  }>({ open: false, mode: 'fill' });
 
   const today = toYmd(new Date());
 
@@ -121,7 +111,9 @@ export function MealPlanPanel({
     [recipes],
   );
 
-  const emptyDates = planDates.filter((d) => !entriesByDate.get(d)?.title);
+  const emptyDates = planDates.filter(
+    (d) => !entriesByDate.get(d)?.title?.trim(),
+  );
   const filledCount = planDates.length - emptyDates.length;
 
   const monthGrid = useMemo(
@@ -217,66 +209,12 @@ export function MealPlanPanel({
     }
   }
 
-  async function runGenerator(mode: 'generate' | 'fill') {
-    const dates = mode === 'fill' ? emptyDates : planDates;
-    if (dates.length === 0) {
-      toast.info('Every day already has a meal — try "Generate" to replace.');
+  function openGenerator(mode: 'generate' | 'fill') {
+    if (mode === 'fill' && emptyDates.length === 0) {
+      toast.info('Every day already has a meal — try "Generate plan" to replace.');
       return;
     }
-
-    setIsGenerating(true);
-    try {
-      const allMeals: GeneratedMeal[] = [];
-      const chunks = chunkDates(dates, 7);
-
-      for (const chunk of chunks) {
-        const response = await fetch('/api/family/meal-plan/generate', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ mode, dates: chunk, ...scopeFields }),
-        });
-        const body = (await response.json()) as {
-          meals?: GeneratedMeal[];
-          error?: string;
-        };
-        if (!response.ok) {
-          throw new Error(body.error ?? 'Could not generate meal plan');
-        }
-        allMeals.push(...(body.meals ?? []));
-      }
-
-      if (allMeals.length === 0) {
-        throw new Error('The planner did not return any meals');
-      }
-
-      const result = await applyGeneratedWeekAction({
-        entries: allMeals.map((meal) => ({
-          planDate: meal.date,
-          mealType: 'dinner',
-          title: meal.title,
-          notes: meal.description || null,
-          recipeId: meal.recipeId ?? null,
-        })),
-        ...scopeFields,
-      });
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-
-      const periodLabel = view === 'month' ? 'month' : 'week';
-      toast.success(
-        mode === 'fill'
-          ? `Filled ${allMeals.length} day${allMeals.length === 1 ? '' : 's'}`
-          : `Generated this ${periodLabel}’s meals`,
-      );
-      onChanged();
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : 'Could not generate meal plan',
-      );
-    } finally {
-      setIsGenerating(false);
-    }
+    setGenerateDialog({ open: true, mode });
   }
 
   const hasDietary = preferences.dietary_requirements.length > 0;
@@ -346,27 +284,18 @@ export function MealPlanPanel({
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            onClick={() => runGenerator('fill')}
-            disabled={isGenerating || emptyDates.length === 0}
+            onClick={() => openGenerator('fill')}
+            disabled={emptyDates.length === 0}
           >
-            {isGenerating ? (
-              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-            ) : (
-              <Wand2 className="mr-1.5 h-4 w-4" />
-            )}
+            <Wand2 className="mr-1.5 h-4 w-4" />
             Fill gaps
           </Button>
           <Button
-            onClick={() => runGenerator('generate')}
-            disabled={isGenerating}
+            onClick={() => openGenerator('generate')}
             style={{ backgroundColor: ACCENT }}
             className="text-white hover:opacity-90"
           >
-            {isGenerating ? (
-              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="mr-1.5 h-4 w-4" />
-            )}
+            <Sparkles className="mr-1.5 h-4 w-4" />
             Generate plan
           </Button>
         </div>
@@ -617,6 +546,21 @@ export function MealPlanPanel({
         date={editingDate}
         entry={editingDate ? (entriesByDate.get(editingDate) ?? null) : null}
         recipes={recipes}
+        accountSlug={accountSlug}
+        onSaved={onChanged}
+      />
+
+      <MealPlanGenerateDialog
+        open={generateDialog.open}
+        onOpenChange={(open) =>
+          setGenerateDialog((current) => ({ ...current, open }))
+        }
+        mode={generateDialog.mode}
+        targetDates={
+          generateDialog.mode === 'fill' ? emptyDates : planDates
+        }
+        planDates={planDates}
+        preferences={preferences}
         accountSlug={accountSlug}
         onSaved={onChanged}
       />

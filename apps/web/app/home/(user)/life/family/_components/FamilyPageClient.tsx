@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
   BookOpen,
@@ -22,6 +22,14 @@ import { RecipeLibrary } from './RecipeLibrary';
 import { ACCENT } from './meal-ui';
 
 type Tab = 'plan' | 'recipes' | 'preferences';
+
+function parseTab(value: string | null): Tab {
+  if (value === 'recipes' || value === 'preferences') {
+    return value;
+  }
+
+  return 'plan';
+}
 
 const TABS: { id: Tab; label: string; Icon: typeof CalendarDays }[] = [
   { id: 'plan', label: 'Meal plan', Icon: CalendarDays },
@@ -47,7 +55,8 @@ export function FamilyPageClient({
   compactHeader = false,
 }: Props) {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>('plan');
+  const searchParams = useSearchParams();
+  const [tab, setTab] = useState<Tab>(() => parseTab(searchParams.get('tab')));
 
   const refresh = () => router.refresh();
 
@@ -169,6 +178,7 @@ export function FamilyPageClient({
         <RecipeLibrary
           recipes={initialData.recipes}
           preferences={initialData.preferences}
+          basePath={initialData.basePath}
           accountSlug={initialData.accountSlug}
           onChanged={refresh}
         />

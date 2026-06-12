@@ -2,6 +2,8 @@
 
 import { useMemo, useState, useTransition } from 'react';
 
+import Link from 'next/link';
+
 import {
   Clock,
   Pencil,
@@ -20,6 +22,7 @@ import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import { deleteRecipeAction, toggleRecipeFavoriteAction } from '../_lib/actions';
+import { buildRecipeDetailPath } from '../_lib/family-meal.paths';
 import type { RecipeRow } from '../_lib/schema/family-meal.schema';
 import { RecipeDialog } from './RecipeDialog';
 import { RecipeGenerateDialog } from './RecipeGenerateDialog';
@@ -28,11 +31,18 @@ import { ACCENT, panelClass, totalTimeLabel } from './meal-ui';
 type Props = {
   recipes: RecipeRow[];
   preferences: import('../_lib/schema/family-meal.schema').MealPreferencesRow;
+  basePath: string;
   accountSlug?: string;
   onChanged: () => void;
 };
 
-export function RecipeLibrary({ recipes, preferences, accountSlug, onChanged }: Props) {
+export function RecipeLibrary({
+  recipes,
+  preferences,
+  basePath,
+  accountSlug,
+  onChanged,
+}: Props) {
   const scopeFields = accountSlug ? { accountSlug } : {};
   const [query, setQuery] = useState('');
   const [activeTag, setActiveTag] = useState<string | null>(null);
@@ -187,9 +197,14 @@ export function RecipeLibrary({ recipes, preferences, accountSlug, onChanged }: 
                 className={cn(panelClass, 'flex flex-col p-4')}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="text-sm font-semibold text-white">
-                    {recipe.name}
-                  </h3>
+                  <Link
+                    href={buildRecipeDetailPath(basePath, recipe.id)}
+                    className="min-w-0 flex-1 transition-opacity hover:opacity-90"
+                  >
+                    <h3 className="text-sm font-semibold text-white">
+                      {recipe.name}
+                    </h3>
+                  </Link>
                   <button
                     type="button"
                     onClick={() => handleFavorite(recipe)}
@@ -207,39 +222,44 @@ export function RecipeLibrary({ recipes, preferences, accountSlug, onChanged }: 
                   </button>
                 </div>
 
-                {recipe.description ? (
-                  <p className="mt-1 line-clamp-2 text-xs text-zinc-400">
-                    {recipe.description}
-                  </p>
-                ) : null}
-
-                <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-zinc-400">
-                  {time ? (
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3.5 w-3.5" />
-                      {time}
-                    </span>
+                <Link
+                  href={buildRecipeDetailPath(basePath, recipe.id)}
+                  className="mt-1 block min-w-0 flex-1 transition-opacity hover:opacity-90"
+                >
+                  {recipe.description ? (
+                    <p className="line-clamp-2 text-xs text-zinc-400">
+                      {recipe.description}
+                    </p>
                   ) : null}
-                  {recipe.servings ? (
-                    <span className="flex items-center gap-1">
-                      <Users className="h-3.5 w-3.5" />
-                      {recipe.servings}
-                    </span>
-                  ) : null}
-                </div>
 
-                {recipe.tags.length > 0 ? (
-                  <div className="mt-3 flex flex-wrap gap-1">
-                    {recipe.tags.slice(0, 4).map((tag) => (
-                      <span
-                        key={tag}
-                        className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[11px] capitalize text-zinc-300"
-                      >
-                        {tag}
+                  <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-zinc-400">
+                    {time ? (
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3.5 w-3.5" />
+                        {time}
                       </span>
-                    ))}
+                    ) : null}
+                    {recipe.servings ? (
+                      <span className="flex items-center gap-1">
+                        <Users className="h-3.5 w-3.5" />
+                        {recipe.servings}
+                      </span>
+                    ) : null}
                   </div>
-                ) : null}
+
+                  {recipe.tags.length > 0 ? (
+                    <div className="mt-3 flex flex-wrap gap-1">
+                      {recipe.tags.slice(0, 4).map((tag) => (
+                        <span
+                          key={tag}
+                          className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[11px] capitalize text-zinc-300"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                </Link>
 
                 <div className="mt-4 flex items-center gap-2 border-t border-white/6 pt-3">
                   <Button

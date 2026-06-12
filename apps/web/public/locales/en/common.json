@@ -107,10 +107,10 @@
     "errorSendingCode": "Error sending code. Please try again."
   },
   "cookieBanner": {
-    "title": "Hey, we use cookies 🍪",
-    "description": "This website uses cookies to ensure you get the best experience on our website.",
-    "reject": "Reject",
-    "accept": "Accept"
+    "title": "Cookies on Keel",
+    "description": "We use essential cookies to run the site. With your permission, we also use analytics cookies to understand how Keel is used. See our cookie policy for details.",
+    "reject": "Reject analytics",
+    "accept": "Accept analytics"
   },
   "dropzone": {
     "success": "Successfully uploaded {{count}} file(s)",

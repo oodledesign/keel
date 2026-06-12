@@ -22,4 +22,11 @@ describe('getAppSiteOrigin', () => {
 
     expect(getAppSiteOrigin()).toBe('https://app.keelos.so');
   });
+
+  it('infers app.{apex} from www marketing when only SITE_URL is set', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://www.keelos.so');
+
+    expect(getAppSiteOrigin()).toBe('https://app.keelos.so');
+  });
 });

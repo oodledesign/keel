@@ -1,6 +1,7 @@
 import { createBrowserClient } from '@supabase/ssr';
 
 import { Database } from '../database.types';
+import { getSupabaseAuthCookieOptions } from '../get-supabase-auth-cookie-options';
 import { getSupabaseClientKeys } from '../get-supabase-client-keys';
 
 /**
@@ -10,5 +11,7 @@ import { getSupabaseClientKeys } from '../get-supabase-client-keys';
 export function getSupabaseBrowserClient<GenericSchema = Database>() {
   const keys = getSupabaseClientKeys();
 
-  return createBrowserClient<GenericSchema>(keys.url, keys.publicKey);
+  return createBrowserClient<GenericSchema>(keys.url, keys.publicKey, {
+    cookieOptions: getSupabaseAuthCookieOptions(),
+  });
 }

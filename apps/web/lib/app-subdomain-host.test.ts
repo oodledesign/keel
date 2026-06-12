@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { resolveAppSubdomainRedirect } from './app-subdomain-host';
+import {
+  isAppSubdomainHostname,
+  resolveAppSubdomainRedirect,
+} from './app-subdomain-host';
 
 describe('resolveAppSubdomainRedirect', () => {
   afterEach(() => {
@@ -33,6 +36,19 @@ describe('resolveAppSubdomainRedirect', () => {
     expect(
       resolveAppSubdomainRedirect(new URL('https://app.keelos.so/pricing')),
     ).toBe('https://www.keelos.so/pricing');
+  });
+
+  it('locks app host even when env vars only list www marketing', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://www.keelos.so');
+
+    expect(isAppSubdomainHostname('app.keelos.so')).toBe(true);
+    expect(resolveAppSubdomainRedirect(new URL('https://app.keelos.so/'))).toBe(
+      'https://app.keelos.so/app',
+    );
+    expect(
+      resolveAppSubdomainRedirect(new URL('https://app.keelos.so/personal')),
+    ).toBe('https://www.keelos.so/personal');
   });
 
   it('does nothing when hosts are the same (local dev)', () => {

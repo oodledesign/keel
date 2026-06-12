@@ -8,6 +8,11 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import pathsConfig from '~/config/paths.config';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
+import {
+  buildRecipeDetailPath,
+  buildRecipesListPath,
+} from '../family-meal.paths';
+
 export type MealPlanScope =
   | {
       kind: 'personal';
@@ -32,6 +37,14 @@ export function revalidateMealPlanPaths(scope: MealPlanScope) {
 
   // Public /app/* URLs rewrite to /home/* — invalidate both route caches.
   revalidatePath(scope.basePath);
+}
+
+export { buildRecipeDetailPath, buildRecipesListPath } from '../family-meal.paths';
+
+export function revalidateRecipePaths(scope: MealPlanScope, recipeId: string) {
+  revalidateMealPlanPaths(scope);
+  revalidatePath(buildRecipeDetailPath(scope.basePath, recipeId));
+  revalidatePath(buildRecipeDetailPath(scope.revalidatePath, recipeId));
 }
 
 export async function resolveMealPlanScope(

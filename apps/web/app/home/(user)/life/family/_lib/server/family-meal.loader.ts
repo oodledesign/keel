@@ -130,3 +130,22 @@ export const loadFamilyMealData = cache(
     };
   },
 );
+
+export const loadFamilyRecipeById = cache(
+  async (
+    recipeId: string,
+    accountSlug?: string,
+  ): Promise<RecipeRow | null> => {
+    const scope = await resolveMealPlanScope(accountSlug);
+    const { data, error } = await recipesQuery(scope)
+      .eq('id', recipeId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[family-meal] loadFamilyRecipeById:', error.message);
+      return null;
+    }
+
+    return (data as RecipeRow | null) ?? null;
+  },
+);

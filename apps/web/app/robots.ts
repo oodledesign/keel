@@ -1,9 +1,21 @@
 import type { MetadataRoute } from 'next';
 
-import appConfig from '~/config/app.config';
+import { getMarketingSiteOrigin } from '~/lib/app-host-routing';
+import { isSearchIndexingAllowed } from '~/lib/seo/search-indexing';
+
+export const dynamic = 'force-dynamic';
 
 export default function robots(): MetadataRoute.Robots {
-  const base = appConfig.url.replace(/\/$/, '');
+  if (!isSearchIndexingAllowed()) {
+    return {
+      rules: {
+        userAgent: '*',
+        disallow: '/',
+      },
+    };
+  }
+
+  const base = getMarketingSiteOrigin().replace(/\/$/, '');
 
   return {
     rules: {
@@ -12,5 +24,6 @@ export default function robots(): MetadataRoute.Robots {
       disallow: ['/home/', '/admin/', '/api/', '/auth/'],
     },
     sitemap: `${base}/sitemap.xml`,
+    host: base,
   };
 }

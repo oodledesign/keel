@@ -1,9 +1,11 @@
 import { cookies, headers } from 'next/headers';
 
 import { Toaster } from '@kit/ui/sonner';
+import { CookieBanner } from '@kit/ui/cookie-banner';
 import { cn } from '@kit/ui/utils';
 
 import { PwaRegister } from '~/components/pwa-register';
+import { GoogleAnalytics } from '~/components/google-analytics';
 import { RootProviders } from '~/components/root-providers';
 import { TextSizeSync } from '~/components/text-size-sync';
 import { getFontsClassName } from '~/lib/fonts';
@@ -41,6 +43,8 @@ export default async function RootLayout({
           {children}
         </RootProviders>
         <PwaRegister />
+        <CookieBanner />
+        <GoogleAnalytics />
 
         <Toaster richColors={true} theme={APP_THEME} position="top-center" />
       </body>

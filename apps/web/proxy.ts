@@ -7,6 +7,7 @@ import { isSuperAdmin } from '@kit/admin';
 import { getSafeRedirectPath } from '@kit/shared/utils';
 import { checkRequiresMultiFactorAuthentication } from '@kit/supabase/check-requires-mfa';
 import { createMiddlewareClient } from '@kit/supabase/middleware-client';
+import { getSupabaseAuthCookieDomain } from '@kit/supabase/get-supabase-auth-cookie-options';
 
 import appConfig from '~/config/app.config';
 import pathsConfig from '~/config/paths.config';
@@ -22,6 +23,7 @@ import {
 } from '~/lib/app-subdomain-host';
 import { getAppSiteOrigin, getMarketingSiteOrigin } from '~/lib/app-host-routing';
 import { getUserDefaultLandingPath } from '~/lib/dashboard-shortcuts/load-shortcuts';
+import { applyNoIndexResponseHeader } from '~/lib/seo/search-indexing';
 
 const CSRF_SECRET_COOKIE = 'csrfSecret';
 const NEXT_ACTION_HEADER = 'next-action';
@@ -168,13 +170,13 @@ export async function proxy(request: NextRequest) {
 
     // if a pattern handler returns a response, return it
     if (patternHandlerResponse) {
-      return patternHandlerResponse;
+      return applyNoIndexResponseHeader(patternHandlerResponse);
     }
   }
 
   // if no pattern handler returned a response,
   // return the session response
-  return csrfResponse;
+  return applyNoIndexResponseHeader(csrfResponse);
 }
 
 async function withCsrfMiddleware(
@@ -186,6 +188,9 @@ async function withCsrfMiddleware(
     cookie: {
       secure: appConfig.production,
       name: CSRF_SECRET_COOKIE,
+      ...(getSupabaseAuthCookieDomain()
+        ? { domain: getSupabaseAuthCookieDomain() }
+        : {}),
     },
     // ignore CSRF errors for server actions since protection is built-in
     ignoreMethods: isServerAction(request)
@@ -197,7 +202,7 @@ async function withCsrfMiddleware(
   try {
     await csrfProtect(request, response);
 
-    return response;
+    return applyNoIndexResponseHeader(response);
   } catch (error) {
     // if there is a CSRF error, return a 403 response
     if (error instanceof CsrfError) {
@@ -226,11 +231,15 @@ async function adminMiddleware(request: NextRequest, response: NextResponse) {
   const { data, error } = await getUser(request, response);
 
   // If user is not logged in, redirect to sign in page.
-  // This should never happen, but just in case.
   if (!data?.claims || error) {
-    return NextResponse.redirect(
-      new URL(pathsConfig.auth.signIn, request.nextUrl.origin).href,
-    );
+    const signInUrl = new URL(pathsConfig.auth.signIn, request.nextUrl.origin);
+    const returnPath = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+
+    if (returnPath && returnPath !== pathsConfig.auth.signIn) {
+      signInUrl.searchParams.set('next', returnPath);
+    }
+
+    return NextResponse.redirect(signInUrl.href);
   }
 
   const client = createMiddlewareClient(request, response);

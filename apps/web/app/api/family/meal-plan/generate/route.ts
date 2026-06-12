@@ -20,6 +20,10 @@ const requestSchema = z.object({
     .array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/))
     .min(1)
     .max(31),
+  contextDates: z
+    .array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/))
+    .max(31)
+    .optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -79,6 +83,43 @@ export async function POST(request: NextRequest) {
     'id' | 'name' | 'tags' | 'meal_type'
   >[];
 
+  const sortedDates = [...parsed.data.dates].sort();
+  const contextDates = parsed.data.contextDates?.length
+    ? [...parsed.data.contextDates].sort()
+    : sortedDates;
+  const rangeStart = contextDates[0]!;
+  const rangeEnd = contextDates[contextDates.length - 1]!;
+
+  let existingMealsQuery = client
+    .from('family_meal_plan_entries')
+    .select('plan_date, title')
+    .eq('meal_type', 'dinner')
+    .gte('plan_date', rangeStart)
+    .lte('plan_date', rangeEnd);
+
+  if (scope.kind === 'workspace') {
+    existingMealsQuery = existingMealsQuery.eq('account_id', scope.accountId);
+  } else {
+    existingMealsQuery = existingMealsQuery
+      .eq('user_id', user.id)
+      .is('account_id', null);
+  }
+
+  const { data: existingEntryData } = await existingMealsQuery;
+  const targetDateSet = new Set(parsed.data.dates);
+  const existingMeals = (existingEntryData ?? [])
+    .map((row) => {
+      const date = String((row as { plan_date: string }).plan_date).slice(0, 10);
+      const title = String((row as { title?: string }).title ?? '').trim();
+      return { date, title };
+    })
+    .filter(
+      (meal) =>
+        meal.title &&
+        !targetDateSet.has(meal.date) &&
+        parsed.data.mode === 'fill',
+    );
+
   try {
     const basePayload = {
       dietary_requirements: preferences?.dietary_requirements ?? [],
@@ -91,6 +132,7 @@ export async function POST(request: NextRequest) {
         tags: r.tags,
         meal_type: r.meal_type,
       })),
+      existing_meals: existingMeals,
     };
 
     const meals = [];

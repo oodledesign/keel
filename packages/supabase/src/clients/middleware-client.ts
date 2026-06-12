@@ -5,6 +5,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
 import { Database } from '../database.types';
+import { getSupabaseAuthCookieOptions } from '../get-supabase-auth-cookie-options';
 import { getSupabaseClientKeys } from '../get-supabase-client-keys';
 
 /**
@@ -20,6 +21,7 @@ export function createMiddlewareClient<GenericSchema = Database>(
   const keys = getSupabaseClientKeys();
 
   return createServerClient<GenericSchema>(keys.url, keys.publicKey, {
+    cookieOptions: getSupabaseAuthCookieOptions(),
     cookies: {
       getAll() {
         return request.cookies.getAll();

@@ -2,6 +2,7 @@ import { Metadata, Viewport } from 'next';
 
 import appConfig from '~/config/app.config';
 import { brandConfig } from '~/config/brand.config';
+import { getSearchIndexingRobots } from '~/lib/seo/search-indexing';
 
 /**
  * @name generateRootMetadata
@@ -15,6 +16,7 @@ export const generateRootMetadata = (): Metadata => ({
   metadataBase: new URL(appConfig.url),
   applicationName: appConfig.name,
   manifest: '/manifest.webmanifest',
+  robots: getSearchIndexingRobots(),
   appleWebApp: {
     capable: true,
     title: appConfig.name,

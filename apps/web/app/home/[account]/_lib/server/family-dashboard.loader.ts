@@ -214,9 +214,10 @@ export const loadFamilyDashboardData = cache(
     if (accountId) {
       const weekEndDate = addDaysYmd(weekStart, 6);
       const { data: meals, error } = await client
-        .from('meal_plan_days')
-        .select('plan_date, summary')
+        .from('family_meal_plan_entries')
+        .select('plan_date, title')
         .eq('account_id', accountId)
+        .eq('meal_type', 'dinner')
         .gte('plan_date', weekStart)
         .lte('plan_date', weekEndDate);
 
@@ -224,7 +225,8 @@ export const loadFamilyDashboardData = cache(
         for (const row of meals ?? []) {
           const d = toIsoDateString((row as { plan_date: string }).plan_date);
           if (d) {
-            mealByDate.set(d, ((row as { summary?: string }).summary ?? '').trim());
+            const title = ((row as { title?: string }).title ?? '').trim();
+            if (title) mealByDate.set(d, title);
           }
         }
       }

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 import appConfig from '~/config/app.config';
+import { getSearchIndexingRobots } from '~/lib/seo/search-indexing';
 
 import type { AppLandingConfig } from './app-landing-pages';
 
@@ -31,10 +32,7 @@ export function buildAppMetadata(config: AppLandingConfig): Metadata {
       title: config.seo.title,
       description: config.seo.description,
     },
-    robots: {
-      index: true,
-      follow: true,
-    },
+    robots: getSearchIndexingRobots(),
   };
 }
 

@@ -1,5 +1,4 @@
 import {
-  buildAppSiteUrl,
   getAppSiteOrigin,
   getMarketingSiteOrigin,
   isAppMarketingHostSplitEnabled,
@@ -93,41 +92,53 @@ export function shouldSplitAppAndMarketingHosts(): boolean {
   return isAppMarketingHostSplitEnabled();
 }
 
+/** True when the request hostname is the reserved app subdomain (e.g. app.keelos.so). */
+export function isAppSubdomainHostname(hostname: string): boolean {
+  const normalized = normalizeHostname(hostname);
+
+  if (normalized.startsWith(`${APP_SUBDOMAIN}.`)) {
+    return !normalized.includes('localhost');
+  }
+
+  const appHost = hostFromOrigin(getAppSiteOrigin());
+
+  return Boolean(appHost && normalized === appHost);
+}
+
 /**
  * When marketing and app use different hostnames, return a redirect target URL
  * or null if the request should continue unchanged.
  */
 export function resolveAppSubdomainRedirect(url: URL): string | null {
-  if (!shouldSplitAppAndMarketingHosts()) {
-    return null;
-  }
-
   const hostname = normalizeHostname(url.hostname);
-  const appHost = hostFromOrigin(getAppSiteOrigin());
-  const marketingHosts = getMarketingHostnames();
+  const onAppHost = isAppSubdomainHostname(hostname);
+  const splitEnabled = shouldSplitAppAndMarketingHosts() || onAppHost;
 
-  if (!appHost) {
+  if (!splitEnabled) {
     return null;
   }
 
+  const appOrigin = getAppSiteOrigin();
+  const appHost = hostFromOrigin(appOrigin);
+  const marketingHosts = getMarketingHostnames();
   const { pathname, search } = url;
 
-  if (marketingHosts.has(hostname)) {
-    if (!isAppRoute(pathname)) {
+  if (onAppHost) {
+    if (isAppRoute(pathname)) {
       return null;
     }
 
-    return `${getAppSiteOrigin()}${pathname}${search}`;
-  }
-
-  if (hostname === appHost) {
-    if (pathname === '/') {
-      return buildAppSiteUrl('/app');
-    }
-
-    if (isMarketingRoute(pathname)) {
+    if (isMarketingRoute(pathname) && pathname !== '/') {
       return `${getMarketingSiteOrigin()}${pathname}${search}`;
     }
+
+    const dashboard = new URL('/app', url);
+    dashboard.search = search;
+    return dashboard.toString();
+  }
+
+  if (appHost && marketingHosts.has(hostname) && isAppRoute(pathname)) {
+    return `${appOrigin}${pathname}${search}`;
   }
 
   return null;

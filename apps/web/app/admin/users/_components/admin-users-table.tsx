@@ -97,6 +97,7 @@ function AdminUsersFilters(props: { query: string }) {
 
 const columns: ColumnDef<AdminUserRow>[] = [
   {
+    id: 'email',
     header: 'Email',
     accessorKey: 'email',
     cell: ({ row }) => (
@@ -109,6 +110,7 @@ const columns: ColumnDef<AdminUserRow>[] = [
     ),
   },
   {
+    id: 'status',
     header: 'Status',
     cell: ({ row }) => {
       if (row.original.isSuperAdmin) {
@@ -121,11 +123,13 @@ const columns: ColumnDef<AdminUserRow>[] = [
     },
   },
   {
+    id: 'createdAt',
     header: 'Created',
     cell: ({ row }) =>
       new Date(row.original.createdAt).toLocaleDateString('en-GB'),
   },
   {
+    id: 'lastSignInAt',
     header: 'Last sign-in',
     cell: ({ row }) =>
       row.original.lastSignInAt
@@ -133,6 +137,7 @@ const columns: ColumnDef<AdminUserRow>[] = [
         : '—',
   },
   {
+    id: 'actions',
     header: '',
     cell: ({ row }) => (
       <Button asChild variant="outline" size="sm">

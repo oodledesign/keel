@@ -9,6 +9,7 @@ You will receive a JSON payload with:
 - "disliked_ingredients": ingredients to avoid where reasonable.
 - "household_size": number of people to cook for.
 - "recipe_library": existing saved recipes [{ "name", "tags", "meal_type" }]. Reuse these by exact name when they fit; otherwise invent suitable new meals.
+- "existing_meals": dinners already on the plan [{ "date", "title" }]. Do not change these; avoid repeating the same protein or cuisine on nearby days.
 - "notes": free-text guidance from the user — treat as high priority.
 
 Rules:
@@ -38,6 +39,7 @@ export type MealPlanGeneratePayload = {
   disliked_ingredients: string[];
   household_size: number;
   recipe_library: Array<{ name: string; tags: string[]; meal_type: string }>;
+  existing_meals: Array<{ date: string; title: string }>;
   notes: string;
 };
 
