@@ -80,17 +80,3 @@ export function SiteAppsNavMenu() {
     </NavigationMenuItem>
   );
 }
-
-export function mobileAppsLinks() {
-  return [
-    { label: 'All apps', path: '/apps' },
-    ...apps.map((app) => ({
-      label: app.name,
-      path: `/apps/${app.slug}`,
-    })),
-  ];
-}
-
-export function isAppsRouteActive(pathname: string) {
-  return appsNavActive(pathname);
-}

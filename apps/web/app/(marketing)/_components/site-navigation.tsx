@@ -13,10 +13,9 @@ import {
 import { NavigationMenu, NavigationMenuList } from '@kit/ui/navigation-menu';
 import { Trans } from '@kit/ui/trans';
 
-import {
-  mobileAppsLinks,
-  SiteAppsNavMenu,
-} from './site-apps-nav-menu';
+import { getMarketingAppNavLinks } from '~/lib/marketing/app-landing-pages';
+
+import { SiteAppsNavMenu } from './site-apps-nav-menu';
 import { SiteNavigationItem } from './site-navigation-item';
 
 const primaryLinks = [
@@ -30,6 +29,8 @@ const primaryLinks = [
     i18n: true,
   },
 ] as const;
+
+const appNavLinks = getMarketingAppNavLinks();
 
 export function SiteNavigation() {
   const NavItems = primaryLinks.map((item) => {
@@ -63,8 +64,6 @@ export function SiteNavigation() {
 }
 
 function MobileDropdown() {
-  const appLinks = mobileAppsLinks();
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -96,7 +95,7 @@ function MobileDropdown() {
         <DropdownMenuLabel className="text-xs font-medium uppercase tracking-wider text-violet-300/70">
           Apps
         </DropdownMenuLabel>
-        {appLinks.map((item) => (
+        {appNavLinks.map((item) => (
           <DropdownMenuItem key={item.path} asChild>
             <Link
               className="flex h-full w-full items-center rounded-md px-2 py-1.5 text-violet-100/85 transition-colors hover:bg-violet-500/15 hover:text-violet-50"

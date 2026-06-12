@@ -410,3 +410,13 @@ export function listAppLandingSummaries() {
     };
   });
 }
+
+export function getMarketingAppNavLinks() {
+  return [
+    { label: 'All apps', path: '/apps' },
+    ...APP_LANDING_SLUGS.map((slug) => ({
+      label: APP_LANDING_PAGES[slug].name,
+      path: `/apps/${slug}`,
+    })),
+  ];
+}
