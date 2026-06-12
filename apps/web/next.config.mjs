@@ -330,6 +330,26 @@ async function getRedirects() {
   return [
     ...legacyHomeRedirects,
     {
+      source: '/app/work/oodle-1',
+      destination: '/app/work/oodle',
+      permanent: true,
+    },
+    {
+      source: '/app/work/oodle-1/:path*',
+      destination: '/app/work/oodle/:path*',
+      permanent: true,
+    },
+    {
+      source: '/home/oodle-1',
+      destination: '/app/work/oodle',
+      permanent: true,
+    },
+    {
+      source: '/home/oodle-1/:path*',
+      destination: '/app/work/oodle/:path*',
+      permanent: true,
+    },
+    {
       source: '/server-sitemap.xml',
       destination: '/sitemap.xml',
       permanent: true,

@@ -12,6 +12,11 @@ import { logAdminAction } from '~/lib/admin/log-admin-action';
 
 import { findPlanByProductAndPlanId } from './keel-plan-catalog';
 import { syncAddonModulesFromEntitlements } from './sync-addon-modules-from-entitlements';
+import {
+  ensureEstablishedWorkspaceMembersOnboarded,
+  syncWorkspaceStateAfterAdminGrant,
+  syncWorkspaceStateAfterAdminPlan,
+} from './sync-workspace-from-admin-grant';
 
 const grantEntitlementSchema = z.object({
   accountId: z.string().uuid(),
@@ -63,7 +68,11 @@ export const adminGrantEntitlementAction = enhanceAction(
       throw new Error(error.message);
     }
 
-    await syncAddonModulesFromEntitlements(admin, input.accountId);
+    await syncWorkspaceStateAfterAdminGrant(
+      admin,
+      input.accountId,
+      input.entitlementKey,
+    );
 
     await logAdminAction(admin, {
       actorUserId: user.id,
@@ -134,6 +143,7 @@ export const adminSetBillingExemptAction = enhanceAction(
         { onConflict: 'account_id' },
       );
       if (error) throw new Error(error.message);
+      await ensureEstablishedWorkspaceMembersOnboarded(admin, input.accountId);
     } else {
       const { error } = await admin
         .from('account_billing_exempt')
@@ -195,7 +205,7 @@ export const adminApplyPlanLimitsAction = enhanceAction(
       { onConflict: 'account_id' },
     );
 
-    await syncAddonModulesFromEntitlements(admin, input.accountId);
+    await syncWorkspaceStateAfterAdminPlan(admin, input.accountId, plan);
 
     await logAdminAction(admin, {
       actorUserId: user.id,

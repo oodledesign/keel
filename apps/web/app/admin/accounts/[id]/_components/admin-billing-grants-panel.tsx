@@ -35,14 +35,34 @@ const ADDON_ENTITLEMENTS = [
 
 const QUICK_PLANS = [
   {
+    label: 'Business Solo',
+    productId: 'keel-business-solo',
+    planId: 'business-solo-monthly',
+  },
+  {
     label: 'Business Team',
     productId: 'keel-business-team',
     planId: 'business-team-monthly',
   },
   {
+    label: 'Business Scale',
+    productId: 'keel-business-scale',
+    planId: 'business-scale-monthly',
+  },
+  {
+    label: 'Business Lite',
+    productId: 'keel-business-lite',
+    planId: 'business-lite-free',
+  },
+  {
     label: 'Property Starter',
     productId: 'keel-property-starter',
     planId: 'property-starter-monthly',
+  },
+  {
+    label: 'Signatures add-on',
+    productId: 'keel-addon-signatures',
+    planId: 'signatures-monthly',
   },
   {
     label: 'Rankly add-on',

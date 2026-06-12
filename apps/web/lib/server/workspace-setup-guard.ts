@@ -52,6 +52,33 @@ export const userRequiresWorkspaceSetup = cache(
       return true;
     }
 
+    const now = new Date().toISOString();
+    const [{ data: entitled }, { data: billingExempt }] = await Promise.all([
+      client
+        .from('account_entitlements')
+        .select('id')
+        .in('account_id', teamAccountIds)
+        .in('entitlement_key', [
+          'workspace_business',
+          'workspace_business_lite',
+          'workspace_property',
+          'workspace_community',
+        ])
+        .or(`expires_at.is.null,expires_at.gt.${now}`)
+        .limit(1)
+        .maybeSingle(),
+      client
+        .from('account_billing_exempt')
+        .select('account_id')
+        .in('account_id', teamAccountIds)
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+    if (entitled || billingExempt) {
+      return false;
+    }
+
     // Workspaces created before onboarding_completed was wired still have businesses.
     const { data: businessRow, error: businessError } = await client
       .from('businesses')

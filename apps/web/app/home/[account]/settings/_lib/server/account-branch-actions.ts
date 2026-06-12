@@ -2,11 +2,9 @@
 
 import { revalidatePath } from 'next/cache';
 
-import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import { loadAccountBranches } from '~/lib/brand/account-branches';
@@ -16,36 +14,15 @@ import {
   saveAccountBranchSchema,
   saveAccountBranchesSchema,
 } from '../schema/account-branches.schema';
+import { assertCanEditBrandSettings } from './brand-settings-access';
 
 function workPath(template: string, accountSlug: string) {
   return template.replace('[account]', accountSlug);
 }
 
 async function assertAccountOwnerOrAdmin(accountId: string, userId: string) {
-  const client = getSupabaseServerClient() as SupabaseClient;
-  const { data: membership } = await client
-    .from('accounts_memberships')
-    .select('account_role')
-    .eq('account_id', accountId)
-    .eq('user_id', userId)
-    .maybeSingle();
-
-  const role = membership?.account_role;
-  if (role !== 'owner' && role !== 'admin') {
-    throw new Error('Workspace owner or admin required');
-  }
-
-  const { data: account } = await client
-    .from('accounts')
-    .select('slug')
-    .eq('id', accountId)
-    .maybeSingle();
-
-  if (!account?.slug) {
-    throw new Error('Account not found');
-  }
-
-  return { accountSlug: account.slug as string };
+  const { accountSlug } = await assertCanEditBrandSettings(accountId, userId);
+  return { accountSlug };
 }
 
 function revalidateBrandPaths(accountSlug: string) {

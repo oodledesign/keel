@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -18,11 +18,35 @@ import type { AccountBrandResolved } from '~/lib/brand/account-brand';
 
 import { saveAccountBrandSettings } from '../_lib/server/account-brand-actions';
 
+const MAX_LOGO_SIZE_BYTES = 5 * 1024 * 1024;
+
 function normalizeHex(input: string): string {
   const t = input.trim();
   if (/^#[0-9A-Fa-f]{6}$/.test(t)) return t;
   if (/^[0-9A-Fa-f]{6}$/.test(t)) return `#${t}`;
   return t;
+}
+
+async function uploadBrandLogo(accountId: string, file: File) {
+  const formData = new FormData();
+  formData.append('accountId', accountId);
+  formData.append('file', file);
+
+  const response = await fetch('/api/brand/upload-logo', {
+    method: 'POST',
+    body: formData,
+  });
+
+  const payload = (await response.json().catch(() => null)) as {
+    error?: string;
+    logoUrl?: string;
+  } | null;
+
+  if (!response.ok || !payload?.logoUrl) {
+    throw new Error(payload?.error || 'Failed to upload logo');
+  }
+
+  return payload.logoUrl;
 }
 
 export function BrandSettingsForm({
@@ -47,30 +71,63 @@ export function BrandSettingsForm({
   const [accent, setAccent] = useState(initialBrand.accent_color);
   const [websiteUrl, setWebsiteUrl] = useState(initialBrand.website_url ?? '');
   const [address, setAddress] = useState(initialBrand.address ?? '');
-  const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+  const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
+  const [pendingLogoPreviewUrl, setPendingLogoPreviewUrl] = useState<
+    string | null
+  >(null);
   const [clearLogo, setClearLogo] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    if (!pendingLogoFile) {
+      setPendingLogoPreviewUrl(null);
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(pendingLogoFile);
+    setPendingLogoPreviewUrl(previewUrl);
+
+    return () => {
+      URL.revokeObjectURL(previewUrl);
+    };
+  }, [pendingLogoFile]);
+
   const previewLogo = useMemo(() => {
     if (clearLogo) return null;
-    if (logoDataUrl) return logoDataUrl;
+    if (pendingLogoPreviewUrl) return pendingLogoPreviewUrl;
     return initialBrand.logo_url;
-  }, [clearLogo, initialBrand.logo_url, logoDataUrl]);
+  }, [clearLogo, initialBrand.logo_url, pendingLogoPreviewUrl]);
 
   const onLogoFile = (file: File | null) => {
     setClearLogo(false);
+
     if (!file) {
-      setLogoDataUrl(null);
+      setPendingLogoFile(null);
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => setLogoDataUrl(String(reader.result));
-    reader.readAsDataURL(file);
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please choose a PNG, JPG, or WebP image.');
+      return;
+    }
+
+    if (file.size > MAX_LOGO_SIZE_BYTES) {
+      toast.error('Logo is too large. Max size is 5MB.');
+      return;
+    }
+
+    setPendingLogoFile(file);
   };
 
   const save = async () => {
     setSaving(true);
     try {
+      let logoUrl: string | undefined;
+
+      if (pendingLogoFile) {
+        logoUrl = await uploadBrandLogo(accountId, pendingLogoFile);
+      }
+
       await saveAccountBrandSettings({
         accountId,
         primary_color: normalizeHex(primary),
@@ -80,11 +137,11 @@ export function BrandSettingsForm({
         accent_color: accent.trim() ? normalizeHex(accent) : null,
         website_url: websiteUrl.trim() || null,
         address: address.trim() || null,
-        logoDataUrl: logoDataUrl ?? undefined,
+        logoUrl,
         clearLogo: clearLogo || undefined,
       });
       toast.success('Brand settings saved');
-      setLogoDataUrl(null);
+      setPendingLogoFile(null);
       setClearLogo(false);
       router.refresh();
     } catch (e) {
@@ -190,7 +247,7 @@ export function BrandSettingsForm({
               size="sm"
               onClick={() => {
                 setClearLogo(true);
-                setLogoDataUrl(null);
+                setPendingLogoFile(null);
               }}
             >
               Remove logo
