@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation';
 import { PageBody } from '@kit/ui/page';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
-import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
 import { getDefaultAccountPath } from '../_lib/role-access';
 import {
   getSpaceTypeFromAccount,
@@ -60,17 +59,7 @@ async function JobsPage({ params }: JobsPageProps) {
 
   return (
     <>
-      <TeamAccountLayoutPageHeader
-        title={isProperty ? 'Maintenance' : 'Projects'}
-        description={
-          isProperty
-            ? 'Open jobs and work orders'
-            : 'Manage projects and assignments'
-        }
-        account={slug}
-      />
-
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
+      <PageBody className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)] px-3 py-3 md:px-4 md:py-4">
         <JobsPageContent
           accountSlug={slug}
           accountId={accountId}

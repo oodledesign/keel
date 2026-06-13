@@ -262,19 +262,19 @@ export function JobProjectWorkspace({
         assigning={assigning}
       />
 
-      <div className="flex rounded-xl border border-zinc-700 bg-zinc-900/40 p-1 text-sm">
+      <div className="flex items-center gap-1 border-b border-white/8 px-4 pb-3 md:px-5">
         {viewButtons.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
             type="button"
             onClick={() => setView(key)}
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 font-medium transition-colors sm:flex-none sm:px-4 ${
+            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
               view === key
-                ? 'bg-white/10 text-white'
-                : 'text-zinc-400 hover:text-white'
+                ? 'bg-[#0073ea]/15 text-[#579bfc]'
+                : 'text-zinc-400 hover:bg-white/5 hover:text-white'
             }`}
           >
-            <Icon className="h-4 w-4" />
+            <Icon className="h-3.5 w-3.5" />
             {label}
           </button>
         ))}

@@ -126,7 +126,7 @@ class JobsService {
 
     if (tab === 'active') {
       q = q.not('status', 'in', '("completed","cancelled")');
-    } else {
+    } else if (tab === 'completed') {
       q = q.in('status', ['completed', 'cancelled']);
     }
 
@@ -156,7 +156,7 @@ class JobsService {
         .range(from, to);
       if (tab === 'active') {
         fallbackQ = fallbackQ.not('status', 'in', '("completed","cancelled")');
-      } else {
+      } else if (tab === 'completed') {
         fallbackQ = fallbackQ.in('status', ['completed', 'cancelled']);
       }
       if (query?.trim()) {
@@ -177,7 +177,7 @@ class JobsService {
     }
     const { data: assignments } = await this.db
       .from('job_assignments')
-      .select('job_id')
+      .select('job_id, user_id, role_on_job')
       .eq('account_id', accountId)
       .in('job_id', jobIds);
     const countByJob = (assignments ?? []).reduce<Record<string, number>>(
@@ -187,9 +187,20 @@ class JobsService {
       },
       {},
     );
+    const assigneesByJob = (assignments ?? []).reduce<
+      Record<string, { user_id: string; role_on_job: string | null }[]>
+    >((acc, row: { job_id: string; user_id: string; role_on_job: string | null }) => {
+      if (!acc[row.job_id]) acc[row.job_id] = [];
+      acc[row.job_id].push({
+        user_id: row.user_id,
+        role_on_job: row.role_on_job,
+      });
+      return acc;
+    }, {});
     const data = jobs.map((job) => ({
       ...job,
       assignment_count: countByJob[job.id] ?? 0,
+      assignees: assigneesByJob[job.id] ?? [],
     }));
     return { data, total: count ?? 0 };
   }

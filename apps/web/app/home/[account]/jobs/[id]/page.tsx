@@ -2,13 +2,11 @@ import { notFound } from 'next/navigation';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { AppBreadcrumbs } from '@kit/ui/app-breadcrumbs';
 import { PageBody } from '@kit/ui/page';
 
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
-import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
 import { isWorkModuleEnabled } from '../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
 import {
@@ -75,13 +73,7 @@ async function JobDetailPage({ params }: JobDetailPageProps) {
 
   return (
     <>
-      <TeamAccountLayoutPageHeader
-        title={job?.title ?? 'Job'}
-        description={<AppBreadcrumbs values={{ [id]: job?.title ?? 'Job' }} />}
-        account={accountSlug}
-      />
-
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
+      <PageBody className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)] px-3 py-3 md:px-4 md:py-4">
         <JobDetailContent
           accountSlug={accountSlug}
           accountId={accountId}

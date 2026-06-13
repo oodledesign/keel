@@ -21,9 +21,9 @@ const optionalNullableDate = z
 // --- List jobs ---
 export const ListJobsSchema = z.object({
   accountId: z.string().uuid(),
-  tab: z.enum(['active', 'completed']),
+  tab: z.enum(['active', 'completed', 'all']),
   page: z.coerce.number().int().min(1).optional().default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).optional().default(20),
+  pageSize: z.coerce.number().int().min(1).max(200).optional().default(20),
   query: z.string().optional(),
   status: jobStatus.optional(),
   priority: jobPriority.optional(),
