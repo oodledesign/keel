@@ -267,6 +267,15 @@ export function buildWorkSpaceNavChildren(
             Icon: <StickyNote className={iconClasses} />,
           }
         : null,
+    brain: () =>
+      access.canViewDashboard && isWorkNavModuleEnabled(ms, 'notes')
+        ? {
+            label: 'Second brain',
+            path: createPath(pathsConfig.app.accountBrain, account),
+            Icon: <Sparkles className={iconClasses} />,
+            description: 'Chat with your indexed workspace knowledge.',
+          }
+        : null,
     sops: () =>
       access.canViewDashboard && isWorkNavModuleEnabled(ms, 'sops')
         ? {

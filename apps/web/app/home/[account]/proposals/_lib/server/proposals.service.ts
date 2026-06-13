@@ -7,6 +7,8 @@ import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import { Database } from '~/lib/database.types';
 
+import { queueBrainDeleteSource, queueBrainIndexSource } from '~/lib/brain/sync';
+
 import {
   DEFAULT_PROPOSAL_EMAIL_BODY,
   DEFAULT_PROPOSAL_EMAIL_SIGNATURE,
@@ -230,6 +232,7 @@ class ProposalsService {
       },
       actorId: user.id,
     });
+    queueBrainIndexSource(input.accountId, 'proposal', proposal.id as string);
     return proposal;
   }
 
@@ -286,6 +289,7 @@ class ProposalsService {
       payload: { fields: Object.keys(payload) },
       actorId: user.id,
     });
+    queueBrainIndexSource(input.accountId, 'proposal', input.proposalId);
     return data;
   }
 
@@ -309,6 +313,7 @@ class ProposalsService {
       .eq('id', params.proposalId)
       .eq('account_id', params.accountId);
     if (error) this.throwErr(error);
+    queueBrainDeleteSource(params.proposalId);
   }
 
   async sendProposal(input: SendProposalInput) {

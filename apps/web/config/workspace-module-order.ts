@@ -50,6 +50,7 @@ export const WORK_BUSINESS_MODULE_ORDER = [
         'contracts',
   'team',
   'notes',
+  'brain',
   'docs',
   'sops',
   'messages',

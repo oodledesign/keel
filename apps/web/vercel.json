@@ -38,6 +38,14 @@
     {
       "path": "/api/cron/planner-reminders",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/project-phase-due-reminders",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/brain-reindex-active",
+      "schedule": "0 3 * * *"
     }
   ]
 }

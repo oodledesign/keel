@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   Calendar,
   FileText,
+  LayoutGrid,
   MessageSquare,
   Pencil,
   UserPlus,
@@ -51,6 +52,7 @@ import type {
 
 import { JobEventsTabContent } from './job-events-tab';
 import { JobScheduleTabContent } from './job-schedule-tab';
+import { JobProjectWorkspace } from './job-project/job-project-workspace';
 
 type Job = {
   id: string;
@@ -359,8 +361,12 @@ export function JobDetailContent({
           </div>
 
           {/* Tabs */}
-          <Tabs defaultValue="overview" className="mt-6">
+          <Tabs defaultValue="project" className="mt-6">
             <TabsList className="mb-4 flex h-auto flex-wrap gap-1 border-b border-zinc-700 bg-transparent p-0">
+              <TabsTrigger value="project" className="gap-1.5 border-b-2 border-transparent data-[state=active]:border-zinc-400 data-[state=active]:bg-transparent data-[state=active]:text-white">
+                <LayoutGrid className="h-4 w-4" />
+                Project
+              </TabsTrigger>
               <TabsTrigger value="overview" className="gap-1.5 border-b-2 border-transparent data-[state=active]:border-zinc-400 data-[state=active]:bg-transparent data-[state=active]:text-white">
                 <ClipboardList className="h-4 w-4" />
                 Overview
@@ -394,6 +400,26 @@ export function JobDetailContent({
                 </TabsTrigger>
               )}
             </TabsList>
+
+            <TabsContent value="project" className="mt-4">
+              <JobProjectWorkspace
+                accountSlug={accountSlug}
+                accountId={accountId}
+                jobId={jobId}
+                job={{
+                  title: job.title,
+                  status: job.status,
+                  priority: job.priority,
+                  start_date: job.start_date,
+                  due_date: job.due_date,
+                  value_pence: job.value_pence,
+                  cost_pence: job.cost_pence,
+                }}
+                client={client ? { id: client.id, display_name: client.display_name } : null}
+                canEditJobs={canEditJobs}
+                isContractorView={isContractorView}
+              />
+            </TabsContent>
 
             <TabsContent value="overview" className="mt-4">
               <div className="prose prose-invert max-w-none text-sm">

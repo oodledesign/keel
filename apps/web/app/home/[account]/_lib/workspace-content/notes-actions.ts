@@ -8,6 +8,8 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 
+import { queueBrainDeleteSource, queueBrainIndexSource } from '~/lib/brain/sync';
+
 import { NOTE_FILE_CATEGORY_OPTIONS } from './types';
 
 const LinkSchema = z
@@ -70,6 +72,7 @@ export const saveWorkspaceNoteAction = enhanceAction(
     const payload = {
       account_id: data.accountId,
       title: data.title?.trim() ?? '',
+      // Content MUST be a Markdown string — see lib/markdown.ts contract.
       content: data.content,
       is_pinned: data.isPinned ?? false,
       category: data.category ?? 'idea',
@@ -85,6 +88,7 @@ export const saveWorkspaceNoteAction = enhanceAction(
         .eq('id', data.noteId)
         .eq('account_id', data.accountId);
       if (error) throw error;
+      queueBrainIndexSource(data.accountId, 'note', data.noteId);
       revalidateNotesPaths(data.accountSlug, data.noteId);
       return { noteId: data.noteId };
     }
@@ -97,6 +101,7 @@ export const saveWorkspaceNoteAction = enhanceAction(
 
     if (error) throw error;
     const noteId = inserted.id as string;
+    queueBrainIndexSource(data.accountId, 'note', noteId);
     revalidateNotesPaths(data.accountSlug, noteId);
     return { noteId };
   },
@@ -112,6 +117,7 @@ export const deleteWorkspaceNoteAction = enhanceAction(
       .eq('id', data.noteId)
       .eq('account_id', data.accountId);
     if (error) throw error;
+    queueBrainDeleteSource(data.noteId);
     revalidateNotesPaths(data.accountSlug);
     return { ok: true };
   },

@@ -14,6 +14,7 @@ import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 
+import { AskBrainLink } from '../../brain/_components/ask-brain-link';
 import { saveWorkspaceNoteAction as saveWorkNoteAction } from '../../_lib/workspace-content/notes-actions';
 
 type NoteEditorProps = {
@@ -100,6 +101,7 @@ export function NoteEditor({ accountId, accountSlug, note }: NoteEditorProps) {
           value={content}
           onChange={(e) => setContent(e.target.value)}
           rows={16}
+          placeholder="Write in Markdown — **bold**, headings, lists…"
           className="min-h-[320px] border-white/10 bg-[var(--workspace-shell-panel)] text-white"
         />
       </div>
@@ -120,6 +122,16 @@ export function NoteEditor({ accountId, accountSlug, note }: NoteEditorProps) {
         </button>
 
         <div className="flex gap-2">
+          <AskBrainLink
+            accountSlug={accountSlug}
+            label="Ask about this note"
+            className="border-white/10 text-zinc-300"
+            params={{
+              jobId: note.jobId ?? undefined,
+              clientId: note.clientId ?? undefined,
+              q: `Summarise this note: "${title || 'Untitled note'}"`,
+            }}
+          />
           <Button
             type="button"
             variant="outline"

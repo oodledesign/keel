@@ -6,6 +6,7 @@ import { requireUser } from '@kit/supabase/require-user';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import { Database } from '~/lib/database.types';
+import { queueBrainDeleteSource, queueBrainIndexSource } from '~/lib/brain/sync';
 
 import type {
   AddJobAssignmentInput,
@@ -231,6 +232,7 @@ class JobsService {
       .single();
 
     if (error) this.throwErr(error);
+    queueBrainIndexSource(input.accountId, 'job', data.id as string);
     return data;
   }
 
@@ -273,6 +275,7 @@ class JobsService {
         .select()
         .single();
       if (error) this.throwErr(error);
+      queueBrainIndexSource(input.accountId, 'job', input.jobId);
       return data;
     }
 
@@ -311,6 +314,7 @@ class JobsService {
       .eq('account_id', params.accountId);
 
     if (error) this.throwErr(error);
+    queueBrainDeleteSource(params.jobId);
   }
 
   async listJobAssignments(params: ListJobAssignmentsInput) {
@@ -398,6 +402,7 @@ class JobsService {
       .single();
 
     if (error) this.throwErr(error);
+    queueBrainIndexSource(input.accountId, 'job_note', data.id as string);
     return data;
   }
 
@@ -423,5 +428,6 @@ class JobsService {
       .eq('account_id', params.accountId);
 
     if (error) this.throwErr(error);
+    queueBrainDeleteSource(params.noteId);
   }
 }

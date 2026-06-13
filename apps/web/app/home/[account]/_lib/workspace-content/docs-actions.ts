@@ -9,6 +9,8 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 
+import { queueBrainIndexSource } from '~/lib/brain/sync';
+
 import { ACCOUNT_DOCS_BUCKET } from './docs-constants';
 import { DOC_TYPE_OPTIONS, NOTE_FILE_CATEGORY_OPTIONS } from './types';
 
@@ -72,6 +74,7 @@ export const saveWrittenWorkspaceDocAction = enhanceAction(
     const payload = {
       account_id: data.accountId,
       title: data.title.trim() || 'Untitled document',
+      // Content MUST be a Markdown string — see lib/markdown.ts contract.
       content: data.content ?? '',
       kind: 'written' as const,
       doc_type: data.docType ?? 'general',
@@ -88,6 +91,7 @@ export const saveWrittenWorkspaceDocAction = enhanceAction(
         .eq('id', data.docId)
         .eq('account_id', data.accountId);
       if (error) throw error;
+      queueBrainIndexSource(data.accountId, 'doc', data.docId);
       revalidateDocsPaths(data.accountSlug, data.docId);
       return { docId: data.docId };
     }
@@ -100,6 +104,7 @@ export const saveWrittenWorkspaceDocAction = enhanceAction(
 
     if (error) throw error;
     const docId = inserted.id as string;
+    queueBrainIndexSource(data.accountId, 'doc', docId);
     revalidateDocsPaths(data.accountSlug, docId);
     return { docId };
   },

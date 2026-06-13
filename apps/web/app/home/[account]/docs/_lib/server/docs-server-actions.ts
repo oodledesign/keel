@@ -8,6 +8,8 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 
+import { queueBrainIndexSource } from '~/lib/brain/sync';
+
 const SaveDocSchema = z.object({
   accountId: z.string().uuid(),
   accountSlug: z.string().min(1),
@@ -24,6 +26,7 @@ export const saveWorkDocAction = enhanceAction(
       .from('docs')
       .update({
         title: data.title.trim() || 'Untitled document',
+        // Content MUST be a Markdown string — see lib/markdown.ts contract.
         content: data.content ?? '',
         doc_type: data.docType ?? null,
       })
@@ -31,6 +34,8 @@ export const saveWorkDocAction = enhanceAction(
       .eq('account_id', data.accountId);
 
     if (error) throw error;
+
+    queueBrainIndexSource(data.accountId, 'doc', data.docId);
 
     const base = pathsConfig.app.accountDocs.replace(
       '[account]',

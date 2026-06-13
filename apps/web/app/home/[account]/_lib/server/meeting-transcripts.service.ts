@@ -7,6 +7,8 @@ import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import type { Database } from '~/lib/database.types';
 
+import { queueBrainDeleteSource, queueBrainIndexSource } from '~/lib/brain/sync';
+
 export type MeetingTranscript = {
   id: string;
   accountId: string;
@@ -170,6 +172,7 @@ class MeetingTranscriptsService {
         client_id: clientId,
         deal_id: dealId,
         title: input.title?.trim() || 'Meeting transcript',
+        // Content MUST be a Markdown string — see lib/markdown.ts contract.
         content: input.content.trim(),
         source: input.source ?? 'paste',
         file_path: input.filePath?.trim() || null,
@@ -181,6 +184,12 @@ class MeetingTranscriptsService {
     if (error || !data) {
       throw new Error(error?.message ?? 'Failed to create meeting transcript');
     }
+
+    queueBrainIndexSource(
+      input.accountId,
+      'transcript',
+      (data as MeetingTranscriptRow).id,
+    );
 
     return mapMeetingTranscript(data as MeetingTranscriptRow);
   }
@@ -198,5 +207,7 @@ class MeetingTranscriptsService {
       .eq('account_id', input.accountId);
 
     if (error) throw new Error(error.message);
+
+    queueBrainDeleteSource(input.transcriptId);
   }
 }

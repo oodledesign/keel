@@ -11,6 +11,7 @@ import { Textarea } from '@kit/ui/textarea';
 
 import pathsConfig from '~/config/paths.config';
 
+import { AskBrainLink } from '../../brain/_components/ask-brain-link';
 import { saveWorkDocAction } from '../_lib/server/docs-server-actions';
 
 type DocEditorProps = {
@@ -97,6 +98,7 @@ export function DocEditor({ accountId, accountSlug, doc }: DocEditorProps) {
             value={content}
             onChange={(e) => setContent(e.target.value)}
             rows={16}
+            placeholder="Write in Markdown — **bold**, headings, lists…"
             className="min-h-[320px] border-white/10 bg-[var(--workspace-shell-panel)] text-white"
           />
         </div>
@@ -106,7 +108,15 @@ export function DocEditor({ accountId, accountSlug, doc }: DocEditorProps) {
         </p>
       )}
 
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
+        <AskBrainLink
+          accountSlug={accountSlug}
+          label="Ask about this doc"
+          className="border-white/10 text-zinc-300"
+          params={{
+            q: `What does the document "${title || 'Untitled document'}" cover?`,
+          }}
+        />
         <Button
           type="button"
           variant="outline"
