@@ -9,6 +9,7 @@ import {
 } from '~/home/[account]/_lib/server/workspace-profile';
 import { workspaceColorForSpaceType } from '~/home/(user)/_lib/workspace-accent';
 import { spaceTypeFromProfile } from '~/home/[account]/_lib/server/workspace-profile';
+import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
 export type WorkspaceSwitcherAccount = {
   id: string;
@@ -131,7 +132,10 @@ export async function loadWorkspaceSwitcherAccounts(
       label,
       slug: acc.slug!,
       value: acc.slug!,
-      image: acc.picture_url ?? brandLogoByAccount.get(acc.id) ?? null,
+      image:
+        toSupabasePublicStorageUrl(acc.picture_url) ??
+        toSupabasePublicStorageUrl(brandLogoByAccount.get(acc.id)) ??
+        null,
       profile,
       typeLabel: workspaceTypeLabel(profile),
       accentColor: workspaceColorForSpaceType(spaceTypeFromProfile(profile)),

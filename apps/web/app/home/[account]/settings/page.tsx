@@ -15,6 +15,7 @@ import { Trans } from '@kit/ui/trans';
 import featuresFlagConfig from '~/config/feature-flags.config';
 import pathsConfig from '~/config/paths.config';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
+import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access';
@@ -67,7 +68,9 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
   const account = {
     id: data.id,
     name: data.name,
-    pictureUrl: data.picture_url ?? brand.logo_url,
+    pictureUrl:
+      toSupabasePublicStorageUrl(data.picture_url) ??
+      toSupabasePublicStorageUrl(brand.logo_url),
     slug: data.slug as string,
     primaryOwnerUserId: data.primary_owner_user_id,
   };

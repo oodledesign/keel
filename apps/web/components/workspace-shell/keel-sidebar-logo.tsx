@@ -1,13 +1,9 @@
-import Image from 'next/image';
 import Link from 'next/link';
 
 import { cn } from '@kit/ui/utils';
 
+import { KeelLogoMark } from '~/components/keel-logo-mark';
 import pathsConfig from '~/config/paths.config';
-
-const LOGO_DARK = '/brand/keel-logo-dark.png';
-const LOGO_LIGHT = '/brand/keel-logo-light.png';
-const LOGO_ICON = '/brand/keel-logo-icon.png';
 
 export function KeelSidebarLogo(props: {
   href?: string | null;
@@ -18,17 +14,12 @@ export function KeelSidebarLogo(props: {
   const collapsed = props.collapsed ?? false;
 
   const image = (
-    <Image
-      src={collapsed ? LOGO_ICON : LOGO_DARK}
-      alt="Keel"
-      width={collapsed ? 32 : 120}
-      height={collapsed ? 32 : 32}
+    <KeelLogoMark
+      collapsed={collapsed}
       className={cn(
-        'h-8 w-auto object-contain object-left',
-        collapsed && 'h-8 w-8 object-center',
+        collapsed ? 'max-w-[32px]' : 'max-w-[140px]',
         props.className,
       )}
-      priority
     />
   );
 
@@ -50,14 +41,5 @@ export function KeelSidebarLogo(props: {
 
 /** Marketing / light surfaces */
 export function KeelLogoLight(props: { className?: string }) {
-  return (
-    <Image
-      src={LOGO_LIGHT}
-      alt="Keel"
-      width={120}
-      height={32}
-      className={cn('h-8 w-auto object-contain', props.className)}
-      priority
-    />
-  );
+  return <KeelLogoMark tone="light" className={props.className} />;
 }
