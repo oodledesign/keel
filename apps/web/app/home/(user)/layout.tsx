@@ -107,7 +107,7 @@ async function SidebarLayout({ children }: React.PropsWithChildren) {
       <SidebarProvider defaultOpen={state.open}>
         <Page
           style={'sidebar'}
-          contentContainerClassName="mx-auto flex h-screen w-full min-w-0 flex-1 flex-col overflow-x-hidden bg-[var(--workspace-shell-canvas)]"
+          contentContainerClassName="mx-auto flex h-svh min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-hidden bg-[var(--workspace-shell-canvas)]"
         >
           <PageNavigation>
             <HomeSidebar

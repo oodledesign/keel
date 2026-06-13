@@ -42,7 +42,7 @@ export function PersonalHomeMobileChrome({
 
   return (
     <>
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden max-lg:flex">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <WorkspaceMobileHeaderBar>
           <div className="min-w-0 flex-1">
             <WorkspaceAccountsSelector

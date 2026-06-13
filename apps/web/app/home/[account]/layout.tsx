@@ -124,7 +124,7 @@ async function SidebarLayout({
       <SidebarProvider defaultOpen={state.open}>
         <Page
           style={'sidebar'}
-          contentContainerClassName="mx-auto flex h-screen w-full min-w-0 flex-1 flex-col bg-[var(--workspace-shell-canvas)]"
+          contentContainerClassName="mx-auto flex h-svh min-h-0 w-full min-w-0 flex-1 flex-col bg-[var(--workspace-shell-canvas)]"
         >
           <PageNavigation>
             <TeamAccountLayoutSidebar

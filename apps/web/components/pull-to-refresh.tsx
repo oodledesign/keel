@@ -98,10 +98,17 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
     (event: TouchEvent) => {
       if (!pullingRef.current || refreshingRef.current) return;
 
+      if (getScrollTop() > 0) {
+        pullingRef.current = false;
+        setIsDragging(false);
+        setPullDistance(0);
+        return;
+      }
+
       const currentY = event.touches[0]?.clientY ?? 0;
       const delta = currentY - startYRef.current;
 
-      if (delta <= 0 || getScrollTop() > 0) {
+      if (delta <= 0) {
         setPullDistance(0);
         return;
       }
@@ -145,55 +152,56 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
     };
   }, [enabled, onTouchEnd, onTouchMove, onTouchStart]);
 
-  if (!enabled) {
-    return <div className={className}>{children}</div>;
-  }
-
   const progress = Math.min(pullDistance / PULL_THRESHOLD, 1);
-  const showSpinner = pullDistance > 8 || refreshing;
+  const showSpinner = enabled && (pullDistance > 8 || refreshing);
 
   return (
     <div
       className={cn(
-        'relative flex min-h-0 flex-1 flex-col bg-[var(--workspace-shell-header)]',
+        'relative flex min-h-0 flex-1 flex-col bg-[var(--workspace-shell-header)] lg:bg-transparent',
         className,
       )}
     >
-      <div
-        aria-hidden
-        aria-live="polite"
-        className={cn(
-          'pointer-events-none absolute inset-x-0 top-0 z-10 flex items-end justify-center pb-2',
-          showSpinner ? 'opacity-100' : 'opacity-0',
-        )}
-        style={{ height: contentOffset }}
-      >
-        <Loader2
+      {enabled ? (
+        <div
+          aria-hidden
+          aria-live="polite"
           className={cn(
-            'h-5 w-5 text-zinc-400',
-            refreshing ? 'animate-spin' : '',
+            'pointer-events-none absolute inset-x-0 top-0 z-10 flex items-end justify-center pb-2',
+            showSpinner ? 'opacity-100' : 'opacity-0',
           )}
-          style={
-            refreshing
-              ? undefined
-              : { transform: `rotate(${progress * 180}deg)` }
-          }
-        />
-      </div>
+          style={{ height: contentOffset }}
+        >
+          <Loader2
+            className={cn(
+              'h-5 w-5 text-zinc-400',
+              refreshing ? 'animate-spin' : '',
+            )}
+            style={
+              refreshing
+                ? undefined
+                : { transform: `rotate(${progress * 180}deg)` }
+            }
+          />
+        </div>
+      ) : null}
 
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+        className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-auto [-webkit-overflow-scrolling:touch]"
       >
         <div
           className={cn(
-            'rounded-t-[1.25rem] bg-[var(--workspace-shell-canvas)] shadow-[0_-1px_0_rgba(255,255,255,0.06)]',
-            !isDragging && pullDistance === 0 && !refreshing
-              ? ''
-              : !isDragging && 'transition-transform duration-200 ease-out',
+            enabled
+              ? 'rounded-t-[1.25rem] bg-[var(--workspace-shell-canvas)] shadow-[0_-1px_0_rgba(255,255,255,0.06)]'
+              : 'min-h-full bg-[var(--workspace-shell-canvas)]',
+            enabled &&
+              (!isDragging && pullDistance === 0 && !refreshing
+                ? ''
+                : !isDragging && 'transition-transform duration-200 ease-out'),
           )}
           style={
-            contentOffset > 0
+            enabled && contentOffset > 0
               ? { transform: `translateY(${contentOffset}px)` }
               : undefined
           }
