@@ -82,6 +82,15 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
 
   const onTouchStart = useCallback(
     (event: TouchEvent) => {
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        target.closest('textarea, input, select, [contenteditable="true"]')
+      ) {
+        pullingRef.current = false;
+        return;
+      }
+
       if (!enabled || refreshingRef.current || getScrollTop() > 0) {
         pullingRef.current = false;
         return;

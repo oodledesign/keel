@@ -1,9 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 import {
   ChevronLeft,
@@ -64,23 +63,6 @@ type NoteEditorProps = {
   };
 };
 
-function splitTitleBody(fullText: string): { title: string; content: string } {
-  const normalized = fullText.replace(/\r\n/g, '\n');
-  const firstNewline = normalized.indexOf('\n');
-  if (firstNewline === -1) {
-    return { title: normalized.trim(), content: '' };
-  }
-  const title = normalized.slice(0, firstNewline).trim();
-  const content = normalized.slice(firstNewline + 1);
-  return { title, content };
-}
-
-function combineTitleBody(title: string, content: string): string {
-  if (!title.trim()) return content;
-  if (!content.trim()) return title;
-  return `${title}\n${content}`;
-}
-
 function linkFromNote(note: NoteEditorProps['note']): LinkValue {
   if (note.jobId) return { type: 'job', id: note.jobId };
   if (note.clientId) return { type: 'client', id: note.clientId };
@@ -94,15 +76,10 @@ export function NoteEditor({
   linkOptions,
   note,
 }: NoteEditorProps) {
-  const router = useRouter();
   const notesHref = pathsConfig.app.accountNotes.replace('[account]', accountSlug);
 
-  const initialBody = useMemo(
-    () => combineTitleBody(note.title, note.content),
-    [note.title, note.content],
-  );
-
-  const [body, setBody] = useState(initialBody);
+  const [title, setTitle] = useState(note.title);
+  const [content, setContent] = useState(note.content);
   const [isPinned, setIsPinned] = useState(note.isPinned);
   const [category, setCategory] = useState(note.category);
   const [tags, setTags] = useState(note.tags);
@@ -112,8 +89,11 @@ export function NoteEditor({
   );
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const titleRef = useRef<HTMLTextAreaElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const latestRef = useRef({
-    body,
+    title,
+    content,
     isPinned,
     category,
     tags,
@@ -121,20 +101,20 @@ export function NoteEditor({
   });
 
   useEffect(() => {
-    latestRef.current = { body, isPinned, category, tags, link };
-  }, [body, isPinned, category, tags, link]);
+    latestRef.current = { title, content, isPinned, category, tags, link };
+  }, [title, content, isPinned, category, tags, link]);
 
   useEffect(() => {
-    setBody(initialBody);
+    setTitle(note.title);
+    setContent(note.content);
     setIsPinned(note.isPinned);
     setCategory(note.category);
     setTags(note.tags);
     setLink(linkFromNote(note));
-  }, [initialBody, note]);
+  }, [note]);
 
   const persist = useCallback(async () => {
     const snapshot = latestRef.current;
-    const { title, content } = splitTitleBody(snapshot.body);
 
     setSaveState('saving');
     try {
@@ -142,20 +122,19 @@ export function NoteEditor({
         accountId,
         accountSlug,
         noteId: note.id,
-        title,
-        content,
+        title: snapshot.title.trim(),
+        content: snapshot.content,
         isPinned: snapshot.isPinned,
         category: snapshot.category,
         tags: snapshot.tags,
         link: snapshot.link,
       });
       setSaveState('saved');
-      router.refresh();
     } catch {
       setSaveState('error');
       toast.error('Could not save note');
     }
-  }, [accountId, accountSlug, note.id, router]);
+  }, [accountId, accountSlug, note.id]);
 
   const scheduleSave = useCallback(() => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -170,10 +149,35 @@ export function NoteEditor({
     };
   }, []);
 
-  const onBodyChange = (value: string) => {
-    setBody(value);
+  const syncTextareaHeight = useCallback((node: HTMLTextAreaElement | null) => {
+    if (!node) return;
+    node.style.height = 'auto';
+    node.style.height = `${node.scrollHeight}px`;
+  }, []);
+
+  useLayoutEffect(() => {
+    syncTextareaHeight(titleRef.current);
+    syncTextareaHeight(textareaRef.current);
+  }, [title, content, syncTextareaHeight]);
+
+  const onTitleChange = (value: string) => {
+    setTitle(value);
     setSaveState('idle');
     scheduleSave();
+    requestAnimationFrame(() => syncTextareaHeight(titleRef.current));
+  };
+
+  const onContentChange = (value: string) => {
+    setContent(value);
+    setSaveState('idle');
+    scheduleSave();
+    requestAnimationFrame(() => syncTextareaHeight(textareaRef.current));
+  };
+
+  const onTitleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    textareaRef.current?.focus();
   };
 
   const onMetaChange = <T,>(setter: (value: T) => void, value: T) => {
@@ -200,7 +204,7 @@ export function NoteEditor({
           : '';
 
   return (
-    <div className="flex min-h-[calc(100dvh-3rem)] flex-col lg:min-h-[calc(100vh-8rem)]">
+    <div className="flex flex-col">
       <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-white/8 bg-[var(--workspace-shell-canvas)] px-3 py-2 lg:px-0">
         <div className="flex min-w-0 items-center gap-1">
           <Button
@@ -351,10 +355,25 @@ export function NoteEditor({
       )}
 
       <Textarea
-        value={body}
-        onChange={(e) => onBodyChange(e.target.value)}
-        placeholder="Title on the first line…"
-        className="min-h-0 flex-1 resize-none rounded-none border-0 bg-transparent px-3 py-4 text-base leading-relaxed text-white shadow-none focus-visible:ring-0 lg:px-0 lg:text-[15px]"
+        ref={titleRef}
+        value={title}
+        onChange={(e) => onTitleChange(e.target.value)}
+        onKeyDown={onTitleKeyDown}
+        placeholder="Untitled"
+        rows={1}
+        aria-label="Note title"
+        className="w-full resize-none overflow-hidden rounded-none border-0 bg-transparent px-3 pb-2 pt-4 font-heading text-[1.75rem] font-bold leading-tight tracking-tight text-white shadow-none focus-visible:ring-0 overscroll-y-contain lg:px-0 lg:text-3xl"
+        spellCheck
+      />
+
+      <Textarea
+        ref={textareaRef}
+        value={content}
+        onChange={(e) => onContentChange(e.target.value)}
+        placeholder="Start writing…"
+        rows={1}
+        aria-label="Note content"
+        className="min-h-[50vh] w-full resize-none overflow-hidden rounded-none border-0 bg-transparent px-3 pb-4 pt-1 text-base leading-relaxed text-white shadow-none focus-visible:ring-0 overscroll-y-contain lg:px-0 lg:text-[15px]"
         spellCheck
       />
     </div>

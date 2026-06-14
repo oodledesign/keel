@@ -41,6 +41,7 @@ function PageWithSidebar(props: PageProps) {
       {Navigation}
 
       <div
+        data-team-workspace-viewport
         className={
           props.contentContainerClassName ??
           'mx-auto flex h-svh min-h-0 w-full min-w-0 flex-1 flex-col bg-inherit'
@@ -49,9 +50,14 @@ function PageWithSidebar(props: PageProps) {
         {MobileNavigation}
 
         <div
-          className={'bg-background flex min-h-0 min-w-0 flex-1 flex-col px-0'}
+          data-team-workspace-page
+          className="flex min-h-0 min-w-0 flex-1 flex-col"
         >
-          {Children}
+          <div
+            className={'bg-background flex min-h-0 min-w-0 flex-1 flex-col px-0'}
+          >
+            {Children}
+          </div>
         </div>
       </div>
     </div>

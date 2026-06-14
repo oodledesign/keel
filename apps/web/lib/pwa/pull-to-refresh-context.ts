@@ -1,6 +1,22 @@
 import { isStandalonePwa } from './is-standalone-pwa';
+import { isNoteEditorRoute } from './is-note-editor-route';
 
 const MOBILE_MAX_WIDTH = 1023;
+
+let currentPathname =
+  typeof window !== 'undefined' ? window.location.pathname : '';
+
+const pathnameListeners = new Set<() => void>();
+
+/** Keep pull-to-refresh in sync with client navigations. */
+export function syncPullToRefreshPathname(pathname: string) {
+  if (currentPathname === pathname) {
+    return;
+  }
+
+  currentPathname = pathname;
+  pathnameListeners.forEach((listener) => listener());
+}
 
 /** Matches Tailwind `lg` — same breakpoint as the mobile workspace shell. */
 export function isMobileViewport(): boolean {
@@ -25,6 +41,10 @@ export function isPullToRefreshEnabled(): boolean {
     return false;
   }
 
+  if (isNoteEditorRoute(currentPathname)) {
+    return false;
+  }
+
   return isStandalonePwa() || (isMobileViewport() && hasTouchInput());
 }
 
@@ -35,6 +55,10 @@ export function subscribePullToRefreshContext(onStoreChange: () => void) {
 
   const mq = window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH}px)`);
   mq.addEventListener('change', onStoreChange);
+  pathnameListeners.add(onStoreChange);
 
-  return () => mq.removeEventListener('change', onStoreChange);
+  return () => {
+    mq.removeEventListener('change', onStoreChange);
+    pathnameListeners.delete(onStoreChange);
+  };
 }

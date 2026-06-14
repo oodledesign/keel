@@ -58,7 +58,7 @@ async function NoteDetailPage({ params }: NoteDetailPageProps) {
   const data = await loadNoteDetailData(accountSlug, noteId);
 
   return (
-    <div className="bg-[var(--workspace-shell-canvas)] px-3 pb-[calc(5rem+env(safe-area-inset-bottom))] text-white lg:mx-auto lg:max-w-3xl lg:px-8 lg:pb-8">
+    <div className="bg-[var(--workspace-shell-canvas)] px-3 text-white lg:mx-auto lg:max-w-3xl lg:px-8">
       <NoteEditor
         accountId={data.accountId}
         accountSlug={data.accountSlug}

@@ -1,5 +1,8 @@
 'use client';
 
+import { useEffect } from 'react';
+import { usePathname } from 'next/navigation';
+
 import { ProfileAccountDropdownContainer } from '~/components/personal-account-dropdown-container';
 import { PullToRefresh } from '~/components/pull-to-refresh';
 import {
@@ -17,6 +20,8 @@ import {
   type MobileNavLink,
 } from '~/components/workspace-shell/workspace-mobile-nav';
 import type { MobileBottomNavTab } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
+import { isNoteEditorRoute } from '~/lib/pwa/is-note-editor-route';
+import { syncPullToRefreshPathname } from '~/lib/pwa/pull-to-refresh-context';
 import { WorkspaceMobileTopActions } from '~/components/workspace-shell/workspace-top-bar-actions';
 import pathsConfig from '~/config/paths.config';
 import type { WorkspaceSpaceType } from '~/home/[account]/_lib/server/account-modules';
@@ -46,14 +51,27 @@ export function TeamWorkspaceMobileChrome({
   showNewMenu = true,
   children,
 }: TeamWorkspaceMobileChromeProps) {
+  const pathname = usePathname();
+  const noteEditorScroll = isNoteEditorRoute(pathname);
   const { menuOpen, setMenuOpen } = useWorkspaceMobileNav();
+
+  useEffect(() => {
+    syncPullToRefreshPathname(pathname);
+  }, [pathname]);
   const homePath = pathsConfig.app.accountHome.replace('[account]', account);
   const accounts = buildPersonalSwitcherAccounts(rawAccounts);
   const settingsHref = pathsConfig.app.accountSettings.replace('[account]', account);
 
   return (
     <>
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <div
+        data-team-workspace-shell
+        className={
+          noteEditorScroll
+            ? 'flex min-w-0 flex-1 flex-col'
+            : 'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden'
+        }
+      >
         <WorkspaceMobileHeaderBar>
           <WorkspaceMobileHeaderSelector
             account={account}
@@ -76,9 +94,15 @@ export function TeamWorkspaceMobileChrome({
           />
         </WorkspaceMobileHeaderBar>
 
-        <PullToRefresh className="min-w-0 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-0">
-          {children}
-        </PullToRefresh>
+        {noteEditorScroll ? (
+          <div className="min-w-0 flex-1 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-0">
+            {children}
+          </div>
+        ) : (
+          <PullToRefresh className="min-w-0 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-0">
+            {children}
+          </PullToRefresh>
+        )}
       </div>
 
       <WorkspaceMobileMenu
