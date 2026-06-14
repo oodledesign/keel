@@ -106,7 +106,7 @@ const getRoutes = (
           ...(access.canViewSettings
             ? [
                 {
-                  label: 'common:routes.settings',
+                  label: 'Workspace settings',
                   path: createPath(pathsConfig.app.accountSettings, account),
                   Icon: <Settings className={iconClasses} />,
                 },

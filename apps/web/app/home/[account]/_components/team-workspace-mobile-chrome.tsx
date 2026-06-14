@@ -6,6 +6,9 @@ import {
   buildPersonalSwitcherAccounts,
 } from '~/components/workspace-shell/workspace-accounts-selector';
 import {
+  WorkspaceMobileNewMenu,
+} from '~/components/workspace-shell/workspace-new-menu';
+import {
   useWorkspaceMobileNav,
   WorkspaceMobileBottomNav,
   WorkspaceMobileHeaderBar,
@@ -40,12 +43,13 @@ export function TeamWorkspaceMobileChrome({
   navLinks,
   bottomNavTabs,
   spaceType,
-  showNewMenu,
+  showNewMenu = true,
   children,
 }: TeamWorkspaceMobileChromeProps) {
   const { menuOpen, setMenuOpen } = useWorkspaceMobileNav();
   const homePath = pathsConfig.app.accountHome.replace('[account]', account);
   const accounts = buildPersonalSwitcherAccounts(rawAccounts);
+  const settingsHref = pathsConfig.app.accountSettings.replace('[account]', account);
 
   return (
     <>
@@ -62,17 +66,17 @@ export function TeamWorkspaceMobileChrome({
             accountId={accountId}
             accountSlug={account}
             spaceType={spaceType}
-            showNewMenu={showNewMenu}
+            showNewMenu={false}
           />
           <ProfileAccountDropdownContainer
-          user={user}
-          account={undefined}
-          showProfileName={false}
-          className="shrink-0"
-        />
+            user={user}
+            account={undefined}
+            showProfileName={false}
+            className="shrink-0"
+          />
         </WorkspaceMobileHeaderBar>
 
-        <PullToRefresh className="min-w-0 pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">
+        <PullToRefresh className="min-w-0 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-0">
           {children}
         </PullToRefresh>
       </div>
@@ -84,6 +88,7 @@ export function TeamWorkspaceMobileChrome({
         navLinks={navLinks}
         open={menuOpen}
         onOpenChange={setMenuOpen}
+        variant="team"
       />
 
       <WorkspaceMobileBottomNav
@@ -91,6 +96,17 @@ export function TeamWorkspaceMobileChrome({
         bottomNavTabs={bottomNavTabs}
         menuOpen={menuOpen}
         onMenuOpenChange={setMenuOpen}
+        settingsHref={settingsHref}
+        settingsLabel="Workspace settings"
+        newMenu={
+          showNewMenu ? (
+            <WorkspaceMobileNewMenu
+              variant="team"
+              account={account}
+              spaceType={spaceType}
+            />
+          ) : null
+        }
       />
     </>
   );

@@ -89,23 +89,32 @@ export function JobsPageContent({
         tab: 'all',
         page: 1,
         pageSize: 200,
-        query: searchDebounced || undefined,
-        priority: priorityFilter as
-          | 'low'
-          | 'medium'
-          | 'high'
-          | 'urgent'
-          | undefined,
+        ...(searchDebounced ? { query: searchDebounced } : {}),
+        ...(priorityFilter
+          ? {
+              priority: priorityFilter as
+                | 'low'
+                | 'medium'
+                | 'high'
+                | 'urgent',
+            }
+          : {}),
       });
-      const err = result?.error ?? (result as { error?: unknown })?.error;
-      if (err) {
-        toast.error(getErrorMessage(err));
+
+      const payload = result as {
+        data?: unknown;
+        total?: number;
+        error?: unknown;
+      };
+
+      if (payload?.error) {
+        toast.error(getErrorMessage(payload.error));
         setJobs([]);
         return;
       }
-      if (result?.data !== undefined) {
-        setJobs((result.data ?? []) as unknown as JobsPmRow[]);
-      }
+
+      const rows = Array.isArray(payload?.data) ? payload.data : [];
+      setJobs(rows as JobsPmRow[]);
     } catch (e) {
       toast.error(getErrorMessage(e));
       setJobs([]);

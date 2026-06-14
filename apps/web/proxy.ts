@@ -23,26 +23,20 @@ import {
 } from '~/lib/app-subdomain-host';
 import { getAppSiteOrigin, getMarketingSiteOrigin } from '~/lib/app-host-routing';
 import { getUserDefaultLandingPath } from '~/lib/dashboard-shortcuts/load-shortcuts';
+import {
+  getMiddlewareAuthenticatedUser,
+  getMiddlewareSessionUser,
+} from '~/lib/server/middleware-auth';
 import { applyNoIndexResponseHeader } from '~/lib/seo/search-indexing';
 
 const CSRF_SECRET_COOKIE = 'csrfSecret';
 const NEXT_ACTION_HEADER = 'next-action';
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|images|locales|assets|api/*).*)'],
+  matcher: [
+    '/((?!_next/static|_next/image|images|locales|assets|api|sw.js|manifest.webmanifest|favicon.ico|robots.txt).*)',
+  ],
 };
-
-async function getUser(request: NextRequest, response: NextResponse) {
-  const supabase = createMiddlewareClient(request, response);
-
-  try {
-    return await supabase.auth.getClaims();
-  } catch (err) {
-    // Auth server unreachable (e.g. Supabase not running) — treat as no session
-    console.warn('[middleware] Auth fetch failed (is Supabase running?):', err);
-    return { data: { claims: null }, error: err as Error };
-  }
-}
 
 function createForwardHeaders(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
@@ -228,10 +222,13 @@ async function adminMiddleware(request: NextRequest, response: NextResponse) {
     return;
   }
 
-  const { data, error } = await getUser(request, response);
+  const { user, supabase } = await getMiddlewareAuthenticatedUser(
+    request,
+    response,
+  );
 
   // If user is not logged in, redirect to sign in page.
-  if (!data?.claims || error) {
+  if (!user) {
     const signInUrl = new URL(pathsConfig.auth.signIn, request.nextUrl.origin);
     const returnPath = `${request.nextUrl.pathname}${request.nextUrl.search}`;
 
@@ -242,8 +239,7 @@ async function adminMiddleware(request: NextRequest, response: NextResponse) {
     return NextResponse.redirect(signInUrl.href);
   }
 
-  const client = createMiddlewareClient(request, response);
-  const userIsSuperAdmin = await isSuperAdmin(client);
+  const userIsSuperAdmin = await isSuperAdmin(supabase);
 
   // If user is not an admin, redirect to 404 page.
   if (!userIsSuperAdmin) {
@@ -255,17 +251,16 @@ async function adminMiddleware(request: NextRequest, response: NextResponse) {
 }
 
 async function personalAppAuthHandler(req: NextRequest, res: NextResponse) {
-  const { data } = await getUser(req, res);
+  const { user, supabase } = await getMiddlewareAuthenticatedUser(req, res);
   const { origin, pathname: next } = req.nextUrl;
 
-  if (!data?.claims) {
+  if (!user) {
     const signIn = pathsConfig.auth.signIn;
     const redirectPath = `${signIn}?next=${next}`;
 
     return NextResponse.redirect(new URL(redirectPath, origin).href);
   }
 
-  const supabase = createMiddlewareClient(req, res);
   const requiresMultiFactorAuthentication =
     await checkRequiresMultiFactorAuthentication(supabase);
 
@@ -295,10 +290,10 @@ async function getPatterns() {
     {
       pattern: new URLPattern({ pathname: '/auth/*?' }),
       handler: async (req: NextRequest, res: NextResponse) => {
-        const { data } = await getUser(req, res);
+        const user = await getMiddlewareSessionUser(req, res);
 
         // the user is logged out, so we don't need to do anything
-        if (!data?.claims) {
+        if (!user) {
           return;
         }
 
@@ -310,17 +305,13 @@ async function getPatterns() {
         if (!isVerifyMfa) {
           const nextParam = req.nextUrl.searchParams.get('next');
           const client = createMiddlewareClient(req, res);
-          const {
-            data: { user },
-          } = await client.auth.getUser();
 
           let nextPath = getSafeRedirectPath(nextParam, pathsConfig.app.home);
 
           if (
-            user &&
-            (!nextParam?.trim() ||
-              nextPath === pathsConfig.app.home ||
-              nextPath === '/')
+            !nextParam?.trim() ||
+            nextPath === pathsConfig.app.home ||
+            nextPath === '/'
           ) {
             try {
               nextPath = await getUserDefaultLandingPath(client, user.id);

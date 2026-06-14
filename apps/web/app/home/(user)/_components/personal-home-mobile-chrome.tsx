@@ -3,9 +3,11 @@
 import { ProfileAccountDropdownContainer } from '~/components/personal-account-dropdown-container';
 import { PullToRefresh } from '~/components/pull-to-refresh';
 import {
-  buildPersonalSwitcherAccounts,
+  PERSONAL_WORKSPACE_VALUE,
   WorkspaceAccountsSelector,
+  buildPersonalSwitcherAccounts,
 } from '~/components/workspace-shell/workspace-accounts-selector';
+import { WorkspaceMobileNewMenu } from '~/components/workspace-shell/workspace-new-menu';
 import {
   useWorkspaceMobileNav,
   WorkspaceMobileBottomNav,
@@ -16,9 +18,8 @@ import {
 import type { MobileBottomNavTab } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
 import { WorkspaceMobileTopActions } from '~/components/workspace-shell/workspace-top-bar-actions';
 import pathsConfig from '~/config/paths.config';
-import { PERSONAL_WORKSPACE_VALUE } from '~/lib/workspace-personal-switcher';
-import type { UserWorkspace } from '../_lib/server/load-user-workspace';
 import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
+import type { UserWorkspace } from '~/home/(user)/_lib/server/load-user-workspace';
 
 type PersonalHomeMobileChromeProps = {
   workspace: UserWorkspace;
@@ -57,6 +58,7 @@ export function PersonalHomeMobileChrome({
             variant="personal"
             userId={userId}
             accountId={workspace.workspace?.id}
+            showNewMenu={false}
           />
           <ProfileAccountDropdownContainer
             user={workspace.user}
@@ -66,7 +68,7 @@ export function PersonalHomeMobileChrome({
           />
         </WorkspaceMobileHeaderBar>
 
-        <PullToRefresh className="min-w-0 pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">
+        <PullToRefresh className="min-w-0 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-0">
           {children}
         </PullToRefresh>
       </div>
@@ -78,6 +80,7 @@ export function PersonalHomeMobileChrome({
         navLinks={navLinks}
         open={menuOpen}
         onOpenChange={setMenuOpen}
+        variant="personal"
       />
 
       <WorkspaceMobileBottomNav
@@ -85,6 +88,9 @@ export function PersonalHomeMobileChrome({
         bottomNavTabs={bottomNavTabs}
         menuOpen={menuOpen}
         onMenuOpenChange={setMenuOpen}
+        settingsHref={pathsConfig.app.personalAccountSettings}
+        settingsLabel="Personal settings"
+        newMenu={<WorkspaceMobileNewMenu variant="personal" />}
       />
     </>
   );

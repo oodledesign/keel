@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
+  ChevronDown,
   Download,
   File,
   FileImage,
@@ -18,6 +19,12 @@ import {
 import { useSupabase } from '@kit/supabase/hooks/use-supabase';
 import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@kit/ui/dropdown-menu';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import {
@@ -29,6 +36,8 @@ import {
 import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
+
+import pathsConfig from '~/config/paths.config';
 
 import { ACCOUNT_DOCS_BUCKET } from '../../_lib/workspace-content/docs-constants';
 import {
@@ -47,7 +56,6 @@ import type {
   NoteListItem,
   WorkspaceNotesVariant,
 } from '../../_lib/workspace-content/types';
-import { NOTE_FILE_CATEGORY_LABELS } from '../../_lib/workspace-content/types';
 import { CategoryBadge, CategorySelect } from './category-select';
 import { LinkToSelect, type LinkValue } from './link-to-select';
 import { PublicSharingSection } from './public-sharing-section';
@@ -56,11 +64,7 @@ import { TagsInput } from './tags-input';
 const panelClass =
   'rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)]';
 
-type WorkFilter = 'all' | 'pinned' | 'project' | 'client';
-type PropertyFilter = 'all' | 'pinned' | 'property';
-type GroupFilter = 'all' | 'pinned';
-type TypeFilter = 'all' | 'notes' | 'files';
-type CategoryFilter = 'all' | NoteFileCategory;
+type ListFilter = 'all' | 'pinned' | 'notes' | 'files';
 
 type UnifiedItem =
   | { kind: 'note'; data: NoteListItem }
@@ -102,25 +106,13 @@ function linkFromItem(item: NoteListItem | DocListItem): LinkValue {
   return null;
 }
 
-function matchesScopeFilter(
-  item: NoteListItem | DocListItem,
-  variant: WorkspaceNotesVariant,
-  workFilter: WorkFilter,
-  propertyFilter: PropertyFilter,
-  groupFilter: GroupFilter,
+function matchesListFilter(
+  item: UnifiedItem,
+  listFilter: ListFilter,
 ) {
-  if (variant === 'family' || variant === 'community') {
-    if (groupFilter === 'pinned' && !item.isPinned) return false;
-    return true;
-  }
-  if (variant === 'property') {
-    if (propertyFilter === 'pinned' && !item.isPinned) return false;
-    if (propertyFilter === 'property' && !item.propertyId) return false;
-    return true;
-  }
-  if (workFilter === 'pinned' && !item.isPinned) return false;
-  if (workFilter === 'project' && !item.projectId && !item.jobId) return false;
-  if (workFilter === 'client' && !item.clientOrgId && !item.clientId) return false;
+  if (listFilter === 'notes' && item.kind !== 'note') return false;
+  if (listFilter === 'files' && item.kind !== 'file') return false;
+  if (listFilter === 'pinned' && !item.data.isPinned) return false;
   return true;
 }
 
@@ -151,14 +143,9 @@ export function WorkspaceNotesPage({
 }) {
   const [notes, setNotes] = useState(initialNotes);
   const [docs, setDocs] = useState(initialDocs);
-  const [workFilter, setWorkFilter] = useState<WorkFilter>('all');
-  const [propertyFilter, setPropertyFilter] = useState<PropertyFilter>('all');
-  const [groupFilter, setGroupFilter] = useState<GroupFilter>('all');
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
-  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
+  const [listFilter, setListFilter] = useState<ListFilter>('all');
   const [createNoteOpen, setCreateNoteOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [editingNote, setEditingNote] = useState<NoteListItem | null>(null);
   const [editingFile, setEditingFile] = useState<DocListItem | null>(null);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
@@ -179,35 +166,13 @@ export function WorkspaceNotesPage({
       ...docs.map((d) => ({ kind: 'file' as const, data: d })),
     ];
     return items
-      .filter((item) => {
-        if (typeFilter === 'notes' && item.kind !== 'note') return false;
-        if (typeFilter === 'files' && item.kind !== 'file') return false;
-        if (categoryFilter !== 'all' && item.data.category !== categoryFilter) {
-          return false;
-        }
-        return matchesScopeFilter(
-          item.data,
-          variant,
-          workFilter,
-          propertyFilter,
-          groupFilter,
-        );
-      })
+      .filter((item) => matchesListFilter(item, listFilter))
       .sort(
         (a, b) =>
           new Date(b.data.updatedAt).getTime() -
           new Date(a.data.updatedAt).getTime(),
       );
-  }, [
-    notes,
-    docs,
-    typeFilter,
-    categoryFilter,
-    variant,
-    workFilter,
-    propertyFilter,
-    groupFilter,
-  ]);
+  }, [notes, docs, listFilter]);
 
   if (!tableAvailable && !docsTableAvailable) {
     return (
@@ -226,89 +191,64 @@ export function WorkspaceNotesPage({
         : 'text-zinc-400 hover:bg-white/5 hover:text-white',
     );
 
+  const noteDetailPath = (noteId: string) =>
+    pathsConfig.app.accountNoteDetail
+      .replace('[account]', accountSlug)
+      .replace('[noteId]', noteId);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         {!hideFilters ? (
-          <div className="flex flex-col gap-2">
-            <ScopeFilterBar
-              variant={variant}
-              workFilter={workFilter}
-              setWorkFilter={setWorkFilter}
-              propertyFilter={propertyFilter}
-              setPropertyFilter={setPropertyFilter}
-              groupFilter={groupFilter}
-              setGroupFilter={setGroupFilter}
-            />
-            <div className="flex flex-wrap gap-2">
-              {(
-                [
-                  { key: 'all' as const, label: 'All types' },
-                  { key: 'notes' as const, label: 'Notes' },
-                  { key: 'files' as const, label: 'Files' },
-                ] as const
-              ).map((f) => (
-                <button
-                  key={f.key}
-                  type="button"
-                  onClick={() => setTypeFilter(f.key)}
-                  className={filterBtn(typeFilter === f.key)}
-                >
-                  {f.label}
-                </button>
-              ))}
-              <span className="mx-1 w-px self-stretch bg-white/10" />
+          <div className="flex flex-wrap gap-2">
+            {(
+              [
+                { key: 'all' as const, label: 'All' },
+                { key: 'pinned' as const, label: 'Pinned' },
+                { key: 'notes' as const, label: 'Notes' },
+                { key: 'files' as const, label: 'Files' },
+              ] as const
+            ).map((f) => (
               <button
+                key={f.key}
                 type="button"
-                onClick={() => setCategoryFilter('all')}
-                className={filterBtn(categoryFilter === 'all')}
+                onClick={() => setListFilter(f.key)}
+                className={filterBtn(listFilter === f.key)}
               >
-                All categories
+                {f.label}
               </button>
-              {(
-                [
-                  'meeting_transcript',
-                  'idea',
-                  'future',
-                  'development',
-                ] as NoteFileCategory[]
-              ).map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setCategoryFilter(cat)}
-                  className={filterBtn(categoryFilter === cat)}
-                >
-                  {NOTE_FILE_CATEGORY_LABELS[cat]}
-                </button>
-              ))}
-            </div>
+            ))}
           </div>
         ) : (
           <div />
         )}
         {canEdit ? (
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="border-white/10 text-white"
-              onClick={() => setUploadOpen(true)}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                size="sm"
+                className="bg-[#2A9D8F] text-white hover:bg-[#238b7f]"
+              >
+                <Plus className="mr-1.5 h-4 w-4" />
+                New
+                <ChevronDown className="ml-1 h-4 w-4 opacity-80" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="border-white/10 bg-[var(--workspace-shell-panel)] text-white"
             >
-              <Upload className="mr-1.5 h-4 w-4" />
-              Upload file
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              className="bg-[#2A9D8F] text-white hover:bg-[#238b7f]"
-              onClick={() => setCreateNoteOpen(true)}
-            >
-              <Plus className="mr-1.5 h-4 w-4" />
-              New note
-            </Button>
-          </div>
+              <DropdownMenuItem onClick={() => setCreateNoteOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                New note
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setUploadOpen(true)}>
+                <Upload className="mr-2 h-4 w-4" />
+                Upload file
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ) : null}
       </div>
 
@@ -321,7 +261,7 @@ export function WorkspaceNotesPage({
               <li key={`note-${item.data.id}`}>
                 <button
                   type="button"
-                  onClick={() => setEditingNote(item.data)}
+                  onClick={() => router.push(noteDetailPath(item.data.id))}
                   className={cn(
                     panelClass,
                     'w-full p-4 text-left transition hover:border-[#2A9D8F]/30 hover:bg-white/[0.02]',
@@ -361,29 +301,6 @@ export function WorkspaceNotesPage({
         }}
         startTransition={startTransition}
       />
-
-      {editingNote ? (
-        <NoteFormSheet
-          open={Boolean(editingNote)}
-          onOpenChange={(open) => !open && setEditingNote(null)}
-          title="Edit note"
-          accountId={accountId}
-          accountSlug={accountSlug}
-          linkOptions={linkOptions}
-          note={editingNote}
-          pending={pending}
-          canDelete={canEdit}
-          onSaved={() => {
-            setEditingNote(null);
-            router.refresh();
-          }}
-          onDeleted={() => {
-            setEditingNote(null);
-            router.refresh();
-          }}
-          startTransition={startTransition}
-        />
-      ) : null}
 
       <UploadFileSheet
         open={uploadOpen}
@@ -547,99 +464,6 @@ function FileListRow({
   );
 }
 
-function ScopeFilterBar({
-  variant,
-  workFilter,
-  setWorkFilter,
-  propertyFilter,
-  setPropertyFilter,
-  groupFilter,
-  setGroupFilter,
-}: {
-  variant: WorkspaceNotesVariant;
-  workFilter: WorkFilter;
-  setWorkFilter: (v: WorkFilter) => void;
-  propertyFilter: PropertyFilter;
-  setPropertyFilter: (v: PropertyFilter) => void;
-  groupFilter: GroupFilter;
-  setGroupFilter: (v: GroupFilter) => void;
-}) {
-  const btn = (active: boolean) =>
-    cn(
-      'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
-      active
-        ? 'bg-[#2A9D8F]/20 text-[#5eead4]'
-        : 'text-zinc-400 hover:bg-white/5 hover:text-white',
-    );
-
-  if (variant === 'family' || variant === 'community') {
-    return (
-      <div className="flex flex-wrap gap-2">
-        {(
-          [
-            { key: 'all' as const, label: 'All' },
-            { key: 'pinned' as const, label: 'Pinned' },
-          ] as const
-        ).map((f) => (
-          <button
-            key={f.key}
-            type="button"
-            onClick={() => setGroupFilter(f.key)}
-            className={btn(groupFilter === f.key)}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-    );
-  }
-
-  if (variant === 'property') {
-    return (
-      <div className="flex flex-wrap gap-2">
-        {(
-          [
-            { key: 'all' as const, label: 'All' },
-            { key: 'pinned' as const, label: 'Pinned' },
-            { key: 'property' as const, label: 'By Property' },
-          ] as const
-        ).map((f) => (
-          <button
-            key={f.key}
-            type="button"
-            onClick={() => setPropertyFilter(f.key)}
-            className={btn(propertyFilter === f.key)}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-wrap gap-2">
-      {(
-        [
-          { key: 'all' as const, label: 'All' },
-          { key: 'pinned' as const, label: 'Pinned' },
-          { key: 'project' as const, label: 'By Project' },
-          { key: 'client' as const, label: 'By Client' },
-        ] as const
-      ).map((f) => (
-        <button
-          key={f.key}
-          type="button"
-          onClick={() => setWorkFilter(f.key)}
-          className={btn(workFilter === f.key)}
-        >
-          {f.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 function NoteFormSheet({
   open,
   onOpenChange,
@@ -669,6 +493,7 @@ function NoteFormSheet({
   onDeleted?: () => void;
   startTransition: (fn: () => void) => void;
 }) {
+  const router = useRouter();
   const [noteTitle, setNoteTitle] = useState(note?.title ?? '');
   const [content, setContent] = useState(note?.content ?? '');
   const [isPinned, setIsPinned] = useState(note?.isPinned ?? false);
@@ -708,6 +533,15 @@ function NoteFormSheet({
           link,
         });
         setSavedNoteId(result.noteId);
+        if (!note && !savedNoteId) {
+          onOpenChange(false);
+          router.push(
+            pathsConfig.app.accountNoteDetail
+              .replace('[account]', accountSlug)
+              .replace('[noteId]', result.noteId),
+          );
+          return;
+        }
         onSaved();
         toast.success(note || savedNoteId ? 'Note saved' : 'Note created');
       } catch {

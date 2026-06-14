@@ -2,7 +2,10 @@
 
 import { useState } from 'react';
 
+import { Plus } from 'lucide-react';
+
 import { Badge } from '@kit/ui/badge';
+import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 
 export function TagsInput({
@@ -40,20 +43,32 @@ export function TagsInput({
           </Badge>
         ))}
       </div>
-      <Input
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            addTag();
-          }
-        }}
-        onBlur={addTag}
-        placeholder="Add tag, press Enter"
-        disabled={disabled}
-        className="border-white/10 bg-[var(--workspace-shell-panel)] text-white"
-      />
+      <div className="flex gap-2">
+        <Input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              addTag();
+            }
+          }}
+          placeholder="Add tag"
+          disabled={disabled}
+          className="border-white/10 bg-[var(--workspace-shell-panel)] text-base text-white md:text-sm"
+        />
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="shrink-0 border-white/10 text-white md:hidden"
+          disabled={disabled || !draft.trim()}
+          onClick={addTag}
+        >
+          Add
+        </Button>
+      </div>
+      <p className="hidden text-xs text-zinc-500 md:block">Press Enter to add a tag</p>
     </div>
   );
 }

@@ -16,6 +16,7 @@ import {
   type WorkspaceAccountRow,
 } from '~/home/_lib/server/workspace-scope';
 import { normalizeSpaceType } from '~/home/[account]/_lib/server/account-modules';
+import { displayTitle } from '~/home/[account]/_lib/workspace-content/context-resolve';
 import { workspaceColorForSpaceType } from '~/home/(user)/_lib/workspace-accent';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
@@ -73,6 +74,16 @@ export type PersonalPeopleUpcomingItem = {
   href: string;
 };
 
+export type PersonalRecentNote = {
+  id: string;
+  title: string;
+  excerpt: string;
+  updatedAt: string;
+  workspaceName: string;
+  workspaceSlug: string;
+  workspaceColor: string;
+};
+
 export type KeelDashboardData = {
   userName: string;
   dateLabel: string;
@@ -84,6 +95,8 @@ export type KeelDashboardData = {
   myDayEvents: PersonalCalendarEvent[];
   peopleUpcoming: PersonalPeopleUpcomingItem[];
   workspaceOverview: WorkspaceOverviewCard[];
+  recentNotes: PersonalRecentNote[];
+  brainWorkspaceSlug: string | null;
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────
@@ -438,6 +451,76 @@ async function buildWorkspaceOverview(
   );
 }
 
+async function loadRecentNotesAcrossWorkspaces(
+  client: ReturnType<typeof getSupabaseServerClient>,
+  workspaceRows: WorkspaceAccountRow[],
+): Promise<PersonalRecentNote[]> {
+  const withSlug = workspaceRows.filter((w) => w.slug);
+  if (withSlug.length === 0) return [];
+
+  const accountIds = withSlug.map((w) => w.id);
+  const workspaceById = new Map(withSlug.map((w) => [w.id, w]));
+
+  const { data, error } = await client
+    .from('notes')
+    .select('id, title, content, updated_at, account_id')
+    .in('account_id', accountIds)
+    .order('updated_at', { ascending: false })
+    .limit(12);
+
+  if (error) {
+    const m = (error.message ?? '').toLowerCase();
+    if (
+      m.includes('schema cache') ||
+      m.includes('does not exist') ||
+      error.code === 'PGRST205' ||
+      error.code === '42P01'
+    ) {
+      return [];
+    }
+    throw error;
+  }
+
+  type NoteRow = {
+    id: string;
+    title: string | null;
+    content: string | null;
+    updated_at: string;
+    account_id: string;
+  };
+
+  return ((data ?? []) as NoteRow[]).map((row) => {
+    const workspace = workspaceById.get(row.account_id);
+    const content = (row.content as string | null) ?? '';
+    const titleRaw = (row.title as string | null) ?? '';
+    const title = displayTitle(titleRaw, content);
+    const plain = content
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const spaceType = normalizeSpaceType(workspace?.space_type ?? null);
+
+    return {
+      id: row.id,
+      title,
+      excerpt: plain.slice(0, 120) || 'No content yet',
+      updatedAt: row.updated_at,
+      workspaceName: workspace?.name?.trim() || workspace?.slug || 'Workspace',
+      workspaceSlug: workspace?.slug ?? '',
+      workspaceColor: workspaceColorForSpaceType(spaceType),
+    };
+  });
+}
+
+function resolveBrainWorkspaceSlug(
+  workspaceRows: WorkspaceAccountRow[],
+): string | null {
+  const work = workspaceRows.find(
+    (w) => w.slug && normalizeSpaceType(w.space_type) === 'work',
+  );
+  return work?.slug ?? workspaceRows.find((w) => w.slug)?.slug ?? null;
+}
+
 // ─── Main loader ─────────────────────────────────────────────────────
 
 export const loadKeelDashboard = cache(async (): Promise<KeelDashboardData> => {
@@ -619,6 +702,15 @@ export const loadKeelDashboard = cache(async (): Promise<KeelDashboardData> => {
       ? tasks
       : tasks.filter((t) => t.workspaceSlug === null);
 
+  let recentNotes: PersonalRecentNote[] = [];
+  try {
+    recentNotes = await loadRecentNotesAcrossWorkspaces(client, workspaceRows);
+  } catch {
+    recentNotes = [];
+  }
+
+  const brainWorkspaceSlug = resolveBrainWorkspaceSlug(workspaceRows);
+
   return {
     userName,
     dateLabel: formatDateLabel(),
@@ -630,5 +722,7 @@ export const loadKeelDashboard = cache(async (): Promise<KeelDashboardData> => {
     myDayEvents,
     peopleUpcoming,
     workspaceOverview,
+    recentNotes,
+    brainWorkspaceSlug,
   };
 });

@@ -1,10 +1,7 @@
 import { redirect } from 'next/navigation';
 
-import { PageBody } from '@kit/ui/page';
-
 import { withI18n } from '~/lib/i18n/with-i18n';
 
-import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
 import { getDefaultAccountPath, getTeamAccountAccess } from '../../_lib/role-access';
 import {
   getSpaceTypeFromAccount,
@@ -61,20 +58,14 @@ async function NoteDetailPage({ params }: NoteDetailPageProps) {
   const data = await loadNoteDetailData(accountSlug, noteId);
 
   return (
-    <>
-      <TeamAccountLayoutPageHeader
-        account={data.accountSlug}
-        title={data.note.title || 'Untitled note'}
-        description="Edit note"
+    <div className="bg-[var(--workspace-shell-canvas)] px-3 pb-[calc(5rem+env(safe-area-inset-bottom))] text-white lg:mx-auto lg:max-w-3xl lg:px-8 lg:pb-8">
+      <NoteEditor
+        accountId={data.accountId}
+        accountSlug={data.accountSlug}
+        linkOptions={data.linkOptions}
+        note={data.note}
       />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-white lg:px-8">
-        <NoteEditor
-          accountId={data.accountId}
-          accountSlug={data.accountSlug}
-          note={data.note}
-        />
-      </PageBody>
-    </>
+    </div>
   );
 }
 

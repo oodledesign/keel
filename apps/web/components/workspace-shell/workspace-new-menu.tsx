@@ -43,15 +43,16 @@ type WorkspaceNewMenuProps =
       variant: 'personal';
     };
 
+function getNewMenuItems(props: WorkspaceNewMenuProps) {
+  if (props.variant === 'team') {
+    return getTeamItems(props.account, props.spaceType ?? 'work');
+  }
+  return getPersonalItems();
+}
+
 export function WorkspaceNewMenu(props: WorkspaceNewMenuProps) {
   const [open, setOpen] = useState(false);
-
-  const teamItems =
-    props.variant === 'team'
-      ? getTeamItems(props.account, props.spaceType ?? 'work')
-      : [];
-  const personalItems = props.variant === 'personal' ? getPersonalItems() : [];
-  const items = props.variant === 'team' ? teamItems : personalItems;
+  const items = getNewMenuItems(props);
 
   if (items.length === 0) {
     return null;
@@ -73,6 +74,53 @@ export function WorkspaceNewMenu(props: WorkspaceNewMenuProps) {
 
       <DropdownMenuContent
         align="end"
+        className="min-w-[12rem] border-white/10 bg-[#0F1B35] text-white"
+      >
+        {items.map((item) => (
+          <DropdownMenuItem key={item.key} asChild className="focus:bg-white/10">
+            {item.href ? (
+              <Link href={item.href} onClick={() => setOpen(false)}>
+                <item.icon className="mr-2 h-4 w-4 text-[#2A9D8F]" />
+                {item.label}
+              </Link>
+            ) : (
+              <span className="flex items-center opacity-50">
+                <item.icon className="mr-2 h-4 w-4" />
+                {item.label}
+              </span>
+            )}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/** Compact “New” control for the mobile bottom nav bar. */
+export function WorkspaceMobileNewMenu(props: WorkspaceNewMenuProps) {
+  const [open, setOpen] = useState(false);
+  const items = getNewMenuItems(props);
+
+  if (items.length === 0) {
+    return null;
+  }
+
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label="Create new"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--keel-teal)] text-white shadow-sm hover:bg-[#238b7f]"
+        >
+          <Plus className="h-[21px] w-[21px]" />
+        </button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent
+        align="center"
+        side="top"
+        sideOffset={12}
         className="min-w-[12rem] border-white/10 bg-[#0F1B35] text-white"
       >
         {items.map((item) => (

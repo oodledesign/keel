@@ -346,7 +346,7 @@ export function buildWorkSettingsChildren(
 
   if (access.canViewSettings) {
     settings.push({
-      label: 'Settings',
+      label: 'Workspace settings',
       path: createPath(pathsConfig.app.accountSettings, account),
       Icon: <Settings className={iconClasses} />,
     });

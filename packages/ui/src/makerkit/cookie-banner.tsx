@@ -37,23 +37,23 @@ export function CookieBannerComponent() {
     <DialogPrimitive.Root open modal={false}>
       <DialogPrimitive.Content
         onOpenAutoFocus={(e) => e.preventDefault()}
-        className={`dark:shadow-primary-500/40 bg-background animate-in fade-in zoom-in-95 slide-in-from-bottom-16 fill-mode-both fixed bottom-0 z-50 w-full max-w-lg border p-6 shadow-2xl delay-1000 duration-1000 lg:bottom-[2rem] lg:left-[2rem] lg:h-48 lg:rounded-lg`}
+        className={`dark:shadow-primary-500/40 bg-background animate-in fade-in zoom-in-95 slide-in-from-bottom-16 fill-mode-both fixed bottom-0 z-50 w-full max-w-md border p-3 shadow-lg delay-1000 duration-1000 sm:p-4 lg:bottom-4 lg:left-4 lg:rounded-lg`}
       >
-        <DialogPrimitive.Title className="text-lg font-semibold">
+        <DialogPrimitive.Title className="text-sm font-semibold">
           <Trans i18nKey={'cookieBanner.title'} />
         </DialogPrimitive.Title>
 
-        <div className={'flex flex-col space-y-4'}>
-          <div className={'text-gray-500 dark:text-gray-400'}>
+        <div className={'mt-2 flex flex-col gap-2.5 sm:flex-row sm:items-end sm:justify-between sm:gap-3'}>
+          <div className={'text-xs leading-snug text-gray-500 dark:text-gray-400 sm:max-w-[18rem]'}>
             <Trans i18nKey={'cookieBanner.description'} />
           </div>
 
-          <div className={'flex justify-end space-x-2.5'}>
-            <Button variant={'ghost'} onClick={reject}>
+          <div className={'flex shrink-0 justify-end gap-2'}>
+            <Button variant={'ghost'} size={'sm'} onClick={reject}>
               <Trans i18nKey={'cookieBanner.reject'} />
             </Button>
 
-            <Button autoFocus onClick={accept}>
+            <Button autoFocus size={'sm'} onClick={accept}>
               <Trans i18nKey={'cookieBanner.accept'} />
             </Button>
           </div>

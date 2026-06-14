@@ -146,3 +146,13 @@
     --workspace-control-border: rgba(255, 255, 255, 0.12);
   }
 }
+
+/* Prevent iOS Safari zoom on focused form fields (requires >= 16px) */
+@media (max-width: 1023px) {
+  input,
+  textarea,
+  select,
+  [contenteditable='true'] {
+    font-size: 16px !important;
+  }
+}

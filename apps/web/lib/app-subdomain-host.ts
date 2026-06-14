@@ -21,6 +21,26 @@ const APP_ROUTE_PREFIXES = [
   '/watch',
 ] as const;
 
+/** Static assets required for PWA install — must not redirect to /app on app host. */
+const APP_HOST_STATIC_PATHS = [
+  '/manifest.webmanifest',
+  '/sw.js',
+  '/favicon.ico',
+  '/robots.txt',
+] as const;
+
+export function isAppHostStaticPath(pathname: string): boolean {
+  if (APP_HOST_STATIC_PATHS.includes(pathname as (typeof APP_HOST_STATIC_PATHS)[number])) {
+    return true;
+  }
+
+  return (
+    pathname.startsWith('/images/') ||
+    pathname.startsWith('/assets/') ||
+    pathname.startsWith('/locales/')
+  );
+}
+
 const MARKETING_ROUTE_PREFIXES = [
   '/personal',
   '/work',
@@ -124,7 +144,7 @@ export function resolveAppSubdomainRedirect(url: URL): string | null {
   const { pathname, search } = url;
 
   if (onAppHost) {
-    if (isAppRoute(pathname)) {
+    if (isAppRoute(pathname) || isAppHostStaticPath(pathname)) {
       return null;
     }
 

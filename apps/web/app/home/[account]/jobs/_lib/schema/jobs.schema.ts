@@ -19,15 +19,22 @@ const optionalNullableDate = z
   .optional();
 
 // --- List jobs ---
-export const ListJobsSchema = z.object({
-  accountId: z.string().uuid(),
-  tab: z.enum(['active', 'completed', 'all']),
-  page: z.coerce.number().int().min(1).optional().default(1),
-  pageSize: z.coerce.number().int().min(1).max(200).optional().default(20),
-  query: z.string().optional(),
-  status: jobStatus.optional(),
-  priority: jobPriority.optional(),
-});
+export const ListJobsSchema = z
+  .object({
+    accountId: z.string().uuid(),
+    tab: z.enum(['active', 'completed', 'all']),
+    page: z.coerce.number().int().min(1).optional().default(1),
+    pageSize: z.coerce.number().int().min(1).max(200).optional().default(20),
+    query: z.string().nullish().optional(),
+    status: jobStatus.nullish().optional(),
+    priority: jobPriority.nullish().optional(),
+  })
+  .transform((input) => ({
+    ...input,
+    query: input.query?.trim() ? input.query.trim() : undefined,
+    status: input.status ?? undefined,
+    priority: input.priority ?? undefined,
+  }));
 
 // --- Get job ---
 export const GetJobSchema = z.object({

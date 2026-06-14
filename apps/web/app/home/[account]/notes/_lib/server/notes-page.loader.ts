@@ -70,6 +70,11 @@ export async function loadNoteDetailData(
   redirectIfSpaceNotIn(workspace, accountSlug, ACCOUNT_NOTES_SPACE_TYPES);
 
   const accountId = workspace.account.id as string;
+  const profile = resolveWorkspaceProfile({
+    space_type: (workspace.account as { space_type?: string }).space_type,
+    business_type: workspace.businessType,
+  });
+
   const note = await loadAccountNoteById(accountId, noteId);
 
   if (!note) {
@@ -86,6 +91,9 @@ export async function loadNoteDetailData(
       title: note.title,
       content: note.content,
       isPinned: note.isPinned,
+      category: note.category,
+      tags: note.tags,
+      isPublic: note.isPublic,
       jobId: note.jobId,
       clientId: note.clientId ?? note.clientOrgId,
       propertyId: note.propertyId,
@@ -100,5 +108,9 @@ export async function loadNoteDetailData(
       createdAt: note.createdAt,
       updatedAt: note.updatedAt,
     },
+    linkOptions: linkOptionsForProfile(
+      await loadWorkspaceLinkOptions(accountId, profile),
+      profile,
+    ),
   };
 }

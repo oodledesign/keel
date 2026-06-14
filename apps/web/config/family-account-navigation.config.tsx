@@ -114,7 +114,7 @@ export function buildFamilySettingsChildren(
   if (!access.canViewSettings) return [];
   return [
     {
-      label: 'Settings',
+      label: 'Workspace settings',
       path: createPath(pathsConfig.app.accountSettings, account),
       Icon: <Settings className={iconClasses} />,
     },

@@ -134,7 +134,7 @@ function PersonalSettingsNavLink() {
         >
           <Link href={personalAccountSettingsPath}>
             <Icon className="h-4 w-4 shrink-0" />
-            {!collapsed ? <span>Settings</span> : null}
+            {!collapsed ? <span>Personal settings</span> : null}
           </Link>
         </SidebarMenuButton>
       </SidebarMenuItem>

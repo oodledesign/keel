@@ -455,12 +455,29 @@ export async function loadDashboardPageData(
     projectRows.map((p) => [p.id, p.name ?? 'Project']),
   );
 
+  const { data: jobRowsForTasks } = await client
+    .from('jobs')
+    .select('id, title')
+    .eq('account_id', accountId);
+  const jobIds = (jobRowsForTasks ?? []).map((j) => j.id as string);
+  const jobNameMap = new Map(
+    (jobRowsForTasks ?? []).map((j) => [j.id as string, (j.title as string) ?? 'Project']),
+  );
+
   let upcomingTasks: DashboardTaskSummary[] = [];
+  const taskScopeFilters: string[] = [];
+  if (jobIds.length > 0) {
+    taskScopeFilters.push(`job_id.in.(${jobIds.join(',')})`);
+  }
   if (projectIds.length > 0) {
+    taskScopeFilters.push(`project_id.in.(${projectIds.join(',')})`);
+  }
+
+  if (taskScopeFilters.length > 0) {
     const { data: taskRows, error: tasksError } = await client
       .from('tasks')
-      .select('id, title, status, due_date, project_id')
-      .in('project_id', projectIds)
+      .select('id, title, status, due_date, project_id, job_id')
+      .or(taskScopeFilters.join(','))
       .is('parent_task_id', null)
       .not('status', 'eq', 'done')
       .order('due_date', { ascending: true, nullsFirst: false })
@@ -475,9 +492,11 @@ export async function loadDashboardPageData(
       title: (t.title as string | null) ?? 'Untitled task',
       dueDate: toIsoDateString(t.due_date as string | null | undefined),
       status: (t.status as string | null) ?? 'todo',
-      projectName: t.project_id
-        ? (projectNameMap.get(t.project_id as string) ?? null)
-        : null,
+      projectName: t.job_id
+        ? (jobNameMap.get(t.job_id as string) ?? null)
+        : t.project_id
+          ? (projectNameMap.get(t.project_id as string) ?? null)
+          : null,
     }));
   }
 
