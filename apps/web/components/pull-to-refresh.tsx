@@ -16,6 +16,7 @@ import { Loader2 } from 'lucide-react';
 import { cn } from '@kit/ui/utils';
 
 import { triggerHapticFeedback } from '~/lib/haptics';
+import { scrollWheelDeltaToScrollParent } from '~/lib/scroll-passthrough';
 import {
   isPullToRefreshEnabled,
   subscribePullToRefreshContext,
@@ -160,6 +161,29 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
       el.removeEventListener('touchcancel', onTouchEnd);
     };
   }, [enabled, onTouchEnd, onTouchMove, onTouchStart]);
+
+  useEffect(() => {
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) return;
+
+    const onWheel = (event: WheelEvent) => {
+      const target = event.target;
+
+      if (
+        !(target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement)
+      ) {
+        return;
+      }
+
+      scrollWheelDeltaToScrollParent(target, event);
+    };
+
+    scrollEl.addEventListener('wheel', onWheel, { passive: false });
+
+    return () => {
+      scrollEl.removeEventListener('wheel', onWheel);
+    };
+  }, []);
 
   const progress = Math.min(pullDistance / PULL_THRESHOLD, 1);
   const showSpinner = enabled && (pullDistance > 8 || refreshing);

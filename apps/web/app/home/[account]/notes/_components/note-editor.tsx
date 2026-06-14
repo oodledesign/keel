@@ -42,6 +42,7 @@ import type {
   NoteFileCategory,
 } from '../../_lib/workspace-content/types';
 import { saveWorkspaceNoteAction } from '../../_lib/workspace-content/notes-actions';
+import { useFormFieldScrollPassthroughRefs } from '~/lib/scroll-passthrough';
 
 type NoteEditorProps = {
   accountId: string;
@@ -159,6 +160,11 @@ export function NoteEditor({
     syncTextareaHeight(titleRef.current);
     syncTextareaHeight(textareaRef.current);
   }, [title, content, syncTextareaHeight]);
+
+  useFormFieldScrollPassthroughRefs(
+    () => [titleRef.current, textareaRef.current],
+    [title, content],
+  );
 
   const onTitleChange = (value: string) => {
     setTitle(value);
@@ -362,7 +368,7 @@ export function NoteEditor({
         placeholder="Untitled"
         rows={1}
         aria-label="Note title"
-        className="w-full resize-none overflow-hidden rounded-none border-0 bg-transparent px-3 pb-2 pt-4 font-heading text-[1.75rem] font-bold leading-tight tracking-tight text-white shadow-none focus-visible:ring-0 overscroll-y-contain lg:px-0 lg:text-3xl"
+        className="w-full resize-none overflow-hidden rounded-none border-0 bg-transparent px-3 pb-2 pt-4 font-heading text-[1.75rem] font-bold leading-tight tracking-tight text-white shadow-none focus-visible:ring-0 touch-pan-y lg:px-0 lg:text-3xl"
         spellCheck
       />
 
@@ -373,7 +379,7 @@ export function NoteEditor({
         placeholder="Start writing…"
         rows={1}
         aria-label="Note content"
-        className="min-h-[50vh] w-full resize-none overflow-hidden rounded-none border-0 bg-transparent px-3 pb-4 pt-1 text-base leading-relaxed text-white shadow-none focus-visible:ring-0 overscroll-y-contain lg:px-0 lg:text-[15px]"
+        className="min-h-[50vh] w-full resize-none overflow-hidden rounded-none border-0 bg-transparent px-3 pb-4 pt-1 text-base leading-relaxed text-white shadow-none focus-visible:ring-0 touch-pan-y lg:px-0 lg:text-[15px]"
         spellCheck
       />
     </div>
