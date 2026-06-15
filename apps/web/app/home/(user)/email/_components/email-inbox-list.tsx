@@ -1,0 +1,158 @@
+'use client';
+
+import { Loader2 } from 'lucide-react';
+
+import { cn } from '@kit/ui/utils';
+
+import type { EmailThreadSummary } from '../_lib/types';
+
+const panelClass =
+  'rounded-2xl border border-white/[0.08] bg-[var(--workspace-shell-panel)]';
+
+function formatThreadDate(value: string | null) {
+  if (!value) {
+    return '';
+  }
+
+  const date = new Date(value);
+  const now = new Date();
+  const sameDay =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate();
+
+  if (sameDay) {
+    return date.toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  return date.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+  });
+}
+
+function participantLabel(thread: EmailThreadSummary) {
+  const first = thread.participants[0];
+  if (!first) {
+    return 'Unknown sender';
+  }
+
+  return first.name?.trim() || first.email;
+}
+
+type Props = {
+  threads: EmailThreadSummary[];
+  selectedThreadId: string | null;
+  onSelectThread: (threadId: string) => void;
+  loadingMore?: boolean;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+};
+
+export function EmailInboxList({
+  threads,
+  selectedThreadId,
+  onSelectThread,
+  loadingMore = false,
+  hasMore = false,
+  onLoadMore,
+}: Props) {
+  return (
+    <section className={cn(panelClass, 'flex min-h-0 flex-col overflow-hidden')}>
+      <div className="border-b border-white/10 px-4 py-3">
+        <h2 className="text-sm font-semibold text-white">Inbox</h2>
+        <p className="text-xs text-zinc-500">
+          {threads.length === 0 ? 'No threads yet' : `${threads.length} threads`}
+        </p>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {threads.length === 0 ? (
+          <div className="px-4 py-8 text-sm text-zinc-500">
+            Connect Gmail and sync to see your recent inbox threads here.
+          </div>
+        ) : (
+          <ul className="divide-y divide-white/5">
+            {threads.map((thread) => {
+              const selected = thread.id === selectedThreadId;
+
+              return (
+                <li key={thread.id}>
+                  <button
+                    type="button"
+                    onClick={() => onSelectThread(thread.id)}
+                    className={cn(
+                      'flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-white/[0.03]',
+                      selected && 'bg-white/[0.05]',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'mt-2 h-2 w-2 shrink-0 rounded-full',
+                        thread.is_unread
+                          ? 'bg-[var(--keel-teal)]'
+                          : 'bg-transparent',
+                      )}
+                      aria-hidden
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-start justify-between gap-2">
+                        <span
+                          className={cn(
+                            'truncate text-sm',
+                            thread.is_unread
+                              ? 'font-semibold text-white'
+                              : 'font-medium text-zinc-200',
+                          )}
+                        >
+                          {participantLabel(thread)}
+                        </span>
+                        <span className="shrink-0 text-xs text-zinc-500">
+                          {formatThreadDate(thread.last_message_at)}
+                        </span>
+                      </span>
+                      <span
+                        className={cn(
+                          'mt-0.5 block truncate text-sm',
+                          thread.is_unread ? 'text-zinc-200' : 'text-zinc-400',
+                        )}
+                      >
+                        {thread.subject?.trim() || '(no subject)'}
+                      </span>
+                      <span className="mt-1 block truncate text-xs text-zinc-500">
+                        {thread.snippet?.trim() || 'No preview'}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+      {hasMore && onLoadMore ? (
+        <div className="border-t border-white/10 p-3">
+          <button
+            type="button"
+            onClick={onLoadMore}
+            disabled={loadingMore}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm text-zinc-300 transition-colors hover:bg-white/[0.03] disabled:opacity-60"
+          >
+            {loadingMore ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading…
+              </>
+            ) : (
+              'Load more'
+            )}
+          </button>
+        </div>
+      ) : null}
+    </section>
+  );
+}

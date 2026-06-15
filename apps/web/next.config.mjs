@@ -21,6 +21,9 @@ const INTERNAL_PACKAGES = [
   '@kit/email-templates',
   '@kit/database-webhooks',
   '@kit/cms',
+  '@kit/google-auth',
+  '@kit/gmail',
+  '@kit/email-assistant',
   '@kit/monitoring',
   '@kit/next',
   '@kit/notifications',
@@ -212,6 +215,14 @@ async function getRewrites() {
         destination: '/home/tasks',
       },
       {
+        source: '/app/email',
+        destination: '/home/email',
+      },
+      {
+        source: '/app/email/:path*',
+        destination: '/home/email/:path*',
+      },
+      {
         source: '/app/support',
         destination: '/home/support',
       },
@@ -290,6 +301,16 @@ async function getRedirects() {
     {
       source: '/home/tasks',
       destination: '/app/tasks',
+      permanent: false,
+    },
+    {
+      source: '/home/email',
+      destination: '/app/email',
+      permanent: false,
+    },
+    {
+      source: '/home/email/:path*',
+      destination: '/app/email/:path*',
       permanent: false,
     },
     {

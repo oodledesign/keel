@@ -1,0 +1,33 @@
+{
+  "name": "@kit/gmail",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "clean": "git clean -xdf .turbo node_modules",
+    "format": "prettier --check \"**/*.{ts,md,json}\"",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "prettier": "@kit/prettier-config",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./mime": "./src/mime.ts",
+    "./sync": "./src/sync.ts",
+    "./drafts": "./src/drafts.ts"
+  },
+  "dependencies": {
+    "@kit/google-auth": "workspace:*",
+    "@kit/supabase": "workspace:*"
+  },
+  "devDependencies": {
+    "@kit/eslint-config": "workspace:*",
+    "@kit/prettier-config": "workspace:*",
+    "@kit/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}

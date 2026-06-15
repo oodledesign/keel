@@ -121,6 +121,12 @@ export function buildPersonalShortcutRoutes(): PersonalShortcutRoute[] {
       path: `${pathsConfig.app.home}/pipeline`,
       keywords: ['pipeline', 'leads'],
     },
+    {
+      label: 'Email',
+      path: pathsConfig.app.personalEmailAssistant,
+      description: 'Gmail inbox, suggested to-dos, and AI draft replies',
+      keywords: ['email', 'gmail', 'inbox', 'assistant'],
+    },
   ];
 
   const seen = new Set<string>();

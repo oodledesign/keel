@@ -317,9 +317,18 @@ importers:
       '@kit/database-webhooks':
         specifier: workspace:*
         version: link:../../packages/database-webhooks
+      '@kit/email-assistant':
+        specifier: workspace:*
+        version: link:../../packages/email-assistant
       '@kit/email-templates':
         specifier: workspace:*
         version: link:../../packages/email-templates
+      '@kit/gmail':
+        specifier: workspace:*
+        version: link:../../packages/gmail
+      '@kit/google-auth':
+        specifier: workspace:*
+        version: link:../../packages/google-auth
       '@kit/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
@@ -856,6 +865,31 @@ importers:
         specifier: 3.25.76
         version: 3.25.76
 
+  packages/email-assistant:
+    dependencies:
+      zod:
+        specifier: 3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@kit/eslint-config':
+        specifier: workspace:*
+        version: link:../../tooling/eslint
+      '@kit/prettier-config':
+        specifier: workspace:*
+        version: link:../../tooling/prettier
+      '@kit/tsconfig':
+        specifier: workspace:*
+        version: link:../../tooling/typescript
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.2.3
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.0.18
+        version: 4.0.18(@opentelemetry/api@1.9.0)(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.46.0)(tsx@4.21.0)
+
   packages/email-templates:
     dependencies:
       '@react-email/components':
@@ -1231,6 +1265,62 @@ importers:
       zod:
         specifier: 3.25.76
         version: 3.25.76
+
+  packages/gmail:
+    dependencies:
+      '@kit/google-auth':
+        specifier: workspace:*
+        version: link:../google-auth
+      '@kit/supabase':
+        specifier: workspace:*
+        version: link:../supabase
+    devDependencies:
+      '@kit/eslint-config':
+        specifier: workspace:*
+        version: link:../../tooling/eslint
+      '@kit/prettier-config':
+        specifier: workspace:*
+        version: link:../../tooling/prettier
+      '@kit/tsconfig':
+        specifier: workspace:*
+        version: link:../../tooling/typescript
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.2.3
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.0.18
+        version: 4.0.18(@opentelemetry/api@1.9.0)(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.46.0)(tsx@4.21.0)
+
+  packages/google-auth:
+    dependencies:
+      '@kit/supabase':
+        specifier: workspace:*
+        version: link:../supabase
+      zod:
+        specifier: 3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@kit/eslint-config':
+        specifier: workspace:*
+        version: link:../../tooling/eslint
+      '@kit/prettier-config':
+        specifier: workspace:*
+        version: link:../../tooling/prettier
+      '@kit/tsconfig':
+        specifier: workspace:*
+        version: link:../../tooling/typescript
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.2.3
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.0.18
+        version: 4.0.18(@opentelemetry/api@1.9.0)(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.46.0)(tsx@4.21.0)
 
   packages/i18n:
     dependencies:

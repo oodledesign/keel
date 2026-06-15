@@ -46,6 +46,10 @@
     {
       "path": "/api/cron/brain-reindex-active",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/gmail/sync",
+      "schedule": "*/15 * * * *"
     }
   ]
 }
