@@ -71,7 +71,7 @@ test.describe('Team Invitation with MFA Flow', () => {
     await invitations.acceptInvitation();
 
     // Should be redirected to the team dashboard
-    await page.waitForURL(`/app/work/${teamSlug}`, {
+    await page.waitForURL(`/app/${teamSlug}`, {
       timeout: 5_000,
     });
 

@@ -4,6 +4,7 @@ import { createHmac, timingSafeEqual } from 'crypto';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import pathsConfig from '~/config/paths.config';
 import { stripeConnectErrorMessage } from './stripe-connect-messages';
 
 export { stripeConnectErrorMessage };
@@ -162,7 +163,7 @@ export async function buildStripeConnectSettingsRedirect(
 
     const account = accountResult.data as { slug?: string | null } | null;
     if (account?.slug) {
-      return `${params.origin}/app/work/${account.slug}/settings/payments?${qs.toString()}`;
+      return `${params.origin}${pathsConfig.app.accountPaymentSettings.replace('[account]', account.slug)}?${qs.toString()}`;
     }
   }
 

@@ -201,7 +201,7 @@ Approximate scale: **~280+** `*.ts` / `*.tsx` files under `app/` (excluding `.ne
 
 ### 4.2 Tenancy model
 
-- **`public.accounts`:** Every user has a **personal** account (`is_personal_account`, slug rules). **Team** accounts have a unique **`slug`** used in URLs (e.g. `/home/[account]` / `/app/work/[account]` depending on route config).
+- **`public.accounts`:** Every user has a **personal** account (`is_personal_account`, slug rules). **Team** accounts have a unique **`slug`** used in URLs (e.g. `/app/[account]` for workspaces, `/app` for personal).
 - **`public.accounts_memberships`:** Links **`auth.users`** to **`accounts`** with **`account_role`** (references **`roles`**).
 - **Primary owner:** `accounts.primary_owner_user_id`; transfer and membership protections implemented in SQL triggers/functions (`kit.*`, `public.transfer_team_account_ownership`, etc.).
 - **Workspace context:** Loaded via **`createTeamAccountsApi`** RPC **`team_account_workspace`** and loaders such as **`loadTeamWorkspace`** — exposes account row, membership list, and is cached per request.

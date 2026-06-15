@@ -53,7 +53,7 @@ export class TeamAccountsPageObject {
         })
         .click();
 
-      await this.page.waitForURL('**/app/work/*/settings');
+      await this.page.waitForURL('**/app/*/settings');
     }).toPass();
   }
 
@@ -65,7 +65,7 @@ export class TeamAccountsPageObject {
         })
         .click();
 
-      await this.page.waitForURL('**/app/work/*/members');
+      await this.page.waitForURL('**/app/*/members');
     }).toPass();
   }
 
@@ -77,7 +77,7 @@ export class TeamAccountsPageObject {
         })
         .click();
 
-      return await this.page.waitForURL('**/app/work/*/billing');
+      return await this.page.waitForURL('**/app/*/billing');
     }).toPass();
   }
 
@@ -129,12 +129,12 @@ export class TeamAccountsPageObject {
       '[data-test="create-team-form"] button:last-child',
     );
 
-    const response = this.page.waitForURL(`/app/work/${slug}`);
+    const response = this.page.waitForURL(`/app/${slug}`);
 
     await Promise.all([click, response]);
 
     // Verify user landed on the team page
-    await expect(this.page).toHaveURL(`/app/work/${slug}`);
+    await expect(this.page).toHaveURL(`/app/${slug}`);
 
     // Verify the team was created and appears in the selector
     await this.openAccountsSelector();
@@ -166,12 +166,12 @@ export class TeamAccountsPageObject {
       '[data-test="create-team-form"] button:last-child',
     );
 
-    const response = this.page.waitForURL(`/app/work/${slug}`);
+    const response = this.page.waitForURL(`/app/${slug}`);
 
     await Promise.all([click, response]);
 
     // Verify user landed on the team page
-    await expect(this.page).toHaveURL(`/app/work/${slug}`);
+    await expect(this.page).toHaveURL(`/app/${slug}`);
 
     // Verify the team was created and appears in the selector
     await this.openAccountsSelector();

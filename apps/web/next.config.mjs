@@ -1,4 +1,5 @@
 import withBundleAnalyzer from '@next/bundle-analyzer';
+import reservedWorkspaceUrlSegments from '../../packages/shared/reserved-workspace-url-segments.json' with { type: 'json' };
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -145,19 +146,15 @@ function getImagesConfig() {
 
 /**
  * Public URLs live under /app; existing handlers stay under app/home/** via rewrites.
- * Do not rewrite /app/family, /app/community, or /app/settings/areas — those are real routes.
+ * Workspace slugs use `/app/:slug` (not `/app/work/:slug`). Reserved segments are excluded
+ * so personal routes and real pages (/app/family, /app/community, /app/settings/areas) win.
  */
 async function getRewrites() {
+  const reserved = reservedWorkspaceUrlSegments.join('|');
+  const account = `(?!${reserved})[a-z0-9-]+`;
+
   return {
     beforeFiles: [
-      {
-        source: '/app/work/:account/:path*',
-        destination: '/home/:account/:path*',
-      },
-      {
-        source: '/app/work/:account',
-        destination: '/home/:account',
-      },
       {
         source: '/app/life/:path*',
         destination: '/home/life/:path*',
@@ -195,6 +192,10 @@ async function getRewrites() {
         destination: '/home/planner',
       },
       {
+        source: '/app/planner/:path*',
+        destination: '/home/planner/:path*',
+      },
+      {
         source: '/app/people',
         destination: '/home/people',
       },
@@ -217,6 +218,14 @@ async function getRewrites() {
       {
         source: '/app/support/:path*',
         destination: '/home/support/:path*',
+      },
+      {
+        source: `/app/:account(${account})/:path*`,
+        destination: '/home/:account/:path*',
+      },
+      {
+        source: `/app/:account(${account})`,
+        destination: '/home/:account',
       },
       {
         source: '/app',
@@ -300,12 +309,12 @@ async function getRedirects() {
     },
     {
       source: '/home/:account/:path*',
-      destination: '/app/work/:account/:path*',
+      destination: '/app/:account/:path*',
       permanent: false,
     },
     {
       source: '/home/:account',
-      destination: '/app/work/:account',
+      destination: '/app/:account',
       permanent: false,
     },
     {
@@ -334,23 +343,33 @@ async function getRedirects() {
   return [
     ...legacyHomeRedirects,
     {
+      source: '/app/work/:account/:path*',
+      destination: '/app/:account/:path*',
+      permanent: true,
+    },
+    {
+      source: '/app/work/:account',
+      destination: '/app/:account',
+      permanent: true,
+    },
+    {
       source: '/app/work/oodle-1',
-      destination: '/app/work/oodle',
+      destination: '/app/oodle',
       permanent: true,
     },
     {
       source: '/app/work/oodle-1/:path*',
-      destination: '/app/work/oodle/:path*',
+      destination: '/app/oodle/:path*',
       permanent: true,
     },
     {
       source: '/home/oodle-1',
-      destination: '/app/work/oodle',
+      destination: '/app/oodle',
       permanent: true,
     },
     {
       source: '/home/oodle-1/:path*',
-      destination: '/app/work/oodle/:path*',
+      destination: '/app/oodle/:path*',
       permanent: true,
     },
     {

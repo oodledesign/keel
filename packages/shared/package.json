@@ -14,7 +14,8 @@
     "./utils": "./src/utils.ts",
     "./hooks": "./src/hooks/index.ts",
     "./events": "./src/events/index.tsx",
-    "./registry": "./src/registry/index.ts"
+    "./registry": "./src/registry/index.ts",
+    "./workspace-url": "./src/workspace-url.ts"
   },
   "devDependencies": {
     "@kit/eslint-config": "workspace:*",

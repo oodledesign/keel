@@ -184,7 +184,7 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
 
   const data = await loadDashboardPageData(account);
 
-  const shortcutsBar = (
+  const businessShortcutsBar = (
     <Suspense fallback={null}>
       <WorkspaceDashboardShortcutsBar
         accountId={accountId}
@@ -215,7 +215,7 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
           financeTrend={data.financeTrend}
           upcomingTasks={data.upcomingTasks}
           recentNotes={data.recentNotes}
-          shortcutsBar={shortcutsBar}
+          shortcutsBar={businessShortcutsBar}
         />
       </PageBody>
     </>

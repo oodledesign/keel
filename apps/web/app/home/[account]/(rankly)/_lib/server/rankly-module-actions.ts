@@ -162,7 +162,8 @@ export const createRanklyProject = enhanceAction(
     revalidatePath(workPath(pathsConfig.app.accountRanklyDashboard, accountSlug));
     if (input.clientId) {
       revalidatePath(
-        `/app/work/${accountSlug}/clients/${input.clientId}`,
+        workPath(pathsConfig.app.accountClients, accountSlug) +
+          `/${input.clientId}`,
       );
     }
     return { ok: true as const };

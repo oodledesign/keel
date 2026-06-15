@@ -12,6 +12,7 @@ import {
 } from '@kit/ui/card';
 import { PageBody, PageHeader } from '@kit/ui/page';
 
+import pathsConfig from '~/config/paths.config';
 import {
   formatMoneyMinor,
   loadAdminBillingAnalytics,
@@ -88,7 +89,7 @@ async function AdminBillingPage() {
                     </p>
                   </div>
                   <Button asChild size="sm" variant="outline">
-                    <Link href={`/app/work/${row.accountSlug}/billing`}>
+                    <Link href={pathsConfig.app.accountBilling.replace('[account]', row.accountSlug)}>
                       Billing
                     </Link>
                   </Button>

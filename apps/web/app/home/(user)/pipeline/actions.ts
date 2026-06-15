@@ -36,7 +36,6 @@ async function resolveAccountIdForBusiness(
 function revalidatePipelinePaths(accountSlug?: string | null) {
   revalidatePath('/home/pipeline');
   revalidatePath('/home');
-  revalidatePath('/app/work', 'layout');
   const slug = accountSlug?.trim();
   if (slug) {
     revalidatePath(pathsConfig.app.accountPipeline.replace('[account]', slug));

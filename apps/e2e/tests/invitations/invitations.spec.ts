@@ -198,7 +198,7 @@ test.describe('Full Invitation Flow', () => {
     }
 
     // Should redirect to team home after skipping
-    await page.waitForURL(new RegExp('/app/work/[a-z0-9-]+'));
+    await page.waitForURL(new RegExp('/app/[a-z0-9-]+'));
 
     console.log(`✓ New user successfully joined team after identity setup`);
 
@@ -256,7 +256,7 @@ test.describe('Full Invitation Flow', () => {
     console.log(`Verifying existing user skips /identities...`);
 
     // EXISTING USERS should skip /identities and go directly to team home
-    await page.waitForURL(new RegExp('/app/work/[a-z0-9-]+'), { timeout: 5000 });
+    await page.waitForURL(new RegExp('/app/[a-z0-9-]+'), { timeout: 5000 });
 
     console.log(
       `✓ Existing user correctly skipped /identities and went directly to team`,
@@ -409,7 +409,7 @@ test.describe('Identity Setup Confirmation Dialog', () => {
     await proceedButton.click();
 
     // Should now redirect to team home
-    await page.waitForURL(new RegExp('/app/work/[a-z0-9-]+'), { timeout: 5000 });
+    await page.waitForURL(new RegExp('/app/[a-z0-9-]+'), { timeout: 5000 });
 
     console.log(`✓ User successfully continued without adding auth method`);
 
@@ -494,7 +494,7 @@ test.describe('Identity Setup Confirmation Dialog', () => {
     console.log(`Clicked continue after adding password...`);
 
     // Confirmation dialog should NOT appear - should go directly to team
-    await page.waitForURL(new RegExp('/app/work/[a-z0-9-]+'), { timeout: 5000 });
+    await page.waitForURL(new RegExp('/app/[a-z0-9-]+'), { timeout: 5000 });
 
     // Verify no dialog appeared
     const confirmDialog = page.locator('[data-test="no-auth-method-dialog"]');

@@ -1,16 +1,11 @@
+import { RESERVED_WORKSPACE_URL_SEGMENTS } from '@kit/shared/workspace-url';
 import { z } from 'zod';
 
 /**
- * @name RESERVED_NAMES_ARRAY
- * @description Array of reserved names for team accounts
- * This is a list of names that cannot be used for team accounts as they are reserved for other purposes.
- * Please include any new reserved names here.
+ * Slugs that cannot be used for workspaces — they collide with personal `/app/*` routes.
+ * Canonical list: packages/shared/reserved-workspace-url-segments.json
  */
-const RESERVED_NAMES_ARRAY = [
-  'settings',
-  'billing',
-  // please add more reserved names here
-];
+const RESERVED_NAMES_ARRAY = [...RESERVED_WORKSPACE_URL_SEGMENTS];
 
 const SPECIAL_CHARACTERS_REGEX = /[!@#$%^&*()+=[\]{};':"\\|,.<>/?]/;
 

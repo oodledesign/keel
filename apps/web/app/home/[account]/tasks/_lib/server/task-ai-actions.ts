@@ -24,12 +24,11 @@ function revalidateWorkspaceTaskPages(accountSlug: string) {
   const workExtract = workAccountPath(pathsConfig.app.accountTasksExtract, slug);
   const homeTasks = `/home/${slug}/tasks`;
   const homeExtract = `/home/${slug}/tasks/extract`;
-  // Use `page` so Next invalidates the concrete route (rewrites can make `layout` alone miss `/app/work/...`).
+  // Use `page` so Next invalidates the concrete route (rewrites can make `layout` alone miss `/app/:slug/...`).
   revalidatePath(workTasks, 'page');
   revalidatePath(workExtract, 'page');
   revalidatePath(homeTasks, 'page');
   revalidatePath(homeExtract, 'page');
-  revalidatePath('/app/work', 'layout');
   revalidatePath('/home', 'layout');
 }
 

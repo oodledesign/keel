@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from '@kit/ui/dialog';
 
-import { PlatformSupportTicketForm } from '~/app/home/(user)/support/_components/platform-support-ticket-form';
+import { PlatformSupportTicketForm } from '~/home/(user)/support/_components/platform-support-ticket-form';
 import {
   loadPlatformSupportAccountOptions,
   type PlatformSupportAccountOption,

@@ -624,7 +624,7 @@ export function JobDetailContent({
               </p>
               <Button asChild className="mt-3" variant="outline">
                 <Link
-                  href={`/app/work/${accountSlug}/messages${jobId ? `?threadJob=${jobId}` : ''}`}
+                  href={`${pathsConfig.app.accountMessages.replace('[account]', accountSlug)}${jobId ? `?threadJob=${jobId}` : ''}`}
                 >
                   Open messages
                 </Link>

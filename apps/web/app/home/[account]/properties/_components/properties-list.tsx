@@ -27,6 +27,7 @@ import {
 
 import type { Property } from '../_lib/server/properties.service';
 import { deleteProperty } from '../_lib/server/server-actions';
+import pathsConfig from '~/config/paths.config';
 import { PropertyFormModal } from './property-form-modal';
 
 interface PropertiesListProps {
@@ -163,7 +164,9 @@ export function PropertiesList({
                       </span>
                       <div>
                         <Link
-                          href={`/app/work/${accountSlug}/properties/${property.id}`}
+                          href={pathsConfig.app.accountPropertyDetail
+                            .replace('[account]', accountSlug)
+                            .replace('[id]', property.id)}
                           className="text-sm font-semibold text-white hover:text-violet-300 transition-colors"
                         >
                           {property.name}
@@ -237,7 +240,9 @@ export function PropertiesList({
                   {/* CTA */}
                   <div className="mt-4 border-t border-white/6 pt-3">
                     <Link
-                      href={`/app/work/${accountSlug}/properties/${property.id}`}
+                      href={pathsConfig.app.accountPropertyDetail
+                        .replace('[account]', accountSlug)
+                        .replace('[id]', property.id)}
                       className="text-xs font-medium text-white/50 hover:text-white transition-colors"
                     >
                       View details →

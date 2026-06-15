@@ -99,7 +99,6 @@ export async function createTask(input: CreateTaskInput) {
   }
 
   revalidatePath('/home', 'layout');
-  revalidatePath('/app/work', 'layout');
   revalidatePath('/home/tasks');
   revalidatePath('/app/tasks');
   return { success: true, error: null, id: data.id as string };
@@ -203,7 +202,6 @@ export async function updateTask(taskId: string, input: UpdateTaskInput) {
   }
 
   revalidatePath('/home', 'layout');
-  revalidatePath('/app/work', 'layout');
   revalidatePath('/home/tasks');
   revalidatePath('/app/tasks');
   return { success: true, error: null };
@@ -224,7 +222,6 @@ export async function deleteTask(taskId: string) {
   }
 
   revalidatePath('/home', 'layout');
-  revalidatePath('/app/work', 'layout');
   revalidatePath('/home/tasks');
   revalidatePath('/app/tasks');
   return { success: true, error: null };
@@ -235,7 +232,7 @@ export type TaskAssignmentOption = {
   name: string;
   type: 'project' | 'area' | 'client';
   color: string | null;
-  /** Team account (workspace) for projects — same rows as /app/work/[slug]. */
+  /** Team account (workspace) for projects — same rows as `/app/[slug]`. */
   accountId?: string | null;
   accountName?: string | null;
 };

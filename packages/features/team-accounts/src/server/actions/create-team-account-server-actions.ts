@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation';
 
 import { enhanceAction } from '@kit/next/actions';
 import { getLogger } from '@kit/shared/logger';
+import { workspaceAccountHomePath } from '@kit/shared/workspace-url';
 
 import { CreateTeamSchema } from '../../schema/create-team.schema';
 import { createAccountCreationPolicyEvaluator } from '../policies';
@@ -68,14 +69,7 @@ export const createTeamAccountAction = enhanceAction(
 
     logger.info(ctx, `Team account created`);
 
-    const accountHomePath =
-      spaceType === 'work' || spaceType === 'property'
-        ? '/app/work/' + data.slug
-        : spaceType === 'family'
-          ? '/app/family'
-          : '/app/community';
-
-    redirect(accountHomePath);
+    redirect(workspaceAccountHomePath(data.slug));
   },
   {
     schema: CreateTeamSchema,

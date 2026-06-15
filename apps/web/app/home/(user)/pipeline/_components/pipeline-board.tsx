@@ -76,7 +76,7 @@ function formatCurrency(value: number) {
 type Props = {
   initialData: PipelineData;
   onDealWon?: (deal: PipelineDeal) => void;
-  /** When set, revalidates `/app/work/[account]/pipeline` after server actions */
+  /** When set, revalidates `/app/[account]/pipeline` after server actions */
   workspaceAccountSlug?: string;
   workspaceAccountId?: string;
 };

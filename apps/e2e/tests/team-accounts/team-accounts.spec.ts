@@ -54,7 +54,7 @@ async function setupTeamWithMember(page: Page, memberRole = 'member') {
   });
 
   // Navigate to the team members page
-  await page.goto(`/app/work/${slug}/members`);
+  await page.goto(`/app/${slug}/members`);
 
   return { invitations, teamAccounts, ownerEmail, memberEmail, slug };
 }
@@ -187,7 +187,7 @@ test.describe('Team Accounts', () => {
     await teamAccounts.createTeamWithNonLatinName('한국 팀', slug);
 
     // Verify we're on the team page
-    await expect(page).toHaveURL(`/app/work/${slug}`);
+    await expect(page).toHaveURL(`/app/${slug}`);
 
     // Verify team appears in selector
     await teamAccounts.openAccountsSelector();
@@ -348,7 +348,7 @@ test.describe('Team Account Security', () => {
     await userBTeamAccounts.auth.visitConfirmEmailLink(emailB);
 
     // 4. Attempt to access the team page with User B
-    await userBPage.goto(`/app/work/${teamSlug}`);
+    await userBPage.goto(`/app/${teamSlug}`);
 
     // Check that we're not on the team page anymore (should redirect)
     await expect(userBPage).toHaveURL(`/app`);

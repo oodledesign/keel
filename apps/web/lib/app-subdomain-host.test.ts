@@ -21,8 +21,8 @@ describe('resolveAppSubdomainRedirect', () => {
     ).toBe('https://app.keelos.so/auth/sign-in?next=%2Fapp');
 
     expect(
-      resolveAppSubdomainRedirect(new URL('https://keelos.so/app/work/potters')),
-    ).toBe('https://app.keelos.so/app/work/potters');
+      resolveAppSubdomainRedirect(new URL('https://keelos.so/app/potters')),
+    ).toBe('https://app.keelos.so/app/potters');
   });
 
   it('redirects app host root to dashboard and marketing pages to www', () => {
