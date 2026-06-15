@@ -28,7 +28,9 @@ export default function AdminLayout(props: React.PropsWithChildren) {
           <AdminMobileNavigation />
         </PageMobileNavigation>
 
-        {props.children}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+          {props.children}
+        </div>
       </Page>
     </SidebarProvider>
   );

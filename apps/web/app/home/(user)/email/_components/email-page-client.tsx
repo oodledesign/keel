@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState, useTransition } from 'react';
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -26,6 +26,30 @@ type Props = {
   initialData: EmailPageInitialData;
 };
 
+function buildThreadsUrl(input: {
+  filter: EmailInboxFilter;
+  searchQuery?: string;
+  cursor?: string | null;
+}) {
+  const params = new URLSearchParams({ limit: '25' });
+
+  if (input.filter === 'needs_reply') {
+    params.set('filter', 'needs_reply');
+  }
+
+  const trimmedSearch = input.searchQuery?.trim();
+
+  if (trimmedSearch) {
+    params.set('q', trimmedSearch);
+  }
+
+  if (input.cursor) {
+    params.set('cursor', input.cursor);
+  }
+
+  return `/api/gmail/threads?${params.toString()}`;
+}
+
 export function EmailPageClient({ initialData }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -38,24 +62,22 @@ export function EmailPageClient({ initialData }: Props) {
   const [showSettings, setShowSettings] = useState(false);
   const [syncing, startSyncTransition] = useTransition();
   const [inboxFilter, setInboxFilter] = useState<EmailInboxFilter>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [searching, setSearching] = useState(false);
+  const searchRequestId = useRef(0);
+  const skipInitialSearchFetch = useRef(true);
 
   const selectedThreadId = searchParams.get('thread');
 
   const threadsEndpoint = useCallback(
-    (cursor?: string | null) => {
-      const params = new URLSearchParams({ limit: '25' });
-
-      if (inboxFilter === 'needs_reply') {
-        params.set('filter', 'needs_reply');
-      }
-
-      if (cursor) {
-        params.set('cursor', cursor);
-      }
-
-      return `/api/gmail/threads?${params.toString()}`;
-    },
-    [inboxFilter],
+    (cursor?: string | null) =>
+      buildThreadsUrl({
+        filter: inboxFilter,
+        searchQuery: debouncedSearch,
+        cursor,
+      }),
+    [inboxFilter, debouncedSearch],
   );
 
   useEffect(() => {
@@ -76,6 +98,50 @@ export function EmailPageClient({ initialData }: Props) {
       router.replace(pathsConfig.app.personalEmailAssistant);
     }
   }, [router, searchParams]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedSearch(searchQuery.trim());
+    }, 300);
+
+    return () => window.clearTimeout(timeout);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (skipInitialSearchFetch.current) {
+      skipInitialSearchFetch.current = false;
+      return;
+    }
+
+    const requestId = ++searchRequestId.current;
+    setSearching(true);
+
+    void emailApiFetch<{
+      threads: EmailThreadSummary[];
+      nextCursor: string | null;
+    }>(buildThreadsUrl({ filter: inboxFilter, searchQuery: debouncedSearch }))
+      .then((data) => {
+        if (requestId !== searchRequestId.current) {
+          return;
+        }
+
+        setThreads(data.threads);
+        setNextCursor(data.nextCursor);
+        setHasMore(Boolean(data.nextCursor));
+      })
+      .catch((error) => {
+        if (requestId !== searchRequestId.current) {
+          return;
+        }
+
+        toast.error(error instanceof Error ? error.message : 'Search failed');
+      })
+      .finally(() => {
+        if (requestId === searchRequestId.current) {
+          setSearching(false);
+        }
+      });
+  }, [debouncedSearch, inboxFilter]);
 
   const selectThread = useCallback(
     (threadId: string) => {
@@ -103,21 +169,10 @@ export function EmailPageClient({ initialData }: Props) {
 
   const changeInboxFilter = useCallback((filter: EmailInboxFilter) => {
     setInboxFilter(filter);
+  }, []);
 
-    const params = new URLSearchParams({ limit: '25' });
-
-    if (filter === 'needs_reply') {
-      params.set('filter', 'needs_reply');
-    }
-
-    void emailApiFetch<{
-      threads: EmailThreadSummary[];
-      nextCursor: string | null;
-    }>(`/api/gmail/threads?${params.toString()}`).then((data) => {
-      setThreads(data.threads);
-      setNextCursor(data.nextCursor);
-      setHasMore(Boolean(data.nextCursor));
-    });
+  const handleSearchQueryChange = useCallback((value: string) => {
+    setSearchQuery(value);
   }, []);
 
   const syncNow = () => {
@@ -268,6 +323,9 @@ export function EmailPageClient({ initialData }: Props) {
             onSelectThread={selectThread}
             filter={inboxFilter}
             onFilterChange={changeInboxFilter}
+            searchQuery={searchQuery}
+            onSearchQueryChange={handleSearchQueryChange}
+            searching={searching}
             loadingMore={loadingMore}
             hasMore={hasMore}
             onLoadMore={loadMore}

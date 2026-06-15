@@ -1,7 +1,8 @@
 'use client';
 
-import { Loader2 } from 'lucide-react';
+import { Loader2, Search, X } from 'lucide-react';
 
+import { Input } from '@kit/ui/input';
 import { cn } from '@kit/ui/utils';
 
 import type { EmailInboxFilter, EmailThreadSummary } from '../_lib/types';
@@ -49,6 +50,9 @@ type Props = {
   onSelectThread: (threadId: string) => void;
   filter: EmailInboxFilter;
   onFilterChange: (filter: EmailInboxFilter) => void;
+  searchQuery: string;
+  onSearchQueryChange: (value: string) => void;
+  searching?: boolean;
   loadingMore?: boolean;
   hasMore?: boolean;
   onLoadMore?: () => void;
@@ -60,10 +64,14 @@ export function EmailInboxList({
   onSelectThread,
   filter,
   onFilterChange,
+  searchQuery,
+  onSearchQueryChange,
+  searching = false,
   loadingMore = false,
   hasMore = false,
   onLoadMore,
 }: Props) {
+  const trimmedSearch = searchQuery.trim();
   const needsReplyCount = threads.filter(
     (thread) => thread.assistant_category === 'needs_reply',
   ).length;
@@ -101,20 +109,48 @@ export function EmailInboxList({
           </div>
         </div>
         <p className="mt-1 text-xs text-zinc-500">
-          {threads.length === 0
-            ? filter === 'needs_reply'
-              ? 'No threads need a reply yet'
-              : 'No threads yet'
-            : filter === 'needs_reply'
-              ? `${threads.length} thread${threads.length === 1 ? '' : 's'} need a reply`
-              : `${threads.length} threads${needsReplyCount > 0 && filter === 'all' ? ` · ${needsReplyCount} need a reply` : ''}`}
+          {searching
+            ? 'Searching…'
+            : threads.length === 0
+              ? trimmedSearch
+                ? `No threads match “${trimmedSearch}”`
+                : filter === 'needs_reply'
+                  ? 'No threads need a reply yet'
+                  : 'No threads yet'
+              : trimmedSearch
+                ? `${threads.length} result${threads.length === 1 ? '' : 's'} for “${trimmedSearch}”`
+                : filter === 'needs_reply'
+                  ? `${threads.length} thread${threads.length === 1 ? '' : 's'} need a reply`
+                  : `${threads.length} threads${needsReplyCount > 0 && filter === 'all' ? ` · ${needsReplyCount} need a reply` : ''}`}
         </p>
+
+        <div className="relative mt-3">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+          <Input
+            value={searchQuery}
+            onChange={(event) => onSearchQueryChange(event.target.value)}
+            placeholder="Search subject, sender, or message…"
+            className="border-white/10 bg-[#0B132B] pl-9 pr-9 text-sm text-white placeholder:text-zinc-500"
+          />
+          {searchQuery ? (
+            <button
+              type="button"
+              onClick={() => onSearchQueryChange('')}
+              className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-white/5 hover:text-white"
+              aria-label="Clear search"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         {threads.length === 0 ? (
           <div className="px-4 py-8 text-sm text-zinc-500">
-            Connect Gmail and sync to see your recent inbox threads here.
+            {trimmedSearch
+              ? 'Try a different search term or clear the search to see all threads.'
+              : 'Connect Gmail and sync to see your recent inbox threads here.'}
           </div>
         ) : (
           <ul className="divide-y divide-white/5">
