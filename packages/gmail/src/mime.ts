@@ -90,21 +90,124 @@ export function parseMessage(message: GmailMessage): ParsedGmailMessage {
   };
 }
 
+export function htmlSignatureToPlain(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+export function normalizePlainTextBody(body: string): string {
+  return body.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
+}
+
+export function stripTrailingPlainSignature(
+  body: string,
+  plainSignature: string | null | undefined,
+): string {
+  const sig = plainSignature?.trim();
+
+  if (!sig) {
+    return body;
+  }
+
+  const normalizedBody = body.replace(/\r\n/g, '\n').trimEnd();
+  const normalizedSig = sig.replace(/\r\n/g, '\n');
+
+  if (normalizedBody.endsWith(`\n\n${normalizedSig}`)) {
+    return normalizedBody.slice(0, -(normalizedSig.length + 2)).trimEnd();
+  }
+
+  if (normalizedBody.endsWith(normalizedSig)) {
+    return normalizedBody.slice(0, -normalizedSig.length).trimEnd();
+  }
+
+  return body;
+}
+
+function plainTextToHtmlContent(body: string): string {
+  const normalized = body.replace(/\r\n/g, '\n').trim();
+  const escaped = normalized
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  const paragraphs = escaped.split(/\n\n+/);
+
+  return paragraphs
+    .map((paragraph) => {
+      const lines = paragraph.replace(/\n/g, '<br>');
+      return `<p style="margin:0 0 1em 0">${lines}</p>`;
+    })
+    .join('');
+}
+
+export function plainTextToHtml(body: string): string {
+  return `<!DOCTYPE html><html><body>${plainTextToHtmlContent(body)}</body></html>`;
+}
+
+export function buildHtmlEmailBody(
+  body: string,
+  options?: {
+    signatureHtml?: string | null;
+    plainSignature?: string | null;
+  },
+): string {
+  const messageBody = stripTrailingPlainSignature(body, options?.plainSignature);
+  const messageHtml = plainTextToHtmlContent(messageBody);
+  const signatureHtml = options?.signatureHtml?.trim();
+
+  if (!signatureHtml) {
+    return `<!DOCTYPE html><html><body>${messageHtml}</body></html>`;
+  }
+
+  return `<!DOCTYPE html><html><body>${messageHtml}<div>${signatureHtml}</div></body></html>`;
+}
+
+function createMimeBoundary(): string {
+  return `keel_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
 export function buildRawMessage(input: BuildRawMessageInput): string {
-  const lines = [
+  const boundary = createMimeBoundary();
+  const plainBody = normalizePlainTextBody(input.body);
+  const htmlBody = buildHtmlEmailBody(input.body, {
+    signatureHtml: input.signatureHtml,
+    plainSignature: input.plainSignature,
+  });
+
+  const headers = [
     input.from ? `From: ${input.from}` : null,
     `To: ${input.to}`,
     `Subject: ${input.subject}`,
     input.inReplyTo ? `In-Reply-To: ${input.inReplyTo}` : null,
     input.references ? `References: ${input.references}` : null,
     'MIME-Version: 1.0',
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+  ].filter((line): line is string => Boolean(line));
+
+  const mime = [
+    ...headers,
+    '',
+    `--${boundary}`,
     'Content-Type: text/plain; charset=UTF-8',
     'Content-Transfer-Encoding: 7bit',
     '',
-    input.body,
-  ].filter((line): line is string => Boolean(line));
+    plainBody,
+    `--${boundary}`,
+    'Content-Type: text/html; charset=UTF-8',
+    'Content-Transfer-Encoding: 7bit',
+    '',
+    htmlBody,
+    `--${boundary}--`,
+    '',
+  ].join('\r\n');
 
-  return encodeBase64Url(lines.join('\r\n'));
+  return encodeBase64Url(mime);
 }
 
 export function participantsFromMessage(message: GmailMessage) {

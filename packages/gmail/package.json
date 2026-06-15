@@ -16,7 +16,8 @@
     "./client": "./src/client.ts",
     "./mime": "./src/mime.ts",
     "./sync": "./src/sync.ts",
-    "./drafts": "./src/drafts.ts"
+    "./drafts": "./src/drafts.ts",
+    "./send-as": "./src/send-as.ts"
   },
   "dependencies": {
     "@kit/google-auth": "workspace:*",

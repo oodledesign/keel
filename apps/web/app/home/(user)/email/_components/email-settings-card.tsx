@@ -6,6 +6,7 @@ import { Loader2, Mail, Unplug } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Label } from '@kit/ui/label';
+import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
 
@@ -15,6 +16,10 @@ import {
   disconnectGmailConnection,
   saveEmailAssistantSettings,
 } from '../_lib/actions/email-assistant-actions';
+import {
+  EmailSignatureField,
+  type EmailSignatureFormat,
+} from './email-signature-field';
 
 const panelClass =
   'rounded-2xl border border-white/[0.08] bg-[var(--workspace-shell-panel)] p-4 md:p-5';
@@ -23,6 +28,10 @@ type Props = {
   connectedEmail: string | null;
   initialStyleNotes: string;
   initialSignature: string;
+  initialSignatureIsHtml: boolean;
+  initialAutoTriageEnabled: boolean;
+  initialAutoDraftEnabled: boolean;
+  initialAutoSaveGmailDrafts: boolean;
   lastSyncedAt: string | null;
 };
 
@@ -39,27 +48,94 @@ function formatSyncedAt(value: string | null) {
   });
 }
 
+function SettingToggle({
+  id,
+  label,
+  description,
+  checked,
+  onCheckedChange,
+  disabled,
+}: {
+  id: string;
+  label: string;
+  description: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 rounded-xl border border-white/10 bg-[#0B132B]/60 p-4">
+      <div className="space-y-1">
+        <Label htmlFor={id} className="text-sm font-medium text-white">
+          {label}
+        </Label>
+        <p className="text-xs text-zinc-500">{description}</p>
+      </div>
+      <Switch
+        id={id}
+        checked={checked}
+        onCheckedChange={onCheckedChange}
+        disabled={disabled}
+      />
+    </div>
+  );
+}
+
 export function EmailSettingsCard({
   connectedEmail,
   initialStyleNotes,
   initialSignature,
+  initialSignatureIsHtml,
+  initialAutoTriageEnabled,
+  initialAutoDraftEnabled,
+  initialAutoSaveGmailDrafts,
   lastSyncedAt,
 }: Props) {
   const [styleNotes, setStyleNotes] = useState(initialStyleNotes);
   const [signature, setSignature] = useState(initialSignature);
+  const [signatureFormat, setSignatureFormat] = useState<EmailSignatureFormat>(
+    initialSignatureIsHtml ? 'html' : 'plain',
+  );
+  const [autoTriageEnabled, setAutoTriageEnabled] = useState(
+    initialAutoTriageEnabled,
+  );
+  const [autoDraftEnabled, setAutoDraftEnabled] = useState(
+    initialAutoDraftEnabled,
+  );
+  const [autoSaveGmailDrafts, setAutoSaveGmailDrafts] = useState(
+    initialAutoSaveGmailDrafts,
+  );
   const [pending, startTransition] = useTransition();
   const [disconnecting, setDisconnecting] = useState(false);
 
   useEffect(() => {
     setStyleNotes(initialStyleNotes);
     setSignature(initialSignature);
-  }, [initialStyleNotes, initialSignature]);
+    setSignatureFormat(initialSignatureIsHtml ? 'html' : 'plain');
+    setAutoTriageEnabled(initialAutoTriageEnabled);
+    setAutoDraftEnabled(initialAutoDraftEnabled);
+    setAutoSaveGmailDrafts(initialAutoSaveGmailDrafts);
+  }, [
+    initialStyleNotes,
+    initialSignature,
+    initialSignatureIsHtml,
+    initialAutoTriageEnabled,
+    initialAutoDraftEnabled,
+    initialAutoSaveGmailDrafts,
+  ]);
 
   const connectHref = `/api/google/connect?returnPath=${encodeURIComponent(pathsConfig.app.personalEmailAssistant)}`;
 
   function saveSettings() {
     startTransition(async () => {
-      const result = await saveEmailAssistantSettings({ styleNotes, signature });
+      const result = await saveEmailAssistantSettings({
+        styleNotes,
+        signature,
+        signatureIsHtml: signatureFormat === 'html',
+        autoTriageEnabled,
+        autoDraftEnabled,
+        autoSaveGmailDrafts,
+      });
 
       if (!result.success) {
         toast.error(result.error ?? 'Could not save settings');
@@ -153,6 +229,33 @@ export function EmailSettingsCard({
         )}
       </div>
 
+      <div className="mt-5 space-y-3">
+        <SettingToggle
+          id="email-auto-triage"
+          label="Auto-sort incoming mail"
+          description="After each sync, Keel labels threads that need a personal reply from you."
+          checked={autoTriageEnabled}
+          onCheckedChange={setAutoTriageEnabled}
+          disabled={pending}
+        />
+        <SettingToggle
+          id="email-auto-draft"
+          label="Auto-draft replies"
+          description="Draft replies for threads that need a response. Review them in Keel before sending."
+          checked={autoDraftEnabled}
+          onCheckedChange={setAutoDraftEnabled}
+          disabled={pending}
+        />
+        <SettingToggle
+          id="email-auto-save-gmail"
+          label="Save drafts to Gmail automatically"
+          description="Push auto-drafts into Gmail as well as Keel. Leave off if you prefer drafts only in Keel."
+          checked={autoSaveGmailDrafts}
+          onCheckedChange={setAutoSaveGmailDrafts}
+          disabled={pending || !autoDraftEnabled}
+        />
+      </div>
+
       <div className="mt-5 space-y-4">
         <div className="space-y-2">
           <Label htmlFor="email-style-notes" className="text-zinc-300">
@@ -162,25 +265,19 @@ export function EmailSettingsCard({
             id="email-style-notes"
             value={styleNotes}
             onChange={(event) => setStyleNotes(event.target.value)}
-            placeholder="Warm and concise. Use first names. Avoid jargon."
+            placeholder="Warm and concise. Use first names. Always write and sign off as me, never as a recipient."
             rows={4}
             className="border-white/10 bg-[#0B132B] text-white placeholder:text-zinc-500"
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="email-signature" className="text-zinc-300">
-            Signature
-          </Label>
-          <Textarea
-            id="email-signature"
-            value={signature}
-            onChange={(event) => setSignature(event.target.value)}
-            placeholder={'Best,\nDan'}
-            rows={4}
-            className="border-white/10 bg-[#0B132B] text-white placeholder:text-zinc-500"
-          />
-        </div>
+        <EmailSignatureField
+          signature={signature}
+          format={signatureFormat}
+          onSignatureChange={setSignature}
+          onFormatChange={setSignatureFormat}
+          disabled={pending}
+        />
 
         <Button
           type="button"

@@ -1,4 +1,10 @@
+export { classify, type ClassifyResult } from './classify';
 export { extract } from './extract';
 export { appendSignature, draft } from './draft';
-export { parseExtractResponse, stripJsonFences } from './json';
-export type { EmailActionItem, ExtractResponseJson } from './types';
+export { parseClassifyResponse, parseExtractResponse, stripJsonFences } from './json';
+export type {
+  ClassifyResponseJson,
+  EmailActionItem,
+  EmailThreadCategory,
+  ExtractResponseJson,
+} from './types';

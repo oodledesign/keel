@@ -2,6 +2,7 @@ import { draft } from '@kit/email-assistant';
 
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { buildThreadText } from '~/lib/email-assistant/thread-text';
+import { resolveEmailAssistantSignature } from '~/lib/email-assistant/resolve-signature';
 import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
 
 export const runtime = 'nodejs';
@@ -20,20 +21,34 @@ export async function POST(_request: Request, context: RouteContext) {
 
   const { id: threadId } = await context.params;
 
-  const [{ data: thread, error: threadError }, { data: settings }] =
-    await Promise.all([
-      auth.client
-        .from('email_threads')
-        .select('id, user_id, subject')
-        .eq('id', threadId)
-        .eq('user_id', auth.user.id)
-        .maybeSingle(),
-      auth.client
-        .from('email_assistant_settings')
-        .select('style_notes, signature')
-        .eq('user_id', auth.user.id)
-        .maybeSingle(),
-    ]);
+  const [
+    { data: thread, error: threadError },
+    { data: settings },
+    { data: connection },
+    { data: account },
+  ] = await Promise.all([
+    auth.client
+      .from('email_threads')
+      .select('id, user_id, subject')
+      .eq('id', threadId)
+      .eq('user_id', auth.user.id)
+      .maybeSingle(),
+    auth.client
+      .from('email_assistant_settings')
+      .select('style_notes, signature, signature_is_html')
+      .eq('user_id', auth.user.id)
+      .maybeSingle(),
+    auth.client
+      .from('google_connections')
+      .select('google_email')
+      .eq('user_id', auth.user.id)
+      .maybeSingle(),
+    auth.client
+      .from('accounts')
+      .select('name, email')
+      .eq('id', auth.user.id)
+      .maybeSingle(),
+  ]);
 
   if (threadError) {
     return jsonErr('LOAD_FAILED', threadError.message, 500);
@@ -42,6 +57,33 @@ export async function POST(_request: Request, context: RouteContext) {
   if (!thread) {
     return jsonErr('NOT_FOUND', 'Thread not found', 404);
   }
+
+  const ownerEmail =
+    (connection as { google_email?: string | null } | null)?.google_email?.trim() ||
+    auth.user.email?.trim() ||
+    (account as { email?: string | null } | null)?.email?.trim() ||
+    '';
+
+  if (!ownerEmail) {
+    return jsonErr(
+      'MISSING_OWNER',
+      'Could not determine your mailbox email for drafting',
+      400,
+    );
+  }
+
+  const ownerName =
+    (account as { name?: string | null } | null)?.name?.trim() ||
+    (() => {
+      const meta = auth.user.user_metadata as Record<string, unknown> | undefined;
+      for (const key of ['full_name', 'name'] as const) {
+        const value = meta?.[key];
+        if (typeof value === 'string' && value.trim()) {
+          return value.trim();
+        }
+      }
+      return null;
+    })();
 
   const { data: messages, error: messagesError } = await auth.client
     .from('email_messages')
@@ -62,13 +104,23 @@ export async function POST(_request: Request, context: RouteContext) {
     return jsonErr('EMPTY_THREAD', 'Thread has no message content to reply to', 400);
   }
 
+  const signature = await resolveEmailAssistantSignature(
+    auth.user.id,
+    (settings as { signature?: string | null } | null)?.signature ?? null,
+    Boolean(
+      (settings as { signature_is_html?: boolean | null } | null)
+        ?.signature_is_html,
+    ),
+  );
+
   let bodyText: string;
 
   try {
     bodyText = await draft(
       threadText,
+      { email: ownerEmail, displayName: ownerName },
       (settings as { style_notes?: string | null } | null)?.style_notes ?? null,
-      (settings as { signature?: string | null } | null)?.signature ?? null,
+      signature.plain,
     );
   } catch (error) {
     return jsonErr(

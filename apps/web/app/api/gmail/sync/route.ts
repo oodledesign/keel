@@ -3,6 +3,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { syncMailbox } from '@kit/gmail';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { authorizeCron } from '~/lib/email-assistant/cron-auth';
+import { runEmailAssistantPipeline } from '~/lib/email-assistant/post-sync-pipeline';
 import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
 
 export const runtime = 'nodejs';
@@ -14,8 +15,20 @@ type SyncResultRow = {
   ok: boolean;
   mode?: string;
   messagesProcessed?: number;
+  assistant?: Awaited<ReturnType<typeof runEmailAssistantPipeline>>;
   error?: string;
 };
+
+async function syncUserMailbox(userId: string) {
+  const syncResult = await syncMailbox(userId);
+
+  if (syncResult.backfillComplete === false) {
+    return { ...syncResult, assistant: null };
+  }
+
+  const assistant = await runEmailAssistantPipeline(userId);
+  return { ...syncResult, assistant };
+}
 
 async function syncAllConnectedUsers() {
   const admin = getSupabaseServerAdminClient();
@@ -33,12 +46,13 @@ async function syncAllConnectedUsers() {
     const userId = (row as { user_id: string }).user_id;
 
     try {
-      const result = await syncMailbox(userId);
+      const result = await syncUserMailbox(userId);
       results.push({
         userId,
         ok: true,
         mode: result.mode,
         messagesProcessed: result.messagesProcessed,
+        assistant: result.assistant ?? undefined,
       });
     } catch (syncError) {
       results.push({
@@ -72,7 +86,7 @@ export async function POST() {
   }
 
   try {
-    const result = await syncMailbox(auth.user.id);
+    const result = await syncUserMailbox(auth.user.id);
     return jsonOk(result);
   } catch (error) {
     return jsonErr(

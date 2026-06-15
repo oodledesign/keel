@@ -11,7 +11,10 @@ export type EmailThreadSummary = {
   participants: EmailParticipant[];
   is_unread: boolean;
   last_message_at: string | null;
+  assistant_category: 'needs_reply' | 'no_reply' | null;
 };
+
+export type EmailInboxFilter = 'all' | 'needs_reply';
 
 export type EmailMessageRow = {
   id: string;
@@ -51,7 +54,11 @@ export type EmailPageInitialData = {
   settings: {
     styleNotes: string;
     signature: string;
+    signatureIsHtml: boolean;
     lastSyncedAt: string | null;
+    autoTriageEnabled: boolean;
+    autoDraftEnabled: boolean;
+    autoSaveGmailDrafts: boolean;
   };
   threads: EmailThreadSummary[];
   workspaces: EmailWorkspaceOption[];

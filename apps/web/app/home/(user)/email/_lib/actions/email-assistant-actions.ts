@@ -92,6 +92,10 @@ export async function loadEmailThreadDetail(
 export async function saveEmailAssistantSettings(input: {
   styleNotes: string;
   signature: string;
+  signatureIsHtml: boolean;
+  autoTriageEnabled: boolean;
+  autoDraftEnabled: boolean;
+  autoSaveGmailDrafts: boolean;
 }) {
   const client = getSupabaseServerClient();
   const user = await requireEmailAssistantAccess();
@@ -101,6 +105,10 @@ export async function saveEmailAssistantSettings(input: {
       user_id: user.id,
       style_notes: input.styleNotes.trim() || null,
       signature: input.signature.trim() || null,
+      signature_is_html: input.signatureIsHtml,
+      auto_triage_enabled: input.autoTriageEnabled,
+      auto_draft_enabled: input.autoDraftEnabled,
+      auto_save_gmail_drafts: input.autoSaveGmailDrafts,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'user_id' },

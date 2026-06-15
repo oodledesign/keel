@@ -5,6 +5,13 @@ export type EmailActionItem = {
   suggestedDueDate: string | null;
 };
 
+export type EmailThreadCategory = 'needs_reply' | 'no_reply';
+
+export type ClassifyResponseJson = {
+  category: EmailThreadCategory;
+  reason?: string | null;
+};
+
 export type ExtractResponseJson = {
   items: Array<{
     title: string;

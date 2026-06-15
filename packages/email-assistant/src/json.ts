@@ -1,6 +1,10 @@
 import { z } from 'zod';
 
-import type { EmailActionItem, ExtractResponseJson } from './types';
+import type {
+  EmailActionItem,
+  EmailThreadCategory,
+  ExtractResponseJson,
+} from './types';
 
 const ExtractItemSchema = z.object({
   title: z.string(),
@@ -10,6 +14,11 @@ const ExtractItemSchema = z.object({
 
 const ExtractResponseSchema = z.object({
   items: z.array(ExtractItemSchema),
+});
+
+const ClassifyResponseSchema = z.object({
+  category: z.enum(['needs_reply', 'no_reply']),
+  reason: z.string().nullable().optional(),
 });
 
 /** Strip accidental markdown fences before JSON.parse. */
@@ -73,6 +82,43 @@ export function parseExtractResponse(raw: string): EmailActionItem[] {
       suggestedDueDate: normalizeDueDate(item.suggested_due_date),
     }))
     .filter((item) => item.title.length > 0);
+}
+
+export function parseClassifyResponse(raw: string): {
+  category: EmailThreadCategory;
+  reason: string | null;
+} {
+  const cleaned = stripJsonFences(raw);
+
+  let json: unknown;
+
+  try {
+    json = JSON.parse(cleaned);
+  } catch {
+    const start = cleaned.indexOf('{');
+    const end = cleaned.lastIndexOf('}');
+
+    if (start < 0 || end <= start) {
+      return { category: 'no_reply', reason: 'Could not parse classification' };
+    }
+
+    try {
+      json = JSON.parse(cleaned.slice(start, end + 1));
+    } catch {
+      return { category: 'no_reply', reason: 'Could not parse classification' };
+    }
+  }
+
+  const parsed = ClassifyResponseSchema.safeParse(json);
+
+  if (!parsed.success) {
+    return { category: 'no_reply', reason: 'Could not parse classification' };
+  }
+
+  return {
+    category: parsed.data.category,
+    reason: parsed.data.reason?.trim() || null,
+  };
 }
 
 export function serializeExtractResponse(items: EmailActionItem[]): ExtractResponseJson {

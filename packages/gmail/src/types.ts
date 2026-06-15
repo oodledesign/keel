@@ -45,6 +45,10 @@ export type BuildRawMessageInput = {
   inReplyTo?: string;
   references?: string;
   from?: string;
+  /** HTML signature appended to the HTML part only (links/images preserved). */
+  signatureHtml?: string | null;
+  /** Plain signature text stripped before HTML conversion when signatureHtml is set. */
+  plainSignature?: string | null;
 };
 
 export type GmailHistoryRecord = {

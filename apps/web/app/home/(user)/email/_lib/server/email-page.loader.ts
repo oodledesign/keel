@@ -13,7 +13,21 @@ import type {
   EmailThreadSummary,
 } from '../types';
 
-function parseParticipants(value: unknown): EmailParticipant[] {
+function inferSignatureIsHtml(
+  signature: string | null | undefined,
+  stored: boolean | null | undefined,
+): boolean {
+  if (stored === true) {
+    return true;
+  }
+
+  if (stored === false) {
+    return false;
+  }
+
+  const trimmed = signature?.trim();
+  return Boolean(trimmed && /<[a-z][\s\S]*>/i.test(trimmed));
+}
   if (!Array.isArray(value)) {
     return [];
   }
@@ -40,6 +54,10 @@ function parseParticipants(value: unknown): EmailParticipant[] {
 }
 
 function mapThreadRow(row: Record<string, unknown>): EmailThreadSummary {
+  const category = row.assistant_category;
+  const assistantCategory =
+    category === 'needs_reply' || category === 'no_reply' ? category : null;
+
   return {
     id: String(row.id),
     gmail_thread_id: String(row.gmail_thread_id),
@@ -48,6 +66,7 @@ function mapThreadRow(row: Record<string, unknown>): EmailThreadSummary {
     participants: parseParticipants(row.participants),
     is_unread: Boolean(row.is_unread),
     last_message_at: (row.last_message_at as string | null) ?? null,
+    assistant_category: assistantCategory,
   };
 }
 
@@ -64,13 +83,15 @@ export const loadEmailPageData = cache(async (): Promise<EmailPageInitialData> =
         .maybeSingle(),
       client
         .from('email_assistant_settings')
-        .select('style_notes, signature, last_synced_at')
+        .select(
+          'style_notes, signature, signature_is_html, last_synced_at, auto_triage_enabled, auto_draft_enabled, auto_save_gmail_drafts',
+        )
         .eq('user_id', user.id)
         .maybeSingle(),
       client
         .from('email_threads')
         .select(
-          'id, gmail_thread_id, subject, snippet, participants, is_unread, last_message_at',
+          'id, gmail_thread_id, subject, snippet, participants, is_unread, last_message_at, assistant_category',
         )
         .eq('user_id', user.id)
         .order('last_message_at', { ascending: false, nullsFirst: false })
@@ -86,7 +107,11 @@ export const loadEmailPageData = cache(async (): Promise<EmailPageInitialData> =
     | {
         style_notes?: string | null;
         signature?: string | null;
+        signature_is_html?: boolean | null;
         last_synced_at?: string | null;
+        auto_triage_enabled?: boolean | null;
+        auto_draft_enabled?: boolean | null;
+        auto_save_gmail_drafts?: boolean | null;
       }
     | null;
 
@@ -100,7 +125,14 @@ export const loadEmailPageData = cache(async (): Promise<EmailPageInitialData> =
     settings: {
       styleNotes: settingsRow?.style_notes ?? '',
       signature: settingsRow?.signature ?? '',
+      signatureIsHtml: inferSignatureIsHtml(
+        settingsRow?.signature,
+        settingsRow?.signature_is_html,
+      ),
       lastSyncedAt: settingsRow?.last_synced_at ?? null,
+      autoTriageEnabled: settingsRow?.auto_triage_enabled ?? true,
+      autoDraftEnabled: settingsRow?.auto_draft_enabled ?? true,
+      autoSaveGmailDrafts: settingsRow?.auto_save_gmail_drafts ?? false,
     },
     threads: (threadsResult.data ?? []).map((row) =>
       mapThreadRow(row as Record<string, unknown>),
@@ -122,7 +154,7 @@ export async function loadEmailThreadDetailFromDb(
   const { data, error } = await client
     .from('email_threads')
     .select(
-      'id, gmail_thread_id, subject, snippet, participants, is_unread, last_message_at',
+      'id, gmail_thread_id, subject, snippet, participants, is_unread, last_message_at, assistant_category',
     )
     .eq('id', threadId)
     .eq('user_id', user.id)

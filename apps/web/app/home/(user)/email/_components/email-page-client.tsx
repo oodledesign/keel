@@ -13,7 +13,11 @@ import { toast } from '@kit/ui/sonner';
 import pathsConfig from '~/config/paths.config';
 
 import { emailApiFetch } from '../_lib/email-api';
-import type { EmailPageInitialData, EmailThreadSummary } from '../_lib/types';
+import type {
+  EmailInboxFilter,
+  EmailPageInitialData,
+  EmailThreadSummary,
+} from '../_lib/types';
 import { EmailInboxList } from './email-inbox-list';
 import { EmailSettingsCard } from './email-settings-card';
 import { EmailThreadPanel } from './email-thread-panel';
@@ -33,8 +37,26 @@ export function EmailPageClient({ initialData }: Props) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [syncing, startSyncTransition] = useTransition();
+  const [inboxFilter, setInboxFilter] = useState<EmailInboxFilter>('all');
 
   const selectedThreadId = searchParams.get('thread');
+
+  const threadsEndpoint = useCallback(
+    (cursor?: string | null) => {
+      const params = new URLSearchParams({ limit: '25' });
+
+      if (inboxFilter === 'needs_reply') {
+        params.set('filter', 'needs_reply');
+      }
+
+      if (cursor) {
+        params.set('cursor', cursor);
+      }
+
+      return `/api/gmail/threads?${params.toString()}`;
+    },
+    [inboxFilter],
+  );
 
   useEffect(() => {
     setThreads(initialData.threads);
@@ -72,11 +94,30 @@ export function EmailPageClient({ initialData }: Props) {
     const data = await emailApiFetch<{
       threads: EmailThreadSummary[];
       nextCursor: string | null;
-    }>('/api/gmail/threads?limit=25');
+    }>(threadsEndpoint());
 
     setThreads(data.threads);
     setNextCursor(data.nextCursor);
     setHasMore(Boolean(data.nextCursor));
+  }, [threadsEndpoint]);
+
+  const changeInboxFilter = useCallback((filter: EmailInboxFilter) => {
+    setInboxFilter(filter);
+
+    const params = new URLSearchParams({ limit: '25' });
+
+    if (filter === 'needs_reply') {
+      params.set('filter', 'needs_reply');
+    }
+
+    void emailApiFetch<{
+      threads: EmailThreadSummary[];
+      nextCursor: string | null;
+    }>(`/api/gmail/threads?${params.toString()}`).then((data) => {
+      setThreads(data.threads);
+      setNextCursor(data.nextCursor);
+      setHasMore(Boolean(data.nextCursor));
+    });
   }, []);
 
   const syncNow = () => {
@@ -85,6 +126,7 @@ export function EmailPageClient({ initialData }: Props) {
         let totalProcessed = 0;
         let complete = true;
         let guard = 0;
+        let draftsCreated = 0;
         const maxBatches = 25;
 
         do {
@@ -93,17 +135,28 @@ export function EmailPageClient({ initialData }: Props) {
             messagesProcessed: number;
             backfillComplete?: boolean;
             remainingEstimate?: number;
+            assistant?: {
+              classified: number;
+              draftsCreated: number;
+              draftsSavedToGmail: number;
+            } | null;
           }>('/api/gmail/sync', { method: 'POST' });
 
           totalProcessed += result.messagesProcessed;
+          draftsCreated += result.assistant?.draftsCreated ?? 0;
           complete = result.backfillComplete !== false;
           guard += 1;
+
         } while (!complete && guard < maxBatches);
 
         await reloadThreads();
         router.refresh();
 
-        if (complete) {
+        if (draftsCreated > 0) {
+          toast.success(
+            `Drafted ${draftsCreated} repl${draftsCreated === 1 ? 'y' : 'ies'}`,
+          );
+        } else if (complete) {
           toast.success(
             totalProcessed > 0
               ? `Synced ${totalProcessed} message${totalProcessed === 1 ? '' : 's'}`
@@ -131,9 +184,7 @@ export function EmailPageClient({ initialData }: Props) {
       const data = await emailApiFetch<{
         threads: EmailThreadSummary[];
         nextCursor: string | null;
-      }>(
-        `/api/gmail/threads?limit=25&cursor=${encodeURIComponent(nextCursor)}`,
-      );
+      }>(threadsEndpoint(nextCursor));
 
       setThreads((current) => {
         const seen = new Set(current.map((thread) => thread.id));
@@ -160,8 +211,8 @@ export function EmailPageClient({ initialData }: Props) {
             Email
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-zinc-400">
-            Sync Gmail threads, turn messages into tasks, and draft replies you
-            save back to Gmail.
+            Sync Gmail threads, auto-draft replies that need a response, and save
+            them back to Gmail.
           </p>
         </div>
 
@@ -201,6 +252,10 @@ export function EmailPageClient({ initialData }: Props) {
           connectedEmail={initialData.connection?.googleEmail ?? null}
           initialStyleNotes={initialData.settings.styleNotes}
           initialSignature={initialData.settings.signature}
+          initialSignatureIsHtml={initialData.settings.signatureIsHtml}
+          initialAutoTriageEnabled={initialData.settings.autoTriageEnabled}
+          initialAutoDraftEnabled={initialData.settings.autoDraftEnabled}
+          initialAutoSaveGmailDrafts={initialData.settings.autoSaveGmailDrafts}
           lastSyncedAt={initialData.settings.lastSyncedAt}
         />
       ) : null}
@@ -211,6 +266,8 @@ export function EmailPageClient({ initialData }: Props) {
             threads={threads}
             selectedThreadId={selectedThreadId}
             onSelectThread={selectThread}
+            filter={inboxFilter}
+            onFilterChange={changeInboxFilter}
             loadingMore={loadingMore}
             hasMore={hasMore}
             onLoadMore={loadMore}

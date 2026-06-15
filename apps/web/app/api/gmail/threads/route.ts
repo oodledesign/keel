@@ -16,15 +16,20 @@ export async function GET(request: Request) {
     100,
   );
   const cursor = url.searchParams.get('cursor');
+  const filter = url.searchParams.get('filter');
 
   let query = auth.client
     .from('email_threads')
     .select(
-      'id, gmail_thread_id, subject, snippet, participants, label_ids, is_unread, last_message_at, updated_at',
+      'id, gmail_thread_id, subject, snippet, participants, label_ids, is_unread, last_message_at, updated_at, assistant_category',
     )
     .eq('user_id', auth.user.id)
     .order('last_message_at', { ascending: false, nullsFirst: false })
     .limit(limit + 1);
+
+  if (filter === 'needs_reply') {
+    query = query.eq('assistant_category', 'needs_reply');
+  }
 
   if (cursor) {
     query = query.lt('last_message_at', cursor);
