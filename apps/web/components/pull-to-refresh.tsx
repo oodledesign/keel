@@ -226,7 +226,7 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
         <div
           className={cn(
             enabled
-              ? 'rounded-t-[1.25rem] bg-[var(--workspace-shell-canvas)] pb-[calc(6rem+env(safe-area-inset-bottom))] shadow-[0_-1px_0_rgba(255,255,255,0.06)] lg:pb-0'
+              ? 'rounded-t-[1.25rem] bg-[var(--workspace-shell-canvas)] shadow-[0_-1px_0_rgba(255,255,255,0.06)] lg:pb-0'
               : 'min-h-full bg-[var(--workspace-shell-canvas)]',
             enabled &&
               (!isDragging && pullDistance === 0 && !refreshing

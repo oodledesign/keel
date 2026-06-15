@@ -22,6 +22,10 @@ import {
 import type { MobileBottomNavTab } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
 import { isNoteEditorRoute } from '~/lib/pwa/is-note-editor-route';
 import { syncPullToRefreshPathname } from '~/lib/pwa/pull-to-refresh-context';
+import { Suspense } from 'react';
+
+import { WorkspaceCreateTaskHost } from '~/components/workspace-shell/workspace-create-task-host';
+import { WorkspaceHelpButton } from '~/components/workspace-shell/workspace-help-button';
 import { WorkspaceMobileTopActions } from '~/components/workspace-shell/workspace-top-bar-actions';
 import pathsConfig from '~/config/paths.config';
 import type { WorkspaceSpaceType } from '~/home/[account]/_lib/server/account-modules';
@@ -95,11 +99,11 @@ export function TeamWorkspaceMobileChrome({
         </WorkspaceMobileHeaderBar>
 
         {noteEditorScroll ? (
-          <div className="min-w-0 flex-1 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-0">
+          <div className="min-w-0 flex-1 lg:pb-0">
             {children}
           </div>
         ) : (
-          <PullToRefresh className="min-w-0 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-0">
+          <PullToRefresh className="min-w-0 lg:pb-0">
             {children}
           </PullToRefresh>
         )}
@@ -132,6 +136,11 @@ export function TeamWorkspaceMobileChrome({
           ) : null
         }
       />
+
+      <Suspense fallback={null}>
+        <WorkspaceCreateTaskHost accountId={accountId} accountSlug={account} />
+      </Suspense>
+      <WorkspaceHelpButton />
     </>
   );
 }

@@ -31,6 +31,7 @@ import {
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
+import { openWorkspaceCreateTaskDialog } from '~/components/workspace-shell/workspace-create-task-host';
 import type { WorkspaceSpaceType } from '~/home/[account]/_lib/server/account-modules';
 
 type WorkspaceNewMenuProps =
@@ -48,6 +49,54 @@ function getNewMenuItems(props: WorkspaceNewMenuProps) {
     return getTeamItems(props.account, props.spaceType ?? 'work');
   }
   return getPersonalItems();
+}
+
+type NewMenuItem = {
+  key: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  href?: string;
+  action?: 'create-task';
+};
+
+function NewMenuItemRow({
+  item,
+  onNavigate,
+}: {
+  item: NewMenuItem;
+  onNavigate: () => void;
+}) {
+  if (item.action === 'create-task') {
+    return (
+      <button
+        type="button"
+        className="flex w-full cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm outline-hidden hover:bg-white/10"
+        onClick={() => {
+          onNavigate();
+          openWorkspaceCreateTaskDialog();
+        }}
+      >
+        <item.icon className="mr-2 h-4 w-4 text-[#2A9D8F]" />
+        {item.label}
+      </button>
+    );
+  }
+
+  if (item.href) {
+    return (
+      <Link href={item.href} onClick={onNavigate} className="flex items-center">
+        <item.icon className="mr-2 h-4 w-4 text-[#2A9D8F]" />
+        {item.label}
+      </Link>
+    );
+  }
+
+  return (
+    <span className="flex items-center opacity-50">
+      <item.icon className="mr-2 h-4 w-4" />
+      {item.label}
+    </span>
+  );
 }
 
 export function WorkspaceNewMenu(props: WorkspaceNewMenuProps) {
@@ -78,17 +127,7 @@ export function WorkspaceNewMenu(props: WorkspaceNewMenuProps) {
       >
         {items.map((item) => (
           <DropdownMenuItem key={item.key} asChild className="focus:bg-white/10">
-            {item.href ? (
-              <Link href={item.href} onClick={() => setOpen(false)}>
-                <item.icon className="mr-2 h-4 w-4 text-[#2A9D8F]" />
-                {item.label}
-              </Link>
-            ) : (
-              <span className="flex items-center opacity-50">
-                <item.icon className="mr-2 h-4 w-4" />
-                {item.label}
-              </span>
-            )}
+            <NewMenuItemRow item={item} onNavigate={() => setOpen(false)} />
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
@@ -125,17 +164,7 @@ export function WorkspaceMobileNewMenu(props: WorkspaceNewMenuProps) {
       >
         {items.map((item) => (
           <DropdownMenuItem key={item.key} asChild className="focus:bg-white/10">
-            {item.href ? (
-              <Link href={item.href} onClick={() => setOpen(false)}>
-                <item.icon className="mr-2 h-4 w-4 text-[#2A9D8F]" />
-                {item.label}
-              </Link>
-            ) : (
-              <span className="flex items-center opacity-50">
-                <item.icon className="mr-2 h-4 w-4" />
-                {item.label}
-              </span>
-            )}
+            <NewMenuItemRow item={item} onNavigate={() => setOpen(false)} />
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
@@ -147,14 +176,14 @@ function accountPath(account: string, template: string) {
   return template.replace('[account]', account);
 }
 
-function getTeamItems(account: string, spaceType: WorkspaceSpaceType) {
+function getTeamItems(account: string, spaceType: WorkspaceSpaceType): NewMenuItem[] {
   if (spaceType === 'community') {
     return [
       {
         key: 'task',
         label: 'New Task',
         icon: CheckSquare,
-        href: `${accountPath(account, pathsConfig.app.accountCommunityTasks)}?create=task`,
+        action: 'create-task',
       },
       {
         key: 'session',
@@ -183,7 +212,7 @@ function getTeamItems(account: string, spaceType: WorkspaceSpaceType) {
         key: 'task',
         label: 'New Task',
         icon: CheckSquare,
-        href: `${accountPath(account, pathsConfig.app.accountCommunityTasks)}?create=task`,
+        action: 'create-task',
       },
       {
         key: 'event',
@@ -236,7 +265,7 @@ function getTeamItems(account: string, spaceType: WorkspaceSpaceType) {
         key: 'task',
         label: 'New Task',
         icon: CheckSquare,
-        href: `${accountPath(account, pathsConfig.app.accountTasks)}?create=task`,
+        action: 'create-task',
       },
       {
         key: 'file',
@@ -264,7 +293,7 @@ function getTeamItems(account: string, spaceType: WorkspaceSpaceType) {
       key: 'task',
       label: 'New Task',
       icon: CheckSquare,
-      href: `${accountPath(account, pathsConfig.app.accountTasks)}?create=task`,
+      action: 'create-task',
     },
     {
       key: 'client',
@@ -299,7 +328,7 @@ function getTeamItems(account: string, spaceType: WorkspaceSpaceType) {
   ];
 }
 
-function getPersonalItems() {
+function getPersonalItems(): NewMenuItem[] {
   return [
     {
       key: 'person',

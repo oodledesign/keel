@@ -1,3 +1,3 @@
-import { GlobalLoader } from '@kit/ui/global-loader';
+import WorkspaceRouteLoading from '~/components/workspace-route-loading';
 
-export default GlobalLoader;
+export default WorkspaceRouteLoading;

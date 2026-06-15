@@ -68,7 +68,7 @@ export function PersonalHomeMobileChrome({
           />
         </WorkspaceMobileHeaderBar>
 
-        <PullToRefresh className="min-w-0 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-0">
+        <PullToRefresh className="min-w-0 lg:pb-0">
           {children}
         </PullToRefresh>
       </div>

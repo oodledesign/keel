@@ -19,16 +19,8 @@ interface ClientsPageProps {
   params: Promise<{ account: string }>;
 }
 
-export const generateMetadata = async ({
-  params,
-}: {
-  params: Promise<{ account: string }>;
-}) => {
-  const workspace = await loadTeamWorkspace((await params).account);
-  const spaceType = getSpaceTypeFromAccount(
-    workspace.account as { space_type?: string | null },
-  );
-  return { title: spaceType === 'property' ? 'Tenants' : 'Clients' };
+export const metadata = {
+  title: 'Clients',
 };
 
 async function ClientsPage({ params }: ClientsPageProps) {

@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { cache } from 'react';
+
 import { redirect } from 'next/navigation';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
@@ -14,7 +16,9 @@ import {
 import pathsConfig from '~/config/paths.config';
 import { createClientsService } from './clients.service';
 
-export async function loadClientsPageData(accountSlug: string) {
+export const loadClientsPageData = cache(loadClientsPageDataImpl);
+
+async function loadClientsPageDataImpl(accountSlug: string) {
   const workspace = await loadTeamWorkspace(accountSlug);
 
   if (!workspace?.account) {

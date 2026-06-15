@@ -15,6 +15,7 @@ const links = [
   { href: '/admin/workspaces', label: 'Workspaces', description: 'Team accounts & billing' },
   { href: '/admin/billing', label: 'Billing', description: 'MRR, dunning & churn' },
   { href: '/admin/accounts', label: 'Accounts', description: 'Personal & team accounts' },
+  { href: '/admin/branding', label: 'Branding', description: 'Colours, fonts & logos' },
   { href: '/admin/support', label: 'Support', description: 'Platform tickets' },
   { href: '/admin/email-marketing', label: 'Email marketing', description: 'Campaigns, contacts & lists' },
   { href: '/admin/email-log', label: 'Email log', description: 'Grouped & individual sends' },

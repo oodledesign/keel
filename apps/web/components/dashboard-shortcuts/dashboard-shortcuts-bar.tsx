@@ -1,22 +1,25 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+
 import Link from 'next/link';
 
-import { ArrowUpRight } from 'lucide-react';
+import { X } from 'lucide-react';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
-import { cn } from '@kit/ui/utils';
-
+import { dismissNotice, isNoticeDismissed } from '~/lib/dismissible-notice';
 import type { ResolvedShortcut } from '~/lib/dashboard-shortcuts/types';
 import { HapticLink } from '~/components/haptic-link';
+import { ArrowUpRight } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
+import { cn } from '@kit/ui/utils';
 
 type Props = {
   shortcuts: ResolvedShortcut[];
   settingsHref?: string;
   className?: string;
-  /** When set, strips "{name} — " prefix from shortcut labels (workspace home). */
   stripWorkspacePrefix?: string;
   compact?: boolean;
+  dismissKey?: string;
 };
 
 function stripPrefix(label: string, prefix: string) {
@@ -33,13 +36,20 @@ export function DashboardShortcutsBar({
   className,
   stripWorkspacePrefix,
   compact = false,
+  dismissKey = 'dashboard-shortcuts-empty',
 }: Props) {
+  const [emptyDismissed, setEmptyDismissed] = useState(false);
+
+  useEffect(() => {
+    setEmptyDismissed(isNoticeDismissed(dismissKey));
+  }, [dismissKey]);
+
   if (shortcuts.length === 0 && !settingsHref) {
     return null;
   }
 
   return (
-    <div className={cn('flex flex-col gap-2', className)}>
+    <div className={cn('flex flex-col gap-2 px-4 md:px-6 lg:px-8', className)}>
       <div className="flex items-center justify-between gap-3">
         <p
           className={cn(
@@ -95,15 +105,28 @@ export function DashboardShortcutsBar({
             );
           })}
         </div>
-      ) : (
-        <p className="text-sm text-zinc-500">
-          No shortcuts yet.{' '}
-          {settingsHref ? (
-            <Link href={settingsHref} className="text-[#5eead4] hover:underline">
-              Add some in settings
-            </Link>
-          ) : null}
-        </p>
+      ) : emptyDismissed ? null : (
+        <div className="flex items-start justify-between gap-3 rounded-xl border border-white/10 bg-[var(--workspace-shell-panel)] p-3">
+          <p className="text-sm text-zinc-400">
+            No shortcuts yet.{' '}
+            {settingsHref ? (
+              <Link href={settingsHref} className="text-[#5eead4] hover:underline">
+                Add some in settings
+              </Link>
+            ) : null}
+          </p>
+          <button
+            type="button"
+            aria-label="Dismiss"
+            className="shrink-0 rounded-md p-1 text-zinc-500 hover:bg-white/8 hover:text-white"
+            onClick={() => {
+              dismissNotice(dismissKey, 14);
+              setEmptyDismissed(true);
+            }}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       )}
     </div>
   );

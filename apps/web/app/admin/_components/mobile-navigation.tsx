@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { Menu } from 'lucide-react';
+import { ArrowLeft, Menu } from 'lucide-react';
 
 import {
   DropdownMenu,
@@ -8,6 +8,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
+
+import pathsConfig from '~/config/paths.config';
 
 export function AdminMobileNavigation() {
   return (
@@ -17,6 +19,13 @@ export function AdminMobileNavigation() {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent>
+        <DropdownMenuItem>
+          <Link href={pathsConfig.app.home} className="flex items-center gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Back to app
+          </Link>
+        </DropdownMenuItem>
+
         <DropdownMenuItem>
           <Link href={'/admin'}>Home</Link>
         </DropdownMenuItem>
@@ -35,6 +44,10 @@ export function AdminMobileNavigation() {
 
         <DropdownMenuItem>
           <Link href={'/admin/accounts'}>Accounts</Link>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem>
+          <Link href={'/admin/branding'}>Branding</Link>
         </DropdownMenuItem>
 
         <DropdownMenuItem>

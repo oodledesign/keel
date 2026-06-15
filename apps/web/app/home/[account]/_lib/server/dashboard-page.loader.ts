@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { cache } from 'react';
+
 import { redirect } from 'next/navigation';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
@@ -109,7 +111,9 @@ export type DashboardPageData = {
   }>;
 };
 
-export async function loadDashboardPageData(
+export const loadDashboardPageData = cache(loadDashboardPageDataImpl);
+
+async function loadDashboardPageDataImpl(
   accountSlug: string,
 ): Promise<DashboardPageData> {
   const workspace = await loadTeamWorkspace(accountSlug);
@@ -464,6 +468,20 @@ export async function loadDashboardPageData(
     (jobRowsForTasks ?? []).map((j) => [j.id as string, (j.title as string) ?? 'Project']),
   );
 
+  const { data: clientRowsForTasks } = await client
+    .from('clients')
+    .select('id, display_name, first_name, last_name')
+    .eq('account_id', accountId);
+  const clientIds = (clientRowsForTasks ?? []).map((c) => c.id as string);
+  const clientNameMap = new Map(
+    (clientRowsForTasks ?? []).map((c) => [
+      c.id as string,
+      (c.display_name as string | null) ??
+        [c.first_name, c.last_name].filter(Boolean).join(' ') ||
+        'Client',
+    ]),
+  );
+
   let upcomingTasks: DashboardTaskSummary[] = [];
   const taskScopeFilters: string[] = [];
   if (jobIds.length > 0) {
@@ -472,11 +490,14 @@ export async function loadDashboardPageData(
   if (projectIds.length > 0) {
     taskScopeFilters.push(`project_id.in.(${projectIds.join(',')})`);
   }
+  if (clientIds.length > 0) {
+    taskScopeFilters.push(`client_id.in.(${clientIds.join(',')})`);
+  }
 
   if (taskScopeFilters.length > 0) {
     const { data: taskRows, error: tasksError } = await client
       .from('tasks')
-      .select('id, title, status, due_date, project_id, job_id')
+      .select('id, title, status, due_date, project_id, job_id, client_id')
       .or(taskScopeFilters.join(','))
       .is('parent_task_id', null)
       .not('status', 'eq', 'done')
@@ -496,7 +517,9 @@ export async function loadDashboardPageData(
         ? (jobNameMap.get(t.job_id as string) ?? null)
         : t.project_id
           ? (projectNameMap.get(t.project_id as string) ?? null)
-          : null,
+          : t.client_id
+            ? (clientNameMap.get(t.client_id as string) ?? null)
+            : null,
     }));
   }
 

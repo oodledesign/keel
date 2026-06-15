@@ -3,7 +3,18 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { CreditCard, Inbox, LayoutDashboard, LayoutGrid, LifeBuoy, Mail, ScrollText, Users } from 'lucide-react';
+import {
+  ArrowLeft,
+  CreditCard,
+  Inbox,
+  LayoutDashboard,
+  LayoutGrid,
+  LifeBuoy,
+  Mail,
+  Palette,
+  ScrollText,
+  Users,
+} from 'lucide-react';
 
 import {
   Sidebar,
@@ -15,10 +26,12 @@ import {
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
+  SidebarTrigger,
 } from '@kit/ui/shadcn-sidebar';
 
 import { AppLogo } from '~/components/app-logo';
 import { ProfileAccountDropdownContainer } from '~/components/personal-account-dropdown-container';
+import pathsConfig from '~/config/paths.config';
 
 export function AdminSidebar() {
   const path = usePathname();
@@ -89,6 +102,16 @@ export function AdminSidebar() {
               </SidebarMenuButton>
 
               <SidebarMenuButton
+                isActive={path.includes('/admin/branding')}
+                asChild
+              >
+                <Link className={'flex gap-2.5'} href={'/admin/branding'}>
+                  <Palette className={'h-4'} />
+                  <span>Branding</span>
+                </Link>
+              </SidebarMenuButton>
+
+              <SidebarMenuButton
                 isActive={path.includes('/admin/support')}
                 asChild
               >
@@ -132,7 +155,20 @@ export function AdminSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter>
+      <SidebarFooter className="gap-2">
+        <SidebarMenu>
+          <SidebarMenuButton asChild tooltip="Back to app">
+            <Link className="flex gap-2.5" href={pathsConfig.app.home}>
+              <ArrowLeft className="h-4 w-4" />
+              <span>Back to app</span>
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenu>
+
+        <div className="flex justify-center px-2">
+          <SidebarTrigger className="h-8 w-8 rounded-md border border-border text-muted-foreground hover:bg-muted hover:text-foreground" />
+        </div>
+
         <ProfileAccountDropdownContainer />
       </SidebarFooter>
     </Sidebar>

@@ -1,4 +1,5 @@
 import { SitePageHeader } from '~/(marketing)/_components/site-page-header';
+import { PrivacyPolicyContent } from '../_components/legal-content';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
@@ -20,8 +21,8 @@ async function PrivacyPolicyPage() {
         subtitle={t('marketing:privacyPolicyDescription')}
       />
 
-      <div className={'container mx-auto py-8'}>
-        <div>Your terms of service content here</div>
+      <div className="container mx-auto px-4 py-8">
+        <PrivacyPolicyContent />
       </div>
     </div>
   );

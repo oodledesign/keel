@@ -90,6 +90,7 @@ export function NoteEditor({
   );
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isDirtyRef = useRef(false);
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const latestRef = useRef({
@@ -112,7 +113,21 @@ export function NoteEditor({
     setCategory(note.category);
     setTags(note.tags);
     setLink(linkFromNote(note));
-  }, [note]);
+    isDirtyRef.current = false;
+  }, [note.id]);
+
+  useEffect(() => {
+    if (isDirtyRef.current || saveState === 'saving') {
+      return;
+    }
+
+    setTitle(note.title);
+    setContent(note.content);
+    setIsPinned(note.isPinned);
+    setCategory(note.category);
+    setTags(note.tags);
+    setLink(linkFromNote(note));
+  }, [note, saveState]);
 
   const persist = useCallback(async () => {
     const snapshot = latestRef.current;
@@ -131,6 +146,7 @@ export function NoteEditor({
         link: snapshot.link,
       });
       setSaveState('saved');
+      isDirtyRef.current = false;
     } catch {
       setSaveState('error');
       toast.error('Could not save note');
@@ -167,6 +183,7 @@ export function NoteEditor({
   );
 
   const onTitleChange = (value: string) => {
+    isDirtyRef.current = true;
     setTitle(value);
     setSaveState('idle');
     scheduleSave();
@@ -174,6 +191,7 @@ export function NoteEditor({
   };
 
   const onContentChange = (value: string) => {
+    isDirtyRef.current = true;
     setContent(value);
     setSaveState('idle');
     scheduleSave();
@@ -187,6 +205,7 @@ export function NoteEditor({
   };
 
   const onMetaChange = <T,>(setter: (value: T) => void, value: T) => {
+    isDirtyRef.current = true;
     setter(value);
     setSaveState('idle');
     scheduleSave();

@@ -37,6 +37,7 @@ import {
   loadTaskAssignmentOptionsForWorkspace,
   type TaskAssignmentOption,
 } from '../../_lib/actions/task-actions';
+import { createClient } from '~/home/[account]/clients/_lib/server/server-actions';
 import { groupProjectsByWorkspace } from '../../tasks/_lib/group-task-options';
 
 const PRIORITIES = [
@@ -51,18 +52,31 @@ type AddTaskDialogProps = {
   workspaceAccountId?: string;
   /** Slug for workspace routes (e.g. AI task extract). Required when `workspaceAccountId` is set. */
   workspaceAccountSlug?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
+  allowInlineClientCreate?: boolean;
 };
 
 export function AddTaskDialog({
   workspaceAccountId,
   workspaceAccountSlug,
+  open: controlledOpen,
+  onOpenChange,
+  hideTrigger = false,
+  allowInlineClientCreate = false,
 }: AddTaskDialogProps) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [options, setOptions] = useState<TaskAssignmentOption[]>([]);
   const [optionsLoading, setOptionsLoading] = useState(false);
+  const [showNewClient, setShowNewClient] = useState(false);
+  const [newClientName, setNewClientName] = useState('');
+  const [creatingClient, setCreatingClient] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   const [priority, setPriority] = useState('medium');
@@ -75,21 +89,58 @@ export function AddTaskDialog({
       setOptions([]);
       setAssignTo('none');
       setError(null);
+      setShowNewClient(false);
+      setNewClientName('');
       return;
     }
 
-    void (async () => {
-      setOptionsLoading(true);
-      try {
-        const data = workspaceAccountId
-          ? await loadTaskAssignmentOptionsForWorkspace(workspaceAccountId)
-          : await loadTaskAssignmentOptions();
-        setOptions(data);
-      } finally {
-        setOptionsLoading(false);
-      }
-    })();
+    void loadOptions();
   }, [open, workspaceAccountId]);
+
+  async function loadOptions(): Promise<TaskAssignmentOption[]> {
+    setOptionsLoading(true);
+    try {
+      const data = workspaceAccountId
+        ? await loadTaskAssignmentOptionsForWorkspace(workspaceAccountId)
+        : await loadTaskAssignmentOptions();
+      setOptions(data);
+      return data;
+    } finally {
+      setOptionsLoading(false);
+    }
+  }
+
+  async function handleCreateClient() {
+    if (!workspaceAccountId || !newClientName.trim()) {
+      return;
+    }
+
+    setCreatingClient(true);
+    setError(null);
+    try {
+      await createClient({
+        accountId: workspaceAccountId,
+        client_type: 'business',
+        company_name: newClientName.trim(),
+        first_name: newClientName.trim(),
+      });
+      const fresh = await loadOptions();
+      const match = fresh.find(
+        (option) =>
+          option.type === 'client' &&
+          option.name.toLowerCase() === newClientName.trim().toLowerCase(),
+      );
+      if (match) {
+        setAssignTo(match.id);
+      }
+      setShowNewClient(false);
+      setNewClientName('');
+    } catch {
+      setError('Could not create client');
+    } finally {
+      setCreatingClient(false);
+    }
+  }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -141,15 +192,17 @@ export function AddTaskDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <button
-          type="button"
-          className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-[var(--keel-teal)] px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#238b7f]"
-        >
-          <Plus className="h-4 w-4" />
-          Add Task
-        </button>
-      </DialogTrigger>
+      {hideTrigger ? null : (
+        <DialogTrigger asChild>
+          <button
+            type="button"
+            className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-[var(--keel-teal)] px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#238b7f]"
+          >
+            <Plus className="h-4 w-4" />
+            Add Task
+          </button>
+        </DialogTrigger>
+      )}
       <DialogContent className="border-white/8 bg-[#0F1923] text-white sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add a new task</DialogTitle>
@@ -303,6 +356,36 @@ export function AddTaskDialog({
                 Create a project or client in this workspace first, then link a
                 task here.
               </p>
+            ) : null}
+            {allowInlineClientCreate && isWorkspaceMode ? (
+              <div className="space-y-2 rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                {showNewClient ? (
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Input
+                      value={newClientName}
+                      onChange={(e) => setNewClientName(e.target.value)}
+                      placeholder="Client or company name"
+                      className="border-white/10 bg-white/5 text-white"
+                    />
+                    <button
+                      type="button"
+                      disabled={creatingClient || !newClientName.trim()}
+                      onClick={() => void handleCreateClient()}
+                      className="h-9 shrink-0 rounded-lg bg-[var(--keel-teal)] px-3 text-sm font-medium text-white disabled:opacity-50"
+                    >
+                      {creatingClient ? 'Adding…' : 'Add client'}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowNewClient(true)}
+                    className="text-xs font-medium text-[var(--keel-teal)] hover:underline"
+                  >
+                    + Create new client
+                  </button>
+                )}
+              </div>
             ) : null}
           </div>
 

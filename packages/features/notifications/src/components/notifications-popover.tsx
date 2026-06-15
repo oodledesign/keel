@@ -128,7 +128,9 @@ export function NotificationsPopover(params: {
       </PopoverTrigger>
 
       <PopoverContent
-        className={'flex w-full max-w-96 flex-col p-0 lg:min-w-64'}
+        className={
+          'flex w-full max-w-96 flex-col border-white/10 bg-[var(--workspace-shell-panel)] p-0 text-white lg:min-w-64'
+        }
         align={'start'}
         collisionPadding={20}
         sideOffset={10}
@@ -147,7 +149,7 @@ export function NotificationsPopover(params: {
 
         <div
           className={
-            'flex max-h-[60vh] flex-col divide-y divide-gray-100 overflow-y-auto dark:divide-gray-800'
+            'flex max-h-[60vh] flex-col divide-y divide-white/10 overflow-y-auto'
           }
         >
           {notifications.map((notification) => {

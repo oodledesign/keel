@@ -41,8 +41,7 @@ const authConfig = AuthConfigSchema.parse({
   captchaTokenSiteKey: process.env.NEXT_PUBLIC_CAPTCHA_SITE_KEY,
 
   // whether to display the terms checkbox during sign-up
-  displayTermsCheckbox:
-    process.env.NEXT_PUBLIC_DISPLAY_TERMS_AND_CONDITIONS_CHECKBOX === 'true',
+  displayTermsCheckbox: true,
 
   // whether to enable identity linking:
   // This needs to be enabled in the Supabase Console as well for it to work.
@@ -52,8 +51,8 @@ const authConfig = AuthConfigSchema.parse({
   // NB: Enable the providers below in the Supabase Console
   // in your production project
   providers: {
-    password: process.env.NEXT_PUBLIC_AUTH_PASSWORD === 'true',
-    magicLink: process.env.NEXT_PUBLIC_AUTH_MAGIC_LINK === 'true',
+    password: process.env.NEXT_PUBLIC_AUTH_PASSWORD !== 'false',
+    magicLink: false,
     otp: process.env.NEXT_PUBLIC_AUTH_OTP === 'true',
     oAuth: ['google'],
   },

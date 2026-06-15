@@ -37,8 +37,8 @@
 
     --border: var(--color-gray-100);
     --input: var(--color-gray-200);
-    --ring: var(--color-neutral-800);
-    --focus-ring: #2563eb;
+    --ring: transparent;
+    --focus-ring: rgba(42, 157, 143, 0.45);
 
     --radius: 0.5rem;
 
@@ -59,7 +59,7 @@
 
     --workspace-shell-header: transparent;
     --workspace-shell-sidebar: #0f1b35;
-    --workspace-shell-canvas: #0f1b35;
+    --workspace-shell-canvas: #0b132b;
     --workspace-shell-panel: #0f1b35;
     --workspace-shell-panel-hover: #152544;
     --workspace-shell-sidebar-active: #1e403a;
@@ -106,8 +106,8 @@
 
     --border: var(--color-neutral-800);
     --input: var(--color-neutral-700);
-    --ring: oklch(87.09% 0.0055 286.29);
-    --focus-ring: #60a5fa;
+    --ring: transparent;
+    --focus-ring: rgba(42, 157, 143, 0.45);
 
     --chart-1: var(--color-blue-600);
     --chart-2: var(--color-emerald-400);
@@ -126,7 +126,7 @@
 
     --workspace-shell-header: transparent;
     --workspace-shell-sidebar: #0f1b35;
-    --workspace-shell-canvas: #0f1b35;
+    --workspace-shell-canvas: #0b132b;
     --workspace-shell-panel: #0f1b35;
     --workspace-shell-panel-hover: #152544;
     --workspace-shell-sidebar-active: #1e403a;
@@ -154,5 +154,12 @@
   select,
   [contenteditable='true'] {
     font-size: 16px !important;
+  }
+}
+
+@layer base {
+  a:focus-visible,
+  button:focus-visible {
+    outline: none;
   }
 }

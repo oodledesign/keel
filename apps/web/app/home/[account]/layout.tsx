@@ -14,7 +14,7 @@ import type { WorkNavCounts } from '~/config/work-account-navigation.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 // local imports
-import { TeamWorkspaceTopBarSlot } from '~/components/workspace-shell/workspace-top-bar-slot';
+import { TeamWorkspaceTopBarClient } from '~/components/workspace-shell/team-workspace-top-bar-client';
 
 import { TeamAccountLayoutSidebar } from './_components/team-account-layout-sidebar';
 import { TeamWorkspaceMobileChrome } from './_components/team-workspace-mobile-chrome';
@@ -67,22 +67,22 @@ async function SidebarLayout({
     loadTeamWorkspace(account),
     getLayoutState(account),
     loadWorkspaceSwitcherAccounts(client, user.id),
+    enforceWorkspaceBilling(account),
   ]);
-
-  const navCounts = await loadWorkNavCounts(
-    client,
-    data.account.id,
-    data.moduleSettings,
-  ).catch((error) => {
-    console.error('[team-workspace] loadWorkNavCounts:', error);
-    return {} as WorkNavCounts;
-  });
 
   if (!data) {
     redirect('/');
   }
 
-  await enforceWorkspaceBilling(account);
+  const accountId = data.account.id;
+
+  const [navCounts, mobileNavShortcuts] = await Promise.all([
+    loadWorkNavCounts(client, accountId, data.moduleSettings).catch((error) => {
+      console.error('[team-workspace] loadWorkNavCounts:', error);
+      return {} as WorkNavCounts;
+    }),
+    loadWorkspaceMobileNavShortcuts(client, user.id, accountId, account),
+  ]);
 
   const workspaceProfile = data.workspaceProfile;
   const accounts =
@@ -151,7 +151,7 @@ async function SidebarLayout({
             spaceType={spaceTypeFromProfile(workspaceProfile)}
             showNewMenu={access.canUseQuickCreate}
           >
-            <TeamWorkspaceTopBarSlot account={account} />
+            <TeamWorkspaceTopBarClient accountSlug={account} />
             {children}
           </TeamWorkspaceMobileChrome>
         </Page>
@@ -175,24 +175,24 @@ async function HeaderLayout({
   const [data, switcherAccounts] = await Promise.all([
     loadTeamWorkspace(account),
     loadWorkspaceSwitcherAccounts(client, user.id),
+    enforceWorkspaceBilling(account),
   ]);
 
   if (!data) {
     redirect('/');
   }
 
-  await enforceWorkspaceBilling(account);
-
+  const accountId = data.account.id;
   const workspaceProfile = data.workspaceProfile;
   const accounts = switcherAccounts;
-  const navCounts = await loadWorkNavCounts(
-    client,
-    data.account.id,
-    data.moduleSettings,
-  ).catch((error) => {
-    console.error('[team-workspace] loadWorkNavCounts:', error);
-    return {} as WorkNavCounts;
-  });
+
+  const [navCounts, mobileNavShortcuts] = await Promise.all([
+    loadWorkNavCounts(client, accountId, data.moduleSettings).catch((error) => {
+      console.error('[team-workspace] loadWorkNavCounts:', error);
+      return {} as WorkNavCounts;
+    }),
+    loadWorkspaceMobileNavShortcuts(client, user.id, accountId, account),
+  ]);
 
   const accountAccess = data.account as {
     permissions?: string[] | null;
@@ -210,12 +210,6 @@ async function HeaderLayout({
     ),
   );
 
-  const mobileNavShortcuts = await loadWorkspaceMobileNavShortcuts(
-    client,
-    user.id,
-    data.account.id,
-    account,
-  );
   const homePath = pathsConfig.app.accountHome.replace('[account]', account);
   const bottomNavTabs = resolveMobileBottomNavTabs({
     homePath,

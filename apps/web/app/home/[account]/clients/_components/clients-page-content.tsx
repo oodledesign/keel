@@ -101,8 +101,12 @@ export function ClientsPageContent({
   }, [accountId, searchDebounced, page, pageSize]);
 
   useEffect(() => {
-    fetchClients();
-  }, [fetchClients]);
+    if (page === 1 && !searchDebounced) {
+      return;
+    }
+
+    void fetchClients();
+  }, [accountId, searchDebounced, page, pageSize, fetchClients]);
 
   useEffect(() => {
     const t = setTimeout(() => setSearchDebounced(search), 300);

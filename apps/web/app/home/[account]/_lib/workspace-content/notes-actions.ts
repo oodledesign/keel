@@ -89,7 +89,7 @@ export const saveWorkspaceNoteAction = enhanceAction(
         .eq('account_id', data.accountId);
       if (error) throw error;
       queueBrainIndexSource(data.accountId, 'note', data.noteId);
-      revalidateNotesPaths(data.accountSlug, data.noteId);
+      revalidateNotesPaths(data.accountSlug);
       return { noteId: data.noteId };
     }
 
