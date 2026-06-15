@@ -477,8 +477,7 @@ async function loadDashboardPageDataImpl(
     (clientRowsForTasks ?? []).map((c) => [
       c.id as string,
       (c.display_name as string | null) ??
-        [c.first_name, c.last_name].filter(Boolean).join(' ') ||
-        'Client',
+        ([c.first_name, c.last_name].filter(Boolean).join(' ') || 'Client'),
     ]),
   );
 

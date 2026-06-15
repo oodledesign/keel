@@ -4,7 +4,7 @@ import { useTeamAccountWorkspace } from '@kit/team-accounts/hooks/use-team-accou
 
 import { WorkspaceTopBar } from '~/components/workspace-shell/workspace-top-bar';
 import { getTeamAccountAccess } from '~/home/[account]/_lib/role-access';
-import { spaceTypeFromProfile } from '~/home/[account]/_lib/server/workspace-profile';
+import { spaceTypeFromProfile } from '~/home/[account]/_lib/workspace-profile';
 
 export function TeamWorkspaceTopBarClient({ accountSlug }: { accountSlug: string }) {
   const workspace = useTeamAccountWorkspace();

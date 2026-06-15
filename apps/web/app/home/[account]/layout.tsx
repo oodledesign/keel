@@ -104,12 +104,6 @@ async function SidebarLayout({
     ),
   );
 
-  const mobileNavShortcuts = await loadWorkspaceMobileNavShortcuts(
-    client,
-    user.id,
-    data.account.id,
-    account,
-  );
   const homePath = pathsConfig.app.accountHome.replace('[account]', account);
   const bottomNavTabs = resolveMobileBottomNavTabs({
     homePath,
