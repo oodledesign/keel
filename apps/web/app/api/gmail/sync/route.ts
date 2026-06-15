@@ -21,12 +21,8 @@ type SyncResultRow = {
 
 async function syncUserMailbox(userId: string) {
   const syncResult = await syncMailbox(userId);
-
-  if (syncResult.backfillComplete === false) {
-    return { ...syncResult, assistant: null };
-  }
-
   const assistant = await runEmailAssistantPipeline(userId);
+
   return { ...syncResult, assistant };
 }
 

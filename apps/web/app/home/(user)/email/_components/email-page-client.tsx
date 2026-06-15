@@ -182,6 +182,7 @@ export function EmailPageClient({ initialData }: Props) {
         let complete = true;
         let guard = 0;
         let draftsCreated = 0;
+        let classified = 0;
         const maxBatches = 25;
 
         do {
@@ -194,11 +195,13 @@ export function EmailPageClient({ initialData }: Props) {
               classified: number;
               draftsCreated: number;
               draftsSavedToGmail: number;
+              errors?: string[];
             } | null;
           }>('/api/gmail/sync', { method: 'POST' });
 
           totalProcessed += result.messagesProcessed;
           draftsCreated += result.assistant?.draftsCreated ?? 0;
+          classified += result.assistant?.classified ?? 0;
           complete = result.backfillComplete !== false;
           guard += 1;
 
@@ -210,6 +213,10 @@ export function EmailPageClient({ initialData }: Props) {
         if (draftsCreated > 0) {
           toast.success(
             `Drafted ${draftsCreated} repl${draftsCreated === 1 ? 'y' : 'ies'}`,
+          );
+        } else if (classified > 0) {
+          toast.success(
+            `Synced and sorted ${classified} thread${classified === 1 ? '' : 's'}`,
           );
         } else if (complete) {
           toast.success(

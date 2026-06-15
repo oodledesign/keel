@@ -1,7 +1,10 @@
 'use client';
 
 import featureFlagsConfig from '~/config/feature-flags.config';
-import { WorkspaceAccountsSelector } from '~/components/workspace-shell/workspace-accounts-selector';
+import {
+  WorkspaceAccountsSelector,
+  buildPersonalSwitcherAccounts,
+} from '~/components/workspace-shell/workspace-accounts-selector';
 import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
 
 export function TeamAccountAccountsSelector(params: {
@@ -14,7 +17,7 @@ export function TeamAccountAccountsSelector(params: {
     <WorkspaceAccountsSelector
       selectedAccount={params.selectedAccount}
       userId={params.userId}
-      accounts={params.accounts}
+      accounts={buildPersonalSwitcherAccounts(params.accounts)}
       className={params.className}
       enableTeamCreation={featureFlagsConfig.enableTeamCreation}
     />

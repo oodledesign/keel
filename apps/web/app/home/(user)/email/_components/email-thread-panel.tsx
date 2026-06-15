@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState, useTransition } from 'react';
 import {
   ArrowLeft,
   Check,
+  ChevronDown,
+  ChevronUp,
   Loader2,
   Sparkles,
   X,
@@ -17,6 +19,10 @@ import { toast } from '@kit/ui/sonner';
 
 import { loadEmailThreadDetail } from '../_lib/actions/email-assistant-actions';
 import { emailApiFetch } from '../_lib/email-api';
+import {
+  previewEmailBody,
+  splitEmailQuotedHistory,
+} from '~/lib/email-assistant/message-body-display';
 import type {
   EmailActionItemRow,
   EmailDraftRow,
@@ -457,30 +463,146 @@ export function EmailThreadPanel({
 }
 
 function ThreadMessages({ messages }: { messages: EmailMessageRow[] }) {
+  const [expandedOlderIds, setExpandedOlderIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [showQuotedIds, setShowQuotedIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+
+  useEffect(() => {
+    setExpandedOlderIds(new Set());
+    setShowQuotedIds(new Set());
+  }, [messages]);
+
+  if (messages.length === 0) {
+    return null;
+  }
+
+  const latestMessageId = messages[messages.length - 1]?.id;
+
+  function toggleOlderMessage(messageId: string) {
+    setExpandedOlderIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(messageId)) {
+        next.delete(messageId);
+      } else {
+        next.add(messageId);
+      }
+
+      return next;
+    });
+  }
+
+  function toggleQuotedHistory(messageId: string) {
+    setShowQuotedIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(messageId)) {
+        next.delete(messageId);
+      } else {
+        next.add(messageId);
+      }
+
+      return next;
+    });
+  }
+
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-semibold text-white">Messages</h3>
       <ul className="space-y-2">
-        {messages.map((message) => (
-          <li
-            key={message.id}
-            className="rounded-xl border border-white/10 bg-[#0B132B]/40 p-3"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-medium text-white">
-                {message.from_address ?? 'Unknown sender'}
-              </p>
-              <p className="text-xs text-zinc-500">
-                {formatMessageDate(message.internal_date)}
-              </p>
-            </div>
-            <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-zinc-300">
-              {message.body_text?.trim() ||
-                message.snippet?.trim() ||
-                '(no content)'}
-            </p>
-          </li>
-        ))}
+        {messages.map((message) => {
+          const isLatest = message.id === latestMessageId;
+          const isExpanded = isLatest || expandedOlderIds.has(message.id);
+          const rawBody =
+            message.body_text?.trim() ||
+            message.snippet?.trim() ||
+            '';
+          const { visible, quoted } = splitEmailQuotedHistory(rawBody);
+          const body = visible || '(no content)';
+          const preview = previewEmailBody(rawBody);
+          const showQuoted = showQuotedIds.has(message.id);
+
+          if (!isExpanded) {
+            return (
+              <li key={message.id}>
+                <button
+                  type="button"
+                  onClick={() => toggleOlderMessage(message.id)}
+                  className="flex w-full items-start gap-3 rounded-xl border border-white/10 bg-[#0B132B]/25 px-3 py-2.5 text-left transition-colors hover:bg-[#0B132B]/40"
+                >
+                  <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="truncate text-sm font-medium text-zinc-300">
+                        {message.from_address ?? 'Unknown sender'}
+                      </p>
+                      <p className="shrink-0 text-xs text-zinc-500">
+                        {formatMessageDate(message.internal_date)}
+                      </p>
+                    </div>
+                    {preview ? (
+                      <p className="mt-1 line-clamp-2 text-sm text-zinc-500">
+                        {preview}
+                      </p>
+                    ) : null}
+                  </div>
+                </button>
+              </li>
+            );
+          }
+
+          return (
+            <li
+              key={message.id}
+              className="rounded-xl border border-white/10 bg-[#0B132B]/40 p-3"
+            >
+              <div className="flex items-start gap-2">
+                {!isLatest ? (
+                  <button
+                    type="button"
+                    onClick={() => toggleOlderMessage(message.id)}
+                    className="mt-0.5 shrink-0 rounded-md p-0.5 text-zinc-500 hover:bg-white/5 hover:text-zinc-300"
+                    aria-label="Collapse message"
+                  >
+                    <ChevronUp className="h-4 w-4" />
+                  </button>
+                ) : null}
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-medium text-white">
+                      {message.from_address ?? 'Unknown sender'}
+                    </p>
+                    <p className="text-xs text-zinc-500">
+                      {formatMessageDate(message.internal_date)}
+                    </p>
+                  </div>
+                  <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-zinc-300">
+                    {body}
+                  </p>
+                  {quoted ? (
+                    <div className="mt-3">
+                      <button
+                        type="button"
+                        onClick={() => toggleQuotedHistory(message.id)}
+                        className="text-xs font-medium text-[var(--keel-teal)] hover:underline"
+                      >
+                        {showQuoted ? 'Hide quoted history' : 'Show quoted history'}
+                      </button>
+                      {showQuoted ? (
+                        <p className="mt-2 whitespace-pre-wrap border-l border-white/10 pl-3 text-sm leading-relaxed text-zinc-500">
+                          {quoted}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

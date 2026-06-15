@@ -21,9 +21,15 @@ import { If } from '@kit/ui/if';
 import { cn } from '@kit/ui/utils';
 
 import { KeelSidebarLogo } from '~/components/workspace-shell/keel-sidebar-logo';
+import {
+  WorkspaceAccountsSelector,
+  buildPersonalSwitcherAccounts,
+} from '~/components/workspace-shell/workspace-accounts-selector';
 import { workspaceSidebarClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import { WorkspaceProfileBlock } from '~/components/workspace-shell/workspace-profile-block';
 import featureFlagsConfig from '~/config/feature-flags.config';
+import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
+import { PERSONAL_WORKSPACE_VALUE } from '~/lib/workspace-personal-switcher';
 import {
   buildPersonalHomeNavRoutes,
   parsePersonalAccountNavigationConfig,
@@ -35,11 +41,11 @@ import pathsConfig from '~/config/paths.config';
 
 import type { UserWorkspace } from '../_lib/server/load-user-workspace';
 
-import { HomeAccountSelector } from './home-account-selector';
 import { PersonalWorkspaceNav } from './personal-workspace-nav';
 
 interface HomeSidebarProps {
   workspace: UserWorkspace;
+  switcherAccounts: WorkspaceSwitcherAccount[];
   /** Shared workspaces for sidebar shortcuts (from memberships). */
   sharedWorkspaces?: Array<{
     id: string;
@@ -50,31 +56,26 @@ interface HomeSidebarProps {
 }
 
 export function HomeSidebar(props: HomeSidebarProps) {
-  const { workspace, user, accounts } = props.workspace;
+  const { workspace, user } = props.workspace;
   const collapsible = personalAccountNavigationConfig.sidebarCollapsedStyle;
-  const teamAccounts = Array.isArray(accounts) ? accounts : [];
   const sharedWorkspaces = props.sharedWorkspaces ?? [];
+  const switcherAccounts = buildPersonalSwitcherAccounts(props.switcherAccounts);
 
   const sidebarNavConfig = parsePersonalAccountNavigationConfig(
     buildPersonalHomeNavRoutes(),
   );
-
-  const selectorAccounts = teamAccounts.map((a) => ({
-    label: a.label,
-    value: a.value,
-    image: a.image ?? null,
-    role: null as string | null,
-  }));
 
   return (
     <Sidebar collapsible={collapsible} className={workspaceSidebarClassName}>
       <SidebarHeader className="gap-0 border-b border-white/[0.08] px-3 py-3">
         <HomeSidebarLogo />
         <If condition={featureFlagsConfig.enableTeamAccounts}>
-          <HomeAccountSelector
+          <WorkspaceAccountsSelector
+            selectedAccount={PERSONAL_WORKSPACE_VALUE}
             userId={user.id}
-            accounts={selectorAccounts}
+            accounts={switcherAccounts}
             className="mt-1 w-full px-0"
+            enableTeamCreation={featureFlagsConfig.enableTeamCreation}
           />
         </If>
       </SidebarHeader>

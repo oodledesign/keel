@@ -9,9 +9,9 @@ const swatches = [
 ];
 
 const logos = [
-  { label: 'Dark sidebar', path: '/brand/keel-logo-dark.png' },
-  { label: 'Light surface', path: '/brand/keel-logo-light.png' },
-  { label: 'Icon', path: '/brand/keel-logo-icon.png' },
+  { label: 'Dark sidebar', path: '/brand/keel-white-transparent.png' },
+  { label: 'Light surface', path: '/brand/keel-dark-transparent.png' },
+  { label: 'Icon', path: '/brand/keel-icon.png' },
 ];
 
 export function KeelBrandingGuide() {

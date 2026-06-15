@@ -113,6 +113,7 @@ async function SidebarLayout({ children }: React.PropsWithChildren) {
             <HomeSidebar
               workspace={workspace}
               sharedWorkspaces={sharedWorkspaces}
+              switcherAccounts={switcherAccounts}
             />
           </PageNavigation>
 

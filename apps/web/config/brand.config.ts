@@ -3,22 +3,31 @@
  * Contains logo paths and brand colors for use across the application
  */
 
+export const brandAssets = {
+  /** Dark wordmark for light surfaces */
+  wordmarkLight: '/brand/keel-dark-transparent.png',
+  /** White wordmark for dark surfaces */
+  wordmarkDark: '/brand/keel-white-transparent.png',
+  /** Icon mark for favicons, collapsed sidebar, etc. */
+  icon: '/brand/keel-icon.png',
+} as const;
+
 export const brandConfig = {
   logos: {
     // Logo with icon + text (for headers, footers)
     iconText: {
-      light: '/images/brand/logo-icon-text-light.png',
-      dark: '/images/brand/logo-icon-text-dark.png',
+      light: brandAssets.wordmarkLight,
+      dark: brandAssets.wordmarkDark,
     },
     // Icon only (for favicons, small spaces)
     icon: {
-      light: '/images/brand/logo-icon-light.png',
-      dark: '/images/brand/logo-icon-dark.png',
+      light: brandAssets.icon,
+      dark: brandAssets.icon,
     },
-    // Text only (for minimal branding)
+    // Text only (wordmarks without separate text-only assets)
     text: {
-      light: '/images/brand/logo-text-light.png',
-      dark: '/images/brand/logo-text-dark.png',
+      light: brandAssets.wordmarkLight,
+      dark: brandAssets.wordmarkDark,
     },
   },
   colors: {

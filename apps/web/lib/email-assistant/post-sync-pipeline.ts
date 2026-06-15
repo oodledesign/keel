@@ -91,6 +91,7 @@ export async function runEmailAssistantPipeline(
       'id, subject, assistant_category, assistant_processed_message_id',
     )
     .eq('user_id', userId)
+    .order('assistant_category', { ascending: true, nullsFirst: true })
     .order('last_message_at', { ascending: false, nullsFirst: false })
     .limit(30);
 
@@ -129,7 +130,10 @@ export async function runEmailAssistantPipeline(
 
     const latest = latestMessage as MessageRow;
 
-    if (thread.assistant_processed_message_id === latest.id) {
+    if (
+      thread.assistant_processed_message_id === latest.id &&
+      (!settings.auto_triage_enabled || thread.assistant_category !== null)
+    ) {
       continue;
     }
 
