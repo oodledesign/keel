@@ -20,7 +20,7 @@ import type { PhaseRecord } from '../../../_components/phase-detail/phase-meta-p
 import { createJobsService } from '../../../_lib/server/jobs.service';
 import { loadJobsPageData } from '../../../_lib/server/jobs-page.loader';
 import { createProjectPhasesService } from '../../../_lib/server/project-phases.service';
-import { createWebsitePlanningService } from '../../../websites/_lib/server/website-planning.service';
+import { createWebsitePlanningService } from '../../../../websites/_lib/server/website-planning.service';
 import { websitePlanningTabForPhase } from '~/lib/websites/website-design-template';
 import type { JobBoardTask } from '../../../_lib/schema/project-phases.schema';
 

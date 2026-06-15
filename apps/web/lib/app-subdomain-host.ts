@@ -35,6 +35,7 @@ export function isAppHostStaticPath(pathname: string): boolean {
   }
 
   return (
+    pathname.startsWith('/brand/') ||
     pathname.startsWith('/images/') ||
     pathname.startsWith('/assets/') ||
     pathname.startsWith('/locales/')

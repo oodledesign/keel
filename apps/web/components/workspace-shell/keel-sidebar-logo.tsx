@@ -16,6 +16,7 @@ export function KeelSidebarLogo(props: {
   const image = (
     <KeelLogoMark
       collapsed={collapsed}
+      tone="dark"
       className={cn(
         collapsed ? 'max-w-[32px]' : 'max-w-[140px]',
         props.className,

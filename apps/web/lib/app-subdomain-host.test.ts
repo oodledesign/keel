@@ -38,6 +38,17 @@ describe('resolveAppSubdomainRedirect', () => {
     ).toBe('https://www.keelos.so/pricing');
   });
 
+  it('serves brand assets on the app host without redirecting to /app', () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://app.keelos.so');
+    vi.stubEnv('NEXT_PUBLIC_MARKETING_SITE_URL', 'https://www.keelos.so');
+
+    expect(
+      resolveAppSubdomainRedirect(
+        new URL('https://app.keelos.so/brand/keel-white-transparent.png'),
+      ),
+    ).toBeNull();
+  });
+
   it('locks app host even when env vars only list www marketing', () => {
     vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://www.keelos.so');
