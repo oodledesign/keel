@@ -20,6 +20,8 @@ import type { PhaseRecord } from '../../../_components/phase-detail/phase-meta-p
 import { createJobsService } from '../../../_lib/server/jobs.service';
 import { loadJobsPageData } from '../../../_lib/server/jobs-page.loader';
 import { createProjectPhasesService } from '../../../_lib/server/project-phases.service';
+import { createWebsitePlanningService } from '../../../websites/_lib/server/website-planning.service';
+import { websitePlanningTabForPhase } from '~/lib/websites/website-design-template';
 import type { JobBoardTask } from '../../../_lib/schema/project-phases.schema';
 
 interface JobPhasePageProps {
@@ -91,6 +93,10 @@ async function JobPhasePage({ params }: JobPhasePageProps) {
 
   const jobTitle = (job.title as string) ?? 'Project';
 
+  const planningService = createWebsitePlanningService(client);
+  const linkedWebsite = await planningService.getWebsiteForJob(accountId, jobId);
+  const planningTab = websitePlanningTabForPhase(phase.name);
+
   return (
     <>
       <TeamAccountLayoutPageHeader
@@ -116,6 +122,8 @@ async function JobPhasePage({ params }: JobPhasePageProps) {
           tasks={tasks}
           notes={notes}
           canEditJobs={canEditJobs}
+          linkedWebsite={linkedWebsite}
+          planningTab={planningTab}
         />
       </PageBody>
     </>

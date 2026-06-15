@@ -150,6 +150,11 @@ const PhaseTemplatePhaseSchema = z.object({
   colour: z.string().nullable().optional(),
   description: z.string().max(5000).nullable().optional(),
   is_milestone: z.boolean().optional(),
+  page_content: z.string().max(100000).nullable().optional(),
+  planning_tab: z
+    .enum(['overview', 'sitemap', 'wireframe', 'content'])
+    .nullable()
+    .optional(),
 });
 
 export const ListPhaseTemplatesSchema = z.object({

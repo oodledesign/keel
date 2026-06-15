@@ -39,12 +39,18 @@ import {
   notifyPhaseCompleted,
 } from '~/lib/jobs/project-notifications';
 import { queueBrainIndexSource } from '~/lib/brain/sync';
+import { WEBSITE_DESIGN_TEMPLATE } from '~/lib/websites/website-design-template';
 
 const PhaseTemplatePhaseSchema = z.object({
   name: z.string().min(1).max(200),
   colour: z.string().nullable().optional(),
   description: z.string().max(5000).nullable().optional(),
   is_milestone: z.boolean().optional(),
+  page_content: z.string().max(100000).nullable().optional(),
+  planning_tab: z
+    .enum(['overview', 'sitemap', 'wireframe', 'content'])
+    .nullable()
+    .optional(),
 });
 
 const STANDARD_DELIVERY_TEMPLATE = {
@@ -897,6 +903,48 @@ class ProjectPhasesService {
     return data;
   }
 
+  private async ensureWebsiteDesignPhaseTemplate(accountId: string, userId: string) {
+    const { data: existing, error: existingErr } = await this.db
+      .from('project_phase_templates')
+      .select('id, phases')
+      .eq('account_id', accountId)
+      .eq('name', WEBSITE_DESIGN_TEMPLATE.name)
+      .maybeSingle();
+
+    if (existingErr) this.throwErr(existingErr);
+
+    if (existing?.id) {
+      const parsed = z.array(PhaseTemplatePhaseSchema).safeParse(existing.phases);
+      const hasPageContent =
+        parsed.success &&
+        parsed.data.some((phase) => Boolean(phase.page_content?.trim()));
+
+      if (!hasPageContent) {
+        const { error: updateErr } = await this.db
+          .from('project_phase_templates')
+          .update({
+            description: WEBSITE_DESIGN_TEMPLATE.description,
+            phases: WEBSITE_DESIGN_TEMPLATE.phases,
+          })
+          .eq('id', existing.id);
+
+        if (updateErr) this.throwErr(updateErr);
+      }
+
+      return;
+    }
+
+    const { error } = await this.db.from('project_phase_templates').insert({
+      account_id: accountId,
+      name: WEBSITE_DESIGN_TEMPLATE.name,
+      description: WEBSITE_DESIGN_TEMPLATE.description,
+      phases: WEBSITE_DESIGN_TEMPLATE.phases,
+      created_by: userId,
+    });
+
+    if (error) this.throwErr(error);
+  }
+
   private async ensureDefaultPhaseTemplate(accountId: string, userId: string) {
     const { data: existing, error: existingErr } = await this.db
       .from('project_phase_templates')
@@ -923,6 +971,7 @@ class ProjectPhasesService {
   ): Promise<PhaseTemplateListItem[]> {
     const user = await this.ensureUser();
     await this.ensureDefaultPhaseTemplate(input.accountId, user.id);
+    await this.ensureWebsiteDesignPhaseTemplate(input.accountId, user.id);
 
     const { data, error } = await this.db
       .from('project_phase_templates')
@@ -973,19 +1022,43 @@ class ProjectPhasesService {
 
     let sortOrder = ((maxRow?.sort_order as number | undefined) ?? -1) + 1;
 
-    for (const [index, phaseInput] of parsed.data.entries()) {
-      const { error: phaseErr } = await this.db.from('project_phases').insert({
-        account_id: input.accountId,
-        job_id: input.jobId,
-        name: phaseInput.name.trim(),
-        description: phaseInput.description?.trim() || null,
-        status: 'not_started',
-        is_milestone: phaseInput.is_milestone ?? false,
-        colour: phaseInput.colour ?? null,
-        sort_order: sortOrder++,
-        created_by: user.id,
-      });
+    for (const phaseInput of parsed.data) {
+      const { data: inserted, error: phaseErr } = await this.db
+        .from('project_phases')
+        .insert({
+          account_id: input.accountId,
+          job_id: input.jobId,
+          name: phaseInput.name.trim(),
+          description: phaseInput.description?.trim() || null,
+          status: 'not_started',
+          is_milestone: phaseInput.is_milestone ?? false,
+          colour: phaseInput.colour ?? null,
+          sort_order: sortOrder++,
+          created_by: user.id,
+        })
+        .select('id, name')
+        .single();
+
       if (phaseErr) this.throwErr(phaseErr);
+
+      const pageContent = phaseInput.page_content?.trim();
+      if (pageContent && inserted?.id) {
+        const { error: docErr } = await this.db.from('docs').insert({
+          account_id: input.accountId,
+          job_id: input.jobId,
+          phase_id: inserted.id,
+          title: (inserted.name as string) ?? phaseInput.name.trim(),
+          content: pageContent,
+          kind: 'written',
+          doc_type: 'phase_page',
+          category: 'idea',
+          tags: [],
+          user_id: user.id,
+          created_by: user.id,
+        });
+
+        if (docErr) this.throwErr(docErr);
+      }
     }
 
     return {

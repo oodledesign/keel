@@ -9,7 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 
 import pathsConfig from '~/config/paths.config';
 import { workspaceBtnPrimaryMd, workspaceLinkAccent } from '~/lib/workspace-ui';
+import type { WebsitePlanningTab } from '~/lib/websites/planning-types';
 
+import type { WebsitePlanningBundle } from '../_lib/server/website-planning.service';
 import type { Website } from '../_lib/server/websites.service';
 import {
   WebsiteStackBadge,
@@ -17,6 +19,7 @@ import {
   externalHref,
   formatWebsiteDate,
 } from './website-badges';
+import { WebsitePlanningPanel } from './website-planning-panel';
 
 function DetailField({
   label,
@@ -52,11 +55,17 @@ function DetailField({
 export function WebsiteDetailContent({
   website,
   accountSlug,
+  accountId,
   canEditWebsites,
+  planning,
+  planningTab,
 }: {
   website: Website;
   accountSlug: string;
+  accountId: string;
   canEditWebsites: boolean;
+  planning: WebsitePlanningBundle;
+  planningTab?: WebsitePlanningTab;
 }) {
   const editHref = pathsConfig.app.accountWebsiteEdit
     .replace('[account]', accountSlug)
@@ -119,6 +128,14 @@ export function WebsiteDetailContent({
           ) : null}
         </div>
       </div>
+
+      <WebsitePlanningPanel
+        accountId={accountId}
+        accountSlug={accountSlug}
+        planning={planning}
+        canEdit={canEditWebsites}
+        initialTab={planningTab ?? 'overview'}
+      />
 
       <Card className="rounded-[20px] border border-white/6 bg-[var(--workspace-shell-panel)]">
         <CardHeader>

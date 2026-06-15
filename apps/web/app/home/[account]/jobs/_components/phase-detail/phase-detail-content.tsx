@@ -14,7 +14,9 @@ import { ProjectAiGenerateDialog } from '../job-project/project-ai-generate-dial
 import { PhaseMetaPanel, type PhaseRecord } from './phase-meta-panel';
 import { PhaseNotesPanel, type PhaseNote } from './phase-notes-panel';
 import { PhasePageEditor } from './phase-page-editor';
+import { PhasePlanningLinks } from './phase-planning-links';
 import { PhaseTasksPanel } from './phase-tasks-panel';
+import type { WebsitePlanningTab } from '~/lib/websites/planning-types';
 
 export function PhaseDetailContent({
   accountSlug,
@@ -26,6 +28,8 @@ export function PhaseDetailContent({
   tasks,
   notes,
   canEditJobs,
+  linkedWebsite,
+  planningTab,
 }: {
   accountSlug: string;
   accountId: string;
@@ -40,6 +44,8 @@ export function PhaseDetailContent({
   tasks: JobBoardTask[];
   notes: PhaseNote[];
   canEditJobs: boolean;
+  linkedWebsite?: { id: string; name: string } | null;
+  planningTab?: WebsitePlanningTab | null;
 }) {
   const [phase, setPhase] = useState(initialPhase);
   const [pageContent, setPageContent] = useState(pageDoc.content ?? '');
@@ -79,6 +85,15 @@ export function PhaseDetailContent({
         canEdit={canEditJobs}
         onPhaseChange={setPhase}
       />
+
+      {linkedWebsite ? (
+        <PhasePlanningLinks
+          accountSlug={accountSlug}
+          websiteId={linkedWebsite.id}
+          websiteName={linkedWebsite.name}
+          planningTab={planningTab ?? null}
+        />
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <PhasePageEditor

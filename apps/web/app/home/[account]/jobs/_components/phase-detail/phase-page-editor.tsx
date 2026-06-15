@@ -5,8 +5,9 @@ import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { Sparkles } from 'lucide-react';
 
 import { Label } from '@kit/ui/label';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+
+import { SimpleMarkdownEditor } from '~/components/simple-markdown-editor';
 
 import { savePhasePageDoc } from '../../_lib/server/server-actions';
 import { getErrorMessage } from '../../_lib/error-message';
@@ -122,17 +123,16 @@ export function PhasePageEditor({
         <Label htmlFor="phase-page-content" className="sr-only">
           Phase page content
         </Label>
-        <Textarea
-          id="phase-page-content"
+        <SimpleMarkdownEditor
           value={content}
-          onChange={(e) => {
+          onChange={(value) => {
             setSaveState('idle');
-            setContent(e.target.value);
+            setContent(value);
           }}
           readOnly={!canEdit}
           rows={18}
           placeholder="Write this phase's plan, decisions, links, and deliverables (Markdown)…"
-          className="min-h-[280px] resize-y border-zinc-600 bg-zinc-900/60 text-sm leading-relaxed text-white placeholder:text-zinc-600 md:min-h-[360px]"
+          className="md:min-h-[360px]"
         />
       </div>
     </section>
