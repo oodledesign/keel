@@ -15,7 +15,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { buildCommunitySpaceNavChildren } from '~/config/community-account-navigation.config';
 import { buildFamilySpaceNavChildren } from '~/config/family-account-navigation.config';
+import pathsConfig from '~/config/paths.config';
 import { buildPersonalShortcutRoutes } from '~/config/personal-account-navigation.config';
+import { canUseEmailAssistant } from '~/lib/billing/entitlements';
 import { buildPropertySpaceNavChildren } from '~/config/property-account-navigation.config';
 import {
   buildWorkAppLinks,
@@ -149,7 +151,14 @@ export async function buildPersonalShortcutCatalog(
   client: SupabaseClient,
   userId: string,
 ): Promise<ShortcutCatalogItem[]> {
-  const items: ShortcutCatalogItem[] = personalCatalogItems();
+  const emailAssistantAllowed = await canUseEmailAssistant(client, userId);
+  const items: ShortcutCatalogItem[] = personalCatalogItems().filter((item) => {
+    if (item.params.href === pathsConfig.app.personalEmailAssistant) {
+      return emailAssistantAllowed;
+    }
+
+    return true;
+  });
   const workspaces = await loadUserWorkspaceAccounts(client, userId);
 
   for (const ws of workspaces) {

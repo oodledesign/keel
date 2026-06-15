@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
+import { redirectIfEmailAssistantNotAllowed } from '~/lib/billing/require-email-assistant-access';
 
 import type {
   EmailActionItemRow,
@@ -21,11 +22,16 @@ function revalidateEmailPage() {
   revalidatePath(EMAIL_PATH);
 }
 
+async function requireEmailAssistantAccess() {
+  await redirectIfEmailAssistantNotAllowed();
+  return requireUserInServerComponent();
+}
+
 export async function loadEmailThreadDetail(
   threadId: string,
 ): Promise<{ ok: true; data: EmailThreadDetail } | { ok: false; error: string }> {
   const client = getSupabaseServerClient();
-  const user = await requireUserInServerComponent();
+  const user = await requireEmailAssistantAccess();
 
   const thread = await loadEmailThreadDetailFromDb(threadId);
 
@@ -88,7 +94,7 @@ export async function saveEmailAssistantSettings(input: {
   signature: string;
 }) {
   const client = getSupabaseServerClient();
-  const user = await requireUserInServerComponent();
+  const user = await requireEmailAssistantAccess();
 
   const { error } = await client.from('email_assistant_settings').upsert(
     {
@@ -110,7 +116,7 @@ export async function saveEmailAssistantSettings(input: {
 
 export async function disconnectGmailConnection() {
   const client = getSupabaseServerClient();
-  const user = await requireUserInServerComponent();
+  const user = await requireEmailAssistantAccess();
 
   const { error } = await client
     .from('google_connections')

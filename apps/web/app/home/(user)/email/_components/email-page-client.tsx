@@ -82,10 +82,38 @@ export function EmailPageClient({ initialData }: Props) {
   const syncNow = () => {
     startSyncTransition(async () => {
       try {
-        await emailApiFetch('/api/gmail/sync', { method: 'POST' });
+        let totalProcessed = 0;
+        let complete = true;
+        let guard = 0;
+        const maxBatches = 25;
+
+        do {
+          const result = await emailApiFetch<{
+            mode: string;
+            messagesProcessed: number;
+            backfillComplete?: boolean;
+            remainingEstimate?: number;
+          }>('/api/gmail/sync', { method: 'POST' });
+
+          totalProcessed += result.messagesProcessed;
+          complete = result.backfillComplete !== false;
+          guard += 1;
+        } while (!complete && guard < maxBatches);
+
         await reloadThreads();
-        toast.success('Mailbox synced');
         router.refresh();
+
+        if (complete) {
+          toast.success(
+            totalProcessed > 0
+              ? `Synced ${totalProcessed} message${totalProcessed === 1 ? '' : 's'}`
+              : 'Mailbox is up to date',
+          );
+        } else {
+          toast.success(
+            `Synced ${totalProcessed} messages — still catching up, tap Sync again`,
+          );
+        }
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'Sync failed');
       }

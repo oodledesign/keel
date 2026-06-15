@@ -2,7 +2,7 @@ import { buildRawMessage, createDraft, updateDraft } from '@kit/gmail';
 
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { loadGmailReplyHeaders } from '~/lib/email-assistant/gmail-reply-headers';
-import { requireApiUser } from '~/lib/email-assistant/require-api-user';
+import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -30,7 +30,7 @@ function pickReplyTo(from: string | null, to: string | null) {
 }
 
 export async function POST(request: Request, context: RouteContext) {
-  const auth = await requireApiUser();
+  const auth = await requireEmailAssistantApiUser();
 
   if (!auth.ok) {
     return auth.response;

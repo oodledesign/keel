@@ -79,6 +79,63 @@ export async function saveAssistantCursor(
   }
 }
 
+export async function touchAssistantSyncTime(userId: string) {
+  const settings = await loadAssistantSettings(userId);
+  const now = new Date().toISOString();
+  const { error } = await adminTable('email_assistant_settings')
+    .upsert(
+      {
+        user_id: userId,
+        last_history_id: settings?.last_history_id ?? null,
+        last_synced_at: now,
+        updated_at: now,
+      },
+      { onConflict: 'user_id' },
+    )
+    .select('user_id')
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function listSyncedGmailMessageIds(
+  userId: string,
+  gmailMessageIds: string[],
+): Promise<Set<string>> {
+  const synced = new Set<string>();
+
+  if (gmailMessageIds.length === 0) {
+    return synced;
+  }
+
+  const admin = getSupabaseServerAdminClient();
+  const chunkSize = 200;
+
+  for (let offset = 0; offset < gmailMessageIds.length; offset += chunkSize) {
+    const chunk = gmailMessageIds.slice(offset, offset + chunkSize);
+    const { data, error } = await admin
+      .from('email_messages')
+      .select('gmail_message_id')
+      .eq('user_id', userId)
+      .in('gmail_message_id', chunk);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    for (const row of data ?? []) {
+      const id = (row as { gmail_message_id?: string | null }).gmail_message_id;
+      if (id) {
+        synced.add(id);
+      }
+    }
+  }
+
+  return synced;
+}
+
 export async function upsertEmailThread(input: {
   userId: string;
   gmailThreadId: string;

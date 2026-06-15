@@ -10,6 +10,13 @@ import featureFlagsConfig from '~/config/feature-flags.config';
 import { PersonalAccountCheckoutSchema } from '../schema/personal-account-checkout.schema';
 import { createUserBillingService } from './user-billing.service';
 
+function personalCheckoutEnabled() {
+  return (
+    featureFlagsConfig.enablePersonalAccountBilling ||
+    featureFlagsConfig.enableTeamAccountBilling
+  );
+}
+
 /**
  * @name enabled
  * @description This feature flag is used to enable or disable personal account billing.
@@ -22,8 +29,8 @@ const enabled = featureFlagsConfig.enablePersonalAccountBilling;
  */
 export const createPersonalAccountCheckoutSession = enhanceAction(
   async function (data) {
-    if (!enabled) {
-      throw new Error('Personal account billing is not enabled');
+    if (!personalCheckoutEnabled()) {
+      throw new Error('Billing is not enabled');
     }
 
     const client = getSupabaseServerClient();

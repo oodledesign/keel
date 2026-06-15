@@ -10,7 +10,8 @@ export type KeelPlanFamily =
   | 'addon_rankly'
   | 'addon_feedflow'
   | 'addon_videos'
-  | 'addon_signatures';
+  | 'addon_signatures'
+  | 'addon_email_assistant';
 
 export type KeelPlanLimits = {
   maxMembers: number | null;
@@ -214,6 +215,14 @@ const ADDONS: KeelPlanDefinition[] = [
     entitlementKey: 'addon_videos',
     limits: { maxMembers: null, maxProperties: null, maxVideos: 100 },
   },
+  {
+    productId: 'keel-addon-email-assistant',
+    planId: 'email-assistant-monthly',
+    stripePriceId: KEEL_STRIPE_PRICES.addon_email_assistant_monthly,
+    family: 'addon_email_assistant',
+    entitlementKey: 'addon_email_assistant',
+    limits: { maxMembers: null, maxProperties: null, maxVideos: null },
+  },
 ];
 
 export const KEEL_PLAN_CATALOG: KeelPlanDefinition[] = [
@@ -296,6 +305,31 @@ export type KeelAddonKey =
   | 'addon_rankly'
   | 'addon_feedflow'
   | 'addon_videos';
+
+/** Personal-account add-ons (entitlement on the user's personal account id). */
+export type KeelPersonalAddonKey = 'addon_email_assistant';
+
+export const EMAIL_ASSISTANT_ENTITLEMENT: KeelPersonalAddonKey =
+  'addon_email_assistant';
+
+export const KEEL_PERSONAL_ADDON_CATALOG: Array<{
+  key: KeelPersonalAddonKey;
+  productId: string;
+  planId: string;
+  name: string;
+  description: string;
+  monthlyPriceGbp: number;
+}> = [
+  {
+    key: 'addon_email_assistant',
+    productId: 'keel-addon-email-assistant',
+    planId: 'email-assistant-monthly',
+    name: 'Email Assistant',
+    description:
+      'Gmail inbox sync, AI action items, and draft replies in your personal Keel.',
+    monthlyPriceGbp: 12,
+  },
+];
 
 export const KEEL_ADDON_CATALOG: Array<{
   key: KeelAddonKey;

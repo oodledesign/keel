@@ -6,6 +6,7 @@ import { PageBody } from '@kit/ui/page';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { AdminBillingGrantsPanel } from './_components/admin-billing-grants-panel';
+import { AdminPersonalAddonsPanel } from './_components/admin-personal-addons-panel';
 import { loadAdminAccountBillingState } from './_lib/load-admin-account-billing';
 
 interface Params {
@@ -32,7 +33,17 @@ async function AccountPage(props: Params) {
   return (
     <>
       <AdminAccountPage account={account} />
-      {!isPersonal ? (
+      {isPersonal ? (
+        <PageBody className="border-t py-4">
+          <div className="mx-auto max-w-3xl px-4">
+            <AdminPersonalAddonsPanel
+              accountId={params.id}
+              entitlements={billing.entitlements}
+              billingExempt={billing.billingExempt}
+            />
+          </div>
+        </PageBody>
+      ) : (
         <PageBody className="border-t py-4">
           <div className="mx-auto max-w-3xl px-4">
             <AdminBillingGrantsPanel
@@ -42,7 +53,7 @@ async function AccountPage(props: Params) {
             />
           </div>
         </PageBody>
-      ) : null}
+      )}
     </>
   );
 }

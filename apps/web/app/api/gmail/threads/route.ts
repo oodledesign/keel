@@ -1,10 +1,10 @@
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
-import { requireApiUser } from '~/lib/email-assistant/require-api-user';
+import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-  const auth = await requireApiUser();
+  const auth = await requireEmailAssistantApiUser();
 
   if (!auth.ok) {
     return auth.response;

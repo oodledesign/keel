@@ -3,7 +3,7 @@ import { extract, type EmailActionItem } from '@kit/email-assistant';
 import { todayLocalYmd } from '~/home/_lib/due-date-ymd';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { buildThreadText } from '~/lib/email-assistant/thread-text';
-import { requireApiUser } from '~/lib/email-assistant/require-api-user';
+import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -13,7 +13,7 @@ type RouteContext = {
 };
 
 export async function POST(_request: Request, context: RouteContext) {
-  const auth = await requireApiUser();
+  const auth = await requireEmailAssistantApiUser();
 
   if (!auth.ok) {
     return auth.response;

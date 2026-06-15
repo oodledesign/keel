@@ -3,8 +3,10 @@ import 'server-only';
 import { GmailApiError, gmailFetch, gmailFetchPaginated } from './client';
 import {
   deleteEmailMessage,
+  listSyncedGmailMessageIds,
   loadAssistantSettings,
   saveAssistantCursor,
+  touchAssistantSyncTime,
   upsertEmailMessage,
   upsertEmailThread,
 } from './db';
@@ -12,6 +14,8 @@ import { parseMessage, participantsFromMessage } from './mime';
 import type { GmailMessage, GmailSyncResult } from './types';
 
 const BACKFILL_QUERY = 'in:inbox newer_than:30d';
+/** Keep each serverless invocation under Vercel's 300s limit (full fetch per message). */
+const BACKFILL_MAX_MESSAGES_PER_RUN = 40;
 
 type GmailListMessage = { id?: string | null; threadId?: string | null };
 type GmailProfile = { historyId?: string | null; emailAddress?: string | null };
@@ -80,21 +84,41 @@ async function fetchProfileHistoryId(userId: string): Promise<string | null> {
 
 export async function backfill(userId: string): Promise<GmailSyncResult> {
   const messageIds = await listBackfillMessageIds(userId);
+  const syncedIds = await listSyncedGmailMessageIds(userId, messageIds);
+  const pending = messageIds.filter((id) => !syncedIds.has(id));
+  const batch = pending.slice(0, BACKFILL_MAX_MESSAGES_PER_RUN);
   let processed = 0;
 
-  for (const messageId of messageIds) {
+  for (const messageId of batch) {
     const message = await fetchMessage(userId, messageId);
     await persistMessage(userId, message);
     processed += 1;
   }
 
-  const historyId = await fetchProfileHistoryId(userId);
-  await saveAssistantCursor(userId, historyId);
+  const remainingEstimate = Math.max(pending.length - batch.length, 0);
+  const backfillComplete = remainingEstimate === 0;
+
+  if (backfillComplete) {
+    const historyId = await fetchProfileHistoryId(userId);
+    await saveAssistantCursor(userId, historyId);
+
+    return {
+      mode: 'backfill',
+      messagesProcessed: processed,
+      historyId,
+      backfillComplete: true,
+      remainingEstimate: 0,
+    };
+  }
+
+  await touchAssistantSyncTime(userId);
 
   return {
     mode: 'backfill',
     messagesProcessed: processed,
-    historyId,
+    historyId: null,
+    backfillComplete: false,
+    remainingEstimate,
   };
 }
 

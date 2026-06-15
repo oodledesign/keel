@@ -7,8 +7,11 @@ import { isSuperAdmin } from '@kit/admin';
 import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
 
 import {
+  EMAIL_ASSISTANT_ENTITLEMENT,
   findPlanByStripePriceId,
   requiredEntitlementForProfile,
+  type KeelAddonKey,
+  type KeelPersonalAddonKey,
   type KeelPlanDefinition,
 } from './keel-plan-catalog';
 
@@ -140,11 +143,7 @@ export async function canUseAddon(
   client: SupabaseClient,
   userId: string,
   accountId: string,
-  addonKey:
-    | 'addon_signatures'
-    | 'addon_rankly'
-    | 'addon_feedflow'
-    | 'addon_videos',
+  addonKey: KeelAddonKey | KeelPersonalAddonKey,
 ): Promise<boolean> {
   if (await isSuperAdmin(client)) {
     return true;
@@ -182,6 +181,14 @@ export async function canUseAddon(
   }
 
   return false;
+}
+
+/** Personal Gmail assistant — entitlement lives on the personal account (same id as user). */
+export async function canUseEmailAssistant(
+  client: SupabaseClient,
+  userId: string,
+): Promise<boolean> {
+  return canUseAddon(client, userId, userId, EMAIL_ASSISTANT_ENTITLEMENT);
 }
 
 export async function assertMemberInviteAllowed(

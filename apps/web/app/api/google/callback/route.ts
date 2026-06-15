@@ -4,6 +4,7 @@ import { exchangeCode, upsertConnection } from '@kit/google-auth';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
+import { canUseEmailAssistant } from '~/lib/billing/entitlements';
 import {
   EMAIL_ASSISTANT_DEFAULT_RETURN_PATH,
   GMAIL_OAUTH_SCOPES,
@@ -66,6 +67,14 @@ export async function GET(request: NextRequest) {
 
   if (!user) {
     return NextResponse.redirect(absoluteUrl(pathsConfig.auth.signIn));
+  }
+
+  if (!(await canUseEmailAssistant(client, user.id))) {
+    return NextResponse.redirect(
+      absoluteUrl(
+        `${pathsConfig.app.personalAccountBilling}?addon=email-assistant`,
+      ),
+    );
   }
 
   const payload = stateToken ? verifyGoogleOAuthState(stateToken) : null;

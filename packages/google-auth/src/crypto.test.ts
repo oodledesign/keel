@@ -20,6 +20,15 @@ describe('google-auth crypto', () => {
 
     expect(decrypt(blob)).toBe(plain);
   });
+
+  it('falls back to TOKEN_ENCRYPTION_KEY when GOOGLE_TOKEN_ENC_KEY is unset', () => {
+    vi.stubEnv('TOKEN_ENCRYPTION_KEY', Buffer.alloc(32, 3).toString('base64'));
+
+    const plain = 'ya29.legacy-calendar-key-fallback';
+    const blob = encrypt(plain);
+
+    expect(decrypt(blob)).toBe(plain);
+  });
 });
 
 function IV_TAG_MIN_LEN() {

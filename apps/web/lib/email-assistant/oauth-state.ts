@@ -13,11 +13,13 @@ function stateSecret() {
     return explicit;
   }
 
-  const tokenKey = process.env.GOOGLE_TOKEN_ENC_KEY?.trim();
+  const tokenKey =
+    process.env.GOOGLE_TOKEN_ENC_KEY?.trim() ||
+    process.env.TOKEN_ENCRYPTION_KEY?.trim();
 
   if (!tokenKey || tokenKey.length < 16) {
     throw new Error(
-      'OAUTH_STATE_SECRET or GOOGLE_TOKEN_ENC_KEY is required for Google OAuth state',
+      'OAUTH_STATE_SECRET, GOOGLE_TOKEN_ENC_KEY, or TOKEN_ENCRYPTION_KEY is required for Google OAuth state',
     );
   }
 

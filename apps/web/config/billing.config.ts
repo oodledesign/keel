@@ -304,6 +304,35 @@ export default createBillingSchema({
       ],
     },
     {
+      id: 'keel-addon-email-assistant',
+      name: 'Email Assistant',
+      description:
+        'Gmail inbox sync, AI action items, and draft replies in your personal Keel',
+      currency: KEEL_BILLING_CURRENCY,
+      plans: [
+        {
+          id: 'email-assistant-monthly',
+          name: 'Email Assistant Monthly',
+          paymentType: 'recurring',
+          interval: 'month',
+          lineItems: [
+            {
+              id: KEEL_STRIPE_PRICES.addon_email_assistant_monthly,
+              name: 'Email Assistant',
+              cost: 12,
+              type: 'flat',
+            },
+          ],
+        },
+      ],
+      features: [
+        'Gmail inbox sync',
+        'AI suggested to-dos from threads',
+        'Draft replies in your voice',
+        'Accept actions into Keel tasks',
+      ],
+    },
+    {
       id: 'keel-addon-signatures',
       name: 'Signatures',
       description: 'Branded email signatures for Microsoft 365 and Google Workspace',

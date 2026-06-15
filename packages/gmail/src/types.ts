@@ -70,4 +70,8 @@ export type GmailSyncResult = {
   mode: 'backfill' | 'incremental';
   messagesProcessed: number;
   historyId: string | null;
+  /** False while first inbox backfill still has unsynced messages. */
+  backfillComplete?: boolean;
+  /** Approximate messages still to backfill (backfill mode only). */
+  remainingEstimate?: number;
 };

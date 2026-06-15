@@ -88,6 +88,10 @@ export const KEEL_STRIPE_PRICES = {
     'STRIPE_PRICE_ADDON_VIDEOS_STUDIO_MONTHLY',
     'price_keel_addon_videos_studio_monthly',
   ),
+  addon_email_assistant_monthly: price(
+    'STRIPE_PRICE_ADDON_EMAIL_ASSISTANT_MONTHLY',
+    'price_keel_addon_email_assistant_monthly',
+  ),
 } as const;
 
 export const KEEL_BILLING_CURRENCY =

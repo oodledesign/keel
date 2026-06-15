@@ -3,6 +3,7 @@ import { Suspense } from 'react';
 import { PageBody } from '@kit/ui/page';
 
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { redirectIfEmailAssistantNotAllowed } from '~/lib/billing/require-email-assistant-access';
 
 import { EmailPageClient } from './_components/email-page-client';
 import { loadEmailPageData } from './_lib/server/email-page.loader';
@@ -10,6 +11,7 @@ import { loadEmailPageData } from './_lib/server/email-page.loader';
 export const metadata = { title: 'Email — Keel' };
 
 async function EmailPageContent() {
+  await redirectIfEmailAssistantNotAllowed();
   const initialData = await loadEmailPageData();
   return <EmailPageClient initialData={initialData} />;
 }

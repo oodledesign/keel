@@ -3,7 +3,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { syncMailbox } from '@kit/gmail';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { authorizeCron } from '~/lib/email-assistant/cron-auth';
-import { requireApiUser } from '~/lib/email-assistant/require-api-user';
+import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -65,7 +65,7 @@ export async function GET(request: Request) {
 
 /** Authenticated user: sync their mailbox now. */
 export async function POST() {
-  const auth = await requireApiUser();
+  const auth = await requireEmailAssistantApiUser();
 
   if (!auth.ok) {
     return auth.response;
