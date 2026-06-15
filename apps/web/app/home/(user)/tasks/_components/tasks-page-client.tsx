@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation';
 
 import {
   AlertTriangle,
+  Check,
   ChevronDown,
   ChevronRight,
   Flame,
@@ -20,6 +21,7 @@ import {
   List as ListIcon,
   Pencil,
   Search,
+  SlidersHorizontal,
   Users,
 } from 'lucide-react';
 
@@ -40,12 +42,17 @@ import { Button } from '@kit/ui/button';
 import { Checkbox } from '@kit/ui/checkbox';
 import { cn } from '@kit/ui/utils';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@kit/ui/select';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from '@kit/ui/dropdown-menu';
 
 import { compareYmd, parseDueDateParts } from '../../../_lib/due-date-ymd';
 import type { TasksPageTask } from '../../_lib/server/tasks.loader';
@@ -402,6 +409,286 @@ function updateTaskTitleInTree(
   });
 }
 
+const toolbarIconButtonClass =
+  'relative h-10 w-10 shrink-0 rounded-xl border-white/8 bg-[var(--workspace-shell-panel)] text-zinc-300 hover:bg-white/8 hover:text-white';
+
+const dropdownContentClass =
+  'border-white/10 bg-[#1A2535] text-white';
+
+function TasksFilterMenu(props: {
+  dueDateFilter: DueDateFilter;
+  onDueDateFilterChange: (value: DueDateFilter) => void;
+  clientFilter: string;
+  onClientFilterChange: (value: string) => void;
+  clientOptions: Array<[string, string]>;
+  workspaceFilter: string;
+  onWorkspaceFilterChange: (value: string) => void;
+  workspaceFilterOptions: Array<{
+    slug: string | null;
+    name: string;
+    color: string;
+  }>;
+  showWorkspaceFilter: boolean;
+  contextFilter: 'all' | 'work' | 'life';
+  onContextFilterChange: (value: 'all' | 'work' | 'life') => void;
+  showContextFilter: boolean;
+  statusFilter: 'active' | 'completed';
+  onStatusFilterChange: (value: 'active' | 'completed') => void;
+  showStatusFilter: boolean;
+}) {
+  const hasActiveFilters =
+    props.dueDateFilter !== 'all' ||
+    props.clientFilter !== 'all' ||
+    props.workspaceFilter !== 'all' ||
+    props.contextFilter !== 'all' ||
+    props.statusFilter !== 'active';
+
+  const clientLabel =
+    props.clientFilter === 'all'
+      ? 'All clients'
+      : props.clientFilter === '__none__'
+        ? 'No client'
+        : (props.clientOptions.find(([id]) => id === props.clientFilter)?.[1] ??
+          'Client');
+
+  const workspaceLabel =
+    props.workspaceFilter === 'all'
+      ? 'All workspaces'
+      : props.workspaceFilter === 'personal'
+        ? 'Personal only'
+        : (props.workspaceFilterOptions.find(
+            (ws) => ws.slug === props.workspaceFilter,
+          )?.name ?? 'Workspace');
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          aria-label="Filter tasks"
+          className={toolbarIconButtonClass}
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          {hasActiveFilters ? (
+            <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[var(--keel-teal)]" />
+          ) : null}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className={cn('w-56', dropdownContentClass)}>
+        <DropdownMenuLabel className="text-xs text-zinc-400">Due date</DropdownMenuLabel>
+        <DropdownMenuRadioGroup
+          value={props.dueDateFilter}
+          onValueChange={(value) =>
+            props.onDueDateFilterChange(value as DueDateFilter)
+          }
+        >
+          {(
+            [
+              ['today', 'Today'],
+              ['week', 'This week'],
+              ['month', 'This month'],
+              ['all', 'All dates'],
+            ] as const
+          ).map(([value, label]) => (
+            <DropdownMenuRadioItem
+              key={value}
+              value={value}
+              className="focus:bg-white/10 focus:text-white"
+            >
+              {label}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+
+        {props.showStatusFilter ? (
+          <>
+            <DropdownMenuSeparator className="bg-white/10" />
+            <DropdownMenuLabel className="text-xs text-zinc-400">Status</DropdownMenuLabel>
+            <DropdownMenuRadioGroup
+              value={props.statusFilter}
+              onValueChange={(value) =>
+                props.onStatusFilterChange(value as 'active' | 'completed')
+              }
+            >
+              <DropdownMenuRadioItem
+                value="active"
+                className="focus:bg-white/10 focus:text-white"
+              >
+                Active
+              </DropdownMenuRadioItem>
+              <DropdownMenuRadioItem
+                value="completed"
+                className="focus:bg-white/10 focus:text-white"
+              >
+                Completed
+              </DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+          </>
+        ) : null}
+
+        {props.showContextFilter ? (
+          <>
+            <DropdownMenuSeparator className="bg-white/10" />
+            <DropdownMenuLabel className="text-xs text-zinc-400">Scope</DropdownMenuLabel>
+            <DropdownMenuRadioGroup
+              value={props.contextFilter}
+              onValueChange={(value) =>
+                props.onContextFilterChange(value as 'all' | 'work' | 'life')
+              }
+            >
+              {(['all', 'work', 'life'] as const).map((value) => (
+                <DropdownMenuRadioItem
+                  key={value}
+                  value={value}
+                  className="capitalize focus:bg-white/10 focus:text-white"
+                >
+                  {value}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </>
+        ) : null}
+
+        {props.showWorkspaceFilter && props.workspaceFilterOptions.length > 0 ? (
+          <>
+            <DropdownMenuSeparator className="bg-white/10" />
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className="focus:bg-white/10 focus:text-white">
+                Workspace · {workspaceLabel}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className={dropdownContentClass}>
+                <DropdownMenuRadioGroup
+                  value={props.workspaceFilter}
+                  onValueChange={props.onWorkspaceFilterChange}
+                >
+                  <DropdownMenuRadioItem
+                    value="all"
+                    className="focus:bg-white/10 focus:text-white"
+                  >
+                    All workspaces
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem
+                    value="personal"
+                    className="focus:bg-white/10 focus:text-white"
+                  >
+                    Personal only
+                  </DropdownMenuRadioItem>
+                  {props.workspaceFilterOptions.map((ws) =>
+                    ws.slug ? (
+                      <DropdownMenuRadioItem
+                        key={ws.slug}
+                        value={ws.slug}
+                        className="focus:bg-white/10 focus:text-white"
+                      >
+                        {ws.name}
+                      </DropdownMenuRadioItem>
+                    ) : null,
+                  )}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          </>
+        ) : null}
+
+        {props.clientOptions.length > 0 ? (
+          <>
+            <DropdownMenuSeparator className="bg-white/10" />
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className="focus:bg-white/10 focus:text-white">
+                Client · {clientLabel}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className={dropdownContentClass}>
+                <DropdownMenuRadioGroup
+                  value={props.clientFilter}
+                  onValueChange={props.onClientFilterChange}
+                >
+                  <DropdownMenuRadioItem
+                    value="all"
+                    className="focus:bg-white/10 focus:text-white"
+                  >
+                    All clients
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem
+                    value="__none__"
+                    className="focus:bg-white/10 focus:text-white"
+                  >
+                    No client
+                  </DropdownMenuRadioItem>
+                  {props.clientOptions.map(([id, name]) => (
+                    <DropdownMenuRadioItem
+                      key={id}
+                      value={id}
+                      className="focus:bg-white/10 focus:text-white"
+                    >
+                      {name}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          </>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function TasksViewMenu(props: {
+  view: TaskViewMode;
+  onViewChange: (view: TaskViewMode) => void;
+}) {
+  const views: Array<{
+    value: TaskViewMode;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+  }> = [
+    { value: 'list', label: 'List', icon: ListIcon },
+    { value: 'board', label: 'Board', icon: KanbanSquare },
+    { value: 'byClient', label: 'By client', icon: Users },
+  ];
+
+  const current = views.find((item) => item.value === props.view) ?? views[0]!;
+  const CurrentIcon = current.icon;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          aria-label="Change task view"
+          className={toolbarIconButtonClass}
+        >
+          <CurrentIcon className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className={cn('w-44', dropdownContentClass)}>
+        <DropdownMenuLabel className="text-xs text-zinc-400">View</DropdownMenuLabel>
+        {views.map(({ value, label, icon: Icon }) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => props.onViewChange(value)}
+            className={cn(
+              'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden hover:bg-white/10',
+              props.view === value ? 'text-white' : 'text-zinc-300',
+            )}
+          >
+            <Icon className="h-4 w-4 shrink-0" />
+            <span className="flex-1 text-left">{label}</span>
+            {props.view === value ? (
+              <Check className="h-4 w-4 shrink-0 text-[var(--keel-teal)]" />
+            ) : null}
+          </button>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 type Props = {
   initialTasks: TasksPageTask[];
   /** Team workspace: only tasks linked to this account’s projects/clients; hides life/work scope toggle. */
@@ -727,27 +1014,16 @@ export function TasksPageClient({
   })();
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 bg-transparent px-4 pb-12 pt-6 text-white md:px-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-6 px-3 pb-8 pt-3 text-white md:px-6 md:pb-12 md:pt-6 lg:max-w-4xl lg:px-8">
+      <div className="flex flex-col gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
             Tasks
           </h1>
           <p className="mt-1 text-sm text-zinc-400">{headerSubtitle}</p>
         </div>
-        {variant === 'personal' ? (
-          <AddTaskDialog />
-        ) : workspaceAccountId ? (
-          <AddTaskDialog
-            workspaceAccountId={workspaceAccountId}
-            workspaceAccountSlug={workspaceAccountSlug}
-          />
-        ) : null}
-      </div>
 
-      {/* Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
+        <div className="relative w-full">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
           <input
             type="text"
@@ -757,13 +1033,28 @@ export function TasksPageClient({
             className="h-10 w-full rounded-xl border border-white/8 bg-[var(--workspace-shell-panel)] pl-10 pr-4 text-sm text-white placeholder:text-zinc-500 focus:border-white/16 focus:outline-none"
           />
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {variant === 'personal' &&
-          includeWorkspaceTasks &&
-          workspaceFilterOptions.length > 0 ? (
-            <Select
-              value={workspaceFilter}
-              onValueChange={(value) => {
+
+        <div className="flex items-center gap-2">
+          <div className="shrink-0">
+            {variant === 'personal' ? (
+              <AddTaskDialog />
+            ) : workspaceAccountId ? (
+              <AddTaskDialog
+                workspaceAccountId={workspaceAccountId}
+                workspaceAccountSlug={workspaceAccountSlug}
+              />
+            ) : null}
+          </div>
+
+          <div className="ml-auto flex items-center gap-2">
+            <TasksFilterMenu
+              dueDateFilter={dueDateFilter}
+              onDueDateFilterChange={setDueDateFilter}
+              clientFilter={clientFilter}
+              onClientFilterChange={setClientFilter}
+              clientOptions={clientOptions}
+              workspaceFilter={workspaceFilter}
+              onWorkspaceFilterChange={(value) => {
                 setWorkspaceFilter(value);
                 if (value === 'personal') {
                   setFilter('life');
@@ -771,138 +1062,20 @@ export function TasksPageClient({
                   setFilter('work');
                 }
               }}
-            >
-              <SelectTrigger className="h-9 w-[200px] border-white/8 bg-[var(--workspace-shell-panel)] text-xs text-white">
-                <SelectValue placeholder="All workspaces" />
-              </SelectTrigger>
-              <SelectContent className="border-white/10 bg-[#1A2535] text-white">
-                <SelectItem value="all">All workspaces</SelectItem>
-                <SelectItem value="personal">Personal only</SelectItem>
-                {workspaceFilterOptions.map((ws) =>
-                  ws.slug ? (
-                    <SelectItem key={ws.slug} value={ws.slug}>
-                      {ws.name}
-                    </SelectItem>
-                  ) : null,
-                )}
-              </SelectContent>
-            </Select>
-          ) : null}
-          {clientOptions.length > 0 && (
-            <Select value={clientFilter} onValueChange={setClientFilter}>
-              <SelectTrigger className="h-9 w-[180px] border-white/8 bg-[var(--workspace-shell-panel)] text-xs text-white">
-                <SelectValue placeholder="All clients" />
-              </SelectTrigger>
-              <SelectContent className="border-white/10 bg-[#1A2535] text-white">
-                <SelectItem value="all">All clients</SelectItem>
-                <SelectItem value="__none__">No client</SelectItem>
-                {clientOptions.map(([id, name]) => (
-                  <SelectItem key={id} value={id}>
-                    {name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <div className="flex rounded-xl border border-white/8 bg-[var(--workspace-shell-panel)] p-1 text-xs">
-            {(
-              [
-                ['today', 'Today'],
-                ['week', 'This week'],
-                ['month', 'This month'],
-                ['all', 'All'],
-              ] as const
-            ).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setDueDateFilter(key)}
-                className={`rounded-lg px-2.5 py-1.5 font-medium transition-colors sm:px-3 ${
-                  dueDateFilter === key
-                    ? 'bg-white/10 text-white'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          {variant === 'personal' ? (
-            <div className="flex rounded-xl border border-white/8 bg-[var(--workspace-shell-panel)] p-1 text-xs">
-              {(['all', 'work', 'life'] as const).map((f) => (
-                <button
-                  key={f}
-                  type="button"
-                  onClick={() => setFilter(f)}
-                  className={`rounded-lg px-3 py-1.5 font-medium capitalize transition-colors ${
-                    filter === f
-                      ? 'bg-white/10 text-white'
-                      : 'text-zinc-400 hover:text-white'
-                  }`}
-                >
-                  {f}
-                </button>
-              ))}
-            </div>
-          ) : null}
-          {(view === 'list' || view === 'byClient') && (
-            <div className="flex rounded-xl border border-white/8 bg-[var(--workspace-shell-panel)] p-1 text-xs">
-              {(['active', 'completed'] as const).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setStatusFilter(s)}
-                  className={`rounded-lg px-3 py-1.5 font-medium capitalize transition-colors ${
-                    statusFilter === s
-                      ? 'bg-white/10 text-white'
-                      : 'text-zinc-400 hover:text-white'
-                  }`}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="flex rounded-xl border border-white/8 bg-[var(--workspace-shell-panel)] p-1 text-xs">
-            <button
-              type="button"
-              onClick={() => setView('list')}
-              aria-label="List view"
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-colors ${
-                view === 'list'
-                  ? 'bg-white/10 text-white'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              <ListIcon className="h-3.5 w-3.5" />
-              List
-            </button>
-            <button
-              type="button"
-              onClick={() => setView('board')}
-              aria-label="Board view"
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-colors ${
-                view === 'board'
-                  ? 'bg-white/10 text-white'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              <KanbanSquare className="h-3.5 w-3.5" />
-              Board
-            </button>
-            <button
-              type="button"
-              onClick={() => setView('byClient')}
-              aria-label="By client view"
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-colors ${
-                view === 'byClient'
-                  ? 'bg-white/10 text-white'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              <Users className="h-3.5 w-3.5" />
-              By Client
-            </button>
+              workspaceFilterOptions={workspaceFilterOptions}
+              showWorkspaceFilter={
+                variant === 'personal' &&
+                includeWorkspaceTasks &&
+                workspaceFilterOptions.length > 0
+              }
+              contextFilter={filter}
+              onContextFilterChange={setFilter}
+              showContextFilter={variant === 'personal'}
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              showStatusFilter={view === 'list' || view === 'byClient'}
+            />
+            <TasksViewMenu view={view} onViewChange={setView} />
           </div>
         </div>
       </div>

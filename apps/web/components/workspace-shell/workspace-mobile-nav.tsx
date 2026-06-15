@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { Menu, X } from 'lucide-react';
+import { Menu, Settings, X } from 'lucide-react';
 
 import { Trans } from '@kit/ui/trans';
 import { cn } from '@kit/ui/utils';
@@ -180,6 +180,44 @@ export function WorkspaceMobileBottomNav({
 }: WorkspaceMobileBottomNavProps) {
   const pathname = usePathname();
 
+  if (menuOpen) {
+    return (
+      <nav
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-[110] flex justify-center px-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:hidden"
+        aria-label="Menu controls"
+      >
+        <div className="pointer-events-auto flex h-14 items-center gap-3 rounded-full border border-white/10 bg-[#1A2535]/98 px-3 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+          <HapticButton
+            type="button"
+            aria-label="Close menu"
+            className={cn(
+              MOBILE_NAV_BTN_CLASS,
+              'gap-2 px-4 text-sm font-medium text-zinc-200 hover:bg-white/8',
+            )}
+            onClick={() => onMenuOpenChange(false)}
+          >
+            <X className={MOBILE_NAV_ICON_CLASS} />
+            <span>Close</span>
+          </HapticButton>
+
+          <HapticLink
+            href={settingsHref}
+            onClick={() => onMenuOpenChange(false)}
+            className={cn(
+              MOBILE_NAV_BTN_CLASS,
+              'min-w-[5.5rem] flex-col gap-0.5 px-3 text-zinc-300 hover:bg-white/8 hover:text-white',
+            )}
+          >
+            <Settings className={MOBILE_NAV_ICON_CLASS} />
+            <span className="max-w-[7rem] truncate text-[10px] font-medium leading-none">
+              {settingsLabel}
+            </span>
+          </HapticLink>
+        </div>
+      </nav>
+    );
+  }
+
   return (
     <nav
       className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:hidden"
@@ -249,7 +287,7 @@ export function WorkspaceMobileHeaderBar({
   return (
     <header
       className={cn(
-        'sticky top-0 z-30 flex h-12 shrink-0 items-center gap-2 border-b border-white/8 bg-[var(--workspace-shell-canvas)] px-3 lg:hidden',
+        'z-30 flex h-12 shrink-0 items-center gap-2 border-b border-white/8 bg-[var(--workspace-shell-canvas)] px-3 lg:hidden',
         className,
       )}
     >

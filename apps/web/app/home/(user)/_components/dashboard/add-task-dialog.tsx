@@ -19,10 +19,7 @@ import { Label } from '@kit/ui/label';
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
-  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
@@ -38,7 +35,7 @@ import {
   type TaskAssignmentOption,
 } from '../../_lib/actions/task-actions';
 import { createClient } from '~/home/[account]/clients/_lib/server/server-actions';
-import { groupProjectsByWorkspace } from '../../tasks/_lib/group-task-options';
+import { TaskAssignmentCombobox } from './task-assignment-combobox';
 
 const PRIORITIES = [
   { key: 'low', label: 'Low' },
@@ -187,8 +184,6 @@ export function AddTaskDialog({
 
   const projects = options.filter((o) => o.type === 'project');
   const clients = options.filter((o) => o.type === 'client');
-  const areas = options.filter((o) => o.type === 'area');
-  const projectGroups = groupProjectsByWorkspace(projects);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -267,86 +262,17 @@ export function AddTaskDialog({
                 Loading...
               </div>
             ) : (
-              <Select value={assignTo} onValueChange={setAssignTo}>
-                <SelectTrigger className="border-white/10 bg-white/5 text-white">
-                  <SelectValue
-                    placeholder={
-                      isWorkspaceMode
-                        ? 'Select project or client'
-                        : 'No assignment'
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent className="border-white/10 bg-[#1A2535] text-white">
-                  {!isWorkspaceMode ? (
-                    <SelectItem value="none">No assignment</SelectItem>
-                  ) : null}
-                  {projectGroups.length > 0
-                    ? projectGroups.map((group) => (
-                        <SelectGroup key={group.key}>
-                          <SelectLabel className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
-                            {isWorkspaceMode ? 'Projects' : group.label}
-                          </SelectLabel>
-                          {group.projects.map((p) => (
-                            <SelectItem key={p.id} value={p.id}>
-                              <span className="flex items-center gap-2">
-                                {p.color && (
-                                  <span
-                                    className="inline-block h-2 w-2 shrink-0 rounded-full"
-                                    style={{ backgroundColor: p.color }}
-                                  />
-                                )}
-                                {p.name}
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      ))
-                    : null}
-                  {isWorkspaceMode && clients.length > 0 ? (
-                    <>
-                      {projectGroups.length > 0 ? (
-                        <SelectSeparator className="my-1 bg-white/10" />
-                      ) : null}
-                      <SelectGroup>
-                        <SelectLabel className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
-                          Clients
-                        </SelectLabel>
-                        {clients.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </>
-                  ) : null}
-                  {!isWorkspaceMode && areas.length > 0 ? (
-                    <>
-                      {projectGroups.length > 0 ? (
-                        <SelectSeparator className="my-1 bg-white/10" />
-                      ) : null}
-                      <SelectGroup>
-                        <SelectLabel className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-                          Life areas
-                        </SelectLabel>
-                        {areas.map((a) => (
-                          <SelectItem key={a.id} value={a.id}>
-                            <span className="flex items-center gap-2">
-                              {a.color && (
-                                <span
-                                  className="inline-block h-2 w-2 shrink-0 rounded-full"
-                                  style={{ backgroundColor: a.color }}
-                                />
-                              )}
-                              {a.name}
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </>
-                  ) : null}
-                </SelectContent>
-              </Select>
+              <TaskAssignmentCombobox
+                value={assignTo}
+                onValueChange={setAssignTo}
+                options={options}
+                isWorkspaceMode={isWorkspaceMode}
+                placeholder={
+                  isWorkspaceMode
+                    ? 'Select project or client'
+                    : 'No assignment'
+                }
+              />
             )}
             {isWorkspaceMode &&
             !optionsLoading &&

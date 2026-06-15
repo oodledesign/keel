@@ -59,7 +59,7 @@ export function AccessibilityStep({
     initial?.accessibility_simplified_mode ?? true,
   );
   const [enhancedFocus, setEnhancedFocus] = useState(
-    initial?.accessibility_enhanced_focus ?? true,
+    initial?.accessibility_enhanced_focus ?? false,
   );
   const [dyslexiaFont, setDyslexiaFont] = useState(
     initial?.accessibility_dyslexia_font ?? false,

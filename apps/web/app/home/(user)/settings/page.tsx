@@ -16,7 +16,7 @@ import { PersonalDashboardShortcutsSection } from './_components/personal-dashbo
 // Show email option if password, magic link, or OTP is enabled
 const showEmailOption =
   authConfig.providers.password ||
-  authConfig.providers.magicLink ||
+  authConfig.providers.magicLinkSignIn ||
   authConfig.providers.otp;
 
 const features = {

@@ -18,6 +18,7 @@ import {
 import type { MobileBottomNavTab } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
 import { WorkspaceMobileTopActions } from '~/components/workspace-shell/workspace-top-bar-actions';
 import pathsConfig from '~/config/paths.config';
+import { WorkspaceMobileScrollLock } from '~/lib/pwa/workspace-mobile-scroll-lock';
 import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
 import type { UserWorkspace } from '~/home/(user)/_lib/server/load-user-workspace';
 
@@ -43,6 +44,7 @@ export function PersonalHomeMobileChrome({
 
   return (
     <>
+      <WorkspaceMobileScrollLock />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <WorkspaceMobileHeaderBar>
           <div className="min-w-0 flex-1">

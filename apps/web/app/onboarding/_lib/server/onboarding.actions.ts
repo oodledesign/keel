@@ -48,7 +48,7 @@ export async function getAccessibilityPreferencesForSync(): Promise<Accessibilit
       ? row.accessibility_text_size
       : 'standard';
   const dyslexiaFont = row?.accessibility_dyslexia_font === true;
-  const enhancedFocus = row?.accessibility_enhanced_focus !== false;
+  const enhancedFocus = row?.accessibility_enhanced_focus === true;
 
   const store = await cookies();
   store.set(ACCESSIBILITY_TEXT_SIZE_COOKIE, textSize, {

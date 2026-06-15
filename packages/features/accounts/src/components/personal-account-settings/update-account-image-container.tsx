@@ -16,6 +16,20 @@ import { useRevalidatePersonalAccountDataQuery } from '../../hooks/use-personal-
 
 const AVATARS_BUCKET = 'account_image';
 
+function toSupabasePublicStorageUrl(url: string | null | undefined) {
+  const trimmed = url?.trim();
+  if (!trimmed) return null;
+
+  return trimmed.replace(
+    /\/storage\/v1\/object\/(?!public\/)([a-z0-9_-]+)\//i,
+    '/storage/v1/object/public/$1/',
+  );
+}
+
+function isAccountImageStorageUrl(url: string) {
+  return url.includes('/account_image/');
+}
+
 export function UpdateAccountImageContainer({
   user,
 }: {
@@ -28,7 +42,7 @@ export function UpdateAccountImageContainer({
 
   return (
     <UploadProfileAvatarForm
-      pictureUrl={user.pictureUrl ?? null}
+      pictureUrl={toSupabasePublicStorageUrl(user.pictureUrl ?? null)}
       userId={user.id}
       onAvatarUpdated={() => revalidateUserDataQuery(user.id)}
     />
@@ -67,6 +81,11 @@ function UploadProfileAvatarForm(props: {
       };
 
       if (file) {
+        if (!file.type.startsWith('image/')) {
+          toast.error(t('updateProfileError'));
+          return;
+        }
+
         const promise = () =>
           removeExistingStorageFile().then(() =>
             uploadUserProfilePhoto(client, file, props.userId)
@@ -123,14 +142,18 @@ function UploadProfileAvatarForm(props: {
 }
 
 function deleteProfilePhoto(client: SupabaseClient<Database>, url: string) {
-  const bucket = client.storage.from(AVATARS_BUCKET);
-  const fileName = url.split('/').pop()?.split('?')[0];
-
-  if (!fileName) {
+  if (!isAccountImageStorageUrl(url)) {
     return;
   }
 
-  return bucket.remove([fileName]);
+  const bucket = client.storage.from(AVATARS_BUCKET);
+  const path = url.split('/account_image/')[1]?.split('?')[0];
+
+  if (!path) {
+    return;
+  }
+
+  return bucket.remove([path]);
 }
 
 async function uploadUserProfilePhoto(
@@ -150,7 +173,14 @@ async function uploadUserProfilePhoto(
   });
 
   if (!result.error) {
-    const url = bucket.getPublicUrl(userId).data.publicUrl;
+    const url = toSupabasePublicStorageUrl(
+      bucket.getPublicUrl(fileName).data.publicUrl,
+    );
+
+    if (!url) {
+      throw new Error('Failed to build public image URL');
+    }
+
     return `${url}?v=${cacheBuster}`;
   }
 

@@ -6,7 +6,7 @@ import { Button } from '@kit/ui/button';
 import { Heading } from '@kit/ui/heading';
 import { Trans } from '@kit/ui/trans';
 
-import authConfig from '~/config/auth.config';
+import authConfig, { getSignInAuthProviders } from '~/config/auth.config';
 import pathsConfig from '~/config/paths.config';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
@@ -48,7 +48,7 @@ async function SignInPage({ searchParams }: SignInPageProps) {
 
       <SignInMethodsContainer
         paths={paths}
-        providers={authConfig.providers}
+        providers={getSignInAuthProviders()}
         captchaSiteKey={authConfig.captchaTokenSiteKey}
       />
 

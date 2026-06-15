@@ -51,17 +51,20 @@ async function TasksContent({ searchParams }: { searchParams: Promise<{ workspac
 
 function TasksSkeleton() {
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 px-4 pb-12 pt-6 md:px-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-6 px-3 pb-8 pt-3 md:px-6 md:pb-12 md:pt-6 lg:max-w-4xl lg:px-8">
+      <div className="flex flex-col gap-4">
         <div className="space-y-2">
           <div className="h-8 w-32 animate-pulse rounded-xl bg-white/[0.04]" />
           <div className="h-4 w-48 animate-pulse rounded-xl bg-white/[0.04]" />
         </div>
-        <div className="h-9 w-28 animate-pulse rounded-xl bg-white/[0.04]" />
-      </div>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="h-10 flex-1 animate-pulse rounded-xl bg-white/[0.04]" />
-        <div className="h-9 w-40 animate-pulse rounded-xl bg-white/[0.04]" />
+        <div className="h-10 w-full animate-pulse rounded-xl bg-white/[0.04]" />
+        <div className="flex items-center justify-between gap-2">
+          <div className="h-10 w-28 animate-pulse rounded-xl bg-white/[0.04]" />
+          <div className="flex gap-2">
+            <div className="h-10 w-10 animate-pulse rounded-xl bg-white/[0.04]" />
+            <div className="h-10 w-10 animate-pulse rounded-xl bg-white/[0.04]" />
+          </div>
+        </div>
       </div>
       <div className="space-y-2">
         {Array.from({ length: 5 }).map((_, i) => (

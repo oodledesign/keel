@@ -34,13 +34,12 @@ function getDyslexiaEnabledFromCookie(): boolean {
 }
 
 function getEnhancedFocusFromCookie(): boolean {
-  if (typeof document === 'undefined') return true;
+  if (typeof document === 'undefined') return false;
   const match = document.cookie
     .split('; ')
     .find((row) => row.trimStart().startsWith(`${ENHANCED_FOCUS_COOKIE}=`));
   const raw = match?.split('=').slice(1).join('=').trim();
-  if (raw === '0' || raw === 'false') return false;
-  return true;
+  return raw === '1' || raw === 'true';
 }
 
 function applyAccessibility(prefs?: {

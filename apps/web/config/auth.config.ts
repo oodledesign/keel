@@ -25,8 +25,11 @@ const AuthConfigSchema = z.object({
     password: z.boolean({
       description: 'Enable password authentication.',
     }),
-    magicLink: z.boolean({
-      description: 'Enable magic link authentication.',
+    magicLinkSignIn: z.boolean({
+      description: 'Enable magic link on the sign-in page.',
+    }),
+    magicLinkSignUp: z.boolean({
+      description: 'Enable magic link on the sign-up page.',
     }),
     otp: z.boolean({
       description: 'Enable one-time password authentication.',
@@ -52,11 +55,27 @@ const authConfig = AuthConfigSchema.parse({
   // in your production project
   providers: {
     password: process.env.NEXT_PUBLIC_AUTH_PASSWORD !== 'false',
-    magicLink: false,
+    magicLinkSignIn: process.env.NEXT_PUBLIC_AUTH_MAGIC_LINK !== 'false',
+    magicLinkSignUp: false,
     otp: process.env.NEXT_PUBLIC_AUTH_OTP === 'true',
     oAuth: ['google'],
   },
 } satisfies z.infer<typeof AuthConfigSchema>);
+
+/** Providers shape expected by @kit/auth sign-in / sign-up containers. */
+export function getSignInAuthProviders() {
+  return {
+    ...authConfig.providers,
+    magicLink: authConfig.providers.magicLinkSignIn,
+  };
+}
+
+export function getSignUpAuthProviders() {
+  return {
+    ...authConfig.providers,
+    magicLink: authConfig.providers.magicLinkSignUp,
+  };
+}
 
 export default authConfig;
 

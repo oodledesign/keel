@@ -144,7 +144,7 @@ async function JoinTeamAccountPage(props: JoinTeamAccountPageProps) {
 
   const isNewAccount = isNewUserParam || linkType === 'invite';
   const supportsInviteAuthSelection =
-    authConfig.providers.password || authConfig.providers.magicLink;
+    authConfig.providers.password || authConfig.providers.magicLinkSignIn;
   const shouldSetupAccount = isNewAccount && supportsInviteAuthSelection;
 
   // After join: go to onboarding (required); if new user needs to pick an auth

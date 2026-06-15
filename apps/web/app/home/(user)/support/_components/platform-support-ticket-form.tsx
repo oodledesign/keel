@@ -13,9 +13,12 @@ import { createPlatformSupportTicketAction } from '~/lib/support/platform-suppor
 
 export function PlatformSupportTicketForm(props: {
   accountOptions: Array<{ id: string; label: string }>;
+  defaultAccountId?: string | null;
+  onSuccess?: (result: { id: string }) => void;
 }) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+  const defaultAccountId = props.defaultAccountId ?? '';
 
   return (
     <form
@@ -31,7 +34,11 @@ export function PlatformSupportTicketForm(props: {
               accountId: String(form.get('accountId') ?? '') || null,
             });
             toast.success('Support ticket submitted');
-            router.push(`/app/support/${result.id}`);
+            if (props.onSuccess) {
+              props.onSuccess(result);
+            } else {
+              router.push(`/app/support/${result.id}`);
+            }
           } catch (err) {
             toast.error(err instanceof Error ? err.message : 'Could not submit');
           }
@@ -50,7 +57,7 @@ export function PlatformSupportTicketForm(props: {
             id="accountId"
             name="accountId"
             className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
-            defaultValue=""
+            defaultValue={defaultAccountId}
           >
             <option value="">None</option>
             {props.accountOptions.map((opt) => (

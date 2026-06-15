@@ -27,7 +27,7 @@ async function loadUserAccessibilitySettings(userId: string) {
     accessibility_text_size: data?.accessibility_text_size ?? 'standard',
     accessibility_high_contrast: data?.accessibility_high_contrast ?? false,
     accessibility_simplified_mode: data?.accessibility_simplified_mode ?? true,
-    accessibility_enhanced_focus: data?.accessibility_enhanced_focus ?? true,
+    accessibility_enhanced_focus: data?.accessibility_enhanced_focus ?? false,
     accessibility_dyslexia_font: data?.accessibility_dyslexia_font ?? false,
   };
 }

@@ -221,12 +221,12 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
 
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-auto [-webkit-overflow-scrolling:touch]"
+        className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] [touch-action:pan-y]"
       >
         <div
           className={cn(
             enabled
-              ? 'rounded-t-[1.25rem] bg-[var(--workspace-shell-canvas)] shadow-[0_-1px_0_rgba(255,255,255,0.06)] lg:pb-0'
+              ? 'rounded-t-[1.25rem] bg-[var(--workspace-shell-canvas)] shadow-[0_-1px_0_rgba(255,255,255,0.06)]'
               : 'min-h-full bg-[var(--workspace-shell-canvas)]',
             enabled &&
               (!isDragging && pullDistance === 0 && !refreshing
@@ -239,7 +239,9 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
               : undefined
           }
         >
-          {children}
+          <div className="pb-[calc(4.75rem+env(safe-area-inset-bottom))] lg:pb-0">
+            {children}
+          </div>
         </div>
       </div>
     </div>

@@ -36,25 +36,30 @@ function PageWithSidebar(props: PageProps) {
 
   return (
     <div
-      className={cn('flex min-w-0 flex-1 overflow-x-hidden', props.className)}
+      className={cn(
+        'flex min-h-0 min-w-0 flex-1 overflow-hidden',
+        props.className,
+      )}
     >
       {Navigation}
 
       <div
         data-team-workspace-viewport
-        className={
+        className={cn(
           props.contentContainerClassName ??
-          'mx-auto flex h-svh min-h-0 w-full min-w-0 flex-1 flex-col bg-inherit'
-        }
+            'mx-auto flex h-svh min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-inherit',
+        )}
       >
         {MobileNavigation}
 
         <div
           data-team-workspace-page
-          className="flex min-h-0 min-w-0 flex-1 flex-col"
+          className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
         >
           <div
-            className={'bg-background flex min-h-0 min-w-0 flex-1 flex-col px-0'}
+            className={
+              'bg-background flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden px-0'
+            }
           >
             {Children}
           </div>

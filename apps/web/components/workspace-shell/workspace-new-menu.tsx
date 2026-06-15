@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import {
   BriefcaseBusiness,
@@ -19,6 +19,7 @@ import {
   UserRoundPlus,
   UtensilsCrossed,
   Wrench,
+  X,
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
@@ -31,6 +32,7 @@ import {
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
+import { HapticButton, HapticLink } from '~/components/haptic-link';
 import { openWorkspaceCreateTaskDialog } from '~/components/workspace-shell/workspace-create-task-host';
 import type { WorkspaceSpaceType } from '~/home/[account]/_lib/server/account-modules';
 
@@ -44,13 +46,6 @@ type WorkspaceNewMenuProps =
       variant: 'personal';
     };
 
-function getNewMenuItems(props: WorkspaceNewMenuProps) {
-  if (props.variant === 'team') {
-    return getTeamItems(props.account, props.spaceType ?? 'work');
-  }
-  return getPersonalItems();
-}
-
 type NewMenuItem = {
   key: string;
   label: string;
@@ -59,41 +54,88 @@ type NewMenuItem = {
   action?: 'create-task';
 };
 
+const MOBILE_NEW_MENU_ROW_CLASS =
+  'flex min-h-[3.25rem] w-full items-center gap-4 rounded-xl px-4 py-3 text-[1.05rem] font-medium text-zinc-200 transition-colors hover:bg-white/6';
+
+function getNewMenuItems(props: WorkspaceNewMenuProps) {
+  const items =
+    props.variant === 'team'
+      ? getTeamItems(props.account, props.spaceType ?? 'work')
+      : getPersonalItems();
+
+  return prioritizeNewMenuItems(items);
+}
+
+/** Task and note first; preserve relative order of everything else. */
+function prioritizeNewMenuItems(items: NewMenuItem[]): NewMenuItem[] {
+  const task = items.find((item) => item.key === 'task');
+  const note = items.find((item) => item.key === 'note');
+  const rest = items.filter((item) => item.key !== 'task' && item.key !== 'note');
+
+  return [task, note, ...rest].filter(Boolean) as NewMenuItem[];
+}
+
 function NewMenuItemRow({
   item,
   onNavigate,
+  variant = 'dropdown',
 }: {
   item: NewMenuItem;
   onNavigate: () => void;
+  variant?: 'dropdown' | 'mobile';
 }) {
+  const iconClassName =
+    variant === 'mobile'
+      ? 'h-5 w-5 shrink-0 text-[#2A9D8F]'
+      : 'mr-2 h-4 w-4 text-[#2A9D8F]';
+
   if (item.action === 'create-task') {
+    const className =
+      variant === 'mobile'
+        ? MOBILE_NEW_MENU_ROW_CLASS
+        : 'flex w-full cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm outline-hidden hover:bg-white/10';
+
     return (
       <button
         type="button"
-        className="flex w-full cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm outline-hidden hover:bg-white/10"
+        className={className}
         onClick={() => {
           onNavigate();
           openWorkspaceCreateTaskDialog();
         }}
       >
-        <item.icon className="mr-2 h-4 w-4 text-[#2A9D8F]" />
+        <item.icon className={iconClassName} />
         {item.label}
       </button>
     );
   }
 
   if (item.href) {
+    if (variant === 'mobile') {
+      return (
+        <HapticLink href={item.href} onClick={onNavigate} className={MOBILE_NEW_MENU_ROW_CLASS}>
+          <item.icon className={iconClassName} />
+          {item.label}
+        </HapticLink>
+      );
+    }
+
     return (
       <Link href={item.href} onClick={onNavigate} className="flex items-center">
-        <item.icon className="mr-2 h-4 w-4 text-[#2A9D8F]" />
+        <item.icon className={iconClassName} />
         {item.label}
       </Link>
     );
   }
 
   return (
-    <span className="flex items-center opacity-50">
-      <item.icon className="mr-2 h-4 w-4" />
+    <span
+      className={cn(
+        'flex items-center opacity-50',
+        variant === 'mobile' && MOBILE_NEW_MENU_ROW_CLASS,
+      )}
+    >
+      <item.icon className={iconClassName} />
       {item.label}
     </span>
   );
@@ -138,37 +180,105 @@ export function WorkspaceNewMenu(props: WorkspaceNewMenuProps) {
 /** Compact “New” control for the mobile bottom nav bar. */
 export function WorkspaceMobileNewMenu(props: WorkspaceNewMenuProps) {
   const [open, setOpen] = useState(false);
+  const [visible, setVisible] = useState(false);
   const items = getNewMenuItems(props);
+
+  const close = useCallback(() => setOpen(false), []);
+
+  useEffect(() => {
+    if (open) {
+      setVisible(true);
+      const previousOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = previousOverflow;
+      };
+    }
+
+    const timer = window.setTimeout(() => setVisible(false), 200);
+    return () => window.clearTimeout(timer);
+  }, [open]);
 
   if (items.length === 0) {
     return null;
   }
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label="Create new"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--keel-teal)] text-white shadow-sm hover:bg-[#238b7f]"
-        >
-          <Plus className="h-[21px] w-[21px]" />
-        </button>
-      </DropdownMenuTrigger>
-
-      <DropdownMenuContent
-        align="center"
-        side="top"
-        sideOffset={12}
-        className="min-w-[12rem] border-white/10 bg-[#0F1B35] text-white"
+    <>
+      <HapticButton
+        type="button"
+        aria-label="Create new"
+        aria-expanded={open}
+        className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--keel-teal)] text-white shadow-sm hover:bg-[#238b7f]"
+        onClick={() => setOpen(true)}
       >
-        {items.map((item) => (
-          <DropdownMenuItem key={item.key} asChild className="focus:bg-white/10">
-            <NewMenuItemRow item={item} onNavigate={() => setOpen(false)} />
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+        <Plus className="h-[21px] w-[21px]" />
+      </HapticButton>
+
+      {visible ? (
+        <>
+          <div
+            className={cn(
+              'fixed inset-0 z-[105] bg-[#060a12]/72 backdrop-blur-md transition-opacity duration-200 lg:hidden',
+              open ? 'opacity-100' : 'opacity-0',
+            )}
+            aria-hidden
+            onClick={close}
+          />
+
+          <div
+            className={cn(
+              'fixed inset-x-3 z-[106] transition-all duration-200 ease-out lg:hidden',
+              'bottom-[calc(4.75rem+env(safe-area-inset-bottom))]',
+              open
+                ? 'translate-y-0 opacity-100'
+                : 'pointer-events-none translate-y-3 opacity-0',
+            )}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Create menu"
+            aria-hidden={!open}
+          >
+            <div className="overflow-hidden rounded-[1.25rem] border border-white/10 bg-[#0B132B] shadow-[0_16px_48px_rgba(0,0,0,0.45)]">
+              <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+                <p className="text-base font-semibold text-white">Create</p>
+                <HapticButton
+                  type="button"
+                  aria-label="Close create menu"
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-300 hover:bg-white/8 hover:text-white"
+                  onClick={close}
+                >
+                  <X className="h-5 w-5" />
+                </HapticButton>
+              </div>
+
+              <nav className="max-h-[min(52vh,22rem)] overflow-y-auto px-2 py-2">
+                <ul className="flex flex-col gap-1">
+                  {items.map((item, index) => (
+                    <li
+                      key={item.key}
+                      className={cn(
+                        'transition-all duration-200',
+                        open
+                          ? 'translate-y-0 opacity-100'
+                          : 'translate-y-1 opacity-0',
+                      )}
+                      style={{ transitionDelay: open ? `${index * 30}ms` : '0ms' }}
+                    >
+                      <NewMenuItemRow
+                        item={item}
+                        variant="mobile"
+                        onNavigate={close}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            </div>
+          </div>
+        </>
+      ) : null}
+    </>
   );
 }
 
@@ -186,16 +296,16 @@ function getTeamItems(account: string, spaceType: WorkspaceSpaceType): NewMenuIt
         action: 'create-task',
       },
       {
-        key: 'session',
-        label: 'New Session',
-        icon: Calendar,
-        href: `${accountPath(account, pathsConfig.app.accountCommunitySchedule)}?create=session`,
-      },
-      {
         key: 'note',
         label: 'New Note',
         icon: StickyNote,
         href: `${accountPath(account, pathsConfig.app.accountNotes)}/new`,
+      },
+      {
+        key: 'session',
+        label: 'New Session',
+        icon: Calendar,
+        href: `${accountPath(account, pathsConfig.app.accountCommunitySchedule)}?create=session`,
       },
       {
         key: 'invite',
@@ -215,6 +325,12 @@ function getTeamItems(account: string, spaceType: WorkspaceSpaceType): NewMenuIt
         action: 'create-task',
       },
       {
+        key: 'note',
+        label: 'New Note',
+        icon: StickyNote,
+        href: `${accountPath(account, pathsConfig.app.accountNotes)}/new`,
+      },
+      {
         key: 'event',
         label: 'New Event',
         icon: Calendar,
@@ -232,17 +348,23 @@ function getTeamItems(account: string, spaceType: WorkspaceSpaceType): NewMenuIt
         icon: ShoppingCart,
         href: `${accountPath(account, pathsConfig.app.accountShopping)}?create=item`,
       },
+    ];
+  }
+
+  if (spaceType === 'property') {
+    return [
+      {
+        key: 'task',
+        label: 'New Task',
+        icon: CheckSquare,
+        action: 'create-task',
+      },
       {
         key: 'note',
         label: 'New Note',
         icon: StickyNote,
         href: `${accountPath(account, pathsConfig.app.accountNotes)}/new`,
       },
-    ];
-  }
-
-  if (spaceType === 'property') {
-    return [
       {
         key: 'property',
         label: 'New Property',
@@ -262,38 +384,32 @@ function getTeamItems(account: string, spaceType: WorkspaceSpaceType): NewMenuIt
         href: `${accountPath(account, pathsConfig.app.accountJobs)}?create=job`,
       },
       {
-        key: 'task',
-        label: 'New Task',
-        icon: CheckSquare,
-        action: 'create-task',
-      },
-      {
         key: 'file',
         label: 'Upload file',
         icon: FileStack,
         href: `${accountPath(account, pathsConfig.app.accountNotes)}?upload=1`,
-      },
-      {
-        key: 'note',
-        label: 'New note',
-        icon: StickyNote,
-        href: `${accountPath(account, pathsConfig.app.accountNotes)}/new`,
       },
     ];
   }
 
   return [
     {
-      key: 'project',
-      label: 'New Project',
-      icon: BriefcaseBusiness,
-      href: `${accountPath(account, pathsConfig.app.accountJobs)}?create=job`,
-    },
-    {
       key: 'task',
       label: 'New Task',
       icon: CheckSquare,
       action: 'create-task',
+    },
+    {
+      key: 'note',
+      label: 'New Note',
+      icon: StickyNote,
+      href: `${accountPath(account, pathsConfig.app.accountNotes)}/new`,
+    },
+    {
+      key: 'project',
+      label: 'New Project',
+      icon: BriefcaseBusiness,
+      href: `${accountPath(account, pathsConfig.app.accountJobs)}?create=job`,
     },
     {
       key: 'client',
@@ -314,12 +430,6 @@ function getTeamItems(account: string, spaceType: WorkspaceSpaceType): NewMenuIt
       href: `${accountPath(account, pathsConfig.app.accountPipeline)}?create=lead`,
     },
     {
-      key: 'note',
-      label: 'New Note',
-      icon: StickyNote,
-      href: `${accountPath(account, pathsConfig.app.accountNotes)}/new`,
-    },
-    {
       key: 'file',
       label: 'Upload file',
       icon: FileStack,
@@ -331,28 +441,28 @@ function getTeamItems(account: string, spaceType: WorkspaceSpaceType): NewMenuIt
 function getPersonalItems(): NewMenuItem[] {
   return [
     {
-      key: 'person',
-      label: 'Add person',
-      icon: UserRoundPlus,
-      href: `${pathsConfig.app.personalPeople}?create=person`,
-    },
-    {
       key: 'task',
       label: 'New Task',
       icon: CheckSquare,
       href: `${pathsConfig.app.home}/tasks?create=task`,
     },
     {
-      key: 'planner',
-      label: 'Plan My Day',
-      icon: CalendarCheck2,
-      href: pathsConfig.app.personalPlanner,
-    },
-    {
       key: 'note',
       label: 'New Note',
       icon: StickyNote,
       href: `${pathsConfig.app.home}/tasks?create=note`,
+    },
+    {
+      key: 'person',
+      label: 'Add person',
+      icon: UserRoundPlus,
+      href: `${pathsConfig.app.personalPeople}?create=person`,
+    },
+    {
+      key: 'planner',
+      label: 'Plan My Day',
+      icon: CalendarCheck2,
+      href: pathsConfig.app.personalPlanner,
     },
   ];
 }

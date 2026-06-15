@@ -162,4 +162,18 @@
   button:focus-visible {
     outline: none;
   }
+
+  /* Taps/clicks should not leave persistent focus chrome */
+  *:focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* Default app chrome: no rings/outlines unless enhanced focus is enabled */
+  html:not([data-enhanced-focus='true']) *:is(:focus, :focus-visible) {
+    --tw-ring-width: 0px;
+    --tw-ring-shadow: 0 0 #0000;
+    --tw-ring-offset-width: 0px;
+    --tw-ring-offset-shadow: 0 0 #0000;
+    outline: none;
+  }
 }

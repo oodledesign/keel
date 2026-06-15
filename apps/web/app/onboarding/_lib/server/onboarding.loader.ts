@@ -115,7 +115,7 @@ export const getOnboardingContext = cache(
             accessibility_simplified_mode:
               userSettings.accessibility_simplified_mode ?? true,
             accessibility_enhanced_focus:
-              userSettings.accessibility_enhanced_focus ?? true,
+              userSettings.accessibility_enhanced_focus ?? false,
             accessibility_dyslexia_font:
               userSettings.accessibility_dyslexia_font ?? false,
           }

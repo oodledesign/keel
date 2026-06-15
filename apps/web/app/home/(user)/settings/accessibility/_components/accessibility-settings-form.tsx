@@ -40,7 +40,7 @@ export function AccessibilitySettingsForm({
   );
   const [highContrast, setHighContrast] = useState(initial.accessibility_high_contrast ?? false);
   const [simplifiedMode, setSimplifiedMode] = useState(initial.accessibility_simplified_mode ?? true);
-  const [enhancedFocus, setEnhancedFocus] = useState(initial.accessibility_enhanced_focus ?? true);
+  const [enhancedFocus, setEnhancedFocus] = useState(initial.accessibility_enhanced_focus ?? false);
   const [dyslexiaFont, setDyslexiaFont] = useState(initial.accessibility_dyslexia_font ?? false);
   const [loading, setLoading] = useState(false);
 

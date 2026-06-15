@@ -107,12 +107,12 @@ async function fetchData(props: IdentitiesPageProps) {
 
   // Available auth methods to add
   const showPasswordOption = authConfig.providers.password;
-  const showMagicLinkOption = authConfig.providers.magicLink;
+  const showMagicLinkOption = authConfig.providers.magicLinkSignIn;
 
   // Show email option if password, magic link, or OTP is enabled
   const showEmailOption =
     authConfig.providers.password ||
-    authConfig.providers.magicLink ||
+    authConfig.providers.magicLinkSignIn ||
     authConfig.providers.otp;
 
   const oAuthProviders = authConfig.providers.oAuth;

@@ -55,7 +55,7 @@ export function BusinessDashboardMobile({
       .replace('[noteId]', id);
 
   return (
-    <div className="flex flex-col gap-4 px-3 pb-6 pt-3 md:hidden">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-3 pb-8 pt-3 md:px-6 lg:max-w-4xl lg:pb-10 lg:pt-5">
       <section className={cn(panelClass, 'overflow-hidden p-4')}>
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -145,7 +145,7 @@ export function BusinessDashboardMobile({
                 href={noteDetailPath(note.id)}
                 className={cn(
                   panelClass,
-                  'w-[calc(50%-0.375rem)] shrink-0 snap-start p-3 active:scale-[0.98] transition-transform',
+                  'w-[calc(50%-0.375rem)] shrink-0 snap-start p-3 transition-transform active:scale-[0.98] md:w-56 lg:w-64',
                 )}
               >
                 <div className="mb-2 flex h-7 w-7 items-center justify-center rounded-lg bg-white/8 text-[#5eead4]">
