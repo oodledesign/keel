@@ -2,6 +2,8 @@ import 'server-only';
 
 import { gmailFetch } from './client';
 import { htmlSignatureToPlain } from './mime';
+
+type SendAsEntry = {
   sendAsEmail?: string | null;
   displayName?: string | null;
   signature?: string | null;
@@ -13,7 +15,7 @@ type SendAsListResponse = {
   sendAs?: SendAsEntry[];
 };
 
-type SendAsEntry = {
+export type ResolvedEmailSignature = {
   plain: string | null;
   html: string | null;
 };
@@ -22,7 +24,9 @@ function looksLikeHtmlSignature(value: string): boolean {
   return /<[a-z][\s\S]*>/i.test(value);
 }
 
-function resolveSignatureContent(raw: string | null | undefined): ResolvedEmailSignature {
+function resolveSignatureContent(
+  raw: string | null | undefined,
+): ResolvedEmailSignature {
   const trimmed = raw?.trim();
 
   if (!trimmed) {

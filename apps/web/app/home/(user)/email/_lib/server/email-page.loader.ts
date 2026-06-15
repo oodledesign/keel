@@ -28,6 +28,8 @@ function inferSignatureIsHtml(
   const trimmed = signature?.trim();
   return Boolean(trimmed && /<[a-z][\s\S]*>/i.test(trimmed));
 }
+
+function parseParticipants(value: unknown): EmailParticipant[] {
   if (!Array.isArray(value)) {
     return [];
   }
