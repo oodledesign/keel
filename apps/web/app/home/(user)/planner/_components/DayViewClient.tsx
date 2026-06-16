@@ -18,6 +18,7 @@ import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
+import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import type { PlannerCalendarEvent } from '~/lib/integrations/google-calendar/types';
 import { parseDayScheduleFromMarkdown } from '~/lib/planner/parse-plan-markdown';
 import {
@@ -261,7 +262,7 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
   });
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+    <div className={workspacePageMainClassName}>
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Today</h1>

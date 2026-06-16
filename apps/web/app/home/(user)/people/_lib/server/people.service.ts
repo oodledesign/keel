@@ -4,6 +4,8 @@ import { SupabaseClient } from '@supabase/supabase-js';
 
 import { createAccountsApi } from '@kit/accounts/api';
 
+import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
+
 import type {
   CatchupRow,
   GiftIdeaRow,
@@ -133,6 +135,14 @@ export function createPeopleService(client: SupabaseClient) {
   return new PeopleService(client);
 }
 
+function normalizePersonRow(row: PersonRow): PersonRow {
+  return {
+    ...row,
+    avatar_url:
+      toSupabasePublicStorageUrl(row.avatar_url) ?? row.avatar_url?.trim() ?? null,
+  };
+}
+
 class PeopleService {
   constructor(private readonly client: SupabaseClient) {}
 
@@ -165,10 +175,10 @@ class PeopleService {
     }
 
     return rows.map((p) => {
-      const person = {
+      const person = normalizePersonRow({
         ...p,
         circle_tier: p.circle_tier ?? DEFAULT_PERSON_CIRCLE_TIER,
-      };
+      });
       const personDates = datesByPerson.get(p.id) ?? [];
       const daysUntilBirthday = computeDaysUntilBirthday(personDates);
       return {
@@ -196,11 +206,11 @@ class PeopleService {
     if (error) throw error;
     if (!person) return null;
 
-    const p = {
+    const p = normalizePersonRow({
       ...(person as PersonRow),
       circle_tier:
         (person as PersonRow).circle_tier ?? DEFAULT_PERSON_CIRCLE_TIER,
-    };
+    });
 
     const [datesRes, giftsRes, catchupsRes, notesRes] = await Promise.all([
       this.db.from('personal_person_dates').select('*').eq('person_id', personId).order('month').order('day'),

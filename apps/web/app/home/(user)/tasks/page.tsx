@@ -9,6 +9,8 @@ import { requireUserInServerComponent } from '~/lib/server/require-user-in-serve
 
 import { loadTasksForUser } from '../_lib/server/tasks.loader';
 import { TasksPageClient } from './_components/tasks-page-client';
+import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
+import { cn } from '@kit/ui/utils';
 
 export const metadata = { title: 'Tasks' };
 
@@ -51,7 +53,7 @@ async function TasksContent({ searchParams }: { searchParams: Promise<{ workspac
 
 function TasksSkeleton() {
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-6 px-3 pb-8 pt-3 md:px-6 md:pb-12 md:pt-6 lg:max-w-4xl lg:px-8">
+    <div className={cn(workspacePageMainClassName, 'min-h-0')}>
       <div className="flex flex-col gap-4">
         <div className="space-y-2">
           <div className="h-8 w-32 animate-pulse rounded-xl bg-white/[0.04]" />

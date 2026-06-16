@@ -43,3 +43,11 @@ export const workspacePageBodyClassName =
 
 /** Inner content column when the page body is full-bleed on mobile. */
 export const workspacePageContentClassName = 'px-4 lg:px-0';
+
+/** Full-width main column for workspace dashboard and module pages. */
+export const workspacePageMainClassName =
+  'flex w-full min-w-0 flex-1 flex-col gap-6 px-3 pb-8 pt-3 md:px-6 md:pb-12 md:pt-6 lg:px-8';
+
+/** Dashboard home rhythm (business / personal overview pages). */
+export const workspaceDashboardMainClassName =
+  'flex w-full min-w-0 flex-col gap-4 px-3 pb-8 pt-3 md:px-6 lg:px-8 lg:pb-10 lg:pt-5';

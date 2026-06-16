@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
 import pathsConfig from '~/config/paths.config';
+import { workspacePageContentClassName } from '~/components/workspace-shell/workspace-shell-styles';
+import { cn } from '@kit/ui/utils';
 
 import { AskBrainLink } from '../../../brain/_components/ask-brain-link';
 import type { JobBoardTask } from '../../_lib/schema/project-phases.schema';
@@ -56,7 +58,7 @@ export function PhaseDetailContent({
     .replace('[id]', jobId);
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6">
+    <div className={cn('w-full space-y-6', workspacePageContentClassName)}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href={jobPath}

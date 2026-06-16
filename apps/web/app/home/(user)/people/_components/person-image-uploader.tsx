@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 
 import { Camera, Trash2 } from 'lucide-react';
 
@@ -13,6 +13,7 @@ import { cn } from '@kit/ui/utils';
 
 import { getInitials } from './person-avatar';
 import { PersonPhotoCropDialog } from './person-photo-crop-dialog';
+import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
 const AVATARS_BUCKET = 'account_image';
 
@@ -41,6 +42,13 @@ export function PersonImageUploader({
   const [cropFile, setCropFile] = useState<File | null>(null);
   const [cropOpen, setCropOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(() =>
+    normalizePersonPhotoUrl(avatarUrl),
+  );
+
+  useEffect(() => {
+    setPreviewUrl(normalizePersonPhotoUrl(avatarUrl));
+  }, [avatarUrl]);
 
   const dimension = size === 'lg' ? 'h-24 w-24' : 'h-20 w-20';
 
@@ -66,6 +74,7 @@ export function PersonImageUploader({
           .eq('id', personId)
           .throwOnError();
 
+        setPreviewUrl(nextUrl);
         toast.success('Photo updated');
         onUpdated();
       } catch (error) {
@@ -110,6 +119,7 @@ export function PersonImageUploader({
         .eq('id', personId)
         .throwOnError();
 
+      setPreviewUrl(null);
       toast.success('Photo removed');
       onUpdated();
     } catch (error) {
@@ -139,12 +149,12 @@ export function PersonImageUploader({
             'disabled:cursor-not-allowed disabled:opacity-60',
             dimension,
           )}
-          aria-label={avatarUrl ? 'Change photo' : 'Add photo'}
+          aria-label={previewUrl ? 'Change photo' : 'Add photo'}
         >
-          {avatarUrl ? (
+          {previewUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={avatarUrl}
+              src={previewUrl}
               alt=""
               className="h-full w-full object-cover"
             />
@@ -163,7 +173,7 @@ export function PersonImageUploader({
               'opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100',
             )}
           >
-            {avatarUrl ? 'Change' : 'Add photo'}
+            {previewUrl ? 'Change' : 'Add photo'}
           </span>
         </button>
 
@@ -176,7 +186,7 @@ export function PersonImageUploader({
           onChange={onFileSelected}
         />
 
-        {avatarUrl ? (
+        {previewUrl ? (
           <Button
             type="button"
             variant="ghost"
@@ -233,8 +243,15 @@ async function uploadPersonPhoto(
   });
 
   if (!result.error) {
-    const url = bucket.getPublicUrl(fileName).data.publicUrl;
-    return `${url}?v=${cacheBuster}`;
+    const publicUrl = toSupabasePublicStorageUrl(
+      bucket.getPublicUrl(fileName).data.publicUrl,
+    );
+
+    if (!publicUrl) {
+      throw new Error('Upload succeeded but public URL could not be generated.');
+    }
+
+    return `${publicUrl}?v=${cacheBuster}`;
   }
 
   throw result.error;
@@ -242,4 +259,8 @@ async function uploadPersonPhoto(
 
 function getPersonPhotoPath(accountId: string, personId: string) {
   return `${accountId}/person-${personId}`;
+}
+
+function normalizePersonPhotoUrl(url: string | null | undefined) {
+  return toSupabasePublicStorageUrl(url) ?? url?.trim() ?? null;
 }

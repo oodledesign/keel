@@ -2,6 +2,8 @@ import Image from 'next/image';
 
 import { cn } from '@kit/ui/utils';
 
+import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
+
 import { circleTierBadgeClass } from '../_lib/circle-tiers';
 import type { PersonCircleTier } from '../_lib/schema/people.schema';
 
@@ -48,8 +50,10 @@ export function PersonAvatar({
   const sizeClass = SIZE_CLASS[size];
   const initials = getInitials(name);
   const shapeClass = square ? 'rounded-lg' : 'rounded-full';
+  const resolvedAvatarUrl =
+    toSupabasePublicStorageUrl(avatarUrl) ?? avatarUrl?.trim() ?? null;
 
-  if (avatarUrl?.trim()) {
+  if (resolvedAvatarUrl) {
     return (
       <span
         className={cn(
@@ -61,7 +65,7 @@ export function PersonAvatar({
         )}
       >
         <Image
-          src={avatarUrl}
+          src={resolvedAvatarUrl}
           alt=""
           fill
           unoptimized

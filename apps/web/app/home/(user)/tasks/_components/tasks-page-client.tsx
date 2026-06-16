@@ -41,6 +41,7 @@ import {
 import { Button } from '@kit/ui/button';
 import { Checkbox } from '@kit/ui/checkbox';
 import { cn } from '@kit/ui/utils';
+import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -1014,7 +1015,7 @@ export function TasksPageClient({
   })();
 
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-6 px-3 pb-8 pt-3 text-white md:px-6 md:pb-12 md:pt-6 lg:max-w-4xl lg:px-8">
+    <div className={cn(workspacePageMainClassName, 'min-h-0 text-white')}>
       <div className="flex flex-col gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl">

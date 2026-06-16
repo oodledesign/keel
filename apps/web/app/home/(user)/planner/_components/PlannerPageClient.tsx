@@ -11,6 +11,7 @@ import {
   saveStoredPlan,
   toLocalDateYmd,
 } from '~/lib/planner/plan-storage';
+import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
 
 import { PlannerInputPanel } from './PlannerInputPanel';
 import { PlanOutputPanel } from './PlanOutputPanel';
@@ -180,7 +181,7 @@ export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-6">
+    <div className={workspacePageMainClassName}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Planner</h1>

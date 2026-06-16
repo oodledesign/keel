@@ -11,6 +11,7 @@ import { cn } from '@kit/ui/utils';
 import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
+import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
 
 import { emailApiFetch } from '../_lib/email-api';
 import type {
@@ -277,7 +278,7 @@ export function EmailPageClient({ initialData }: Props) {
   const mobileShowThread = Boolean(selectedThreadId);
 
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col gap-6 px-3 pb-8 pt-3 md:px-6 md:pb-12 md:pt-6">
+    <div className={cn(workspacePageMainClassName, 'min-h-0')}>
       <div className="flex flex-col gap-4 border-b border-white/10 pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-white md:text-3xl">

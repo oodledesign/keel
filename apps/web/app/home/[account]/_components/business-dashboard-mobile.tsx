@@ -5,6 +5,7 @@ import { ChevronRight, StickyNote } from 'lucide-react';
 import { cn } from '@kit/ui/utils';
 
 import { HapticLink } from '~/components/haptic-link';
+import { workspaceDashboardMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import type {
   DashboardFinanceMonth,
   DashboardMetrics,
@@ -58,8 +59,13 @@ export function BusinessDashboardMobile({
       .replace('[noteId]', id);
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-3 pb-8 pt-3 md:px-6 lg:max-w-4xl lg:pb-10 lg:pt-5">
-      <section className={cn(panelClass, 'overflow-hidden p-4')}>
+    <div
+      className={cn(
+        workspaceDashboardMainClassName,
+        'xl:grid xl:grid-cols-2 xl:items-start xl:gap-6',
+      )}
+    >
+      <section className={cn(panelClass, 'overflow-hidden p-4 xl:col-span-2')}>
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-[10px] font-medium uppercase tracking-wide text-violet-200/60">
@@ -84,7 +90,7 @@ export function BusinessDashboardMobile({
         </div>
       </section>
 
-      <section>{shortcutsBar}</section>
+      <section className="xl:col-span-2">{shortcutsBar}</section>
 
       <section className={panelClass}>
         <div className="flex items-center justify-between border-b border-white/6 px-4 py-3">
