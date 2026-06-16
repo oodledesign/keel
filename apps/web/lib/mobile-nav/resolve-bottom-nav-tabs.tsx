@@ -17,6 +17,7 @@ import {
   Mail,
   MessageSquare,
   MessageSquareText,
+  Mic,
   PenLine,
   Share2,
   Sparkles,

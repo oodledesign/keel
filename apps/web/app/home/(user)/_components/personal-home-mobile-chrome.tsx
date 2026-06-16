@@ -3,7 +3,6 @@
 import { ProfileAccountDropdownContainer } from '~/components/personal-account-dropdown-container';
 import { PullToRefresh } from '~/components/pull-to-refresh';
 import {
-  PERSONAL_WORKSPACE_VALUE,
   WorkspaceAccountsSelector,
   buildPersonalSwitcherAccounts,
 } from '~/components/workspace-shell/workspace-accounts-selector';
@@ -19,6 +18,7 @@ import type { MobileBottomNavTab } from '~/lib/mobile-nav/resolve-bottom-nav-tab
 import { WorkspaceMobileTopActions } from '~/components/workspace-shell/workspace-top-bar-actions';
 import { getExplicitPersonalHomePath } from '~/lib/dashboard-shortcuts/personal-home-url';
 import pathsConfig from '~/config/paths.config';
+import { PERSONAL_WORKSPACE_VALUE } from '~/lib/workspace-personal-switcher';
 import { WorkspaceMobileScrollLock } from '~/lib/pwa/workspace-mobile-scroll-lock';
 import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
 import type { UserWorkspace } from '~/home/(user)/_lib/server/load-user-workspace';
