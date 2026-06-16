@@ -8,7 +8,7 @@ import { redirectIfEmailAssistantNotAllowed } from '~/lib/billing/require-email-
 import { EmailPageClient } from './_components/email-page-client';
 import { loadEmailPageData } from './_lib/server/email-page.loader';
 
-export const metadata = { title: 'Email — Keel' };
+export const metadata = { title: 'Email' };
 
 async function EmailPageContent() {
   await redirectIfEmailAssistantNotAllowed();

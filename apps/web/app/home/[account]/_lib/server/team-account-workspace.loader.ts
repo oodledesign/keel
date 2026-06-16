@@ -89,6 +89,7 @@ async function workspaceLoader(accountSlug: string) {
   const accountRecord = workspace.data.account as {
     id: string;
     slug: string;
+    name?: string | null;
     space_type?: string | null;
   };
 

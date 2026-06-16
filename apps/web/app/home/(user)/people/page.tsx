@@ -7,7 +7,7 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 import { PeoplePageClient } from './_components/people-page-client';
 import { loadPeopleListPageData } from './_lib/server/people-page.loader';
 
-export const metadata = { title: 'People — Keel' };
+export const metadata = { title: 'People' };
 
 async function PeoplePageContent() {
   const data = await loadPeopleListPageData();

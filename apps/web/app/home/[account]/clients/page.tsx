@@ -51,7 +51,7 @@ async function ClientsPage({ params }: ClientsPageProps) {
     canViewClients,
     canEditClients,
     isContractorView,
-    initialClients,
+    initialOverview,
     initialTotal,
   } = await loadClientsPageData(accountSlug);
 
@@ -64,7 +64,7 @@ async function ClientsPage({ params }: ClientsPageProps) {
         description={
           isProperty
             ? 'Active tenancies and contacts'
-            : 'Manage your clients'
+            : 'Projects, delivery health, and client relationships'
         }
         account={accountSlug}
       />
@@ -76,7 +76,7 @@ async function ClientsPage({ params }: ClientsPageProps) {
           canViewClients={canViewClients}
           canEditClients={canEditClients}
           isContractorView={isContractorView}
-          initialClients={initialClients}
+          initialOverview={initialOverview}
           initialTotal={initialTotal}
         />
       </PageBody>

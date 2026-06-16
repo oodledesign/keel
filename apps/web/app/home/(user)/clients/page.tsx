@@ -95,7 +95,7 @@ async function PersonalClientsPage({ searchParams }: Props) {
     canViewClients,
     canEditClients,
     isContractorView,
-    initialClients,
+    initialOverview,
     initialTotal,
   } = await loadClientsPageData(slug);
 
@@ -127,7 +127,7 @@ async function PersonalClientsPage({ searchParams }: Props) {
         canViewClients={canViewClients}
         canEditClients={canEditClients}
         isContractorView={isContractorView}
-        initialClients={initialClients}
+        initialOverview={initialOverview}
         initialTotal={initialTotal}
       />
     </PageBody>

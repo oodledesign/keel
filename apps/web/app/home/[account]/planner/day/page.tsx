@@ -16,7 +16,7 @@ interface WorkspacePlannerDayPageProps {
 }
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Today — Keel' };
+export const metadata = { title: 'Today' };
 
 async function WorkspacePlannerDayPage({ params }: WorkspacePlannerDayPageProps) {
   const accountSlug = (await params).account;

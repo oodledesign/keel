@@ -6,7 +6,7 @@ import pathsConfig from '~/config/paths.config';
 
 import { DayViewClient } from '../_components/DayViewClient';
 
-export const metadata = { title: 'Today — Keel' };
+export const metadata = { title: 'Today' };
 
 async function PersonalPlannerDayPage() {
   const data = await loadPersonalDayViewData();

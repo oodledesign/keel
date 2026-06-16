@@ -25,6 +25,7 @@ import pathsConfig from '~/config/paths.config';
 import { TeamAccountNavigationMenu } from './_components/team-account-navigation-menu';
 import { getTeamAccountAccess } from './_lib/role-access';
 import { loadTeamWorkspace } from './_lib/server/team-account-workspace.loader';
+import { buildWorkspaceShellMetadata } from '~/lib/seo/app-shell-metadata';
 import { spaceTypeFromProfile } from './_lib/workspace-profile';
 import { enforceWorkspaceBilling } from './_lib/server/workspace-billing-guard';
 import { loadWorkspaceSwitcherAccounts } from '../_lib/server/workspace-switcher.loader';
@@ -38,6 +39,15 @@ import {
 type TeamWorkspaceLayoutProps = React.PropsWithChildren<{
   params: Promise<{ account: string }>;
 }>;
+
+export async function generateMetadata({ params }: TeamWorkspaceLayoutProps) {
+  const { account } = await params;
+  const workspace = await loadTeamWorkspace(account);
+  const workspaceName =
+    workspace.account.name?.trim() || account;
+
+  return buildWorkspaceShellMetadata(workspaceName);
+}
 
 function TeamWorkspaceLayout({ children, params }: TeamWorkspaceLayoutProps) {
   const account = use(params).account;

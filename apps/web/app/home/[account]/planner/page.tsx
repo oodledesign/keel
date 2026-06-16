@@ -17,7 +17,7 @@ interface WorkspacePlannerPageProps {
 }
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Planner — Keel' };
+export const metadata = { title: 'Planner' };
 
 async function WorkspacePlannerPage({ params }: WorkspacePlannerPageProps) {
   const accountSlug = (await params).account;

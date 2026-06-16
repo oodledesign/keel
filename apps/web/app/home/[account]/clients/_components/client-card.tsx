@@ -13,6 +13,8 @@ type ClientCardProps = {
   email: string | null;
   city: string | null;
   updated_at: string;
+  projectCount?: number;
+  dueTaskCount?: number;
   selected: boolean;
   onSelect: () => void;
   /** When set, the card links to the client detail page */
@@ -39,6 +41,8 @@ export function ClientCard({
   company_name,
   city,
   updated_at,
+  projectCount,
+  dueTaskCount,
   selected,
   onSelect,
   detailHref,
@@ -68,6 +72,16 @@ export function ClientCard({
         <p className="mt-0.5 text-xs text-zinc-500">
           {formatLastActivity(updated_at)}
         </p>
+        {(projectCount !== undefined || dueTaskCount !== undefined) && (
+          <p className="mt-1 text-xs text-zinc-500">
+            {[
+              projectCount !== undefined ? `${projectCount} projects` : null,
+              dueTaskCount !== undefined ? `${dueTaskCount} due tasks` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
+        )}
       </div>
       <div className="flex items-center gap-1">
         <span className="flex items-center gap-1.5 rounded-full bg-[var(--keel-teal)]/20 px-2 py-0.5 text-xs font-medium text-[#5eead4]">

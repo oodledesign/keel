@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: Props) {
     data?.person.nickname?.trim() ||
     data?.person.full_name ||
     'Person';
-  return { title: `${name} — People — Keel` };
+  return { title: `${name} — People` };
 }
 
 async function PersonProfilePage({ params }: Props) {

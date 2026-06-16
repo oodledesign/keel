@@ -35,6 +35,26 @@ export const listClients = enhanceAction(
   { schema: ListClientsSchema },
 );
 
+export const listClientsOverview = enhanceAction(
+  async (input) => {
+    const service = getService();
+    return service.listClientsOverview(input);
+  },
+  {
+    schema: ListClientsSchema.extend({
+      members: z
+        .array(
+          z.object({
+            user_id: z.string().uuid(),
+            name: z.string().nullable(),
+            picture_url: z.string().nullable().optional(),
+          }),
+        )
+        .optional(),
+    }),
+  },
+);
+
 export const getClient = enhanceAction(
   async (input) => {
     const service = getService();

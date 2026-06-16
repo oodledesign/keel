@@ -10,7 +10,7 @@ import { requireUserInServerComponent } from '~/lib/server/require-user-in-serve
 import { loadTasksForUser } from '../_lib/server/tasks.loader';
 import { TasksPageClient } from './_components/tasks-page-client';
 
-export const metadata = { title: 'Tasks — Keel' };
+export const metadata = { title: 'Tasks' };
 
 type PageProps = {
   searchParams: Promise<{ workspace?: string }>;

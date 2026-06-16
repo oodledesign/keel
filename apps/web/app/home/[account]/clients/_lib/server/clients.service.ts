@@ -23,6 +23,7 @@ import type {
   ListNotesInput,
   UpdateClientInput,
 } from '../schema/clients.schema';
+import { buildClientsOverview } from './clients-overview.builder';
 
 export function createClientsService(client: SupabaseClient<Database>) {
   return new ClientsService(client);
@@ -183,6 +184,38 @@ class ClientsService {
 
     if (error) throw error;
     return { data: data ?? [], total: count ?? 0 };
+  }
+
+  async listClientsOverview(
+    params: ListClientsInput & {
+      members?: Array<{
+        user_id: string;
+        name: string | null;
+        picture_url?: string | null;
+      }>;
+    },
+  ) {
+    const { members = [], ...listParams } = params;
+    const { data, total } = await this.listClients(listParams);
+    const readDb = await this.dbForClientReads(params.accountId);
+
+    const overview = await buildClientsOverview({
+      db: readDb,
+      accountId: params.accountId,
+      clients: (data ?? []) as Array<{
+        id: string;
+        display_name: string | null;
+        company_name: string | null;
+        email: string | null;
+        phone: string | null;
+        city: string | null;
+        created_at: string;
+        updated_at: string;
+      }>,
+      members,
+    });
+
+    return { data: overview, total };
   }
 
   async getClient(params: GetClientInput) {

@@ -5,7 +5,7 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 import { PlannerPageClient } from './_components/PlannerPageClient';
 import { loadPlannerPageData } from './_lib/server/planner.loader';
 
-export const metadata = { title: 'Planner — Keel' };
+export const metadata = { title: 'Planner' };
 
 async function PlannerPage() {
   const data = await loadPlannerPageData();

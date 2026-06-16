@@ -15,6 +15,7 @@ import {
 } from '../../../_lib/server/workspace-route-guard';
 import pathsConfig from '~/config/paths.config';
 import { createClientsService } from './clients.service';
+import type { ClientOverviewItem } from '../clients-overview.types';
 
 export const loadClientsPageData = cache(loadClientsPageDataImpl);
 
@@ -40,18 +41,33 @@ async function loadClientsPageDataImpl(accountSlug: string) {
     isWorkModuleEnabled(workspace.moduleSettings, 'clients');
   const canEditClients = access.canEditClients;
 
-  let initialClients: Array<Record<string, unknown>> = [];
+  let initialOverview: ClientOverviewItem[] = [];
   let initialTotal = 0;
   if (canViewClients) {
     try {
       const client = getSupabaseServerClient();
       const service = createClientsService(client);
-      const result = await service.listClients({
+
+      const { data: membersData } = await client.rpc('get_account_members', {
+        account_slug: account.slug ?? accountSlug,
+      });
+      const members = ((membersData ?? []) as Array<{
+        user_id: string;
+        name: string | null;
+        picture_url?: string | null;
+      }>).map((row) => ({
+        user_id: row.user_id,
+        name: row.name,
+        picture_url: row.picture_url,
+      }));
+
+      const result = await service.listClientsOverview({
         accountId: account.id,
         page: 1,
         pageSize: 20,
+        members,
       });
-      initialClients = (result.data ?? []) as Array<Record<string, unknown>>;
+      initialOverview = result.data;
       initialTotal = result.total ?? 0;
     } catch (e) {
       console.error('[clients-page.loader] listClients error:', e);
@@ -65,7 +81,7 @@ async function loadClientsPageDataImpl(accountSlug: string) {
     canViewClients,
     canEditClients,
     isContractorView: access.isContractor,
-    initialClients,
+    initialOverview,
     initialTotal,
   };
 }

@@ -5,7 +5,7 @@ import { PageBody } from '@kit/ui/page';
 import { loadPipelineData } from '../_lib/server/pipeline.loader';
 import { PipelineBoardWrapper } from './_components/pipeline-board-wrapper';
 
-export const metadata = { title: 'Pipeline — Keel' };
+export const metadata = { title: 'Pipeline' };
 
 export default function PipelinePage() {
   return (

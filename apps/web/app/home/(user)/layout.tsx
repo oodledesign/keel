@@ -34,10 +34,13 @@ import { loadPersonalMobileNavShortcuts } from '~/lib/dashboard-shortcuts/load-s
 import { resolveMobileBottomNavTabs } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
 import { loadWorkspaceSwitcherAccounts } from '~/home/_lib/server/workspace-switcher.loader';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
+import { buildPersonalShellMetadata } from '~/lib/seo/app-shell-metadata';
 import {
   userRequiresWorkspaceSetup,
   workspaceSetupPath,
 } from '~/lib/server/workspace-setup-guard';
+
+export const generateMetadata = async () => buildPersonalShellMetadata();
 
 function UserHomeLayout({ children }: React.PropsWithChildren) {
   const state = use(getLayoutState());
