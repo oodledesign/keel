@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Json } from '@kit/supabase/database';
 import { useSupabase } from '@kit/supabase/hooks/use-supabase';
 
-import { toSupabasePublicStorageUrl } from '../../lib/public-storage-url';
+import { toSupabasePublicStorageUrl } from '../lib/public-storage-url';
 
 export function usePersonalAccountData(
   userId: string,
