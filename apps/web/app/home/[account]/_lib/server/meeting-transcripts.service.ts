@@ -16,7 +16,7 @@ export type MeetingTranscript = {
   dealId: string | null;
   title: string;
   content: string;
-  source: 'paste' | 'upload';
+  source: 'paste' | 'upload' | 'desktop_recorder';
   filePath: string | null;
   meetingDate: string | null;
   createdBy: string | null;
@@ -52,7 +52,12 @@ function mapMeetingTranscript(row: MeetingTranscriptRow): MeetingTranscript {
     dealId: row.deal_id ?? null,
     title: row.title?.trim() || 'Meeting transcript',
     content: row.content ?? '',
-    source: row.source === 'upload' ? 'upload' : 'paste',
+    source:
+      row.source === 'upload'
+        ? 'upload'
+        : row.source === 'desktop_recorder'
+          ? 'desktop_recorder'
+          : 'paste',
     filePath: row.file_path ?? null,
     meetingDate: row.meeting_date ?? null,
     createdBy: row.created_by ?? null,
@@ -73,6 +78,22 @@ function clientDisplayName(row: {
   return named || null;
 }
 
+function pipelineDealTitle(
+  deal: {
+    name?: string | null;
+    contact_name?: string | null;
+    company_name?: string | null;
+  } | null,
+) {
+  if (!deal) return null;
+  return (
+    deal.contact_name?.trim() ||
+    deal.company_name?.trim() ||
+    deal.name?.trim() ||
+    null
+  );
+}
+
 function mapMeetingTranscriptListItem(
   row: MeetingTranscriptRow & {
     clients?: {
@@ -80,13 +101,17 @@ function mapMeetingTranscriptListItem(
       first_name?: string | null;
       last_name?: string | null;
     } | null;
-    pipeline_deals?: { title?: string | null } | null;
+    pipeline_deals?: {
+      name?: string | null;
+      contact_name?: string | null;
+      company_name?: string | null;
+    } | null;
   },
 ): MeetingTranscriptListItem {
   return {
     ...mapMeetingTranscript(row),
     clientName: clientDisplayName(row.clients ?? null),
-    dealTitle: row.pipeline_deals?.title?.trim() || null,
+    dealTitle: pipelineDealTitle(row.pipeline_deals ?? null),
   };
 }
 
@@ -156,7 +181,7 @@ class MeetingTranscriptsService {
     const { data, error } = await this.db
       .from('meeting_transcripts')
       .select(
-        '*, clients(display_name, first_name, last_name), pipeline_deals(title)',
+        '*, clients(display_name, first_name, last_name), pipeline_deals(name, contact_name, company_name)',
       )
       .eq('account_id', input.accountId)
       .order('created_at', { ascending: false });
@@ -188,7 +213,7 @@ class MeetingTranscriptsService {
     const { data, error } = await this.db
       .from('meeting_transcripts')
       .select(
-        '*, clients(display_name, first_name, last_name), pipeline_deals(title)',
+        '*, clients(display_name, first_name, last_name), pipeline_deals(name, contact_name, company_name)',
       )
       .eq('account_id', input.accountId)
       .eq('id', input.transcriptId)
