@@ -131,7 +131,6 @@ export function PersonProfileClient({ person }: Props) {
           <div className="flex items-start gap-4">
             <div className="shrink-0">
               <PersonImageUploader
-                accountId={person.account_id}
                 personId={person.id}
                 personName={name}
                 avatarUrl={person.avatar_url}

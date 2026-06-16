@@ -15,6 +15,7 @@ import {
   ListChecks,
   MessageSquareText,
   MessageSquare,
+  Mic,
   PenLine,
   Settings,
   Share2,
@@ -200,6 +201,15 @@ export function buildWorkSpaceNavChildren(
             label: 'Clients',
             path: createPath(pathsConfig.app.accountClients, account),
             Icon: <Briefcase className={iconClasses} />,
+          }
+        : null,
+    meetings: () =>
+      access.canViewClients && isWorkNavModuleEnabled(ms, 'clients')
+        ? {
+            label: 'Meetings',
+            path: createPath(pathsConfig.app.accountMeetings, account),
+            Icon: <Mic className={iconClasses} />,
+            description: 'Meeting transcripts and AI task extraction.',
           }
         : null,
     websites: () =>

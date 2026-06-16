@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 
@@ -33,6 +33,10 @@ type Props = {
   accountId: string;
   accountSlug: string;
   assignmentOptions: TaskAssignmentOption[];
+  embedded?: boolean;
+  initialRawText?: string;
+  defaultClientId?: string | null;
+  successRedirectHref?: string;
 };
 
 function assignValue(projectId: string | null, clientId: string | null): string {
@@ -63,18 +67,40 @@ function fillMissingParentAssignments(
   });
 }
 
+function applyDefaultClient(
+  rows: ExtractedTaskReviewRow[],
+  defaultClientId: string | null | undefined,
+): ExtractedTaskReviewRow[] {
+  if (!defaultClientId) return rows;
+  return rows.map((row) =>
+    row.clientId || row.projectId
+      ? row
+      : { ...row, clientId: defaultClientId },
+  );
+}
+
 export function ExtractWorkspaceTasksClient({
   accountId,
   accountSlug,
   assignmentOptions,
+  embedded = false,
+  initialRawText = '',
+  defaultClientId = null,
+  successRedirectHref,
 }: Props) {
-  const [rawText, setRawText] = useState('');
+  const [rawText, setRawText] = useState(initialRawText);
   const [rows, setRows] = useState<ExtractedTaskReviewRow[] | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [committing, setCommitting] = useState(false);
   const [, startTransition] = useTransition();
 
-  const tasksPath = pathsConfig.app.accountTasks.replace('[account]', accountSlug);
+  useEffect(() => {
+    setRawText(initialRawText);
+  }, [initialRawText]);
+
+  const tasksPath =
+    successRedirectHref ??
+    pathsConfig.app.accountTasks.replace('[account]', accountSlug);
 
   const projects = useMemo(
     () => assignmentOptions.filter((o) => o.type === 'project'),
@@ -93,7 +119,12 @@ export function ExtractWorkspaceTasksClient({
           accountId,
           rawText,
         });
-        setRows(fillMissingParentAssignments(result.rows));
+        setRows(
+          applyDefaultClient(
+            fillMissingParentAssignments(result.rows),
+            defaultClientId,
+          ),
+        );
         if (result.rows.length === 0) {
           toast.message('No tasks extracted', {
             description: 'Try a longer email or transcript with clear action items.',
@@ -159,39 +190,54 @@ export function ExtractWorkspaceTasksClient({
   };
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8 px-4 pb-16 pt-6 text-white md:px-6">
-      <div>
-        <Link
-          href={tasksPath}
-          className="mb-4 inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-white"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          Back to tasks
-        </Link>
-        <h1 className="text-2xl font-bold tracking-tight">Extract tasks with AI</h1>
-        <p className="mt-2 max-w-2xl text-sm text-zinc-400">
-          Paste an email thread or meeting transcript. We use Anthropic to suggest tasks,
-          subtasks, due dates, and project or client links. Review everything before they
-          are added to this workspace.
-        </p>
-      </div>
+    <div
+      className={
+        embedded
+          ? 'space-y-6'
+          : 'mx-auto max-w-4xl space-y-8 px-4 pb-16 pt-6 text-white md:px-6'
+      }
+    >
+      {!embedded ? (
+        <div>
+          <Link
+            href={tasksPath}
+            className="mb-4 inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-white"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back to tasks
+          </Link>
+          <h1 className="text-2xl font-bold tracking-tight">Extract tasks with AI</h1>
+          <p className="mt-2 max-w-2xl text-sm text-zinc-400">
+            Paste an email thread or meeting transcript. We use Anthropic to suggest tasks,
+            subtasks, due dates, and project or client links. Review everything before they
+            are added to this workspace.
+          </p>
+        </div>
+      ) : null}
 
       {!rows ? (
         <div className="space-y-4 rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-6">
-          <div className="space-y-2">
-            <Label htmlFor="raw">Email or transcript</Label>
-            <Textarea
-              id="raw"
-              value={rawText}
-              onChange={(e) => setRawText(e.target.value)}
-              placeholder="Paste the full text here…"
-              className="min-h-[220px] border-white/10 bg-white/5 text-sm text-white placeholder:text-zinc-600"
-            />
-            <p className="text-xs text-zinc-500">
-              Requires <code className="text-zinc-400">ANTHROPIC_API_KEY</code> on the server.
-              Optional: <code className="text-zinc-400">ANTHROPIC_TASK_EXTRACT_MODEL</code>.
+          {!embedded ? (
+            <div className="space-y-2">
+              <Label htmlFor="raw">Email or transcript</Label>
+              <Textarea
+                id="raw"
+                value={rawText}
+                onChange={(e) => setRawText(e.target.value)}
+                placeholder="Paste the full text here…"
+                className="min-h-[220px] border-white/10 bg-white/5 text-sm text-white placeholder:text-zinc-600"
+              />
+              <p className="text-xs text-zinc-500">
+                Requires <code className="text-zinc-400">ANTHROPIC_API_KEY</code> on the server.
+                Optional: <code className="text-zinc-400">ANTHROPIC_TASK_EXTRACT_MODEL</code>.
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-zinc-400">
+              We&apos;ll analyse the transcript above and suggest actionable tasks for this
+              workspace.
             </p>
-          </div>
+          )}
           <Button
             type="button"
             onClick={extract}
@@ -517,12 +563,14 @@ export function ExtractWorkspaceTasksClient({
         </div>
       )}
 
-      <p className="text-xs text-zinc-500">
-        Future: connect Gmail to scan new messages and surface suggested tasks for review
-        in Keel — see{' '}
-        <code className="text-zinc-400">TASK_GMAIL_INGEST_ENABLED</code> placeholder in{' '}
-        <code className="text-zinc-400">lib/integrations/gmail-tasks-ingest.placeholder.ts</code>.
-      </p>
+      {!embedded ? (
+        <p className="text-xs text-zinc-500">
+          Future: connect Gmail to scan new messages and surface suggested tasks for review
+          in Keel — see{' '}
+          <code className="text-zinc-400">TASK_GMAIL_INGEST_ENABLED</code> placeholder in{' '}
+          <code className="text-zinc-400">lib/integrations/gmail-tasks-ingest.placeholder.ts</code>.
+        </p>
+      ) : null}
     </div>
   );
 }

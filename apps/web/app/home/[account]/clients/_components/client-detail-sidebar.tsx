@@ -453,6 +453,7 @@ export function ClientDetailSidebar({
                       {activeTab === 'transcripts' && (
                         <MeetingTranscriptsBlock
                           accountId={accountId}
+                          accountSlug={accountSlug}
                           clientId={client.id}
                           canEdit={canEditClients}
                         />

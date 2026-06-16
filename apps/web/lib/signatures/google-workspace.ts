@@ -27,6 +27,7 @@ const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.settings.basic';
 type ServiceAccountCredentials = {
   client_email: string;
   private_key: string;
+  client_id?: string;
 };
 
 export type GoogleConnection = {
@@ -124,6 +125,10 @@ function parseServiceAccountCredentials(): ServiceAccountCredentials {
         return {
           client_email: parsed.client_email.trim(),
           private_key: normalizePrivateKey(parsed.private_key),
+          client_id:
+            typeof parsed.client_id === 'string'
+              ? parsed.client_id.trim()
+              : undefined,
         };
       }
       throw new Error(
@@ -152,6 +157,16 @@ function parseServiceAccountCredentials(): ServiceAccountCredentials {
     client_email: clientEmail,
     private_key: normalizePrivateKey(privateKeyRaw),
   };
+}
+
+/** Numeric client ID shown in Google Admin domain-wide delegation setup. */
+export function getGoogleServiceAccountClientId(): string | null {
+  try {
+    const creds = parseServiceAccountCredentials();
+    return creds.client_id?.trim() || null;
+  } catch {
+    return null;
+  }
 }
 
 function base64url(value: string | Buffer): string {
@@ -292,7 +307,7 @@ export async function connectGoogleWorkspace(input: {
   accountId: string;
   primaryDomain: string;
   delegatedAdminEmail: string;
-  connectedBy: string;
+  connectedBy?: string | null;
 }): Promise<GoogleConnection> {
   await testGoogleWorkspaceConnection({
     primaryDomain: input.primaryDomain,
@@ -304,7 +319,7 @@ export async function connectGoogleWorkspace(input: {
     account_id: input.accountId,
     primary_domain: input.primaryDomain.trim().toLowerCase(),
     delegated_admin_email: input.delegatedAdminEmail.trim().toLowerCase(),
-    connected_by: input.connectedBy,
+    connected_by: input.connectedBy ?? null,
   };
 
   const { data, error } = await db

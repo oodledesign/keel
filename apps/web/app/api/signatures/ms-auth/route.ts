@@ -4,7 +4,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import { assertAccountAdmin } from '~/lib/signatures/account-access';
-import { encodeMsOAuthState } from '~/lib/signatures/ms-oauth-state';
+import { signSignaturesMsOAuthState } from '~/lib/signatures/signatures-oauth-state';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,7 +67,14 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const oauthState = encodeMsOAuthState(accountId, accountSlug);
+  const oauthState = signSignaturesMsOAuthState({
+    v: 2,
+    accountId,
+    slug: accountSlug,
+    inviteId: null,
+    flow: 'member',
+    exp: Date.now() + 30 * 60_000,
+  });
 
   const params = new URLSearchParams({
     client_id: clientId,

@@ -51,7 +51,9 @@ export function buildBrainSourceUrl(
         .replace('[id]', '') // filled by metadata job_id when known
         .replace('[phaseId]', sourceId);
     case 'transcript':
-      return pathsConfig.app.accountNotes.replace('[account]', account);
+      return pathsConfig.app.accountMeetingDetail
+        .replace('[account]', account)
+        .replace('[transcriptId]', sourceId);
     case 'proposal':
       return pathsConfig.app.accountProposalEdit
         .replace('[account]', account)

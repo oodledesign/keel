@@ -17,6 +17,7 @@ const LEGACY_WORKSPACE_MODULE_PATHS: Record<string, string> = {
   schedule: pathsConfig.app.accountSchedule,
   pipeline: pathsConfig.app.accountPipeline,
   clients: pathsConfig.app.accountClients,
+  meetings: pathsConfig.app.accountMeetings,
   websites: pathsConfig.app.accountWebsites,
   support_tickets: pathsConfig.app.accountSupport,
   invoices: pathsConfig.app.accountInvoices,

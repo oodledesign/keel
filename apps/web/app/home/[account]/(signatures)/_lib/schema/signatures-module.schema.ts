@@ -72,3 +72,15 @@ export const saveTemplateActionSchema = z.object({
   html_template: z.string().trim().min(1, 'HTML template is required'),
   is_default: z.boolean().default(false),
 });
+
+export const createIntegrationInviteActionSchema = z.object({
+  accountId: z.string().uuid(),
+  provider: z.enum(['microsoft', 'google']),
+  label: z.string().trim().max(120).optional(),
+  expiresInDays: z.coerce.number().int().min(1).max(30).optional(),
+});
+
+export const revokeIntegrationInviteActionSchema = z.object({
+  accountId: z.string().uuid(),
+  inviteId: z.string().uuid(),
+});

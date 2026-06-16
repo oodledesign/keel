@@ -1,5 +1,6 @@
 import { ModuleDataSection } from '../../../_components/module-data-section';
 import { SignaturesSettingsPanel } from '../../_components/signatures-settings-panel';
+import { SignaturesIntegrationLinksCard } from '../../_components/signatures-integration-links-card';
 import {
   loadDepartmentBadges,
   loadDepartments,
@@ -7,6 +8,7 @@ import {
   loadMsConnection,
   loadSignaturesWorkspace,
 } from '../../_lib/server/signatures-data';
+import { listIntegrationConnectInvites } from '~/lib/signatures/integration-invite';
 
 type SignaturesSettingsPageProps = {
   params: Promise<{ account: string }>;
@@ -21,12 +23,13 @@ export default async function SignaturesSettingsPage({
   const sp = await searchParams;
   const workspace = await loadSignaturesWorkspace(account);
   const accountId = workspace.account.id as string;
-  const [msConnection, googleConnection, departmentBadges, departments] =
+  const [msConnection, googleConnection, departmentBadges, departments, integrationInvites] =
     await Promise.all([
       loadMsConnection(accountId),
       loadGoogleConnection(accountId),
       loadDepartmentBadges(accountId),
       loadDepartments(accountId),
+      listIntegrationConnectInvites(accountId),
     ]);
 
   return (
@@ -34,7 +37,12 @@ export default async function SignaturesSettingsPage({
       title="Settings"
       description="Connect Microsoft 365 or Google Workspace to sync staff and push signatures."
     >
-      <SignaturesSettingsPanel
+      <div className="space-y-6">
+        <SignaturesIntegrationLinksCard
+          accountId={accountId}
+          initialInvites={integrationInvites}
+        />
+        <SignaturesSettingsPanel
         accountId={accountId}
         accountSlug={account}
         msConnection={msConnection}
@@ -43,6 +51,7 @@ export default async function SignaturesSettingsPage({
         departmentBadges={departmentBadges}
         departments={departments}
       />
+      </div>
     </ModuleDataSection>
   );
 }

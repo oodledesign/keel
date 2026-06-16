@@ -299,6 +299,7 @@ export function EditDealDialog({
           <div className="mt-4 border-t border-white/8 pt-4">
             <MeetingTranscriptsBlock
               accountId={accountId}
+              accountSlug={accountSlug ?? ''}
               dealId={deal.id}
               canEdit
             />

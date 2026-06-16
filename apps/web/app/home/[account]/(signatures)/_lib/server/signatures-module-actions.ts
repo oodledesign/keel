@@ -16,6 +16,11 @@ import {
   disconnectGoogleWorkspace,
   connectGoogleWorkspace,
 } from '~/lib/signatures/google-workspace';
+import {
+  createIntegrationConnectInvite,
+  integrationConnectUrl,
+  revokeIntegrationConnectInvite,
+} from '~/lib/signatures/integration-invite';
 import { getSignaturesSupabaseClient } from '~/lib/signatures/graph';
 import {
   pushAllSignatures,
@@ -28,6 +33,8 @@ import {
   disconnectM365ActionSchema,
   connectGoogleWorkspaceActionSchema,
   disconnectGoogleActionSchema,
+  createIntegrationInviteActionSchema,
+  revokeIntegrationInviteActionSchema,
   pushAllActionSchema,
   pushStaffActionSchema,
   saveTemplateActionSchema,
@@ -385,4 +392,38 @@ export const deleteDepartmentBadgeAction = enhanceAction(
     return { ok: true as const };
   },
   { schema: deleteDepartmentBadgeActionSchema },
+);
+
+export const createSignaturesIntegrationInvite = enhanceAction(
+  async (input, user) => {
+    await assertSignaturesAdmin(input.accountId, user.id);
+    const { token, invite } = await createIntegrationConnectInvite({
+      accountId: input.accountId,
+      provider: input.provider,
+      createdBy: user.id,
+      label: input.label,
+      expiresInDays: input.expiresInDays,
+    });
+
+    return {
+      inviteId: invite.id,
+      url: integrationConnectUrl(token),
+      provider: invite.provider,
+      expiresAt: invite.expires_at,
+    };
+  },
+  { schema: createIntegrationInviteActionSchema },
+);
+
+export const revokeSignaturesIntegrationInvite = enhanceAction(
+  async (input, user) => {
+    const { accountSlug } = await assertSignaturesAdmin(input.accountId, user.id);
+    await revokeIntegrationConnectInvite({
+      accountId: input.accountId,
+      inviteId: input.inviteId,
+    });
+    revalidatePath(workPath(pathsConfig.app.accountSignaturesSettings, accountSlug));
+    return { ok: true as const };
+  },
+  { schema: revokeIntegrationInviteActionSchema },
 );

@@ -37,6 +37,7 @@ export type AccountModuleKey =
 export function resolveAccountModuleKey(navKey: string): string {
   if (navKey === 'projects') return 'jobs';
   if (navKey === 'proposals' || navKey === 'contracts') return 'invoices';
+  if (navKey === 'meetings') return 'clients';
   return navKey;
 }
 

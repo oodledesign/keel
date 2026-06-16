@@ -28,6 +28,7 @@ import {
 
 import type { MobileNavLink } from '~/components/workspace-shell/workspace-mobile-nav';
 import pathsConfig from '~/config/paths.config';
+import { navHrefPathname } from '~/lib/dashboard-shortcuts/personal-home-url';
 import type { ResolvedShortcut } from '~/lib/dashboard-shortcuts/types';
 
 const MOBILE_NAV_ICON_CLASS = 'h-5 w-5';
@@ -39,9 +40,7 @@ export type MobileBottomNavTab = {
 };
 
 function normalizeNavPath(path: string): string {
-  const trimmed = path.trim();
-  if (!trimmed || trimmed === '/') return '/';
-  return trimmed.replace(/\/+$/, '') || '/';
+  return navHrefPathname(path);
 }
 
 function iconNode(Icon: LucideIcon) {
@@ -65,6 +64,7 @@ const WORKSPACE_SEGMENT_ICONS: Record<string, LucideIcon> = {
   schedule: Calendar,
   pipeline: Kanban,
   clients: Briefcase,
+  meetings: Mic,
   websites: Globe,
   support: LifeBuoy,
   invoices: FileText,
@@ -122,13 +122,8 @@ function iconFromHrefFallback(href: string): React.ReactNode | null {
 }
 
 /** Prefer the longest matching nav path so `/app/oodle/jobs` maps to Jobs, not Dashboard. */
-function findNavMatch(navLinks: MobileNavLink[], path: string) {
+function findNavPrefixMatch(navLinks: MobileNavLink[], path: string) {
   const target = normalizeNavPath(path);
-
-  const exact = navLinks.find(
-    (link) => normalizeNavPath(link.path) === target,
-  );
-  if (exact) return exact;
 
   let best: MobileNavLink | undefined;
   let bestLength = -1;
@@ -154,11 +149,18 @@ function resolveTabIcon(
   navLinks: MobileNavLink[],
   fallback: LucideIcon,
 ) {
-  const match = findNavMatch(navLinks, path);
-  if (match?.Icon) return match.Icon;
+  const target = normalizeNavPath(path);
+
+  const exact = navLinks.find(
+    (link) => normalizeNavPath(link.path) === target,
+  );
+  if (exact?.Icon) return exact.Icon;
 
   const hrefFallback = iconFromHrefFallback(path);
   if (hrefFallback) return hrefFallback;
+
+  const prefix = findNavPrefixMatch(navLinks, path);
+  if (prefix?.Icon) return prefix.Icon;
 
   return iconNode(fallback);
 }

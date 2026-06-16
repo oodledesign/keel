@@ -4,9 +4,6 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react';
 
 import { Camera, Trash2 } from 'lucide-react';
 
-import type { SupabaseClient } from '@supabase/supabase-js';
-
-import { useSupabase } from '@kit/supabase/hooks/use-supabase';
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
@@ -15,10 +12,7 @@ import { getInitials } from './person-avatar';
 import { PersonPhotoCropDialog } from './person-photo-crop-dialog';
 import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
-const AVATARS_BUCKET = 'account_image';
-
 type PersonImageUploaderProps = {
-  accountId: string;
   personId: string;
   personName?: string;
   avatarUrl: string | null;
@@ -28,7 +22,6 @@ type PersonImageUploaderProps = {
 };
 
 export function PersonImageUploader({
-  accountId,
   personId,
   personName = '',
   avatarUrl,
@@ -36,7 +29,6 @@ export function PersonImageUploader({
   size = 'lg',
   className,
 }: PersonImageUploaderProps) {
-  const client = useSupabase();
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [cropFile, setCropFile] = useState<File | null>(null);
@@ -57,34 +49,20 @@ export function PersonImageUploader({
       setUploading(true);
 
       try {
-        if (avatarUrl) {
-          await deletePersonPhoto(client, avatarUrl);
-        }
-
-        const nextUrl = await uploadPersonPhoto(
-          client,
-          file,
-          accountId,
-          personId,
-        );
-
-        await client
-          .from('personal_people')
-          .update({ avatar_url: nextUrl })
-          .eq('id', personId)
-          .throwOnError();
-
+        const nextUrl = await uploadPersonPhotoViaApi(file, personId);
         setPreviewUrl(nextUrl);
         toast.success('Photo updated');
         onUpdated();
       } catch (error) {
         console.error('[people] photo upload', error);
-        toast.error('Failed to update photo');
+        toast.error(
+          error instanceof Error ? error.message : 'Failed to update photo',
+        );
       } finally {
         setUploading(false);
       }
     },
-    [accountId, avatarUrl, client, onUpdated, personId],
+    [onUpdated, personId],
   );
 
   const onFileSelected = useCallback(
@@ -109,26 +87,19 @@ export function PersonImageUploader({
     setUploading(true);
 
     try {
-      if (avatarUrl) {
-        await deletePersonPhoto(client, avatarUrl);
-      }
-
-      await client
-        .from('personal_people')
-        .update({ avatar_url: null })
-        .eq('id', personId)
-        .throwOnError();
-
+      await removePersonPhotoViaApi(personId);
       setPreviewUrl(null);
       toast.success('Photo removed');
       onUpdated();
     } catch (error) {
       console.error('[people] photo remove', error);
-      toast.error('Failed to remove photo');
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to remove photo',
+      );
     } finally {
       setUploading(false);
     }
-  }, [avatarUrl, client, onUpdated, personId]);
+  }, [onUpdated, personId]);
 
   const openPicker = () => {
     inputRef.current?.click();
@@ -214,51 +185,50 @@ export function PersonImageUploader({
   );
 }
 
-function deletePersonPhoto(client: SupabaseClient, url: string) {
-  const bucket = client.storage.from(AVATARS_BUCKET);
-  const path = url.includes('/account_image/')
-    ? url.split('/account_image/')[1]?.split('?')[0]
-    : url.split('/').pop()?.split('?')[0];
+async function uploadPersonPhotoViaApi(file: File, personId: string) {
+  const formData = new FormData();
+  formData.append('personId', personId);
+  formData.append('file', file);
 
-  if (!path) return Promise.resolve();
-
-  return bucket.remove([path]);
-}
-
-async function uploadPersonPhoto(
-  client: SupabaseClient,
-  photoFile: File,
-  accountId: string,
-  personId: string,
-) {
-  const bytes = await photoFile.arrayBuffer();
-  const bucket = client.storage.from(AVATARS_BUCKET);
-  const fileName = getPersonPhotoPath(accountId, personId);
-  const { nanoid } = await import('nanoid');
-  const cacheBuster = nanoid(16);
-
-  const result = await bucket.upload(fileName, bytes, {
-    contentType: 'image/jpeg',
-    upsert: true,
+  const response = await fetch('/api/people/upload-photo', {
+    method: 'POST',
+    body: formData,
   });
 
-  if (!result.error) {
-    const publicUrl = toSupabasePublicStorageUrl(
-      bucket.getPublicUrl(fileName).data.publicUrl,
-    );
+  const payload = (await response.json().catch(() => ({}))) as {
+    avatarUrl?: string | null;
+    error?: string;
+  };
 
-    if (!publicUrl) {
-      throw new Error('Upload succeeded but public URL could not be generated.');
-    }
-
-    return `${publicUrl}?v=${cacheBuster}`;
+  if (!response.ok) {
+    throw new Error(payload.error || 'Failed to upload photo');
   }
 
-  throw result.error;
+  const nextUrl = normalizePersonPhotoUrl(payload.avatarUrl);
+  if (!nextUrl) {
+    throw new Error('Upload succeeded but photo URL was missing.');
+  }
+
+  return nextUrl;
 }
 
-function getPersonPhotoPath(accountId: string, personId: string) {
-  return `${accountId}/person-${personId}`;
+async function removePersonPhotoViaApi(personId: string) {
+  const formData = new FormData();
+  formData.append('personId', personId);
+  formData.append('remove', '1');
+
+  const response = await fetch('/api/people/upload-photo', {
+    method: 'POST',
+    body: formData,
+  });
+
+  const payload = (await response.json().catch(() => ({}))) as {
+    error?: string;
+  };
+
+  if (!response.ok) {
+    throw new Error(payload.error || 'Failed to remove photo');
+  }
 }
 
 function normalizePersonPhotoUrl(url: string | null | undefined) {

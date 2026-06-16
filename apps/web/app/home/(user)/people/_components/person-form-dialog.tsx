@@ -122,7 +122,6 @@ export function PersonFormDialog({
           {isEdit && person ? (
             <div className="flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.02] p-4">
               <PersonImageUploader
-                accountId={person.account_id}
                 personId={person.id}
                 personName={person.nickname?.trim() || person.full_name}
                 avatarUrl={person.avatar_url}
