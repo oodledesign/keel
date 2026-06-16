@@ -159,15 +159,24 @@ class MeetingTranscriptsService {
         '*, clients(display_name, first_name, last_name), pipeline_deals(title)',
       )
       .eq('account_id', input.accountId)
-      .order('meeting_date', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false });
 
     if (error) throw new Error(error.message);
-    return ((data ?? []) as MeetingTranscriptRow[]).map((row) =>
+
+    const items = ((data ?? []) as MeetingTranscriptRow[]).map((row) =>
       mapMeetingTranscriptListItem(
         row as Parameters<typeof mapMeetingTranscriptListItem>[0],
       ),
     );
+
+    return items.sort((a, b) => {
+      const aKey = a.meetingDate ?? a.createdAt.slice(0, 10);
+      const bKey = b.meetingDate ?? b.createdAt.slice(0, 10);
+      if (aKey !== bKey) {
+        return bKey.localeCompare(aKey);
+      }
+      return b.createdAt.localeCompare(a.createdAt);
+    });
   }
 
   async getById(input: {

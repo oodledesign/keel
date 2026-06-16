@@ -10,12 +10,22 @@ type Props = {
 
 export async function ApiTokensSection({ accountId, accountSlug }: Props) {
   const user = await requireUserInServerComponent();
-  const client = getSupabaseServerClient();
 
-  const tokens = await listApiTokensForWorkspace({
-    accountId,
-    userId: user.id,
-  });
+  let tokens: Awaited<ReturnType<typeof listApiTokensForWorkspace>> = [];
+
+  try {
+    tokens = await listApiTokensForWorkspace({
+      accountId,
+      userId: user.id,
+    });
+  } catch {
+    return (
+      <p className="text-sm text-muted-foreground">
+        API tokens are not available yet. Apply the latest database migrations,
+        then refresh this page.
+      </p>
+    );
+  }
 
   return (
     <ApiTokensSettingsCard
