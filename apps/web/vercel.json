@@ -2,6 +2,12 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "cd ../.. && pnpm run build --filter=web",
   "installCommand": "cd ../.. && pnpm install",
+  "build": {
+    "env": {
+      "NODE_OPTIONS": "--max-old-space-size=5120",
+      "NEXT_WEBPACK_PARALLELISM": "1"
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/rankly-rank-check",

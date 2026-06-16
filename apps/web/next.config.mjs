@@ -76,6 +76,10 @@ const config = {
   experimental: {
     mdxRs: true,
     turbopackFileSystemCacheForDev: true,
+    /** Keep Vercel/webpack production builds inside 8 GB RAM. */
+    webpackMemoryOptimizations: true,
+    webpackBuildWorker: true,
+    cpus: 1,
     staleTimes: {
       dynamic: 30,
       static: 180,
