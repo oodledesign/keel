@@ -16,12 +16,19 @@ import {
   revokeApiTokenActionSchema,
 } from '../schema/api-tokens.schema';
 
-function revalidateSettings(accountSlug?: string) {
-  if (!accountSlug?.trim()) return;
-  revalidatePath(
-    workAccountPath(pathsConfig.app.accountSettings, accountSlug.trim()),
-    'page',
-  );
+function revalidateSettings(input: {
+  accountSlug?: string;
+  personal?: boolean;
+}) {
+  if (input.personal) {
+    revalidatePath(pathsConfig.app.personalAccountSettings, 'page');
+    return;
+  }
+
+  const slug = input.accountSlug?.trim();
+  if (!slug) return;
+
+  revalidatePath(workAccountPath(pathsConfig.app.accountSettings, slug), 'page');
 }
 
 export const createApiTokenAction = enhanceAction(
@@ -32,7 +39,10 @@ export const createApiTokenAction = enhanceAction(
       name: input.name,
     });
 
-    revalidateSettings(input.accountSlug);
+    revalidateSettings({
+      accountSlug: input.accountSlug,
+      personal: input.personal,
+    });
 
     return {
       token: result.token,
@@ -50,7 +60,10 @@ export const revokeApiTokenAction = enhanceAction(
       tokenId: input.tokenId,
     });
 
-    revalidateSettings(input.accountSlug);
+    revalidateSettings({
+      accountSlug: input.accountSlug,
+      personal: input.personal,
+    });
     return { ok: true as const };
   },
   { schema: revokeApiTokenActionSchema },

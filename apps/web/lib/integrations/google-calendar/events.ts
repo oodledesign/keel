@@ -29,6 +29,17 @@ type GoogleEvent = {
 type GoogleCalendarListEntry = {
   id: string;
   summary?: string;
+  selected?: boolean;
+  primary?: boolean;
+};
+
+const RECORDER_CALENDAR_LOOKBACK_MS = 24 * 60 * 60 * 1000;
+const RECORDER_CALENDAR_LOOKAHEAD_MS = 2 * 60 * 60 * 1000;
+const MAX_RECORDER_CALENDARS = 20;
+
+export type RecorderCalendarEventResult = {
+  connected: boolean;
+  event: RecorderCalendarEvent | null;
 };
 
 function isExpiringSoon(iso: string | null) {
@@ -137,49 +148,113 @@ function pickCurrentOrNextRecorderEvent(
   );
 }
 
-export async function getRecorderCalendarEvent(
-  client: SupabaseClient,
-  input: { userId: string },
-): Promise<RecorderCalendarEvent | null> {
-  const nowMs = Date.now();
-  const timeMin = new Date(nowMs - 8 * 60 * 60 * 1000).toISOString();
-  const timeMax = new Date(nowMs + 2 * 60 * 60 * 1000).toISOString();
+async function listGoogleCalendarEventsInRange(
+  connection: GoogleCalendarConnection,
+  timeMin: string,
+  timeMax: string,
+): Promise<GoogleEvent[]> {
+  const calendars = await googleJson<{ items?: GoogleCalendarListEntry[] }>(
+    connection,
+    '/users/me/calendarList',
+  );
 
-  if (isPlannerMockCalendarEnabled()) {
-    const mocks = mockEvents(timeMin).map((event) => ({
-      title: event.title,
-      start: event.start,
-      end: event.end,
-      attendees: [
-        { name: 'Alex Example', email: 'alex@example.com' },
-        { name: 'Sam Example', email: 'sam@example.com' },
-      ],
-    }));
-    return pickCurrentOrNextRecorderEvent(mocks, nowMs);
-  }
+  const calendarIds = (calendars.items ?? [])
+    .filter((calendar) => calendar.id)
+    .filter((calendar) => calendar.selected !== false || calendar.primary)
+    .map((calendar) => calendar.id)
+    .slice(0, MAX_RECORDER_CALENDARS);
 
-  const connection = await validConnection(client, input.userId);
-  if (!connection) {
-    return null;
-  }
+  const targetIds =
+    calendarIds.length > 0 ? calendarIds : [connection.calendarId];
 
   const params = new URLSearchParams({
     timeMin,
     timeMax,
     singleEvents: 'true',
     orderBy: 'startTime',
+    maxResults: '250',
   });
 
-  const body = await googleJson<{ items?: GoogleEvent[] }>(
-    connection,
-    `/calendars/${encodeURIComponent(connection.calendarId)}/events?${params}`,
+  const batches = await Promise.all(
+    targetIds.map(async (calendarId) => {
+      try {
+        const body = await googleJson<{ items?: GoogleEvent[] }>(
+          connection,
+          `/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
+        );
+        return body.items ?? [];
+      } catch {
+        return [];
+      }
+    }),
   );
 
-  const events = (body.items ?? [])
-    .map(mapRecorderCalendarEvent)
-    .filter((event): event is RecorderCalendarEvent => Boolean(event));
+  return batches.flat();
+}
 
-  return pickCurrentOrNextRecorderEvent(events, nowMs);
+function mockRecorderEvents(nowMs: number): RecorderCalendarEvent[] {
+  const currentStart = new Date(nowMs - 15 * 60 * 1000);
+  const currentEnd = new Date(nowMs + 45 * 60 * 1000);
+
+  const scheduled = mockEvents(new Date(nowMs).toISOString()).map((event) => ({
+    title: event.title,
+    start: event.start,
+    end: event.end,
+    attendees: [
+      { name: 'Alex Example', email: 'alex@example.com' },
+      { name: 'Sam Example', email: 'sam@example.com' },
+    ],
+  }));
+
+  return [
+    {
+      title: 'Current meeting (mock)',
+      start: currentStart.toISOString(),
+      end: currentEnd.toISOString(),
+      attendees: [
+        { name: 'Alex Example', email: 'alex@example.com' },
+        { name: 'Sam Example', email: 'sam@example.com' },
+      ],
+    },
+    ...scheduled,
+  ];
+}
+
+export async function getRecorderCalendarEvent(
+  client: SupabaseClient,
+  input: { userId: string },
+): Promise<RecorderCalendarEventResult> {
+  const nowMs = Date.now();
+  const timeMin = new Date(nowMs - RECORDER_CALENDAR_LOOKBACK_MS).toISOString();
+  const timeMax = new Date(nowMs + RECORDER_CALENDAR_LOOKAHEAD_MS).toISOString();
+
+  if (isPlannerMockCalendarEnabled()) {
+    return {
+      connected: true,
+      event: pickCurrentOrNextRecorderEvent(mockRecorderEvents(nowMs), nowMs),
+    };
+  }
+
+  const connection = await validConnection(client, input.userId);
+  if (!connection) {
+    return { connected: false, event: null };
+  }
+
+  const items = await listGoogleCalendarEventsInRange(
+    connection,
+    timeMin,
+    timeMax,
+  );
+
+  const events = items
+    .map(mapRecorderCalendarEvent)
+    .filter((event): event is RecorderCalendarEvent => Boolean(event))
+    .sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
+
+  return {
+    connected: true,
+    event: pickCurrentOrNextRecorderEvent(events, nowMs),
+  };
 }
 
 function mockEvents(timeMin: string): PlannerCalendarEvent[] {

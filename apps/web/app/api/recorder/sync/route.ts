@@ -6,6 +6,12 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 
 import pathsConfig from '~/config/paths.config';
 import { authenticateRecorderRequest } from '~/lib/api-tokens/recorder-auth';
+import { assertWorkspaceMember } from '~/lib/api-tokens/assert-workspace-member';
+import {
+  assertRecorderSyncAllowed,
+  RecorderUsageLimitError,
+  recordRecorderSync,
+} from '~/lib/recorder/access';
 import { queueBrainIndexSource } from '~/lib/brain/sync';
 import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
 
@@ -25,6 +31,7 @@ const SyncBodySchema = z.object({
     .optional(),
   client_id: z.string().uuid().optional(),
   deal_id: z.string().uuid().optional(),
+  account_id: z.string().uuid().optional(),
 });
 
 function badRequest(message: string) {
@@ -86,6 +93,45 @@ export async function POST(request: Request) {
 
   const input = parsed.data;
 
+  const admin = getSupabaseServerAdminClient();
+  const targetAccountId = input.account_id ?? token.account_id;
+
+  try {
+    await assertWorkspaceMember(admin, targetAccountId, token.user_id);
+  } catch {
+    return badRequest('Invalid workspace for this token');
+  }
+
+  try {
+    await assertRecorderSyncAllowed(
+      admin,
+      token.user_id,
+      input.duration_seconds ?? 0,
+    );
+  } catch (error) {
+    if (error instanceof RecorderUsageLimitError) {
+      return NextResponse.json(
+        {
+          error: error.message,
+          usage: {
+            tier: error.summary.tier,
+            period: error.summary.period,
+            duration_seconds: error.summary.durationSeconds,
+            limits: {
+              max_duration_seconds_per_month:
+                error.summary.limits.maxDurationSecondsPerMonth,
+            },
+            remaining: {
+              duration_seconds: error.summary.remainingDurationSeconds,
+            },
+          },
+        },
+        { status: 429 },
+      );
+    }
+    throw error;
+  }
+
   if (Buffer.byteLength(input.content, 'utf8') > MAX_CONTENT_BYTES) {
     return badRequest('Content exceeds maximum size');
   }
@@ -110,19 +156,18 @@ export async function POST(request: Request) {
     return badRequest('client_id or deal_id is required');
   }
 
-  if (clientId && !(await assertClientBelongsToAccount(clientId, token.account_id))) {
+  if (clientId && !(await assertClientBelongsToAccount(clientId, targetAccountId))) {
     return badRequest('Invalid client_id for this workspace');
   }
 
-  if (dealId && !(await assertDealBelongsToAccount(dealId, token.account_id))) {
+  if (dealId && !(await assertDealBelongsToAccount(dealId, targetAccountId))) {
     return badRequest('Invalid deal_id for this workspace');
   }
 
-  const admin = getSupabaseServerAdminClient();
   const { data: row, error } = await admin
     .from('meeting_transcripts')
     .insert({
-      account_id: token.account_id,
+      account_id: targetAccountId,
       created_by: token.user_id,
       client_id: clientId,
       deal_id: dealId,
@@ -143,12 +188,14 @@ export async function POST(request: Request) {
     );
   }
 
-  queueBrainIndexSource(token.account_id, 'transcript', row.id);
+  queueBrainIndexSource(targetAccountId, 'transcript', row.id);
+
+  await recordRecorderSync(token.user_id, input.duration_seconds ?? 0);
 
   const { data: account } = await admin
     .from('accounts')
     .select('slug')
-    .eq('id', token.account_id)
+    .eq('id', targetAccountId)
     .maybeSingle();
 
   const slug = account?.slug as string | undefined;

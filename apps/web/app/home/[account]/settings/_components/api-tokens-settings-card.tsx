@@ -12,6 +12,7 @@ import { toast } from '@kit/ui/sonner';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import type { ApiTokenListItem } from '~/lib/api-tokens/types';
+import type { RecorderUsageSummary } from '~/lib/recorder/access';
 
 import {
   createApiTokenAction,
@@ -20,8 +21,10 @@ import {
 
 type Props = {
   accountId: string;
-  accountSlug: string;
+  accountSlug?: string;
+  scope?: 'personal' | 'workspace';
   initialTokens: ApiTokenListItem[];
+  usageSummary?: RecorderUsageSummary | null;
 };
 
 function formatWhen(value: string | null) {
@@ -35,7 +38,9 @@ function formatWhen(value: string | null) {
 export function ApiTokensSettingsCard({
   accountId,
   accountSlug,
+  scope = 'workspace',
   initialTokens,
+  usageSummary,
 }: Props) {
   const [tokens, setTokens] = useState(initialTokens);
   const [name, setName] = useState('');
@@ -55,6 +60,7 @@ export function ApiTokensSettingsCard({
         const result = await createApiTokenAction({
           accountId,
           accountSlug,
+          personal: scope === 'personal',
           name: trimmed,
         });
         setRawToken(result.rawToken);
@@ -71,7 +77,12 @@ export function ApiTokensSettingsCard({
   const revoke = (tokenId: string) => {
     startTransition(async () => {
       try {
-        await revokeApiTokenAction({ accountId, accountSlug, tokenId });
+        await revokeApiTokenAction({
+          accountId,
+          accountSlug,
+          personal: scope === 'personal',
+          tokenId,
+        });
         setTokens((prev) =>
           prev.map((token) =>
             token.id === tokenId
@@ -94,12 +105,36 @@ export function ApiTokensSettingsCard({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const formatMinutes = (seconds: number) => Math.max(1, Math.round(seconds / 60));
+
   return (
     <div className="space-y-5">
+      {scope === 'personal' && usageSummary ? (
+        <div className="rounded-2xl border border-white/10 bg-black/10 p-4 text-sm text-muted-foreground">
+          <p>
+            Plan:{' '}
+            <span className="font-medium text-white">
+              {usageSummary.tier === 'standard' ? 'Included with paid workspace' : 'Personal / Business Lite'}
+            </span>
+          </p>
+          <p className="mt-1">
+            This month: {formatMinutes(usageSummary.durationSeconds)} of{' '}
+            {formatMinutes(usageSummary.limits.maxDurationSecondsPerMonth)} minutes
+            recorded.
+          </p>
+          {usageSummary.tier === 'limited' ? (
+            <p className="mt-2 text-xs">
+              Personal and Business Lite include 45 minutes per month. Paid
+              Business, Community, or Property workspaces include 10 hours.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       <p className="text-sm text-muted-foreground">
-        Generate personal access tokens for the Keel desktop recorder and other
-        connected apps. Each token is scoped to this workspace only — create a
-        separate token per workspace if you use more than one.
+        {scope === 'personal'
+          ? 'Connect the Keel desktop recorder with a personal access token. Choose the destination workspace when you sync each recording.'
+          : 'Legacy workspace tokens still work. For new setups, create tokens in your personal settings instead.'}
       </p>
 
       <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto]">
@@ -152,7 +187,7 @@ export function ApiTokensSettingsCard({
       {tokens.length > 0 ? (
         <div className="space-y-2 rounded-2xl border border-white/10 bg-black/10 p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-            Your tokens in this workspace
+            {scope === 'personal' ? 'Your tokens' : 'Your tokens in this workspace'}
           </p>
           <ul className="space-y-2">
             {tokens.map((token) => {
@@ -201,7 +236,7 @@ export function ApiTokensSettingsCard({
         </div>
       ) : (
         <p className="text-sm text-muted-foreground">
-          No tokens yet for this workspace.
+          {scope === 'personal' ? 'No tokens yet.' : 'No tokens yet for this workspace.'}
         </p>
       )}
     </div>

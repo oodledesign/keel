@@ -35,6 +35,23 @@ export async function listApiTokensForWorkspace(input: {
   return (data ?? []) as ApiTokenListItem[];
 }
 
+export async function listApiTokensForUser(input: {
+  userId: string;
+}): Promise<ApiTokenListItem[]> {
+  const client = getSupabaseServerClient();
+
+  const { data, error } = await apiTokensTable(client)
+    .select(TOKEN_LIST_COLUMNS)
+    .eq('user_id', input.userId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as ApiTokenListItem[];
+}
+
 export async function createApiToken(input: {
   accountId: string;
   userId: string;
