@@ -10,6 +10,32 @@ import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-wor
 
 import { createMeetingTranscriptsService } from '~/home/[account]/_lib/server/meeting-transcripts.service';
 
+export type MeetingClientOption = { id: string; name: string };
+
+function mapClientOptions(
+  rows: Array<{
+    id: unknown;
+    display_name?: string | null;
+    first_name?: string | null;
+    last_name?: string | null;
+    company_name?: string | null;
+  }>,
+): MeetingClientOption[] {
+  return rows
+    .map((row) => ({
+      id: row.id as string,
+      name:
+        row.display_name?.trim() ||
+        row.company_name?.trim() ||
+        [(row.first_name as string), (row.last_name as string)]
+          .filter(Boolean)
+          .join(' ')
+          .trim() ||
+        'Unnamed client',
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 export const loadMeetingsPageData = cache(loadMeetingsPageDataImpl);
 
 async function loadMeetingsPageDataImpl(accountSlug: string) {
@@ -37,18 +63,7 @@ async function loadMeetingsPageDataImpl(accountSlug: string) {
     }),
   ]);
 
-  const clients = (clientsResult.data ?? [])
-    .map((row) => ({
-      id: row.id as string,
-      name:
-        (row.display_name as string | null)?.trim() ||
-        [(row.first_name as string), (row.last_name as string)]
-          .filter(Boolean)
-          .join(' ')
-          .trim() ||
-        'Unnamed client',
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const clients = mapClientOptions(clientsResult.data ?? []);
 
   return {
     accountId,
@@ -80,15 +95,26 @@ async function loadMeetingTranscriptPageDataImpl(
     },
   );
 
-  const transcript = await createMeetingTranscriptsService(client).getById({
-    accountId,
-    transcriptId,
-  });
+  const transcriptsService = createMeetingTranscriptsService(client);
+  const clientsService = createClientsService(client);
+
+  const [transcript, clientsResult] = await Promise.all([
+    transcriptsService.getById({
+      accountId,
+      transcriptId,
+    }),
+    clientsService.listClients({
+      accountId,
+      page: 1,
+      pageSize: 100,
+    }),
+  ]);
 
   return {
     accountId,
     accountSlug,
     transcript,
+    clients: mapClientOptions(clientsResult.data ?? []),
     canEdit: access.canEditClients,
     canView: access.canViewClients,
   };

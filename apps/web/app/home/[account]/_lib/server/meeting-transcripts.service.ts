@@ -66,15 +66,25 @@ function mapMeetingTranscript(row: MeetingTranscriptRow): MeetingTranscript {
   };
 }
 
+function normalizeEmbeddedRow<T>(value: T | T[] | null | undefined): T | null {
+  if (value == null) return null;
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value;
+}
+
 function clientDisplayName(row: {
   display_name?: string | null;
+  company_name?: string | null;
   first_name?: string | null;
   last_name?: string | null;
+  name?: string | null;
 } | null) {
   if (!row) return null;
   const named =
     row.display_name?.trim() ||
-    [row.first_name, row.last_name].filter(Boolean).join(' ').trim();
+    row.company_name?.trim() ||
+    [row.first_name, row.last_name].filter(Boolean).join(' ').trim() ||
+    row.name?.trim();
   return named || null;
 }
 
@@ -96,22 +106,43 @@ function pipelineDealTitle(
 
 function mapMeetingTranscriptListItem(
   row: MeetingTranscriptRow & {
-    clients?: {
-      display_name?: string | null;
-      first_name?: string | null;
-      last_name?: string | null;
-    } | null;
-    pipeline_deals?: {
-      name?: string | null;
-      contact_name?: string | null;
-      company_name?: string | null;
-    } | null;
+    clients?:
+      | {
+          display_name?: string | null;
+          company_name?: string | null;
+          first_name?: string | null;
+          last_name?: string | null;
+          name?: string | null;
+        }
+      | {
+          display_name?: string | null;
+          company_name?: string | null;
+          first_name?: string | null;
+          last_name?: string | null;
+          name?: string | null;
+        }[]
+      | null;
+    pipeline_deals?:
+      | {
+          name?: string | null;
+          contact_name?: string | null;
+          company_name?: string | null;
+        }
+      | {
+          name?: string | null;
+          contact_name?: string | null;
+          company_name?: string | null;
+        }[]
+      | null;
   },
 ): MeetingTranscriptListItem {
+  const client = normalizeEmbeddedRow(row.clients ?? null);
+  const deal = normalizeEmbeddedRow(row.pipeline_deals ?? null);
+
   return {
     ...mapMeetingTranscript(row),
-    clientName: clientDisplayName(row.clients ?? null),
-    dealTitle: pipelineDealTitle(row.pipeline_deals ?? null),
+    clientName: clientDisplayName(client),
+    dealTitle: pipelineDealTitle(deal),
   };
 }
 
@@ -132,6 +163,72 @@ class MeetingTranscriptsService {
     const { data: user } = await requireUser(this.client);
     if (!user) throw new Error('Authentication required');
     return user;
+  }
+
+  private async resolveClientNames(
+    accountId: string,
+    clientIds: string[],
+  ): Promise<Map<string, string>> {
+    const unique = [...new Set(clientIds.filter(Boolean))];
+    if (unique.length === 0) return new Map();
+
+    const { data, error } = await this.db
+      .from('clients')
+      .select('id, display_name, company_name, first_name, last_name')
+      .eq('account_id', accountId)
+      .in('id', unique);
+
+    if (error) throw new Error(error.message);
+
+    const map = new Map<string, string>();
+    for (const row of (data ?? []) as Array<{
+      id: string;
+      display_name?: string | null;
+      company_name?: string | null;
+      first_name?: string | null;
+      last_name?: string | null;
+      name?: string | null;
+    }>) {
+      const label = clientDisplayName(row);
+      if (label) map.set(row.id, label);
+    }
+
+    return map;
+  }
+
+  private applyResolvedClientNames(
+    items: MeetingTranscriptListItem[],
+    namesByClientId: Map<string, string>,
+  ) {
+    return items.map((item) => {
+      if (item.clientName || !item.clientId) return item;
+      const resolved = namesByClientId.get(item.clientId);
+      return resolved ? { ...item, clientName: resolved } : item;
+    });
+  }
+
+  private async assertClientInAccount(accountId: string, clientId: string) {
+    const { data, error } = await this.db
+      .from('clients')
+      .select('id')
+      .eq('account_id', accountId)
+      .eq('id', clientId)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error('Client not found in this workspace');
+  }
+
+  private async assertDealInAccount(accountId: string, dealId: string) {
+    const { data, error } = await this.db
+      .from('pipeline_deals')
+      .select('id')
+      .eq('account_id', accountId)
+      .eq('id', dealId)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error('Deal not found in this workspace');
   }
 
   private async ensureUserAndPermission(
@@ -181,7 +278,7 @@ class MeetingTranscriptsService {
     const { data, error } = await this.db
       .from('meeting_transcripts')
       .select(
-        '*, clients(display_name, first_name, last_name), pipeline_deals(name, contact_name, company_name)',
+        '*, clients(display_name, company_name, first_name, last_name), pipeline_deals(name, contact_name, company_name)',
       )
       .eq('account_id', input.accountId)
       .order('created_at', { ascending: false });
@@ -194,7 +291,17 @@ class MeetingTranscriptsService {
       ),
     );
 
-    return items.sort((a, b) => {
+    const missingClientIds = items
+      .filter((item) => item.clientId && !item.clientName)
+      .map((item) => item.clientId as string);
+    const namesByClientId = await this.resolveClientNames(
+      input.accountId,
+      missingClientIds,
+    );
+
+    const enriched = this.applyResolvedClientNames(items, namesByClientId);
+
+    return enriched.sort((a, b) => {
       const aKey = a.meetingDate ?? a.createdAt.slice(0, 10);
       const bKey = b.meetingDate ?? b.createdAt.slice(0, 10);
       if (aKey !== bKey) {
@@ -213,7 +320,7 @@ class MeetingTranscriptsService {
     const { data, error } = await this.db
       .from('meeting_transcripts')
       .select(
-        '*, clients(display_name, first_name, last_name), pipeline_deals(name, contact_name, company_name)',
+        '*, clients(display_name, company_name, first_name, last_name), pipeline_deals(name, contact_name, company_name)',
       )
       .eq('account_id', input.accountId)
       .eq('id', input.transcriptId)
@@ -222,9 +329,18 @@ class MeetingTranscriptsService {
     if (error) throw new Error(error.message);
     if (!data) return null;
 
-    return mapMeetingTranscriptListItem(
+    let item = mapMeetingTranscriptListItem(
       data as Parameters<typeof mapMeetingTranscriptListItem>[0],
     );
+
+    if (item.clientId && !item.clientName) {
+      const namesByClientId = await this.resolveClientNames(input.accountId, [
+        item.clientId,
+      ]);
+      item = this.applyResolvedClientNames([item], namesByClientId)[0] ?? item;
+    }
+
+    return item;
   }
 
   async listForClient(input: {
@@ -317,8 +433,16 @@ class MeetingTranscriptsService {
     transcriptId: string;
     title?: string;
     meetingDate?: string | null;
-  }): Promise<MeetingTranscript> {
+    clientId?: string | null;
+    dealId?: string | null;
+  }): Promise<MeetingTranscriptListItem> {
     await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+
+    const existing = await this.getById({
+      accountId: input.accountId,
+      transcriptId: input.transcriptId,
+    });
+    if (!existing) throw new Error('Transcript not found');
 
     const payload: Record<string, string | null> = {};
     if (input.title !== undefined) {
@@ -328,12 +452,28 @@ class MeetingTranscriptsService {
       payload.meeting_date = input.meetingDate?.trim() || null;
     }
 
+    const nextClientId =
+      input.clientId !== undefined
+        ? input.clientId?.trim() || null
+        : existing.clientId;
+    const nextDealId =
+      input.dealId !== undefined ? input.dealId?.trim() || null : existing.dealId;
+
+    if (input.clientId !== undefined || input.dealId !== undefined) {
+      if (!nextClientId && !nextDealId) {
+        throw new Error('Link the meeting to a client or deal');
+      }
+      if (nextClientId) {
+        await this.assertClientInAccount(input.accountId, nextClientId);
+      }
+      if (nextDealId) {
+        await this.assertDealInAccount(input.accountId, nextDealId);
+      }
+      payload.client_id = nextClientId;
+      payload.deal_id = nextDealId;
+    }
+
     if (Object.keys(payload).length === 0) {
-      const existing = await this.getById({
-        accountId: input.accountId,
-        transcriptId: input.transcriptId,
-      });
-      if (!existing) throw new Error('Transcript not found');
       return existing;
     }
 
@@ -351,7 +491,12 @@ class MeetingTranscriptsService {
 
     queueBrainIndexSource(input.accountId, 'transcript', input.transcriptId);
 
-    return mapMeetingTranscript(data as MeetingTranscriptRow);
+    const updated = await this.getById({
+      accountId: input.accountId,
+      transcriptId: input.transcriptId,
+    });
+    if (!updated) throw new Error('Transcript not found');
+    return updated;
   }
 
   async delete(input: {

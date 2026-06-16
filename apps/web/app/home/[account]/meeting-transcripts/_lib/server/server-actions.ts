@@ -43,6 +43,8 @@ const UpdateSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .nullable()
     .optional(),
+  clientId: z.string().uuid().nullable().optional(),
+  dealId: z.string().uuid().nullable().optional(),
 });
 
 const DeleteSchema = z.object({
@@ -135,6 +137,8 @@ export const updateMeetingTranscript = enhanceAction(
       transcriptId: input.transcriptId,
       title: input.title,
       meetingDate: input.meetingDate,
+      clientId: input.clientId,
+      dealId: input.dealId,
     });
 
     if (input.accountSlug) {

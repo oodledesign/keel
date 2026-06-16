@@ -68,6 +68,7 @@ async function MeetingDetailPage({ params }: MeetingDetailPageProps) {
           accountId={data.accountId}
           accountSlug={data.accountSlug}
           transcript={data.transcript}
+          clients={data.clients}
           canEdit={data.canEdit}
           assignmentOptions={assignmentOptions}
         />

@@ -35,3 +35,15 @@ export type ScheduledPlannerBlock = {
   start: string;
   end: string;
 };
+
+export type RecorderCalendarAttendee = {
+  name: string;
+  email: string;
+};
+
+export type RecorderCalendarEvent = {
+  title: string;
+  attendees: RecorderCalendarAttendee[];
+  start: string;
+  end: string;
+};

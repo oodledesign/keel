@@ -166,8 +166,15 @@ export function MeetingsPageContent({
     });
   };
 
-  const contextLabel = (row: TranscriptRow) =>
-    row.clientName || row.dealTitle || 'Unlinked';
+  const contextLabel = (row: TranscriptRow) => {
+    if (row.clientName) return row.clientName;
+    if (row.dealTitle) return row.dealTitle;
+    if (row.clientId) {
+      const match = clients.find((client) => client.id === row.clientId);
+      if (match) return match.name;
+    }
+    return 'Unlinked';
+  };
 
   return (
     <div className="space-y-6">

@@ -10,6 +10,13 @@ import { ChevronLeft, Loader2, Mic, Sparkles, Trash2 } from 'lucide-react';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
@@ -29,14 +36,18 @@ type Transcript = {
   meetingDate: string | null;
   createdAt: string;
   clientId: string | null;
+  dealId: string | null;
   clientName: string | null;
   dealTitle: string | null;
 };
+
+type ClientOption = { id: string; name: string };
 
 type Props = {
   accountId: string;
   accountSlug: string;
   transcript: Transcript;
+  clients: ClientOption[];
   canEdit: boolean;
   assignmentOptions: TaskAssignmentOption[];
 };
@@ -45,6 +56,7 @@ export function MeetingTranscriptDetailClient({
   accountId,
   accountSlug,
   transcript,
+  clients,
   canEdit,
   assignmentOptions,
 }: Props) {
@@ -53,6 +65,7 @@ export function MeetingTranscriptDetailClient({
   const [meetingDate, setMeetingDate] = useState(
     transcript.meetingDate ?? transcript.createdAt.slice(0, 10),
   );
+  const [clientId, setClientId] = useState(transcript.clientId ?? '');
   const [pending, startTransition] = useTransition();
 
   const meetingsPath = pathsConfig.app.accountMeetings.replace(
@@ -63,9 +76,15 @@ export function MeetingTranscriptDetailClient({
     '[account]',
     accountSlug,
   );
-  const clientPath = transcript.clientId
-    ? `${pathsConfig.app.accountClients.replace('[account]', accountSlug)}/${transcript.clientId}`
+  const clientPath = clientId
+    ? `${pathsConfig.app.accountClients.replace('[account]', accountSlug)}/${clientId}`
     : null;
+
+  const resolvedClientName =
+    transcript.clientName ||
+    clients.find((client) => client.id === clientId)?.name ||
+    null;
+  const contextLabel = resolvedClientName || transcript.dealTitle;
 
   const saveMeta = () => {
     if (!canEdit) return;
@@ -81,6 +100,32 @@ export function MeetingTranscriptDetailClient({
         toast.success('Meeting updated');
         router.refresh();
       } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Update failed');
+      }
+    });
+  };
+
+  const saveClientLink = (nextClientId: string) => {
+    if (!canEdit) return;
+    if (!nextClientId) {
+      toast.error('Choose a client');
+      return;
+    }
+
+    setClientId(nextClientId);
+    startTransition(async () => {
+      try {
+        await updateMeetingTranscript({
+          accountId,
+          accountSlug,
+          transcriptId: transcript.id,
+          clientId: nextClientId,
+          dealId: null,
+        });
+        toast.success('Client link updated');
+        router.refresh();
+      } catch (error) {
+        setClientId(transcript.clientId ?? '');
         toast.error(error instanceof Error ? error.message : 'Update failed');
       }
     });
@@ -103,8 +148,6 @@ export function MeetingTranscriptDetailClient({
       }
     });
   };
-
-  const contextLabel = transcript.clientName || transcript.dealTitle;
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-8 px-4 pb-16 pt-2 md:px-6">
@@ -146,6 +189,30 @@ export function MeetingTranscriptDetailClient({
                     className="mt-1 border-white/10 bg-white/5 text-white"
                   />
                 </div>
+                <div className="max-w-md">
+                  <Label htmlFor="detail-client" className="text-xs text-zinc-500">
+                    Client
+                  </Label>
+                  <Select
+                    value={clientId || undefined}
+                    onValueChange={saveClientLink}
+                    disabled={pending}
+                  >
+                    <SelectTrigger
+                      id="detail-client"
+                      className="mt-1 border-white/10 bg-white/5 text-white"
+                    >
+                      <SelectValue placeholder="Select client" />
+                    </SelectTrigger>
+                    <SelectContent className="border-white/10 bg-[#1A2535] text-white">
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </>
             ) : (
               <>
@@ -159,17 +226,21 @@ export function MeetingTranscriptDetailClient({
             )}
             {contextLabel ? (
               <p className="text-sm text-zinc-400">
-                {clientPath ? (
+                {clientPath && resolvedClientName ? (
                   <>
                     Client:{' '}
                     <Link href={clientPath} className="text-[#5eead4] hover:underline">
-                      {contextLabel}
+                      {resolvedClientName}
                     </Link>
                   </>
+                ) : transcript.dealTitle ? (
+                  <>Linked to deal: {transcript.dealTitle}</>
                 ) : (
                   <>Linked to: {contextLabel}</>
                 )}
               </p>
+            ) : canEdit ? (
+              <p className="text-sm text-zinc-500">No client linked yet.</p>
             ) : null}
           </div>
 
@@ -218,7 +289,7 @@ export function MeetingTranscriptDetailClient({
           assignmentOptions={assignmentOptions}
           embedded
           initialRawText={transcript.content}
-          defaultClientId={transcript.clientId}
+          defaultClientId={clientId || transcript.clientId}
           successRedirectHref={tasksPath}
         />
       </section>

@@ -10,6 +10,7 @@ import { refreshGoogleCalendarToken } from './oauth';
 import type {
   GoogleCalendarConnection,
   PlannerCalendarEvent,
+  RecorderCalendarEvent,
   ScheduledPlannerBlock,
 } from './types';
 
@@ -22,6 +23,7 @@ type GoogleEvent = {
   start?: { dateTime?: string; date?: string };
   end?: { dateTime?: string; date?: string };
   organizer?: { displayName?: string; email?: string };
+  attendees?: Array<{ displayName?: string; email?: string }>;
 };
 
 type GoogleCalendarListEntry = {
@@ -95,6 +97,89 @@ function mapGoogleEvent(event: GoogleEvent): PlannerCalendarEvent | null {
     calendar: event.organizer?.displayName ?? event.organizer?.email ?? 'Google',
     is_all_day: Boolean(event.start?.date),
   };
+}
+
+function mapRecorderCalendarEvent(event: GoogleEvent): RecorderCalendarEvent | null {
+  const base = mapGoogleEvent(event);
+  if (!base) return null;
+
+  return {
+    title: base.title,
+    start: base.start,
+    end: base.end,
+    attendees: (event.attendees ?? []).map((attendee) => ({
+      name: attendee.displayName?.trim() || attendee.email?.trim() || 'Guest',
+      email: attendee.email?.trim() || '',
+    })),
+  };
+}
+
+function pickCurrentOrNextRecorderEvent(
+  events: RecorderCalendarEvent[],
+  nowMs = Date.now(),
+): RecorderCalendarEvent | null {
+  const horizonMs = nowMs + 2 * 60 * 60 * 1000;
+
+  const current = events.find((event) => {
+    const start = Date.parse(event.start);
+    const end = Date.parse(event.end);
+    if (Number.isNaN(start) || Number.isNaN(end)) return false;
+    return start <= nowMs && end > nowMs;
+  });
+  if (current) return current;
+
+  return (
+    events.find((event) => {
+      const start = Date.parse(event.start);
+      if (Number.isNaN(start)) return false;
+      return start > nowMs && start <= horizonMs;
+    }) ?? null
+  );
+}
+
+export async function getRecorderCalendarEvent(
+  client: SupabaseClient,
+  input: { userId: string },
+): Promise<RecorderCalendarEvent | null> {
+  const nowMs = Date.now();
+  const timeMin = new Date(nowMs - 8 * 60 * 60 * 1000).toISOString();
+  const timeMax = new Date(nowMs + 2 * 60 * 60 * 1000).toISOString();
+
+  if (isPlannerMockCalendarEnabled()) {
+    const mocks = mockEvents(timeMin).map((event) => ({
+      title: event.title,
+      start: event.start,
+      end: event.end,
+      attendees: [
+        { name: 'Alex Example', email: 'alex@example.com' },
+        { name: 'Sam Example', email: 'sam@example.com' },
+      ],
+    }));
+    return pickCurrentOrNextRecorderEvent(mocks, nowMs);
+  }
+
+  const connection = await validConnection(client, input.userId);
+  if (!connection) {
+    return null;
+  }
+
+  const params = new URLSearchParams({
+    timeMin,
+    timeMax,
+    singleEvents: 'true',
+    orderBy: 'startTime',
+  });
+
+  const body = await googleJson<{ items?: GoogleEvent[] }>(
+    connection,
+    `/calendars/${encodeURIComponent(connection.calendarId)}/events?${params}`,
+  );
+
+  const events = (body.items ?? [])
+    .map(mapRecorderCalendarEvent)
+    .filter((event): event is RecorderCalendarEvent => Boolean(event));
+
+  return pickCurrentOrNextRecorderEvent(events, nowMs);
 }
 
 function mockEvents(timeMin: string): PlannerCalendarEvent[] {

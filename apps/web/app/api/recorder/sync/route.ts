@@ -5,11 +5,7 @@ import { z } from 'zod';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import pathsConfig from '~/config/paths.config';
-import {
-  touchApiTokenLastUsed,
-  validateApiTokenForAuth,
-} from '~/lib/api-tokens/api-tokens.service';
-import { isKeelApiTokenFormat } from '~/lib/api-tokens/token';
+import { authenticateRecorderRequest } from '~/lib/api-tokens/recorder-auth';
 import { queueBrainIndexSource } from '~/lib/brain/sync';
 import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
 
@@ -31,20 +27,8 @@ const SyncBodySchema = z.object({
   deal_id: z.string().uuid().optional(),
 });
 
-function unauthorized() {
-  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-}
-
 function badRequest(message: string) {
   return NextResponse.json({ error: message }, { status: 400 });
-}
-
-function parseBearerToken(request: Request) {
-  const header = request.headers.get('authorization');
-  if (!header) return null;
-
-  const match = /^Bearer\s+(.+)$/i.exec(header.trim());
-  return match?.[1]?.trim() ?? null;
 }
 
 async function assertClientBelongsToAccount(
@@ -83,14 +67,9 @@ async function assertDealBelongsToAccount(dealId: string, accountId: string) {
 }
 
 export async function POST(request: Request) {
-  const rawToken = parseBearerToken(request);
-  if (!rawToken || !isKeelApiTokenFormat(rawToken)) {
-    return unauthorized();
-  }
-
-  const token = await validateApiTokenForAuth(rawToken);
-  if (!token) {
-    return unauthorized();
+  const token = await authenticateRecorderRequest(request, { touchLastUsed: true });
+  if (token instanceof NextResponse) {
+    return token;
   }
 
   let body: unknown;
@@ -164,7 +143,6 @@ export async function POST(request: Request) {
     );
   }
 
-  touchApiTokenLastUsed(token.id);
   queueBrainIndexSource(token.account_id, 'transcript', row.id);
 
   const { data: account } = await admin
