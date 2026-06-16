@@ -39,6 +39,74 @@ const tooltipStyle = {
   boxShadow: '0 12px 30px rgba(2, 8, 23, 0.35)',
 };
 
+const GROUPED_INCOME_COLOR = '#2A9D8F';
+const GROUPED_EXPENSES_COLOR = '#94A3B8';
+
+function FinanceGroupedTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{ payload?: MonthlyFinancePoint }>;
+  label?: string;
+}) {
+  if (!active || !payload?.length) {
+    return null;
+  }
+
+  const point = payload[0]?.payload;
+  if (!point) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-[#0B1524] px-3 py-2.5 text-xs shadow-lg">
+      <p className="mb-2 font-medium text-white">{label}</p>
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between gap-6">
+          <span className="flex items-center gap-2 text-zinc-400">
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ backgroundColor: GROUPED_INCOME_COLOR }}
+            />
+            Income
+          </span>
+          <span className="font-medium text-white">
+            {formatCurrency(point.income)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-6">
+          <span className="flex items-center gap-2 text-zinc-400">
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ backgroundColor: GROUPED_EXPENSES_COLOR }}
+            />
+            Expenses
+          </span>
+          <span className="font-medium text-white">
+            {formatCurrency(point.expenses)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-6 border-t border-white/10 pt-1.5">
+          <span className="text-zinc-400">Net</span>
+          <span className="font-medium text-[#5eead4]">
+            {formatCurrency(point.net)}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function seriesLabel(name: string) {
+  const key = name.toLowerCase();
+  if (key === 'income') return 'Income';
+  if (key === 'expenses') return 'Expenses';
+  if (key === 'net') return 'Net';
+  return name;
+}
+
 export function FinanceTrendBarChart({
   data,
   variant = 'stacked',
@@ -74,15 +142,21 @@ export function FinanceTrendBarChart({
             />
             <Tooltip
               cursor={{ fill: 'rgba(255,255,255,0.035)' }}
-              contentStyle={tooltipStyle}
-              formatter={(value: number, name: string) => [
-                formatCurrency(Number(value)),
-                name === 'income' ? 'Income' : name === 'expenses' ? 'Expenses' : 'Net',
-              ]}
+              content={<FinanceGroupedTooltip />}
             />
             <Legend wrapperStyle={{ fontSize: 12, color: '#D7DEEE' }} />
-            <Bar dataKey="income" name="Income" fill="#2A9D8F" radius={[6, 6, 0, 0]} />
-            <Bar dataKey="expenses" name="Expenses" fill="#176A72" radius={[6, 6, 0, 0]} />
+            <Bar
+              dataKey="income"
+              name="Income"
+              fill={GROUPED_INCOME_COLOR}
+              radius={[6, 6, 0, 0]}
+            />
+            <Bar
+              dataKey="expenses"
+              name="Expenses"
+              fill={GROUPED_EXPENSES_COLOR}
+              radius={[6, 6, 0, 0]}
+            />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -105,7 +179,7 @@ export function FinanceTrendBarChart({
             contentStyle={tooltipStyle}
             formatter={(value: number, name: string) => [
               formatCurrency(Number(value)),
-              name === 'net' ? 'Net' : name === 'expenses' ? 'Expenses' : 'Income',
+              seriesLabel(name),
             ]}
           />
           <Bar dataKey="expenses" stackId="finance" radius={[0, 0, 10, 10]}>
