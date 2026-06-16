@@ -18,11 +18,21 @@ export function flattenTeamNavLinks(config: NavConfig): NavLink[] {
 
     for (const child of group.children) {
       if ('collapsible' in child && child.collapsible && child.children?.length) {
-        links.push({
-          path: child.path,
-          label: child.label,
-          Icon: child.Icon,
-        });
+        if (child.path) {
+          links.push({
+            path: child.path,
+            label: child.label,
+            Icon: child.Icon,
+          });
+        }
+
+        for (const nested of child.children) {
+          links.push({
+            path: nested.path,
+            label: nested.label,
+            Icon: nested.Icon,
+          });
+        }
         continue;
       }
 

@@ -7,7 +7,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { getDbForWorkspaceTaskAssignmentOptions } from '~/home/_lib/server/workspace-scope';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 import type { TasksPageTask } from '../server/tasks.loader';
-import { loadTasksForClient } from '../server/tasks.loader';
+import { loadTaskById, loadTasksForClient } from '../server/tasks.loader';
 
 const TASK_DB_PRIORITIES = new Set(['low', 'medium', 'high', 'urgent']);
 
@@ -361,4 +361,12 @@ export async function getTasksForClient(
   clientId: string,
 ): Promise<TasksPageTask[]> {
   return loadTasksForClient(clientId);
+}
+
+/** Fetch one task for dashboard quick-open / edit dialog. */
+export async function loadTaskForEdit(
+  taskId: string,
+  workspaceAccountId?: string,
+): Promise<TasksPageTask | null> {
+  return loadTaskById(taskId, { workspaceAccountId });
 }

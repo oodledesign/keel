@@ -11,6 +11,12 @@ import type {
   WebsiteWireframePage,
 } from '~/lib/websites/planning-types';
 
+import {
+  isMissingColumnError,
+  isMissingRelationError,
+  logMissingRelation,
+} from '../../../_lib/server/supabase-errors';
+
 function parseSitemap(value: unknown): WebsiteSitemapPage[] {
   if (!Array.isArray(value)) return [];
   return value as WebsiteSitemapPage[];
@@ -38,6 +44,18 @@ export type WebsitePlanningBundle = {
   contentDocs: WebsiteContentDoc[];
 };
 
+export function emptyWebsitePlanningBundle(
+  websiteId: string,
+): WebsitePlanningBundle {
+  return {
+    websiteId,
+    jobId: null,
+    sitemap: [],
+    wireframes: [],
+    contentDocs: [],
+  };
+}
+
 export function createWebsitePlanningService(client: SupabaseClient) {
   return new WebsitePlanningService(client);
 }
@@ -56,11 +74,12 @@ class WebsitePlanningService {
   }
 
   private async ensureCanView(accountId: string) {
-    await this.ensureUser();
+    const user = await this.ensureUser();
     const { data, error } = await this.client
       .from('accounts_memberships')
       .select('account_role')
       .eq('account_id', accountId)
+      .eq('user_id', user.id)
       .maybeSingle();
 
     if (error) throw error;
@@ -71,11 +90,12 @@ class WebsitePlanningService {
   }
 
   private async ensureCanEdit(accountId: string) {
-    await this.ensureUser();
+    const user = await this.ensureUser();
     const { data, error } = await this.client
       .from('accounts_memberships')
       .select('account_role')
       .eq('account_id', accountId)
+      .eq('user_id', user.id)
       .maybeSingle();
 
     if (error) throw error;
@@ -102,14 +122,51 @@ class WebsitePlanningService {
   ): Promise<WebsitePlanningBundle | null> {
     await this.ensureCanView(accountId);
 
-    const { data, error } = await this.client
+    type PlanningRow = {
+      id: string;
+      job_id?: string | null;
+      sitemap?: unknown;
+      wireframes?: unknown;
+    };
+
+    let row: PlanningRow | null = null;
+
+    const planningQuery = await this.client
       .from('websites')
       .select('id, job_id, sitemap, wireframes')
       .eq('id', websiteId)
       .eq('business_id', accountId)
       .maybeSingle();
 
-    if (error || !data) return null;
+    if (planningQuery.error) {
+      if (isMissingColumnError(planningQuery.error)) {
+        logMissingRelation(
+          'website_planning.getPlanningBundle',
+          planningQuery.error,
+        );
+
+        const fallback = await this.client
+          .from('websites')
+          .select('id')
+          .eq('id', websiteId)
+          .eq('business_id', accountId)
+          .maybeSingle();
+
+        if (fallback.error || !fallback.data) {
+          return null;
+        }
+
+        row = fallback.data as PlanningRow;
+      } else {
+        throw planningQuery.error;
+      }
+    } else if (!planningQuery.data) {
+      return null;
+    } else {
+      row = planningQuery.data as PlanningRow;
+    }
+
+    let contentDocs: WebsiteContentDoc[] = [];
 
     const { data: docs, error: docsErr } = await this.client
       .from('website_content_docs')
@@ -119,16 +176,24 @@ class WebsitePlanningService {
       .order('sort_order', { ascending: true })
       .order('created_at', { ascending: true });
 
-    if (docsErr) throw docsErr;
+    if (docsErr) {
+      if (isMissingRelationError(docsErr)) {
+        logMissingRelation('website_planning.content_docs', docsErr);
+      } else {
+        throw docsErr;
+      }
+    } else {
+      contentDocs = ((docs ?? []) as ContentDocRow[]).map((row) =>
+        this.mapContentDoc(row),
+      );
+    }
 
     return {
-      websiteId: data.id as string,
-      jobId: (data.job_id as string | null) ?? null,
-      sitemap: parseSitemap(data.sitemap),
-      wireframes: parseWireframes(data.wireframes),
-      contentDocs: ((docs ?? []) as ContentDocRow[]).map((row) =>
-        this.mapContentDoc(row),
-      ),
+      websiteId: row.id,
+      jobId: row.job_id ?? null,
+      sitemap: parseSitemap(row.sitemap),
+      wireframes: parseWireframes(row.wireframes),
+      contentDocs,
     };
   }
 
@@ -142,7 +207,14 @@ class WebsitePlanningService {
       .eq('job_id', jobId)
       .maybeSingle();
 
-    if (error) throw error;
+    if (error) {
+      if (isMissingColumnError(error)) {
+        return null;
+      }
+
+      throw error;
+    }
+
     if (!data) return null;
 
     return {

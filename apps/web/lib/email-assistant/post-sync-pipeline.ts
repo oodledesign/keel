@@ -3,6 +3,7 @@ import 'server-only';
 import { classify } from '@kit/email-assistant';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { autoLinkEmailThread } from './auto-link-thread';
 import { isFromOwner } from './address-utils';
 import { createThreadDraft } from './create-thread-draft';
 import { resolveDraftOwnerContext } from './draft-owner';
@@ -13,6 +14,7 @@ const MAX_AUTO_DRAFT_PER_RUN = 3;
 
 export type EmailAssistantPipelineResult = {
   classified: number;
+  linked: number;
   draftsCreated: number;
   draftsSavedToGmail: number;
   skipped: number;
@@ -24,6 +26,7 @@ type ThreadRow = {
   subject: string | null;
   assistant_category: 'needs_reply' | 'no_reply' | null;
   assistant_processed_message_id: string | null;
+  link_source: string | null;
 };
 
 type MessageRow = {
@@ -47,6 +50,7 @@ export async function runEmailAssistantPipeline(
 ): Promise<EmailAssistantPipelineResult> {
   const result: EmailAssistantPipelineResult = {
     classified: 0,
+    linked: 0,
     draftsCreated: 0,
     draftsSavedToGmail: 0,
     skipped: 0,
@@ -88,7 +92,7 @@ export async function runEmailAssistantPipeline(
   const { data: threadRows, error: threadsError } = await admin
     .from('email_threads')
     .select(
-      'id, subject, assistant_category, assistant_processed_message_id',
+      'id, subject, assistant_category, assistant_processed_message_id, link_source',
     )
     .eq('user_id', userId)
     .order('assistant_category', { ascending: true, nullsFirst: true })
@@ -180,6 +184,25 @@ export async function runEmailAssistantPipeline(
         result.skipped += 1;
       }
 
+      if (!thread.link_source || thread.link_source === 'auto') {
+        try {
+          const linked = await autoLinkEmailThread(
+            admin,
+            userId,
+            thread.id,
+            owner.email,
+          );
+
+          if (linked) {
+            result.linked += 1;
+          }
+        } catch (error) {
+          result.errors.push(
+            error instanceof Error ? error.message : 'Auto-link failed',
+          );
+        }
+      }
+
       continue;
     }
 
@@ -239,6 +262,25 @@ export async function runEmailAssistantPipeline(
     }
 
     result.classified += 1;
+
+    if (!thread.link_source || thread.link_source === 'auto') {
+      try {
+        const linked = await autoLinkEmailThread(
+          admin,
+          userId,
+          thread.id,
+          owner.email,
+        );
+
+        if (linked) {
+          result.linked += 1;
+        }
+      } catch (error) {
+        result.errors.push(
+          error instanceof Error ? error.message : 'Auto-link failed',
+        );
+      }
+    }
 
     if (
       category === 'needs_reply' &&

@@ -32,6 +32,7 @@ import type {
   EmailWorkspaceOption,
 } from '../_lib/types';
 import { AcceptActionItemDialog } from './accept-action-item-dialog';
+import { EmailThreadLinkSection } from './email-thread-link-section';
 
 const panelClass =
   'rounded-2xl border border-white/[0.08] bg-[var(--workspace-shell-panel)]';
@@ -294,6 +295,21 @@ export function EmailThreadPanel({
               </p>
             </div>
           </div>
+        </div>
+
+        <div className="border-b border-white/10 px-4 py-3">
+          <EmailThreadLinkSection
+            threadId={threadId}
+            link={detail.thread.link}
+            workspaces={workspaces}
+            onUpdated={(link) =>
+              setDetail((current) =>
+                current
+                  ? { ...current, thread: { ...current.thread, link } }
+                  : current,
+              )
+            }
+          />
         </div>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">

@@ -37,6 +37,10 @@ function buildThreadsUrl(input: {
     params.set('filter', 'needs_reply');
   }
 
+  if (input.filter === 'linked') {
+    params.set('filter', 'linked');
+  }
+
   const trimmedSearch = input.searchQuery?.trim();
 
   if (trimmedSearch) {
@@ -183,6 +187,7 @@ export function EmailPageClient({ initialData }: Props) {
         let guard = 0;
         let draftsCreated = 0;
         let classified = 0;
+        let linked = 0;
         const maxBatches = 25;
 
         do {
@@ -193,6 +198,7 @@ export function EmailPageClient({ initialData }: Props) {
             remainingEstimate?: number;
             assistant?: {
               classified: number;
+              linked?: number;
               draftsCreated: number;
               draftsSavedToGmail: number;
               errors?: string[];
@@ -202,6 +208,7 @@ export function EmailPageClient({ initialData }: Props) {
           totalProcessed += result.messagesProcessed;
           draftsCreated += result.assistant?.draftsCreated ?? 0;
           classified += result.assistant?.classified ?? 0;
+          linked += result.assistant?.linked ?? 0;
           complete = result.backfillComplete !== false;
           guard += 1;
 
@@ -213,6 +220,10 @@ export function EmailPageClient({ initialData }: Props) {
         if (draftsCreated > 0) {
           toast.success(
             `Drafted ${draftsCreated} repl${draftsCreated === 1 ? 'y' : 'ies'}`,
+          );
+        } else if (linked > 0) {
+          toast.success(
+            `Linked ${linked} thread${linked === 1 ? '' : 's'} to clients/projects`,
           );
         } else if (classified > 0) {
           toast.success(

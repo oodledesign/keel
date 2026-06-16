@@ -1,7 +1,36 @@
-import { LayoutDashboard, Link2 } from 'lucide-react';
+import {
+  BarChart3,
+  Briefcase,
+  Calendar,
+  CalendarClock,
+  CalendarDays,
+  CheckSquare,
+  ClipboardList,
+  FileSignature,
+  FileText,
+  Globe,
+  Kanban,
+  LayoutDashboard,
+  LayoutGrid,
+  LifeBuoy,
+  ListChecks,
+  Mail,
+  MessageSquare,
+  MessageSquareText,
+  PenLine,
+  Share2,
+  Sparkles,
+  StickyNote,
+  Users,
+  Wallet,
+  type LucideIcon,
+} from 'lucide-react';
 
 import type { MobileNavLink } from '~/components/workspace-shell/workspace-mobile-nav';
+import pathsConfig from '~/config/paths.config';
 import type { ResolvedShortcut } from '~/lib/dashboard-shortcuts/types';
+
+const MOBILE_NAV_ICON_CLASS = 'h-5 w-5';
 
 export type MobileBottomNavTab = {
   path: string;
@@ -9,15 +38,129 @@ export type MobileBottomNavTab = {
   Icon: React.ReactNode;
 };
 
+function normalizeNavPath(path: string): string {
+  const trimmed = path.trim();
+  if (!trimmed || trimmed === '/') return '/';
+  return trimmed.replace(/\/+$/, '') || '/';
+}
+
+function iconNode(Icon: LucideIcon) {
+  return <Icon className={MOBILE_NAV_ICON_CLASS} />;
+}
+
+/** Fallback icons for personal routes and workspace modules (by URL segment). */
+const PERSONAL_SEGMENT_ICONS: Record<string, LucideIcon> = {
+  tasks: CheckSquare,
+  pipeline: Kanban,
+  email: Mail,
+  planner: CalendarDays,
+  people: Users,
+  settings: Users,
+};
+
+const WORKSPACE_SEGMENT_ICONS: Record<string, LucideIcon> = {
+  jobs: ClipboardList,
+  tasks: CheckSquare,
+  planner: Sparkles,
+  schedule: Calendar,
+  pipeline: Kanban,
+  clients: Briefcase,
+  websites: Globe,
+  support: LifeBuoy,
+  invoices: FileText,
+  proposals: PenLine,
+  contracts: FileSignature,
+  people: Users,
+  notes: StickyNote,
+  brain: Sparkles,
+  sops: ListChecks,
+  messages: MessageSquare,
+  finances: Wallet,
+  videos: LayoutGrid,
+  rankly: BarChart3,
+  signatures: PenLine,
+  feedflow: Share2,
+  reviews: MessageSquareText,
+  social: Share2,
+  apps: LayoutGrid,
+  properties: Briefcase,
+  calendar: Calendar,
+  shopping: LayoutGrid,
+  meal: CalendarDays,
+};
+
+function iconFromHrefFallback(href: string): React.ReactNode | null {
+  const normalized = normalizeNavPath(href);
+  const parts = normalized.split('/').filter(Boolean);
+
+  if (parts[0] !== 'app') return null;
+
+  if (parts.length === 1 || (parts.length === 2 && parts[1] === 'home')) {
+    return iconNode(LayoutDashboard);
+  }
+
+  if (parts.length === 2) {
+    const personal = PERSONAL_SEGMENT_ICONS[parts[1]!];
+    if (personal) return iconNode(personal);
+  }
+
+  if (parts.length >= 3) {
+    const moduleKey = parts[2]!.split('?')[0]!;
+    const workspace = WORKSPACE_SEGMENT_ICONS[moduleKey];
+    if (workspace) return iconNode(workspace);
+  }
+
+  if (normalized === normalizeNavPath(pathsConfig.app.personalPlannerDay)) {
+    return iconNode(CalendarClock);
+  }
+
+  if (normalized === normalizeNavPath(pathsConfig.app.personalEmailAssistant)) {
+    return iconNode(Mail);
+  }
+
+  return null;
+}
+
+/** Prefer the longest matching nav path so `/app/oodle/jobs` maps to Jobs, not Dashboard. */
 function findNavMatch(navLinks: MobileNavLink[], path: string) {
-  const exact = navLinks.find((link) => link.path === path);
+  const target = normalizeNavPath(path);
+
+  const exact = navLinks.find(
+    (link) => normalizeNavPath(link.path) === target,
+  );
   if (exact) return exact;
 
-  return navLinks.find(
-    (link) =>
-      path.startsWith(`${link.path}/`) ||
-      (link.path !== '/' && link.path.startsWith(`${path}/`)),
-  );
+  let best: MobileNavLink | undefined;
+  let bestLength = -1;
+
+  for (const link of navLinks) {
+    const linkPath = normalizeNavPath(link.path);
+    if (linkPath === '/') continue;
+
+    const isPrefix =
+      target === linkPath || target.startsWith(`${linkPath}/`);
+
+    if (isPrefix && linkPath.length > bestLength) {
+      best = link;
+      bestLength = linkPath.length;
+    }
+  }
+
+  return best;
+}
+
+function resolveTabIcon(
+  path: string,
+  navLinks: MobileNavLink[],
+  fallback: LucideIcon,
+) {
+  const match = findNavMatch(navLinks, path);
+  if (match?.Icon) return match.Icon;
+
+  const hrefFallback = iconFromHrefFallback(path);
+  if (hrefFallback) return hrefFallback;
+
+  return iconNode(fallback);
 }
 
 export function resolveMobileBottomNavTabs(input: {
@@ -25,22 +168,19 @@ export function resolveMobileBottomNavTabs(input: {
   navLinks: MobileNavLink[];
   shortcuts: ResolvedShortcut[];
 }): MobileBottomNavTab[] {
-  const homeMatch = findNavMatch(input.navLinks, input.homePath);
-
   const tabs: MobileBottomNavTab[] = [
     {
       path: input.homePath,
       label: 'Home',
-      Icon: homeMatch?.Icon ?? <LayoutDashboard className="h-5 w-5" />,
+      Icon: resolveTabIcon(input.homePath, input.navLinks, LayoutDashboard),
     },
   ];
 
   for (const shortcut of input.shortcuts.slice(0, 3)) {
-    const match = findNavMatch(input.navLinks, shortcut.href);
     tabs.push({
       path: shortcut.href,
       label: shortcut.label,
-      Icon: match?.Icon ?? <Link2 className="h-5 w-5" />,
+      Icon: resolveTabIcon(shortcut.href, input.navLinks, LayoutDashboard),
     });
   }
 

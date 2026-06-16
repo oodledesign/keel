@@ -37,7 +37,7 @@ import {
   personalAccountSettingsPath,
   PersonalSettingsIcon,
 } from '~/config/personal-account-navigation.config';
-import pathsConfig from '~/config/paths.config';
+import { getExplicitPersonalHomePath } from '~/lib/dashboard-shortcuts/personal-home-url';
 
 import type { UserWorkspace } from '../_lib/server/load-user-workspace';
 
@@ -113,9 +113,8 @@ function HomeSidebarLogo() {
 
   return (
     <KeelSidebarLogo
-      href={pathsConfig.app.home}
+      href={getExplicitPersonalHomePath()}
       collapsed={collapsed}
-      className="max-w-[140px]"
     />
   );
 }

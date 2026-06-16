@@ -12,6 +12,11 @@ import type {
   EmailParticipant,
   EmailThreadSummary,
 } from '../types';
+import {
+  EMAIL_THREAD_LINK_SELECT,
+  enrichEmailThreadLinks,
+  mapThreadLinkFields,
+} from '~/lib/email-assistant/thread-link-display';
 
 function inferSignatureIsHtml(
   signature: string | null | undefined,
@@ -69,6 +74,7 @@ function mapThreadRow(row: Record<string, unknown>): EmailThreadSummary {
     is_unread: Boolean(row.is_unread),
     last_message_at: (row.last_message_at as string | null) ?? null,
     assistant_category: assistantCategory,
+    link: mapThreadLinkFields(row),
   };
 }
 
@@ -93,7 +99,7 @@ export const loadEmailPageData = cache(async (): Promise<EmailPageInitialData> =
       client
         .from('email_threads')
         .select(
-          'id, gmail_thread_id, subject, snippet, participants, is_unread, last_message_at, assistant_category',
+          `id, gmail_thread_id, subject, snippet, participants, is_unread, last_message_at, assistant_category, ${EMAIL_THREAD_LINK_SELECT}`,
         )
         .eq('user_id', user.id)
         .order('last_message_at', { ascending: false, nullsFirst: false })
@@ -136,8 +142,11 @@ export const loadEmailPageData = cache(async (): Promise<EmailPageInitialData> =
       autoDraftEnabled: settingsRow?.auto_draft_enabled ?? true,
       autoSaveGmailDrafts: settingsRow?.auto_save_gmail_drafts ?? false,
     },
-    threads: (threadsResult.data ?? []).map((row) =>
-      mapThreadRow(row as Record<string, unknown>),
+    threads: await enrichEmailThreadLinks(
+      client,
+      (threadsResult.data ?? []).map((row) =>
+        mapThreadRow(row as Record<string, unknown>),
+      ),
     ),
     workspaces: workspaces.map((workspace) => ({
       id: workspace.id,
@@ -156,7 +165,7 @@ export async function loadEmailThreadDetailFromDb(
   const { data, error } = await client
     .from('email_threads')
     .select(
-      'id, gmail_thread_id, subject, snippet, participants, is_unread, last_message_at, assistant_category',
+      `id, gmail_thread_id, subject, snippet, participants, is_unread, last_message_at, assistant_category, ${EMAIL_THREAD_LINK_SELECT}`,
     )
     .eq('id', threadId)
     .eq('user_id', user.id)
@@ -166,5 +175,7 @@ export async function loadEmailThreadDetailFromDb(
     return null;
   }
 
-  return mapThreadRow(data as Record<string, unknown>);
+  const thread = mapThreadRow(data as Record<string, unknown>);
+  const [enriched] = await enrichEmailThreadLinks(client, [thread]);
+  return enriched ?? null;
 }

@@ -1,5 +1,7 @@
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { cn } from '@kit/ui/utils';
+
 import { DashboardShortcutsBar } from '~/components/dashboard-shortcuts/dashboard-shortcuts-bar';
 import pathsConfig from '~/config/paths.config';
 import { loadWorkspaceDashboardShortcuts } from '~/lib/dashboard-shortcuts/load-shortcuts';
@@ -38,7 +40,7 @@ export async function WorkspaceDashboardShortcutsBar({
       )}
       stripWorkspacePrefix={accountName}
       compact={compact}
-      className={className ?? 'mb-4 pt-4'}
+      className={cn('mb-4 px-4 pt-4 md:px-6 lg:px-8', className)}
     />
   );
 }

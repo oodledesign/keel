@@ -10,7 +10,10 @@ import { getDefaultAccountPath } from '../../_lib/role-access';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
 import { WebsiteDetailContent } from '../_components/website-detail-content';
 import { loadWebsitesPageData } from '../_lib/server/websites-page.loader';
-import { createWebsitePlanningService } from '../_lib/server/website-planning.service';
+import {
+  createWebsitePlanningService,
+  emptyWebsitePlanningBundle,
+} from '../_lib/server/website-planning.service';
 import { createWebsitesService } from '../_lib/server/websites.service';
 import type { WebsitePlanningTab } from '~/lib/websites/planning-types';
 
@@ -51,14 +54,15 @@ async function WebsiteDetailPage({
 
   const service = createWebsitesService(getSupabaseServerClient());
   const planningService = createWebsitePlanningService(getSupabaseServerClient());
-  const [website, planning] = await Promise.all([
-    service.getWebsite({ accountId, websiteId }),
-    planningService.getPlanningBundle(accountId, websiteId),
-  ]);
+  const website = await service.getWebsite({ accountId, websiteId });
 
-  if (!website || !planning) {
+  if (!website) {
     notFound();
   }
+
+  const planning =
+    (await planningService.getPlanningBundle(accountId, websiteId)) ??
+    emptyWebsitePlanningBundle(websiteId);
 
   const planningTab = ['overview', 'sitemap', 'wireframe', 'content'].includes(
     plan ?? '',

@@ -11,8 +11,14 @@ import { Trans } from '@kit/ui/trans';
 import { cn } from '@kit/ui/utils';
 
 import { HapticButton, HapticLink } from '~/components/haptic-link';
+import { WorkspaceHelpButton } from '~/components/workspace-shell/workspace-help-button';
 import { WorkspaceAccountsSelector } from '~/components/workspace-shell/workspace-accounts-selector';
 import type { MobileBottomNavTab } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
+import {
+  MOBILE_FLOATING_CHROME_PB,
+  MOBILE_FLOATING_CHROME_PX,
+} from '~/lib/mobile-nav/mobile-floating-chrome';
+import { navHrefPathname } from '~/lib/dashboard-shortcuts/personal-home-url';
 import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
 
 export type MobileNavLink = {
@@ -164,6 +170,7 @@ type WorkspaceMobileBottomNavProps = {
   settingsHref: string;
   settingsLabel: string;
   newMenu?: React.ReactNode;
+  helpDefaultAccountId?: string | null;
 };
 
 const MOBILE_NAV_ICON_CLASS = 'h-[21px] w-[21px]';
@@ -177,42 +184,48 @@ export function WorkspaceMobileBottomNav({
   settingsHref,
   settingsLabel,
   newMenu,
+  helpDefaultAccountId = null,
 }: WorkspaceMobileBottomNavProps) {
   const pathname = usePathname();
+  const homePathname = navHrefPathname(homePath);
+  const normalizedPathname = navHrefPathname(pathname);
 
   if (menuOpen) {
     return (
       <nav
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-[110] flex justify-center px-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:hidden"
+        className={cn(
+          'pointer-events-none fixed inset-x-0 bottom-0 z-[110] flex justify-center lg:hidden',
+          MOBILE_FLOATING_CHROME_PX,
+          MOBILE_FLOATING_CHROME_PB,
+        )}
         aria-label="Menu controls"
       >
-        <div className="pointer-events-auto flex h-14 items-center gap-3 rounded-full border border-white/10 bg-[#1A2535]/98 px-3 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+        <div className="pointer-events-auto flex h-12 min-w-[6.5rem] items-center justify-between gap-6 rounded-full border border-white/10 bg-[#1A2535]/98 px-2 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+          <HapticLink
+            href={settingsHref}
+            onClick={() => onMenuOpenChange(false)}
+            aria-label={settingsLabel}
+            title={settingsLabel}
+            className={cn(
+              MOBILE_NAV_BTN_CLASS,
+              'text-zinc-300 hover:bg-white/8 hover:text-white',
+            )}
+          >
+            <Settings className={MOBILE_NAV_ICON_CLASS} />
+          </HapticLink>
+
           <HapticButton
             type="button"
             aria-label="Close menu"
+            title="Close menu"
             className={cn(
               MOBILE_NAV_BTN_CLASS,
-              'gap-2 px-4 text-sm font-medium text-zinc-200 hover:bg-white/8',
+              'text-zinc-300 hover:bg-white/8 hover:text-white',
             )}
             onClick={() => onMenuOpenChange(false)}
           >
             <X className={MOBILE_NAV_ICON_CLASS} />
-            <span>Close</span>
           </HapticButton>
-
-          <HapticLink
-            href={settingsHref}
-            onClick={() => onMenuOpenChange(false)}
-            className={cn(
-              MOBILE_NAV_BTN_CLASS,
-              'min-w-[5.5rem] flex-col gap-0.5 px-3 text-zinc-300 hover:bg-white/8 hover:text-white',
-            )}
-          >
-            <Settings className={MOBILE_NAV_ICON_CLASS} />
-            <span className="max-w-[7rem] truncate text-[10px] font-medium leading-none">
-              {settingsLabel}
-            </span>
-          </HapticLink>
         </div>
       </nav>
     );
@@ -220,16 +233,24 @@ export function WorkspaceMobileBottomNav({
 
   return (
     <nav
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:hidden"
+      className={cn(
+        'pointer-events-none fixed inset-x-0 bottom-0 z-40 grid grid-cols-[1fr_auto_1fr] items-center lg:hidden',
+        MOBILE_FLOATING_CHROME_PX,
+        MOBILE_FLOATING_CHROME_PB,
+      )}
       aria-label="Primary"
     >
-      <div className="pointer-events-auto flex h-12 items-center gap-0.5 rounded-full border border-white/10 bg-[#1A2535]/98 px-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+      <div aria-hidden />
+      <div className="pointer-events-auto flex h-12 items-center gap-0.5 justify-self-center rounded-full border border-white/10 bg-[#1A2535]/98 px-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl">
         {bottomNavTabs.map((tab) => {
+          const tabPathname = navHrefPathname(tab.path);
           const active =
-            pathname === tab.path ||
-            (tab.path !== homePath && pathname.startsWith(`${tab.path}/`)) ||
-            (tab.path === homePath &&
-              (pathname === homePath || pathname === `${homePath}/`));
+            normalizedPathname === tabPathname ||
+            (tabPathname !== homePathname &&
+              normalizedPathname.startsWith(`${tabPathname}/`)) ||
+            (tabPathname === homePathname &&
+              (normalizedPathname === homePathname ||
+                normalizedPathname === `${homePathname}/`));
 
           return (
             <HapticLink
@@ -269,6 +290,13 @@ export function WorkspaceMobileBottomNav({
         >
           <Menu className={MOBILE_NAV_ICON_CLASS} />
         </HapticButton>
+      </div>
+
+      <div className="pointer-events-auto flex justify-end">
+        <WorkspaceHelpButton
+          defaultAccountId={helpDefaultAccountId}
+          variant="inline"
+        />
       </div>
     </nav>
   );

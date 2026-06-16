@@ -22,6 +22,7 @@ import { cn } from '@kit/ui/utils';
 import { SidebarContext } from '@kit/ui/shadcn-sidebar';
 
 import pathsConfig from '~/config/paths.config';
+import { getExplicitPersonalHomePath } from '~/lib/dashboard-shortcuts/personal-home-url';
 import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
 import {
   isPersonalWorkspaceValue,
@@ -63,7 +64,7 @@ export function WorkspaceAccountsSelector({
     onNavigate?.();
 
     if (isPersonalWorkspaceValue(account.value)) {
-      router.replace(pathsConfig.app.home);
+      router.replace(getExplicitPersonalHomePath());
       return;
     }
 

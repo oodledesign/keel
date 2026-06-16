@@ -39,6 +39,13 @@ export const ImageUploadInput: React.FC<Props> =
       fileName: '',
     });
 
+    useEffect(() => {
+      setState((current) => ({
+        ...current,
+        image: image ?? '',
+      }));
+    }, [image]);
+
     const handleFileSelection = useCallback(
       (files: FileList | null) => {
         if (!files?.length) {
@@ -125,13 +132,8 @@ export const ImageUploadInput: React.FC<Props> =
       [forwardedRef],
     );
 
-    if (image !== state.image) {
-      setState((state) => ({ ...state, image }));
-    }
-
     useEffect(() => {
       if (!image) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         onRemove();
       }
     }, [image, onRemove]);

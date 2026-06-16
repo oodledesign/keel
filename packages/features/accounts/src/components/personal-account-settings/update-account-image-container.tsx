@@ -2,33 +2,15 @@
 
 import { useCallback } from 'react';
 
-import type { SupabaseClient } from '@supabase/supabase-js';
-
 import { useTranslation } from 'react-i18next';
 
-import { Database } from '@kit/supabase/database';
-import { useSupabase } from '@kit/supabase/hooks/use-supabase';
 import { ImageUploader } from '@kit/ui/image-uploader';
 import { toast } from '@kit/ui/sonner';
 import { Trans } from '@kit/ui/trans';
 
+import { toSupabasePublicStorageUrl } from '../../lib/public-storage-url';
+
 import { useRevalidatePersonalAccountDataQuery } from '../../hooks/use-personal-account-data';
-
-const AVATARS_BUCKET = 'account_image';
-
-function toSupabasePublicStorageUrl(url: string | null | undefined) {
-  const trimmed = url?.trim();
-  if (!trimmed) return null;
-
-  return trimmed.replace(
-    /\/storage\/v1\/object\/(?!public\/)([a-z0-9_-]+)\//i,
-    '/storage/v1/object/public/$1/',
-  );
-}
-
-function isAccountImageStorageUrl(url: string) {
-  return url.includes('/account_image/');
-}
 
 export function UpdateAccountImageContainer({
   user,
@@ -54,7 +36,6 @@ function UploadProfileAvatarForm(props: {
   userId: string;
   onAvatarUpdated: () => void;
 }) {
-  const client = useSupabase();
   const { t } = useTranslation('account');
 
   const createToaster = useCallback(
@@ -70,60 +51,59 @@ function UploadProfileAvatarForm(props: {
 
   const onValueChange = useCallback(
     (file: File | null) => {
-      const removeExistingStorageFile = () => {
-        if (props.pictureUrl) {
-          return (
-            deleteProfilePhoto(client, props.pictureUrl) ?? Promise.resolve()
-          );
-        }
-
-        return Promise.resolve();
-      };
-
       if (file) {
         if (!file.type.startsWith('image/')) {
           toast.error(t('updateProfileError'));
           return;
         }
 
-        const promise = () =>
-          removeExistingStorageFile().then(() =>
-            uploadUserProfilePhoto(client, file, props.userId)
-              .then((pictureUrl) => {
-                return client
-                  .from('accounts')
-                  .update({
-                    picture_url: pictureUrl,
-                  })
-                  .eq('id', props.userId)
-                  .throwOnError();
-              })
-              .then(() => {
-                props.onAvatarUpdated();
-              }),
-          );
+        const promise = async () => {
+          const formData = new FormData();
+          formData.append('file', file);
+
+          const response = await fetch('/api/account/upload-profile-image', {
+            method: 'POST',
+            body: formData,
+          });
+
+          const payload = (await response.json().catch(() => ({}))) as {
+            error?: string;
+          };
+
+          if (!response.ok) {
+            throw new Error(payload.error || t('updateProfileError'));
+          }
+
+          props.onAvatarUpdated();
+        };
 
         createToaster(promise);
-      } else {
-        const promise = () =>
-          removeExistingStorageFile()
-            .then(() => {
-              return client
-                .from('accounts')
-                .update({
-                  picture_url: null,
-                })
-                .eq('id', props.userId)
-                .throwOnError();
-            })
-            .then(() => {
-              props.onAvatarUpdated();
-            });
-
-        createToaster(promise);
+        return;
       }
+
+      const promise = async () => {
+        const formData = new FormData();
+        formData.append('remove', '1');
+
+        const response = await fetch('/api/account/upload-profile-image', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const payload = (await response.json().catch(() => ({}))) as {
+          error?: string;
+        };
+
+        if (!response.ok) {
+          throw new Error(payload.error || t('updateProfileError'));
+        }
+
+        props.onAvatarUpdated();
+      };
+
+      createToaster(promise);
     },
-    [client, createToaster, props],
+    [createToaster, props, t],
   );
 
   return (
@@ -139,54 +119,4 @@ function UploadProfileAvatarForm(props: {
       </div>
     </ImageUploader>
   );
-}
-
-function deleteProfilePhoto(client: SupabaseClient<Database>, url: string) {
-  if (!isAccountImageStorageUrl(url)) {
-    return;
-  }
-
-  const bucket = client.storage.from(AVATARS_BUCKET);
-  const path = url.split('/account_image/')[1]?.split('?')[0];
-
-  if (!path) {
-    return;
-  }
-
-  return bucket.remove([path]);
-}
-
-async function uploadUserProfilePhoto(
-  client: SupabaseClient<Database>,
-  photoFile: File,
-  userId: string,
-) {
-  const bytes = await photoFile.arrayBuffer();
-  const bucket = client.storage.from(AVATARS_BUCKET);
-  const fileName = getAvatarFileName(userId);
-  const { nanoid } = await import('nanoid');
-  const cacheBuster = nanoid(16);
-
-  const result = await bucket.upload(fileName, bytes, {
-    contentType: photoFile.type,
-    upsert: true,
-  });
-
-  if (!result.error) {
-    const url = toSupabasePublicStorageUrl(
-      bucket.getPublicUrl(fileName).data.publicUrl,
-    );
-
-    if (!url) {
-      throw new Error('Failed to build public image URL');
-    }
-
-    return `${url}?v=${cacheBuster}`;
-  }
-
-  throw result.error;
-}
-
-function getAvatarFileName(userId: string) {
-  return userId;
 }

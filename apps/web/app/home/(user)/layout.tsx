@@ -13,6 +13,7 @@ import { SidebarProvider } from '@kit/ui/shadcn-sidebar';
 import { AppLogo } from '~/components/app-logo';
 import { WorkspaceTopBar } from '~/components/workspace-shell/workspace-top-bar';
 import pathsConfig from '~/config/paths.config';
+import { getExplicitPersonalHomePath } from '~/lib/dashboard-shortcuts/personal-home-url';
 import { APP_LOGO_SHELL_CLASSNAME } from '~/lib/app-logo-shell';
 import { personalAccountNavigationConfig } from '~/config/personal-account-navigation.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
@@ -26,6 +27,7 @@ import { loadPersonalSidebarWorkspaces } from './_lib/server/personal-sidebar-wo
 import { flattenPersonalNavLinks } from './_lib/flatten-personal-nav-links';
 import {
   buildPersonalHomeNavRoutes,
+  buildPersonalMobileNavIconLinks,
   parsePersonalAccountNavigationConfig,
 } from '~/config/personal-account-navigation.config';
 import { loadPersonalMobileNavShortcuts } from '~/lib/dashboard-shortcuts/load-shortcuts';
@@ -93,12 +95,18 @@ async function SidebarLayout({ children }: React.PropsWithChildren) {
   const personalNavLinks = flattenPersonalNavLinks(
     parsePersonalAccountNavigationConfig(buildPersonalHomeNavRoutes()),
   );
+  const mobileNavIconLinks = [
+    ...personalNavLinks,
+    ...buildPersonalMobileNavIconLinks().filter(
+      (link) => !personalNavLinks.some((nav) => nav.path === link.path),
+    ),
+  ];
   const mobileNavShortcuts = client
     ? await loadPersonalMobileNavShortcuts(client, user.id)
     : [];
   const bottomNavTabs = resolveMobileBottomNavTabs({
-    homePath: pathsConfig.app.home,
-    navLinks: personalNavLinks,
+    homePath: getExplicitPersonalHomePath(),
+    navLinks: mobileNavIconLinks,
     shortcuts: mobileNavShortcuts,
   });
 

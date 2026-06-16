@@ -24,6 +24,10 @@ import {
 import { getAppSiteOrigin, getMarketingSiteOrigin } from '~/lib/app-host-routing';
 import { getUserDefaultLandingPath } from '~/lib/dashboard-shortcuts/load-shortcuts';
 import {
+  isExplicitPersonalHomeRequest,
+  isPersonalDashboardRoot,
+} from '~/lib/dashboard-shortcuts/personal-home-url';
+import {
   getMiddlewareAuthenticatedUser,
   getMiddlewareSessionUser,
 } from '~/lib/server/middleware-auth';
@@ -268,6 +272,21 @@ async function personalAppAuthHandler(req: NextRequest, res: NextResponse) {
     return NextResponse.redirect(
       new URL(pathsConfig.auth.verifyMfa, origin).href,
     );
+  }
+
+  if (
+    isPersonalDashboardRoot(next) &&
+    !isExplicitPersonalHomeRequest(req.nextUrl.searchParams)
+  ) {
+    try {
+      const landingPath = await getUserDefaultLandingPath(supabase, user.id);
+
+      if (landingPath !== pathsConfig.app.home) {
+        return NextResponse.redirect(new URL(landingPath, origin).href);
+      }
+    } catch {
+      // Fall through to personal home.
+    }
   }
 }
 

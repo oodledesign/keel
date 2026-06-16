@@ -211,6 +211,7 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
       <PageBody className="bg-[var(--workspace-shell-canvas)] p-0 md:p-0">
         <DashboardPageContent
           accountSlug={data.accountSlug}
+          accountId={data.accountId}
           metrics={data.metrics}
           financeTrend={data.financeTrend}
           upcomingTasks={data.upcomingTasks}

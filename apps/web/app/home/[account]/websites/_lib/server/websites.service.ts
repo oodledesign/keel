@@ -14,6 +14,7 @@ import type {
   WebsiteStatus,
 } from '../schema/websites.schema';
 import {
+  isMissingColumnError,
   isMissingRelationError,
   logMissingRelation,
 } from '../../../_lib/server/supabase-errors';
@@ -100,7 +101,7 @@ function mapWebsiteWriteError(err: unknown): Error {
     );
   }
 
-  if (e?.code === 'PGRST204' || /could not find the .* column/i.test(blob)) {
+  if (isMissingColumnError(err)) {
     return new Error(
       'Could not save website: the websites table is missing columns expected by Keel. Run migrations from apps/web (`pnpm exec supabase db push`).',
     );

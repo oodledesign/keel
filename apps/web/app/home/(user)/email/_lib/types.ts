@@ -3,6 +3,17 @@ export type EmailParticipant = {
   email: string;
 };
 
+export type EmailThreadLink = {
+  accountId: string | null;
+  clientId: string | null;
+  projectId: string | null;
+  linkSource: 'auto' | 'manual' | null;
+  linked: boolean;
+  accountName: string | null;
+  clientName: string | null;
+  projectName: string | null;
+};
+
 export type EmailThreadSummary = {
   id: string;
   gmail_thread_id: string;
@@ -12,9 +23,10 @@ export type EmailThreadSummary = {
   is_unread: boolean;
   last_message_at: string | null;
   assistant_category: 'needs_reply' | 'no_reply' | null;
+  link: EmailThreadLink;
 };
 
-export type EmailInboxFilter = 'all' | 'needs_reply';
+export type EmailInboxFilter = 'all' | 'needs_reply' | 'linked';
 
 export type EmailMessageRow = {
   id: string;

@@ -1,3 +1,11 @@
+/** PostgREST errors when a column is missing on the remote project. */
+export function isMissingColumnError(err: unknown): boolean {
+  const e = err as { code?: string; message?: string; details?: string };
+  const blob = `${e?.message ?? ''} ${e?.details ?? ''}`.toLowerCase();
+
+  return e?.code === 'PGRST204' || /could not find the .* column/i.test(blob);
+}
+
 /** PostgREST / Postgres errors when a relation is missing on the remote project. */
 export function isMissingRelationError(err: unknown): boolean {
   const e = err as { code?: string; message?: string; details?: string };

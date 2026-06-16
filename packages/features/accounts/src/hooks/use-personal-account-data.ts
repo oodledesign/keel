@@ -5,6 +5,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Json } from '@kit/supabase/database';
 import { useSupabase } from '@kit/supabase/hooks/use-supabase';
 
+import { toSupabasePublicStorageUrl } from '../../lib/public-storage-url';
+
 export function usePersonalAccountData(
   userId: string,
   partialAccount?: {
@@ -40,7 +42,14 @@ export function usePersonalAccountData(
       throw response.error;
     }
 
-    return response.data;
+    if (!response.data) {
+      return null;
+    }
+
+    return {
+      ...response.data,
+      picture_url: toSupabasePublicStorageUrl(response.data.picture_url),
+    };
   };
 
   return useQuery({
@@ -53,7 +62,7 @@ export function usePersonalAccountData(
       ? {
           id: partialAccount.id,
           name: partialAccount.name,
-          picture_url: partialAccount.picture_url,
+          picture_url: toSupabasePublicStorageUrl(partialAccount.picture_url),
           public_data: partialAccount.public_data,
         }
       : undefined,

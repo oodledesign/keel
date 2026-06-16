@@ -25,6 +25,7 @@ import { Trans } from '@kit/ui/trans';
 
 import featureFlagsConfig from '~/config/feature-flags.config';
 import pathsConfig from '~/config/paths.config';
+import { getExplicitPersonalHomePath } from '~/lib/dashboard-shortcuts/personal-home-url';
 import { getTeamAccountSidebarConfig } from '~/config/team-account-navigation.config';
 import { flattenTeamNavLinks } from '~/home/[account]/_lib/flatten-team-nav-links';
 import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
@@ -180,7 +181,7 @@ function TeamAccountsModal(props: {
             onAccountChange={(value) => {
               const path = value
                 ? pathsConfig.app.accountHome.replace('[account]', value)
-                : pathsConfig.app.home;
+                : getExplicitPersonalHomePath();
 
               router.replace(path);
             }}

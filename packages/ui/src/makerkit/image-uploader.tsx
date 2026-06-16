@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { Image as ImageIcon } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -16,6 +16,10 @@ export function ImageUploader(
   }>,
 ) {
   const [image, setImage] = useState(props.value);
+
+  useEffect(() => {
+    setImage(props.value ?? '');
+  }, [props.value]);
 
   const { setValue, register } = useForm<{
     value: string | null | FileList;
@@ -43,10 +47,6 @@ export function ImageUploader(
     },
     [props],
   );
-
-  if (props.value !== image) {
-    setImage(props.value);
-  }
 
   if (!image) {
     return (

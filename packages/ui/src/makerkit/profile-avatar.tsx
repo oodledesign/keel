@@ -1,6 +1,16 @@
 import { cn } from '../lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '../shadcn/avatar';
 
+function normalizePictureUrl(url: string | null | undefined) {
+  const trimmed = url?.trim();
+  if (!trimmed) return undefined;
+
+  return trimmed.replace(
+    /\/storage\/v1\/object\/(?!public\/)([a-z0-9_-]+)\//i,
+    '/storage/v1/object/public/$1/',
+  );
+}
+
 type SessionProps = {
   displayName: string | null;
   pictureUrl?: string | null;
@@ -37,10 +47,11 @@ export function ProfileAvatar(props: ProfileAvatarProps) {
   }
 
   const initials = props.displayName?.slice(0, 1);
+  const pictureUrl = normalizePictureUrl(props.pictureUrl);
 
   return (
     <Avatar className={avatarClassName}>
-      <AvatarImage src={props.pictureUrl ?? undefined} />
+      <AvatarImage src={pictureUrl} />
 
       <AvatarFallback
         className={cn(props.fallbackClassName, 'animate-in fade-in')}

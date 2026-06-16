@@ -16,6 +16,7 @@ import { Loader2 } from 'lucide-react';
 import { cn } from '@kit/ui/utils';
 
 import { triggerHapticFeedback } from '~/lib/haptics';
+import { MOBILE_FLOATING_CHROME_SCROLL_PB } from '~/lib/mobile-nav/mobile-floating-chrome';
 import { scrollWheelDeltaToScrollParent } from '~/lib/scroll-passthrough';
 import {
   isPullToRefreshEnabled,
@@ -239,7 +240,7 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
               : undefined
           }
         >
-          <div className="pb-[calc(4.75rem+env(safe-area-inset-bottom))] lg:pb-0">
+          <div className={cn(MOBILE_FLOATING_CHROME_SCROLL_PB, 'lg:pb-0')}>
             {children}
           </div>
         </div>

@@ -85,8 +85,8 @@ export function KeelDashboard({ data }: Props) {
         </DashboardSection>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <div className="flex flex-col gap-6">
+      <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <div className="flex min-w-0 flex-col gap-6">
           <TaskPreviewSection
             title="Today's Focus"
             subtitle={
@@ -130,7 +130,8 @@ export function KeelDashboard({ data }: Props) {
           </DashboardSection>
         </div>
 
-        <DashboardSection title="My Day">
+        <div className="min-w-0">
+          <DashboardSection title="My Day">
           {data.myDayEvents.length > 0 ? (
             <div className={`${panelClass} divide-y divide-white/[0.06]`}>
               {data.myDayEvents.map((event) => (
@@ -140,7 +141,8 @@ export function KeelDashboard({ data }: Props) {
           ) : (
             <EmptyPanel message="No events on your calendar today." />
           )}
-        </DashboardSection>
+          </DashboardSection>
+        </div>
       </div>
 
       <DashboardSection title="Workspace overview">
@@ -247,12 +249,12 @@ function EmptyPanel(
 
 function CalendarEventRow(props: { event: PersonalCalendarEvent }) {
   return (
-    <div className="flex items-start gap-3 px-4 py-3">
+    <div className="flex min-w-0 items-start gap-3 px-4 py-3">
       <span className="w-14 shrink-0 text-sm font-medium tabular-nums text-[#2A9D8F]">
         {props.event.timeLabel || '—'}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-white">{props.event.title}</p>
+        <p className="truncate text-sm font-medium text-white">{props.event.title}</p>
         <span className="mt-1 inline-flex items-center gap-1.5 text-[11px] text-white/60">
           <span
             className="h-2 w-2 rounded-full"
@@ -285,7 +287,7 @@ function PeopleUpcomingRow(props: { item: PersonalPeopleUpcomingItem }) {
         <p className="truncate text-sm font-medium text-white">
           {props.item.name}
         </p>
-        <p className="text-xs text-zinc-400">{props.item.label}</p>
+        <p className="truncate text-xs text-zinc-400">{props.item.label}</p>
       </div>
       <ArrowRight className="h-4 w-4 shrink-0 text-zinc-500" />
     </Link>

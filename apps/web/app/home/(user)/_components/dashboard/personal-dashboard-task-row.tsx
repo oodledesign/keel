@@ -4,6 +4,7 @@ import Link from 'next/link';
 
 import { cn } from '@kit/ui/utils';
 
+import { DashboardTaskDetailTrigger } from '~/components/dashboard/dashboard-task-detail-trigger';
 import pathsConfig from '~/config/paths.config';
 
 import type { PersonalDashboardTask } from '../../_lib/server/keel-dashboard.loader';
@@ -28,7 +29,10 @@ export function PersonalDashboardTaskRow(props: {
   const { task } = props;
 
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-[var(--workspace-shell-panel)] px-3 py-2.5">
+    <DashboardTaskDetailTrigger
+      taskId={task.id}
+      className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-[var(--workspace-shell-panel)] px-3 py-2.5"
+    >
       <div className="min-w-0 flex-1">
         <p
           className={cn(
@@ -64,7 +68,7 @@ export function PersonalDashboardTaskRow(props: {
       >
         {priorityLabels[task.priority]}
       </span>
-    </div>
+    </DashboardTaskDetailTrigger>
   );
 }
 
@@ -85,7 +89,11 @@ function WorkspaceChip(props: { name: string; color: string; slug: string | null
   if (props.slug) {
     const href = pathsConfig.app.accountHome.replace('[account]', props.slug);
     return (
-      <Link href={href} className={cn(className, 'transition-colors hover:bg-white/[0.04]')}>
+      <Link
+        href={href}
+        onClick={(event) => event.stopPropagation()}
+        className={cn(className, 'transition-colors hover:bg-white/[0.04]')}
+      >
         {inner}
       </Link>
     );

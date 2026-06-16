@@ -11,6 +11,7 @@ import type {
   DashboardNoteSummary,
   DashboardTaskSummary,
 } from '../_lib/server/dashboard-page.loader';
+import { DashboardTaskDetailTrigger } from '~/components/dashboard/dashboard-task-detail-trigger';
 import { FinanceTrendBarChart } from '~/components/finance/finance-charts';
 import pathsConfig from '~/config/paths.config';
 
@@ -19,6 +20,7 @@ const panelClass =
 
 type BusinessDashboardMobileProps = {
   accountSlug: string;
+  accountId: string;
   metrics: DashboardMetrics;
   financeTrend: DashboardFinanceMonth[];
   upcomingTasks: DashboardTaskSummary[];
@@ -28,6 +30,7 @@ type BusinessDashboardMobileProps = {
 
 export function BusinessDashboardMobile({
   accountSlug,
+  accountId,
   metrics,
   financeTrend,
   upcomingTasks,
@@ -102,8 +105,9 @@ export function BusinessDashboardMobile({
           ) : (
             upcomingTasks.map((task) => (
               <li key={task.id}>
-                <HapticLink
-                  href={tasksHref}
+                <DashboardTaskDetailTrigger
+                  taskId={task.id}
+                  workspaceAccountId={accountId}
                   className="flex flex-col gap-0.5 px-4 py-3 active:bg-white/4"
                 >
                   <span className="text-sm font-medium text-white">
@@ -114,7 +118,7 @@ export function BusinessDashboardMobile({
                       .filter(Boolean)
                       .join(' · ')}
                   </span>
-                </HapticLink>
+                </DashboardTaskDetailTrigger>
               </li>
             ))
           )}

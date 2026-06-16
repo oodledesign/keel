@@ -80,7 +80,7 @@ function SidebarLogoLink(props: { account: string }) {
   const href = pathsConfig.app.accountHome.replace('[account]', props.account);
 
   return (
-    <KeelSidebarLogo href={href} collapsed={collapsed} className="max-w-[140px]" />
+    <KeelSidebarLogo href={href} collapsed={collapsed} />
   );
 }
 

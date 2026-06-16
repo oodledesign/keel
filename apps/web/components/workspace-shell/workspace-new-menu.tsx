@@ -34,6 +34,7 @@ import { cn } from '@kit/ui/utils';
 import pathsConfig from '~/config/paths.config';
 import { HapticButton, HapticLink } from '~/components/haptic-link';
 import { openWorkspaceCreateTaskDialog } from '~/components/workspace-shell/workspace-create-task-host';
+import { MOBILE_FLOATING_CHROME_ABOVE } from '~/lib/mobile-nav/mobile-floating-chrome';
 import type { WorkspaceSpaceType } from '~/home/[account]/_lib/server/account-modules';
 
 type WorkspaceNewMenuProps =
@@ -56,6 +57,12 @@ type NewMenuItem = {
 
 const MOBILE_NEW_MENU_ROW_CLASS =
   'flex min-h-[3.25rem] w-full items-center gap-4 rounded-xl px-4 py-3 text-[1.05rem] font-medium text-zinc-200 transition-colors hover:bg-white/6';
+
+const DESKTOP_NEW_MENU_CONTENT_CLASS =
+  'w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-[1.25rem] border border-white/10 bg-[#0B132B] p-0 text-white shadow-[0_16px_48px_rgba(0,0,0,0.45)] outline-none ring-0 focus:outline-none focus-visible:outline-none';
+
+const DESKTOP_NEW_MENU_ITEM_CLASS =
+  'rounded-xl p-0 outline-none ring-0 focus:bg-white/6 focus:text-zinc-200 data-[highlighted]:bg-white/6 data-[highlighted]:text-zinc-200';
 
 function getNewMenuItems(props: WorkspaceNewMenuProps) {
   const items =
@@ -82,16 +89,16 @@ function NewMenuItemRow({
 }: {
   item: NewMenuItem;
   onNavigate: () => void;
-  variant?: 'dropdown' | 'mobile';
+  variant?: 'dropdown' | 'mobile' | 'panel';
 }) {
   const iconClassName =
-    variant === 'mobile'
+    variant === 'mobile' || variant === 'panel'
       ? 'h-5 w-5 shrink-0 text-[#2A9D8F]'
       : 'mr-2 h-4 w-4 text-[#2A9D8F]';
 
   if (item.action === 'create-task') {
     const className =
-      variant === 'mobile'
+      variant === 'mobile' || variant === 'panel'
         ? MOBILE_NEW_MENU_ROW_CLASS
         : 'flex w-full cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm outline-hidden hover:bg-white/10';
 
@@ -117,6 +124,15 @@ function NewMenuItemRow({
           <item.icon className={iconClassName} />
           {item.label}
         </HapticLink>
+      );
+    }
+
+    if (variant === 'panel') {
+      return (
+        <Link href={item.href} onClick={onNavigate} className={MOBILE_NEW_MENU_ROW_CLASS}>
+          <item.icon className={iconClassName} />
+          {item.label}
+        </Link>
       );
     }
 
@@ -165,13 +181,29 @@ export function WorkspaceNewMenu(props: WorkspaceNewMenuProps) {
 
       <DropdownMenuContent
         align="end"
-        className="min-w-[12rem] border-white/10 bg-[#0F1B35] text-white"
+        sideOffset={8}
+        onCloseAutoFocus={(event) => event.preventDefault()}
+        className={DESKTOP_NEW_MENU_CONTENT_CLASS}
       >
-        {items.map((item) => (
-          <DropdownMenuItem key={item.key} asChild className="focus:bg-white/10">
-            <NewMenuItemRow item={item} onNavigate={() => setOpen(false)} />
-          </DropdownMenuItem>
-        ))}
+        <div className="border-b border-white/10 px-4 py-3">
+          <p className="text-base font-semibold text-white">Create</p>
+        </div>
+
+        <nav className="max-h-[min(52vh,22rem)] overflow-y-auto px-2 py-2">
+          <ul className="flex flex-col gap-1">
+            {items.map((item) => (
+              <li key={item.key}>
+                <DropdownMenuItem asChild className={DESKTOP_NEW_MENU_ITEM_CLASS}>
+                  <NewMenuItemRow
+                    item={item}
+                    variant="panel"
+                    onNavigate={() => setOpen(false)}
+                  />
+                </DropdownMenuItem>
+              </li>
+            ))}
+          </ul>
+        </nav>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -229,7 +261,7 @@ export function WorkspaceMobileNewMenu(props: WorkspaceNewMenuProps) {
           <div
             className={cn(
               'fixed inset-x-3 z-[106] transition-all duration-200 ease-out lg:hidden',
-              'bottom-[calc(4.75rem+env(safe-area-inset-bottom))]',
+              MOBILE_FLOATING_CHROME_ABOVE,
               open
                 ? 'translate-y-0 opacity-100'
                 : 'pointer-events-none translate-y-3 opacity-0',

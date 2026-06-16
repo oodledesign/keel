@@ -265,6 +265,7 @@ async function enrichTaskRows(
   contextOverride?: 'work' | 'life',
   /** Use for project/client names when session RLS hides rows (e.g. team workspace). */
   enrichmentClient?: SupabaseClient,
+  nest = true,
 ): Promise<TasksPageTask[]> {
   const rowDb = enrichmentClient ?? client;
 
@@ -350,7 +351,52 @@ async function enrichTaskRows(
   const maps = { projects, clients, areas, accountsById };
 
   const flat = rows.map((row) => taskRowToPageTask(row, maps, contextOverride));
-  return nestTaskTree(flat);
+  return nest ? nestTaskTree(flat) : flat;
+}
+
+/** Load a single task for the edit dialog (dashboard quick-open, etc.). */
+export async function loadTaskById(
+  taskId: string,
+  options?: { workspaceAccountId?: string },
+): Promise<TasksPageTask | null> {
+  const client = getSupabaseServerClient();
+  const user = await requireUserInServerComponent();
+
+  const { data, error } = await client
+    .from('tasks')
+    .select(
+      'id, title, status, priority, due_date, project_id, client_id, area_id, parent_task_id, notes',
+    )
+    .eq('id', taskId)
+    .maybeSingle();
+
+  if (error || !data) {
+    return null;
+  }
+
+  let enrichmentClient: SupabaseClient | undefined;
+
+  if (options?.workspaceAccountId) {
+    try {
+      enrichmentClient = await getDbForWorkspaceTaskAssignmentOptions(
+        client,
+        user.id,
+        options.workspaceAccountId,
+      );
+    } catch {
+      return null;
+    }
+  }
+
+  const tasks = await enrichTaskRows(
+    client,
+    [data as TaskQueryRow],
+    options?.workspaceAccountId ? 'work' : undefined,
+    enrichmentClient,
+    false,
+  );
+
+  return tasks[0] ?? null;
 }
 
 export const loadTasksForUser = cache(async (): Promise<TasksPageTask[]> => {

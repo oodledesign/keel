@@ -52,6 +52,8 @@ const CommandInput: React.FC<
 
 CommandInput.displayName = CommandPrimitive.Input.displayName;
 
+const CommandRawInput = CommandPrimitive.Input;
+
 const CommandList: React.FC<
   React.ComponentPropsWithRef<typeof CommandPrimitive.List>
 > = ({ className, ...props }) => (
@@ -129,6 +131,7 @@ export {
   Command,
   CommandDialog,
   CommandInput,
+  CommandRawInput,
   CommandList,
   CommandEmpty,
   CommandGroup,

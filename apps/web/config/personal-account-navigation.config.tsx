@@ -1,9 +1,19 @@
-import { CalendarDays, LayoutDashboard, Settings, Users } from 'lucide-react';
+import {
+  CalendarClock,
+  CalendarDays,
+  CheckSquare,
+  Kanban,
+  LayoutDashboard,
+  Mail,
+  Settings,
+  Users,
+} from 'lucide-react';
 import { z } from 'zod';
 
 import { NavigationConfigSchema } from '@kit/ui/navigation-schema';
 
 import pathsConfig from '~/config/paths.config';
+import { getExplicitPersonalHomePath } from '~/lib/dashboard-shortcuts/personal-home-url';
 
 const iconClasses = 'w-4';
 
@@ -32,7 +42,7 @@ export function buildPersonalHomeNavRoutes() {
       children: [
         {
           label: 'Home',
-          path: pathsConfig.app.home,
+          path: getExplicitPersonalHomePath(),
           Icon: <LayoutDashboard className={iconClasses} />,
           end: true,
         },
@@ -145,6 +155,60 @@ export function buildPersonalShortcutRoutes(): PersonalShortcutRoute[] {
         : {};
 
     merged.push({ ...route, ...meta });
+  }
+
+  return merged;
+}
+
+/** Icon links for personal routes used in mobile bottom nav (includes sidebar + supplements). */
+export function buildPersonalMobileNavIconLinks(): Array<{
+  path: string;
+  label: string;
+  Icon: React.ReactNode;
+}> {
+  const icon = (Icon: React.ComponentType<{ className?: string }>) => (
+    <Icon className={iconClasses} />
+  );
+
+  const fromNav = buildPersonalHomeNavRoutes().flatMap((group) =>
+    (group.children ?? []).flatMap((child) =>
+      child.path
+        ? [{ path: child.path, label: child.label, Icon: child.Icon }]
+        : [],
+    ),
+  );
+
+  const supplements = [
+    {
+      path: `${pathsConfig.app.home}/tasks`,
+      label: 'Tasks',
+      Icon: icon(CheckSquare),
+    },
+    {
+      path: pathsConfig.app.personalPlannerDay,
+      label: 'Today',
+      Icon: icon(CalendarClock),
+    },
+    {
+      path: `${pathsConfig.app.home}/pipeline`,
+      label: 'Pipeline',
+      Icon: icon(Kanban),
+    },
+    {
+      path: pathsConfig.app.personalEmailAssistant,
+      label: 'Email',
+      Icon: icon(Mail),
+    },
+  ];
+
+  const seen = new Set<string>();
+  const merged: Array<{ path: string; label: string; Icon: React.ReactNode }> =
+    [];
+
+  for (const link of [...fromNav, ...supplements]) {
+    if (seen.has(link.path)) continue;
+    seen.add(link.path);
+    merged.push(link);
   }
 
   return merged;

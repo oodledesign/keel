@@ -4,9 +4,16 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 
 import { requireUser } from '@kit/supabase/require-user';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import { Database } from '~/lib/database.types';
+
+import {
+  isMissingColumnError,
+  isMissingRelationError,
+  logMissingRelation,
+} from '../../../_lib/server/supabase-errors';
 
 import type {
   AddPhaseNoteInput,
@@ -115,6 +122,17 @@ class ProjectPhasesService {
 
   private get db(): any {
     return this.client;
+  }
+
+  private get adminDb(): SupabaseClient<Database> {
+    return getSupabaseServerAdminClient();
+  }
+
+  private isCheckConstraintError(err: unknown): boolean {
+    const e = err as { code?: string; message?: string; details?: string };
+    const blob = `${e?.message ?? ''} ${e?.details ?? ''}`.toLowerCase();
+
+    return e?.code === '23514' || blob.includes('check constraint');
   }
 
   private throwErr(err: unknown, fallback = 'Something went wrong'): never {
@@ -594,44 +612,124 @@ class ProjectPhasesService {
       .eq('account_id', input.accountId)
       .maybeSingle();
 
-    if (phaseErr) this.throwErr(phaseErr);
+    if (phaseErr) {
+      if (isMissingRelationError(phaseErr)) {
+        logMissingRelation('project_phases.ensurePhasePage', phaseErr);
+        throw new Error(
+          'Project phases are not set up on this database. Run migrations from apps/web (`pnpm exec supabase db push`).',
+        );
+      }
+
+      this.throwErr(phaseErr);
+    }
+
     if (!phase) throw new Error('Phase not found');
+
+    return this.loadOrCreatePhasePageDoc(phase, user.id);
+  }
+
+  private async loadOrCreatePhasePageDoc(
+    phase: Record<string, unknown>,
+    userId: string,
+    initialContent = '',
+  ) {
+    const phaseId = phase.id as string;
+    const phaseName = (phase.name as string) ?? 'Phase';
+    const accountId = phase.account_id as string;
 
     const { data: existing, error: findErr } = await this.db
       .from('docs')
       .select('*')
-      .eq('account_id', input.accountId)
-      .eq('phase_id', input.phaseId)
+      .eq('account_id', accountId)
+      .eq('phase_id', phaseId)
       .eq('doc_type', 'phase_page')
       .maybeSingle();
 
-    if (findErr) this.throwErr(findErr);
-    if (existing) return existing;
+    if (!findErr && existing) {
+      return existing;
+    }
 
-    const { data, error } = await this.db
-      .from('docs')
-      .insert({
-        account_id: phase.account_id,
+    if (findErr && !isMissingColumnError(findErr)) {
+      this.throwErr(findErr);
+    }
+
+    if (findErr && isMissingColumnError(findErr)) {
+      logMissingRelation('project_phases.phase_page.find', findErr);
+    }
+
+    const insertPayloads: Array<Record<string, unknown>> = [
+      {
+        account_id: accountId,
         job_id: phase.job_id,
-        phase_id: phase.id,
-        title: phase.name,
-        content: '',
+        phase_id: phaseId,
+        title: phaseName,
+        content: initialContent,
         kind: 'written',
         doc_type: 'phase_page',
         category: 'idea',
         tags: [],
-        user_id: user.id,
-        created_by: user.id,
-      })
-      .select()
-      .single();
+        user_id: userId,
+        created_by: userId,
+      },
+      {
+        account_id: accountId,
+        job_id: phase.job_id,
+        phase_id: phaseId,
+        title: phaseName,
+        content: initialContent,
+        kind: 'written',
+        doc_type: 'general',
+        category: 'idea',
+        tags: [],
+        user_id: userId,
+        created_by: userId,
+      },
+      {
+        account_id: accountId,
+        job_id: phase.job_id,
+        phase_id: phaseId,
+        title: phaseName,
+        content: initialContent,
+        kind: 'written',
+        created_by: userId,
+      },
+      {
+        account_id: accountId,
+        job_id: phase.job_id,
+        title: phaseName,
+        content: initialContent,
+        kind: 'written',
+        created_by: userId,
+      },
+    ];
 
-    if (error) this.throwErr(error);
-    return data;
+    for (const payload of insertPayloads) {
+      const { data, error } = await this.adminDb
+        .from('docs')
+        .insert(payload)
+        .select('*')
+        .single();
+
+      if (!error && data) {
+        return data;
+      }
+
+      if (
+        error &&
+        !isMissingColumnError(error) &&
+        !this.isCheckConstraintError(error)
+      ) {
+        this.throwErr(error);
+      }
+    }
+
+    throw new Error(
+      'Could not create the phase page document. Run migrations from apps/web (`pnpm exec supabase db push`).',
+    );
   }
 
   async getPhaseDetail(input: GetPhaseDetailInput) {
-    await this.ensureUser();
+    const user = await this.ensureUser();
 
     const { data: phase, error: phaseErr } = await this.db
       .from('project_phases')
@@ -640,43 +738,68 @@ class ProjectPhasesService {
       .eq('account_id', input.accountId)
       .maybeSingle();
 
-    if (phaseErr) this.throwErr(phaseErr);
+    if (phaseErr) {
+      if (isMissingRelationError(phaseErr)) {
+        logMissingRelation('project_phases.getPhaseDetail', phaseErr);
+        throw new Error(
+          'Project phases are not set up on this database. Run migrations from apps/web (`pnpm exec supabase db push`).',
+        );
+      }
+
+      this.throwErr(phaseErr);
+    }
+
     if (!phase) throw new Error('Phase not found');
 
     const jobId = phase.job_id as string;
 
-    const [pageDoc, { data: tasks, error: tasksErr }, { data: notes, error: notesErr }] =
-      await Promise.all([
-        this.ensurePhasePage({
-          accountId: input.accountId,
-          phaseId: input.phaseId,
-        }),
-        this.db
-          .from('tasks')
-          .select(
-            'id, title, status, priority, due_date, sort_order, phase_id, job_id, user_id, notes',
-          )
-          .eq('job_id', jobId)
-          .eq('phase_id', input.phaseId)
-          .order('sort_order', { ascending: true, nullsFirst: false })
-          .order('created_at', { ascending: true }),
-        this.db
-          .from('notes')
-          .select('*')
-          .eq('account_id', input.accountId)
-          .eq('phase_id', input.phaseId)
-          .order('is_pinned', { ascending: false })
-          .order('created_at', { ascending: false }),
-      ]);
+    const [pageDoc, tasksResult, notesResult] = await Promise.all([
+      this.loadOrCreatePhasePageDoc(phase as Record<string, unknown>, user.id),
+      this.db
+        .from('tasks')
+        .select(
+          'id, title, status, priority, due_date, sort_order, phase_id, job_id, user_id, notes',
+        )
+        .eq('job_id', jobId)
+        .eq('phase_id', input.phaseId)
+        .order('sort_order', { ascending: true, nullsFirst: false })
+        .order('created_at', { ascending: true }),
+      this.db
+        .from('notes')
+        .select('*')
+        .eq('account_id', input.accountId)
+        .eq('phase_id', input.phaseId)
+        .order('is_pinned', { ascending: false })
+        .order('created_at', { ascending: false }),
+    ]);
 
-    if (tasksErr) this.throwErr(tasksErr);
-    if (notesErr) this.throwErr(notesErr);
+    let tasks = tasksResult.data ?? [];
+
+    if (tasksResult.error) {
+      if (isMissingColumnError(tasksResult.error)) {
+        logMissingRelation('project_phases.getPhaseDetail.tasks', tasksResult.error);
+        tasks = [];
+      } else {
+        this.throwErr(tasksResult.error);
+      }
+    }
+
+    let notes = notesResult.data ?? [];
+
+    if (notesResult.error) {
+      if (isMissingColumnError(notesResult.error)) {
+        logMissingRelation('project_phases.getPhaseDetail.notes', notesResult.error);
+        notes = [];
+      } else {
+        this.throwErr(notesResult.error);
+      }
+    }
 
     return {
       phase,
       pageDoc,
-      tasks: tasks ?? [],
-      notes: notes ?? [],
+      tasks,
+      notes,
     };
   }
 
@@ -1043,21 +1166,16 @@ class ProjectPhasesService {
 
       const pageContent = phaseInput.page_content?.trim();
       if (pageContent && inserted?.id) {
-        const { error: docErr } = await this.db.from('docs').insert({
-          account_id: input.accountId,
-          job_id: input.jobId,
-          phase_id: inserted.id,
-          title: (inserted.name as string) ?? phaseInput.name.trim(),
-          content: pageContent,
-          kind: 'written',
-          doc_type: 'phase_page',
-          category: 'idea',
-          tags: [],
-          user_id: user.id,
-          created_by: user.id,
-        });
-
-        if (docErr) this.throwErr(docErr);
+        await this.loadOrCreatePhasePageDoc(
+          {
+            id: inserted.id,
+            account_id: input.accountId,
+            job_id: input.jobId,
+            name: inserted.name,
+          },
+          user.id,
+          pageContent,
+        );
       }
     }
 

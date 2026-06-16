@@ -17,6 +17,7 @@ import {
 } from '~/components/workspace-shell/workspace-mobile-nav';
 import type { MobileBottomNavTab } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
 import { WorkspaceMobileTopActions } from '~/components/workspace-shell/workspace-top-bar-actions';
+import { getExplicitPersonalHomePath } from '~/lib/dashboard-shortcuts/personal-home-url';
 import pathsConfig from '~/config/paths.config';
 import { WorkspaceMobileScrollLock } from '~/lib/pwa/workspace-mobile-scroll-lock';
 import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
@@ -38,7 +39,7 @@ export function PersonalHomeMobileChrome({
   children,
 }: PersonalHomeMobileChromeProps) {
   const { menuOpen, setMenuOpen } = useWorkspaceMobileNav();
-  const homePath = pathsConfig.app.home;
+  const homePath = getExplicitPersonalHomePath();
   const userId = workspace.user.id;
   const switcherAccounts = buildPersonalSwitcherAccounts(rawSwitcherAccounts);
 
@@ -93,6 +94,7 @@ export function PersonalHomeMobileChrome({
         settingsHref={pathsConfig.app.personalAccountSettings}
         settingsLabel="Personal settings"
         newMenu={<WorkspaceMobileNewMenu variant="personal" />}
+        helpDefaultAccountId={workspace.workspace?.id ?? null}
       />
     </>
   );

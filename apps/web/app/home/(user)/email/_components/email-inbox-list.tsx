@@ -44,6 +44,18 @@ function participantLabel(thread: EmailThreadSummary) {
   return first.name?.trim() || first.email;
 }
 
+function linkBadgeLabel(thread: EmailThreadSummary): string | null {
+  if (thread.link.projectName) {
+    return thread.link.projectName;
+  }
+
+  if (thread.link.clientName) {
+    return thread.link.clientName;
+  }
+
+  return null;
+}
+
 type Props = {
   threads: EmailThreadSummary[];
   selectedThreadId: string | null;
@@ -75,6 +87,7 @@ export function EmailInboxList({
   const needsReplyCount = threads.filter(
     (thread) => thread.assistant_category === 'needs_reply',
   ).length;
+  const linkedCount = threads.filter((thread) => thread.link.linked).length;
 
   return (
     <section className={cn(panelClass, 'flex min-h-0 flex-col overflow-hidden')}>
@@ -93,6 +106,18 @@ export function EmailInboxList({
               )}
             >
               All
+            </button>
+            <button
+              type="button"
+              onClick={() => onFilterChange('linked')}
+              className={cn(
+                'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                filter === 'linked'
+                  ? 'bg-white/10 text-white'
+                  : 'text-zinc-400 hover:text-zinc-200',
+              )}
+            >
+              Linked
             </button>
             <button
               type="button"
@@ -116,12 +141,16 @@ export function EmailInboxList({
                 ? `No threads match “${trimmedSearch}”`
                 : filter === 'needs_reply'
                   ? 'No threads need a reply yet'
-                  : 'No threads yet'
+                  : filter === 'linked'
+                    ? 'No linked threads yet'
+                    : 'No threads yet'
               : trimmedSearch
                 ? `${threads.length} result${threads.length === 1 ? '' : 's'} for “${trimmedSearch}”`
-                : filter === 'needs_reply'
+                : filter === 'linked'
+                  ? `${threads.length} linked thread${threads.length === 1 ? '' : 's'}`
+                  : filter === 'needs_reply'
                   ? `${threads.length} thread${threads.length === 1 ? '' : 's'} need a reply`
-                  : `${threads.length} threads${needsReplyCount > 0 && filter === 'all' ? ` · ${needsReplyCount} need a reply` : ''}`}
+                  : `${threads.length} threads${needsReplyCount > 0 && filter === 'all' ? ` · ${needsReplyCount} need a reply` : ''}${linkedCount > 0 && filter === 'all' ? ` · ${linkedCount} linked` : ''}`}
         </p>
 
         <div className="relative mt-3">
@@ -200,11 +229,20 @@ export function EmailInboxList({
                       >
                         {thread.subject?.trim() || '(no subject)'}
                       </span>
-                      {thread.assistant_category === 'needs_reply' ? (
-                        <span className="mt-1 inline-flex rounded-full border border-[var(--keel-teal)]/30 bg-[var(--keel-teal)]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--keel-teal)]">
-                          Needs reply
-                        </span>
-                      ) : null}
+                      <span className="mt-1 flex flex-wrap items-center gap-1">
+                        {thread.assistant_category === 'needs_reply' ? (
+                          <span className="inline-flex rounded-full border border-[var(--keel-teal)]/30 bg-[var(--keel-teal)]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--keel-teal)]">
+                            Needs reply
+                          </span>
+                        ) : null}
+                        {linkBadgeLabel(thread) ? (
+                          <span className="inline-flex max-w-full rounded-full border border-white/10 bg-white/[0.06] px-2 py-0.5 text-[10px] font-medium text-zinc-300">
+                            <span className="truncate">
+                              {linkBadgeLabel(thread)}
+                            </span>
+                          </span>
+                        ) : null}
+                      </span>
                       <span className="mt-1 block truncate text-xs text-zinc-500">
                         {thread.snippet?.trim() || 'No preview'}
                       </span>

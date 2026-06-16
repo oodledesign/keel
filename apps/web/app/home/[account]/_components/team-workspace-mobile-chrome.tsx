@@ -128,6 +128,7 @@ export function TeamWorkspaceMobileChrome({
         onMenuOpenChange={setMenuOpen}
         settingsHref={settingsHref}
         settingsLabel="Workspace settings"
+        helpDefaultAccountId={accountId}
         newMenu={
           showNewMenu ? (
             <WorkspaceMobileNewMenu

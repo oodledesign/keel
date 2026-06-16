@@ -12,11 +12,17 @@ type WorkspaceHelpButtonProps = {
   className?: string;
   /** Pre-select workspace when opened from a team account shell. */
   defaultAccountId?: string | null;
+  /** Inline with the mobile floating bottom bar, or fixed FAB (desktop). */
+  variant?: 'inline' | 'fixed';
 };
+
+const triggerBaseClass =
+  'flex items-center justify-center rounded-full border border-white/10 text-[var(--keel-teal)] transition-colors hover:border-[var(--keel-teal)]/40 hover:bg-[var(--keel-teal)]/10';
 
 export function WorkspaceHelpButton({
   className,
   defaultAccountId = null,
+  variant = 'fixed',
 }: WorkspaceHelpButtonProps) {
   const [open, setOpen] = useState(false);
 
@@ -26,7 +32,10 @@ export function WorkspaceHelpButton({
         type="button"
         onClick={() => setOpen(true)}
         className={cn(
-          'fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] right-4 z-[35] flex h-11 w-11 items-center justify-center rounded-full border border-white/12 bg-[var(--workspace-shell-panel)] text-[var(--keel-teal)] shadow-[0_8px_24px_rgba(0,0,0,0.35)] transition-colors hover:border-[var(--keel-teal)]/40 hover:bg-[var(--keel-teal)]/10 lg:bottom-6',
+          triggerBaseClass,
+          variant === 'inline'
+            ? 'h-12 w-12 bg-[#1A2535]/98 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl'
+            : 'fixed bottom-6 right-4 z-[35] hidden h-11 w-11 border-white/12 bg-[var(--workspace-shell-panel)] shadow-[0_8px_24px_rgba(0,0,0,0.35)] lg:flex',
           className,
         )}
         aria-label="Help and feedback"

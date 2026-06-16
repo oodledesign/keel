@@ -94,7 +94,14 @@ async function JobPhasePage({ params }: JobPhasePageProps) {
   const jobTitle = (job.title as string) ?? 'Project';
 
   const planningService = createWebsitePlanningService(client);
-  const linkedWebsite = await planningService.getWebsiteForJob(accountId, jobId);
+  let linkedWebsite: { id: string; name: string } | null = null;
+
+  try {
+    linkedWebsite = await planningService.getWebsiteForJob(accountId, jobId);
+  } catch {
+    linkedWebsite = null;
+  }
+
   const planningTab = websitePlanningTabForPhase(phase.name);
 
   return (
