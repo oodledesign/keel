@@ -98,7 +98,7 @@ export function TaskAssignmentCombobox({
             placeholder="Search projects and clients…"
             className="border-white/10 text-white placeholder:text-zinc-500"
           />
-          <CommandList className="max-h-64">
+          <CommandList className="max-h-[min(50dvh,16rem)]">
             <CommandEmpty>No matches found.</CommandEmpty>
 
             {!isWorkspaceMode ? (

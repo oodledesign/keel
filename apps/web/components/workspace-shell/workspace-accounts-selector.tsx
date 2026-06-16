@@ -125,7 +125,7 @@ export function WorkspaceAccountsSelector({
         placeholder="Search workspaces…"
         className="h-9 border-white/10 text-white"
       />
-      <CommandList>
+      <CommandList className="max-h-[min(50dvh,var(--radix-popover-content-available-height,50dvh))]">
         <CommandGroup heading="Your workspaces">
           {accounts.map((account) => (
             <CommandItem
@@ -181,7 +181,7 @@ export function WorkspaceAccountsSelector({
         <div className="w-full">
           {trigger}
           {open ? (
-            <div className="mt-2 overflow-hidden rounded-xl border border-white/10 bg-[#141c2e]">
+            <div className="mt-2 max-h-[min(50dvh,20rem)] overflow-y-auto rounded-xl border border-white/10 bg-[#141c2e]">
               {list}
             </div>
           ) : null}

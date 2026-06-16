@@ -149,7 +149,7 @@ export function NotificationsPopover(params: {
 
         <div
           className={
-            'flex max-h-[60vh] flex-col divide-y divide-white/10 overflow-y-auto'
+            'flex max-h-[min(60dvh,calc(100dvh-8rem))] flex-col divide-y divide-white/10 overflow-y-auto overscroll-contain'
           }
         >
           {notifications.map((notification) => {

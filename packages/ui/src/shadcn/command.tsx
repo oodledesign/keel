@@ -6,6 +6,7 @@ import { MagnifyingGlassIcon } from '@radix-ui/react-icons';
 import { Command as CommandPrimitive } from 'cmdk';
 
 import { cn } from '../lib/utils';
+import { modalViewportClass } from '../lib/overlay-layout';
 import { Dialog, DialogContent } from './dialog';
 
 const Command: React.FC<
@@ -26,7 +27,7 @@ type CommandDialogProps = React.ComponentProps<typeof Dialog>;
 const CommandDialog = ({ children, ...props }: CommandDialogProps) => {
   return (
     <Dialog {...props}>
-      <DialogContent className="overflow-hidden p-0">
+      <DialogContent className={cn(modalViewportClass, 'overflow-hidden p-0')}>
         <Command className="[&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
           {children}
         </Command>
@@ -58,7 +59,7 @@ const CommandList: React.FC<
   React.ComponentPropsWithRef<typeof CommandPrimitive.List>
 > = ({ className, ...props }) => (
   <CommandPrimitive.List
-    className={cn('max-h-[300px] overflow-x-hidden overflow-y-auto', className)}
+    className={cn('max-h-[min(70dvh,480px)] overflow-x-hidden overflow-y-auto', className)}
     {...props}
   />
 );
