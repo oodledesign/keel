@@ -25,6 +25,7 @@ import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader'
 // local imports
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
 import { RestoreWorkspaceModulesCard } from './_components/restore-workspace-modules-card';
+import { ApiTokensSection } from './_components/api-tokens-section';
 import { WorkspaceDashboardShortcutsSection } from './_components/workspace-dashboard-shortcuts-section';
 
 export const generateMetadata = async () => {
@@ -113,6 +114,19 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
             accountSlug={account.slug}
             workspaceProfile={workspace.workspaceProfile}
           />
+        ) : null}
+
+        {!isClient ? (
+          <div className="mx-auto flex max-w-2xl flex-col gap-3 rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+            <div>
+              <h2 className="text-base font-semibold">Connected apps</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                API tokens for the Keel desktop recorder and other quick-capture
+                tools.
+              </p>
+            </div>
+            <ApiTokensSection accountId={account.id} accountSlug={account.slug} />
+          </div>
         ) : null}
 
         {!isClient ? (
