@@ -4,13 +4,13 @@ import { PageBody } from '@kit/ui/page';
 
 import { loadTaskAssignmentOptionsForWorkspace } from '~/home/(user)/_lib/actions/task-actions';
 
-import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
-import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access';
-import { isWorkNavModuleEnabled } from '../_lib/server/account-modules';
-import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../_lib/server/workspace-route-guard';
-import { MeetingTranscriptDetailClient } from './_components/meeting-transcript-detail-client';
-import { loadMeetingTranscriptPageData } from './_lib/server/meetings-page.loader';
+import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
+import { getDefaultAccountPath, getTeamAccountAccess } from '../../_lib/role-access';
+import { isWorkNavModuleEnabled } from '../../_lib/server/account-modules';
+import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
+import { redirectIfSpaceNotIn } from '../../_lib/server/workspace-route-guard';
+import { MeetingTranscriptDetailClient } from '../_components/meeting-transcript-detail-client';
+import { loadMeetingTranscriptPageData } from '../_lib/server/meetings-page.loader';
 
 interface MeetingDetailPageProps {
   params: Promise<{ account: string; transcriptId: string }>;

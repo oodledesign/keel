@@ -8,7 +8,7 @@ import { createClientsService } from '~/home/[account]/clients/_lib/server/clien
 import { getTeamAccountAccess } from '~/home/[account]/_lib/role-access';
 import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
 
-import { createMeetingTranscriptsService } from '../../_lib/server/meeting-transcripts.service';
+import { createMeetingTranscriptsService } from '~/home/[account]/_lib/server/meeting-transcripts.service';
 
 export const loadMeetingsPageData = cache(loadMeetingsPageDataImpl);
 
