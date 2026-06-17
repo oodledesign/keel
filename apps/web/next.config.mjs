@@ -156,9 +156,14 @@ function getImagesConfig() {
  * Workspace slugs use `/app/:slug` (not `/app/work/:slug`). Reserved segments are excluded
  * so personal routes and real pages (/app/family, /app/community, /app/settings/areas) win.
  */
+/** Keep in sync with packages/shared/src/workspace-url.ts */
+function workspaceAccountUrlSegmentPattern(segments) {
+  const reserved = segments.join('|');
+  return `(?!(?:${reserved})$)[a-z0-9-]+`;
+}
+
 async function getRewrites() {
-  const reserved = reservedWorkspaceUrlSegments.join('|');
-  const account = `(?!${reserved})[a-z0-9-]+`;
+  const account = workspaceAccountUrlSegmentPattern(reservedWorkspaceUrlSegments);
 
   return {
     beforeFiles: [
