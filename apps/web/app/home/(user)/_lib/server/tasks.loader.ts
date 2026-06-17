@@ -21,6 +21,8 @@ type TaskQueryRow = {
   project_id?: string | null;
   client_id?: string | null;
   area_id?: string | null;
+  account_id?: string | null;
+  job_id?: string | null;
   parent_task_id?: string | null;
   notes?: string | null;
 };
@@ -58,6 +60,22 @@ type AreaEnrichment = {
   name?: string | null;
   colour?: string | null;
 };
+
+type JobEnrichment = {
+  id: string;
+  account_id?: string | null;
+};
+
+function isWorkTaskRow(row: {
+  project_id?: string | null;
+  client_id?: string | null;
+  account_id?: string | null;
+  job_id?: string | null;
+}): boolean {
+  return Boolean(
+    row.project_id || row.client_id || row.account_id || row.job_id,
+  );
+}
 
 export type TasksPageTask = {
   id: string;
@@ -146,6 +164,7 @@ function taskRowToPageTask(
     projects: Map<string, ProjectEnrichment>;
     clients: Map<string, ClientEnrichment>;
     areas: Map<string, AreaEnrichment>;
+    jobs: Map<string, JobEnrichment>;
     accountsById: Map<string, AccountWorkspaceRow>;
   },
   contextOverride?: 'work' | 'life',
@@ -192,11 +211,27 @@ function taskRowToPageTask(
     }
   }
 
+  if (!resolvedAccountId && row.job_id) {
+    resolvedAccountId = maps.jobs.get(row.job_id)?.account_id ?? null;
+    if (resolvedAccountId) {
+      const ws = workspaceFromAccountId(resolvedAccountId, maps.accountsById);
+      workspaceName = ws.name;
+      workspaceSlug = ws.slug;
+    }
+  }
+
+  if (!resolvedAccountId && row.account_id) {
+    resolvedAccountId = row.account_id;
+    const ws = workspaceFromAccountId(row.account_id, maps.accountsById);
+    workspaceName = ws.name;
+    workspaceSlug = ws.slug;
+  }
+
   if (resolvedAccountId) {
     const accountRow = maps.accountsById.get(resolvedAccountId);
     workspaceColor =
       accentColor ?? workspaceColorForSpaceType(accountRow?.space_type ?? 'work');
-  } else if (!row.project_id && !row.client_id) {
+  } else if (!isWorkTaskRow(row)) {
     workspaceColor = '#7C3AED';
   }
   if (row.area_id) {
@@ -208,8 +243,7 @@ function taskRowToPageTask(
   }
 
   const context: 'work' | 'life' =
-    contextOverride ??
-    (row.project_id || row.client_id ? 'work' : 'life');
+    contextOverride ?? (isWorkTaskRow(row) ? 'work' : 'life');
 
   return {
     id: row.id,
@@ -278,8 +312,12 @@ async function enrichTaskRows(
   const areaIds = [
     ...new Set(rows.map((r) => r.area_id).filter(Boolean)),
   ] as string[];
+  const jobIds = [
+    ...new Set(rows.map((r) => r.job_id).filter(Boolean)),
+  ] as string[];
 
-  const [projectsResult, clientsResult, areasResult] = await Promise.all([
+  const [projectsResult, clientsResult, areasResult, jobsResult] =
+    await Promise.all([
     projectIds.length > 0
       ? rowDb
           .from('projects')
@@ -295,6 +333,9 @@ async function enrichTaskRows(
     areaIds.length > 0
       ? client.from('areas').select('id, name, colour').in('id', areaIds)
       : Promise.resolve({ data: [] as AreaEnrichment[] }),
+    jobIds.length > 0
+      ? rowDb.from('jobs').select('id, account_id').in('id', jobIds)
+      : Promise.resolve({ data: [] as JobEnrichment[] }),
   ]);
 
   const projects = new Map<string, ProjectEnrichment>();
@@ -308,6 +349,10 @@ async function enrichTaskRows(
   const areas = new Map<string, AreaEnrichment>();
   for (const a of (areasResult.data ?? []) as AreaEnrichment[]) {
     areas.set(a.id, a);
+  }
+  const jobs = new Map<string, JobEnrichment>();
+  for (const j of (jobsResult.data ?? []) as JobEnrichment[]) {
+    jobs.set(j.id, j);
   }
 
   const accountIdSet = new Set<string>();
@@ -323,6 +368,17 @@ async function enrichTaskRows(
   for (const c of clients.values()) {
     if (c.account_id) {
       accountIdSet.add(c.account_id);
+    }
+  }
+  for (const row of rows) {
+    if (row.account_id) {
+      accountIdSet.add(row.account_id);
+    }
+    if (row.job_id) {
+      const jobAccountId = jobs.get(row.job_id)?.account_id;
+      if (jobAccountId) {
+        accountIdSet.add(jobAccountId);
+      }
     }
   }
   const uniqueAccountIds = [...accountIdSet];
@@ -348,7 +404,7 @@ async function enrichTaskRows(
     }
   }
 
-  const maps = { projects, clients, areas, accountsById };
+  const maps = { projects, clients, areas, jobs, accountsById };
 
   const flat = rows.map((row) => taskRowToPageTask(row, maps, contextOverride));
   return nest ? nestTaskTree(flat) : flat;
@@ -365,7 +421,7 @@ export async function loadTaskById(
   const { data, error } = await client
     .from('tasks')
     .select(
-      'id, title, status, priority, due_date, project_id, client_id, area_id, parent_task_id, notes',
+      'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, job_id, parent_task_id, notes',
     )
     .eq('id', taskId)
     .maybeSingle();
@@ -406,7 +462,7 @@ export const loadTasksForUser = cache(async (): Promise<TasksPageTask[]> => {
   const { data, error } = await client
     .from('tasks')
     .select(
-      'id, title, status, priority, due_date, project_id, client_id, area_id, parent_task_id, notes',
+      'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, job_id, parent_task_id, notes',
     )
     .eq('user_id', user.id)
     .order('due_date', { ascending: true, nullsLast: true });
@@ -428,7 +484,7 @@ export const loadTasksForClient = cache(
     const { data, error } = await client
       .from('tasks')
       .select(
-        'id, title, status, priority, due_date, project_id, client_id, area_id, parent_task_id, notes',
+        'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, job_id, parent_task_id, notes',
       )
       .eq('user_id', user.id)
       .eq('client_id', clientId)
@@ -443,7 +499,7 @@ export const loadTasksForClient = cache(
   },
 );
 
-/** Tasks linked to this team account’s projects or CRM clients (RLS + project/client ID scope). */
+/** Tasks linked to this team account’s projects, CRM clients, or jobs (RLS + scoped IDs). */
 export const loadTasksForTeamAccount = cache(
   async (accountId: string): Promise<TasksPageTask[]> => {
     const userClient = getSupabaseServerClient();
@@ -460,34 +516,58 @@ export const loadTasksForTeamAccount = cache(
       return [];
     }
 
-    const [{ data: projectsData }, { data: clientsData }] = await Promise.all([
-      scopedDb.from('projects').select('id').eq('account_id', accountId),
-      scopedDb.from('clients').select('id').eq('account_id', accountId),
-    ]);
+    const [{ data: projectsData }, { data: clientsData }, { data: jobsData }] =
+      await Promise.all([
+        scopedDb.from('projects').select('id').eq('account_id', accountId),
+        scopedDb.from('clients').select('id').eq('account_id', accountId),
+        scopedDb.from('jobs').select('id').eq('account_id', accountId),
+      ]);
 
     const projectIds = (projectsData ?? []).map((p: { id: string }) => p.id);
     const clientIds = (clientsData ?? []).map((c: { id: string }) => c.id);
+    const jobIds = (jobsData ?? []).map((j: { id: string }) => j.id);
 
-    if (projectIds.length === 0 && clientIds.length === 0) {
-      return [];
+    if (projectIds.length === 0 && clientIds.length === 0 && jobIds.length === 0) {
+      const { data: accountOnlyData, error: accountOnlyError } = await userClient
+        .from('tasks')
+        .select(
+          'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, job_id, parent_task_id, notes',
+        )
+        .eq('account_id', accountId)
+        .order('due_date', { ascending: true, nullsLast: true });
+
+      if (accountOnlyError) {
+        console.error(
+          '[tasks.loader] loadTasksForTeamAccount error:',
+          accountOnlyError.message,
+        );
+        return [];
+      }
+
+      return enrichTaskRows(
+        userClient,
+        (accountOnlyData ?? []) as TaskQueryRow[],
+        'work',
+        scopedDb,
+      );
     }
 
-    // Do not filter by user_id here: RLS already limits rows to tasks you may see
-    // (your own or workspace-linked). Scoping to this account’s project/client IDs
-    // keeps the list aligned with the workspace surface.
     let query = userClient.from('tasks').select(
-      'id, title, status, priority, due_date, project_id, client_id, area_id, parent_task_id, notes',
+      'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, job_id, parent_task_id, notes',
     );
 
-    if (projectIds.length > 0 && clientIds.length > 0) {
-      query = query.or(
-        `project_id.in.(${projectIds.join(',')}),client_id.in.(${clientIds.join(',')})`,
-      );
-    } else if (projectIds.length > 0) {
-      query = query.in('project_id', projectIds);
-    } else {
-      query = query.in('client_id', clientIds);
+    const filters: string[] = [`account_id.eq.${accountId}`];
+    if (projectIds.length > 0) {
+      filters.push(`project_id.in.(${projectIds.join(',')})`);
     }
+    if (clientIds.length > 0) {
+      filters.push(`client_id.in.(${clientIds.join(',')})`);
+    }
+    if (jobIds.length > 0) {
+      filters.push(`job_id.in.(${jobIds.join(',')})`);
+    }
+
+    query = query.or(filters.join(','));
 
     const { data, error } = await query.order('due_date', {
       ascending: true,

@@ -21,6 +21,49 @@ function normalizeTaskPriorityForDb(
   return 'medium';
 }
 
+async function resolveTaskAccountId(
+  client: ReturnType<typeof getSupabaseServerClient>,
+  input: {
+    projectId?: string | null;
+    clientId?: string | null;
+    jobId?: string | null;
+    accountId?: string | null;
+  },
+): Promise<string | null> {
+  if (input.accountId) {
+    return input.accountId;
+  }
+
+  if (input.projectId) {
+    const { data } = await client
+      .from('projects')
+      .select('account_id')
+      .eq('id', input.projectId)
+      .maybeSingle();
+    return (data as { account_id?: string | null } | null)?.account_id ?? null;
+  }
+
+  if (input.clientId) {
+    const { data } = await client
+      .from('clients')
+      .select('account_id')
+      .eq('id', input.clientId)
+      .maybeSingle();
+    return (data as { account_id?: string | null } | null)?.account_id ?? null;
+  }
+
+  if (input.jobId) {
+    const { data } = await client
+      .from('jobs')
+      .select('account_id')
+      .eq('id', input.jobId)
+      .maybeSingle();
+    return (data as { account_id?: string | null } | null)?.account_id ?? null;
+  }
+
+  return null;
+}
+
 export type CreateTaskInput = {
   title: string;
   priority: string;
@@ -31,6 +74,8 @@ export type CreateTaskInput = {
   /** When set, inherits project/client/area from parent if those are omitted. */
   parentTaskId?: string;
   notes?: string | null;
+  /** Team workspace when creating from a business context without project/client. */
+  accountId?: string;
 };
 
 export async function createTask(input: CreateTaskInput) {
@@ -40,11 +85,12 @@ export async function createTask(input: CreateTaskInput) {
   let projectId = input.projectId || null;
   let clientId = input.clientId || null;
   let areaId = input.areaId || null;
+  let accountId = input.accountId || null;
 
   if (input.parentTaskId) {
     const { data: parent, error: pe } = await client
       .from('tasks')
-      .select('user_id, project_id, client_id, area_id')
+      .select('user_id, project_id, client_id, area_id, account_id, job_id')
       .eq('id', input.parentTaskId)
       .maybeSingle();
 
@@ -59,11 +105,24 @@ export async function createTask(input: CreateTaskInput) {
       project_id: string | null;
       client_id: string | null;
       area_id: string | null;
+      account_id: string | null;
+      job_id: string | null;
     };
     projectId = projectId ?? p.project_id;
     clientId = clientId ?? p.client_id;
     areaId = areaId ?? p.area_id;
+    accountId = accountId ?? p.account_id;
+    if (!accountId && p.job_id) {
+      accountId = await resolveTaskAccountId(client, { jobId: p.job_id });
+    }
   }
+
+  accountId =
+    accountId ??
+    (await resolveTaskAccountId(client, {
+      projectId,
+      clientId,
+    }));
 
   const insertRow: Record<string, unknown> = {
     title: input.title,
@@ -72,6 +131,7 @@ export async function createTask(input: CreateTaskInput) {
     project_id: projectId,
     area_id: areaId,
     client_id: clientId,
+    account_id: accountId,
     user_id: user.id,
     status: 'todo',
   };
@@ -161,21 +221,29 @@ export async function updateTask(taskId: string, input: UpdateTaskInput) {
         updates.project_id = null;
         updates.client_id = null;
         updates.area_id = null;
+        updates.account_id = null;
         break;
       case 'project':
         updates.project_id = input.assignment.id;
         updates.client_id = null;
         updates.area_id = null;
+        updates.account_id = await resolveTaskAccountId(client, {
+          projectId: input.assignment.id,
+        });
         break;
       case 'client':
         updates.client_id = input.assignment.id;
         updates.project_id = null;
         updates.area_id = null;
+        updates.account_id = await resolveTaskAccountId(client, {
+          clientId: input.assignment.id,
+        });
         break;
       case 'area':
         updates.area_id = input.assignment.id;
         updates.project_id = null;
         updates.client_id = null;
+        updates.account_id = null;
         break;
       default:
         break;

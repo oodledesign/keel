@@ -67,14 +67,14 @@ export function HomeSidebar(props: HomeSidebarProps) {
 
   return (
     <Sidebar collapsible={collapsible} className={workspaceSidebarClassName}>
-      <SidebarHeader className="gap-0 border-b border-white/[0.08] px-3 py-3">
+      <SidebarHeader className="gap-3 border-b border-white/[0.08] px-3 py-3">
         <HomeSidebarLogo />
         <If condition={featureFlagsConfig.enableTeamAccounts}>
           <WorkspaceAccountsSelector
             selectedAccount={PERSONAL_WORKSPACE_VALUE}
             userId={user.id}
             accounts={switcherAccounts}
-            className="mt-1 w-full px-0"
+            className="w-full px-0"
             enableTeamCreation={featureFlagsConfig.enableTeamCreation}
           />
         </If>

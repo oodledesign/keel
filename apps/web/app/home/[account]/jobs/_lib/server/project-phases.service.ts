@@ -845,6 +845,7 @@ class ProjectPhasesService {
         user_id: assigneeUserId,
         job_id: input.jobId,
         phase_id: input.phaseId,
+        account_id: input.accountId,
         client_id: (job.client_id as string | null) ?? null,
         sort_order: sortOrder,
       })

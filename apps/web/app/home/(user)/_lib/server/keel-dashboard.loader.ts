@@ -191,6 +191,8 @@ type TaskRow = {
   due_date?: string | null;
   project_id?: string | null;
   client_id?: string | null;
+  account_id?: string | null;
+  job_id?: string | null;
 };
 
 type ProjectRow = {
@@ -201,6 +203,11 @@ type ProjectRow = {
 };
 
 type ClientRow = {
+  id: string;
+  account_id?: string | null;
+};
+
+type JobRow = {
   id: string;
   account_id?: string | null;
 };
@@ -216,8 +223,11 @@ async function mapTasksToDashboard(
   const clientIds = [
     ...new Set(rows.map((r) => r.client_id).filter(Boolean)),
   ] as string[];
+  const jobIds = [
+    ...new Set(rows.map((r) => r.job_id).filter(Boolean)),
+  ] as string[];
 
-  const [projectsResult, clientsResult] = await Promise.all([
+  const [projectsResult, clientsResult, jobsResult] = await Promise.all([
     projectIds.length > 0
       ? client
           .from('projects')
@@ -227,6 +237,9 @@ async function mapTasksToDashboard(
     clientIds.length > 0
       ? client.from('clients').select('id, account_id').in('id', clientIds)
       : Promise.resolve({ data: [] as ClientRow[] }),
+    jobIds.length > 0
+      ? client.from('jobs').select('id, account_id').in('id', jobIds)
+      : Promise.resolve({ data: [] as JobRow[] }),
   ]);
 
   const projects = new Map<string, ProjectRow>();
@@ -237,19 +250,27 @@ async function mapTasksToDashboard(
   for (const c of (clientsResult.data ?? []) as ClientRow[]) {
     clients.set(c.id, c);
   }
+  const jobs = new Map<string, JobRow>();
+  for (const j of (jobsResult.data ?? []) as JobRow[]) {
+    jobs.set(j.id, j);
+  }
 
   const today = todayLocalYmd();
 
   return rows.map((row) => {
-    let accountId: string | null = null;
+    let accountId: string | null = row.account_id ?? null;
     let accent: string | null = null;
 
     if (row.project_id) {
       const p = projects.get(row.project_id);
-      accountId = p?.account_id ?? null;
+      accountId = accountId ?? p?.account_id ?? null;
       accent = p?.businesses?.colour ?? null;
     } else if (row.client_id) {
-      accountId = clients.get(row.client_id)?.account_id ?? null;
+      accountId = accountId ?? clients.get(row.client_id)?.account_id ?? null;
+    }
+
+    if (!accountId && row.job_id) {
+      accountId = jobs.get(row.job_id)?.account_id ?? null;
     }
 
     const ws = accountId ? workspaceById.get(accountId) : null;
@@ -278,13 +299,18 @@ async function countOpenTasksForAccount(
   userId: string,
   accountId: string,
 ): Promise<number> {
-  const [{ data: projectsData }, { data: clientsData }] = await Promise.all([
-    client.from('projects').select('id').eq('account_id', accountId),
-    client.from('clients').select('id').eq('account_id', accountId),
-  ]);
+  const [{ data: projectsData }, { data: clientsData }, { data: jobsData }] =
+    await Promise.all([
+      client.from('projects').select('id').eq('account_id', accountId),
+      client.from('clients').select('id').eq('account_id', accountId),
+      client.from('jobs').select('id').eq('account_id', accountId),
+    ]);
   const projectIds = (projectsData ?? []).map((p: { id: string }) => p.id);
   const clientIds = (clientsData ?? []).map((c: { id: string }) => c.id);
-  if (projectIds.length === 0 && clientIds.length === 0) return 0;
+  const jobIds = (jobsData ?? []).map((j: { id: string }) => j.id);
+  if (projectIds.length === 0 && clientIds.length === 0 && jobIds.length === 0) {
+    return 0;
+  }
 
   let q = client
     .from('tasks')
@@ -292,15 +318,18 @@ async function countOpenTasksForAccount(
     .eq('user_id', userId)
     .not('status', 'eq', 'done');
 
-  if (projectIds.length > 0 && clientIds.length > 0) {
-    q = q.or(
-      `project_id.in.(${projectIds.join(',')}),client_id.in.(${clientIds.join(',')})`,
-    );
-  } else if (projectIds.length > 0) {
-    q = q.in('project_id', projectIds);
-  } else {
-    q = q.in('client_id', clientIds);
+  const filters: string[] = [`account_id.eq.${accountId}`];
+  if (projectIds.length > 0) {
+    filters.push(`project_id.in.(${projectIds.join(',')})`);
   }
+  if (clientIds.length > 0) {
+    filters.push(`client_id.in.(${clientIds.join(',')})`);
+  }
+  if (jobIds.length > 0) {
+    filters.push(`job_id.in.(${jobIds.join(',')})`);
+  }
+
+  q = q.or(filters.join(','));
 
   const { count } = await q;
   return count ?? 0;
@@ -560,7 +589,7 @@ export const loadKeelDashboard = cache(async (): Promise<KeelDashboardData> => {
 
   const { data: focusRows } = await client
     .from('tasks')
-    .select('id, title, status, priority, due_date, project_id, client_id')
+    .select('id, title, status, priority, due_date, project_id, client_id, account_id, job_id')
     .eq('user_id', userId)
     .not('status', 'eq', 'done')
     .not('due_date', 'is', null)
@@ -570,7 +599,7 @@ export const loadKeelDashboard = cache(async (): Promise<KeelDashboardData> => {
 
   const { data: upcomingRows } = await client
     .from('tasks')
-    .select('id, title, status, priority, due_date, project_id, client_id')
+    .select('id, title, status, priority, due_date, project_id, client_id, account_id, job_id')
     .eq('user_id', userId)
     .not('status', 'eq', 'done')
     .gt('due_date', today)

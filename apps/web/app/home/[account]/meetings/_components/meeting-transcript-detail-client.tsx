@@ -5,7 +5,15 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import { ChevronLeft, Loader2, Mic, Sparkles, Trash2 } from 'lucide-react';
+import {
+  Check,
+  ChevronLeft,
+  Copy,
+  Loader2,
+  Mic,
+  Sparkles,
+  Trash2,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -18,7 +26,9 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
+import { cn } from '@kit/ui/utils';
 
+import { workspacePageContentClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import pathsConfig from '~/config/paths.config';
 import type { TaskAssignmentOption } from '~/home/(user)/_lib/actions/task-actions';
 import { ExtractWorkspaceTasksClient } from '~/home/[account]/tasks/_components/extract-workspace-tasks-client';
@@ -52,6 +62,9 @@ type Props = {
   assignmentOptions: TaskAssignmentOption[];
 };
 
+const panelClassName =
+  'rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.24)]';
+
 export function MeetingTranscriptDetailClient({
   accountId,
   accountSlug,
@@ -66,6 +79,7 @@ export function MeetingTranscriptDetailClient({
     transcript.meetingDate ?? transcript.createdAt.slice(0, 10),
   );
   const [clientId, setClientId] = useState(transcript.clientId ?? '');
+  const [copied, setCopied] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const meetingsPath = pathsConfig.app.accountMeetings.replace(
@@ -149,150 +163,204 @@ export function MeetingTranscriptDetailClient({
     });
   };
 
+  const copyTranscript = async () => {
+    if (!transcript.content.trim()) {
+      toast.error('Nothing to copy');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(transcript.content);
+      setCopied(true);
+      toast.success('Transcript copied');
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error('Could not copy to clipboard');
+    }
+  };
+
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-8 px-4 pb-16 pt-2 md:px-6">
-      <div>
-        <Link
-          href={meetingsPath}
-          className="mb-4 inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-white"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          All meetings
-        </Link>
+    <div
+      className={cn(
+        'mx-auto w-full max-w-6xl space-y-6 pb-16 pt-2',
+        workspacePageContentClassName,
+      )}
+    >
+      <Link
+        href={meetingsPath}
+        className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-white"
+      >
+        <ChevronLeft className="h-4 w-4" />
+        All meetings
+      </Link>
 
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0 flex-1 space-y-2">
-            {canEdit ? (
-              <>
-                <div>
-                  <Label htmlFor="detail-title" className="text-xs text-zinc-500">
-                    Title
-                  </Label>
-                  <Input
-                    id="detail-title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    onBlur={saveMeta}
-                    className="mt-1 border-white/10 bg-white/5 text-lg font-semibold text-white"
-                  />
-                </div>
-                <div className="max-w-xs">
-                  <Label htmlFor="detail-date" className="text-xs text-zinc-500">
-                    Meeting date
-                  </Label>
-                  <Input
-                    id="detail-date"
-                    type="date"
-                    value={meetingDate}
-                    onChange={(e) => setMeetingDate(e.target.value)}
-                    onBlur={saveMeta}
-                    className="mt-1 border-white/10 bg-white/5 text-white"
-                  />
-                </div>
-                <div className="max-w-md">
-                  <Label htmlFor="detail-client" className="text-xs text-zinc-500">
-                    Client
-                  </Label>
-                  <Select
-                    value={clientId || undefined}
-                    onValueChange={saveClientLink}
-                    disabled={pending}
-                  >
-                    <SelectTrigger
-                      id="detail-client"
-                      className="mt-1 border-white/10 bg-white/5 text-white"
-                    >
-                      <SelectValue placeholder="Select client" />
-                    </SelectTrigger>
-                    <SelectContent className="border-white/10 bg-[#1A2535] text-white">
-                      {clients.map((client) => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {client.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </>
-            ) : (
-              <>
-                <h1 className="text-2xl font-bold tracking-tight text-white">
-                  {transcript.title}
-                </h1>
-                <p className="text-sm text-zinc-400">
-                  {meetingDisplayDate(transcript.meetingDate, transcript.createdAt)}
-                </p>
-              </>
-            )}
-            {contextLabel ? (
-              <p className="text-sm text-zinc-400">
-                {clientPath && resolvedClientName ? (
-                  <>
-                    Client:{' '}
-                    <Link href={clientPath} className="text-[#5eead4] hover:underline">
-                      {resolvedClientName}
-                    </Link>
-                  </>
-                ) : transcript.dealTitle ? (
-                  <>Linked to deal: {transcript.dealTitle}</>
-                ) : (
-                  <>Linked to: {contextLabel}</>
-                )}
-              </p>
-            ) : canEdit ? (
-              <p className="text-sm text-zinc-500">No client linked yet.</p>
-            ) : null}
-          </div>
-
-          {canEdit ? (
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+        <section className={panelClassName}>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Mic className="h-4 w-4 text-[var(--keel-teal)]" />
+              <h2 className="text-sm font-semibold text-white">Transcript</h2>
+            </div>
             <Button
               type="button"
               variant="outline"
               size="sm"
-              disabled={pending}
-              className="border-red-500/30 text-red-400 hover:bg-red-500/10"
-              onClick={remove}
+              className="border-white/10 bg-white/5 text-white hover:bg-white/10"
+              onClick={() => void copyTranscript()}
             >
-              {pending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              {copied ? (
+                <Check className="mr-2 h-4 w-4 text-emerald-400" />
               ) : (
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Copy className="mr-2 h-4 w-4" />
               )}
-              Delete
+              {copied ? 'Copied' : 'Copy transcript'}
             </Button>
-          ) : null}
-        </div>
+          </div>
+          <pre className="max-h-[min(70vh,720px)] overflow-auto whitespace-pre-wrap rounded-xl border border-white/6 bg-black/20 p-4 text-sm leading-relaxed text-zinc-200">
+            {transcript.content}
+          </pre>
+        </section>
+
+        <aside className="space-y-6">
+          <section className={panelClassName}>
+            <h2 className="text-sm font-semibold text-white">Meeting details</h2>
+
+            <div className="mt-4 space-y-4">
+              {canEdit ? (
+                <>
+                  <div>
+                    <Label htmlFor="detail-title" className="text-xs text-zinc-500">
+                      Title
+                    </Label>
+                    <Input
+                      id="detail-title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      onBlur={saveMeta}
+                      className="mt-1 border-white/10 bg-white/5 text-white"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="detail-date" className="text-xs text-zinc-500">
+                      Meeting date
+                    </Label>
+                    <Input
+                      id="detail-date"
+                      type="date"
+                      value={meetingDate}
+                      onChange={(e) => setMeetingDate(e.target.value)}
+                      onBlur={saveMeta}
+                      className="mt-1 border-white/10 bg-white/5 text-white"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="detail-client" className="text-xs text-zinc-500">
+                      Client
+                    </Label>
+                    <Select
+                      value={clientId || undefined}
+                      onValueChange={saveClientLink}
+                      disabled={pending}
+                    >
+                      <SelectTrigger
+                        id="detail-client"
+                        className="mt-1 border-white/10 bg-white/5 text-white"
+                      >
+                        <SelectValue placeholder="Select client" />
+                      </SelectTrigger>
+                      <SelectContent className="border-white/10 bg-[#1A2535] text-white">
+                        {clients.map((client) => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <p className="text-xs text-zinc-500">Title</p>
+                    <p className="mt-1 font-medium text-white">{transcript.title}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-zinc-500">Meeting date</p>
+                    <p className="mt-1 text-sm text-zinc-300">
+                      {meetingDisplayDate(
+                        transcript.meetingDate,
+                        transcript.createdAt,
+                      )}
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {contextLabel ? (
+                <p className="text-sm text-zinc-400">
+                  {clientPath && resolvedClientName ? (
+                    <>
+                      Client:{' '}
+                      <Link
+                        href={clientPath}
+                        className="text-[#5eead4] hover:underline"
+                      >
+                        {resolvedClientName}
+                      </Link>
+                    </>
+                  ) : transcript.dealTitle ? (
+                    <>Linked to deal: {transcript.dealTitle}</>
+                  ) : (
+                    <>Linked to: {contextLabel}</>
+                  )}
+                </p>
+              ) : canEdit ? (
+                <p className="text-sm text-zinc-500">No client linked yet.</p>
+              ) : null}
+            </div>
+
+            {canEdit ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={pending}
+                className="mt-5 w-full border-red-500/30 text-red-400 hover:bg-red-500/10"
+                onClick={remove}
+              >
+                {pending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="mr-2 h-4 w-4" />
+                )}
+                Delete meeting
+              </Button>
+            ) : null}
+          </section>
+
+          <section className={panelClassName}>
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-[var(--keel-teal)]" />
+              <h2 className="text-sm font-semibold text-white">Extract tasks</h2>
+            </div>
+            <p className="mt-2 text-sm text-zinc-400">
+              Review AI-suggested tasks from this transcript before adding them to
+              the workspace.
+            </p>
+            <div className="mt-4">
+              <ExtractWorkspaceTasksClient
+                accountId={accountId}
+                accountSlug={accountSlug}
+                assignmentOptions={assignmentOptions}
+                embedded
+                initialRawText={transcript.content}
+                defaultClientId={clientId || transcript.clientId}
+                successRedirectHref={tasksPath}
+              />
+            </div>
+          </section>
+        </aside>
       </div>
-
-      <section className="rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-5">
-        <div className="mb-3 flex items-center gap-2">
-          <Mic className="h-4 w-4 text-[var(--keel-teal)]" />
-          <h2 className="text-sm font-semibold text-white">Transcript</h2>
-        </div>
-        <pre className="max-h-[min(50vh,520px)] overflow-auto whitespace-pre-wrap rounded-xl border border-white/6 bg-black/20 p-4 text-sm leading-relaxed text-zinc-200">
-          {transcript.content}
-        </pre>
-      </section>
-
-      <section className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-[var(--keel-teal)]" />
-          <h2 className="text-sm font-semibold text-white">Extract tasks</h2>
-        </div>
-        <p className="text-sm text-zinc-400">
-          Review AI-suggested tasks from this transcript before adding them to the
-          workspace.
-        </p>
-        <ExtractWorkspaceTasksClient
-          accountId={accountId}
-          accountSlug={accountSlug}
-          assignmentOptions={assignmentOptions}
-          embedded
-          initialRawText={transcript.content}
-          defaultClientId={clientId || transcript.clientId}
-          successRedirectHref={tasksPath}
-        />
-      </section>
     </div>
   );
 }

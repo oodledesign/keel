@@ -1,11 +1,7 @@
-import { PageBody } from '@kit/ui/page';
-
-import { withI18n } from '~/lib/i18n/with-i18n';
 import { getBrainIndexStats } from '~/lib/brain/indexer';
 import { isVoyageConfigured } from '~/lib/brain/voyage';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
-import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
 import { getTeamAccountAccess } from '../../_lib/role-access';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
 import { KnowledgeBaseSettings } from '../_components/knowledge-base-settings';
@@ -37,25 +33,16 @@ async function KnowledgeSettingsPage({ params }: KnowledgeSettingsPageProps) {
   const stats = await getBrainIndexStats(admin, workspace.account.id);
 
   return (
-    <>
-      <TeamAccountLayoutPageHeader
-        account={accountSlug}
-        title="Knowledge base"
-        description="Manage semantic indexing for Second brain."
-      />
-      <PageBody>
-        <KnowledgeBaseSettings
-          accountId={workspace.account.id}
-          accountSlug={accountSlug}
-          initialStats={{
-            ...stats,
-            voyageConfigured: isVoyageConfigured(),
-          }}
-          voyageConfigured={isVoyageConfigured()}
-        />
-      </PageBody>
-    </>
+    <KnowledgeBaseSettings
+      accountId={workspace.account.id}
+      accountSlug={accountSlug}
+      initialStats={{
+        ...stats,
+        voyageConfigured: isVoyageConfigured(),
+      }}
+      voyageConfigured={isVoyageConfigured()}
+    />
   );
 }
 
-export default withI18n(KnowledgeSettingsPage);
+export default KnowledgeSettingsPage;

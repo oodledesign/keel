@@ -25,7 +25,7 @@ export async function resolveDraftOwnerContext(
 
   const ownerEmail =
     (connection as { google_email?: string | null } | null)?.google_email?.trim() ||
-    authUser.data.user?.email?.trim() ||
+    authUser?.user?.email?.trim() ||
     (account as { email?: string | null } | null)?.email?.trim() ||
     '';
 
@@ -33,7 +33,7 @@ export async function resolveDraftOwnerContext(
     return null;
   }
 
-  const meta = authUser.data.user?.user_metadata as
+  const meta = authUser?.user?.user_metadata as
     | Record<string, unknown>
     | undefined;
 

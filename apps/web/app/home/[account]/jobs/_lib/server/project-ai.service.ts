@@ -491,6 +491,7 @@ class ProjectAiService {
           priority: taskInput.priority ?? 'medium',
           due_date: taskInput.due_date || null,
           user_id: user.id,
+          account_id: input.accountId,
           job_id: input.jobId,
           phase_id: phaseId,
           client_id: ctx.clientId,

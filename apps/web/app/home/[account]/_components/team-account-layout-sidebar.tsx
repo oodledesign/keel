@@ -50,13 +50,13 @@ export function TeamAccountLayoutSidebar(props: {
 
   return (
     <Sidebar collapsible={config.sidebarCollapsedStyle} className={workspaceSidebarClassName}>
-      <SidebarHeader className="gap-0 border-b border-white/[0.08] px-3 py-3">
+      <SidebarHeader className="gap-3 border-b border-white/[0.08] px-3 py-3">
         <SidebarLogoLink account={props.account} />
         <TeamAccountAccountsSelector
           userId={props.user.id}
           selectedAccount={props.account}
           accounts={props.accounts}
-          className="mt-1 w-full px-0"
+          className="w-full px-0"
         />
       </SidebarHeader>
 

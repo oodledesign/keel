@@ -149,7 +149,7 @@ const pathsConfig = PathsSchema.parse({
     accountSettings: `/app/[account]/settings`,
     accountBrandSettings: `/app/[account]/settings/brand`,
     accountPaymentSettings: `/app/[account]/settings/payments`,
-    accountBilling: `/app/[account]/billing`,
+    accountBilling: `/app/[account]/settings/billing`,
     accountMembers: `/app/[account]/members`,
     accountClients: `/app/[account]/clients`,
     accountWebsites: `/app/[account]/websites`,

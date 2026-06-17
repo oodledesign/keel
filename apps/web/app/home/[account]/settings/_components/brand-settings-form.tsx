@@ -73,12 +73,6 @@ export function BrandSettingsForm({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
-      <div className="text-sm text-muted-foreground">
-        <Link href={settingsHref} className="text-[var(--keel-teal)] hover:underline">
-          ← Back to settings
-        </Link>
-      </div>
-
       {!canEdit ? (
         <p className="rounded-xl border border-white/10 bg-black/10 px-4 py-3 text-sm text-muted-foreground">
           Only workspace owners and admins can edit brand colours.

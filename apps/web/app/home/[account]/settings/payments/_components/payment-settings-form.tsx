@@ -86,7 +86,7 @@ export function PaymentSettingsForm({
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 lg:px-0">
+    <div className="flex w-full flex-col gap-6">
       {stripeConnectedFlash ? (
         <div className="rounded-xl border border-[var(--keel-teal)]/30 bg-[var(--keel-teal)]/10 px-4 py-3 text-sm text-[#97D9AA]">
           Stripe connected successfully. Card payments are now enabled on invoices.

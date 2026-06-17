@@ -1,7 +1,5 @@
 import { redirect } from 'next/navigation';
 
-import { PageBody } from '@kit/ui/page';
-
 import { isVideosModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
 import {
   getDefaultAccountPath,
@@ -17,7 +15,6 @@ import {
 } from '~/lib/videos/server/player-config-data';
 import { toPublicVideoSettings } from '~/lib/videos/video-settings';
 
-import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
 import { VideoSettingsForm } from './_components/video-settings-form';
 
 type VideoSettingsPageProps = {
@@ -73,24 +70,15 @@ export default async function VideoSettingsPage({ params }: VideoSettingsPagePro
   ]);
 
   return (
-    <>
-      <TeamAccountLayoutPageHeader
-        account={account}
-        title="Video settings"
-        description="Bunny Stream credentials and default player preset."
-      />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-[var(--workspace-shell-text)] lg:px-6">
-        <VideoSettingsForm
-          accountId={accountId}
-          accountSlug={account}
-          initialSettings={toPublicVideoSettings(settings)}
-          presets={presets.map((preset) => ({
-            id: preset.id,
-            name: preset.name,
-          }))}
-          canEdit={access.isOwner || access.isAdmin}
-        />
-      </PageBody>
-    </>
+    <VideoSettingsForm
+      accountId={accountId}
+      accountSlug={account}
+      initialSettings={toPublicVideoSettings(settings)}
+      presets={presets.map((preset) => ({
+        id: preset.id,
+        name: preset.name,
+      }))}
+      canEdit={access.isOwner || access.isAdmin}
+    />
   );
 }

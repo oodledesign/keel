@@ -1,18 +1,17 @@
 import { redirect } from 'next/navigation';
 
-import { AppBreadcrumbs } from '@kit/ui/app-breadcrumbs';
-import { PageBody } from '@kit/ui/page';
-
 import { createInvoicePaymentSettingsService } from '~/home/[account]/invoices/_lib/server/invoice-payment-settings.service';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import {
+  BUSINESS_WORKSPACE_SPACE_TYPES,
+} from '../../_lib/server/workspace-route-guard';
 import {
   getDefaultAccountPath,
   getTeamAccountAccess,
 } from '../../_lib/role-access';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../_lib/server/workspace-route-guard';
-import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
 import { PaymentSettingsForm } from './_components/payment-settings-form';
 
 export const generateMetadata = async () => ({ title: 'Payment settings' });
@@ -24,7 +23,7 @@ interface PaymentSettingsPageProps {
 export default async function PaymentSettingsPage(props: PaymentSettingsPageProps) {
   const { account } = await props.params;
   const workspace = await loadTeamWorkspace(account);
-  redirectIfSpaceNotIn(workspace, account, ['work']);
+  redirectIfSpaceNotIn(workspace, account, BUSINESS_WORKSPACE_SPACE_TYPES);
 
   const access = getTeamAccountAccess(
     workspace.account as {
@@ -53,21 +52,11 @@ export default async function PaymentSettingsPage(props: PaymentSettingsPageProp
   const canEdit = access.isOwner || access.isAdmin;
 
   return (
-    <>
-      <TeamAccountLayoutPageHeader
-        account={account}
-        title="Payments"
-        description={<AppBreadcrumbs />}
-      />
-
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-[var(--workspace-shell-text)] lg:px-6">
-        <PaymentSettingsForm
-          accountId={accountId}
-          accountSlug={account}
-          initialSettings={settings}
-          canEdit={canEdit}
-        />
-      </PageBody>
-    </>
+    <PaymentSettingsForm
+      accountId={accountId}
+      accountSlug={account}
+      initialSettings={settings}
+      canEdit={canEdit}
+    />
   );
 }
