@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { requireSuperAdmin } from '~/admin/_lib/server/require-super-admin';
+import { DEFAULT_ANTHROPIC_MODEL } from '~/lib/ai/default-anthropic-model';
 import { extractJsonObject } from '~/lib/ai/extract-json-object';
 
 import {
@@ -311,7 +312,7 @@ export async function setContactSubscribed(id: string, subscribed: boolean) {
   refreshEmailMarketing();
 }
 
-const ANTHROPIC_MODEL = 'claude-sonnet-4-20250514';
+const ANTHROPIC_MODEL = DEFAULT_ANTHROPIC_MODEL;
 
 const AiContactMappingRecordSchema = z.record(
   z.string(),

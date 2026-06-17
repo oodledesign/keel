@@ -53,7 +53,7 @@ const LLM_PLATFORMS: LlmPlatformConfig[] = [
   {
     platform: 'claude',
     path: '/ai_optimization/claude/llm_responses/live',
-    model_name: 'claude-sonnet-4-20250514',
+    model_name: 'claude-sonnet-4-6',
     web_search: true,
     force_web_search: true,
   },

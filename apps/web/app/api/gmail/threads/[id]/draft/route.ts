@@ -1,5 +1,6 @@
 import { draft } from '@kit/email-assistant';
 
+import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { buildThreadText } from '~/lib/email-assistant/thread-text';
 import { resolveEmailAssistantSignature } from '~/lib/email-assistant/resolve-signature';
@@ -132,7 +133,7 @@ export async function POST(_request: Request, context: RouteContext) {
 
   const latestMessageId =
     (messages?.at(-1) as { id?: string } | undefined)?.id ?? null;
-  const model = process.env.ANTHROPIC_MODEL?.trim() || 'claude-sonnet-4-20250514';
+  const model = resolveAnthropicModel();
 
   const { data: inserted, error: insertError } = await auth.client
     .from('email_drafts')

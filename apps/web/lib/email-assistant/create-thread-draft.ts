@@ -1,14 +1,12 @@
 import 'server-only';
 
-import { draft } from '@kit/email-assistant';
+import { DEFAULT_ANTHROPIC_MODEL, draft } from '@kit/email-assistant';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { resolveDraftOwnerContext } from './draft-owner';
 import { resolveEmailAssistantSignature } from './resolve-signature';
 import { saveDraftToGmail } from './save-draft-to-gmail';
 import { buildThreadText } from './thread-text';
-
-const DEFAULT_MODEL = 'claude-sonnet-4-20250514';
 
 export async function createThreadDraft(input: {
   userId: string;
@@ -111,7 +109,7 @@ export async function createThreadDraft(input: {
     signature.plain,
   );
 
-  const model = process.env.ANTHROPIC_MODEL?.trim() || DEFAULT_MODEL;
+  const model = process.env.ANTHROPIC_MODEL?.trim() || DEFAULT_ANTHROPIC_MODEL;
 
   const { data: inserted, error: insertError } = await admin
     .from('email_drafts')

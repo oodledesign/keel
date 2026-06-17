@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+
 export type CategoryOption = {
   id: string;
   name: string;
@@ -51,8 +53,7 @@ export async function suggestTransactionCategories(input: {
       return heuristicCategorySuggestions(input);
     }
 
-    const model =
-      process.env.ANTHROPIC_MODEL?.trim() || 'claude-sonnet-4-20250514';
+    const model = resolveAnthropicModel();
 
     const payload = {
       categories: input.categories.map((c) => ({

@@ -3,6 +3,7 @@ import 'server-only';
 import { z } from 'zod';
 
 import { extractJsonObject } from '~/lib/ai/extract-json-object';
+import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
 
 export type ProjectSourceBlock = {
   type: 'transcript' | 'proposal' | 'note' | 'file';
@@ -45,8 +46,7 @@ function getAnthropicConfig() {
   if (!apiKey) {
     throw new Error('ANTHROPIC_API_KEY is not configured');
   }
-  const model =
-    process.env.ANTHROPIC_MODEL?.trim() || 'claude-sonnet-4-20250514';
+  const model = resolveAnthropicModel();
   return { apiKey, model };
 }
 

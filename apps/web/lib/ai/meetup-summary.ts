@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+
 export async function summarizeMeetupTranscript(
   transcript: string,
   meetupTitle: string,
@@ -9,8 +11,7 @@ export async function summarizeMeetupTranscript(
     throw new Error('ANTHROPIC_API_KEY is not configured');
   }
 
-  const model =
-    process.env.ANTHROPIC_MODEL?.trim() || 'claude-sonnet-4-20250514';
+  const model = resolveAnthropicModel();
 
   const system = `You summarize home group / community meetup notes for leaders.
 Write a clear, warm summary in markdown with sections: Highlights, Discussion, Prayer & pastoral care, Action items, Next time.

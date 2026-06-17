@@ -3,6 +3,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { extractJsonObject } from '~/lib/ai/extract-json-object';
+import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
 
 import { formatBrainContext, searchBrainChunks, type BrainMatch } from './search';
 import { isVoyageConfigured } from './voyage';
@@ -14,8 +15,7 @@ Use UK English. Format replies as Markdown.`;
 function getAnthropicConfig() {
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not configured');
-  const model =
-    process.env.ANTHROPIC_MODEL?.trim() || 'claude-sonnet-4-20250514';
+  const model = resolveAnthropicModel();
   return { apiKey, model };
 }
 

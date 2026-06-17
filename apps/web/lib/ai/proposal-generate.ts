@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+
 export type ProposalTranscript = {
   title: string;
   content: string;
@@ -78,8 +80,7 @@ function getAnthropicConfig() {
     throw new Error('ANTHROPIC_API_KEY is not configured');
   }
 
-  const model =
-    process.env.ANTHROPIC_MODEL?.trim() || 'claude-sonnet-4-20250514';
+  const model = resolveAnthropicModel();
 
   return { apiKey, model };
 }

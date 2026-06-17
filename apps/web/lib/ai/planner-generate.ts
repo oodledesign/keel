@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+
 const PLANNER_SYSTEM_PROMPT = `You are a personal productivity planner integrated into Keel, a personal and business operating system. Your role is to help the user plan their day or week intelligently, using proven productivity principles.
 
 You will receive a JSON payload containing the user's tasks, existing calendar events, working hours, and any personal context for the session.
@@ -73,8 +75,7 @@ export async function streamPlannerMarkdown(payload: unknown) {
     throw new Error('ANTHROPIC_API_KEY is not configured');
   }
 
-  const model =
-    process.env.ANTHROPIC_MODEL?.trim() || 'claude-sonnet-4-20250514';
+  const model = resolveAnthropicModel();
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',

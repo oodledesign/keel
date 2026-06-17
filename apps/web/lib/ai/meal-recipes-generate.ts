@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+
 const RECIPE_GENERATE_SYSTEM_PROMPT = `You are a family recipe assistant inside Keel. Suggest complete, cookable recipes inspired by popular home cooking — weeknight staples, trending one-pan meals, comfort food people share on Instagram and food blogs, and classic family favourites.
 
 You will receive JSON with:
@@ -84,8 +86,7 @@ export async function generateMealRecipes(
     throw new Error('ANTHROPIC_API_KEY is not configured');
   }
 
-  const model =
-    process.env.ANTHROPIC_MODEL?.trim() || 'claude-sonnet-4-20250514';
+  const model = resolveAnthropicModel();
 
   const maxTokens = payload.count > 5 ? 8_192 : 4_096;
 

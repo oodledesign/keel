@@ -2,6 +2,8 @@ import 'server-only';
 
 import { z } from 'zod';
 
+import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+
 const PaymentPlanItemSchema = z.object({
   label: z.string(),
   percent: z.number().min(0).max(100),
@@ -64,8 +66,7 @@ function getAnthropicConfig() {
     throw new Error('ANTHROPIC_API_KEY is not configured');
   }
 
-  const model =
-    process.env.ANTHROPIC_MODEL?.trim() || 'claude-sonnet-4-20250514';
+  const model = resolveAnthropicModel();
 
   return { apiKey, model };
 }

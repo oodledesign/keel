@@ -1,5 +1,8 @@
 import 'server-only';
 
+/** Retired 2026-06-15 — use claude-sonnet-4-6 (override via ANTHROPIC_MODEL). */
+export const DEFAULT_ANTHROPIC_MODEL = 'claude-sonnet-4-6';
+
 function getAnthropicConfig() {
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
 
@@ -10,7 +13,7 @@ function getAnthropicConfig() {
   }
 
   const model =
-    process.env.ANTHROPIC_MODEL?.trim() || 'claude-sonnet-4-20250514';
+    process.env.ANTHROPIC_MODEL?.trim() || DEFAULT_ANTHROPIC_MODEL;
 
   return { apiKey, model };
 }

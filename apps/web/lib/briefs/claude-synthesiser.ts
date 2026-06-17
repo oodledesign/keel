@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+
 import type { BriefOutput, BriefSynthesisInput } from './types';
 
 function buildPrompt(input: BriefSynthesisInput): string {
@@ -129,9 +131,7 @@ async function callClaude(prompt: string, retry = false): Promise<string> {
   }
 
   const model =
-    process.env.ANTHROPIC_BRIEF_MODEL?.trim() ||
-    process.env.ANTHROPIC_MODEL?.trim() ||
-    'claude-sonnet-4-20250514';
+    process.env.ANTHROPIC_BRIEF_MODEL?.trim() || resolveAnthropicModel();
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',

@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+
 import type { ScorerInput, ScorerOutput } from './types';
 
 function buildScorerPrompt(input: ScorerInput): string {
@@ -161,9 +163,7 @@ async function callClaude(prompt: string, retry = false): Promise<string> {
   }
 
   const model =
-    process.env.ANTHROPIC_AUDIT_MODEL?.trim() ||
-    process.env.ANTHROPIC_MODEL?.trim() ||
-    'claude-sonnet-4-20250514';
+    process.env.ANTHROPIC_AUDIT_MODEL?.trim() || resolveAnthropicModel();
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -231,9 +231,7 @@ export async function generateFixSnippet(input: {
   }
 
   const model =
-    process.env.ANTHROPIC_AUDIT_MODEL?.trim() ||
-    process.env.ANTHROPIC_MODEL?.trim() ||
-    'claude-sonnet-4-20250514';
+    process.env.ANTHROPIC_AUDIT_MODEL?.trim() || resolveAnthropicModel();
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',

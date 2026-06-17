@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+
 const MEAL_PLAN_SYSTEM_PROMPT = `You are a family meal-planning assistant inside Keel, a personal operating system. Your job is to plan dinners for a household for specific dates.
 
 You will receive a JSON payload with:
@@ -63,8 +65,7 @@ export async function generateMealPlan(
     throw new Error('ANTHROPIC_API_KEY is not configured');
   }
 
-  const model =
-    process.env.ANTHROPIC_MODEL?.trim() || 'claude-sonnet-4-20250514';
+  const model = resolveAnthropicModel();
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',

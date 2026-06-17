@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+
 export type CsvColumnMapping = {
   date: string;
   description: string;
@@ -46,8 +48,7 @@ export async function suggestCsvColumnMapping(input: {
     return heuristicMapping(input.headers);
   }
 
-  const model =
-    process.env.ANTHROPIC_MODEL?.trim() || 'claude-sonnet-4-20250514';
+  const model = resolveAnthropicModel();
 
   const payload = {
     headers: input.headers,
