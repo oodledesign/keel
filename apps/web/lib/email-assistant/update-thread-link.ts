@@ -2,6 +2,8 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { getDbForWorkspaceTaskAssignmentOptions } from '~/home/_lib/server/workspace-scope';
+
 type UpdateEmailThreadLinkInput = {
   accountId: string | null;
   clientId: string | null;
@@ -84,12 +86,18 @@ export async function updateEmailThreadLink(
     throw new Error('Choose a workspace');
   }
 
+  const readDb = await getDbForWorkspaceTaskAssignmentOptions(
+    client,
+    userId,
+    input.accountId,
+  );
+
   let clientId = input.clientId;
   let projectId = input.projectId;
 
   if (projectId) {
     const project = await validateProject(
-      client,
+      readDb,
       projectId,
       input.accountId,
     );
@@ -97,7 +105,7 @@ export async function updateEmailThreadLink(
   }
 
   if (clientId) {
-    await validateClient(client, clientId, input.accountId);
+    await validateClient(readDb, clientId, input.accountId);
   } else if (!projectId) {
     throw new Error('Choose a client or project');
   }

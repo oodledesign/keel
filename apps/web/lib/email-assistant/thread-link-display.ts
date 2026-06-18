@@ -2,6 +2,8 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+
 import type { EmailThreadLink, EmailThreadSummary } from '~/home/(user)/email/_lib/types';
 
 type LinkRow = {
@@ -59,15 +61,17 @@ export async function enrichEmailThreadLinks(
     ),
   ];
 
+  const nameClient = getSupabaseServerAdminClient() as unknown as SupabaseClient;
+
   const [clientsResult, projectsResult, accountsResult] = await Promise.all([
     clientIds.length > 0
-      ? client
+      ? nameClient
           .from('clients')
           .select('id, display_name, first_name, last_name, company_name')
           .in('id', clientIds)
       : Promise.resolve({ data: [], error: null }),
     projectIds.length > 0
-      ? client.from('projects').select('id, name').in('id', projectIds)
+      ? nameClient.from('projects').select('id, name').in('id', projectIds)
       : Promise.resolve({ data: [], error: null }),
     accountIds.length > 0
       ? client.from('accounts').select('id, name').in('id', accountIds)
