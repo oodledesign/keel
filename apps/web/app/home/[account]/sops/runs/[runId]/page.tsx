@@ -57,6 +57,7 @@ async function SopRunPage({ params }: SopRunPageProps) {
           run={data.run}
           playbook={data.playbook}
           steps={data.steps}
+          teamMembers={data.teamMembers}
         />
       </PageBody>
     </>

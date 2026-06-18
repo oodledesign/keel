@@ -16,9 +16,11 @@ import type {
   SopPlaybookRow,
   SopPlaybookStepRow,
   SopRunRow,
+  SopTeamMember,
 } from '~/lib/sops/types';
 
 import { startSopRunAction } from '../_lib/server/sops-actions';
+import { SopRunAssigneeSelect } from './sop-run-assignee-select';
 
 const panelClass =
   'rounded-[24px] border border-white/6 bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]';
@@ -29,6 +31,7 @@ type SopPlaybookDetailProps = {
   playbook: SopPlaybookRow;
   steps: SopPlaybookStepRow[];
   runs: SopRunRow[];
+  teamMembers: SopTeamMember[];
 };
 
 export function SopPlaybookDetail({
@@ -37,10 +40,12 @@ export function SopPlaybookDetail({
   playbook,
   steps,
   runs,
+  teamMembers,
 }: SopPlaybookDetailProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [runTitle, setRunTitle] = useState('');
+  const [assignedToUserId, setAssignedToUserId] = useState<string | null>(null);
 
   const libraryPath = pathsConfig.app.accountSops.replace('[account]', accountSlug);
 
@@ -52,6 +57,7 @@ export function SopPlaybookDetail({
           accountSlug,
           playbookId: playbook.id,
           title: runTitle.trim() || undefined,
+          assignedToUserId: assignedToUserId ?? undefined,
         });
         if (result?.runId) {
           router.push(
@@ -94,6 +100,17 @@ export function SopPlaybookDetail({
               className="border-white/10 bg-black/20 text-white"
             />
           </div>
+          {teamMembers.length > 0 ? (
+            <div className="w-full min-w-0 sm:w-56">
+              <SopRunAssigneeSelect
+                id="start-run-assignee"
+                members={teamMembers}
+                value={assignedToUserId}
+                disabled={pending}
+                onChange={setAssignedToUserId}
+              />
+            </div>
+          ) : null}
           <Button
             type="button"
             disabled={pending || steps.length === 0}

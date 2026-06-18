@@ -38,6 +38,23 @@ function runPath(slug: string, runId: string) {
     .replace('[runId]', runId);
 }
 
+async function assertTeamMember(accountSlug: string, userId: string) {
+  const client = getSupabaseServerClient();
+  const { data, error } = await client.rpc('get_account_members', {
+    account_slug: accountSlug,
+  });
+
+  if (error) throw error;
+
+  const isMember = (data ?? []).some(
+    (row: { user_id: string }) => row.user_id === userId,
+  );
+
+  if (!isMember) {
+    throw new Error('Selected user is not a team member in this workspace');
+  }
+}
+
 export const importSopFromTextAction = enhanceAction(
   async (data) => {
     const draft = await extractSopPlaybookFromText(data.rawText);
@@ -139,6 +156,10 @@ export const startSopRunAction = enhanceAction(
     const periodLabel =
       data.periodLabel?.trim() || defaultPeriodLabel(pb.recurrence);
 
+    if (data.assignedToUserId) {
+      await assertTeamMember(data.accountSlug, data.assignedToUserId);
+    }
+
     const { data: run, error: runErr } = await db
       .from('runs')
       .insert({
@@ -148,6 +169,7 @@ export const startSopRunAction = enhanceAction(
         period_label: periodLabel,
         notes_md: data.notesMd?.trim() || null,
         started_by: user.id,
+        assigned_to: data.assignedToUserId ?? null,
         status: 'active',
       })
       .select('id')
@@ -188,6 +210,37 @@ export const startSopRunAction = enhanceAction(
       title: z.string().max(300).optional(),
       periodLabel: z.string().max(200).optional(),
       notesMd: z.string().max(20_000).optional(),
+      assignedToUserId: z.string().uuid().optional(),
+    }),
+  },
+);
+
+export const updateSopRunAssigneeAction = enhanceAction(
+  async (data) => {
+    const db = getSopsDb();
+
+    if (data.assignedToUserId) {
+      await assertTeamMember(data.accountSlug, data.assignedToUserId);
+    }
+
+    const { error } = await db
+      .from('runs')
+      .update({ assigned_to: data.assignedToUserId ?? null })
+      .eq('id', data.runId)
+      .eq('account_id', data.accountId);
+
+    if (error) throw error;
+
+    revalidatePath(runPath(data.accountSlug, data.runId));
+    revalidatePath(sopsBasePath(data.accountSlug));
+    return { ok: true };
+  },
+  {
+    schema: z.object({
+      accountId: z.string().uuid(),
+      accountSlug: z.string().min(1),
+      runId: z.string().uuid(),
+      assignedToUserId: z.string().uuid().nullable().optional(),
     }),
   },
 );
@@ -212,6 +265,7 @@ export const duplicateSopRunAction = enhanceAction(
       title: string;
       period_label: string | null;
       notes_md: string | null;
+      assigned_to: string | null;
     };
 
     const { data: playbook } = await db
@@ -242,6 +296,7 @@ export const duplicateSopRunAction = enhanceAction(
           (pb ? defaultPeriodLabel(pb.recurrence) : source.period_label),
         notes_md: source.notes_md,
         started_by: user.id,
+        assigned_to: source.assigned_to,
         status: 'active',
       })
       .select('id')

@@ -1,14 +1,12 @@
 import { redirect } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
-import { Trans } from '@kit/ui/trans';
 
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { loadTasksForTeamAccount } from '~/home/(user)/_lib/server/tasks.loader';
 import { TasksPageClient } from '~/home/(user)/tasks/_components/tasks-page-client';
 
-import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
 import { getDefaultAccountPath, getTeamAccountAccess } from '../../_lib/role-access';
 import { getSpaceTypeFromAccount } from '../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
@@ -52,27 +50,15 @@ async function CommunityTasksPage({ params }: CommunityTasksPageProps) {
   const accountId = workspace.account.id as string;
   const tasks = await loadTasksForTeamAccount(accountId);
 
-  const description =
-    spaceType === 'family'
-      ? 'Shared tasks for your family workspace.'
-      : 'Shared tasks for your community space.';
-
   return (
-    <>
-      <TeamAccountLayoutPageHeader
-        account={slug}
-        title={<Trans i18nKey="common:routes.tasks" />}
-        description={description}
+    <PageBody className="bg-[var(--workspace-shell-canvas)] p-0 md:p-0">
+      <TasksPageClient
+        initialTasks={tasks}
+        variant="workspace"
+        workspaceAccountId={accountId}
+        workspaceAccountSlug={slug}
       />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] p-0 md:p-0">
-        <TasksPageClient
-          initialTasks={tasks}
-          variant="workspace"
-          workspaceAccountId={accountId}
-          workspaceAccountSlug={slug}
-        />
-      </PageBody>
-    </>
+    </PageBody>
   );
 }
 

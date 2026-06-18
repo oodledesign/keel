@@ -187,13 +187,14 @@ export async function loadAccountIndexables(
   for (const row of transcripts ?? []) {
     const content = (row.content as string)?.trim();
     if (!content) continue;
+    const title = ((row.title as string) || 'Meeting transcript').trim();
     records.push({
       sourceType: 'transcript',
       sourceId: row.id as string,
       accountId,
       accountSlug,
-      title: ((row.title as string) || 'Meeting transcript').trim(),
-      text: content,
+      title,
+      text: `# ${title}\n\n${content}`,
       updatedAt: row.updated_at as string,
       clientId: (row.client_id as string | null) ?? null,
     });
@@ -258,7 +259,7 @@ async function upsertRecordChunks(
 
   const { data: existingRows } = await admin
     .from('brain_chunks')
-    .select('chunk_index, indexed_at')
+    .select('chunk_index, indexed_at, embedding')
     .eq('source_id', record.sourceId)
     .order('chunk_index', { ascending: true });
 
@@ -266,6 +267,7 @@ async function upsertRecordChunks(
   const needsReembed =
     !existingRows?.length ||
     existingRows.some((row) => {
+      if (!row.embedding) return true;
       const indexedAt = row.indexed_at as string | null;
       if (!indexedAt) return true;
       return new Date(indexedAt).getTime() < sourceUpdatedMs;

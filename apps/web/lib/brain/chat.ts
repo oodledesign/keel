@@ -60,6 +60,7 @@ export async function prepareBrainChat(params: {
     accountId: params.accountId,
     query: params.userMessage,
     matchCount: 10,
+    threshold: 0.32,
     scope: {
       jobId: params.scope?.jobId ?? null,
       clientId: params.scope?.clientId ?? null,

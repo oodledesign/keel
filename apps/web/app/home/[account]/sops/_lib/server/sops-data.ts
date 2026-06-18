@@ -13,6 +13,7 @@ import {
   type SopPlaybookStepRow,
   type SopRunRow,
   type SopRunStepRow,
+  type SopTeamMember,
 } from '~/lib/sops/types';
 
 export type SopPlaybookListItem = SopPlaybookRow & {
@@ -24,7 +25,38 @@ export type SopRunListItem = SopRunRow & {
   playbook_title: string;
   completed_steps: number;
   total_steps: number;
+  assignee_name: string | null;
 };
+
+export async function loadSopTeamMembers(
+  accountSlug: string,
+): Promise<SopTeamMember[]> {
+  const client = getSupabaseServerClient();
+  const { data, error } = await client.rpc('get_account_members', {
+    account_slug: accountSlug,
+  });
+
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map(
+    (row: {
+      user_id: string;
+      name?: string | null;
+      email?: string | null;
+      picture_url?: string | null;
+    }) => ({
+      user_id: row.user_id,
+      name: row.name ?? null,
+      email: row.email ?? null,
+      picture_url: row.picture_url ?? null,
+    }),
+  );
+}
+
+function memberDisplayName(member: SopTeamMember | undefined): string | null {
+  if (!member) return null;
+  return member.name?.trim() || member.email?.trim() || null;
+}
 
 export const loadSopsLibraryPage = cache(async (accountSlug: string) => {
   const workspace = await loadTeamWorkspace(accountSlug);
@@ -106,6 +138,9 @@ export const loadSopsLibraryPage = cache(async (accountSlug: string) => {
     active_runs: activeRunCounts.get(p.id) ?? 0,
   }));
 
+  const members = await loadSopTeamMembers(accountSlug);
+  const memberById = new Map(members.map((member) => [member.user_id, member]));
+
   const recentRuns: SopRunListItem[] = runRows.map((r) => {
     const progress = runProgress.get(r.id) ?? { done: 0, total: 0 };
     return {
@@ -113,6 +148,9 @@ export const loadSopsLibraryPage = cache(async (accountSlug: string) => {
       playbook_title: playbookTitleById.get(r.playbook_id) ?? 'Playbook',
       completed_steps: progress.done,
       total_steps: progress.total,
+      assignee_name: memberDisplayName(
+        r.assigned_to ? memberById.get(r.assigned_to) : undefined,
+      ),
     };
   });
 
@@ -162,6 +200,7 @@ export const loadSopPlaybookPage = cache(
       playbook: playbook as SopPlaybookRow,
       steps: (steps ?? []) as SopPlaybookStepRow[],
       runs: (runs ?? []) as SopRunRow[],
+      teamMembers: await loadSopTeamMembers(accountSlug),
     };
   },
 );
@@ -200,6 +239,7 @@ export const loadSopRunPage = cache(async (accountSlug: string, runId: string) =
     run: runRow,
     playbook: (playbook as SopPlaybookRow | null) ?? null,
     steps: (steps ?? []) as SopRunStepRow[],
+    teamMembers: await loadSopTeamMembers(accountSlug),
   };
 });
 

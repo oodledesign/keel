@@ -18,13 +18,16 @@ import type {
   SopPlaybookRow,
   SopRunRow,
   SopRunStepRow,
+  SopTeamMember,
 } from '~/lib/sops/types';
 
 import {
   duplicateSopRunAction,
   toggleSopRunStepAction,
+  updateSopRunAssigneeAction,
   updateSopRunNotesAction,
 } from '../_lib/server/sops-actions';
+import { SopRunAssigneeSelect } from './sop-run-assignee-select';
 
 const panelClass =
   'rounded-[24px] border border-white/6 bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]';
@@ -35,6 +38,7 @@ type SopRunChecklistProps = {
   run: SopRunRow;
   playbook: SopPlaybookRow | null;
   steps: SopRunStepRow[];
+  teamMembers: SopTeamMember[];
 };
 
 export function SopRunChecklist({
@@ -43,10 +47,13 @@ export function SopRunChecklist({
   run,
   playbook,
   steps,
+  teamMembers,
 }: SopRunChecklistProps) {
   const router = useRouter();
   const [notes, setNotes] = useState(run.notes_md ?? '');
+  const [assignedTo, setAssignedTo] = useState(run.assigned_to ?? '');
   const [notesPending, startNotesSave] = useTransition();
+  const [assigneePending, startAssigneeSave] = useTransition();
   const [dupPending, startDup] = useTransition();
   const [stepPending, startStep] = useTransition();
 
@@ -59,6 +66,25 @@ export function SopRunChecklist({
         .replace('[account]', accountSlug)
         .replace('[playbookId]', playbook.id)
     : pathsConfig.app.accountSops.replace('[account]', accountSlug);
+
+  function saveAssignee(nextAssignee: string | null) {
+    setAssignedTo(nextAssignee ?? '');
+    startAssigneeSave(async () => {
+      try {
+        await updateSopRunAssigneeAction({
+          accountId,
+          accountSlug,
+          runId: run.id,
+          assignedToUserId: nextAssignee,
+        });
+        toast.success(nextAssignee ? 'Assignee updated' : 'Run unassigned');
+        router.refresh();
+      } catch (e) {
+        setAssignedTo(run.assigned_to ?? '');
+        toast.error(e instanceof Error ? e.message : 'Could not update assignee');
+      }
+    });
+  }
 
   function saveNotes() {
     startNotesSave(async () => {
@@ -160,6 +186,17 @@ export function SopRunChecklist({
             style={{ width: `${pct}%` }}
           />
         </div>
+        {teamMembers.length > 0 ? (
+          <div className="mt-4 max-w-xs">
+            <SopRunAssigneeSelect
+              id="run-assignee"
+              members={teamMembers}
+              value={assignedTo || null}
+              disabled={assigneePending}
+              onChange={saveAssignee}
+            />
+          </div>
+        ) : null}
       </div>
 
       <div className={`${panelClass} divide-y divide-white/6`}>

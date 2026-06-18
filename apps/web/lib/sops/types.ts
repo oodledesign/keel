@@ -35,8 +35,17 @@ export type SopRunRow = {
   period_label: string | null;
   notes_md: string | null;
   status: 'active' | 'completed' | 'archived';
+  started_by: string | null;
+  assigned_to: string | null;
   completed_at: string | null;
   created_at: string;
+};
+
+export type SopTeamMember = {
+  user_id: string;
+  name: string | null;
+  email: string | null;
+  picture_url: string | null;
 };
 
 export type SopRunStepRow = {

@@ -143,6 +143,7 @@ export function SopsLibraryPage({
                     <p className="text-muted-foreground text-xs">
                       {run.playbook_title}
                       {run.period_label ? ` · ${run.period_label}` : ''}
+                      {run.assignee_name ? ` · ${run.assignee_name}` : ''}
                     </p>
                   </div>
                   <div className="text-right text-sm">

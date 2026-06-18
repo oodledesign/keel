@@ -314,6 +314,11 @@ export function BrainChatContent({
             Scoped to job: {scope.jobTitle}
           </p>
         )}
+        {scope?.clientName && (
+          <p className="text-xs text-zinc-500">
+            Scoped to client: {scope.clientName}
+          </p>
+        )}
       </aside>
 
       <section
