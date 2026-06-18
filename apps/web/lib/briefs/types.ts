@@ -108,12 +108,20 @@ export type SuggestedLink = {
   target_section: string;
 };
 
+export type BriefBrandContext = {
+  brandName?: string | null;
+  voiceNotes?: string | null;
+  mentionRules?: string | null;
+  researchDepth?: 'standard' | 'deep';
+};
+
 export type BriefSynthesisInput = {
   targetDomain: string;
   targetKeyword: string;
   country: string;
   template: BriefTemplate;
   templateRationale: string;
+  brandContext?: BriefBrandContext;
   domainKeywords: DomainKeyword[];
   competitors: CompetitorWithOpr[];
   targetOpr: number;

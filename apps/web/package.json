@@ -21,6 +21,7 @@
     "start": "next start",
     "start:test": "NODE_ENV=test next start",
     "test:unit": "vitest run",
+    "stripe:setup-catalog": "node scripts/stripe-setup-catalog.mjs",
     "typecheck": "tsc --noEmit",
     "supabase": "supabase",
     "supabase:start": "supabase status || supabase start --exclude realtime",

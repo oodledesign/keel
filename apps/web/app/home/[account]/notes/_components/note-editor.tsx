@@ -116,19 +116,6 @@ export function NoteEditor({
     isDirtyRef.current = false;
   }, [note.id]);
 
-  useEffect(() => {
-    if (isDirtyRef.current || saveState === 'saving') {
-      return;
-    }
-
-    setTitle(note.title);
-    setContent(note.content);
-    setIsPinned(note.isPinned);
-    setCategory(note.category);
-    setTags(note.tags);
-    setLink(linkFromNote(note));
-  }, [note, saveState]);
-
   const persist = useCallback(async () => {
     const snapshot = latestRef.current;
 

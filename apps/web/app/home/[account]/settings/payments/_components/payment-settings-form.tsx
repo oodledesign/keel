@@ -28,11 +28,13 @@ export function PaymentSettingsForm({
   accountSlug,
   initialSettings,
   canEdit,
+  hasInvoices,
 }: {
   accountId: string;
   accountSlug: string;
   initialSettings: AccountPaymentSettings;
   canEdit: boolean;
+  hasInvoices: boolean;
 }) {
   const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
@@ -63,6 +65,7 @@ export function PaymentSettingsForm({
           bank_transfer_enabled: settings.bank_transfer_enabled,
           bank_transfer_instructions: settings.bank_transfer_instructions,
           stripe_pay_now_enabled: settings.stripe_pay_now_enabled,
+          invoice_starting_number: settings.invoice_starting_number,
         });
         setSettings(saved as AccountPaymentSettings);
         toast.success('Payment settings saved');
@@ -146,6 +149,43 @@ export function PaymentSettingsForm({
               setSettings((prev) => ({ ...prev, stripe_pay_now_enabled: checked }))
             }
           />
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+        <h2 className="text-base font-semibold">Invoice numbering</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          New invoices are numbered INV-0001, INV-0002, and so on. Set a custom
+          starting number before you create your first invoice.
+        </p>
+        <div className="mt-4 max-w-xs">
+          <Label htmlFor="invoice_starting_number">Next invoice number</Label>
+          <div className="mt-1 flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">INV-</span>
+            <Input
+              id="invoice_starting_number"
+              type="number"
+              min={1}
+              max={999999}
+              value={settings.invoice_starting_number ?? 1}
+              disabled={!canEdit || hasInvoices}
+              onChange={(e) => {
+                const n = parseInt(e.target.value, 10);
+                setSettings((prev) => ({
+                  ...prev,
+                  invoice_starting_number: Number.isFinite(n)
+                    ? Math.min(999999, Math.max(1, n))
+                    : 1,
+                }));
+              }}
+              className="font-mono"
+            />
+          </div>
+          {hasInvoices ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Numbering is locked after your first invoice has been created.
+            </p>
+          ) : null}
         </div>
       </div>
 

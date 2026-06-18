@@ -80,6 +80,19 @@ VOLUME FOR PRIMARY KEYWORD: ${input.primaryVolume}/mo
 COMPETITOR AVERAGE WORD COUNT: ${input.competitorAvgWc}
 
 ---
+${
+  input.brandContext?.brandName ||
+  input.brandContext?.voiceNotes ||
+  input.brandContext?.mentionRules
+    ? `BRAND & VOICE (must follow):
+${input.brandContext.brandName ? `Brand name: ${input.brandContext.brandName}` : ''}
+${input.brandContext.voiceNotes ? `Voice & tone: ${input.brandContext.voiceNotes}` : ''}
+${input.brandContext.mentionRules ? `Mention rules: ${input.brandContext.mentionRules}` : ''}
+Research depth: ${input.brandContext.researchDepth ?? 'standard'}
+`
+    : ''
+}
+---
 Return a JSON object with this exact shape:
 
 {

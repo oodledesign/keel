@@ -183,6 +183,7 @@ export const SavePaymentSettingsSchema = z.object({
   bank_transfer_enabled: z.boolean().optional(),
   bank_transfer_instructions: optionalNullableString,
   stripe_pay_now_enabled: z.boolean().optional(),
+  invoice_starting_number: z.number().int().min(1).max(999999).optional(),
 });
 
 export type ListInvoicesInput = z.infer<typeof ListInvoicesSchema>;

@@ -45,10 +45,22 @@ CREATE POLICY google_calendar_connections_delete
 
 DROP TRIGGER IF EXISTS google_calendar_connections_set_updated_at
   ON public.google_calendar_connections;
+
+CREATE OR REPLACE FUNCTION public.trigger_google_calendar_connections_updated_at()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$;
+
 CREATE TRIGGER google_calendar_connections_set_updated_at
   BEFORE UPDATE ON public.google_calendar_connections
   FOR EACH ROW
-  EXECUTE PROCEDURE public.trigger_set_timestamps();
+  EXECUTE FUNCTION public.trigger_google_calendar_connections_updated_at();
 
 GRANT SELECT, INSERT, UPDATE, DELETE
   ON public.google_calendar_connections

@@ -277,7 +277,7 @@ export function EditTaskDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="border-white/8 bg-[#0F1923] text-white sm:max-w-lg">
+        <DialogContent className="border-white/8 bg-[#0F1923] text-white sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>Edit task</DialogTitle>
             <DialogDescription className="text-zinc-400">
@@ -306,14 +306,14 @@ export function EditTaskDialog({
 
             <div className="space-y-2">
               <Label htmlFor="edit-notes" className="text-zinc-300">
-                Notes
+                Description
               </Label>
               <Textarea
                 id="edit-notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Context, checklist, or transcript snippet…"
-                className="min-h-[88px] border-white/10 bg-white/5 text-sm text-white placeholder:text-zinc-600"
+                placeholder="Add context, checklist items, links, or meeting notes…"
+                className="min-h-[180px] border-white/10 bg-white/5 text-sm text-white placeholder:text-zinc-600"
               />
             </div>
 

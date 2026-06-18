@@ -4,6 +4,7 @@ import Link from 'next/link';
 
 import { Button } from '@kit/ui/button';
 
+import { BatchClusterBriefsButton } from './batch-cluster-briefs-button';
 import { ClusterCard } from './cluster-card';
 import { QualityScorecard } from './quality-scorecard';
 
@@ -30,6 +31,9 @@ type ClusterPlanViewProps = {
   links: ClusterLink[];
   clusterNameById: Record<string, string>;
   briefNewPath?: string;
+  accountId?: string;
+  projectId?: string;
+  briefsPath?: string;
 };
 
 export function ClusterPlanView({
@@ -39,9 +43,16 @@ export function ClusterPlanView({
   links,
   clusterNameById,
   briefNewPath,
+  accountId,
+  projectId,
+  briefsPath,
 }: ClusterPlanViewProps) {
   const sorted = [...clusters].sort(
     (a, b) => (a.build_order ?? 0) - (b.build_order ?? 0),
+  );
+  const spokeCount = sorted.reduce(
+    (total, cluster) => total + cluster.spokes.length,
+    0,
   );
 
   return (
@@ -56,6 +67,17 @@ export function ClusterPlanView({
       </header>
 
       <QualityScorecard gates={qualityGates} />
+
+      {accountId && projectId && briefsPath && spokeCount > 0 ? (
+        <BatchClusterBriefsButton
+          accountId={accountId}
+          projectId={projectId}
+          clusterJobId={job.id}
+          country={job.country}
+          spokeCount={spokeCount}
+          briefsPath={briefsPath}
+        />
+      ) : null}
 
       <div className="space-y-6">
         {sorted.map((cluster) => (

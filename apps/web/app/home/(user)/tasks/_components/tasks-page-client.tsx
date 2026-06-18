@@ -13,13 +13,15 @@ import { useRouter } from 'next/navigation';
 
 import {
   AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  CalendarDays,
   Check,
   ChevronDown,
   ChevronRight,
   Flame,
   KanbanSquare,
   List as ListIcon,
-  Pencil,
   Search,
   SlidersHorizontal,
   Users,
@@ -39,6 +41,7 @@ import {
 } from '@dnd-kit/core';
 
 import { Button } from '@kit/ui/button';
+import { Avatar, AvatarFallback } from '@kit/ui/avatar';
 import { Checkbox } from '@kit/ui/checkbox';
 import { cn } from '@kit/ui/utils';
 import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
@@ -111,35 +114,96 @@ const STATUS_LABEL: Record<TaskStatus, string> = STATUS_COLUMNS.reduce(
   {} as Record<TaskStatus, string>,
 );
 
-/** Shared grid for list header + task rows (ClickUp-style columns). */
-function taskListRowGridClass(showWorkspace: boolean) {
-  return showWorkspace
-    ? 'grid grid-cols-[1.25rem_1.5rem_minmax(260px,1.65fr)_minmax(120px,0.75fr)_minmax(130px,0.8fr)_minmax(140px,0.85fr)_6.75rem_5.5rem_4.75rem_2.25rem] items-center gap-x-2 px-3 py-2 sm:gap-x-3 sm:px-4'
-    : 'grid grid-cols-[1.25rem_1.5rem_minmax(280px,1.8fr)_minmax(140px,0.9fr)_minmax(150px,1fr)_6.75rem_5.5rem_4.75rem_2.25rem] items-center gap-x-2 px-3 py-2 sm:gap-x-3 sm:px-4';
+/** Simplified list row: expand · done · title · due · client · priority */
+function taskListRowGridClass() {
+  return 'grid grid-cols-[1.25rem_1.5rem_minmax(0,1fr)_2rem_2rem_1.75rem] items-center gap-x-3 px-3 py-2.5 sm:px-4';
 }
 
-function TaskTableHeader({ showWorkspaceTag }: { showWorkspaceTag: boolean }) {
-  const g = taskListRowGridClass(showWorkspaceTag);
+function ClientAvatar({
+  name,
+  color,
+}: {
+  name: string | null;
+  color?: string | null;
+}) {
+  if (!name?.trim()) {
+    return <span className="inline-block h-6 w-6 shrink-0" aria-hidden />;
+  }
+
+  const initial = (name.trim()[0] ?? '?').toUpperCase();
+
   return (
-    <div
-      className={cn(
-        g,
-        'border-b border-white/10 bg-white/[0.04] text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500',
-      )}
-      role="row"
-    >
-      <span aria-hidden className="block w-3 shrink-0" />
-      <span className="sr-only">Done</span>
-      <span className="truncate">Name</span>
-      {showWorkspaceTag ? <span className="truncate">Workspace</span> : null}
-      <span className="truncate">Client</span>
-      <span className="truncate">List</span>
-      <span className="truncate">Due</span>
-      <span className="truncate">Status</span>
-      <span className="truncate">Priority</span>
-      <span className="sr-only">Edit</span>
-    </div>
+    <Avatar className="h-6 w-6 shrink-0" title={name}>
+      <AvatarFallback
+        className="text-[10px] font-semibold text-white"
+        style={{ backgroundColor: color ?? '#64748B' }}
+      >
+        {initial}
+      </AvatarFallback>
+    </Avatar>
   );
+}
+
+function DueDateIcon({
+  dueDateLabel,
+  overdue,
+}: {
+  dueDateLabel: string;
+  overdue: boolean;
+}) {
+  if (!dueDateLabel) {
+    return <span className="inline-block h-4 w-4 shrink-0" aria-hidden />;
+  }
+
+  return (
+    <span
+      className="flex justify-center"
+      title={overdue ? `Overdue · ${dueDateLabel}` : dueDateLabel}
+    >
+      <CalendarDays
+        className={cn(
+          'h-4 w-4',
+          overdue ? 'text-rose-400' : 'text-zinc-500',
+        )}
+        aria-hidden
+      />
+      <span className="sr-only">
+        {overdue ? `Overdue · ${dueDateLabel}` : dueDateLabel}
+      </span>
+    </span>
+  );
+}
+
+function PriorityIndicator({
+  priority,
+}: {
+  priority: TasksPageTask['priority'];
+}) {
+  if (priority === 'urgent') {
+    return (
+      <span title="Urgent priority" className="flex justify-center">
+        <Flame className="h-3.5 w-3.5 text-rose-400" aria-hidden />
+      </span>
+    );
+  }
+
+  if (priority === 'high') {
+    return (
+      <span title="High priority" className="flex justify-center">
+        <ArrowUp className="h-3.5 w-3.5 text-amber-400" aria-hidden />
+      </span>
+    );
+  }
+
+  if (priority === 'medium') {
+    return (
+      <span title="Medium priority" className="flex justify-center">
+        <ArrowDown className="h-3.5 w-3.5 text-emerald-400/80" aria-hidden />
+      </span>
+    );
+  }
+
+  return <span className="inline-block h-3.5 w-3.5 shrink-0" aria-hidden />;
 }
 
 type TaskViewMode = 'list' | 'board' | 'byClient';
@@ -223,25 +287,6 @@ function PriorityGroupHeader({
       />
       {isHigh ? 'High priority' : 'Everything else'}
     </div>
-  );
-}
-
-function WorkspaceColorChip({
-  name,
-  color,
-}: {
-  name: string;
-  color: string;
-}) {
-  return (
-    <span className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[11px] font-medium text-white/90">
-      <span
-        className="h-2 w-2 shrink-0 rounded-full"
-        style={{ backgroundColor: color }}
-        aria-hidden
-      />
-      <span className="truncate">{name}</span>
-    </span>
   );
 }
 
@@ -364,12 +409,7 @@ function TasksByClientList({
                 {group.tasks.length} task{group.tasks.length === 1 ? '' : 's'}
               </p>
             </div>
-            <div
-              className={cn(
-                handlers.showWorkspaceTag ? 'min-w-[1080px]' : 'min-w-[940px]',
-              )}
-            >
-              <TaskTableHeader showWorkspaceTag={handlers.showWorkspaceTag} />
+            <div className="space-y-0">
               <PriorityGroupedTaskList
                 urgent={urgent}
                 rest={rest}
@@ -822,9 +862,10 @@ export function TasksPageClient({
       if (search) {
         const q = search.trim().toLowerCase();
         const inTitle = t.title.toLowerCase().includes(q);
+        const inNotes = (t.notes ?? '').toLowerCase().includes(q);
         const inWorkspace = (t.workspaceName ?? '').toLowerCase().includes(q);
         const inClient = (t.clientName ?? '').toLowerCase().includes(q);
-        if (!inTitle && !inWorkspace && !inClient) {
+        if (!inTitle && !inNotes && !inWorkspace && !inClient) {
           return false;
         }
       }
@@ -1024,18 +1065,49 @@ export function TasksPageClient({
           <p className="mt-1 text-sm text-zinc-400">{headerSubtitle}</p>
         </div>
 
-        <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search tasks..."
-            className="h-10 w-full rounded-xl border border-white/8 bg-[var(--workspace-shell-panel)] pl-10 pr-4 text-sm text-white placeholder:text-zinc-500 focus:border-white/16 focus:outline-none"
-          />
-        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative min-w-0 flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search tasks..."
+              className="h-10 w-full rounded-xl border border-white/8 bg-[var(--workspace-shell-panel)] pl-10 pr-4 text-sm text-white placeholder:text-zinc-500 focus:border-white/16 focus:outline-none"
+            />
+          </div>
 
-        <div className="flex items-center gap-2">
+          <TasksFilterMenu
+            dueDateFilter={dueDateFilter}
+            onDueDateFilterChange={setDueDateFilter}
+            clientFilter={clientFilter}
+            onClientFilterChange={setClientFilter}
+            clientOptions={clientOptions}
+            workspaceFilter={workspaceFilter}
+            onWorkspaceFilterChange={(value) => {
+              setWorkspaceFilter(value);
+              if (value === 'personal') {
+                setFilter('life');
+              } else if (value !== 'all') {
+                setFilter('work');
+              }
+            }}
+            workspaceFilterOptions={workspaceFilterOptions}
+            showWorkspaceFilter={
+              variant === 'personal' &&
+              includeWorkspaceTasks &&
+              workspaceFilterOptions.length > 0
+            }
+            contextFilter={filter}
+            onContextFilterChange={setFilter}
+            showContextFilter={variant === 'personal'}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
+            showStatusFilter={view === 'list' || view === 'byClient'}
+          />
+
+          <TasksViewMenu view={view} onViewChange={setView} />
+
           <div className="shrink-0">
             {variant === 'personal' ? (
               <AddTaskDialog />
@@ -1045,38 +1117,6 @@ export function TasksPageClient({
                 workspaceAccountSlug={workspaceAccountSlug}
               />
             ) : null}
-          </div>
-
-          <div className="ml-auto flex items-center gap-2">
-            <TasksFilterMenu
-              dueDateFilter={dueDateFilter}
-              onDueDateFilterChange={setDueDateFilter}
-              clientFilter={clientFilter}
-              onClientFilterChange={setClientFilter}
-              clientOptions={clientOptions}
-              workspaceFilter={workspaceFilter}
-              onWorkspaceFilterChange={(value) => {
-                setWorkspaceFilter(value);
-                if (value === 'personal') {
-                  setFilter('life');
-                } else if (value !== 'all') {
-                  setFilter('work');
-                }
-              }}
-              workspaceFilterOptions={workspaceFilterOptions}
-              showWorkspaceFilter={
-                variant === 'personal' &&
-                includeWorkspaceTasks &&
-                workspaceFilterOptions.length > 0
-              }
-              contextFilter={filter}
-              onContextFilterChange={setFilter}
-              showContextFilter={variant === 'personal'}
-              statusFilter={statusFilter}
-              onStatusFilterChange={setStatusFilter}
-              showStatusFilter={view === 'list' || view === 'byClient'}
-            />
-            <TasksViewMenu view={view} onViewChange={setView} />
           </div>
         </div>
       </div>
@@ -1099,20 +1139,13 @@ export function TasksPageClient({
             />
           ) : (
             <div className="overflow-x-auto rounded-xl border border-white/6 bg-[var(--workspace-shell-panel)] shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]">
-              <div
-                className={cn(
-                  showWorkspaceTag ? 'min-w-[1080px]' : 'min-w-[940px]',
-                )}
-              >
-                <TaskTableHeader showWorkspaceTag={showWorkspaceTag} />
-                <PriorityGroupedTaskList
+              <PriorityGroupedTaskList
                   urgent={urgent}
                   rest={rest}
                   statusFilter={statusFilter}
                   handlers={taskRowHandlers}
-                  inlineClientId={inlineClientId}
-                />
-              </div>
+                inlineClientId={inlineClientId}
+              />
             </div>
           )}
         </>
@@ -1218,7 +1251,7 @@ function InlineTaskTitle({
   if (readOnly) {
     return (
       <p
-        className={`text-sm font-medium leading-snug ${
+        className={`truncate text-[13px] font-medium leading-snug ${
           isDone ? 'text-zinc-500 line-through' : 'text-white'
         }`}
       >
@@ -1268,7 +1301,6 @@ function InlineTaskTitle({
 
 function TaskRow({
   task,
-  showWorkspaceTag,
   workspaceAccountId,
   today,
   onStatusChanged,
@@ -1289,7 +1321,6 @@ function TaskRow({
   const [editOpen, setEditOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
-  const priorityCfg = priorityConfig[task.priority];
   const isDone = task.status === 'completed';
   const isRoot = !task.parentTaskId;
   const subtasks = task.subtasks ?? [];
@@ -1311,7 +1342,10 @@ function TaskRow({
   const showSubtasks = subtasksExpanded && subtasks.length > 0;
   const showExpandToggle = isRoot && subtasks.length > 0 && onToggleSubtasks;
 
-  const rowGrid = taskListRowGridClass(showWorkspaceTag);
+  const rowGrid = taskListRowGridClass();
+  const clientColor = task.accentColor ?? task.workspaceColor;
+
+  const openEdit = () => setEditOpen(true);
 
   return (
     <div
@@ -1333,20 +1367,32 @@ function TaskRow({
         </>
       ) : null}
       <div
+        role="button"
+        tabIndex={0}
+        onClick={openEdit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openEdit();
+          }
+        }}
         className={cn(
           rowGrid,
           overdue &&
             'border-l-[3px] border-l-rose-500 bg-rose-500/[0.07] ring-1 ring-inset ring-rose-400/20 hover:bg-rose-500/[0.09]',
           !overdue && 'hover:bg-white/[0.035]',
           !isRoot && !overdue && 'bg-transparent hover:bg-white/[0.025]',
-          'relative border-b border-white/[0.06] transition-colors',
+          'relative cursor-pointer border-b border-white/[0.06] transition-colors',
         )}
       >
-        <div className="flex justify-center">
+        <div className="flex justify-center" data-task-row-action>
           {showExpandToggle ? (
             <button
               type="button"
-              onClick={() => onToggleSubtasks?.()}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleSubtasks?.();
+              }}
               className="rounded p-0.5 text-zinc-500 transition-colors hover:bg-white/5 hover:text-white"
               aria-expanded={subtasksExpanded}
               aria-label={
@@ -1363,10 +1409,11 @@ function TaskRow({
             <span className="inline-block w-3 shrink-0" aria-hidden />
           )}
         </div>
-        <div className="flex justify-center pt-0.5">
+        <div className="flex justify-center pt-0.5" data-task-row-action>
           <Checkbox
             checked={isDone}
             disabled={isPending}
+            onClick={(e) => e.stopPropagation()}
             onCheckedChange={(value) => {
               if (value === 'indeterminate') return;
               handleCheckedChange(Boolean(value));
@@ -1380,90 +1427,25 @@ function TaskRow({
             taskId={task.id}
             title={task.title}
             isDone={isDone}
-            onTitleChanged={onTitleChanged}
+            readOnly
           />
           {isRoot && subCount > 0 ? (
             <span
-              className="mt-0.5 block text-[11px] font-normal tabular-nums text-zinc-500"
+              className="mt-0.5 block text-[10px] font-normal tabular-nums text-zinc-500"
               title="Subtasks completed / total"
             >
               {doneSubCount}/{subCount}
             </span>
           ) : null}
         </div>
-        {showWorkspaceTag ? (
-          <div className="min-w-0">
-            {task.workspaceName ? (
-              <WorkspaceColorChip
-                name={task.workspaceName}
-                color={task.workspaceColor ?? '#64748B'}
-              />
-            ) : (
-              <span className="text-xs text-zinc-600">—</span>
-            )}
-          </div>
-        ) : null}
-        <span
-          className="min-w-0 truncate text-xs text-zinc-300"
-          title={task.clientName ?? undefined}
-        >
-          {task.clientName ?? '—'}
-        </span>
-        <div className="flex min-w-0 items-center gap-1.5 text-xs text-zinc-400">
-          {task.projectName || task.areaLabel ? (
-            <>
-              {task.accentColor ? (
-                <span
-                  className="inline-block h-2 w-2 shrink-0 rounded-full"
-                  style={{ backgroundColor: task.accentColor }}
-                />
-              ) : null}
-              <span className="truncate">
-                {task.projectName ?? task.areaLabel}
-              </span>
-            </>
-          ) : (
-            <span className="text-zinc-600">—</span>
-          )}
+        <DueDateIcon
+          dueDateLabel={overdue ? task.dueDateLabel : task.dueDateLabel}
+          overdue={overdue}
+        />
+        <div className="flex justify-center">
+          <ClientAvatar name={task.clientName} color={clientColor} />
         </div>
-        <div className="min-w-0">
-          {overdue ? (
-            <OverduePill dueDate={task.dueDate} compact />
-          ) : task.dueDateLabel ? (
-            <span className="block truncate text-xs text-zinc-400">
-              {task.dueDateLabel}
-            </span>
-          ) : (
-            <span className="text-xs text-zinc-600">—</span>
-          )}
-        </div>
-        <div className="min-w-0">
-          {task.status === 'pending' && !isDone ? (
-            <span className="block truncate text-[11px] leading-5 text-zinc-500">
-              Not started
-            </span>
-          ) : (
-            <StatusPill status={task.status} compact />
-          )}
-        </div>
-        <span
-          className={cn(
-            'text-xs font-medium tabular-nums',
-            priorityCfg.className,
-          )}
-        >
-          {priorityCfg.label}
-        </span>
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={() => setEditOpen(true)}
-            className="rounded-md p-1.5 text-zinc-500 transition-colors hover:bg-white/10 hover:text-white"
-            aria-label="Edit task"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
-        </div>
+        <PriorityIndicator priority={task.priority} />
       </div>
 
       {showSubtasks ? (
@@ -1603,31 +1585,20 @@ function BoardCard({
         style={style}
         {...attributes}
         {...listeners}
+        onClick={() => {
+          if (!isOverlay) setEditOpen(true);
+        }}
         className={`group cursor-grab touch-none p-3 text-left transition-colors active:cursor-grabbing ${baseClass} ${interactClass}`}
       >
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <InlineTaskTitle
-              taskId={task.id}
-              title={task.title}
-              isDone={isDone}
-              onTitleChanged={onTitleChanged}
-              isolatePointer
-              readOnly={isOverlay}
-            />
-          </div>
-          <button
-            type="button"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              setEditOpen(true);
-            }}
-            className="rounded-md p-1 text-zinc-500 opacity-0 transition-opacity hover:bg-white/5 hover:text-white group-hover:opacity-100"
-            aria-label="Edit task"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
+        <div className="min-w-0">
+          <InlineTaskTitle
+            taskId={task.id}
+            title={task.title}
+            isDone={isDone}
+            onTitleChanged={onTitleChanged}
+            isolatePointer
+            readOnly={isOverlay}
+          />
         </div>
 
         <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-zinc-400">

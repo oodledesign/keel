@@ -244,6 +244,44 @@ export function InvoiceEditIndyContent({
     })),
   );
 
+  const [unitPriceDrafts, setUnitPriceDrafts] = useState<Record<string, string>>(
+    {},
+  );
+
+  const unitPriceRowKey = (row: InvoiceItem, index: number) =>
+    row.id ?? `new-${index}`;
+
+  const unitPriceInputValue = (row: InvoiceItem, index: number) => {
+    const key = unitPriceRowKey(row, index);
+    if (key in unitPriceDrafts) return unitPriceDrafts[key]!;
+    if (row.unit_price_pence === 0) return '';
+    return (row.unit_price_pence / 100).toFixed(2);
+  };
+
+  const commitUnitPriceDraft = (index: number) => {
+    const row = items[index];
+    if (!row) return;
+    const key = unitPriceRowKey(row, index);
+    const raw = unitPriceDrafts[key];
+    if (raw === undefined) return;
+
+    const trimmed = raw.trim();
+    const pence =
+      trimmed === ''
+        ? 0
+        : (() => {
+            const v = parseFloat(trimmed);
+            return Number.isFinite(v) ? Math.round(v * 100) : row.unit_price_pence;
+          })();
+
+    updateItem(index, { unit_price_pence: Math.max(0, pence) });
+    setUnitPriceDrafts((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
   const [clients, setClients] = useState<
     { id: string; display_name: string | null }[]
   >([]);
@@ -923,17 +961,17 @@ export function InvoiceEditIndyContent({
                             </td>
                             <td className="py-3 pr-2 text-right">
                               <Input
-                                type="number"
-                                min={0}
-                                step={0.01}
-                                value={penceToPoundsInput(row.unit_price_pence)}
-                                onChange={(e) =>
-                                  updateItem(index, {
-                                    unit_price_pence: poundsInputToPence(
-                                      e.target.value,
-                                    ),
-                                  })
-                                }
+                                type="text"
+                                inputMode="decimal"
+                                value={unitPriceInputValue(row, index)}
+                                onChange={(e) => {
+                                  const key = unitPriceRowKey(row, index);
+                                  setUnitPriceDrafts((prev) => ({
+                                    ...prev,
+                                    [key]: e.target.value,
+                                  }));
+                                }}
+                                onBlur={() => commitUnitPriceDraft(index)}
                                 disabled={readOnly}
                                 placeholder="0.00"
                                 className={`text-right ${inputClassName}`}

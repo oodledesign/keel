@@ -16,6 +16,13 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@kit/ui/dialog';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import {
@@ -80,6 +87,7 @@ export function MeetingTranscriptDetailClient({
   );
   const [clientId, setClientId] = useState(transcript.clientId ?? '');
   const [copied, setCopied] = useState(false);
+  const [extractOpen, setExtractOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const meetingsPath = pathsConfig.app.accountMeetings.replace(
@@ -347,7 +355,29 @@ export function MeetingTranscriptDetailClient({
               Review AI-suggested tasks from this transcript before adding them to
               the workspace.
             </p>
-            <div className="mt-4">
+            <Button
+              type="button"
+              className="mt-4 w-full bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+              onClick={() => setExtractOpen(true)}
+            >
+              <Sparkles className="mr-2 h-4 w-4" />
+              Extract tasks with AI
+            </Button>
+          </section>
+        </aside>
+      </div>
+
+      <Dialog open={extractOpen} onOpenChange={setExtractOpen}>
+        <DialogContent className="max-h-[min(90vh,900px)] max-w-4xl gap-0 overflow-hidden border-white/10 bg-[var(--workspace-shell-panel)] p-0 text-white">
+          <DialogHeader className="border-b border-white/10 px-6 py-4">
+            <DialogTitle>Extract tasks</DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              AI will analyse this meeting transcript and suggest actionable tasks.
+              Review and edit before adding them to the workspace.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[calc(min(90vh,900px)-5.5rem)] overflow-y-auto px-6 py-5">
+            {extractOpen ? (
               <ExtractWorkspaceTasksClient
                 accountId={accountId}
                 accountSlug={accountSlug}
@@ -357,10 +387,10 @@ export function MeetingTranscriptDetailClient({
                 defaultClientId={clientId || transcript.clientId}
                 successRedirectHref={tasksPath}
               />
-            </div>
-          </section>
-        </aside>
-      </div>
+            ) : null}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

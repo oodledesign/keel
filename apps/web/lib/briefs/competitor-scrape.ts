@@ -2,6 +2,8 @@ import 'server-only';
 
 import { load } from 'cheerio';
 
+import { fetchPageHtmlWithFirecrawl } from '~/lib/firecrawl/scrape-page';
+
 import type { CompetitorPage } from './types';
 
 function extractJsonLdTypes($: ReturnType<typeof load>): string[] {
@@ -23,21 +25,7 @@ function estimateWordCount(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
-export async function scrapeCompetitorPage(url: string): Promise<CompetitorPage> {
-  const res = await fetch(url, {
-    headers: {
-      'User-Agent':
-        'Mozilla/5.0 (compatible; Rankly/1.0; +https://rankly.app)',
-      Accept: 'text/html',
-    },
-    signal: AbortSignal.timeout(10000),
-  });
-
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status}`);
-  }
-
-  const html = await res.text();
+export function parseCompetitorHtml(url: string, html: string): CompetitorPage {
   const $ = load(html);
 
   $('nav, footer, header, script, style, .cookie-banner, #cookie-consent').remove();
@@ -69,6 +57,33 @@ export async function scrapeCompetitorPage(url: string): Promise<CompetitorPage>
     codeBlockCount: $('pre, code').length,
     imageCount: $('img').length,
   };
+}
+
+async function fetchCompetitorHtml(url: string): Promise<string> {
+  const firecrawlHtml = await fetchPageHtmlWithFirecrawl(url);
+  if (firecrawlHtml) {
+    return firecrawlHtml;
+  }
+
+  const res = await fetch(url, {
+    headers: {
+      'User-Agent':
+        'Mozilla/5.0 (compatible; Rankly/1.0; +https://rankly.app)',
+      Accept: 'text/html',
+    },
+    signal: AbortSignal.timeout(10000),
+  });
+
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
+
+  return res.text();
+}
+
+export async function scrapeCompetitorPage(url: string): Promise<CompetitorPage> {
+  const html = await fetchCompetitorHtml(url);
+  return parseCompetitorHtml(url, html);
 }
 
 export async function scrapeTopCompetitors(

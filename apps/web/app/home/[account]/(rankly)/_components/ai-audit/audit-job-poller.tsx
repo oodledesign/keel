@@ -1,12 +1,12 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
-
-import { toast } from '@kit/ui/sonner';
+import { useCallback, useEffect } from 'react';
 
 import { AUDIT_STATUS_LABELS } from '~/lib/ai-audit/types';
-import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
+
+import { RanklyJobProgress } from '../rankly-job-progress';
+import { useRanklyJobProgress } from '../../_lib/use-rankly-job-progress';
 
 type AuditJob = {
   id: string;
@@ -14,7 +14,12 @@ type AuditJob = {
   error_msg: string | null;
   pages_crawled: number | null;
   credits_used: number | null;
+  reportId?: string | null;
 };
+
+type ApiResponse<T> =
+  | { ok: true; data: T }
+  | { ok: false; error: { message: string } };
 
 const PROGRESS = [
   'pending',
@@ -31,10 +36,6 @@ function progressPercent(status: string): number {
   return Math.round((index / (PROGRESS.length - 1)) * 100);
 }
 
-type ApiResponse<T> =
-  | { ok: true; data: T }
-  | { ok: false; error: { message: string } };
-
 export function AuditJobPoller({
   jobId,
   auditPath,
@@ -43,44 +44,34 @@ export function AuditJobPoller({
   auditPath: string;
 }) {
   const router = useRouter();
-  const [job, setJob] = useState<AuditJob | null>(null);
 
-  const poll = useCallback(async () => {
+  const fallbackFetch = useCallback(async () => {
     const res = await fetch(`/api/rankly/ai-audit/${jobId}`);
     const json = (await res.json()) as ApiResponse<{
       job: AuditJob;
       reportId: string | null;
     }>;
-    if (!json.ok) throw new Error(json.error.message);
-    setJob(json.data.job);
-    if (json.data.job.status === 'done' && json.data.reportId) {
-      router.push(`${auditPath}/${json.data.reportId}`);
-      router.refresh();
+    if (!json.ok) {
+      throw new Error(json.error.message);
     }
-    return json.data.job;
-  }, [auditPath, jobId, router]);
+    return {
+      ...json.data.job,
+      reportId: json.data.reportId,
+    };
+  }, [jobId]);
+
+  const { data: job } = useRanklyJobProgress({
+    streamUrl: `/api/rankly/ai-audit/${jobId}/stream`,
+    fallbackFetch,
+    isTerminal: (data) => data.status === 'done' || data.status === 'error',
+  });
 
   useEffect(() => {
-    let active = true;
-    let timer: ReturnType<typeof setTimeout>;
-
-    const run = async () => {
-      try {
-        const current = await poll();
-        if (!active) return;
-        if (current.status === 'done' || current.status === 'error') return;
-        timer = setTimeout(run, 3000);
-      } catch (err) {
-        if (active) toast.error(getErrorMessage(err));
-      }
-    };
-
-    void run();
-    return () => {
-      active = false;
-      clearTimeout(timer);
-    };
-  }, [poll]);
+    if (job?.status === 'done' && job.reportId) {
+      router.push(`${auditPath}/${job.reportId}`);
+      router.refresh();
+    }
+  }, [auditPath, job, router]);
 
   if (!job) {
     return <p className="text-sm text-muted-foreground">Loading audit status…</p>;
@@ -99,23 +90,16 @@ export function AuditJobPoller({
   }
 
   const label = AUDIT_STATUS_LABELS[job.status] ?? job.status;
+  const meta =
+    job.pages_crawled != null
+      ? `${job.pages_crawled} pages crawled · ~${job.credits_used ?? 25} DataForSEO credits`
+      : `~${job.credits_used ?? 25} DataForSEO credits`;
 
   return (
-    <div className="max-w-xl space-y-3">
-      <p className="text-sm text-muted-foreground">
-        {job.pages_crawled != null ? `${job.pages_crawled} pages crawled · ` : ''}
-        ~{job.credits_used ?? 25} DataForSEO credits
-      </p>
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">{label}</span>
-        <span className="text-muted-foreground">{progressPercent(job.status)}%</span>
-      </div>
-      <div className="h-2 overflow-hidden rounded-full bg-black/30">
-        <div
-          className="h-full rounded-full bg-primary transition-all duration-500"
-          style={{ width: `${progressPercent(job.status)}%` }}
-        />
-      </div>
-    </div>
+    <RanklyJobProgress
+      label={label}
+      percent={progressPercent(job.status)}
+      meta={meta}
+    />
   );
 }

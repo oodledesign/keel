@@ -10,6 +10,7 @@ import { Menu, Settings, X } from 'lucide-react';
 import { Trans } from '@kit/ui/trans';
 import { cn } from '@kit/ui/utils';
 
+import { MobileNavTabIcon } from '~/components/workspace-shell/mobile-nav-tab-icon';
 import { HapticButton, HapticLink } from '~/components/haptic-link';
 import { WorkspaceHelpButton } from '~/components/workspace-shell/workspace-help-button';
 import { WorkspaceAccountsSelector } from '~/components/workspace-shell/workspace-accounts-selector';
@@ -270,7 +271,12 @@ export function WorkspaceMobileBottomNav({
                   'flex items-center justify-center [&>svg]:h-[21px] [&>svg]:w-[21px]',
                 )}
               >
-                {tab.Icon}
+                <MobileNavTabIcon
+                  iconKey={tab.iconKey}
+                  avatarUrl={tab.avatarUrl}
+                  avatarColor={tab.avatarColor}
+                  avatarFallback={tab.avatarFallback}
+                />
               </span>
             </HapticLink>
           );

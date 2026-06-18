@@ -10,6 +10,7 @@ export type RanklyProjectPaths = {
   aiAudit: string;
   briefs: string;
   clusters: string;
+  settings: string;
 };
 
 export function ranklyPagesDetailPath(
@@ -51,5 +52,6 @@ export function ranklyProjectPaths(
     aiAudit: replace(pathsConfig.app.accountRanklyProjectAiAudit),
     briefs: replace(pathsConfig.app.accountRanklyProjectBriefs),
     clusters: replace(pathsConfig.app.accountRanklyProjectClusters),
+    settings: replace(pathsConfig.app.accountRanklyProjectSettings),
   };
 }

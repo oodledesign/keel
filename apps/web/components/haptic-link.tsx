@@ -2,34 +2,16 @@
 
 import Link from 'next/link';
 
-import { triggerHapticFeedback } from '~/lib/haptics';
-
 type HapticLinkProps = React.ComponentProps<typeof Link>;
 
-export function HapticLink({ onClick, prefetch = false, ...props }: HapticLinkProps) {
-  return (
-    <Link
-      {...props}
-      prefetch={prefetch}
-      onClick={(event) => {
-        triggerHapticFeedback();
-        onClick?.(event);
-      }}
-    />
-  );
+/** Semantic link wrapper — haptics handled by MobileTapHaptics in mobile chrome. */
+export function HapticLink({ prefetch = false, ...props }: HapticLinkProps) {
+  return <Link {...props} prefetch={prefetch} />;
 }
 
 type HapticButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement>;
 
-export function HapticButton({ onClick, type = 'button', ...props }: HapticButtonProps) {
-  return (
-    <button
-      {...props}
-      type={type}
-      onClick={(event) => {
-        triggerHapticFeedback();
-        onClick?.(event);
-      }}
-    />
-  );
+/** Semantic button wrapper — haptics handled by MobileTapHaptics in mobile chrome. */
+export function HapticButton({ type = 'button', ...props }: HapticButtonProps) {
+  return <button {...props} type={type} />;
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import { MobileTapHaptics } from '~/components/mobile-tap-haptics';
 import { ProfileAccountDropdownContainer } from '~/components/personal-account-dropdown-container';
 import { PullToRefresh } from '~/components/pull-to-refresh';
 import {
@@ -45,6 +46,7 @@ export function PersonalHomeMobileChrome({
 
   return (
     <>
+      <MobileTapHaptics />
       <WorkspaceMobileScrollLock />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <WorkspaceMobileHeaderBar>

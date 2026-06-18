@@ -27,10 +27,10 @@ import { loadPersonalSidebarWorkspaces } from './_lib/server/personal-sidebar-wo
 import { flattenPersonalNavLinks } from './_lib/flatten-personal-nav-links';
 import {
   buildPersonalHomeNavRoutes,
-  buildPersonalMobileNavIconLinks,
   parsePersonalAccountNavigationConfig,
 } from '~/config/personal-account-navigation.config';
 import { loadPersonalMobileNavShortcuts } from '~/lib/dashboard-shortcuts/load-shortcuts';
+import { enrichPersonalShortcutsWithWorkspaceAvatars } from '~/lib/dashboard-shortcuts/enrich-workspace-shortcut-avatars';
 import { resolveMobileBottomNavTabs } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
 import { loadWorkspaceSwitcherAccounts } from '~/home/_lib/server/workspace-switcher.loader';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
@@ -98,18 +98,14 @@ async function SidebarLayout({ children }: React.PropsWithChildren) {
   const personalNavLinks = flattenPersonalNavLinks(
     parsePersonalAccountNavigationConfig(buildPersonalHomeNavRoutes()),
   );
-  const mobileNavIconLinks = [
-    ...personalNavLinks,
-    ...buildPersonalMobileNavIconLinks().filter(
-      (link) => !personalNavLinks.some((nav) => nav.path === link.path),
-    ),
-  ];
   const mobileNavShortcuts = client
-    ? await loadPersonalMobileNavShortcuts(client, user.id)
+    ? enrichPersonalShortcutsWithWorkspaceAvatars(
+        await loadPersonalMobileNavShortcuts(client, user.id),
+        sharedWorkspaces,
+      )
     : [];
   const bottomNavTabs = resolveMobileBottomNavTabs({
     homePath: getExplicitPersonalHomePath(),
-    navLinks: mobileNavIconLinks,
     shortcuts: mobileNavShortcuts,
   });
 

@@ -3,7 +3,23 @@ import { workspaceColorForSpaceType } from '~/home/(user)/_lib/workspace-accent'
 
 import type { ResolvedShortcut } from './types';
 
-const WORKSPACE_HREF_RE = /^\/app\/work\/([^/]+)/;
+const PERSONAL_APP_SEGMENTS = new Set([
+  'home',
+  'tasks',
+  'pipeline',
+  'email',
+  'planner',
+  'people',
+  'settings',
+]);
+
+function workspaceSlugFromHref(href: string): string | null {
+  const match = href.match(/^\/app\/([^/?#]+)(?:\/|$)/);
+  if (!match) return null;
+  const segment = match[1]!.trim();
+  if (!segment || PERSONAL_APP_SEGMENTS.has(segment)) return null;
+  return segment;
+}
 
 function stripWorkspacePrefix(label: string, workspaceName: string): string {
   const needle = `${workspaceName} — `;
@@ -26,7 +42,7 @@ export function enrichPersonalShortcutsWithWorkspaceAvatars(
   );
 
   return shortcuts.map((shortcut) => {
-    const slug = shortcut.href.match(WORKSPACE_HREF_RE)?.[1]?.trim();
+    const slug = workspaceSlugFromHref(shortcut.href);
 
     if (!slug) {
       return shortcut;

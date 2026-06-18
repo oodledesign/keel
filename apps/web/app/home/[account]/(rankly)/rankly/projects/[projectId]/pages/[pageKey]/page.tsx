@@ -53,6 +53,9 @@ export default async function RanklyProjectPageDetailRoute({
           page={page}
           backHref={paths.pages}
           pagespeedDetailHref={pagespeedDetailHref}
+          accountId={accountId}
+          projectId={projectId}
+          country={project.target_country}
         />
       </div>
     </div>

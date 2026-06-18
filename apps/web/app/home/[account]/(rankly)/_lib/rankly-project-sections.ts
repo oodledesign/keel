@@ -8,6 +8,7 @@ import {
   Network,
   ScanSearch,
   Search,
+  Settings,
   Sparkles,
 } from 'lucide-react';
 
@@ -22,7 +23,8 @@ export type RanklySectionId =
   | 'pagespeed'
   | 'aiAudit'
   | 'briefs'
-  | 'clusters';
+  | 'clusters'
+  | 'settings';
 
 export type RanklyProjectSection = {
   id: RanklySectionId;
@@ -103,6 +105,14 @@ export const RANKLY_PROJECT_SECTIONS: RanklyProjectSection[] = [
     pathKey: 'clusters',
     dashboardTitle: 'Keyword clusters',
     dashboardBody: 'Pillar + spoke architecture from seed keywords.',
+  },
+  {
+    id: 'settings',
+    navLabel: 'Brief settings',
+    icon: Settings,
+    pathKey: 'settings',
+    dashboardTitle: 'Brief settings',
+    dashboardBody: 'Brand voice and mention rules for content brief synthesis.',
   },
 ];
 

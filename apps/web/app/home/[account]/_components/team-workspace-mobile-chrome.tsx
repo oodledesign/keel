@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 
+import { MobileTapHaptics } from '~/components/mobile-tap-haptics';
 import { ProfileAccountDropdownContainer } from '~/components/personal-account-dropdown-container';
 import { PullToRefresh } from '~/components/pull-to-refresh';
 import {
@@ -69,6 +70,7 @@ export function TeamWorkspaceMobileChrome({
 
   return (
     <>
+      <MobileTapHaptics />
       {!noteEditorScroll ? <WorkspaceMobileScrollLock /> : null}
       <div
         data-team-workspace-shell

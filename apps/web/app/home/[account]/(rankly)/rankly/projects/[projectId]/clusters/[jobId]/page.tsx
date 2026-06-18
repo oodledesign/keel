@@ -50,6 +50,9 @@ export default async function RanklyClusterJobPage({
   const briefNewPath = `${pathsConfig.app.accountRanklyProjectBriefs
     .replace('[account]', account)
     .replace('[projectId]', projectId)}/new`;
+  const briefsPath = pathsConfig.app.accountRanklyProjectBriefs
+    .replace('[account]', account)
+    .replace('[projectId]', projectId);
 
   return (
     <div className="space-y-8">
@@ -68,6 +71,9 @@ export default async function RanklyClusterJobPage({
           links={links}
           clusterNameById={clusterNameById}
           briefNewPath={briefNewPath}
+          accountId={accountId}
+          projectId={projectId}
+          briefsPath={briefsPath}
         />
       )}
 

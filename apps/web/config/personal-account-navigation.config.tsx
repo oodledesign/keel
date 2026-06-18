@@ -47,9 +47,19 @@ export function buildPersonalHomeNavRoutes() {
           end: true,
         },
         {
+          label: 'Tasks',
+          path: `${pathsConfig.app.home}/tasks`,
+          Icon: <CheckSquare className={iconClasses} />,
+        },
+        {
           label: 'Planner',
           path: pathsConfig.app.personalPlanner,
           Icon: <CalendarDays className={iconClasses} />,
+        },
+        {
+          label: 'Email',
+          path: pathsConfig.app.personalEmailAssistant,
+          Icon: <Mail className={iconClasses} />,
         },
         {
           label: 'People',

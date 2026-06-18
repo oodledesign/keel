@@ -34,6 +34,7 @@ import {
   saveBrief,
   updateBriefJobStatus,
 } from './db';
+import { loadProjectBriefSettings } from './project-settings';
 
 function ranklyAdmin() {
   return supabaseCustomSchema(getSupabaseServerAdminClient(), 'rankly');
@@ -138,6 +139,8 @@ export async function runBriefJob(jobId: string): Promise<void> {
       relatedKeywords[0]?.volume ??
       500;
 
+    const brandSettings = await loadProjectBriefSettings(job.project_id);
+
     await updateBriefJobStatus(jobId, 'synthesising');
     const briefOutput = await synthesiseBrief({
       targetDomain: job.target_domain,
@@ -145,6 +148,12 @@ export async function runBriefJob(jobId: string): Promise<void> {
       country: job.country,
       template,
       templateRationale: rationale,
+      brandContext: {
+        brandName: brandSettings.brief_brand_name,
+        voiceNotes: brandSettings.brief_voice_notes,
+        mentionRules: brandSettings.brief_mention_rules,
+        researchDepth: brandSettings.brief_research_depth,
+      },
       domainKeywords,
       competitors: competitorDomains,
       targetOpr,

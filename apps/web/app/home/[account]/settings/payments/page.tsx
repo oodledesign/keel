@@ -47,8 +47,15 @@ export default async function PaymentSettingsPage(props: PaymentSettingsPageProp
   }
 
   const accountId = workspace.account.id as string;
-  const service = createInvoicePaymentSettingsService(getSupabaseServerClient());
-  const settings = await service.getSettings(accountId);
+  const client = getSupabaseServerClient();
+  const service = createInvoicePaymentSettingsService(client);
+  const [settings, invoiceCount] = await Promise.all([
+    service.getSettings(accountId),
+    client
+      .from('invoices')
+      .select('id', { count: 'exact', head: true })
+      .eq('account_id', accountId),
+  ]);
   const canEdit = access.isOwner || access.isAdmin;
 
   return (
@@ -57,6 +64,7 @@ export default async function PaymentSettingsPage(props: PaymentSettingsPageProp
       accountSlug={account}
       initialSettings={settings}
       canEdit={canEdit}
+      hasInvoices={(invoiceCount.count ?? 0) > 0}
     />
   );
 }

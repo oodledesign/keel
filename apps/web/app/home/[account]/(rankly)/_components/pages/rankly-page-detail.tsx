@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useState } from 'react';
 
+import { PageOptimizePanel } from './page-optimize-panel';
+
 import type { RanklyPageDetail } from '~/lib/rankly-pages/types';
 import {
   PAGE_RECOMMENDATION_CATEGORY_LABELS,
@@ -267,6 +269,9 @@ export function RanklyPageDetailView(props: {
   page: RanklyPageDetail;
   backHref: string;
   pagespeedDetailHref: string | null;
+  accountId: string;
+  projectId: string;
+  country: string;
 }) {
   const { page } = props;
 
@@ -326,6 +331,16 @@ export function RanklyPageDetailView(props: {
       <CrawlDataSection page={page} />
 
       <PagespeedSection page={page} pagespeedDetailHref={props.pagespeedDetailHref} />
+
+      <section className="space-y-3 rounded-lg border border-white/10 bg-black/10 p-4">
+        <h2 className="text-sm font-medium">URL optimization</h2>
+        <PageOptimizePanel
+          accountId={props.accountId}
+          projectId={props.projectId}
+          sourceUrl={page.url}
+          country={props.country}
+        />
+      </section>
 
       <section className="space-y-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">

@@ -13,6 +13,8 @@ import { requireUserInServerComponent } from '~/lib/server/require-user-in-serve
 import { KeelUsePreferencesSection } from './_components/keel-use-preferences-section';
 import { PersonalApiTokensSection } from './_components/personal-api-tokens-section';
 import { PersonalDashboardShortcutsSection } from './_components/personal-dashboard-shortcuts-section';
+import { PersonalIntegrationsSettingsSection } from './_components/personal-integrations-settings-section';
+import { PersonalIntegrationsToasts } from './_components/personal-integrations-toasts';
 
 // Show email option if password, magic link, or OTP is enabled
 const showEmailOption =
@@ -50,6 +52,9 @@ function PersonalAccountSettingsPage() {
 
   return (
     <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-[var(--workspace-shell-text)] lg:px-6">
+      <Suspense fallback={null}>
+        <PersonalIntegrationsToasts />
+      </Suspense>
       <div className="flex w-full flex-1 flex-col lg:max-w-2xl">
         <div className="rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
           <PersonalAccountSettingsContainer
@@ -58,6 +63,19 @@ function PersonalAccountSettingsPage() {
             paths={paths}
             providers={providers}
           />
+        </div>
+
+        <div className="mt-6 rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+          <h2 className="mb-1 text-lg font-semibold text-[var(--workspace-shell-text)]">
+            Integrations
+          </h2>
+          <p className="mb-4 text-sm text-[var(--workspace-shell-text-muted)]">
+            Connect Google Calendar and Gmail once here. Planner and Email keep
+            their own shortcuts too.
+          </p>
+          <Suspense fallback={<p className="text-sm text-[var(--workspace-shell-text-muted)]">Loading…</p>}>
+            <PersonalIntegrationsSettingsSection />
+          </Suspense>
         </div>
 
         <div className="mt-6 rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">

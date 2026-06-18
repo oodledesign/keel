@@ -1,12 +1,12 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
-
-import { toast } from '@kit/ui/sonner';
+import { useCallback, useEffect } from 'react';
 
 import { BRIEF_STATUS_LABELS } from '~/lib/briefs/types';
-import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
+
+import { RanklyJobProgress } from '../rankly-job-progress';
+import { useRanklyJobProgress } from '../../_lib/use-rankly-job-progress';
 
 type BriefJob = {
   id: string;
@@ -14,6 +14,7 @@ type BriefJob = {
   error_msg: string | null;
   target_keyword: string | null;
   credits_used: number | null;
+  briefId?: string | null;
 };
 
 type ApiResponse<T> =
@@ -49,9 +50,8 @@ export function BriefJobPoller({
   briefsPath: string;
 }) {
   const router = useRouter();
-  const [job, setJob] = useState<BriefJob | null>(null);
 
-  const fetchStatus = useCallback(async () => {
+  const fallbackFetch = useCallback(async () => {
     const res = await fetch(`/api/rankly/briefs/${jobId}`);
     const json = (await res.json()) as ApiResponse<{
       job: BriefJob;
@@ -60,37 +60,24 @@ export function BriefJobPoller({
     if (!json.ok) {
       throw new Error(json.error.message);
     }
-    setJob(json.data.job);
+    return {
+      ...json.data.job,
+      briefId: json.data.briefId,
+    };
+  }, [jobId]);
 
-    if (json.data.job.status === 'done' && json.data.briefId) {
-      router.push(`${briefsPath}/${json.data.briefId}`);
-      router.refresh();
-    }
-
-    return json.data;
-  }, [briefsPath, jobId, router]);
+  const { data: job } = useRanklyJobProgress({
+    streamUrl: `/api/rankly/briefs/${jobId}/stream`,
+    fallbackFetch,
+    isTerminal: (data) => data.status === 'done' || data.status === 'error',
+  });
 
   useEffect(() => {
-    let active = true;
-    let timer: ReturnType<typeof setTimeout>;
-
-    const poll = async () => {
-      try {
-        const data = await fetchStatus();
-        if (!active) return;
-        if (data.job.status === 'done' || data.job.status === 'error') return;
-        timer = setTimeout(poll, 3000);
-      } catch (err) {
-        if (active) toast.error(getErrorMessage(err));
-      }
-    };
-
-    void poll();
-    return () => {
-      active = false;
-      clearTimeout(timer);
-    };
-  }, [fetchStatus]);
+    if (job?.status === 'done' && job.briefId) {
+      router.push(`${briefsPath}/${job.briefId}`);
+      router.refresh();
+    }
+  }, [briefsPath, job, router]);
 
   if (!job) {
     return <p className="text-sm text-muted-foreground">Loading job status…</p>;
@@ -111,26 +98,18 @@ export function BriefJobPoller({
   }
 
   const label = BRIEF_STATUS_LABELS[job.status] ?? job.status;
-  const percent = progressPercent(job.status);
+  const detail = job.target_keyword
+    ? `Keyword: ${job.target_keyword}`
+    : null;
+  const meta =
+    job.credits_used != null ? `~${job.credits_used} credits` : null;
 
   return (
-    <div className="max-w-xl space-y-3">
-      {job.target_keyword ? (
-        <p className="text-sm text-muted-foreground">
-          Keyword: <span className="text-foreground">{job.target_keyword}</span>
-          {job.credits_used != null ? ` · ~${job.credits_used} credits` : ''}
-        </p>
-      ) : null}
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">{label}</span>
-        <span className="text-muted-foreground">{percent}%</span>
-      </div>
-      <div className="h-2 overflow-hidden rounded-full bg-black/30">
-        <div
-          className="h-full rounded-full bg-primary transition-all duration-500"
-          style={{ width: `${percent}%` }}
-        />
-      </div>
-    </div>
+    <RanklyJobProgress
+      label={label}
+      percent={progressPercent(job.status)}
+      detail={detail}
+      meta={meta}
+    />
   );
 }

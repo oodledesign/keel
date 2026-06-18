@@ -22,6 +22,10 @@ export type RanklyProjectRow = {
   locale: string | null;
   client_id: string | null;
   target_country: string;
+  brief_brand_name: string | null;
+  brief_voice_notes: string | null;
+  brief_mention_rules: string | null;
+  brief_research_depth: 'standard' | 'deep';
   created_at: string;
 };
 
@@ -43,12 +47,34 @@ export type RanklyResearchCacheRow = {
   expires_at: string;
 };
 
+const RANKLY_PROJECT_FIELDS =
+  'id, name, domain, locale, client_id, target_country, brief_brand_name, brief_voice_notes, brief_mention_rules, brief_research_depth, created_at';
+
+function normalizeRanklyProjectRow(
+  data: Record<string, unknown>,
+): RanklyProjectRow {
+  return {
+    id: data.id as string,
+    name: data.name as string,
+    domain: data.domain as string,
+    locale: (data.locale as string | null) ?? null,
+    client_id: (data.client_id as string | null) ?? null,
+    target_country: (data.target_country as string) ?? 'gb',
+    brief_brand_name: (data.brief_brand_name as string | null) ?? null,
+    brief_voice_notes: (data.brief_voice_notes as string | null) ?? null,
+    brief_mention_rules: (data.brief_mention_rules as string | null) ?? null,
+    brief_research_depth:
+      data.brief_research_depth === 'deep' ? 'deep' : 'standard',
+    created_at: data.created_at as string,
+  };
+}
+
 export const loadRanklyProjectsForTeam = cache(
   async (accountId: string): Promise<RanklyProjectRow[]> => {
     const client = getSupabaseServerClient();
     const { data, error } = await supabaseCustomSchema(client, 'rankly')
       .from('projects')
-      .select('id, name, domain, locale, client_id, target_country, created_at')
+      .select(RANKLY_PROJECT_FIELDS)
       .eq('account_id', accountId)
       .order('created_at', { ascending: false });
 
@@ -56,7 +82,9 @@ export const loadRanklyProjectsForTeam = cache(
       console.error('[rankly] projects', error.message);
       return [];
     }
-    return (data ?? []) as RanklyProjectRow[];
+    return (data ?? []).map((row: Record<string, unknown>) =>
+      normalizeRanklyProjectRow(row),
+    );
   },
 );
 
@@ -146,7 +174,7 @@ export const loadRanklyProjectForTeam = cache(
     const client = getSupabaseServerClient();
     const { data, error } = await supabaseCustomSchema(client, 'rankly')
       .from('projects')
-      .select('id, name, domain, locale, client_id, target_country, created_at')
+      .select(RANKLY_PROJECT_FIELDS)
       .eq('id', projectId)
       .eq('account_id', accountId)
       .maybeSingle();
@@ -155,7 +183,9 @@ export const loadRanklyProjectForTeam = cache(
       console.error('[rankly] project', error.message);
       return null;
     }
-    return data as RanklyProjectRow | null;
+    return data
+      ? normalizeRanklyProjectRow(data as Record<string, unknown>)
+      : null;
   },
 );
 
@@ -283,7 +313,7 @@ export const loadRanklyProjectForClient = cache(
     const client = getSupabaseServerClient();
     const { data, error } = await supabaseCustomSchema(client, 'rankly')
       .from('projects')
-      .select('id, name, domain, locale, client_id, target_country, created_at')
+      .select(RANKLY_PROJECT_FIELDS)
       .eq('account_id', accountId)
       .eq('client_id', clientId)
       .order('created_at', { ascending: false })
@@ -294,6 +324,8 @@ export const loadRanklyProjectForClient = cache(
       console.error('[rankly] project for client', error.message);
       return null;
     }
-    return data as RanklyProjectRow | null;
+    return data
+      ? normalizeRanklyProjectRow(data as Record<string, unknown>)
+      : null;
   },
 );

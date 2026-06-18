@@ -19,6 +19,7 @@ export type AccountPaymentSettings = {
   stripe_account_id: string | null;
   stripe_connect_enabled: boolean;
   stripe_pay_now_enabled: boolean;
+  invoice_starting_number: number;
 };
 
 const DEFAULT_SETTINGS: Omit<AccountPaymentSettings, 'account_id'> = {
@@ -32,6 +33,7 @@ const DEFAULT_SETTINGS: Omit<AccountPaymentSettings, 'account_id'> = {
   stripe_account_id: null,
   stripe_connect_enabled: false,
   stripe_pay_now_enabled: true,
+  invoice_starting_number: 1,
 };
 
 export function createInvoicePaymentSettingsService(
@@ -89,6 +91,7 @@ class InvoicePaymentSettingsService {
     bank_transfer_enabled?: boolean;
     bank_transfer_instructions?: string | null;
     stripe_pay_now_enabled?: boolean;
+    invoice_starting_number?: number;
   }) {
     await this.ensureOwnerOrAdmin(input.accountId);
 
@@ -114,6 +117,9 @@ class InvoicePaymentSettingsService {
       ...(input.stripe_pay_now_enabled !== undefined
         ? { stripe_pay_now_enabled: input.stripe_pay_now_enabled }
         : {}),
+      ...(input.invoice_starting_number !== undefined
+        ? { invoice_starting_number: input.invoice_starting_number }
+        : {}),
     };
 
     const { data, error } = await this.db
@@ -122,7 +128,36 @@ class InvoicePaymentSettingsService {
       .select('*')
       .single();
     if (error) throw new Error(error.message);
+
+    if (input.invoice_starting_number !== undefined) {
+      await this.syncInvoiceCounterIfAllowed(
+        input.accountId,
+        input.invoice_starting_number,
+      );
+    }
+
     return data as AccountPaymentSettings;
+  }
+
+  private async syncInvoiceCounterIfAllowed(
+    accountId: string,
+    startingNumber: number,
+  ) {
+    const { count, error: countError } = await this.db
+      .from('invoices')
+      .select('id', { count: 'exact', head: true })
+      .eq('account_id', accountId);
+    if (countError) throw new Error(countError.message);
+    if ((count ?? 0) > 0) return;
+
+    const { error } = await this.db.from('invoice_counters').upsert(
+      {
+        account_id: accountId,
+        next_number: Math.max(1, Math.floor(startingNumber)),
+      },
+      { onConflict: 'account_id' },
+    );
+    if (error) throw new Error(error.message);
   }
 
   async connectStripeAccount(input: {
