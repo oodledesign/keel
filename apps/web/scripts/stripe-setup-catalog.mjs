@@ -157,6 +157,12 @@ const CATALOG = [
         envKey: 'STRIPE_PRICE_ADDON_EMAIL_ASSISTANT_MONTHLY',
         lookupKey: 'keel.addon.email_assistant.monthly',
         amount: 900,
+        interval: 'month',
+      },
+    ],
+  },
+  {
+    catalogId: 'keel-addon-signatures',
     productName: 'Keel Signatures',
     prices: [
       {

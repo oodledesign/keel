@@ -320,6 +320,13 @@ export default createBillingSchema({
               id: KEEL_STRIPE_PRICES.addon_email_assistant_monthly,
               name: 'Email Assistant',
               cost: 9,
+              type: 'flat',
+            },
+          ],
+        },
+      ],
+      features: [
+        'Gmail inbox sync',
         'AI suggested to-dos from threads',
         'Draft replies in your voice',
         'Accept actions into Keel tasks',
