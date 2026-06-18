@@ -24,7 +24,21 @@ type GoogleEvent = {
   end?: { dateTime?: string; date?: string };
   organizer?: { displayName?: string; email?: string };
   attendees?: Array<{ displayName?: string; email?: string }>;
+  /** Google status events (working location, OOO, etc.) — not real time blocks. */
+  eventType?: string;
 };
+
+/** Status/metadata events Google returns but users don't treat as calendar blocks. */
+function isPlannerCalendarBlock(event: GoogleEvent): boolean {
+  switch (event.eventType) {
+    case 'workingLocation':
+    case 'birthday':
+    case 'fromGmail':
+      return false;
+    default:
+      return true;
+  }
+}
 
 type GoogleCalendarListEntry = {
   id: string;
@@ -96,6 +110,8 @@ async function googleJson<T>(
 }
 
 function mapGoogleEvent(event: GoogleEvent): PlannerCalendarEvent | null {
+  if (!isPlannerCalendarBlock(event)) return null;
+
   const start = event.start?.dateTime ?? event.start?.date;
   const end = event.end?.dateTime ?? event.end?.date;
   if (!start || !end) return null;
