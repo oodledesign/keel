@@ -114,12 +114,12 @@ const STATUS_LABEL: Record<TaskStatus, string> = STATUS_COLUMNS.reduce(
   {} as Record<TaskStatus, string>,
 );
 
-/** Simplified list row: expand · done · title · due · client · priority */
+/** List row: expand · done · title · due (icon + label) · client (avatar + name) · priority */
 function taskListRowGridClass() {
-  return 'grid grid-cols-[1.25rem_1.5rem_minmax(0,1fr)_2rem_2rem_1.75rem] items-center gap-x-3 px-3 py-2.5 sm:px-4';
+  return 'grid grid-cols-[1.25rem_1.5rem_minmax(0,1fr)_minmax(5.5rem,7.5rem)_minmax(6rem,10rem)_1.75rem] items-center gap-x-3 px-3 py-2.5 sm:px-4';
 }
 
-function ClientAvatar({
+function ClientCell({
   name,
   color,
 }: {
@@ -127,24 +127,27 @@ function ClientAvatar({
   color?: string | null;
 }) {
   if (!name?.trim()) {
-    return <span className="inline-block h-6 w-6 shrink-0" aria-hidden />;
+    return <span className="inline-block min-h-6 shrink-0" aria-hidden />;
   }
 
   const initial = (name.trim()[0] ?? '?').toUpperCase();
 
   return (
-    <Avatar className="h-6 w-6 shrink-0" title={name}>
-      <AvatarFallback
-        className="text-[10px] font-semibold text-white"
-        style={{ backgroundColor: color ?? '#64748B' }}
-      >
-        {initial}
-      </AvatarFallback>
-    </Avatar>
+    <span className="flex min-w-0 items-center gap-1.5" title={name}>
+      <Avatar className="h-6 w-6 shrink-0">
+        <AvatarFallback
+          className="text-[10px] font-semibold text-white"
+          style={{ backgroundColor: color ?? '#64748B' }}
+        >
+          {initial}
+        </AvatarFallback>
+      </Avatar>
+      <span className="truncate text-xs text-zinc-400">{name}</span>
+    </span>
   );
 }
 
-function DueDateIcon({
+function DueDateCell({
   dueDateLabel,
   overdue,
 }: {
@@ -152,23 +155,28 @@ function DueDateIcon({
   overdue: boolean;
 }) {
   if (!dueDateLabel) {
-    return <span className="inline-block h-4 w-4 shrink-0" aria-hidden />;
+    return <span className="inline-block min-h-4 shrink-0" aria-hidden />;
   }
 
   return (
     <span
-      className="flex justify-center"
+      className="flex min-w-0 items-center gap-1.5"
       title={overdue ? `Overdue · ${dueDateLabel}` : dueDateLabel}
     >
       <CalendarDays
         className={cn(
-          'h-4 w-4',
+          'h-4 w-4 shrink-0',
           overdue ? 'text-rose-400' : 'text-zinc-500',
         )}
         aria-hidden
       />
-      <span className="sr-only">
-        {overdue ? `Overdue · ${dueDateLabel}` : dueDateLabel}
+      <span
+        className={cn(
+          'truncate text-xs tabular-nums',
+          overdue ? 'font-medium text-rose-400' : 'text-zinc-400',
+        )}
+      >
+        {dueDateLabel}
       </span>
     </span>
   );
@@ -1301,6 +1309,7 @@ function InlineTaskTitle({
 
 function TaskRow({
   task,
+  showWorkspaceTag = false,
   workspaceAccountId,
   today,
   onStatusChanged,
@@ -1438,13 +1447,8 @@ function TaskRow({
             </span>
           ) : null}
         </div>
-        <DueDateIcon
-          dueDateLabel={overdue ? task.dueDateLabel : task.dueDateLabel}
-          overdue={overdue}
-        />
-        <div className="flex justify-center">
-          <ClientAvatar name={task.clientName} color={clientColor} />
-        </div>
+        <DueDateCell dueDateLabel={task.dueDateLabel} overdue={overdue} />
+        <ClientCell name={task.clientName} color={clientColor} />
         <PriorityIndicator priority={task.priority} />
       </div>
 
