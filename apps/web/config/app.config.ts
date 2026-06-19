@@ -63,11 +63,14 @@ const AppConfigSchema = z
     },
   );
 
+const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
+
 const appConfig = AppConfigSchema.parse({
-  name: process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer',
-  title: process.env.NEXT_PUBLIC_SITE_TITLE ?? 'Ozer',
+  name: productName,
+  title: process.env.NEXT_PUBLIC_SITE_TITLE ?? productName,
   description:
-    process.env.NEXT_PUBLIC_SITE_DESCRIPTION ?? 'Ozer is your new Life OS.',
+    process.env.NEXT_PUBLIC_SITE_DESCRIPTION ??
+    'Ozer is the Life CRM that connects personal life, business, family, and community in one account.',
   url: process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000',
   locale: process.env.NEXT_PUBLIC_DEFAULT_LOCALE,
   theme: (process.env.NEXT_PUBLIC_DEFAULT_THEME_MODE ?? 'light') as

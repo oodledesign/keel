@@ -114,7 +114,7 @@ export function EmailSignatureField({
         placeholder={
           format === 'html'
             ? 'Best,<br>Dan Potter<br><a href="https://keelos.so">Ozer</a>'
-            : 'Best,\nDan Potter\nKeel'
+            : 'Best,\nDan Potter\nOzer'
         }
         rows={format === 'html' ? 6 : 4}
         spellCheck={format === 'plain'}
