@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   ArrowLeft,
   CreditCard,
+  FileText,
   Inbox,
   LayoutDashboard,
   LayoutGrid,
@@ -108,6 +109,16 @@ export function AdminSidebar() {
                 <Link className={'flex gap-2.5'} href={'/admin/branding'}>
                   <Palette className={'h-4'} />
                   <span>Branding</span>
+                </Link>
+              </SidebarMenuButton>
+
+              <SidebarMenuButton
+                isActive={path.includes('/admin/blog')}
+                asChild
+              >
+                <Link className={'flex gap-2.5'} href={'/admin/blog'}>
+                  <FileText className={'h-4'} />
+                  <span>Blog</span>
                 </Link>
               </SidebarMenuButton>
 

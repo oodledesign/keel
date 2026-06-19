@@ -2,6 +2,7 @@ import { NavigationMenu, NavigationMenuList } from '@kit/ui/navigation-menu';
 import { Trans } from '@kit/ui/trans';
 
 import { SiteAppsNavMenu } from './site-apps-nav-menu';
+import { SiteFeaturesNavMenu } from './site-features-nav-menu';
 import { SiteNavigationItem } from './site-navigation-item';
 
 const primaryLinks = [
@@ -34,6 +35,7 @@ export function SiteNavigation() {
       <NavigationMenu>
         <NavigationMenuList className="gap-x-1 rounded-full border border-violet-200/10 bg-white/[0.03] p-1 xl:gap-x-2">
           {NavItems}
+          <SiteFeaturesNavMenu />
           <SiteAppsNavMenu />
         </NavigationMenuList>
       </NavigationMenu>

@@ -150,34 +150,48 @@ function ClientCell({
 function DueDateCell({
   dueDateLabel,
   overdue,
+  calendarScheduleStatus,
 }: {
   dueDateLabel: string;
   overdue: boolean;
+  calendarScheduleStatus?: 'scheduled' | 'failed' | null;
 }) {
-  if (!dueDateLabel) {
+  if (!dueDateLabel && !calendarScheduleStatus) {
     return <span className="inline-block min-h-4 shrink-0" aria-hidden />;
   }
 
   return (
-    <span
-      className="flex min-w-0 items-center gap-1.5"
-      title={overdue ? `Overdue · ${dueDateLabel}` : dueDateLabel}
-    >
-      <CalendarDays
-        className={cn(
-          'h-4 w-4 shrink-0',
-          overdue ? 'text-rose-400' : 'text-zinc-500',
-        )}
-        aria-hidden
-      />
-      <span
-        className={cn(
-          'truncate text-xs tabular-nums',
-          overdue ? 'font-medium text-rose-400' : 'text-zinc-400',
-        )}
-      >
-        {dueDateLabel}
-      </span>
+    <span className="flex min-w-0 flex-col gap-1">
+      {dueDateLabel ? (
+        <span
+          className="flex min-w-0 items-center gap-1.5"
+          title={overdue ? `Overdue · ${dueDateLabel}` : dueDateLabel}
+        >
+          <CalendarDays
+            className={cn(
+              'h-4 w-4 shrink-0',
+              overdue ? 'text-rose-400' : 'text-zinc-500',
+            )}
+            aria-hidden
+          />
+          <span
+            className={cn(
+              'truncate text-xs tabular-nums',
+              overdue ? 'font-medium text-rose-400' : 'text-zinc-400',
+            )}
+          >
+            {dueDateLabel}
+          </span>
+        </span>
+      ) : null}
+      {calendarScheduleStatus === 'failed' ? (
+        <span
+          className="text-[11px] font-medium text-amber-300"
+          title="Could not find a free calendar slot before the due date"
+        >
+          Couldn&apos;t auto-schedule
+        </span>
+      ) : null}
     </span>
   );
 }
@@ -1447,7 +1461,11 @@ function TaskRow({
             </span>
           ) : null}
         </div>
-        <DueDateCell dueDateLabel={task.dueDateLabel} overdue={overdue} />
+        <DueDateCell
+          dueDateLabel={task.dueDateLabel}
+          overdue={overdue}
+          calendarScheduleStatus={task.calendarScheduleStatus}
+        />
         <ClientCell name={task.clientName} color={clientColor} />
         <PriorityIndicator priority={task.priority} />
       </div>

@@ -48,6 +48,7 @@ const MARKETING_ROUTE_PREFIXES = [
   '/property',
   '/community',
   '/apps',
+  '/features',
   '/pricing',
   '/faq',
   '/contact',
@@ -57,6 +58,7 @@ const MARKETING_ROUTE_PREFIXES = [
   '/privacy-policy',
   '/terms-of-service',
   '/cookie-policy',
+  '/trust',
 ] as const;
 
 export function normalizeHostname(hostname: string): string {

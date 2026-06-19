@@ -22,13 +22,17 @@ function revalidateWorkspaceTaskPages(accountSlug: string) {
   if (!slug) return;
   const workTasks = workAccountPath(pathsConfig.app.accountTasks, slug);
   const workExtract = workAccountPath(pathsConfig.app.accountTasksExtract, slug);
+  const workReview = workAccountPath(pathsConfig.app.accountTasksReview, slug);
   const homeTasks = `/home/${slug}/tasks`;
   const homeExtract = `/home/${slug}/tasks/extract`;
+  const homeReview = `/home/${slug}/tasks/review`;
   // Use `page` so Next invalidates the concrete route (rewrites can make `layout` alone miss `/app/:slug/...`).
   revalidatePath(workTasks, 'page');
   revalidatePath(workExtract, 'page');
+  revalidatePath(workReview, 'page');
   revalidatePath(homeTasks, 'page');
   revalidatePath(homeExtract, 'page');
+  revalidatePath(homeReview, 'page');
   revalidatePath('/home', 'layout');
 }
 

@@ -13,6 +13,8 @@ import {
   recordRecorderSync,
 } from '~/lib/recorder/access';
 import { queueBrainIndexSource } from '~/lib/brain/sync';
+import { resolveMeetingCalendarMetadata } from '~/lib/recorder/calendar-metadata';
+import { queueMeetingSummaryGeneration } from '~/lib/recorder/meeting-summary';
 import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
 
 export const runtime = 'nodejs';
@@ -164,6 +166,11 @@ export async function POST(request: Request) {
     return badRequest('Invalid deal_id for this workspace');
   }
 
+  const calendarMetadata = await resolveMeetingCalendarMetadata(admin, {
+    userId: token.user_id,
+    recordedAt: recordedAt ? new Date(recordedAt) : null,
+  });
+
   const { data: row, error } = await admin
     .from('meeting_transcripts')
     .insert({
@@ -177,6 +184,10 @@ export async function POST(request: Request) {
       recorded_at: recordedAt,
       duration_seconds: input.duration_seconds ?? null,
       meeting_date: input.meeting_date ?? null,
+      calendar_event_id: calendarMetadata.calendar_event_id,
+      calendar_event_start: calendarMetadata.calendar_event_start,
+      calendar_event_end: calendarMetadata.calendar_event_end,
+      calendar_attendees: calendarMetadata.calendar_attendees,
     })
     .select('id, account_id, created_at')
     .single();
@@ -189,6 +200,16 @@ export async function POST(request: Request) {
   }
 
   queueBrainIndexSource(targetAccountId, 'transcript', row.id);
+
+  queueMeetingSummaryGeneration({
+    meetingTranscriptId: row.id,
+    accountId: targetAccountId,
+    createdByUserId: token.user_id,
+    title: input.title?.trim() || 'Meeting transcript',
+    content: input.content.trim(),
+    meetingDate: input.meeting_date ?? null,
+    calendarAttendees: calendarMetadata.calendar_attendees,
+  });
 
   await recordRecorderSync(token.user_id, input.duration_seconds ?? 0);
 

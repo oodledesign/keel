@@ -7,5 +7,7 @@ export type {
   ClassifyResponseJson,
   EmailActionItem,
   EmailThreadCategory,
+  ExtractAccountMember,
+  ExtractContext,
   ExtractResponseJson,
 } from './types';

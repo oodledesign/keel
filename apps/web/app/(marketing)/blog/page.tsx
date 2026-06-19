@@ -1,122 +1,106 @@
-import { cache } from 'react';
+import Link from 'next/link';
 
 import type { Metadata } from 'next';
 
-import { createCmsClient } from '@kit/cms';
-import { getLogger } from '@kit/shared/logger';
-import { If } from '@kit/ui/if';
-import { Trans } from '@kit/ui/trans';
+import { getBlogPosts } from '~/lib/blog';
 
-import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
-import { withI18n } from '~/lib/i18n/with-i18n';
-
-// local imports
 import { SitePageHeader } from '../_components/site-page-header';
-import { BlogPagination } from './_components/blog-pagination';
-import { PostPreview } from './_components/post-preview';
 
-interface BlogPageProps {
-  searchParams: Promise<{ page?: string }>;
-}
-
-const BLOG_POSTS_PER_PAGE = 10;
-
-export const generateMetadata = async (
-  props: BlogPageProps,
-): Promise<Metadata> => {
-  const { t, resolvedLanguage } = await createI18nServerInstance();
-  const searchParams = await props.searchParams;
-  const limit = BLOG_POSTS_PER_PAGE;
-
-  const page = searchParams.page ? parseInt(searchParams.page) : 0;
-  const offset = page * limit;
-
-  const { total } = await getContentItems(resolvedLanguage, limit, offset);
-
-  return {
-    title: t('marketing:blog'),
-    description: t('marketing:blogSubtitle'),
-    pagination: {
-      previous: page > 0 ? `/blog?page=${page - 1}` : undefined,
-      next: offset + limit < total ? `/blog?page=${page + 1}` : undefined,
-    },
-  };
+const BLOG_JSON_LD = {
+  '@context': 'https://schema.org',
+  '@type': 'Blog',
+  name: 'Ozer Blog',
+  url: 'https://ozer.so/blog',
+  description:
+    'Thoughts on running a freelance agency, building in public, and the tools that help.',
+  publisher: {
+    '@type': 'Organization',
+    name: 'Ozer',
+    url: 'https://ozer.so',
+  },
 };
 
-const getContentItems = cache(
-  async (language: string | undefined, limit: number, offset: number) => {
-    const client = await createCmsClient();
-    const logger = await getLogger();
-
-    try {
-      return await client.getContentItems({
-        collection: 'posts',
-        limit,
-        offset,
-        language,
-        content: false,
-        sortBy: 'publishedAt',
-        sortDirection: 'desc',
-      });
-    } catch (error) {
-      logger.error({ error }, 'Failed to load blog posts');
-
-      return { total: 0, items: [] };
-    }
+export const metadata: Metadata = {
+  title: 'Blog | Ozer',
+  description:
+    'Thoughts on running a freelance agency, building in public, and the tools that help.',
+  alternates: {
+    canonical: 'https://ozer.so/blog',
   },
-);
+};
 
-async function BlogPage(props: BlogPageProps) {
-  const { t, resolvedLanguage: language } = await createI18nServerInstance();
-  const searchParams = await props.searchParams;
+function formatPublishedDate(value: string | null) {
+  if (!value) return null;
 
-  const limit = BLOG_POSTS_PER_PAGE;
-  const page = searchParams.page ? parseInt(searchParams.page) : 0;
-  const offset = page * limit;
+  return new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(value));
+}
 
-  const { total, items: posts } = await getContentItems(
-    language,
-    limit,
-    offset,
-  );
+export default async function BlogPage() {
+  const posts = await getBlogPosts();
 
   return (
     <>
-      <SitePageHeader
-        title={t('marketing:blog')}
-        subtitle={t('marketing:blogSubtitle')}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(BLOG_JSON_LD) }}
       />
 
-      <div className={'container flex flex-col space-y-6 py-8'}>
-        <If
-          condition={posts.length > 0}
-          fallback={<Trans i18nKey="marketing:noPosts" />}
-        >
-          <PostsGridList>
-            {posts.map((post, idx) => {
-              return <PostPreview key={idx} post={post} />;
-            })}
-          </PostsGridList>
+      <SitePageHeader
+        title="Blog"
+        subtitle="Thoughts on running a freelance agency, building in public, and the tools that help."
+      />
 
-          <div>
-            <BlogPagination
-              currentPage={page}
-              canGoToNextPage={offset + limit < total}
-              canGoToPreviousPage={page > 0}
-            />
+      <div className="container flex flex-col space-y-8 py-8">
+        {posts.length === 0 ? (
+          <p className="text-muted-foreground text-center">No posts yet.</p>
+        ) : (
+          <div className="mx-auto flex w-full max-w-3xl flex-col gap-10">
+            {posts.map((post) => (
+              <article
+                key={post.id}
+                className="border-border/40 border-b pb-10 last:border-b-0 last:pb-0"
+              >
+                <h2 className="font-heading text-2xl font-semibold tracking-tight">
+                  <Link
+                    href={`/blog/${post.slug}`}
+                    className="hover:text-primary transition-colors"
+                  >
+                    {post.title}
+                  </Link>
+                </h2>
+
+                <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                  {post.published_at ? (
+                    <time dateTime={post.published_at}>
+                      {formatPublishedDate(post.published_at)}
+                    </time>
+                  ) : null}
+                  {post.reading_time_minutes ? (
+                    <span>{post.reading_time_minutes} min read</span>
+                  ) : null}
+                </div>
+
+                {post.excerpt ? (
+                  <p className="text-muted-foreground mt-4 text-base leading-relaxed">
+                    {post.excerpt}
+                  </p>
+                ) : null}
+
+                <Link
+                  href={`/blog/${post.slug}`}
+                  className="text-primary mt-4 inline-block text-sm font-medium underline-offset-4 hover:underline"
+                >
+                  Read more
+                </Link>
+              </article>
+            ))}
           </div>
-        </If>
+        )}
       </div>
     </>
-  );
-}
-
-export default withI18n(BlogPage);
-
-function PostsGridList({ children }: React.PropsWithChildren) {
-  return (
-    <div className="grid grid-cols-1 gap-y-8 md:grid-cols-2 md:gap-x-2 md:gap-y-12 lg:grid-cols-3">
-      {children}
-    </div>
   );
 }

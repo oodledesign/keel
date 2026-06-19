@@ -9,6 +9,7 @@ import { getTeamAccountAccess } from '~/home/[account]/_lib/role-access';
 import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
 
 import { createMeetingTranscriptsService } from '~/home/[account]/_lib/server/meeting-transcripts.service';
+import { loadMeetingSummary } from '~/lib/recorder/meeting-summary';
 
 export type MeetingClientOption = { id: string; name: string };
 
@@ -98,7 +99,7 @@ async function loadMeetingTranscriptPageDataImpl(
   const transcriptsService = createMeetingTranscriptsService(client);
   const clientsService = createClientsService(client);
 
-  const [transcript, clientsResult] = await Promise.all([
+  const [transcript, clientsResult, summary] = await Promise.all([
     transcriptsService.getById({
       accountId,
       transcriptId,
@@ -108,12 +109,14 @@ async function loadMeetingTranscriptPageDataImpl(
       page: 1,
       pageSize: 100,
     }),
+    loadMeetingSummary(client, { meetingTranscriptId: transcriptId, accountId }),
   ]);
 
   return {
     accountId,
     accountSlug,
     transcript,
+    summary,
     clients: mapClientOptions(clientsResult.data ?? []),
     canEdit: access.canEditClients,
     canView: access.canViewClients,

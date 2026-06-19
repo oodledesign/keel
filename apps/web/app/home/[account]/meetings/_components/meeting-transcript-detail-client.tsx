@@ -58,12 +58,19 @@ type Transcript = {
   dealTitle: string | null;
 };
 
+type MeetingSummary = {
+  summaryText: string;
+  attendeeEmails: string[];
+  generatedAt: string;
+} | null;
+
 type ClientOption = { id: string; name: string };
 
 type Props = {
   accountId: string;
   accountSlug: string;
   transcript: Transcript;
+  summary: MeetingSummary;
   clients: ClientOption[];
   canEdit: boolean;
   assignmentOptions: TaskAssignmentOption[];
@@ -76,6 +83,7 @@ export function MeetingTranscriptDetailClient({
   accountId,
   accountSlug,
   transcript,
+  summary,
   clients,
   canEdit,
   assignmentOptions,
@@ -203,7 +211,30 @@ export function MeetingTranscriptDetailClient({
       </Link>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
-        <section className={panelClassName}>
+        <div className="space-y-6">
+          {summary ? (
+            <section className={panelClassName}>
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-[var(--keel-teal)]" />
+                  <h2 className="text-sm font-semibold text-white">Summary</h2>
+                </div>
+                {summary.attendeeEmails.length > 0 ? (
+                  <p className="text-xs text-zinc-400">
+                    {summary.attendeeEmails.length} attendee
+                    {summary.attendeeEmails.length === 1 ? '' : 's'} from calendar
+                  </p>
+                ) : null}
+              </div>
+              <div className="space-y-4 rounded-xl border border-white/6 bg-black/20 p-4 text-sm leading-relaxed text-zinc-200">
+                {summary.summaryText.split('\n\n').map((paragraph) => (
+                  <p key={paragraph.slice(0, 40)}>{paragraph}</p>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          <section className={panelClassName}>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Mic className="h-4 w-4 text-[var(--keel-teal)]" />
@@ -228,6 +259,7 @@ export function MeetingTranscriptDetailClient({
             {transcript.content}
           </pre>
         </section>
+        </div>
 
         <aside className="space-y-6">
           <section className={panelClassName}>

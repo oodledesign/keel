@@ -51,7 +51,7 @@ export async function loadEmailThreadDetail(
     client
       .from('email_action_items')
       .select(
-        'id, title, detail, suggested_due_date, status, task_id, created_at',
+        'id, title, detail, suggested_due_date, source_excerpt, assignee_confidence, suggested_assignee_id, status, task_id, created_at',
       )
       .eq('thread_id', threadId)
       .eq('user_id', user.id)

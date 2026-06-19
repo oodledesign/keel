@@ -5,7 +5,16 @@ export type GoogleCalendarConnection = {
   tokenExpiresAt: string | null;
   calendarId: string;
   plannerCalendarId: string | null;
+  busyCalendarIds: string[];
+  personalCalendarIds: string[];
   scopes: string | null;
+};
+
+export type GoogleCalendarListItem = {
+  id: string;
+  summary: string;
+  primary: boolean;
+  selected: boolean;
 };
 
 export type GoogleCalendarConnectionStatus = {
@@ -42,6 +51,7 @@ export type RecorderCalendarAttendee = {
 };
 
 export type RecorderCalendarEvent = {
+  id: string;
   title: string;
   attendees: RecorderCalendarAttendee[];
   start: string;

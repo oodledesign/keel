@@ -18,6 +18,8 @@ type GoogleCalendarConnectionRow = {
   token_expires_at: string | null;
   calendar_id: string | null;
   planner_calendar_id: string | null;
+  busy_calendar_ids: string[] | null;
+  personal_calendar_ids: string[] | null;
   scopes: string | null;
 };
 
@@ -69,7 +71,7 @@ export async function loadGoogleCalendarConnection(
 ): Promise<GoogleCalendarConnection | null> {
   const { data, error } = await table(client)
     .select(
-      'user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at, calendar_id, planner_calendar_id, scopes',
+      'user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at, calendar_id, planner_calendar_id, busy_calendar_ids, personal_calendar_ids, scopes',
     )
     .eq('user_id', userId)
     .maybeSingle();
@@ -90,8 +92,21 @@ export async function loadGoogleCalendarConnection(
     tokenExpiresAt: row.token_expires_at,
     calendarId: row.calendar_id || 'primary',
     plannerCalendarId: row.planner_calendar_id,
+    busyCalendarIds: normalizeCalendarIdList(row.busy_calendar_ids),
+    personalCalendarIds: normalizeCalendarIdList(row.personal_calendar_ids),
     scopes: row.scopes,
   };
+}
+
+function normalizeCalendarIdList(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter((entry): entry is string => typeof entry === 'string')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
 }
 
 export async function saveGoogleCalendarConnection(
@@ -152,6 +167,26 @@ export async function updatePlannerCalendarId(
   const { error } = await table(client)
     .update({ planner_calendar_id: plannerCalendarId })
     .eq('user_id', userId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function updateGoogleCalendarSelection(
+  client: SupabaseClient,
+  input: {
+    userId: string;
+    busyCalendarIds: string[];
+    personalCalendarIds: string[];
+  },
+) {
+  const { error } = await table(client)
+    .update({
+      busy_calendar_ids: input.busyCalendarIds,
+      personal_calendar_ids: input.personalCalendarIds,
+    })
+    .eq('user_id', input.userId);
 
   if (error) {
     throw new Error(error.message);

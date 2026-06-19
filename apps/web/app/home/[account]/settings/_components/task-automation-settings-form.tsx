@@ -1,0 +1,407 @@
+'use client';
+
+import { useMemo, useState, useTransition } from 'react';
+
+import Link from 'next/link';
+
+import { Calendar, Loader2 } from 'lucide-react';
+
+import { Badge } from '@kit/ui/badge';
+import { Button } from '@kit/ui/button';
+import { Checkbox } from '@kit/ui/checkbox';
+import { Input } from '@kit/ui/input';
+import { Label } from '@kit/ui/label';
+import { Switch } from '@kit/ui/switch';
+import { toast } from '@kit/ui/sonner';
+
+import pathsConfig from '~/config/paths.config';
+import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
+import type { AccountTaskAutomationSettings } from '~/lib/recorder/task-automation-settings';
+
+import type { TaskAutomationSettingsPageData } from '../_lib/server/task-automation-settings.loader';
+import {
+  saveAccountTaskAutomationSettingsAction,
+  saveGoogleCalendarSelectionAction,
+} from '../_lib/server/task-automation-settings-actions';
+
+type Props = {
+  data: TaskAutomationSettingsPageData;
+  canEdit: boolean;
+};
+
+function modeLabel(mode: AccountTaskAutomationSettings['meetingTasksMode']) {
+  return mode === 'auto_publish' ? 'Auto-publish' : 'Require my review';
+}
+
+export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
+  const [settings, setSettings] = useState(data.settings);
+  const [busyCalendarIds, setBusyCalendarIds] = useState<string[]>(
+    data.calendar.busyCalendarIds.length > 0
+      ? data.calendar.busyCalendarIds
+      : data.calendar.calendars.filter((calendar) => calendar.selected).map((calendar) => calendar.id),
+  );
+  const [personalCalendarIds, setPersonalCalendarIds] = useState<string[]>(
+    data.calendar.personalCalendarIds,
+  );
+  const [pending, startTransition] = useTransition();
+
+  const reviewPath = workAccountPath(
+    pathsConfig.app.accountTasksReview,
+    data.accountSlug,
+  );
+
+  const calendarOptions = useMemo(
+    () =>
+      data.calendar.calendars.map((calendar) => ({
+        ...calendar,
+        busy: busyCalendarIds.includes(calendar.id),
+        personal: personalCalendarIds.includes(calendar.id),
+      })),
+    [data.calendar.calendars, busyCalendarIds, personalCalendarIds],
+  );
+
+  function toggleBusyCalendar(calendarId: string, checked: boolean) {
+    setBusyCalendarIds((current) => {
+      if (checked) {
+        return current.includes(calendarId) ? current : [...current, calendarId];
+      }
+      return current.filter((id) => id !== calendarId);
+    });
+  }
+
+  function togglePersonalCalendar(calendarId: string, checked: boolean) {
+    setPersonalCalendarIds((current) => {
+      if (checked) {
+        return current.includes(calendarId) ? current : [...current, calendarId];
+      }
+      return current.filter((id) => id !== calendarId);
+    });
+  }
+
+  function saveSettings() {
+    if (!canEdit) return;
+
+    startTransition(async () => {
+      try {
+        const saved = await saveAccountTaskAutomationSettingsAction({
+          accountId: data.accountId,
+          accountSlug: data.accountSlug,
+          meetingTasksMode: settings.meetingTasksMode,
+          emailTasksMode: settings.emailTasksMode,
+          autoScheduleOnCalendar: settings.autoScheduleOnCalendar,
+          calendarLeadTimeMinutes: settings.calendarLeadTimeMinutes,
+          workingHoursStart: settings.workingHoursStart,
+          workingHoursEnd: settings.workingHoursEnd,
+          excludePersonalCalendarBusy: settings.excludePersonalCalendarBusy,
+        });
+        setSettings(saved);
+
+        if (data.calendar.connected) {
+          await saveGoogleCalendarSelectionAction({
+            accountSlug: data.accountSlug,
+            busyCalendarIds,
+            personalCalendarIds,
+          });
+        }
+
+        toast.success('Task automation settings saved');
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Save failed');
+      }
+    });
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-white">Current review mode</h2>
+            <p className="mt-1 text-sm text-zinc-400">
+              Meeting tasks: {modeLabel(settings.meetingTasksMode)} · Email tasks:{' '}
+              {modeLabel(settings.emailTasksMode)}
+            </p>
+          </div>
+          <Link
+            href={reviewPath}
+            className="text-sm font-medium text-[var(--keel-teal)] hover:underline"
+          >
+            Open review queue
+          </Link>
+        </div>
+      </div>
+
+      <section className="space-y-5 rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-5">
+        <div>
+          <h2 className="text-base font-semibold text-white">Meeting tasks</h2>
+          <p className="mt-1 text-sm text-zinc-400">
+            High-confidence suggestions can auto-publish when enabled. Ambiguous assignees
+            always require review.
+          </p>
+        </div>
+        <ModeRadioGroup
+          value={settings.meetingTasksMode}
+          disabled={!canEdit || pending}
+          onChange={(meetingTasksMode) =>
+            setSettings((current) => ({ ...current, meetingTasksMode }))
+          }
+        />
+      </section>
+
+      <section className="space-y-5 rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-5">
+        <div>
+          <h2 className="text-base font-semibold text-white">Email tasks</h2>
+          <p className="mt-1 text-sm text-zinc-400">
+            Same moderation rules apply to email action item suggestions.
+          </p>
+        </div>
+        <ModeRadioGroup
+          value={settings.emailTasksMode}
+          disabled={!canEdit || pending}
+          onChange={(emailTasksMode) =>
+            setSettings((current) => ({ ...current, emailTasksMode }))
+          }
+        />
+      </section>
+
+      <section className="space-y-5 rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-5">
+        <div>
+          <h2 className="text-base font-semibold text-white">Calendar auto-scheduling</h2>
+          <p className="mt-1 text-sm text-zinc-400">
+            When a task is published with a due date, Keel can block time on the assignee&apos;s
+            Google Calendar before the deadline.
+          </p>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-white/8 bg-white/[0.03] p-4">
+          <div>
+            <Label className="text-white">Auto-schedule approved tasks on my calendar</Label>
+            <p className="mt-1 text-xs text-zinc-500">
+              Uses the assignee&apos;s connected Google Calendar when a task is approved.
+            </p>
+          </div>
+          <Switch
+            checked={settings.autoScheduleOnCalendar}
+            disabled={!canEdit || pending}
+            onCheckedChange={(autoScheduleOnCalendar) =>
+              setSettings((current) => ({ ...current, autoScheduleOnCalendar }))
+            }
+          />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label className="text-zinc-300">Lead time before due date (minutes)</Label>
+            <Input
+              type="number"
+              min={0}
+              max={1440}
+              value={settings.calendarLeadTimeMinutes}
+              disabled={!canEdit || pending}
+              onChange={(event) =>
+                setSettings((current) => ({
+                  ...current,
+                  calendarLeadTimeMinutes: Number(event.target.value) || 0,
+                }))
+              }
+              className="border-white/10 bg-[#0B132B] text-white"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-zinc-300">Working hours</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                type="time"
+                value={settings.workingHoursStart}
+                disabled={!canEdit || pending}
+                onChange={(event) =>
+                  setSettings((current) => ({
+                    ...current,
+                    workingHoursStart: event.target.value,
+                  }))
+                }
+                className="border-white/10 bg-[#0B132B] text-white"
+              />
+              <span className="text-zinc-500">to</span>
+              <Input
+                type="time"
+                value={settings.workingHoursEnd}
+                disabled={!canEdit || pending}
+                onChange={(event) =>
+                  setSettings((current) => ({
+                    ...current,
+                    workingHoursEnd: event.target.value,
+                  }))
+                }
+                className="border-white/10 bg-[#0B132B] text-white"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-white/8 bg-white/[0.03] p-4">
+          <div>
+            <Label className="text-white">Include personal calendar when finding free time</Label>
+            <p className="mt-1 text-xs text-zinc-500">
+              When off, events on calendars marked personal below are ignored for busy time.
+            </p>
+          </div>
+          <Switch
+            checked={!settings.excludePersonalCalendarBusy}
+            disabled={!canEdit || pending}
+            onCheckedChange={(includePersonal) =>
+              setSettings((current) => ({
+                ...current,
+                excludePersonalCalendarBusy: !includePersonal,
+              }))
+            }
+          />
+        </div>
+      </section>
+
+      <section className="space-y-4 rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-white">Google Calendar connection</h2>
+            <p className="mt-1 text-sm text-zinc-400">
+              Connect your Google account and choose which calendars count as busy time for
+              auto-scheduling tasks assigned to you.
+            </p>
+          </div>
+          <Badge
+            variant="outline"
+            className={
+              data.calendar.connected
+                ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200'
+                : 'border-white/10 bg-white/5 text-zinc-300'
+            }
+          >
+            {data.calendar.connected ? 'Connected' : 'Not connected'}
+          </Badge>
+        </div>
+
+        {!data.calendar.configured ? (
+          <p className="text-sm text-amber-100/90">
+            Google Calendar OAuth is not configured on this server yet.
+          </p>
+        ) : !data.calendar.connected ? (
+          <Button
+            type="button"
+            className="keel-gradient-btn text-white"
+            onClick={() => {
+              window.location.href = data.calendar.connectHref;
+            }}
+          >
+            <Calendar className="mr-2 h-4 w-4" />
+            Connect Google Calendar
+          </Button>
+        ) : calendarOptions.length === 0 ? (
+          <p className="text-sm text-zinc-400">No calendars returned from Google.</p>
+        ) : (
+          <div className="space-y-3">
+            {calendarOptions.map((calendar) => (
+              <div
+                key={calendar.id}
+                className="rounded-xl border border-white/8 bg-white/[0.03] p-4"
+              >
+                <div className="flex flex-wrap items-center gap-3">
+                  <Checkbox
+                    id={`busy-${calendar.id}`}
+                    checked={calendar.busy}
+                    disabled={!canEdit || pending}
+                    onCheckedChange={(checked) =>
+                      toggleBusyCalendar(calendar.id, checked === true)
+                    }
+                  />
+                  <Label htmlFor={`busy-${calendar.id}`} className="text-sm text-white">
+                    {calendar.summary}
+                    {calendar.primary ? ' (primary)' : ''}
+                  </Label>
+                </div>
+                {calendar.busy ? (
+                  <div className="mt-3 ml-7 flex items-center gap-2">
+                    <Checkbox
+                      id={`personal-${calendar.id}`}
+                      checked={calendar.personal}
+                      disabled={!canEdit || pending}
+                      onCheckedChange={(checked) =>
+                        togglePersonalCalendar(calendar.id, checked === true)
+                      }
+                    />
+                    <Label htmlFor={`personal-${calendar.id}`} className="text-xs text-zinc-400">
+                      Treat as personal calendar
+                    </Label>
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {canEdit ? (
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            onClick={saveSettings}
+            disabled={pending}
+            className="bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+          >
+            {pending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving…
+              </>
+            ) : (
+              'Save settings'
+            )}
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ModeRadioGroup({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: 'auto_publish' | 'requires_moderation';
+  disabled: boolean;
+  onChange: (value: 'auto_publish' | 'requires_moderation') => void;
+}) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      {(
+        [
+          {
+            id: 'requires_moderation',
+            title: 'Require my review',
+            description: 'Suggestions land in the review queue first.',
+          },
+          {
+            id: 'auto_publish',
+            title: 'Auto-publish',
+            description: 'High-confidence items publish without manual approval.',
+          },
+        ] as const
+      ).map((option) => (
+        <button
+          key={option.id}
+          type="button"
+          disabled={disabled}
+          onClick={() => onChange(option.id)}
+          className={`rounded-xl border p-4 text-left transition-colors ${
+            value === option.id
+              ? 'border-[var(--keel-teal)]/50 bg-[var(--keel-teal)]/10'
+              : 'border-white/8 bg-white/[0.03] hover:bg-white/[0.05]'
+          }`}
+        >
+          <div className="text-sm font-medium text-white">{option.title}</div>
+          <p className="mt-1 text-xs text-zinc-400">{option.description}</p>
+        </button>
+      ))}
+    </div>
+  );
+}

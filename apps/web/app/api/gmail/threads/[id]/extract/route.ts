@@ -1,7 +1,14 @@
 import { extract, type EmailActionItem } from '@kit/email-assistant';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { todayLocalYmd } from '~/home/_lib/due-date-ymd';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
+import {
+  loadAccountMembersForExtraction,
+  resolveSuggestedAssigneeId,
+  shouldIncludeExtractedItem,
+} from '~/lib/email-assistant/account-members';
+import { resolveDraftOwnerContext } from '~/lib/email-assistant/draft-owner';
 import { buildThreadText } from '~/lib/email-assistant/thread-text';
 import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
 
@@ -23,7 +30,7 @@ export async function POST(_request: Request, context: RouteContext) {
 
   const { data: thread, error: threadError } = await auth.client
     .from('email_threads')
-    .select('id, user_id, subject')
+    .select('id, user_id, subject, account_id')
     .eq('id', threadId)
     .eq('user_id', auth.user.id)
     .maybeSingle();
@@ -35,6 +42,18 @@ export async function POST(_request: Request, context: RouteContext) {
   if (!thread) {
     return jsonErr('NOT_FOUND', 'Thread not found', 404);
   }
+
+  const owner = await resolveDraftOwnerContext(auth.user.id);
+
+  if (!owner) {
+    return jsonErr('OWNER_UNKNOWN', 'Could not resolve mailbox owner', 500);
+  }
+
+  const accountId = (thread as { account_id?: string | null }).account_id;
+  const admin = getSupabaseServerAdminClient();
+  const accountMembers = accountId
+    ? await loadAccountMembersForExtraction(admin, accountId)
+    : [];
 
   const { data: messages, error: messagesError } = await auth.client
     .from('email_messages')
@@ -55,10 +74,14 @@ export async function POST(_request: Request, context: RouteContext) {
     return jsonErr('EMPTY_THREAD', 'Thread has no message content to analyze', 400);
   }
 
-  let items;
+  let items: EmailActionItem[];
 
   try {
-    items = await extract(threadText, todayLocalYmd());
+    items = await extract(threadText, todayLocalYmd(), {
+      mailboxOwnerEmail: owner.email,
+      mailboxOwnerName: owner.displayName,
+      accountMembers,
+    });
   } catch (error) {
     return jsonErr(
       'EXTRACT_FAILED',
@@ -67,20 +90,31 @@ export async function POST(_request: Request, context: RouteContext) {
     );
   }
 
-  if (items.length === 0) {
+  const filteredItems = items.filter((item) =>
+    shouldIncludeExtractedItem(item, accountMembers, owner.email),
+  );
+
+  if (filteredItems.length === 0) {
     return jsonOk({ items: [] });
   }
 
   const latestMessageId =
     (messages?.at(-1) as { id?: string } | undefined)?.id ?? null;
 
-  const rows = items.map((item: EmailActionItem) => ({
+  const rows = filteredItems.map((item: EmailActionItem) => ({
     user_id: auth.user.id,
     thread_id: threadId,
     message_id: latestMessageId,
     title: item.title,
     detail: item.detail,
     suggested_due_date: item.suggestedDueDate,
+    source_excerpt: item.sourceExcerpt,
+    assignee_confidence: item.assigneeConfidence,
+    suggested_assignee_id: resolveSuggestedAssigneeId(
+      item,
+      accountMembers,
+      owner.email,
+    ),
     status: 'suggested',
   }));
 
@@ -88,7 +122,7 @@ export async function POST(_request: Request, context: RouteContext) {
     .from('email_action_items')
     .insert(rows)
     .select(
-      'id, thread_id, message_id, title, detail, suggested_due_date, status, created_at',
+      'id, thread_id, message_id, title, detail, suggested_due_date, source_excerpt, assignee_confidence, suggested_assignee_id, status, created_at',
     );
 
   if (insertError) {

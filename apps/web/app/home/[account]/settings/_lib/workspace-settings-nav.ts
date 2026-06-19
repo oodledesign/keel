@@ -6,7 +6,7 @@ import {
   spaceTypeFromProfile,
   type WorkspaceProfile,
 } from '~/home/[account]/_lib/workspace-profile';
-import { isVideosModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
+import { isVideosModuleEnabled, isWorkModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
 
 export type WorkspaceSettingsNavItem = {
   id: string;
@@ -53,6 +53,17 @@ export function buildWorkspaceSettingsNav(input: {
         label: 'Brand',
         href: settingsPath(pathsConfig.app.accountBrandSettings, accountSlug),
       });
+
+      if (isWorkModuleEnabled(moduleSettings, 'tasks')) {
+        items.push({
+          id: 'task-automation',
+          label: 'Task automation',
+          href: settingsPath(
+            pathsConfig.app.accountTaskAutomationSettings,
+            accountSlug,
+          ),
+        });
+      }
     }
 
     items.push({

@@ -42,6 +42,9 @@ export type EmailActionItemRow = {
   title: string;
   detail: string | null;
   suggested_due_date: string | null;
+  source_excerpt: string | null;
+  assignee_confidence: number | null;
+  suggested_assignee_id: string | null;
   status: string;
   task_id: string | null;
   created_at: string;

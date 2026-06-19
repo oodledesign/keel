@@ -5,6 +5,8 @@ import type { MetadataRoute } from 'next';
 import { createCmsClient } from '@kit/cms';
 
 import { getMarketingSiteOrigin } from '~/lib/app-host-routing';
+import { getPublishedBlogPostsForSitemap } from '~/lib/blog';
+import { FEATURE_SITEMAP_PATHS } from '~/lib/marketing/feature-landing-pages';
 import { APP_LANDING_SLUGS } from '~/lib/marketing/app-landing-pages';
 import type { SegmentSlug } from '~/lib/marketing/segment-landing-pages';
 
@@ -26,6 +28,7 @@ const STATIC_MARKETING_PATHS: Array<{
   { path: '/privacy-policy', priority: 0.3, changeFrequency: 'yearly' },
   { path: '/terms-of-service', priority: 0.3, changeFrequency: 'yearly' },
   { path: '/cookie-policy', priority: 0.3, changeFrequency: 'yearly' },
+  { path: '/trust', priority: 0.4, changeFrequency: 'monthly' },
 ];
 
 type SitemapEntry = MetadataRoute.Sitemap[number];
@@ -89,11 +92,26 @@ export async function buildMarketingSitemap(): Promise<MetadataRoute.Sitemap> {
     ),
   ];
 
-  const [posts, docs, changelog] = await Promise.all([
-    loadCmsPaths(base, 'posts', '/blog'),
+  const [blogPosts, docs, changelog] = await Promise.all([
+    getPublishedBlogPostsForSitemap(),
     loadCmsPaths(base, 'documentation', '/docs'),
     loadCmsPaths(base, 'changelog', '/changelog'),
   ]);
 
-  return [...staticEntries, ...posts, ...docs, ...changelog];
+  const blogEntries = blogPosts.map((post) =>
+    entry(base, `/blog/${post.slug}`, {
+      lastModified: new Date(post.updated_at),
+      priority: 0.65,
+      changeFrequency: 'monthly',
+    }),
+  );
+
+  const featureEntries = FEATURE_SITEMAP_PATHS.map((path) =>
+    entry(base, path, {
+      priority: 0.8,
+      changeFrequency: 'monthly',
+    }),
+  );
+
+  return [...staticEntries, ...featureEntries, ...blogEntries, ...docs, ...changelog];
 }

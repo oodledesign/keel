@@ -134,6 +134,7 @@ function mapRecorderCalendarEvent(event: GoogleEvent): RecorderCalendarEvent | n
   if (!base) return null;
 
   return {
+    id: event.id?.trim() || `${base.title}-${base.start}`,
     title: base.title,
     start: base.start,
     end: base.end,
@@ -242,6 +243,7 @@ function mockRecorderEvents(nowMs: number): RecorderCalendarEvent[] {
   const currentEnd = new Date(nowMs + 45 * 60 * 1000);
 
   const scheduled = mockEvents(new Date(nowMs).toISOString()).map((event) => ({
+    id: `mock-${event.id}`,
     title: event.title,
     start: event.start,
     end: event.end,
@@ -253,6 +255,7 @@ function mockRecorderEvents(nowMs: number): RecorderCalendarEvent[] {
 
   return [
     {
+      id: 'mock-current-meeting',
       title: 'Current meeting (mock)',
       start: currentStart.toISOString(),
       end: currentEnd.toISOString(),
@@ -305,6 +308,83 @@ export async function getRecorderCalendarEvent(
     next_event: pickNextUpcomingRecorderEvent(events, nowMs),
     upcoming_events: pickUpcomingRecorderEvents(events, nowMs),
   };
+}
+
+const RECORDING_MATCH_LOOKBACK_MS = 6 * 60 * 60 * 1000;
+const RECORDING_MATCH_LOOKAHEAD_MS = 60 * 60 * 1000;
+
+/** Match a Google Calendar event to a desktop-recorder sync timestamp. */
+export async function findRecorderCalendarEventAt(
+  client: SupabaseClient,
+  input: { userId: string; instant: Date },
+): Promise<RecorderCalendarEvent | null> {
+  const instantMs = input.instant.getTime();
+  const timeMin = new Date(instantMs - RECORDING_MATCH_LOOKBACK_MS).toISOString();
+  const timeMax = new Date(instantMs + RECORDING_MATCH_LOOKAHEAD_MS).toISOString();
+
+  if (isPlannerMockCalendarEnabled()) {
+    const events = mockRecorderEvents(instantMs);
+    return pickBestRecorderEventForInstant(events, instantMs);
+  }
+
+  const connection = await validConnection(client, input.userId);
+  if (!connection) {
+    return null;
+  }
+
+  const items = await listGoogleCalendarEventsInRange(connection, timeMin, timeMax);
+  const events = items
+    .map(mapRecorderCalendarEvent)
+    .filter((event): event is RecorderCalendarEvent => Boolean(event));
+
+  return pickBestRecorderEventForInstant(events, instantMs);
+}
+
+function pickBestRecorderEventForInstant(
+  events: RecorderCalendarEvent[],
+  instantMs: number,
+): RecorderCalendarEvent | null {
+  if (events.length === 0) {
+    return null;
+  }
+
+  const inProgress = events.find((event) => {
+    const start = Date.parse(event.start);
+    const end = Date.parse(event.end);
+    if (Number.isNaN(start) || Number.isNaN(end)) {
+      return false;
+    }
+    return start <= instantMs && end >= instantMs;
+  });
+
+  if (inProgress) {
+    return inProgress;
+  }
+
+  let best: RecorderCalendarEvent | null = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  for (const event of events) {
+    const start = Date.parse(event.start);
+    const end = Date.parse(event.end);
+    if (Number.isNaN(start) || Number.isNaN(end)) {
+      continue;
+    }
+
+    const distance =
+      instantMs < start
+        ? start - instantMs
+        : instantMs > end
+          ? instantMs - end
+          : 0;
+
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = event;
+    }
+  }
+
+  return bestDistance <= 2 * 60 * 60 * 1000 ? best : null;
 }
 
 function mockEvents(timeMin: string): PlannerCalendarEvent[] {
@@ -449,4 +529,154 @@ export async function createPlannerCalendarEvents(
   }
 
   return { created, errors };
+}
+
+export async function getValidGoogleCalendarConnection(
+  client: SupabaseClient,
+  userId: string,
+): Promise<GoogleCalendarConnection | null> {
+  return validConnection(client, userId);
+}
+
+export async function listUserGoogleCalendars(
+  client: SupabaseClient,
+  userId: string,
+) {
+  const connection = await validConnection(client, userId);
+  if (!connection) {
+    return { connected: false as const, calendars: [] };
+  }
+
+  const body = await googleJson<{ items?: GoogleCalendarListEntry[] }>(
+    connection,
+    '/users/me/calendarList',
+  );
+
+  const calendars = (body.items ?? [])
+    .filter((calendar) => calendar.id)
+    .map((calendar) => ({
+      id: calendar.id,
+      summary: calendar.summary?.trim() || calendar.id,
+      primary: Boolean(calendar.primary),
+      selected: calendar.selected !== false || Boolean(calendar.primary),
+    }));
+
+  return {
+    connected: true as const,
+    calendars,
+    busyCalendarIds: connection.busyCalendarIds,
+    personalCalendarIds: connection.personalCalendarIds,
+  };
+}
+
+function resolveBusyCalendarIds(
+  connection: GoogleCalendarConnection,
+  availableCalendars: GoogleCalendarListEntry[],
+): string[] {
+  if (connection.busyCalendarIds.length > 0) {
+    return connection.busyCalendarIds;
+  }
+
+  return availableCalendars
+    .filter((calendar) => calendar.id)
+    .filter((calendar) => calendar.selected !== false || calendar.primary)
+    .map((calendar) => calendar.id);
+}
+
+export async function listBusyIntervalsForScheduling(
+  client: SupabaseClient,
+  input: {
+    userId: string;
+    timeMin: string;
+    timeMax: string;
+    excludePersonalCalendarBusy: boolean;
+  },
+): Promise<Array<{ start: string; end: string }>> {
+  const connection = await validConnection(client, input.userId);
+  if (!connection) {
+    return [];
+  }
+
+  const calendarList = await googleJson<{ items?: GoogleCalendarListEntry[] }>(
+    connection,
+    '/users/me/calendarList',
+  );
+
+  const available = calendarList.items ?? [];
+  let calendarIds = resolveBusyCalendarIds(connection, available);
+
+  if (input.excludePersonalCalendarBusy && connection.personalCalendarIds.length > 0) {
+    const personal = new Set(connection.personalCalendarIds);
+    calendarIds = calendarIds.filter((id) => !personal.has(id));
+  }
+
+  if (calendarIds.length === 0) {
+    calendarIds = [connection.calendarId];
+  }
+
+  const params = new URLSearchParams({
+    timeMin: input.timeMin,
+    timeMax: input.timeMax,
+    singleEvents: 'true',
+    orderBy: 'startTime',
+    maxResults: '250',
+  });
+
+  const batches = await Promise.all(
+    calendarIds.slice(0, MAX_RECORDER_CALENDARS).map(async (calendarId) => {
+      try {
+        const body = await googleJson<{ items?: GoogleEvent[] }>(
+          connection,
+          `/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
+        );
+
+        return (body.items ?? [])
+          .map(mapGoogleEvent)
+          .filter((event): event is PlannerCalendarEvent => Boolean(event))
+          .map((event) => ({ start: event.start, end: event.end }));
+      } catch {
+        return [];
+      }
+    }),
+  );
+
+  return batches.flat();
+}
+
+export async function createTaskCalendarEvent(
+  client: SupabaseClient,
+  input: {
+    userId: string;
+    title: string;
+    start: string;
+    end: string;
+    description?: string | null;
+  },
+): Promise<string> {
+  const connection = await validConnection(client, input.userId);
+  if (!connection) {
+    throw new Error('Assignee has not connected Google Calendar');
+  }
+
+  const calendarId = await ensurePlannerCalendar(client, input.userId, connection);
+
+  const created = await googleJson<{ id?: string }>(
+    connection,
+    `/calendars/${encodeURIComponent(calendarId)}/events`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        summary: input.title,
+        description: input.description?.trim() || 'Scheduled by Keel',
+        start: { dateTime: input.start },
+        end: { dateTime: input.end },
+      }),
+    },
+  );
+
+  if (!created.id) {
+    throw new Error('Google Calendar did not return an event id');
+  }
+
+  return created.id;
 }

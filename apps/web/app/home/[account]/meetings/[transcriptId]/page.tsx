@@ -61,13 +61,14 @@ async function MeetingDetailPage({ params }: MeetingDetailPageProps) {
       <TeamAccountLayoutPageHeader
         account={accountSlug}
         title={data.transcript.title}
-        description="Transcript and AI task extraction"
+        description="Transcript, AI summary, and task extraction"
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] p-0 md:p-0">
         <MeetingTranscriptDetailClient
           accountId={data.accountId}
           accountSlug={data.accountSlug}
           transcript={data.transcript}
+          summary={data.summary}
           clients={data.clients}
           canEdit={data.canEdit}
           assignmentOptions={assignmentOptions}

@@ -44,8 +44,9 @@ export function SiteFooter() {
           ],
         },
         {
-          heading: <Trans i18nKey="marketing:legal" />,
+          heading: 'Legal & Security',
           links: [
+            { href: '/trust', label: 'Trust Center' },
             { href: '/privacy-policy', label: 'Privacy policy' },
             { href: '/terms-of-service', label: 'Terms of service' },
             { href: '/cookie-policy', label: 'Cookie policy' },

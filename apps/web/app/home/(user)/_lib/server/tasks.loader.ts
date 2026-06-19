@@ -25,6 +25,7 @@ type TaskQueryRow = {
   job_id?: string | null;
   parent_task_id?: string | null;
   notes?: string | null;
+  calendar_schedule_status?: string | null;
 };
 
 type BusinessEnrichment = {
@@ -99,6 +100,7 @@ export type TasksPageTask = {
   workspaceColor: string | null;
   parentTaskId: string | null;
   notes: string | null;
+  calendarScheduleStatus: 'scheduled' | 'failed' | null;
   /** Populated for root tasks only (see `nestTaskTree`). */
   subtasks?: TasksPageTask[];
 };
@@ -265,6 +267,11 @@ function taskRowToPageTask(
     workspaceColor,
     parentTaskId: row.parent_task_id ?? null,
     notes: row.notes?.trim() ? row.notes : null,
+    calendarScheduleStatus:
+      row.calendar_schedule_status === 'scheduled' ||
+      row.calendar_schedule_status === 'failed'
+        ? row.calendar_schedule_status
+        : null,
   };
 }
 
@@ -421,7 +428,7 @@ export async function loadTaskById(
   const { data, error } = await client
     .from('tasks')
     .select(
-      'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, job_id, parent_task_id, notes',
+      'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, job_id, parent_task_id, notes, calendar_schedule_status',
     )
     .eq('id', taskId)
     .maybeSingle();
@@ -462,7 +469,7 @@ export const loadTasksForUser = cache(async (): Promise<TasksPageTask[]> => {
   const { data, error } = await client
     .from('tasks')
     .select(
-      'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, job_id, parent_task_id, notes',
+      'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, job_id, parent_task_id, notes, calendar_schedule_status',
     )
     .eq('user_id', user.id)
     .order('due_date', { ascending: true, nullsLast: true });
@@ -484,7 +491,7 @@ export const loadTasksForClient = cache(
     const { data, error } = await client
       .from('tasks')
       .select(
-        'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, job_id, parent_task_id, notes',
+        'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, job_id, parent_task_id, notes, calendar_schedule_status',
       )
       .eq('user_id', user.id)
       .eq('client_id', clientId)
@@ -531,7 +538,7 @@ export const loadTasksForTeamAccount = cache(
       const { data: accountOnlyData, error: accountOnlyError } = await userClient
         .from('tasks')
         .select(
-          'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, job_id, parent_task_id, notes',
+          'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, job_id, parent_task_id, notes, calendar_schedule_status',
         )
         .eq('account_id', accountId)
         .order('due_date', { ascending: true, nullsLast: true });
@@ -553,7 +560,7 @@ export const loadTasksForTeamAccount = cache(
     }
 
     let query = userClient.from('tasks').select(
-      'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, job_id, parent_task_id, notes',
+      'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, job_id, parent_task_id, notes, calendar_schedule_status',
     );
 
     const filters: string[] = [`account_id.eq.${accountId}`];
