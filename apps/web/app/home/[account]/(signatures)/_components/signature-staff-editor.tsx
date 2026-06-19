@@ -239,7 +239,7 @@ export function SignatureStaffEditor({
                   <DialogHeader>
                     <DialogTitle>Push this signature?</DialogTitle>
                     <DialogDescription>
-                      Keel will send the currently assigned template to this
+                      Ozer will send the currently assigned template to this
                       staff member&apos;s mailbox.
                     </DialogDescription>
                   </DialogHeader>

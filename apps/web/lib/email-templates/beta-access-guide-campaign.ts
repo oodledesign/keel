@@ -11,9 +11,9 @@ export function renderBetaAccessGuideEmail() {
     title: 'Your beta account is ready',
     preheader: 'Sign in with your beta email and complete onboarding.',
     heroBadge: 'Beta access',
-    heroTitle: 'Your Keel beta account is ready',
+    heroTitle: 'Your Ozer beta account is ready',
     heroSubtitle: 'Here is how to sign in and get started.',
-    ctaHtml: renderPrimaryCta('Sign in to Keel', MARKETING_EMAIL_URLS.signIn),
+    ctaHtml: renderPrimaryCta('Sign in to Ozer', MARKETING_EMAIL_URLS.signIn),
     bodyHtml: [
       renderParagraph(
         'Hi {{first_name}}, your beta access is live. Use the same email address you registered with ({{email}}).',

@@ -41,7 +41,7 @@ async function requireSuperAdminActor() {
 
   return {
     user,
-    inviterName: profile?.name?.trim() || user.email || 'Keel Admin',
+    inviterName: profile?.name?.trim() || user.email || 'Ozer Admin',
   };
 }
 

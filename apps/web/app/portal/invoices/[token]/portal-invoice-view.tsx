@@ -311,7 +311,7 @@ export function PortalInvoiceView({
           <div>
             <p className="text-sm font-medium text-[#F7F9FC]">Want a client account for future invoices?</p>
             <p className="mt-1 text-sm text-[#AAB4C8]">
-              Sign in to Keel to see invoices, job details, and messages in one place.
+              Sign in to Ozer to see invoices, job details, and messages in one place.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">

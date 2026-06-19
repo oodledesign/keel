@@ -583,8 +583,8 @@ function FreeAgentPanel({
           <h3 className="font-medium text-white">FreeAgent</h3>
           <p className="text-sm text-zinc-400">
             {data?.connection
-              ? `Connected to ${data.connection.freeagent_company_name ?? 'FreeAgent'}. Keel is your UI; FreeAgent stays the ledger. Categories sync from FreeAgent on each sync. When you categorise here, Keel writes a bank transaction explanation in FreeAgent (fully explained, not a draft). New transactions sync automatically each morning; use Sync now for a full refresh.`
-              : 'Connect FreeAgent to import bank transactions and categories. Categorise in Keel and sync explanations back to FreeAgent.'}
+              ? `Connected to ${data.connection.freeagent_company_name ?? 'FreeAgent'}. Ozer is your UI; FreeAgent stays the ledger. Categories sync from FreeAgent on each sync. When you categorise here, Ozer writes a bank transaction explanation in FreeAgent (fully explained, not a draft). New transactions sync automatically each morning; use Sync now for a full refresh.`
+              : 'Connect FreeAgent to import bank transactions and categories. Categorise in Ozer and sync explanations back to FreeAgent.'}
           </p>
         </div>
         <div className="flex gap-2">

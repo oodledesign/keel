@@ -8,7 +8,7 @@ function AdminBrandingPage() {
     <>
       <PageHeader
         title="Branding"
-        description="Keel design tokens, colours, typography, and logo assets."
+        description="Ozer design tokens, colours, typography, and logo assets."
       />
 
       <PageBody>

@@ -84,7 +84,7 @@ export function PersonalDashboardShortcutsSettingsForm({
         <div>
           <h2 className="text-base font-semibold text-white">Default landing</h2>
           <p className="mt-1 text-sm text-zinc-400">
-            Choose where Keel opens after you sign in.
+            Choose where Ozer opens after you sign in.
           </p>
         </div>
 

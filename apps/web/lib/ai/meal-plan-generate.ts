@@ -2,7 +2,7 @@ import 'server-only';
 
 import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
 
-const MEAL_PLAN_SYSTEM_PROMPT = `You are a family meal-planning assistant inside Keel, a personal operating system. Your job is to plan dinners for a household for specific dates.
+const MEAL_PLAN_SYSTEM_PROMPT = `You are a family meal-planning assistant inside Ozer, a personal operating system. Your job is to plan dinners for a household for specific dates.
 
 You will receive a JSON payload with:
 - "dates": the dates that need a meal (YYYY-MM-DD). Plan exactly one dinner for each.

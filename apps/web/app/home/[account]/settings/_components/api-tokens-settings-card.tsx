@@ -133,7 +133,7 @@ export function ApiTokensSettingsCard({
 
       <p className="text-sm text-muted-foreground">
         {scope === 'personal'
-          ? 'Connect the Keel desktop recorder with a personal access token. Choose the destination workspace when you sync each recording.'
+          ? 'Connect the Ozer desktop recorder with a personal access token. Choose the destination workspace when you sync each recording.'
           : 'Legacy workspace tokens still work. For new setups, create tokens in your personal settings instead.'}
       </p>
 
@@ -142,7 +142,7 @@ export function ApiTokensSettingsCard({
           <Label htmlFor="api-token-name">Token name</Label>
           <Input
             id="api-token-name"
-            placeholder="MacBook Pro — Keel Recorder"
+            placeholder="MacBook Pro — Ozer Recorder"
             value={name}
             onChange={(event) => setName(event.target.value)}
           />

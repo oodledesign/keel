@@ -5,7 +5,7 @@ export function PrivacyPolicyContent() {
   return (
     <article className={legalProseClass}>
       <p>
-        <strong>Last updated:</strong> 15 June 2026. Oodle Designs Ltd (&quot;Keel&quot;,
+        <strong>Last updated:</strong> 15 June 2026. Oodle Designs Ltd (&quot;Ozer&quot;,
         &quot;we&quot;, &quot;us&quot;) is the data controller for personal data processed
         through keelos.so and related services. We comply with the UK GDPR, EU GDPR, and
         the Data Protection Act 2018.
@@ -18,7 +18,7 @@ export function PrivacyPolicyContent() {
           <li>Workspace content you create: tasks, notes, clients, invoices, files.</li>
           <li>Billing data processed by Stripe (we do not store full card numbers).</li>
           <li>Usage, device, and security logs; optional analytics cookies with consent.</li>
-          <li>AI feature inputs and outputs where you use Keel AI (Second Brain, task extract, etc.).</li>
+          <li>AI feature inputs and outputs where you use Ozer AI (Second Brain, task extract, etc.).</li>
         </ul>
       </section>
 
@@ -76,7 +76,7 @@ export function TermsOfServiceContent() {
   return (
     <article className={legalProseClass}>
       <p>
-        <strong>Last updated:</strong> 15 June 2026. These Terms govern use of Keel
+        <strong>Last updated:</strong> 15 June 2026. These Terms govern use of Ozer
         operated by Oodle Designs Ltd. By creating an account and accepting these Terms you
         agree to be bound by them.
       </p>
@@ -84,7 +84,7 @@ export function TermsOfServiceContent() {
       <section>
         <h2>Service</h2>
         <p>
-          Keel provides workspace software for personal and business productivity including
+          Ozer provides workspace software for personal and business productivity including
           optional paid plans and marketplace apps. Features may change; we will give
           reasonable notice of material changes.
         </p>
@@ -93,7 +93,7 @@ export function TermsOfServiceContent() {
       <section>
         <h2>Accounts &amp; acceptable use</h2>
         <p>
-          You must provide accurate information, keep credentials secure, and use Keel
+          You must provide accurate information, keep credentials secure, and use Ozer
           lawfully. You are responsible for content in your workspaces and for inviting
           team members in line with your plan limits.
         </p>

@@ -2,7 +2,7 @@ import 'server-only';
 
 import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
 
-const RECIPE_GENERATE_SYSTEM_PROMPT = `You are a family recipe assistant inside Keel. Suggest complete, cookable recipes inspired by popular home cooking — weeknight staples, trending one-pan meals, comfort food people share on Instagram and food blogs, and classic family favourites.
+const RECIPE_GENERATE_SYSTEM_PROMPT = `You are a family recipe assistant inside Ozer. Suggest complete, cookable recipes inspired by popular home cooking — weeknight staples, trending one-pan meals, comfort food people share on Instagram and food blogs, and classic family favourites.
 
 You will receive JSON with:
 - "count": how many recipes to return (match exactly)

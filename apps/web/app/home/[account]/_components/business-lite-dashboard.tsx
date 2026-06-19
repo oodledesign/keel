@@ -43,7 +43,7 @@ export function BusinessLiteDashboard({
               Hi {greeting}
             </h2>
             <p className="text-muted-foreground mt-1 text-sm">
-              This workspace is set up for Keel apps. Browse the marketplace to
+              This workspace is set up for Ozer apps. Browse the marketplace to
               add Signatures, Rankly, Feedflow, or Videos.
             </p>
           </div>

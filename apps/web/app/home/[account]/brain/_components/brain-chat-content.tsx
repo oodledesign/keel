@@ -345,7 +345,7 @@ export function BrainChatContent({
               <Sparkles className="h-8 w-8 text-[var(--keel-teal)]" />
               <p className="max-w-md text-sm text-zinc-400">
                 Ask anything about your notes, docs, jobs, transcripts, and
-                proposals. Answers include citations back to your Keel records.
+                proposals. Answers include citations back to your Ozer records.
               </p>
             </div>
           ) : (

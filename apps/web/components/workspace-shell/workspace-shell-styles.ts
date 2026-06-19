@@ -1,4 +1,4 @@
-/** Shared Tailwind classes for Keel workspace shell (sidebar + top bar). */
+/** Shared Tailwind classes for Ozer workspace shell (sidebar + top bar). */
 
 export const WORKSPACE_SIDEBAR_WIDTH = '15rem'; // 240px
 

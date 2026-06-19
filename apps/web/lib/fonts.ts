@@ -10,7 +10,7 @@ const inter = Inter({
   weight: ['400', '500', '700'],
 });
 
-// Inter for both body and headings (Keel brand)
+// Inter for both body and headings (Ozer brand)
 export const sans = inter;
 export const heading = inter;
 

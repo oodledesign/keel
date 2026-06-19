@@ -17,7 +17,7 @@ export function renderBetaDontMissOutCampaignEmail() {
     ctaHtml: renderPrimaryCta('Get beta access', MARKETING_EMAIL_URLS.signUp),
     bodyHtml: [
       renderParagraph(
-        'Hi {{first_name}}, the Keel beta window is closing soon. If you have been waiting, now is the time to claim your spot.',
+        'Hi {{first_name}}, the Ozer beta window is closing soon. If you have been waiting, now is the time to claim your spot.',
       ),
       renderSectionLabel('What you get'),
       renderBulletList([

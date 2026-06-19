@@ -55,8 +55,8 @@ export default async function SignaturesConnectPage({ params }: PageProps) {
           </h1>
           <p className="mt-3 text-sm text-zinc-400">
             You were invited to connect <strong className="text-white">{workspaceName}</strong>{' '}
-            to Keel Signatures. Sign in with a Microsoft 365 administrator account
-            and grant consent. You do not need a Keel login.
+            to Ozer Signatures. Sign in with a Microsoft 365 administrator account
+            and grant consent. You do not need a Ozer login.
           </p>
           <Link
             href={authUrl}
@@ -66,7 +66,7 @@ export default async function SignaturesConnectPage({ params }: PageProps) {
           </Link>
           <p className="mt-4 text-xs text-zinc-500">
             This link expires soon and works once. After connecting, you can close
-            this page — the business owner manages signatures in Keel.
+            this page — the business owner manages signatures in Ozer.
           </p>
         </div>
       </main>
@@ -81,7 +81,7 @@ export default async function SignaturesConnectPage({ params }: PageProps) {
         </h1>
         <p className="mt-2 text-sm text-zinc-400">
           Complete domain-wide delegation for{' '}
-          <strong className="text-white">{workspaceName}</strong>. No Keel account
+          <strong className="text-white">{workspaceName}</strong>. No Ozer account
           required.
         </p>
       </div>

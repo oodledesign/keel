@@ -73,7 +73,7 @@ export function KeelUsePreferencesForm(props: {
     <div className="space-y-4">
       <div>
         <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
-          How you use Keel
+          How you use Ozer
         </h2>
         <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
           Shared spaces (optional) are for when you organise with others — work

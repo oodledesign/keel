@@ -89,7 +89,7 @@ export async function loadFinanceCategoriesForAccount(
   return data ?? [];
 }
 
-/** Remove Keel's generic seed categories once FreeAgent categories are linked. */
+/** Remove Ozer's generic seed categories once FreeAgent categories are linked. */
 export async function removeKeelDefaultCategories(
   db: SupabaseClient,
   accountId: string,

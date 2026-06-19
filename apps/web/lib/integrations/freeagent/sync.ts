@@ -444,7 +444,7 @@ export async function pushCategoryToFreeAgent(
     const body = {
       bank_transaction: tx.freeagent_transaction_url,
       category: category.freeagent_category_url,
-      description: tx.description || 'Categorised in Keel',
+      description: tx.description || 'Categorised in Ozer',
       gross_value: grossValue,
       dated_on: String(tx.transaction_date ?? new Date().toISOString().slice(0, 10)),
     };

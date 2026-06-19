@@ -532,7 +532,7 @@ export function ClientDetailSidebar({
                   }}
                 >
                   <Mail className="mr-2 h-4 w-4" />
-                  Invite to Keel portal
+                  Invite to Ozer portal
                 </Button>
               )}
               {canEditClients && (

@@ -326,7 +326,7 @@ export const KEEL_PERSONAL_ADDON_CATALOG: Array<{
     planId: 'email-assistant-monthly',
     name: 'Email Assistant',
     description:
-      'Gmail inbox sync, AI action items, and draft replies in your personal Keel.',
+      'Gmail inbox sync, AI action items, and draft replies in your personal Ozer.',
     monthlyPriceGbp: 9,
   },
 ];

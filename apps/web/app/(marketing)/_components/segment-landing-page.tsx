@@ -163,8 +163,8 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
             {config.slug === 'personal'
               ? 'Modules connect through your personal home — tasks, planner, and shortcuts span every workspace you add.'
               : config.slug === 'work'
-                ? 'Your business CRM runs inside Keel’s connected Life CRM — clients, jobs, and invoices link back to one account, not a separate silo.'
-                : 'Keel modules work together — and every workspace stays connected to your personal home for tasks, planning, and shortcuts.'}
+                ? 'Your business CRM runs inside Ozer’s connected Life CRM — clients, jobs, and invoices link back to one account, not a separate silo.'
+                : 'Ozer modules work together — and every workspace stays connected to your personal home for tasks, planning, and shortcuts.'}
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -354,7 +354,7 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
       {/* Related + CTA */}
       <section className="relative mx-auto w-full max-w-7xl px-6 py-20">
         <h2 className="font-heading text-2xl font-semibold text-white">
-          More Keel workspaces — all connected
+          More Ozer workspaces — all connected
         </h2>
         <p className="mt-2 max-w-2xl text-sm text-violet-100/70">
           Add business, property, or community spaces anytime. Your personal home
@@ -384,12 +384,12 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
           <h2 className="font-heading text-3xl font-semibold text-white">
             {isPersonal
               ? 'Ready for your free Life CRM?'
-              : 'Ready to get organised with Keel?'}
+              : 'Ready to get organised with Ozer?'}
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-violet-100/80">
             {isPersonal
               ? 'Personal and family workspaces stay free — no credit card, no subscription, no catch.'
-              : 'Join thousands using Keel as their Life CRM — personal life and work in one account.'}
+              : 'Join thousands using Ozer as their Life CRM — personal life and work in one account.'}
           </p>
           <Button
             asChild

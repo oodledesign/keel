@@ -34,7 +34,7 @@ async function WorkspacePlannerPage({ params }: WorkspacePlannerPageProps) {
     <>
       <TeamAccountLayoutPageHeader
         title="Planner"
-        description="Build a day or week plan from this workspace’s tasks — or everything across Keel."
+        description="Build a day or week plan from this workspace’s tasks — or everything across Ozer."
         account={accountSlug}
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-white lg:px-6">

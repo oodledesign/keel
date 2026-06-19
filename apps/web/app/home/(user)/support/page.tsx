@@ -49,7 +49,7 @@ async function PlatformSupportPage() {
     <>
       <HomeLayoutPageHeader
         title="Support"
-        description="Contact the Keel team about billing, bugs, or product questions."
+        description="Contact the Ozer team about billing, bugs, or product questions."
       />
       <PageBody className="mx-auto max-w-2xl space-y-8 py-6">
         <PlatformSupportTicketForm accountOptions={accountOptions} />

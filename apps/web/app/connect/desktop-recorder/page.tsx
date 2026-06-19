@@ -8,7 +8,7 @@ import { createDesktopConnectSession } from '~/lib/recorder/desktop-connect';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 export const metadata = {
-  title: 'Connect Keel Assistant',
+  title: 'Connect Ozer Assistant',
   robots: { index: false, follow: false },
 };
 
@@ -31,13 +31,13 @@ export default async function DesktopRecorderConnectPage({ searchParams }: PageP
     return (
       <main className="mx-auto flex min-h-svh max-w-lg flex-col justify-center px-4 py-16">
         <div className="rounded-2xl border border-white/10 bg-[#0F1B35] p-8 text-white shadow-xl">
-          <h1 className="text-2xl font-bold tracking-tight">Connect Keel Assistant</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Connect Ozer Assistant</h1>
           <p className="mt-3 text-sm text-zinc-400">
-            Open Keel Assistant on your Mac and choose <strong className="text-white">Sign in to Keel</strong>{' '}
+            Open Ozer Assistant on your Mac and choose <strong className="text-white">Sign in to Ozer</strong>{' '}
             to start the connection.
           </p>
           <Button asChild className="mt-6 w-full">
-            <Link href={pathsConfig.app.personalAccountSettings}>Open Keel settings</Link>
+            <Link href={pathsConfig.app.personalAccountSettings}>Open Ozer settings</Link>
           </Button>
         </div>
       </main>
@@ -60,7 +60,7 @@ export default async function DesktopRecorderConnectPage({ searchParams }: PageP
     redirectURL = session.redirectURL;
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : 'Could not connect Keel Assistant.';
+      error instanceof Error ? error.message : 'Could not connect Ozer Assistant.';
     return (
       <main className="mx-auto flex min-h-svh max-w-lg flex-col justify-center px-4 py-16">
         <div className="rounded-2xl border border-white/10 bg-[#0F1B35] p-8 text-white shadow-xl">

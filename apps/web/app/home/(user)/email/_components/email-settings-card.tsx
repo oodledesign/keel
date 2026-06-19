@@ -233,7 +233,7 @@ export function EmailSettingsCard({
         <SettingToggle
           id="email-auto-triage"
           label="Auto-sort incoming mail"
-          description="After each sync, Keel labels threads that need a personal reply from you."
+          description="After each sync, Ozer labels threads that need a personal reply from you."
           checked={autoTriageEnabled}
           onCheckedChange={setAutoTriageEnabled}
           disabled={pending}
@@ -241,7 +241,7 @@ export function EmailSettingsCard({
         <SettingToggle
           id="email-auto-draft"
           label="Auto-draft replies"
-          description="Draft replies for threads that need a response. Review them in Keel before sending."
+          description="Draft replies for threads that need a response. Review them in Ozer before sending."
           checked={autoDraftEnabled}
           onCheckedChange={setAutoDraftEnabled}
           disabled={pending}
@@ -249,7 +249,7 @@ export function EmailSettingsCard({
         <SettingToggle
           id="email-auto-save-gmail"
           label="Save drafts to Gmail automatically"
-          description="Push auto-drafts into Gmail as well as Keel. Leave off if you prefer drafts only in Keel."
+          description="Push auto-drafts into Gmail as well as Ozer. Leave off if you prefer drafts only in Ozer."
           checked={autoSaveGmailDrafts}
           onCheckedChange={setAutoSaveGmailDrafts}
           disabled={pending || !autoDraftEnabled}

@@ -74,7 +74,7 @@ export function SignaturesGoogleConnectClient({
           <li>
             Client ID:{' '}
             <code className="rounded bg-black/30 px-1 py-0.5 text-xs text-[#5eead4]">
-              {googleClientId ?? 'Ask Keel support — service account not configured'}
+              {googleClientId ?? 'Ask Ozer support — service account not configured'}
             </code>
           </li>
           <li>
@@ -85,7 +85,7 @@ export function SignaturesGoogleConnectClient({
           </li>
           <li>
             After authorizing, enter your workspace domain and super-admin email
-            below so Keel can verify access.
+            below so Ozer can verify access.
           </li>
         </ol>
       </div>

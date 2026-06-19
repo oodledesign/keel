@@ -41,7 +41,7 @@ export function SiteAppsNavMenu() {
             href="/apps"
             className="block rounded-lg px-3 py-2.5 text-sm font-medium text-violet-50 transition hover:bg-violet-500/15"
           >
-            All Keel apps
+            All Ozer apps
             <span className="mt-0.5 block text-xs font-normal text-violet-200/70">
               Overview of every workspace add-on
             </span>

@@ -169,7 +169,7 @@ export function QuickActionDialog(props: QuickActionDialogProps) {
           >
             <Sparkles className="h-4 w-4 shrink-0 text-[var(--keel-teal)]/80" />
             <CommandRawInput
-              placeholder="Ask Keel to create a task, run PageSpeed…"
+              placeholder="Ask Ozer to create a task, run PageSpeed…"
               value={query}
               onValueChange={setQuery}
               className={cn(
@@ -196,7 +196,7 @@ export function QuickActionDialog(props: QuickActionDialogProps) {
                   Thinking…
                 </span>
               ) : (
-                'Describe what you want Keel to do, then press Enter.'
+                'Describe what you want Ozer to do, then press Enter.'
               )}
             </CommandEmpty>
 

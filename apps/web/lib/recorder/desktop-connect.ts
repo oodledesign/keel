@@ -47,7 +47,7 @@ export async function createDesktopConnectSession(input: {
   const { rawToken } = await createApiToken({
     accountId: personalAccountId,
     userId: input.userId,
-    name: 'Keel Assistant (Mac)',
+    name: 'Ozer Assistant (Mac)',
   });
 
   const code = randomBytes(32).toString('hex');

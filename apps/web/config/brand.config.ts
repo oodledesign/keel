@@ -1,5 +1,5 @@
 /**
- * Brand configuration for Keel
+ * Brand configuration for Ozer
  * Contains logo paths and brand colors for use across the application
  */
 

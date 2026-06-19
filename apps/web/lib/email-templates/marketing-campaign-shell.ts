@@ -2,7 +2,7 @@ import { getAppSiteOrigin, getMarketingSiteOrigin } from '~/lib/app-host-routing
 
 const appOrigin = getAppSiteOrigin();
 const marketingOrigin = getMarketingSiteOrigin();
-const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Keel';
+const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
 const supportEmail =
   process.env.SUPPORT_INBOX?.trim() ??
   process.env.EMAIL_SENDER?.match(/<([^>]+)>/)?.[1] ??

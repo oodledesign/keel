@@ -199,5 +199,5 @@ export function summarizeAccessConfig(
     parts.push('Billing exempt');
   }
 
-  return parts.join(' · ') || 'Keel access';
+  return parts.join(' · ') || 'Ozer access';
 }

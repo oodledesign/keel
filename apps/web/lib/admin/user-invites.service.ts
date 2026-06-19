@@ -332,7 +332,7 @@ export async function sendAdminUserInviteEmail(params: {
   inviterName: string;
 }): Promise<void> {
   const acceptUrl = getAdminUserInviteAcceptUrl(params.inviteToken);
-  const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Keel';
+  const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
   const sender = process.env.EMAIL_SENDER;
 
   if (!sender) {

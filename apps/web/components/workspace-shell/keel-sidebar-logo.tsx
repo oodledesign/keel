@@ -34,7 +34,7 @@ export function KeelSidebarLogo(props: {
       href={href}
       prefetch
       className="mb-2 inline-flex shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2A9D8F]"
-      aria-label="Keel home"
+      aria-label="Ozer home"
     >
       {image}
     </Link>

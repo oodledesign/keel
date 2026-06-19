@@ -102,7 +102,7 @@ export function KeelDashboard({ data }: Props) {
             title="Upcoming"
             subtitle={
               data.includeWorkspaceTasks
-                ? 'Next up everywhere you work in Keel'
+                ? 'Next up everywhere you work in Ozer'
                 : 'Next up in your personal areas'
             }
             tasks={data.upcoming}

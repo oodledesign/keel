@@ -1,4 +1,4 @@
-/** Shared classes for Keel workspace UI (see DESIGN_SYSTEM.md — teal primary). */
+/** Shared classes for Ozer workspace UI (see DESIGN_SYSTEM.md — teal primary). */
 
 export const workspaceBtnPrimary =
   'bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]';

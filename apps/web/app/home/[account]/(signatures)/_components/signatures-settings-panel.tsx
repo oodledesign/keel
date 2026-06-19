@@ -244,7 +244,7 @@ export function SignaturesSettingsPanel({
                     <h3 className="font-medium">Connect Google Workspace</h3>
                     <p className="mt-1 text-sm text-muted-foreground">
                       After domain-wide delegation is set up in Google Admin,
-                      enter your domain and a super-admin email. Keel verifies
+                      enter your domain and a super-admin email. Ozer verifies
                       access and syncs staff via the Directory API.
                     </p>
                   </div>

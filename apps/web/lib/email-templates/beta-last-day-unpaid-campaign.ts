@@ -15,7 +15,7 @@ export function renderBetaLastDayUnpaidEmail() {
     ctaHtml: renderPrimaryCta('Finish signup', MARKETING_EMAIL_URLS.signUp),
     bodyHtml: [
       renderParagraph(
-        'Hi {{first_name}}, you expressed interest in the Keel beta but have not finished signup yet.',
+        'Hi {{first_name}}, you expressed interest in the Ozer beta but have not finished signup yet.',
       ),
       renderParagraph(
         'Today is the last day to lock in introductory beta access. After that, standard pricing applies.',

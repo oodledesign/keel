@@ -307,7 +307,7 @@ export default createBillingSchema({
       id: 'keel-addon-email-assistant',
       name: 'Email Assistant',
       description:
-        'Gmail inbox sync, AI action items, and draft replies in your personal Keel',
+        'Gmail inbox sync, AI action items, and draft replies in your personal Ozer',
       currency: KEEL_BILLING_CURRENCY,
       plans: [
         {
@@ -329,7 +329,7 @@ export default createBillingSchema({
         'Gmail inbox sync',
         'AI suggested to-dos from threads',
         'Draft replies in your voice',
-        'Accept actions into Keel tasks',
+        'Accept actions into Ozer tasks',
       ],
     },
     {

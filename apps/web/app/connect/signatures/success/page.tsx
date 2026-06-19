@@ -21,7 +21,7 @@ export default async function SignaturesConnectSuccessPage({
       <div className="rounded-2xl border border-[var(--keel-teal)]/30 bg-[#0F1B35] p-8 text-center shadow-xl">
         <h1 className="text-2xl font-bold tracking-tight">You&apos;re all set</h1>
         <p className="mt-3 text-sm text-zinc-400">
-          {provider} is now connected for this business in Keel Signatures. The
+          {provider} is now connected for this business in Ozer Signatures. The
           workspace owner can sync staff and push email signatures — no further
           action is needed from you.
         </p>

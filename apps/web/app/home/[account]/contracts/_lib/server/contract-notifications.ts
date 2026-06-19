@@ -35,7 +35,7 @@ export async function sendContractIssuedEmail(params: {
 }) {
   const sender = process.env.EMAIL_SENDER;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-  const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Keel';
+  const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
 
   if (!sender || !siteUrl) {
     return;
@@ -127,7 +127,7 @@ export async function sendContractSignedNotifications(params: {
 }) {
   const sender = process.env.EMAIL_SENDER;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-  const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Keel';
+  const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
 
   if (!sender || !siteUrl) {
     return;

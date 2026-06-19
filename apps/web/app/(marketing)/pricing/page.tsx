@@ -9,7 +9,7 @@ export const generateMetadata = async () => {
   return {
     title: t('marketing:pricing'),
     description:
-      'Keel pricing — free personal & family workspaces, paid community, business, and property plans, plus optional add-ons.',
+      'Ozer pricing — free personal & family workspaces, paid community, business, and property plans, plus optional add-ons.',
   };
 };
 

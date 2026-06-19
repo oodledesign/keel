@@ -97,7 +97,7 @@
     "livePreview": "Live preview",
     "previewAssignTemplate": "Assign a template to preview this signature.",
     "pushDialogTitle": "Push this signature?",
-    "pushDialogDescription": "Keel will send the currently assigned template to this staff member’s Microsoft mailbox.",
+    "pushDialogDescription": "Ozer will send the currently assigned template to this staff member’s Microsoft mailbox.",
     "pushConfirm": "Push signature",
     "saving": "Saving...",
     "pushing": "Pushing..."

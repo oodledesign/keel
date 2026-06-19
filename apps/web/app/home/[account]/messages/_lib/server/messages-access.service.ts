@@ -106,6 +106,6 @@ class MessagesAccessService {
   }
 
   async assertThreadClientsNotArchived(_threadId: string) {
-    // Keel clients do not use archived_at yet; no-op for compatibility.
+    // Ozer clients do not use archived_at yet; no-op for compatibility.
   }
 }

@@ -21,7 +21,7 @@ export default async function SignaturesConnectInvalidPage({
         <h1 className="text-2xl font-bold tracking-tight">Link unavailable</h1>
         <p className="mt-3 text-sm text-zinc-400">{detail}</p>
         <p className="mt-4 text-xs text-zinc-500">
-          Ask the business owner to generate a new link from Keel → Signatures →
+          Ask the business owner to generate a new link from Ozer → Signatures →
           Settings.
         </p>
       </div>

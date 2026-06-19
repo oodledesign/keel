@@ -10,7 +10,7 @@ import { syncAddonModulesFromEntitlements } from './sync-addon-modules-from-enti
 import { syncFullBusinessModules } from './sync-workspace-modules-from-plan';
 
 /**
- * After Stripe webhook upserts a subscription, sync Keel entitlements and plan limits.
+ * After Stripe webhook upserts a subscription, sync Ozer entitlements and plan limits.
  */
 export async function syncKeelPlanFromSubscription(
   admin: SupabaseClient,

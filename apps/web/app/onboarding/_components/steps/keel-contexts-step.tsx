@@ -87,7 +87,7 @@ export function KeelContextsStep({
     <div className="space-y-6">
       <div>
         <h2 className="text-lg font-semibold text-white">
-          How do you want to use Keel?
+          How do you want to use Ozer?
         </h2>
         <p className="mt-1 text-sm text-zinc-400">
           Not everyone is here for work — pick anything that fits. You can change

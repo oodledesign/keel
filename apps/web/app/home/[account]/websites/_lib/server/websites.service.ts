@@ -103,7 +103,7 @@ function mapWebsiteWriteError(err: unknown): Error {
 
   if (isMissingColumnError(err)) {
     return new Error(
-      'Could not save website: the websites table is missing columns expected by Keel. Run migrations from apps/web (`pnpm exec supabase db push`).',
+      'Could not save website: the websites table is missing columns expected by Ozer. Run migrations from apps/web (`pnpm exec supabase db push`).',
     );
   }
 

@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
   if (!clientId) {
     return NextResponse.redirect(
       absoluteUrl(
-        `/connect/signatures/invalid?reason=${encodeURIComponent('Microsoft sign-in is not configured on Keel')}`,
+        `/connect/signatures/invalid?reason=${encodeURIComponent('Microsoft sign-in is not configured on Ozer')}`,
       ),
     );
   }

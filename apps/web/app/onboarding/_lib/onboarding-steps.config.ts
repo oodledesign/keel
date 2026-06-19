@@ -14,7 +14,7 @@ export interface StepDef {
 const ADMIN_STEPS: StepDef[] = [
   {
     step: 1,
-    title: 'How you use Keel',
+    title: 'How you use Ozer',
     key: 'keel_contexts',
     canSkip: true,
   },
@@ -24,7 +24,7 @@ const ADMIN_STEPS: StepDef[] = [
 const STAFF_STEPS: StepDef[] = [
   {
     step: 1,
-    title: 'How you use Keel',
+    title: 'How you use Ozer',
     key: 'keel_contexts',
     canSkip: true,
   },
@@ -36,7 +36,7 @@ const STAFF_STEPS: StepDef[] = [
 const CLIENT_STEPS: StepDef[] = [
   {
     step: 1,
-    title: 'How you use Keel',
+    title: 'How you use Ozer',
     key: 'keel_contexts',
     canSkip: true,
   },

@@ -101,7 +101,7 @@ export function EmailSignatureField({
       </div>
 
       <p className="text-xs text-zinc-500">
-        Appended when Keel saves a draft to Gmail. Use HTML for logos and links
+        Appended when Ozer saves a draft to Gmail. Use HTML for logos and links
         from your Gmail signature. Reconnect Gmail to import Google&apos;s HTML
         signature automatically.
       </p>
@@ -113,7 +113,7 @@ export function EmailSignatureField({
         disabled={disabled}
         placeholder={
           format === 'html'
-            ? 'Best,<br>Dan Potter<br><a href="https://keelos.so">Keel</a>'
+            ? 'Best,<br>Dan Potter<br><a href="https://keelos.so">Ozer</a>'
             : 'Best,\nDan Potter\nKeel'
         }
         rows={format === 'html' ? 6 : 4}

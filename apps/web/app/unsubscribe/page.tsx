@@ -18,7 +18,7 @@ export default async function UnsubscribePage({
   const { token } = await searchParams;
   const email = token ? decodeUnsubscribeToken(token) : null;
   let error: string | null = null;
-  const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Keel';
+  const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
 
   if (email) {
     try {

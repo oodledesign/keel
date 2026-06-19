@@ -8,7 +8,7 @@ import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
 import { formatBrainContext, searchBrainChunks, type BrainMatch } from './search';
 import { isVoyageConfigured } from './voyage';
 
-const SYSTEM_PROMPT = `You are Keel's second brain assistant. Answer from the sources below only.
+const SYSTEM_PROMPT = `You are Ozer's second brain assistant. Answer from the sources below only.
 If the answer is not in the sources, say so clearly. Cite sources by [1], [2], etc.
 Use UK English. Format replies as Markdown.`;
 

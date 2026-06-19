@@ -10,7 +10,7 @@ export function SiteFooter() {
       logo={<AppLogo className="w-[85px] md:w-[95px]" />}
       description={
         <p>
-          Keel is the Life CRM — one system for personal life, business, property, and
+          Ozer is the Life CRM — one system for personal life, business, property, and
           community. Simple pricing, no clutter.
         </p>
       }

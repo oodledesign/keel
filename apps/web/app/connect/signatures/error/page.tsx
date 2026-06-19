@@ -22,7 +22,7 @@ export default async function SignaturesConnectErrorPage({
         <p className="mt-3 text-sm text-zinc-400">{detail}</p>
         <p className="mt-4 text-xs text-zinc-500">
           If you are the IT administrator, check permissions and try again. The
-          business owner can issue a new link from Keel if this one expired.
+          business owner can issue a new link from Ozer if this one expired.
         </p>
       </div>
     </main>

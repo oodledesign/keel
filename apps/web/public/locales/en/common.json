@@ -107,8 +107,8 @@
     "errorSendingCode": "Error sending code. Please try again."
   },
   "cookieBanner": {
-    "title": "Cookies on Keel",
-    "description": "We use essential cookies to run the site. With your permission, we also use analytics cookies to understand how Keel is used. See our cookie policy for details.",
+    "title": "Cookies on Ozer",
+    "description": "We use essential cookies to run the site. With your permission, we also use analytics cookies to understand how Ozer is used. See our cookie policy for details.",
     "reject": "Reject analytics",
     "accept": "Accept analytics"
   },

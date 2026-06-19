@@ -10,7 +10,7 @@ import { getSignaturesSupabaseClient } from '~/lib/signatures/graph';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 /** Simple two-column layout — kept for reference / migration copy-paste. */
-export const MINIMAL_SIGNATURE_TEMPLATE = `<!-- Keel Signatures minimal template -->
+export const MINIMAL_SIGNATURE_TEMPLATE = `<!-- Ozer Signatures minimal template -->
 <table cellpadding="0" cellspacing="0" role="presentation" style="font-family:Arial,sans-serif;color:#000;border-collapse:collapse;">
   <tr>
     <td style="padding-right:16px;vertical-align:top;">
@@ -36,7 +36,7 @@ export const MINIMAL_SIGNATURE_TEMPLATE = `<!-- Keel Signatures minimal template
  * {{award_badge_url}}, plus {{phone_direct}}, {{phone_mobile}}, {{department}}, {{branch}}.
  * Phone, email, and address use the staff member's branch (Settings → Brand → Branches) when not overridden on their profile.
  */
-export const DEFAULT_SIGNATURE_TEMPLATE = `<!-- Keel Signatures — executive banner (Outlook-safe table layout) -->
+export const DEFAULT_SIGNATURE_TEMPLATE = `<!-- Ozer Signatures — executive banner (Outlook-safe table layout) -->
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;max-width:560px;font-family:Arial,Helvetica,sans-serif;">
   <tr>
     <td style="width:160px;vertical-align:top;padding:0;line-height:0;font-size:0;">

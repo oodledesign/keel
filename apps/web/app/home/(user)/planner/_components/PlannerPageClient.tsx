@@ -187,7 +187,7 @@ export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
           <h1 className="text-2xl font-bold tracking-tight">Planner</h1>
           <p className="mt-1 text-sm text-white/55">
             {initialData.scope.kind === 'workspace'
-              ? `Plan ${initialData.scope.accountName} tasks — or everything across Keel when unified view is on.`
+              ? `Plan ${initialData.scope.accountName} tasks — or everything across Ozer when unified view is on.`
               : 'Turn your open tasks and calendar into a practical day or week plan.'}
           </p>
         </div>

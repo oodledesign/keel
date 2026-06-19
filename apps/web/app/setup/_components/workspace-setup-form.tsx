@@ -185,7 +185,7 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
     <div className="mx-auto w-full max-w-2xl space-y-8 px-4 py-10">
       <header className="space-y-2 text-center">
         <h1 className="text-2xl font-bold tracking-tight text-white md:text-3xl">
-          Welcome to Keel
+          Welcome to Ozer
         </h1>
         <p className="text-sm text-zinc-400 md:text-base">
           Let&apos;s set up your workspaces. Pick one or more — you can add more

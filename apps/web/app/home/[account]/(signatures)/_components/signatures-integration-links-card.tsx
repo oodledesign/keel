@@ -127,8 +127,8 @@ export function SignaturesIntegrationLinksCard({
       <CardContent className="space-y-5">
         <p className="text-sm text-muted-foreground">
           Generate a secure one-time link for your Google Workspace or Microsoft
-          365 administrator. They can complete the connection without a Keel
-          account — you keep managing signatures in Keel.
+          365 administrator. They can complete the connection without a Ozer
+          account — you keep managing signatures in Ozer.
         </p>
 
         <div className="grid gap-4 md:grid-cols-[180px_minmax(0,1fr)_auto]">

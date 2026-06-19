@@ -70,7 +70,7 @@ export function PlatformSupportTicketDialog({
         <DialogHeader>
           <DialogTitle>Help &amp; feedback</DialogTitle>
           <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
-            Contact the Keel team about billing, bugs, or product questions.
+            Contact the Ozer team about billing, bugs, or product questions.
           </DialogDescription>
         </DialogHeader>
 

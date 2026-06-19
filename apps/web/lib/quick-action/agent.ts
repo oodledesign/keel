@@ -42,7 +42,7 @@ function buildSystemPrompt(ctx: QuickActionContext): string {
     ? `The user is currently viewing workspace "${ctx.pageContext.accountSlug}".`
     : 'The user may be on their personal workspace.';
 
-  return `You are Keel Quick Action — an assistant that turns natural language into concrete actions inside the Keel app.
+  return `You are Ozer Quick Action — an assistant that turns natural language into concrete actions inside the Ozer app.
 
 Today is ${today} (local calendar). ${pageHint}
 

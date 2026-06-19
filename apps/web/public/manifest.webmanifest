@@ -1,7 +1,7 @@
 {
   "id": "/app",
-  "name": "Keel",
-  "short_name": "Keel",
+  "name": "Ozer",
+  "short_name": "Ozer",
   "description": "Workspace for clients, pipeline, finances, and projects",
   "start_url": "/app",
   "scope": "/",

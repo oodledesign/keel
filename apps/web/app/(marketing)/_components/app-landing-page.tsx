@@ -85,7 +85,7 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
                 </span>
                 <div>
                   <p className="font-semibold text-white">{config.name}</p>
-                  <p className="text-xs text-violet-200/75">Keel workspace add-on</p>
+                  <p className="text-xs text-violet-200/75">Ozer workspace add-on</p>
                 </div>
               </div>
               <ul className="space-y-3">
@@ -122,7 +122,7 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
             What {config.name} includes
           </h2>
           <p className="mt-3 text-violet-100/80">
-            Install {config.name} on any Keel business workspace. Business Lite is free — you only pay for the apps you need.
+            Install {config.name} on any Ozer business workspace. Business Lite is free — you only pay for the apps you need.
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -215,7 +215,7 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
           <p className="mt-4 text-xs text-violet-200/60">
             Explore all apps on the{' '}
             <Link href="/apps" className="underline hover:text-white">
-              Keel apps page
+              Ozer apps page
             </Link>
             {' · '}
             Already have an account?{' '}

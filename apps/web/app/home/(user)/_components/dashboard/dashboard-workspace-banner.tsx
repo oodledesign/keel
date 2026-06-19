@@ -18,7 +18,7 @@ export function DashboardWorkspaceBanner(props: {
         <p className="text-sm font-medium">Organise with others (optional)</p>
         <p className="mt-1 text-sm text-violet-200/80">
           Shared spaces are for crews, family hubs, or community groups — not
-          required for your personal Keel home. Add one when you are ready from
+          required for your personal Ozer home. Add one when you are ready from
           the button below or the Shared spaces section in the sidebar.
         </p>
         <div className="mt-3">

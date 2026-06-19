@@ -35,7 +35,7 @@ export async function sendProposalIssuedEmail(params: {
 }) {
   const sender = process.env.EMAIL_SENDER;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-  const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Keel';
+  const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
 
   if (!sender || !siteUrl) {
     return;
@@ -183,7 +183,7 @@ export async function sendProposalApprovedOwnerNotification(params: {
   recipientName?: string | null;
 }) {
   const sender = process.env.EMAIL_SENDER;
-  const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Keel';
+  const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
 
   if (!sender) return;
 
@@ -235,7 +235,7 @@ export async function sendProposalCommentOwnerNotification(params: {
   body: string;
 }) {
   const sender = process.env.EMAIL_SENDER;
-  const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Keel';
+  const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
 
   if (!sender) return;
 

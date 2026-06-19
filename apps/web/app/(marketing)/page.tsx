@@ -10,9 +10,9 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 import { InterconnectedWorkspacesSection } from './_components/interconnected-workspaces-section';
 
 export const metadata = {
-  title: 'Keel - The Life CRM',
+  title: 'Ozer - The Life CRM',
   description:
-    'Keel is the Life CRM that connects personal life, business, family, and community in one account — not another siloed CRM. One home for tasks, planner, and every workspace.',
+    'Ozer is the Life CRM that connects personal life, business, family, and community in one account — not another siloed CRM. One home for tasks, planner, and every workspace.',
 };
 
 const features = [
@@ -57,7 +57,7 @@ function Home() {
         <div className="grid items-center gap-12 lg:grid-cols-[1.05fr,0.95fr]">
           <div className="space-y-8">
             <span className="inline-flex items-center rounded-full border border-violet-300/20 bg-violet-500/10 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.14em] text-violet-200">
-              Keel: The Life CRM
+              Ozer: The Life CRM
             </span>
 
             <div className="space-y-5">
@@ -70,7 +70,7 @@ function Home() {
                 .
               </h1>
               <p className="max-w-xl text-base leading-relaxed text-violet-100/85 md:text-lg">
-                Keel is the Life CRM that connects work, family, and community in one account — with a personal home that sees tasks and plans across every workspace. Not another siloed CRM.
+                Ozer is the Life CRM that connects work, family, and community in one account — with a personal home that sees tasks and plans across every workspace. Not another siloed CRM.
               </p>
             </div>
 
@@ -91,7 +91,7 @@ function Home() {
             <div className="absolute -inset-px rounded-3xl bg-[linear-gradient(135deg,rgba(167,139,250,0.35),rgba(236,72,153,0.18),transparent_58%)] opacity-70" />
             <div className="relative rounded-2xl border border-white/10 bg-[#120f24] p-5">
               <div className="mb-4 flex items-center justify-between">
-                <p className="text-xs uppercase tracking-[0.12em] text-violet-200/80">Today in Keel</p>
+                <p className="text-xs uppercase tracking-[0.12em] text-violet-200/80">Today in Ozer</p>
                 <LayoutDashboard className="h-4 w-4 text-violet-200/80" />
               </div>
               <div className="space-y-3">
@@ -140,7 +140,7 @@ function Home() {
             Everything connects through your personal home.
           </h2>
           <p className="mt-3 max-w-2xl text-violet-100/80">
-            Keel keeps priorities visible across workspaces — what needs action now, what can wait, and what is drifting — without switching apps or losing context.
+            Ozer keeps priorities visible across workspaces — what needs action now, what can wait, and what is drifting — without switching apps or losing context.
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
@@ -175,10 +175,10 @@ function Home() {
       <section className="border-t border-violet-200/10 bg-[#070610]/80 py-20">
         <div className="mx-auto flex w-full max-w-7xl flex-col items-center gap-4 px-6 text-center">
           <h2 className="font-heading text-3xl font-semibold text-white md:text-4xl">
-            Build a calmer, more intentional life with Keel.
+            Build a calmer, more intentional life with Ozer.
           </h2>
           <p className="max-w-2xl text-violet-100/80">
-            If your current setup feels fragmented, Keel gives you one source of truth for projects, people, plans, and priorities.
+            If your current setup feels fragmented, Ozer gives you one source of truth for projects, people, plans, and priorities.
           </p>
           <Button asChild size="lg" className="mt-2 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 px-7 text-white hover:from-violet-400 hover:to-fuchsia-400">
             <Link href={pathsConfig.auth.signUp}>Create your workspace</Link>

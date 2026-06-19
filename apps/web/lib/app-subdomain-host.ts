@@ -4,7 +4,7 @@ import {
   isAppMarketingHostSplitEnabled,
 } from '~/lib/app-host-routing';
 
-/** Reserved on keelos.so — hosts the authenticated Keel app, not agency portals. */
+/** Reserved on keelos.so — hosts the authenticated Ozer app, not agency portals. */
 export const APP_SUBDOMAIN = 'app';
 
 const APP_ROUTE_PREFIXES = [

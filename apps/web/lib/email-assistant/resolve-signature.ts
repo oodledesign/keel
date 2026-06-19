@@ -28,7 +28,7 @@ function parseSettingsSignature(
   return { plain: trimmed, html: null };
 }
 
-/** Keel settings first, then Gmail "Send mail as" signature when connected. */
+/** Ozer settings first, then Gmail "Send mail as" signature when connected. */
 export async function resolveEmailAssistantSignature(
   userId: string,
   settingsSignature: string | null | undefined,

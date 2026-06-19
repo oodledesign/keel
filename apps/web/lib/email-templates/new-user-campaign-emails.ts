@@ -25,13 +25,13 @@ function renderOnboardingShell(params: {
 
 export function renderNewUserWelcomeEmail() {
   return renderOnboardingShell({
-    title: 'Welcome to Keel',
+    title: 'Welcome to Ozer',
     preheader: 'Create your first workspace and get started.',
-    heroTitle: 'Welcome to Keel',
+    heroTitle: 'Welcome to Ozer',
     heroSubtitle: 'Your Life OS for community, business, and property.',
     bodyHtml: [
       renderParagraph(
-        'Hi {{first_name}}, thanks for signing up. Keel helps you run community groups, client work, and property portfolios from one account.',
+        'Hi {{first_name}}, thanks for signing up. Ozer helps you run community groups, client work, and property portfolios from one account.',
       ),
       renderStepBox(
         'Create a workspace',
@@ -43,12 +43,12 @@ export function renderNewUserWelcomeEmail() {
 
 export function renderOnboardingNudge1hEmail() {
   return renderOnboardingShell({
-    title: 'Finish setting up Keel',
+    title: 'Finish setting up Ozer',
     preheader: 'Create your first workspace to unlock the app.',
     heroTitle: 'Finish setting up your workspace',
     heroSubtitle: 'It only takes a few minutes.',
     bodyHtml: renderParagraph(
-      'Hi {{first_name}}, you signed up about an hour ago. Complete onboarding to create your first workspace and start using Keel.',
+      'Hi {{first_name}}, you signed up about an hour ago. Complete onboarding to create your first workspace and start using Ozer.',
     ),
   });
 }
@@ -57,7 +57,7 @@ export function renderOnboardingNudge2dEmail() {
   return renderOnboardingShell({
     title: 'Your workspace is waiting',
     preheader: 'Complete onboarding to unlock clients, tasks, and more.',
-    heroTitle: 'Your Keel workspace is waiting',
+    heroTitle: 'Your Ozer workspace is waiting',
     heroSubtitle: 'Pick up where you left off.',
     bodyHtml: renderParagraph(
       'Hi {{first_name}}, onboarding is still incomplete. Finish setup so you can create workspaces, invite teammates, and use your modules.',
@@ -72,7 +72,7 @@ export function renderOnboardingNudge1wEmail() {
     heroTitle: 'Can we help you get started?',
     heroSubtitle: 'Reply if you need a hand with setup.',
     bodyHtml: renderParagraph(
-      'Hi {{first_name}}, your Keel account is ready but onboarding is not finished yet. Jump back in to create your workspace, or reply if you would like help.',
+      'Hi {{first_name}}, your Ozer account is ready but onboarding is not finished yet. Jump back in to create your workspace, or reply if you would like help.',
     ),
   });
 }

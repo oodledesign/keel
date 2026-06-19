@@ -155,7 +155,7 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
   personal: {
     slug: 'personal',
     seo: {
-      title: 'Keel Personal — Free Life CRM Hub for Every Workspace',
+      title: 'Ozer Personal — Free Life CRM Hub for Every Workspace',
       description:
         'Free personal home that connects tasks, planner, and shortcuts across business, family, property, and community workspaces. One Life CRM — not separate apps. No credit card required.',
       keywords: [
@@ -175,7 +175,7 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
       title: 'One free home for',
       titleAccent: 'life, work, and every workspace',
       subtitle:
-        'Keel is not a siloed CRM. Your personal home unifies tasks, today’s focus, and AI planning across business, family, and community spaces — while personal and family stay completely free.',
+        'Ozer is not a siloed CRM. Your personal home unifies tasks, today’s focus, and AI planning across business, family, and community spaces — while personal and family stay completely free.',
     },
     stats: [
       { value: '£0', label: 'Forever — personal & family' },
@@ -235,19 +235,19 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
       'Personal and family workspaces are always free. Upgrade only when you add a community, business, or property workspace.',
     faqs: [
       {
-        question: 'Is Keel really free for personal use?',
+        question: 'Is Ozer really free for personal use?',
         answer:
           'Yes. Your personal command centre and one family workspace are free with no time limit. You only pay if you create a paid workspace type such as business, property, or community.',
       },
       {
-        question: 'Can my partner and children use Keel?',
+        question: 'Can my partner and children use Ozer?',
         answer:
           'Yes. Invite family members to your family workspace. They can view shared calendars, tasks, meal plans, and shopping lists without needing their own subscription.',
       },
       {
-        question: 'How is Keel different from a generic to-do app or CRM?',
+        question: 'How is Ozer different from a generic to-do app or CRM?',
         answer:
-          'Most CRMs only handle work — Keel is a Life CRM. Your free personal home connects tasks, planner, shortcuts, and today’s focus across every workspace. Business CRM features live inside the same account, not a separate silo.',
+          'Most CRMs only handle work — Ozer is a Life CRM. Your free personal home connects tasks, planner, shortcuts, and today’s focus across every workspace. Business CRM features live inside the same account, not a separate silo.',
       },
       {
         question: 'Can I see work tasks from my personal home?',
@@ -255,9 +255,9 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
           'Yes. By default your personal home and task list span every workspace you belong to. You can turn workspace tasks off in settings when you want personal-only focus.',
       },
       {
-        question: 'Can I use Keel for freelance work on the free plan?',
+        question: 'Can I use Ozer for freelance work on the free plan?',
         answer:
-          'Personal Keel is for life organisation. When you need clients, invoices, and jobs, create a business workspace — start with free Business Lite or a 14-day trial on Solo.',
+          'Personal Ozer is for life organisation. When you need clients, invoices, and jobs, create a business workspace — start with free Business Lite or a 14-day trial on Solo.',
       },
     ],
     relatedSegments: relatedExcept('personal'),
@@ -267,9 +267,9 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
   work: {
     slug: 'work',
     seo: {
-      title: 'Keel for Business — Connected CRM Inside Your Life CRM',
+      title: 'Ozer for Business — Connected CRM Inside Your Life CRM',
       description:
-        'Business CRM, jobs, invoices, and client portal that connects to your personal Keel home — one login, unified tasks and planning. Not another siloed CRM. Free Business Lite or from £29/mo.',
+        'Business CRM, jobs, invoices, and client portal that connects to your personal Ozer home — one login, unified tasks and planning. Not another siloed CRM. Free Business Lite or from £29/mo.',
       keywords: [
         'connected business CRM',
         'Life CRM for business',
@@ -298,7 +298,7 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
         icon: Home,
         title: 'CRM inside your Life CRM',
         description:
-          'Unlike HubSpot or Pipedrive, Keel business workspaces plug into your free personal home — unified tasks, today view, and AI planner across work and life.',
+          'Unlike HubSpot or Pipedrive, Ozer business workspaces plug into your free personal home — unified tasks, today view, and AI planner across work and life.',
       },
       {
         icon: Users,
@@ -361,14 +361,14 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
       'Add-ons such as Rankly (SEO), Feedflow (reviews), Videos, and Signatures (£9/mo) attach per workspace after signup. Annual billing saves about two months.',
     faqs: [
       {
-        question: 'How is Keel different from other CRMs?',
+        question: 'How is Ozer different from other CRMs?',
         answer:
-          'Traditional CRMs silo work away from the rest of your life. Keel is a Life CRM — your business workspace connects to a free personal home where tasks, planner, shortcuts, and today’s focus span every workspace. One login, one mental model.',
+          'Traditional CRMs silo work away from the rest of your life. Ozer is a Life CRM — your business workspace connects to a free personal home where tasks, planner, shortcuts, and today’s focus span every workspace. One login, one mental model.',
       },
       {
         question: 'Can I plan my day across business and personal tasks?',
         answer:
-          'Yes. Keel Planner and Today view pull from all workspaces you enable. Solopreneurs see client work and personal errands in one AI-generated schedule — then push blocks to Google Calendar.',
+          'Yes. Ozer Planner and Today view pull from all workspaces you enable. Solopreneurs see client work and personal errands in one AI-generated schedule — then push blocks to Google Calendar.',
       },
       {
         question: 'What is the difference between Business Lite and Solo?',
@@ -376,7 +376,7 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
           'Business Lite is free and includes apps marketplace access, team settings, and brand basics — ideal if you mainly want add-ons like Signatures or Rankly. Solo adds full CRM modules: clients, jobs, invoices, pipeline, messages, SOPs, and more for one person.',
       },
       {
-        question: 'Do my clients need to pay for Keel?',
+        question: 'Do my clients need to pay for Ozer?',
         answer:
           'No. Clients use your client portal or message threads at no cost. Billing stays with the workspace owner.',
       },
@@ -398,9 +398,9 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
   property: {
     slug: 'property',
     seo: {
-      title: 'Keel for Property — Landlord & Portfolio Management Software',
+      title: 'Ozer for Property — Landlord & Portfolio Management Software',
       description:
-        'Manage rental properties, tenants, maintenance, and finances in Keel. From £19/mo for up to 5 properties or £29/mo for portfolios up to 20. 14-day free trial.',
+        'Manage rental properties, tenants, maintenance, and finances in Ozer. From £19/mo for up to 5 properties or £29/mo for portfolios up to 20. 14-day free trial.',
       keywords: [
         'property management software UK',
         'landlord software',
@@ -415,7 +415,7 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
       title: 'Portfolio, tenants, and maintenance in',
       titleAccent: 'one property workspace',
       subtitle:
-        'Whether you manage five doors or twenty, Keel keeps properties, tenants, repairs, and finances organised — without spreadsheet chaos.',
+        'Whether you manage five doors or twenty, Ozer keeps properties, tenants, repairs, and finances organised — without spreadsheet chaos.',
     },
     stats: [
       { value: '5–20', label: 'Properties per plan tier' },
@@ -484,9 +484,9 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
       'Need more than 20 properties? Contact us for Scale pricing. All plans billed per property workspace.',
     faqs: [
       {
-        question: 'Who is Keel property software for?',
+        question: 'Who is Ozer property software for?',
         answer:
-          'Keel suits private landlords, small letting agents, and portfolio holders who want properties, tenants, maintenance, and finances in one system — not enterprise block management.',
+          'Ozer suits private landlords, small letting agents, and portfolio holders who want properties, tenants, maintenance, and finances in one system — not enterprise block management.',
       },
       {
         question: 'How many properties can I manage?',
@@ -499,9 +499,9 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
           'Yes. Log issues as maintenance jobs, assign them, and keep a history per property for handovers and compliance.',
       },
       {
-        question: 'Does Keel replace accounting software?',
+        question: 'Does Ozer replace accounting software?',
         answer:
-          'Keel tracks property-level finances and cash flow. Many landlords still use Xero or FreeAgent for statutory accounts — Keel focuses on operational property management.',
+          'Ozer tracks property-level finances and cash flow. Many landlords still use Xero or FreeAgent for statutory accounts — Ozer focuses on operational property management.',
       },
     ],
     relatedSegments: relatedExcept('property'),
@@ -511,9 +511,9 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
   community: {
     slug: 'community',
     seo: {
-      title: 'Keel for Community Groups — Schedule, Tasks & Shared Notes',
+      title: 'Ozer for Community Groups — Schedule, Tasks & Shared Notes',
       description:
-        'Organise clubs, homegroups, and volunteer teams with Keel Community: shared schedule, group tasks, notes, and member directory. £12/mo with 3 members included. 14-day trial.',
+        'Organise clubs, homegroups, and volunteer teams with Ozer Community: shared schedule, group tasks, notes, and member directory. £12/mo with 3 members included. 14-day trial.',
       keywords: [
         'community group software',
         'church homegroup planner',
@@ -568,7 +568,7 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
       },
       {
         icon: MessageSquare,
-        title: 'Works alongside Keel personal',
+        title: 'Works alongside Ozer personal',
         description:
           'Leaders keep their personal Life CRM while the group gets its own dedicated workspace.',
       },
@@ -594,22 +594,22 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
       (p) => p.profile === 'community',
     ).map((p) => planToCard(p)),
     pricingNote:
-      'Community billing is per workspace. Personal Keel accounts remain free for members who only need their own Life CRM.',
+      'Community billing is per workspace. Personal Ozer accounts remain free for members who only need their own Life CRM.',
     faqs: [
       {
-        question: 'What types of groups use Keel Community?',
+        question: 'What types of groups use Ozer Community?',
         answer:
-          'Homegroups, sports clubs, hobby societies, PTAs, and volunteer teams use Keel to coordinate schedules, tasks, and shared notes without enterprise church or club software complexity.',
+          'Homegroups, sports clubs, hobby societies, PTAs, and volunteer teams use Ozer to coordinate schedules, tasks, and shared notes without enterprise church or club software complexity.',
       },
       {
-        question: 'How much does Keel Community cost?',
+        question: 'How much does Ozer Community cost?',
         answer:
           'The Community plan is £12 per month (or £120 annually) and includes 3 members. Start with a 14-day free trial when you create the workspace.',
       },
       {
         question: 'Do group members need their own subscription?',
         answer:
-          'Invited members join your community workspace without paying. They can also use a free personal Keel account for their own tasks and planner.',
+          'Invited members join your community workspace without paying. They can also use a free personal Ozer account for their own tasks and planner.',
       },
       {
         question: 'Can we share documents and meeting notes?',

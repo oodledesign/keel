@@ -22,15 +22,15 @@ export type InterconnectedWorkspaceNode = {
 };
 
 export const INTERCONNECTED_WORKSPACES_MARKETING = {
-  eyebrow: 'Why Keel is different',
+  eyebrow: 'Why Ozer is different',
   title: 'One Life CRM.',
   titleAccent: 'Every workspace connected.',
   subtitle:
-    'Most CRMs lock work in a silo. Keel links your personal life, business, family, property, and community spaces — so tasks, plans, and shortcuts flow through one calm home, not five disconnected apps.',
+    'Most CRMs lock work in a silo. Ozer links your personal life, business, family, property, and community spaces — so tasks, plans, and shortcuts flow through one calm home, not five disconnected apps.',
   comparison: {
     heading: 'Not another siloed CRM',
     traditionalLabel: 'Typical CRM',
-    keelLabel: 'Keel Life CRM',
+    keelLabel: 'Ozer Life CRM',
     traditional: [
       'Work lives in one product; life lives elsewhere',
       'Separate logins, tabs, and mental models',
@@ -120,4 +120,4 @@ export const INTERCONNECTED_PERSONAL_HOOK =
   'Your free personal home is the hub — business, family, and community workspaces plug in without losing the big picture.';
 
 export const INTERCONNECTED_WORK_HOOK =
-  'Run your business workspace inside the same Keel account as your personal life — tasks and plans stay connected, not copied between apps.';
+  'Run your business workspace inside the same Ozer account as your personal life — tasks and plans stay connected, not copied between apps.';

@@ -24,7 +24,7 @@ async function AdminSupportPage() {
 
   return (
     <>
-      <PageHeader description="Platform support tickets from Keel users" />
+      <PageHeader description="Platform support tickets from Ozer users" />
       <PageBody className="max-w-4xl py-4">
         <AdminSupportTicketsTable
           tickets={(tickets ?? []) as AdminSupportTicketRow[]}

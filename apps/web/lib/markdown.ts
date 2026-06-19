@@ -1,5 +1,5 @@
 /**
- * Keel Markdown content contract.
+ * Ozer Markdown content contract.
  * Human-editable fields (notes.content, docs.content, job_notes.note, etc.)
  * MUST store Markdown strings — not HTML or ProseMirror JSON.
  */

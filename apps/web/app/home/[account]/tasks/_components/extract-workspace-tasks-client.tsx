@@ -566,7 +566,7 @@ export function ExtractWorkspaceTasksClient({
       {!embedded ? (
         <p className="text-xs text-zinc-500">
           Future: connect Gmail to scan new messages and surface suggested tasks for review
-          in Keel — see{' '}
+          in Ozer — see{' '}
           <code className="text-zinc-400">TASK_GMAIL_INGEST_ENABLED</code> placeholder in{' '}
           <code className="text-zinc-400">lib/integrations/gmail-tasks-ingest.placeholder.ts</code>.
         </p>

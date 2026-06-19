@@ -59,7 +59,7 @@ export function getSignaturesSupabaseClient() {
 }
 
 /**
- * Returns a valid Graph access token for the tenant linked to this Keel account (client_credentials).
+ * Returns a valid Graph access token for the tenant linked to this Ozer account (client_credentials).
  */
 export async function getMsAccessToken(accountId: string): Promise<string> {
   const db = getSignaturesSupabaseClient();

@@ -8,7 +8,7 @@ import { userRequiresWorkspaceSetup } from '~/lib/server/workspace-setup-guard';
 import { WorkspaceSetupForm } from './_components/workspace-setup-form';
 
 export const metadata = {
-  title: 'Set up your workspaces — Keel',
+  title: 'Set up your workspaces — Ozer',
 };
 
 export default async function WorkspaceSetupPage({

@@ -55,9 +55,9 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
     productId: 'keel-addon-signatures',
     planId: 'signatures-monthly',
     seo: {
-      title: 'Keel Signatures — Branded Email Signatures for Teams',
+      title: 'Ozer Signatures — Branded Email Signatures for Teams',
       description:
-        'Deploy consistent, on-brand email signatures across Microsoft 365 and Google Workspace. From £9/mo per workspace with Keel Business Lite.',
+        'Deploy consistent, on-brand email signatures across Microsoft 365 and Google Workspace. From £9/mo per workspace with Ozer Business Lite.',
       keywords: [
         'email signature manager',
         'Microsoft 365 email signatures',
@@ -67,7 +67,7 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
       ],
     },
     hero: {
-      eyebrow: 'Keel app',
+      eyebrow: 'Ozer app',
       title: 'On-brand email signatures for',
       titleAccent: 'every team member',
       subtitle:
@@ -97,7 +97,7 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
       {
         title: 'Create a free Business Lite workspace',
         description:
-          'Keel apps attach to a business workspace. Business Lite is free — no card required to get started.',
+          'Ozer apps attach to a business workspace. Business Lite is free — no card required to get started.',
       },
       {
         title: 'Subscribe to Signatures',
@@ -111,7 +111,7 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
     ],
     faqs: [
       {
-        question: 'Do I need a paid Keel business plan?',
+        question: 'Do I need a paid Ozer business plan?',
         answer:
           'No. Signatures works on free Business Lite. You only pay for the Signatures add-on (£9/mo per workspace).',
       },
@@ -123,7 +123,7 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
       {
         question: 'Can I use Signatures on multiple brands?',
         answer:
-          'Each Keel workspace is billed separately. Create a workspace per brand or client if you need isolated signature sets.',
+          'Each Ozer workspace is billed separately. Create a workspace per brand or client if you need isolated signature sets.',
       },
     ],
   },
@@ -136,9 +136,9 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
     productId: 'keel-addon-rankly',
     planId: 'rankly-monthly',
     seo: {
-      title: 'Keel Rankly — SEO Rank Tracking, PageSpeed & AI Insights',
+      title: 'Ozer Rankly — SEO Rank Tracking, PageSpeed & AI Insights',
       description:
-        'Track keyword rankings, schedule PageSpeed Insights scans with drop alerts, run AI SEO audits, and explore site structure — £36/mo per workspace inside Keel. Backlink analysis coming soon.',
+        'Track keyword rankings, schedule PageSpeed Insights scans with drop alerts, run AI SEO audits, and explore site structure — £36/mo per workspace inside Ozer. Backlink analysis coming soon.',
       keywords: [
         'SEO rank tracker UK',
         'keyword rank tracking software',
@@ -151,7 +151,7 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
       ],
     },
     hero: {
-      eyebrow: 'Keel app',
+      eyebrow: 'Ozer app',
       title: 'Your SEO command centre with',
       titleAccent: 'rankings, PageSpeed & AI insights',
       subtitle:
@@ -180,7 +180,7 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
         icon: Globe,
         title: 'Site explorer & crawler',
         description:
-          'Understand site structure, indexable pages, and technical issues without leaving Keel.',
+          'Understand site structure, indexable pages, and technical issues without leaving Ozer.',
       },
       {
         icon: PenLine,
@@ -214,7 +214,7 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
       {
         question: 'Is Rankly per workspace or per user?',
         answer:
-          'Rankly is billed per Keel workspace (£36/mo). Team members on that workspace can access projects according to their role.',
+          'Rankly is billed per Ozer workspace (£36/mo). Team members on that workspace can access projects according to their role.',
       },
       {
         question: 'Does Rankly include PageSpeed monitoring?',
@@ -247,9 +247,9 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
     productId: 'keel-addon-feedflow',
     planId: 'feedflow-monthly',
     seo: {
-      title: 'Keel Feedflow — Review Widgets & Social Publishing',
+      title: 'Ozer Feedflow — Review Widgets & Social Publishing',
       description:
-        'Collect reviews, embed trust widgets on your site, and manage social accounts from Keel. Feedflow from £9/mo per workspace.',
+        'Collect reviews, embed trust widgets on your site, and manage social accounts from Ozer. Feedflow from £9/mo per workspace.',
       keywords: [
         'review widget software',
         'Google reviews embed',
@@ -259,7 +259,7 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
       ],
     },
     hero: {
-      eyebrow: 'Keel app',
+      eyebrow: 'Ozer app',
       title: 'Turn reviews and social into',
       titleAccent: 'proof that converts',
       subtitle:
@@ -326,7 +326,7 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
     productId: 'keel-addon-videos-starter',
     planId: 'videos-starter-monthly',
     seo: {
-      title: 'Keel Videos — Hosted Video Library & Embeds',
+      title: 'Ozer Videos — Hosted Video Library & Embeds',
       description:
         'Host videos with private/public controls, shareable public links, custom branded players, and embed codes for Webflow, WordPress, and any website. Plans from £5/mo per workspace.',
       keywords: [
@@ -341,7 +341,7 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
       ],
     },
     hero: {
-      eyebrow: 'Keel app',
+      eyebrow: 'Ozer app',
       title: 'Professional video hosting with',
       titleAccent: 'embeds, sharing & branded players',
       subtitle:
@@ -352,7 +352,7 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
         icon: Lock,
         title: 'Private & public videos',
         description:
-          'Keep internal clips workspace-only, or enable public sharing when you want a link anyone can watch — no Keel login required.',
+          'Keep internal clips workspace-only, or enable public sharing when you want a link anyone can watch — no Ozer login required.',
       },
       {
         icon: Share2,

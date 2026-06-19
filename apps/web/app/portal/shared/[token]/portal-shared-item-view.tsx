@@ -100,7 +100,7 @@ export function PortalSharedItemView({
 
       {!embed ? (
         <p className="pt-6 text-xs text-zinc-600">
-          Shared via Keel · token {token.slice(0, 8)}…
+          Shared via Ozer · token {token.slice(0, 8)}…
         </p>
       ) : null}
     </article>

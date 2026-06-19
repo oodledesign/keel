@@ -6,7 +6,7 @@ const AppConfigSchema = z
   .object({
     name: z
       .string({
-        description: `This is the name of your SaaS. Ex. "Keel"`,
+        description: `This is the name of your SaaS. Ex. "Ozer"`,
         required_error: `Please provide the variable NEXT_PUBLIC_PRODUCT_NAME`,
       })
       .min(1),
@@ -64,10 +64,10 @@ const AppConfigSchema = z
   );
 
 const appConfig = AppConfigSchema.parse({
-  name: process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Keel',
-  title: process.env.NEXT_PUBLIC_SITE_TITLE ?? 'Keel',
+  name: process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer',
+  title: process.env.NEXT_PUBLIC_SITE_TITLE ?? 'Ozer',
   description:
-    process.env.NEXT_PUBLIC_SITE_DESCRIPTION ?? 'Keel is your new Life OS.',
+    process.env.NEXT_PUBLIC_SITE_DESCRIPTION ?? 'Ozer is your new Life OS.',
   url: process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000',
   locale: process.env.NEXT_PUBLIC_DEFAULT_LOCALE,
   theme: (process.env.NEXT_PUBLIC_DEFAULT_THEME_MODE ?? 'light') as
