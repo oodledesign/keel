@@ -15,7 +15,7 @@ import type {
 } from './types';
 
 const GOOGLE_CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
-const PLANNER_CALENDAR_NAME = 'Keel Planner';
+const PLANNER_CALENDAR_NAME = 'Ozer Planner';
 
 type GoogleEvent = {
   id?: string;
@@ -49,11 +49,14 @@ type GoogleCalendarListEntry = {
 
 const RECORDER_CALENDAR_LOOKBACK_MS = 24 * 60 * 60 * 1000;
 const RECORDER_CALENDAR_LOOKAHEAD_MS = 2 * 60 * 60 * 1000;
+const RECORDER_CALENDAR_NEXT_LOOKAHEAD_MS = 24 * 60 * 60 * 1000;
 const MAX_RECORDER_CALENDARS = 20;
 
 export type RecorderCalendarEventResult = {
   connected: boolean;
   event: RecorderCalendarEvent | null;
+  next_event: RecorderCalendarEvent | null;
+  upcoming_events: RecorderCalendarEvent[];
 };
 
 function isExpiringSoon(iso: string | null) {
@@ -139,6 +142,32 @@ function mapRecorderCalendarEvent(event: GoogleEvent): RecorderCalendarEvent | n
       email: attendee.email?.trim() || '',
     })),
   };
+}
+
+function pickNextUpcomingRecorderEvent(
+  events: RecorderCalendarEvent[],
+  nowMs = Date.now(),
+): RecorderCalendarEvent | null {
+  return (
+    events.find((event) => {
+      const start = Date.parse(event.start);
+      if (Number.isNaN(start)) return false;
+      return start > nowMs;
+    }) ?? null
+  );
+}
+
+function pickUpcomingRecorderEvents(
+  events: RecorderCalendarEvent[],
+  nowMs = Date.now(),
+  limit = 20,
+): RecorderCalendarEvent[] {
+  return events
+    .filter((event) => {
+      const start = Date.parse(event.start);
+      return !Number.isNaN(start) && start > nowMs;
+    })
+    .slice(0, limit);
 }
 
 function pickCurrentOrNextRecorderEvent(
@@ -242,18 +271,21 @@ export async function getRecorderCalendarEvent(
 ): Promise<RecorderCalendarEventResult> {
   const nowMs = Date.now();
   const timeMin = new Date(nowMs - RECORDER_CALENDAR_LOOKBACK_MS).toISOString();
-  const timeMax = new Date(nowMs + RECORDER_CALENDAR_LOOKAHEAD_MS).toISOString();
+  const timeMax = new Date(nowMs + RECORDER_CALENDAR_NEXT_LOOKAHEAD_MS).toISOString();
 
   if (isPlannerMockCalendarEnabled()) {
+    const events = mockRecorderEvents(nowMs);
     return {
       connected: true,
-      event: pickCurrentOrNextRecorderEvent(mockRecorderEvents(nowMs), nowMs),
+      event: pickCurrentOrNextRecorderEvent(events, nowMs),
+      next_event: pickNextUpcomingRecorderEvent(events, nowMs),
+      upcoming_events: pickUpcomingRecorderEvents(events, nowMs),
     };
   }
 
   const connection = await validConnection(client, input.userId);
   if (!connection) {
-    return { connected: false, event: null };
+    return { connected: false, event: null, next_event: null, upcoming_events: [] };
   }
 
   const items = await listGoogleCalendarEventsInRange(
@@ -270,6 +302,8 @@ export async function getRecorderCalendarEvent(
   return {
     connected: true,
     event: pickCurrentOrNextRecorderEvent(events, nowMs),
+    next_event: pickNextUpcomingRecorderEvent(events, nowMs),
+    upcoming_events: pickUpcomingRecorderEvents(events, nowMs),
   };
 }
 
@@ -370,7 +404,7 @@ async function ensurePlannerCalendar(
     method: 'POST',
     body: JSON.stringify({
       summary: PLANNER_CALENDAR_NAME,
-      description: 'Tasks scheduled by Keel Planner',
+      description: 'Tasks scheduled by Ozer Planner',
       timeZone: 'Europe/London',
     }),
   });
@@ -401,7 +435,7 @@ export async function createPlannerCalendarEvents(
         method: 'POST',
         body: JSON.stringify({
           summary: block.title,
-          description: 'Scheduled by Keel Planner',
+          description: 'Scheduled by Ozer Planner',
           start: { dateTime: block.start },
           end: { dateTime: block.end },
         }),

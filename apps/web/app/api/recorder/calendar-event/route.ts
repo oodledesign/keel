@@ -18,7 +18,12 @@ export async function GET(request: Request) {
 
   try {
     const result = await getRecorderCalendarEvent(admin, { userId: auth.user_id });
-    return NextResponse.json(result);
+    const { data: userData } = await admin.auth.admin.getUserById(auth.user_id);
+
+    return NextResponse.json({
+      ...result,
+      user_email: userData?.user?.email?.trim() || null,
+    });
   } catch (err) {
     return NextResponse.json(
       {

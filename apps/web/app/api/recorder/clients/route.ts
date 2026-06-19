@@ -15,6 +15,7 @@ type ClientRow = {
   company_name: string | null;
   first_name: string | null;
   last_name: string | null;
+  email: string | null;
 };
 
 function badRequest(message: string) {
@@ -40,7 +41,7 @@ export async function GET(request: Request) {
 
   const { data, error } = await admin
     .from('clients')
-    .select('id, display_name, company_name, first_name, last_name')
+    .select('id, display_name, company_name, first_name, last_name, email')
     .eq('account_id', accountId);
 
   if (error) {
@@ -54,6 +55,7 @@ export async function GET(request: Request) {
     .map((row) => ({
       id: row.id,
       name: clientDisplayName(row),
+      email: row.email?.trim() || null,
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 

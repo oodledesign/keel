@@ -26,6 +26,7 @@ export type IndexableRecord = {
   jobId?: string | null;
   clientId?: string | null;
   phaseJobId?: string | null;
+  meetingDate?: string | null;
 };
 
 async function loadAccountSlug(admin: AdminClient, accountId: string) {
@@ -35,6 +36,48 @@ async function loadAccountSlug(admin: AdminClient, accountId: string) {
     .eq('id', accountId)
     .maybeSingle();
   return (data?.slug as string | undefined) ?? accountId;
+}
+
+function transcriptClientName(
+  client:
+    | {
+        display_name?: string | null;
+        company_name?: string | null;
+        first_name?: string | null;
+        last_name?: string | null;
+        name?: string | null;
+      }
+    | {
+        display_name?: string | null;
+        company_name?: string | null;
+        first_name?: string | null;
+        last_name?: string | null;
+        name?: string | null;
+      }[]
+    | null,
+): string | null {
+  const row = Array.isArray(client) ? client[0] : client;
+  if (!row) return null;
+  return (
+    row.display_name?.trim() ||
+    row.company_name?.trim() ||
+    [row.first_name, row.last_name].filter(Boolean).join(' ').trim() ||
+    row.name?.trim() ||
+    null
+  );
+}
+
+function buildTranscriptIndexText(params: {
+  title: string;
+  content: string;
+  meetingDate?: string | null;
+  clientName?: string | null;
+}) {
+  const lines = [`# ${params.title}`];
+  if (params.clientName) lines.push(`Client: ${params.clientName}`);
+  if (params.meetingDate) lines.push(`Meeting date: ${params.meetingDate}`);
+  lines.push('', params.content);
+  return lines.join('\n');
 }
 
 export async function loadAccountIndexables(
@@ -181,22 +224,34 @@ export async function loadAccountIndexables(
 
   const { data: transcripts } = await admin
     .from('meeting_transcripts')
-    .select('id, title, content, updated_at, client_id')
+    .select(
+      'id, title, content, updated_at, client_id, meeting_date, clients(display_name, company_name, first_name, last_name, name)',
+    )
     .eq('account_id', accountId);
 
   for (const row of transcripts ?? []) {
     const content = (row.content as string)?.trim();
     if (!content) continue;
     const title = ((row.title as string) || 'Meeting transcript').trim();
+    const clientName = transcriptClientName(
+      row.clients as Parameters<typeof transcriptClientName>[0],
+    );
+    const meetingDate = (row.meeting_date as string | null) ?? null;
     records.push({
       sourceType: 'transcript',
       sourceId: row.id as string,
       accountId,
       accountSlug,
       title,
-      text: `# ${title}\n\n${content}`,
+      text: buildTranscriptIndexText({
+        title,
+        content,
+        meetingDate,
+        clientName,
+      }),
       updatedAt: row.updated_at as string,
       clientId: (row.client_id as string | null) ?? null,
+      meetingDate,
     });
   }
 
@@ -244,6 +299,7 @@ function buildMetadata(record: IndexableRecord): BrainChunkMetadata {
     account_slug: record.accountSlug,
     job_id: record.jobId ?? null,
     client_id: record.clientId ?? null,
+    meeting_date: record.meetingDate ?? null,
   };
 }
 
@@ -344,25 +400,45 @@ export async function indexSource(
 
 export async function indexAccount(admin: AdminClient, accountId: string) {
   if (!isVoyageConfigured()) {
-    return { indexed: 0, chunks: 0, skipped: true as const };
+    return { indexed: 0, chunks: 0, skipped: true as const, errors: [] as string[] };
   }
 
   const records = await loadAccountIndexables(admin, accountId);
   let chunkTotal = 0;
+  let indexed = 0;
+  const errors: string[] = [];
 
   console.log(
     `[brain] indexing account ${accountId}: ${records.length} sources`,
   );
 
   for (const record of records) {
-    chunkTotal += await upsertRecordChunks(admin, record);
+    try {
+      chunkTotal += await upsertRecordChunks(admin, record);
+      indexed += 1;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const label = `${record.sourceType}:${record.title}`;
+      console.error('[brain] index source failed', {
+        accountId,
+        sourceType: record.sourceType,
+        sourceId: record.sourceId,
+        title: record.title,
+        error: message,
+      });
+      errors.push(`${label}: ${message}`);
+    }
   }
 
   console.log(
-    `[brain] indexed account ${accountId}: ${records.length} sources, ${chunkTotal} chunks`,
+    `[brain] indexed account ${accountId}: ${indexed}/${records.length} sources, ${chunkTotal} chunks, ${errors.length} errors`,
   );
 
-  return { indexed: records.length, chunks: chunkTotal };
+  if (indexed === 0 && errors.length > 0) {
+    throw new Error(errors[0] ?? 'Indexing failed');
+  }
+
+  return { indexed, chunks: chunkTotal, errors };
 }
 
 export async function getBrainIndexStats(admin: AdminClient, accountId: string) {

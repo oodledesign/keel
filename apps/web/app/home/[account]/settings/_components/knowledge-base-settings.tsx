@@ -9,7 +9,6 @@ import { toast } from '@kit/ui/sonner';
 
 import {
   getBrainKnowledgeStats,
-  reindexBrainAccount,
 } from '../../brain/_lib/server/brain-actions';
 
 export function KnowledgeBaseSettings({
@@ -44,10 +43,33 @@ export function KnowledgeBaseSettings({
   const handleReindex = () => {
     startTransition(async () => {
       try {
-        const result = await reindexBrainAccount({ accountId, accountSlug });
-        toast.success(
-          `Indexed ${(result as { indexed?: number }).indexed ?? 0} sources`,
-        );
+        const res = await fetch('/api/brain/reindex', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ accountId, accountSlug }),
+        });
+
+        const result = (await res.json()) as {
+          indexed?: number;
+          chunks?: number;
+          errors?: string[];
+          error?: string;
+        };
+
+        if (!res.ok) {
+          throw new Error(result.error ?? 'Re-index failed');
+        }
+
+        const errorCount = result.errors?.length ?? 0;
+        if (errorCount > 0) {
+          toast.warning(
+            `Indexed ${result.indexed ?? 0} sources (${result.chunks ?? 0} chunks). ${errorCount} source${errorCount === 1 ? '' : 's'} failed.`,
+          );
+        } else {
+          toast.success(
+            `Indexed ${result.indexed ?? 0} sources (${result.chunks ?? 0} chunks)`,
+          );
+        }
         refreshStats();
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Re-index failed');

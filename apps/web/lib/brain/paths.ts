@@ -19,6 +19,7 @@ export type BrainChunkMetadata = {
   account_slug: string;
   job_id?: string | null;
   client_id?: string | null;
+  meeting_date?: string | null;
 };
 
 export function buildBrainSourceUrl(
