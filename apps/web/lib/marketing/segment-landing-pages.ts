@@ -628,3 +628,42 @@ export function getSegmentLandingConfig(slug: string): SegmentLandingConfig | nu
   }
   return null;
 }
+
+const WORKSPACE_NAV_PATHS: Record<SegmentSlug, string> = {
+  personal: '/personal',
+  work: '/work',
+  property: '/property',
+  community: '/community',
+};
+
+const WORKSPACE_NAV_LABELS: Record<SegmentSlug, string> = {
+  personal: 'Personal',
+  work: 'Business',
+  property: 'Property',
+  community: 'Community',
+};
+
+const WORKSPACE_NAV_DESCRIPTIONS: Record<SegmentSlug, string> = {
+  personal:
+    'Free hub — tasks and planner connected across every workspace.',
+  work: 'Full CRM that plugs into your Life CRM — not a separate silo.',
+  property: 'Tenants, maintenance, and portfolio finances in one place.',
+  community: 'Schedules, tasks, and notes for clubs and homegroups.',
+};
+
+export function getMarketingWorkspaceNavLinks() {
+  return ALL_SEGMENTS.map((slug) => ({
+    slug,
+    label: WORKSPACE_NAV_LABELS[slug],
+    path: WORKSPACE_NAV_PATHS[slug],
+    description: WORKSPACE_NAV_DESCRIPTIONS[slug],
+    icon: SEGMENT_ICONS[slug],
+  }));
+}
+
+export function isWorkspaceNavPath(pathname: string) {
+  return getMarketingWorkspaceNavLinks().some(
+    (item) =>
+      pathname === item.path || pathname.startsWith(`${item.path}/`),
+  );
+}

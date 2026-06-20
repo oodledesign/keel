@@ -4,39 +4,19 @@ import { Trans } from '@kit/ui/trans';
 import { SiteAppsNavMenu } from './site-apps-nav-menu';
 import { SiteFeaturesNavMenu } from './site-features-nav-menu';
 import { SiteNavigationItem } from './site-navigation-item';
-
-const primaryLinks = [
-  { label: 'Personal', path: '/personal' },
-  { label: 'Business', path: '/work' },
-  { label: 'Property', path: '/property' },
-  { label: 'Community', path: '/community' },
-  {
-    label: 'marketing:pricing',
-    path: '/pricing',
-    i18n: true,
-  },
-] as const;
+import { SiteWorkspacesNavMenu } from './site-workspaces-nav-menu';
 
 export function SiteNavigation() {
-  const NavItems = primaryLinks.map((item) => {
-    return (
-      <SiteNavigationItem key={item.path} path={item.path}>
-        {'i18n' in item && item.i18n ? (
-          <Trans i18nKey={item.label} />
-        ) : (
-          item.label
-        )}
-      </SiteNavigationItem>
-    );
-  });
-
   return (
     <div className="hidden items-center justify-center md:flex">
       <NavigationMenu>
         <NavigationMenuList className="gap-x-1 rounded-full border border-violet-200/10 bg-white/[0.03] p-1 xl:gap-x-2">
-          {NavItems}
+          <SiteWorkspacesNavMenu />
           <SiteFeaturesNavMenu />
           <SiteAppsNavMenu />
+          <SiteNavigationItem path="/pricing">
+            <Trans i18nKey="marketing:pricing" />
+          </SiteNavigationItem>
         </NavigationMenuList>
       </NavigationMenu>
     </div>
