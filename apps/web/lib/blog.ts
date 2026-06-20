@@ -2,7 +2,7 @@ import 'server-only';
 
 import { cache } from 'react';
 
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { getSupabasePublicServerClient } from '~/lib/supabase-public-server-client';
 
 export type BlogPostListItem = {
   id: string;
@@ -12,6 +12,10 @@ export type BlogPostListItem = {
   primary_keyword: string | null;
   reading_time_minutes: number | null;
   published_at: string | null;
+  featured_image_url: string | null;
+  featured_image_alt: string | null;
+  author_name: string;
+  author_avatar_url: string | null;
 };
 
 export type BlogPost = BlogPostListItem & {
@@ -25,18 +29,20 @@ export type BlogPost = BlogPostListItem & {
   featured_image_alt: string | null;
   author_name: string;
   author_url: string | null;
+  author_bio: string | null;
+  author_avatar_url: string | null;
   schema_json: Record<string, unknown> | null;
   status: string;
   updated_at: string;
 };
 
 const LIST_COLUMNS =
-  'id, slug, title, excerpt, primary_keyword, reading_time_minutes, published_at';
+  'id, slug, title, excerpt, primary_keyword, reading_time_minutes, published_at, featured_image_url, featured_image_alt, author_name, author_avatar_url';
 
-const ALL_COLUMNS = `${LIST_COLUMNS}, meta_description, content, secondary_keywords, og_title, og_description, canonical_url, featured_image_url, featured_image_alt, author_name, author_url, schema_json, status, updated_at`;
+const ALL_COLUMNS = `${LIST_COLUMNS}, meta_description, content, secondary_keywords, og_title, og_description, canonical_url, author_url, author_bio, schema_json, status, updated_at`;
 
 export const getBlogPosts = cache(async (): Promise<BlogPostListItem[]> => {
-  const client = getSupabaseServerClient();
+  const client = getSupabasePublicServerClient();
 
   const { data, error } = await client
     .from('blog_posts')
@@ -53,7 +59,7 @@ export const getBlogPosts = cache(async (): Promise<BlogPostListItem[]> => {
 });
 
 export const getBlogPost = cache(async (slug: string): Promise<BlogPost | null> => {
-  const client = getSupabaseServerClient();
+  const client = getSupabasePublicServerClient();
 
   const { data, error } = await client
     .from('blog_posts')
@@ -71,7 +77,7 @@ export const getBlogPost = cache(async (slug: string): Promise<BlogPost | null> 
 });
 
 export const getBlogPostSlugs = cache(async (): Promise<string[]> => {
-  const client = getSupabaseServerClient();
+  const client = getSupabasePublicServerClient();
 
   const { data, error } = await client
     .from('blog_posts')
@@ -93,7 +99,7 @@ export type BlogPostSitemapItem = {
 
 export const getPublishedBlogPostsForSitemap = cache(
   async (): Promise<BlogPostSitemapItem[]> => {
-    const client = getSupabaseServerClient();
+    const client = getSupabasePublicServerClient();
 
     const { data, error } = await client
       .from('blog_posts')

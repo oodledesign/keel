@@ -21,6 +21,8 @@ export type BlogPostFormData = {
   featured_image_alt?: string | null;
   author_name?: string | null;
   author_url?: string | null;
+  author_user_id?: string | null;
+  author_bio?: string | null;
   reading_time_minutes?: number | null;
 };
 
@@ -60,7 +62,39 @@ function parseSecondaryKeywords(value: string | null | undefined) {
     .filter(Boolean);
 }
 
-function toDbPayload(data: BlogPostFormData) {
+async function resolveAuthorFields(data: BlogPostFormData) {
+  const authorUserId = data.author_user_id?.trim() || null;
+  let authorName = data.author_name?.trim() || 'Dan Potter';
+  let authorAvatarUrl: string | null = null;
+
+  if (authorUserId) {
+    const { data: account, error } = await adminClient()
+      .from('accounts')
+      .select('picture_url')
+      .eq('primary_owner_user_id', authorUserId)
+      .eq('is_personal_account', true)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[blog] author account lookup failed:', error.message);
+    } else if (account) {
+      const pictureUrl = (account.picture_url as string | null | undefined)?.trim();
+      authorAvatarUrl = pictureUrl || null;
+    }
+  }
+
+  return {
+    author_name: authorName,
+    author_url: data.author_url?.trim() || 'https://ozer.so',
+    author_user_id: authorUserId,
+    author_bio: data.author_bio?.trim() || null,
+    author_avatar_url: authorAvatarUrl,
+  };
+}
+
+async function toDbPayload(data: BlogPostFormData) {
+  const author = await resolveAuthorFields(data);
+
   return {
     slug: data.slug.trim(),
     title: data.title.trim(),
@@ -74,8 +108,7 @@ function toDbPayload(data: BlogPostFormData) {
     canonical_url: data.canonical_url?.trim() || null,
     featured_image_url: data.featured_image_url?.trim() || null,
     featured_image_alt: data.featured_image_alt?.trim() || null,
-    author_name: data.author_name?.trim() || 'Dan Potter',
-    author_url: data.author_url?.trim() || 'https://ozer.so',
+    ...author,
     reading_time_minutes: data.reading_time_minutes ?? null,
   };
 }
@@ -112,7 +145,7 @@ export async function getAdminBlogPost(id: string) {
 export async function createBlogPost(data: BlogPostFormData) {
   await requireSuperAdmin();
 
-  const payload = toDbPayload(data);
+  const payload = await toDbPayload(data);
 
   if (!payload.slug || !payload.title) {
     throw new Error('Slug and title are required');
@@ -134,7 +167,7 @@ export async function createBlogPost(data: BlogPostFormData) {
 export async function updateBlogPost(id: string, data: BlogPostFormData) {
   await requireSuperAdmin();
 
-  const payload = toDbPayload(data);
+  const payload = await toDbPayload(data);
 
   if (!payload.slug || !payload.title) {
     throw new Error('Slug and title are required');

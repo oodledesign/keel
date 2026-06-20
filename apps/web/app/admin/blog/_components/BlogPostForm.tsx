@@ -8,10 +8,19 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@kit/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
 
+import type { BlogAuthorOption } from '../_lib/load-blog-author-options';
 import {
   createBlogPost,
   publishBlogPost,
@@ -36,6 +45,9 @@ type BlogPostRecord = {
   featured_image_alt?: string | null;
   author_name?: string | null;
   author_url?: string | null;
+  author_user_id?: string | null;
+  author_bio?: string | null;
+  author_avatar_url?: string | null;
   reading_time_minutes?: number | null;
   status?: string | null;
 };
@@ -63,7 +75,13 @@ function CharacterCounter({
   );
 }
 
-export function BlogPostForm({ post }: { post?: BlogPostRecord | null }) {
+export function BlogPostForm({
+  post,
+  authorOptions,
+}: {
+  post?: BlogPostRecord | null;
+  authorOptions: BlogAuthorOption[];
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [slugTouched, setSlugTouched] = useState(Boolean(post?.slug));
@@ -84,6 +102,8 @@ export function BlogPostForm({ post }: { post?: BlogPostRecord | null }) {
       featured_image_alt: post?.featured_image_alt ?? '',
       author_name: post?.author_name ?? 'Dan Potter',
       author_url: post?.author_url ?? 'https://ozer.so',
+      author_user_id: post?.author_user_id ?? '',
+      author_bio: post?.author_bio ?? '',
       reading_time_minutes:
         post?.reading_time_minutes != null
           ? String(post.reading_time_minutes)
@@ -124,6 +144,8 @@ export function BlogPostForm({ post }: { post?: BlogPostRecord | null }) {
     featured_image_alt: form.featured_image_alt,
     author_name: form.author_name,
     author_url: form.author_url,
+    author_user_id: form.author_user_id || null,
+    author_bio: form.author_bio,
     reading_time_minutes: form.reading_time_minutes
       ? Number(form.reading_time_minutes)
       : null,
@@ -169,6 +191,24 @@ export function BlogPostForm({ post }: { post?: BlogPostRecord | null }) {
         );
       }
     });
+  };
+
+  const selectedAuthor = authorOptions.find(
+    (option) => option.userId === form.author_user_id,
+  );
+
+  const previewAvatarUrl =
+    selectedAuthor?.avatarUrl ?? post?.author_avatar_url ?? null;
+
+  const handleAuthorChange = (userId: string) => {
+    const nextUserId = userId === 'none' ? '' : userId;
+    const author = authorOptions.find((option) => option.userId === nextUserId);
+
+    setForm((current) => ({
+      ...current,
+      author_user_id: nextUserId,
+      author_name: author?.name ?? current.author_name,
+    }));
   };
 
   return (
@@ -336,6 +376,49 @@ export function BlogPostForm({ post }: { post?: BlogPostRecord | null }) {
 
         <TabsContent value="author" className="mt-6 space-y-4">
           <div className="space-y-2">
+            <Label htmlFor="author_user_id">Author profile</Label>
+            <Select
+              value={form.author_user_id || 'none'}
+              onValueChange={handleAuthorChange}
+            >
+              <SelectTrigger id="author_user_id">
+                <SelectValue placeholder="Select a super admin" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Manual author (no profile photo)</SelectItem>
+                {authorOptions.map((option) => (
+                  <SelectItem key={option.userId} value={option.userId}>
+                    {option.name}
+                    {option.email ? ` (${option.email})` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-muted-foreground text-xs">
+              Links the post to a super admin account and syncs their profile photo on save.
+            </p>
+          </div>
+
+          {previewAvatarUrl || form.author_name ? (
+            <div className="border-border/40 flex items-center gap-3 rounded-lg border p-4">
+              <Avatar className="h-12 w-12">
+                {previewAvatarUrl ? (
+                  <AvatarImage src={previewAvatarUrl} alt={form.author_name} />
+                ) : null}
+                <AvatarFallback className="uppercase">
+                  {form.author_name.slice(0, 1)}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="text-sm font-medium">{form.author_name}</p>
+                <p className="text-muted-foreground text-xs">
+                  Profile photo preview
+                </p>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="space-y-2">
             <Label htmlFor="author_name">Author name</Label>
             <Input
               id="author_name"
@@ -351,6 +434,18 @@ export function BlogPostForm({ post }: { post?: BlogPostRecord | null }) {
               value={form.author_url}
               onChange={(event) => updateField('author_url', event.target.value)}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="author_bio">Author bio</Label>
+            <Textarea
+              id="author_bio"
+              rows={4}
+              value={form.author_bio}
+              onChange={(event) => updateField('author_bio', event.target.value)}
+              placeholder="Short bio shown on the post and in Article schema for E-E-A-T."
+            />
+            <CharacterCounter value={form.author_bio} max={280} />
           </div>
         </TabsContent>
       </Tabs>

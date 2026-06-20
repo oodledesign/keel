@@ -5,6 +5,7 @@ import { PageBody, PageHeader } from '@kit/ui/page';
 
 import { getAdminBlogPost } from '../../_actions';
 import { BlogPostForm } from '../../_components/BlogPostForm';
+import { loadBlogAuthorOptions } from '../../_lib/load-blog-author-options';
 
 export const metadata = {
   title: 'Edit blog post',
@@ -16,7 +17,10 @@ async function AdminEditBlogPostPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const post = await getAdminBlogPost(id);
+  const [post, authorOptions] = await Promise.all([
+    getAdminBlogPost(id),
+    loadBlogAuthorOptions(),
+  ]);
 
   if (!post) {
     notFound();
@@ -30,7 +34,7 @@ async function AdminEditBlogPostPage({
       />
 
       <PageBody>
-        <BlogPostForm post={post} />
+        <BlogPostForm post={post} authorOptions={authorOptions} />
       </PageBody>
     </>
   );
