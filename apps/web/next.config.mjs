@@ -356,8 +356,6 @@ async function getRedirects() {
 
   // Legacy marketing pages still disabled; segment landings, pricing, contact, FAQ, and legal stay public.
   const marketingRedirects = [
-    '/blog',
-    '/blog/:path*',
     '/docs',
     '/docs/:path*',
     '/changelog',
