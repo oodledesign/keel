@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   HIGH_CONFIDENCE_ASSIGNEE_THRESHOLD,
   isHighConfidenceMeetingSuggestion,
-} from './publish-meeting-task';
+} from './meeting-task-confidence';
 
 describe('meeting task publish helpers', () => {
   it('treats high-confidence assigned suggestions as bulk-approvable', () => {

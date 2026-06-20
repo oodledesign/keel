@@ -4,6 +4,12 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { schedulePublishedTaskIfEnabled } from '~/lib/recorder/schedule-published-task';
 
+export {
+  HIGH_CONFIDENCE_ASSIGNEE_THRESHOLD,
+  LOW_CONFIDENCE_ASSIGNEE_THRESHOLD,
+  isHighConfidenceMeetingSuggestion,
+} from '~/lib/recorder/meeting-task-confidence';
+
 export type PublishMeetingTaskInput = {
   meetingActionItemId: string;
   accountId: string;
@@ -205,18 +211,4 @@ export async function publishMeetingTaskToPlanner(
   }
 
   return { plannerTaskId, status };
-}
-
-export const HIGH_CONFIDENCE_ASSIGNEE_THRESHOLD = 0.75;
-export const LOW_CONFIDENCE_ASSIGNEE_THRESHOLD = 0.6;
-
-export function isHighConfidenceMeetingSuggestion(item: {
-  assigneeConfidence: number | null;
-  suggestedAssigneeId: string | null;
-}): boolean {
-  return (
-    item.suggestedAssigneeId !== null &&
-    item.assigneeConfidence !== null &&
-    item.assigneeConfidence >= HIGH_CONFIDENCE_ASSIGNEE_THRESHOLD
-  );
 }

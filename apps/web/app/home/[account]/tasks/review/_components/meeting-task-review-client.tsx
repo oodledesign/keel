@@ -35,7 +35,7 @@ import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
 import {
   isHighConfidenceMeetingSuggestion,
   LOW_CONFIDENCE_ASSIGNEE_THRESHOLD,
-} from '~/lib/recorder/publish-meeting-task';
+} from '~/lib/recorder/meeting-task-confidence';
 
 import type {
   MeetingReviewItem,
