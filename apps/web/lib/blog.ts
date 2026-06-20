@@ -2,7 +2,7 @@ import 'server-only';
 
 import { cache } from 'react';
 
-import { getSupabasePublicServerClient } from '~/lib/supabase-public-server-client';
+import { getSupabasePublicServerClient } from '@kit/supabase/public-server-client';
 
 export type BlogPostListItem = {
   id: string;

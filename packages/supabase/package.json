@@ -12,6 +12,7 @@
   "exports": {
     "./server-client": "./src/clients/server-client.ts",
     "./server-admin-client": "./src/clients/server-admin-client.ts",
+    "./public-server-client": "./src/clients/public-server-client.ts",
     "./middleware-client": "./src/clients/middleware-client.ts",
     "./browser-client": "./src/clients/browser-client.ts",
     "./get-supabase-auth-cookie-options": "./src/get-supabase-auth-cookie-options.ts",
