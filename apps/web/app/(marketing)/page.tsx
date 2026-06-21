@@ -8,6 +8,7 @@ import pathsConfig from '~/config/paths.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { InterconnectedWorkspacesSection } from './_components/interconnected-workspaces-section';
+import PricingSection from './_components/pricing-section';
 
 export const metadata = {
   title: 'Ozer - The Life CRM',
@@ -133,6 +134,10 @@ function Home() {
       </section>
 
       <InterconnectedWorkspacesSection />
+
+      <div id="pricing">
+        <PricingSection />
+      </div>
 
       <section className="relative mx-auto w-full max-w-7xl px-6 pb-24">
         <div className="mb-8">

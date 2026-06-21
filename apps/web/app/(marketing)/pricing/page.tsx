@@ -1,4 +1,5 @@
 import { SitePageHeader } from '~/(marketing)/_components/site-page-header';
+import PricingSection from '~/(marketing)/_components/pricing-section';
 import { KeelPricingPage } from '~/(marketing)/pricing/_components/keel-pricing-page';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
@@ -26,7 +27,11 @@ async function PricingPage() {
         />
 
         <div className="container mx-auto px-4 pb-8 xl:pb-16">
-          <KeelPricingPage />
+          <PricingSection />
+
+          <div className="mt-16 border-t border-white/10 pt-16">
+            <KeelPricingPage />
+          </div>
         </div>
       </div>
     </div>
