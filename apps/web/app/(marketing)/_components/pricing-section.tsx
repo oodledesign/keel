@@ -3,14 +3,14 @@
 /**
  * Pricing map notes (from apps/web/config/billing.config.ts):
  * - Personal & Family has no paid product — always free.
- * - Business maps to Business Solo (£29/mo, £290/yr). billing.config.ts also defines
- *   Business Lite (£0), Team (£79/£790), and Scale (£149/£1490).
- * - Property maps to Property Starter (£19/mo, £190/yr). Portfolio tier is £29/£290.
+ * - Business tiers: Lite (£0), Solo (£29/£290), Team (£79/£790), Scale (£149/£1490).
+ * - Property tiers: Starter (£19/£190), Portfolio (£29/£290).
  * - Community is £12/mo, £120/yr.
- * - Trial length: 14 days (billing.config.ts TRIAL_DAYS; not defined in app.config.ts).
- * - Currency: GBP (KEEL_BILLING_CURRENCY / STRIPE_BILLING_CURRENCY).
- *
- * framer-motion added to apps/web for this component.
+ * - Personal add-on: Email Assistant (£9/mo).
+ * - Workspace add-ons: Signatures (£9), Rankly (£36), Feedflow (£9), Videos (£5–£47).
+ * - TODO: Meeting transcription / Ozer Assistant — no Stripe product in billing.config.ts yet.
+ * - Trial length: 14 days (billing.config.ts TRIAL_DAYS).
+ * - Currency: GBP (KEEL_BILLING_CURRENCY).
  */
 
 import Link from 'next/link';
@@ -31,6 +31,9 @@ import {
   ChevronDown,
   Home,
   Lock,
+  Mail,
+  Puzzle,
+  Sparkles,
   Users,
   type LucideIcon,
 } from 'lucide-react';
@@ -56,6 +59,7 @@ const PRICING_CONFIG = {
       monthlyPrice: 0,
       annualPrice: 0,
       alwaysIncluded: true,
+      hasTiers: false,
       planId: '',
       variantIds: { monthly: '', annual: '' },
     },
@@ -67,6 +71,7 @@ const PRICING_CONFIG = {
       monthlyPrice: 29,
       annualPrice: 290 / 12,
       alwaysIncluded: false,
+      hasTiers: true,
       planId: 'keel-business-solo',
       variantIds: {
         monthly: KEEL_STRIPE_PRICES.business_solo_monthly,
@@ -81,6 +86,7 @@ const PRICING_CONFIG = {
       monthlyPrice: 19,
       annualPrice: 190 / 12,
       alwaysIncluded: false,
+      hasTiers: true,
       planId: 'keel-property-starter',
       variantIds: {
         monthly: KEEL_STRIPE_PRICES.property_starter_monthly,
@@ -95,11 +101,174 @@ const PRICING_CONFIG = {
       monthlyPrice: 12,
       annualPrice: 120 / 12,
       alwaysIncluded: false,
+      hasTiers: false,
       planId: 'keel-community',
       variantIds: {
         monthly: KEEL_STRIPE_PRICES.community_monthly,
         annual: KEEL_STRIPE_PRICES.community_yearly,
       },
+    },
+  ],
+  businessTiers: [
+    {
+      id: 'business-lite',
+      label: 'Lite',
+      description: 'Free apps workspace — add Signatures, Rankly, and more à la carte',
+      monthlyPrice: 0,
+      annualPrice: 0,
+      badge: 'Apps only',
+      planId: 'business-lite-free',
+      productId: 'keel-business-lite',
+      variantIds: {
+        monthly: KEEL_STRIPE_PRICES.business_lite_monthly,
+        annual: KEEL_STRIPE_PRICES.business_lite_monthly,
+      },
+    },
+    {
+      id: 'business-solo',
+      label: 'Solo',
+      description: 'Full CRM for one person',
+      monthlyPrice: 29,
+      annualPrice: 290 / 12,
+      planId: 'business-solo-monthly',
+      productId: 'keel-business-solo',
+      variantIds: {
+        monthly: KEEL_STRIPE_PRICES.business_solo_monthly,
+        annual: KEEL_STRIPE_PRICES.business_solo_yearly,
+      },
+    },
+    {
+      id: 'business-team',
+      label: 'Team',
+      description: 'Up to 5 team members',
+      monthlyPrice: 79,
+      annualPrice: 790 / 12,
+      badge: 'Popular',
+      planId: 'business-team-monthly',
+      productId: 'keel-business-team',
+      variantIds: {
+        monthly: KEEL_STRIPE_PRICES.business_team_monthly,
+        annual: KEEL_STRIPE_PRICES.business_team_yearly,
+      },
+    },
+    {
+      id: 'business-scale',
+      label: 'Scale',
+      description: 'Up to 15 team members',
+      monthlyPrice: 149,
+      annualPrice: 1490 / 12,
+      planId: 'business-scale-monthly',
+      productId: 'keel-business-scale',
+      variantIds: {
+        monthly: KEEL_STRIPE_PRICES.business_scale_monthly,
+        annual: KEEL_STRIPE_PRICES.business_scale_yearly,
+      },
+    },
+  ],
+  propertyTiers: [
+    {
+      id: 'property-starter',
+      label: 'Starter',
+      description: 'Up to 5 properties',
+      monthlyPrice: 19,
+      annualPrice: 190 / 12,
+      planId: 'property-starter-monthly',
+      productId: 'keel-property-starter',
+      variantIds: {
+        monthly: KEEL_STRIPE_PRICES.property_starter_monthly,
+        annual: KEEL_STRIPE_PRICES.property_starter_yearly,
+      },
+    },
+    {
+      id: 'property-portfolio',
+      label: 'Portfolio',
+      description: 'Up to 20 properties',
+      monthlyPrice: 29,
+      annualPrice: 290 / 12,
+      planId: 'property-portfolio-monthly',
+      productId: 'keel-property-portfolio',
+      variantIds: {
+        monthly: KEEL_STRIPE_PRICES.property_portfolio_monthly,
+        annual: KEEL_STRIPE_PRICES.property_portfolio_yearly,
+      },
+    },
+  ],
+  personalAddons: [
+    {
+      id: 'email-assistant',
+      label: 'Email Assistant',
+      description: 'Gmail sync, AI action items, and draft replies in your personal home',
+      monthlyPrice: 9,
+      planId: 'email-assistant-monthly',
+      productId: 'keel-addon-email-assistant',
+      variantId: KEEL_STRIPE_PRICES.addon_email_assistant_monthly,
+    },
+  ],
+  workspaceAddons: [
+    {
+      id: 'signatures',
+      label: 'Signatures',
+      description: 'Branded email signatures for Microsoft 365 and Google Workspace',
+      monthlyPrice: 9,
+      planId: 'signatures-monthly',
+      productId: 'keel-addon-signatures',
+      variantId: KEEL_STRIPE_PRICES.addon_signatures_monthly,
+    },
+    {
+      id: 'rankly',
+      label: 'Rankly',
+      description: 'SEO rankings, PageSpeed, and AI insights',
+      monthlyPrice: 36,
+      planId: 'rankly-monthly',
+      productId: 'keel-addon-rankly',
+      variantId: KEEL_STRIPE_PRICES.addon_rankly_monthly,
+    },
+    {
+      id: 'feedflow',
+      label: 'Feedflow',
+      description: 'Reviews and social content for your brand',
+      monthlyPrice: 9,
+      planId: 'feedflow-monthly',
+      productId: 'keel-addon-feedflow',
+      variantId: KEEL_STRIPE_PRICES.addon_feedflow_monthly,
+    },
+  ],
+  videoTiers: [
+    {
+      id: 'videos-starter',
+      label: 'Videos Starter',
+      description: 'Up to 5 hosted videos',
+      monthlyPrice: 5,
+      planId: 'videos-starter-monthly',
+      productId: 'keel-addon-videos-starter',
+      variantId: KEEL_STRIPE_PRICES.addon_videos_starter_monthly,
+    },
+    {
+      id: 'videos-growth',
+      label: 'Videos Growth',
+      description: 'Up to 20 hosted videos',
+      monthlyPrice: 12,
+      planId: 'videos-growth-monthly',
+      productId: 'keel-addon-videos-growth',
+      variantId: KEEL_STRIPE_PRICES.addon_videos_growth_monthly,
+    },
+    {
+      id: 'videos-pro',
+      label: 'Videos Pro',
+      description: 'Up to 49 hosted videos',
+      monthlyPrice: 29,
+      planId: 'videos-pro-monthly',
+      productId: 'keel-addon-videos-pro',
+      variantId: KEEL_STRIPE_PRICES.addon_videos_pro_monthly,
+    },
+    {
+      id: 'videos-studio',
+      label: 'Videos Studio',
+      description: 'Up to 100 hosted videos',
+      monthlyPrice: 47,
+      planId: 'videos-studio-monthly',
+      productId: 'keel-addon-videos-studio',
+      variantId: KEEL_STRIPE_PRICES.addon_videos_studio_monthly,
     },
   ],
   alwaysIncludedFeatures: [
@@ -112,7 +281,16 @@ const PRICING_CONFIG = {
 } as const;
 
 type WorkspaceConfig = (typeof PRICING_CONFIG.workspaces)[number];
+type TierConfig =
+  | (typeof PRICING_CONFIG.businessTiers)[number]
+  | (typeof PRICING_CONFIG.propertyTiers)[number];
 type BillingInterval = 'monthly' | 'annual';
+
+type SummaryLineItem = {
+  id: string;
+  label: string;
+  price: number;
+};
 
 const WORKSPACE_ICONS: Record<WorkspaceConfig['icon'], LucideIcon> = {
   Home,
@@ -122,11 +300,17 @@ const WORKSPACE_ICONS: Record<WorkspaceConfig['icon'], LucideIcon> = {
 };
 
 function computeAnnualDiscountPercent() {
-  const discounts = PRICING_CONFIG.workspaces
-    .filter((workspace) => workspace.monthlyPrice > 0)
-    .map((workspace) => {
-      const monthlyYearTotal = workspace.monthlyPrice * 12;
-      const annualYearTotal = workspace.annualPrice * 12;
+  const tierPrices = [
+    ...PRICING_CONFIG.businessTiers,
+    ...PRICING_CONFIG.propertyTiers,
+    ...PRICING_CONFIG.workspaces.filter((workspace) => !workspace.hasTiers),
+  ];
+
+  const discounts = tierPrices
+    .filter((item) => item.monthlyPrice > 0)
+    .map((item) => {
+      const monthlyYearTotal = item.monthlyPrice * 12;
+      const annualYearTotal = item.annualPrice * 12;
 
       return ((monthlyYearTotal - annualYearTotal) / monthlyYearTotal) * 100;
     });
@@ -157,8 +341,142 @@ function formatTotalPrice(amount: number) {
   }).format(amount);
 }
 
-function workspaceUnitPrice(workspace: WorkspaceConfig, billing: BillingInterval) {
+function tierUnitPrice(tier: TierConfig, billing: BillingInterval) {
+  return billing === 'annual' ? tier.annualPrice : tier.monthlyPrice;
+}
+
+function workspaceUnitPrice(
+  workspace: WorkspaceConfig,
+  billing: BillingInterval,
+  businessTierId: string,
+  propertyTierId: string,
+) {
+  if (workspace.id === 'business') {
+    const tier = PRICING_CONFIG.businessTiers.find((item) => item.id === businessTierId);
+
+    return tier ? tierUnitPrice(tier, billing) : 0;
+  }
+
+  if (workspace.id === 'property') {
+    const tier = PRICING_CONFIG.propertyTiers.find((item) => item.id === propertyTierId);
+
+    return tier ? tierUnitPrice(tier, billing) : 0;
+  }
+
   return billing === 'annual' ? workspace.annualPrice : workspace.monthlyPrice;
+}
+
+function workspaceCardPriceLabel(workspace: WorkspaceConfig) {
+  if (workspace.id === 'business') {
+    return `From ${formatWorkspacePrice(29)}/mo`;
+  }
+
+  if (workspace.id === 'property') {
+    return `From ${formatWorkspacePrice(19)}/mo`;
+  }
+
+  const price = workspace.monthlyPrice;
+
+  return price === 0
+    ? 'Free'
+    : `${formatWorkspacePrice(price)}/mo`;
+}
+
+function buildSummaryLineItems(params: {
+  selected: Set<string>;
+  billing: BillingInterval;
+  businessTierId: string;
+  propertyTierId: string;
+  selectedAddons: Set<string>;
+  videoTierId: string;
+}): SummaryLineItem[] {
+  const items: SummaryLineItem[] = [];
+  const paidWorkspaceCount = [...params.selected].filter((id) => id !== 'personal').length;
+
+  for (const workspace of PRICING_CONFIG.workspaces) {
+    if (!params.selected.has(workspace.id)) continue;
+
+    if (workspace.id === 'business') {
+      const tier = PRICING_CONFIG.businessTiers.find(
+        (item) => item.id === params.businessTierId,
+      );
+
+      items.push({
+        id: 'business',
+        label: `Business ${tier?.label ?? 'Solo'}`,
+        price: tier ? tierUnitPrice(tier, params.billing) : 0,
+      });
+      continue;
+    }
+
+    if (workspace.id === 'property') {
+      const tier = PRICING_CONFIG.propertyTiers.find(
+        (item) => item.id === params.propertyTierId,
+      );
+
+      items.push({
+        id: 'property',
+        label: `Property ${tier?.label ?? 'Starter'}`,
+        price: tier ? tierUnitPrice(tier, params.billing) : 0,
+      });
+      continue;
+    }
+
+    items.push({
+      id: workspace.id,
+      label: workspace.label,
+      price: workspaceUnitPrice(
+        workspace,
+        params.billing,
+        params.businessTierId,
+        params.propertyTierId,
+      ),
+    });
+  }
+
+  for (const addon of PRICING_CONFIG.personalAddons) {
+    if (!params.selectedAddons.has(addon.id)) continue;
+
+    items.push({
+      id: addon.id,
+      label: addon.label,
+      price: addon.monthlyPrice,
+    });
+  }
+
+  for (const addon of PRICING_CONFIG.workspaceAddons) {
+    if (!params.selectedAddons.has(addon.id) || paidWorkspaceCount === 0) continue;
+
+    items.push({
+      id: addon.id,
+      label:
+        paidWorkspaceCount > 1
+          ? `${addon.label} × ${paidWorkspaceCount} workspaces`
+          : addon.label,
+      price: addon.monthlyPrice * paidWorkspaceCount,
+    });
+  }
+
+  if (params.selectedAddons.has('videos') && paidWorkspaceCount > 0) {
+    const tier = PRICING_CONFIG.videoTiers.find((item) => item.id === params.videoTierId);
+
+    if (tier) {
+      items.push({
+        id: 'videos',
+        label:
+          paidWorkspaceCount > 1
+            ? `${tier.label} × ${paidWorkspaceCount} workspaces`
+            : tier.label,
+        price: tier.monthlyPrice * paidWorkspaceCount,
+      });
+    }
+  }
+
+  return items;
+}
+
+function summaryTotal(items: SummaryLineItem[]) {
+  return items.reduce((sum, item) => sum + item.price, 0);
 }
 
 function AnimatedTotal({ value, reducedMotion }: { value: number; reducedMotion: boolean }) {
@@ -245,15 +563,16 @@ function WorkspaceCard({
   selected,
   onToggle,
   reducedMotion,
+  priceLabel,
 }: {
   workspace: WorkspaceConfig;
   billing: BillingInterval;
   selected: boolean;
   onToggle: () => void;
   reducedMotion: boolean;
+  priceLabel: string;
 }) {
   const Icon = WORKSPACE_ICONS[workspace.icon];
-  const price = workspaceUnitPrice(workspace, billing);
   const locked = workspace.alwaysIncluded;
 
   return (
@@ -332,17 +651,251 @@ function WorkspaceCard({
       <p className="mt-1 text-sm leading-relaxed text-slate-300">{workspace.description}</p>
 
       <div className="mt-auto pt-5">
-        <p className="font-heading text-2xl font-semibold text-white">
-          {formatWorkspacePrice(price)}
-          {price > 0 ? (
-            <span className="text-sm font-normal text-slate-400">/mo</span>
-          ) : null}
-        </p>
-        {billing === 'annual' && price > 0 ? (
+        <p className="font-heading text-2xl font-semibold text-white">{priceLabel}</p>
+        {workspace.hasTiers && selected ? (
+          <p className="mt-1 text-xs text-slate-400">Choose your tier below</p>
+        ) : billing === 'annual' && workspace.monthlyPrice > 0 && selected ? (
           <p className="mt-1 text-xs text-slate-400">Billed annually</p>
         ) : null}
       </div>
     </motion.button>
+  );
+}
+
+function TierPicker({
+  title,
+  tiers,
+  selectedTierId,
+  onSelect,
+  billing,
+  reducedMotion,
+}: {
+  title: string;
+  tiers: readonly TierConfig[];
+  selectedTierId: string;
+  onSelect: (tierId: string) => void;
+  billing: BillingInterval;
+  reducedMotion: boolean;
+}) {
+  return (
+    <motion.div
+      initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={reducedMotion ? undefined : { opacity: 0, y: 8 }}
+      className="rounded-2xl border border-white/10 bg-[#120f24]/50 p-4 sm:p-5"
+    >
+      <h4 className="font-heading text-sm font-semibold uppercase tracking-wide text-violet-200/80">
+        {title}
+      </h4>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        {tiers.map((tier) => {
+          const selected = tier.id === selectedTierId;
+          const price = tierUnitPrice(tier, billing);
+
+          return (
+            <button
+              key={tier.id}
+              type="button"
+              onClick={() => onSelect(tier.id)}
+              className={cn(
+                'rounded-xl border px-4 py-3 text-left transition-colors',
+                selected
+                  ? 'border-[#2dd4bf]/60 bg-[#2dd4bf]/10'
+                  : 'border-white/10 bg-white/[0.02] hover:border-white/20',
+              )}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-medium text-white">{tier.label}</span>
+                {'badge' in tier && tier.badge ? (
+                  <span className="rounded-full bg-[#7c3aed]/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-200">
+                    {tier.badge}
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-1 text-xs text-slate-400">{tier.description}</p>
+              <p className="mt-2 text-sm font-semibold text-white">
+                {formatWorkspacePrice(price)}
+                {price > 0 ? '/mo' : ''}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+    </motion.div>
+  );
+}
+
+function AddonToggle({
+  label,
+  description,
+  priceLabel,
+  selected,
+  onToggle,
+}: {
+  label: string;
+  description: string;
+  priceLabel: string;
+  selected: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={selected}
+      onClick={onToggle}
+      className={cn(
+        'rounded-xl border px-4 py-3 text-left transition-colors',
+        selected
+          ? 'border-[#2dd4bf]/60 bg-[#2dd4bf]/10'
+          : 'border-white/10 bg-white/[0.02] hover:border-white/20',
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="font-medium text-white">{label}</p>
+          <p className="mt-1 text-xs leading-relaxed text-slate-400">{description}</p>
+        </div>
+        <span className="shrink-0 text-sm font-semibold text-[#2dd4bf]">{priceLabel}</span>
+      </div>
+    </button>
+  );
+}
+
+function AddonsPanel({
+  selected,
+  selectedAddons,
+  onToggleAddon,
+  videoTierId,
+  onVideoTierChange,
+  paidWorkspaceCount,
+  reducedMotion,
+}: {
+  selected: Set<string>;
+  selectedAddons: Set<string>;
+  onToggleAddon: (id: string) => void;
+  videoTierId: string;
+  onVideoTierChange: (tierId: string) => void;
+  paidWorkspaceCount: number;
+  reducedMotion: boolean;
+}) {
+  const videosSelected = selectedAddons.has('videos');
+  const workspaceMultiplier =
+    paidWorkspaceCount > 1 ? ` × ${paidWorkspaceCount} workspaces` : '';
+
+  return (
+    <div className="space-y-6 rounded-2xl border border-white/10 bg-[#120f24]/40 p-4 sm:p-5">
+      <div>
+        <h4 className="font-heading text-lg font-semibold text-white">Add-ons</h4>
+        <p className="mt-1 text-sm text-slate-400">
+          Optional extras on top of your workspaces. Workspace add-ons are priced per
+          workspace.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-violet-200/80">
+          <Mail className="h-3.5 w-3.5" aria-hidden />
+          Personal add-ons
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {PRICING_CONFIG.personalAddons.map((addon) => (
+            <AddonToggle
+              key={addon.id}
+              label={addon.label}
+              description={addon.description}
+              priceLabel={`${formatWorkspacePrice(addon.monthlyPrice)}/mo`}
+              selected={selectedAddons.has(addon.id)}
+              onToggle={() => onToggleAddon(addon.id)}
+            />
+          ))}
+        </div>
+        <p className="text-xs text-slate-500">
+          Meeting transcription for Ozer Assistant is not yet on a public plan — coming
+          soon.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-violet-200/80">
+          <Puzzle className="h-3.5 w-3.5" aria-hidden />
+          Workspace apps
+          {paidWorkspaceCount === 0 ? (
+            <span className="font-normal normal-case text-slate-500">
+              — select a paid workspace first
+            </span>
+          ) : null}
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {PRICING_CONFIG.workspaceAddons.map((addon) => (
+            <AddonToggle
+              key={addon.id}
+              label={addon.label}
+              description={addon.description}
+              priceLabel={`${formatWorkspacePrice(addon.monthlyPrice)}/mo${workspaceMultiplier}`}
+              selected={selectedAddons.has(addon.id)}
+              onToggle={() => {
+                if (paidWorkspaceCount === 0) return;
+                onToggleAddon(addon.id);
+              }}
+            />
+          ))}
+          <AddonToggle
+            label="Videos hosting"
+            description="Hosted video libraries with embeds and sharing"
+            priceLabel={`From ${formatWorkspacePrice(5)}/mo${workspaceMultiplier}`}
+            selected={videosSelected}
+            onToggle={() => {
+              if (paidWorkspaceCount === 0) return;
+              onToggleAddon('videos');
+            }}
+          />
+        </div>
+
+        <AnimatePresence initial={false}>
+          {videosSelected ? (
+            <motion.div
+              initial={reducedMotion ? false : { height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={reducedMotion ? undefined : { height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <label className="block text-xs font-medium uppercase tracking-wide text-slate-400">
+                Videos tier
+                <select
+                  value={videoTierId}
+                  onChange={(event) => onVideoTierChange(event.target.value)}
+                  className="mt-2 w-full rounded-lg border border-white/10 bg-[#0d0b1e] px-3 py-2 text-sm text-white"
+                >
+                  {PRICING_CONFIG.videoTiers.map((tier) => (
+                    <option key={tier.id} value={tier.id}>
+                      {tier.label} — {formatWorkspacePrice(tier.monthlyPrice)}/mo (
+                      {tier.description})
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      </div>
+
+      {selected.has('business') ? (
+        <p className="flex items-start gap-2 text-xs text-slate-500">
+          <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-300" aria-hidden />
+          Business Lite is free and built for the apps marketplace — pick Lite above if you
+          only need Signatures, Rankly, or other add-ons without full CRM features.
+        </p>
+      ) : null}
+
+      <p className="text-xs text-slate-500">
+        Add-ons are monthly only today. See{' '}
+        <Link href="/pricing" className="text-[#2dd4bf] underline-offset-4 hover:underline">
+          full pricing
+        </Link>{' '}
+        for feature lists.
+      </p>
+    </div>
   );
 }
 
@@ -465,6 +1018,12 @@ function ComparisonTable({ reducedMotion }: { reducedMotion: boolean }) {
 function PricingFaq({ reducedMotion }: { reducedMotion: boolean }) {
   const items = [
     {
+      id: 'addons',
+      question: 'How do add-ons like Email Assistant or Rankly work?',
+      answer:
+        'Personal add-ons attach to your home account. Workspace apps attach to each business, property, or community workspace you run — so Rankly on two workspaces means two subscriptions.',
+    },
+    {
       id: 'add-later',
       question: 'Can I add workspaces later?',
       answer:
@@ -547,33 +1106,52 @@ export default function PricingSection() {
   const reducedMotion = useReducedMotion() ?? false;
   const [billing, setBilling] = useState<BillingInterval>('monthly');
   const [selected, setSelected] = useState<Set<string>>(new Set(['personal']));
+  const [businessTierId, setBusinessTierId] = useState('business-solo');
+  const [propertyTierId, setPropertyTierId] = useState('property-starter');
+  const [selectedAddons, setSelectedAddons] = useState<Set<string>>(new Set());
+  const [videoTierId, setVideoTierId] = useState('videos-starter');
   const [alwaysIncludedOpen, setAlwaysIncludedOpen] = useState(false);
   const [ctaGlow, setCtaGlow] = useState(false);
 
-  const selectedWorkspaces = useMemo(
-    () =>
-      PRICING_CONFIG.workspaces.filter((workspace) => selected.has(workspace.id)),
+  const paidWorkspaceCount = useMemo(
+    () => [...selected].filter((id) => id !== 'personal').length,
     [selected],
   );
 
-  const total = useMemo(
+  const summaryLineItems = useMemo(
     () =>
-      [...selected]
-        .map((id) => {
-          const workspace = PRICING_CONFIG.workspaces.find((item) => item.id === id);
-
-          return billing === 'annual'
-            ? (workspace?.annualPrice ?? 0)
-            : (workspace?.monthlyPrice ?? 0);
-        })
-        .reduce((sum, price) => sum + price, 0),
-    [billing, selected],
+      buildSummaryLineItems({
+        selected,
+        billing,
+        businessTierId,
+        propertyTierId,
+        selectedAddons,
+        videoTierId,
+      }),
+    [selected, billing, businessTierId, propertyTierId, selectedAddons, videoTierId],
   );
+
+  const total = useMemo(() => summaryTotal(summaryLineItems), [summaryLineItems]);
 
   const toggleWorkspace = (id: string) => {
     if (id === 'personal') return;
 
     setSelected((current) => {
+      const next = new Set(current);
+
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+        if (!ctaGlow) setCtaGlow(true);
+      }
+
+      return next;
+    });
+  };
+
+  const toggleAddon = (id: string) => {
+    setSelectedAddons((current) => {
       const next = new Set(current);
 
       if (next.has(id)) {
@@ -612,17 +1190,66 @@ export default function PricingSection() {
         </div>
 
         <div className="mt-12 grid gap-8 lg:grid-cols-[1.2fr,0.8fr] lg:items-start">
-          <div className="grid gap-4 sm:grid-cols-2">
-            {PRICING_CONFIG.workspaces.map((workspace) => (
-              <WorkspaceCard
-                key={workspace.id}
-                workspace={workspace}
-                billing={billing}
-                selected={selected.has(workspace.id)}
-                onToggle={() => toggleWorkspace(workspace.id)}
-                reducedMotion={reducedMotion}
-              />
-            ))}
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              {PRICING_CONFIG.workspaces.map((workspace) => (
+                <WorkspaceCard
+                  key={workspace.id}
+                  workspace={workspace}
+                  billing={billing}
+                  selected={selected.has(workspace.id)}
+                  onToggle={() => toggleWorkspace(workspace.id)}
+                  reducedMotion={reducedMotion}
+                  priceLabel={
+                    workspace.hasTiers && selected.has(workspace.id)
+                      ? `${formatWorkspacePrice(
+                          workspaceUnitPrice(
+                            workspace,
+                            billing,
+                            businessTierId,
+                            propertyTierId,
+                          ),
+                        )}${workspaceUnitPrice(workspace, billing, businessTierId, propertyTierId) > 0 ? '/mo' : ''}`
+                      : workspaceCardPriceLabel(workspace)
+                  }
+                />
+              ))}
+            </div>
+
+            <AnimatePresence initial={false}>
+              {selected.has('business') ? (
+                <TierPicker
+                  key="business-tiers"
+                  title="Business tier"
+                  tiers={PRICING_CONFIG.businessTiers}
+                  selectedTierId={businessTierId}
+                  onSelect={setBusinessTierId}
+                  billing={billing}
+                  reducedMotion={reducedMotion}
+                />
+              ) : null}
+              {selected.has('property') ? (
+                <TierPicker
+                  key="property-tiers"
+                  title="Property tier"
+                  tiers={PRICING_CONFIG.propertyTiers}
+                  selectedTierId={propertyTierId}
+                  onSelect={setPropertyTierId}
+                  billing={billing}
+                  reducedMotion={reducedMotion}
+                />
+              ) : null}
+            </AnimatePresence>
+
+            <AddonsPanel
+              selected={selected}
+              selectedAddons={selectedAddons}
+              onToggleAddon={toggleAddon}
+              videoTierId={videoTierId}
+              onVideoTierChange={setVideoTierId}
+              paidWorkspaceCount={paidWorkspaceCount}
+              reducedMotion={reducedMotion}
+            />
           </div>
 
           <aside className="rounded-3xl border border-white/10 bg-[#120f24]/70 p-6 backdrop-blur-sm lg:sticky lg:top-24">
@@ -630,30 +1257,26 @@ export default function PricingSection() {
 
             <ul className="mt-5 space-y-3">
               <AnimatePresence initial={false}>
-                {selectedWorkspaces.map((workspace, index) => {
-                  const price = workspaceUnitPrice(workspace, billing);
-
-                  return (
-                    <motion.li
-                      key={workspace.id}
-                      initial={reducedMotion ? false : { opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={reducedMotion ? undefined : { opacity: 0, x: 8 }}
-                      transition={{
-                        duration: reducedMotion ? 0 : 0.2,
-                        delay: reducedMotion ? 0 : index * 0.05,
-                        ease: 'easeOut',
-                      }}
-                      className="flex items-center justify-between gap-3 text-sm"
-                    >
-                      <span className="text-slate-200">{workspace.label}</span>
-                      <span className="font-medium text-white">
-                        {formatWorkspacePrice(price)}
-                        {price > 0 ? '/mo' : ''}
-                      </span>
-                    </motion.li>
-                  );
-                })}
+                {summaryLineItems.map((item, index) => (
+                  <motion.li
+                    key={item.id}
+                    initial={reducedMotion ? false : { opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={reducedMotion ? undefined : { opacity: 0, x: 8 }}
+                    transition={{
+                      duration: reducedMotion ? 0 : 0.2,
+                      delay: reducedMotion ? 0 : index * 0.05,
+                      ease: 'easeOut',
+                    }}
+                    className="flex items-center justify-between gap-3 text-sm"
+                  >
+                    <span className="text-slate-200">{item.label}</span>
+                    <span className="font-medium text-white">
+                      {formatWorkspacePrice(item.price)}
+                      {item.price > 0 ? '/mo' : ''}
+                    </span>
+                  </motion.li>
+                ))}
               </AnimatePresence>
             </ul>
 
