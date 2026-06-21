@@ -52,7 +52,7 @@ function Home() {
     <main className="relative overflow-hidden bg-[radial-gradient(circle_at_15%_10%,rgba(168,85,247,0.35),transparent_45%),radial-gradient(circle_at_85%_0%,rgba(124,58,237,0.4),transparent_42%),linear-gradient(180deg,#05050b_0%,#080711_45%,#070612_100%)] text-white">
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_22%)]" />
 
-      <section className="relative mx-auto flex w-full max-w-7xl flex-col gap-14 px-6 pb-20 pt-24 md:pt-28">
+      <section className="relative mx-auto flex w-full max-w-7xl flex-col px-6 pb-12 pt-24 md:pb-16 md:pt-28">
         <MarketingHomeHero />
       </section>
 
