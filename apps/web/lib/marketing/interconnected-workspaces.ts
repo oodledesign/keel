@@ -1,9 +1,12 @@
+// Task A: Life CRM → OS copy (section title, comparison label, ctaLine).
+// Task B: Meeting Assistant benefit card (marketing features grid).
 import type { LucideIcon } from 'lucide-react';
 import {
   CalendarDays,
   Layers,
   LayoutDashboard,
   ListTodo,
+  Mic,
   Smartphone,
   Sparkles,
 } from 'lucide-react';
@@ -23,14 +26,14 @@ export type InterconnectedWorkspaceNode = {
 
 export const INTERCONNECTED_WORKSPACES_MARKETING = {
   eyebrow: 'Why Ozer is different',
-  title: 'One Life CRM.',
+  title: 'One OS.',
   titleAccent: 'Every workspace connected.',
   subtitle:
     'Most CRMs lock work in a silo. Ozer links your personal life, business, family, property, and community spaces — so tasks, plans, and shortcuts flow through one calm home, not five disconnected apps.',
   comparison: {
     heading: 'Not another siloed CRM',
     traditionalLabel: 'Typical CRM',
-    keelLabel: 'Ozer Life CRM',
+    keelLabel: 'Ozer',
     traditional: [
       'Work lives in one product; life lives elsewhere',
       'Separate logins, tabs, and mental models',
@@ -82,6 +85,12 @@ export const INTERCONNECTED_WORKSPACES_MARKETING = {
         'See everything due today across personal life and every workspace — filter by space when you want, or keep the full picture.',
     },
     {
+      icon: Mic,
+      title: 'Meeting Assistant',
+      description:
+        'Record, transcribe, and extract tasks from any meeting — automatically synced to the right workspace. Runs locally on your Mac. No per-minute fees.',
+    },
+    {
       icon: Sparkles,
       title: 'Planner & today view',
       description:
@@ -113,7 +122,7 @@ export const INTERCONNECTED_WORKSPACES_MARKETING = {
     },
   ] satisfies InterconnectedBenefit[],
   ctaLine:
-    'Life and work in one account — the way real people actually live.',
+    'Agency work, family, and personal life — all in one account.',
 } as const;
 
 export const INTERCONNECTED_PERSONAL_HOOK =

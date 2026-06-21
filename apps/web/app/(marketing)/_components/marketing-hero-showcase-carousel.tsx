@@ -19,6 +19,7 @@ import { cn } from '@kit/ui/utils';
 type ShowcaseCard = {
   id: string;
   width: number;
+  featureLabel?: string;
   render: () => ReactNode;
 };
 
@@ -32,6 +33,7 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
   {
     id: 'today',
     width: 300,
+    featureLabel: 'Today view',
     render: () => (
       <div className="flex h-full flex-col rounded-[1.75rem] border border-white/10 bg-[#120f24] p-4">
         <div className="mb-3 flex items-center justify-between">
@@ -71,6 +73,7 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
   {
     id: 'workspaces-stat',
     width: 260,
+    featureLabel: 'Workspaces',
     render: () => (
       <div className="flex h-full flex-col justify-between rounded-[1.75rem] bg-[linear-gradient(145deg,#dbeafe,#bfdbfe)] p-5 text-slate-900">
         <div className="flex -space-x-2">
@@ -97,6 +100,7 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
   {
     id: 'dashboard',
     width: 420,
+    featureLabel: 'Home dashboard',
     render: () => (
       <div className="relative h-full overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#0f0d1e]">
         <Image
@@ -117,6 +121,7 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
   {
     id: 'pipeline',
     width: 320,
+    featureLabel: 'Pipeline',
     render: () => (
       <div className="flex h-full flex-col rounded-[1.75rem] bg-[linear-gradient(145deg,#ede9fe,#ddd6fe)] p-4 text-slate-900">
         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-700/80">
@@ -181,6 +186,7 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
   {
     id: 'invoicing',
     width: 300,
+    featureLabel: 'Invoicing',
     render: () => (
       <div className="flex h-full flex-col rounded-[1.75rem] bg-[linear-gradient(145deg,#ccfbf1,#99f6e4)] p-4 text-slate-900">
         <div className="flex items-center gap-2">
@@ -207,6 +213,7 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
   {
     id: 'people',
     width: 260,
+    featureLabel: 'Contacts',
     render: () => (
       <div className="flex h-full flex-col justify-between rounded-[1.75rem] bg-[linear-gradient(145deg,#fce7f3,#fbcfe8)] p-5 text-slate-900">
         <Users className="h-5 w-5 text-pink-700" />
@@ -222,6 +229,7 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
   {
     id: 'ai-planner',
     width: 280,
+    featureLabel: 'AI Planner',
     render: () => (
       <div className="flex h-full flex-col justify-between rounded-[1.75rem] border border-violet-300/20 bg-[linear-gradient(145deg,#1e1b4b,#312e81)] p-5">
         <Sparkles className="h-5 w-5 text-violet-300" />
@@ -245,10 +253,15 @@ function ShowcaseCardShell({
 }) {
   return (
     <div
-      className={cn('h-[220px] shrink-0 sm:h-[240px]', className)}
+      className={cn('relative h-[220px] shrink-0 sm:h-[240px]', className)}
       style={{ width: card.width }}
     >
       {card.render()}
+      {card.featureLabel ? (
+        <span className="absolute bottom-3 left-3 z-10 rounded-md border border-white/10 bg-black/50 px-2 py-1 text-xs font-medium text-white/80 backdrop-blur-sm">
+          {card.featureLabel}
+        </span>
+      ) : null}
     </div>
   );
 }

@@ -15,6 +15,8 @@ import {
   type InterconnectedWorkspaceNode,
 } from '~/lib/marketing/interconnected-workspaces';
 
+import { WorkspaceOrbitDiagram } from './workspace-orbit-diagram';
+
 type Props = {
   className?: string;
   /** Emphasise personal-free angle on /personal */
@@ -53,37 +55,43 @@ export function InterconnectedWorkspacesSection({
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(42,157,143,0.12),transparent_55%)]" />
 
       <div className="relative mx-auto w-full max-w-7xl px-6">
-        <div className="mx-auto max-w-3xl text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-[#2A9D8F]/35 bg-[#2A9D8F]/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[#7ee8d8]">
-            <Link2 className="h-3.5 w-3.5" aria-hidden />
-            {m.eyebrow}
-          </span>
-          <h2
-            id="connected-workspaces-heading"
-            className="mt-6 font-heading text-3xl font-bold leading-tight text-white md:text-5xl lg:text-[3.25rem]"
-          >
-            {m.title}
-            <span className="mt-1 block bg-gradient-to-r from-[#2A9D8F] via-teal-200 to-[#2563EB] bg-clip-text text-transparent">
-              {m.titleAccent}
+        <div className="grid gap-12 lg:grid-cols-[45%_55%] lg:items-start lg:gap-10">
+          <div>
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#2A9D8F]/35 bg-[#2A9D8F]/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[#7ee8d8]">
+              <Link2 className="h-3.5 w-3.5" aria-hidden />
+              {m.eyebrow}
             </span>
-          </h2>
-          <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-violet-100/85 md:text-lg">
-            {subtitle}
-          </p>
+            <h2
+              id="connected-workspaces-heading"
+              className="mt-6 font-heading text-3xl font-bold leading-tight text-white md:text-5xl lg:text-[3.25rem]"
+            >
+              {m.title}
+              <span className="mt-1 block bg-gradient-to-r from-[#2A9D8F] via-teal-200 to-[#2563EB] bg-clip-text text-transparent">
+                {m.titleAccent}
+              </span>
+            </h2>
+            <p className="mt-5 max-w-2xl text-base leading-relaxed text-violet-100/85 md:text-lg">
+              {subtitle}
+            </p>
+
+            <div className="mt-8 space-y-4">
+              {m.benefits.map((benefit) => (
+                <BenefitCard key={benefit.title} benefit={benefit} />
+              ))}
+            </div>
+          </div>
+
+          <div className="hidden lg:block">
+            <WorkspaceOrbitDiagram nodes={m.workspaceNodes} />
+          </div>
         </div>
 
-        <div className="mt-14 lg:mt-16">
+        <div className="mt-14 lg:hidden">
           <WorkspaceHubDiagram
             hubLabel={m.hubLabel}
             hubCaption={m.hubCaption}
             nodes={m.workspaceNodes}
           />
-        </div>
-
-        <div className="mt-16 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {m.benefits.map((benefit) => (
-            <BenefitCard key={benefit.title} benefit={benefit} />
-          ))}
         </div>
 
         <div className="mt-16 rounded-3xl border border-white/10 bg-[#0B132B]/90 p-6 md:p-10">

@@ -13,6 +13,7 @@ import PricingSection from './_components/pricing-section';
 
 // Edited: apps/web/app/(marketing)/page.tsx — hero section (via MarketingHomeHero client child).
 // Stats: removed inline stats grid from this file (was 9 hrs/wk, 2.6x, 94% cards).
+// Task A: Life CRM → OS copy (business segment card).
 
 export const metadata = {
   title: 'Ozer - The Life CRM',
@@ -98,7 +99,7 @@ function Home() {
             {
               href: '/work',
               title: 'Business',
-              copy: 'CRM inside your Life CRM — not a separate silo.',
+              copy: 'Client management inside your workspace OS.',
             },
             {
               href: '/property',

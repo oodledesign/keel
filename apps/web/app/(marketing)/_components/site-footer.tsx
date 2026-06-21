@@ -1,3 +1,4 @@
+// Task A: Life CRM → OS copy (footer description).
 import { Footer } from '@kit/ui/marketing';
 import { Trans } from '@kit/ui/trans';
 
@@ -10,8 +11,8 @@ export function SiteFooter() {
       logo={<AppLogo className="w-[85px] md:w-[95px]" />}
       description={
         <p>
-          Ozer is the Life CRM — one system for personal life, business, property, and
-          community. Simple pricing, no clutter.
+          Ozer is the workspace OS for freelancers and small agencies — personal,
+          business, family, and community. Simple pricing, no clutter.
         </p>
       }
       copyright={
