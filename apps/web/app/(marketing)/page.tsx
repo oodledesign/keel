@@ -1,14 +1,18 @@
 import Link from 'next/link';
 
-import { ArrowRight, Calendar, CheckCircle2, CreditCard, LayoutDashboard, MessagesSquare, Users } from 'lucide-react';
+import { Calendar, CreditCard, MessagesSquare, Users } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 
 import pathsConfig from '~/config/paths.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
+import { MarketingHomeHero } from './_components/marketing-home-hero';
 import { InterconnectedWorkspacesSection } from './_components/interconnected-workspaces-section';
 import PricingSection from './_components/pricing-section';
+
+// Edited: apps/web/app/(marketing)/page.tsx — hero section (via MarketingHomeHero client child).
+// Stats: removed inline stats grid from this file (was 9 hrs/wk, 2.6x, 94% cards).
 
 export const metadata = {
   title: 'Ozer - The Life CRM',
@@ -43,94 +47,13 @@ const features = [
   },
 ];
 
-const stats = [
-  { label: 'Less weekly coordination stress', value: '9 hrs/wk' },
-  { label: 'Better follow-through across commitments', value: '2.6x' },
-  { label: 'Confidence nothing important is missed', value: '94%' },
-];
-
 function Home() {
   return (
     <main className="relative overflow-hidden bg-[radial-gradient(circle_at_15%_10%,rgba(168,85,247,0.35),transparent_45%),radial-gradient(circle_at_85%_0%,rgba(124,58,237,0.4),transparent_42%),linear-gradient(180deg,#05050b_0%,#080711_45%,#070612_100%)] text-white">
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_22%)]" />
 
       <section className="relative mx-auto flex w-full max-w-7xl flex-col gap-14 px-6 pb-20 pt-24 md:pt-28">
-        <div className="grid items-center gap-12 lg:grid-cols-[1.05fr,0.95fr]">
-          <div className="space-y-8">
-            <span className="inline-flex items-center rounded-full border border-violet-300/20 bg-violet-500/10 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.14em] text-violet-200">
-              Ozer: The Life CRM
-            </span>
-
-            <div className="space-y-5">
-              <h1 className="font-heading text-4xl font-bold leading-tight text-white md:text-6xl">
-                Organize your life and work
-                <span className="bg-gradient-to-r from-violet-300 via-purple-200 to-fuchsia-300 bg-clip-text text-transparent">
-                  {' '}
-                  from one calm system
-                </span>
-                .
-              </h1>
-              <p className="max-w-xl text-base leading-relaxed text-violet-100/85 md:text-lg">
-                Ozer is the Life CRM that connects work, family, and community in one account — with a personal home that sees tasks and plans across every workspace. Not another siloed CRM.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <Button asChild size="lg" className="h-11 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 text-white hover:from-violet-400 hover:to-fuchsia-400">
-                <Link href={pathsConfig.auth.signUp}>
-                  Start free
-                  <ArrowRight className="ml-1.5 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="lg" className="h-11 rounded-full border-violet-300/25 bg-[#100d1f]/70 px-6 text-violet-100 hover:bg-[#17122e]">
-                <Link href="/pricing">View pricing</Link>
-              </Button>
-            </div>
-          </div>
-
-          <div className="relative rounded-3xl border border-violet-300/15 bg-[#0f0d1e]/85 p-5 shadow-[0_30px_100px_rgba(23,8,50,0.55)] backdrop-blur">
-            <div className="absolute -inset-px rounded-3xl bg-[linear-gradient(135deg,rgba(167,139,250,0.35),rgba(236,72,153,0.18),transparent_58%)] opacity-70" />
-            <div className="relative rounded-2xl border border-white/10 bg-[#120f24] p-5">
-              <div className="mb-4 flex items-center justify-between">
-                <p className="text-xs uppercase tracking-[0.12em] text-violet-200/80">Today in Ozer</p>
-                <LayoutDashboard className="h-4 w-4 text-violet-200/80" />
-              </div>
-              <div className="space-y-3">
-                {[
-                  { time: '09:00', text: 'School run prep', tag: 'Personal', color: '#7C3AED' },
-                  { time: '11:30', text: 'Follow up Acme proposal', tag: 'Business', color: '#2563EB' },
-                  { time: '15:00', text: 'Community event notes', tag: 'Community', color: '#2A9D8F' },
-                ].map((item) => (
-                  <div key={item.text} className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-violet-300" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm text-violet-50/90">
-                        <span className="font-mono text-xs text-violet-300/70">{item.time}</span>
-                        {' '}
-                        {item.text}
-                      </p>
-                      <span
-                        className="mt-1 inline-flex items-center gap-1 rounded-md border border-white/10 px-1.5 py-0.5 text-[10px] font-medium text-white/70"
-                      >
-                        <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: item.color }} />
-                        {item.tag}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-3">
-          {stats.map((s) => (
-            <div key={s.label} className="rounded-2xl border border-violet-200/10 bg-white/[0.03] px-5 py-4 backdrop-blur">
-              <p className="text-2xl font-semibold text-violet-100">{s.value}</p>
-              <p className="mt-1 text-xs uppercase tracking-[0.1em] text-violet-200/70">{s.label}</p>
-            </div>
-          ))}
-        </div>
+        <MarketingHomeHero />
       </section>
 
       <InterconnectedWorkspacesSection />
@@ -150,20 +73,43 @@ function Home() {
         </div>
         <div className="grid gap-4 md:grid-cols-2">
           {features.map((feature) => (
-            <article key={feature.title} className="rounded-2xl border border-violet-300/10 bg-[linear-gradient(145deg,rgba(23,18,44,0.95),rgba(13,10,24,0.95))] p-6">
+            <article
+              key={feature.title}
+              className="rounded-2xl border border-violet-300/10 bg-[linear-gradient(145deg,rgba(23,18,44,0.95),rgba(13,10,24,0.95))] p-6"
+            >
               <feature.icon className="h-5 w-5 text-violet-300" />
-              <h3 className="mt-4 font-heading text-xl font-semibold text-white">{feature.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-violet-100/80">{feature.description}</p>
+              <h3 className="mt-4 font-heading text-xl font-semibold text-white">
+                {feature.title}
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-violet-100/80">
+                {feature.description}
+              </p>
             </article>
           ))}
         </div>
 
         <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { href: '/personal', title: 'Personal & family', copy: 'Free hub — tasks, planner, and shortcuts across all workspaces.' },
-            { href: '/work', title: 'Business', copy: 'CRM inside your Life CRM — not a separate silo.' },
-            { href: '/property', title: 'Property', copy: 'Tenants, maintenance, and portfolio finances.' },
-            { href: '/community', title: 'Community', copy: 'Schedules and tasks for clubs and homegroups.' },
+            {
+              href: '/personal',
+              title: 'Personal & family',
+              copy: 'Free hub — tasks, planner, and shortcuts across all workspaces.',
+            },
+            {
+              href: '/work',
+              title: 'Business',
+              copy: 'CRM inside your Life CRM — not a separate silo.',
+            },
+            {
+              href: '/property',
+              title: 'Property',
+              copy: 'Tenants, maintenance, and portfolio finances.',
+            },
+            {
+              href: '/community',
+              title: 'Community',
+              copy: 'Schedules and tasks for clubs and homegroups.',
+            },
           ].map((item) => (
             <Link
               key={item.href}
@@ -183,9 +129,14 @@ function Home() {
             Build a calmer, more intentional life with Ozer.
           </h2>
           <p className="max-w-2xl text-violet-100/80">
-            If your current setup feels fragmented, Ozer gives you one source of truth for projects, people, plans, and priorities.
+            If your current setup feels fragmented, Ozer gives you one source of truth
+            for projects, people, plans, and priorities.
           </p>
-          <Button asChild size="lg" className="mt-2 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 px-7 text-white hover:from-violet-400 hover:to-fuchsia-400">
+          <Button
+            asChild
+            size="lg"
+            className="mt-2 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 px-7 text-white hover:from-violet-400 hover:to-fuchsia-400"
+          >
             <Link href={pathsConfig.auth.signUp}>Create your workspace</Link>
           </Button>
         </div>
