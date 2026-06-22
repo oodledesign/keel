@@ -165,6 +165,7 @@ export function TaskSelectorTree({
               workspace={workspace}
               selectedTaskIds={selectedTaskIds}
               toggle={toggle}
+              scope={scope}
             />
           ))}
         </div>
@@ -177,10 +178,12 @@ function WorkspaceNode({
   workspace,
   selectedTaskIds,
   toggle,
+  scope,
 }: {
   workspace: PlannerWorkspaceNode;
   selectedTaskIds: Set<string>;
   toggle: (ids: string[], checked: boolean) => void;
+  scope: PlannerScope;
 }) {
   const [open, setOpen] = useState(true);
   const ids = workspace.projects.flatMap((project) =>
