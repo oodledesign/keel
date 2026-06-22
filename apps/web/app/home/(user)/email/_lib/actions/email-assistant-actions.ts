@@ -14,6 +14,10 @@ import type {
   EmailThreadDetail,
 } from '../types';
 import { loadEmailThreadDetailFromDb } from '../server/email-page.loader';
+import {
+  enrichEmailActionItemLinks,
+  syncSuggestedActionItemsFromThreadLink,
+} from '~/lib/email-assistant/action-item-links';
 
 const EMAIL_PATH = '/app/email';
 
@@ -51,7 +55,7 @@ export async function loadEmailThreadDetail(
     client
       .from('email_action_items')
       .select(
-        'id, title, detail, suggested_due_date, source_excerpt, assignee_confidence, suggested_assignee_id, status, task_id, created_at',
+        'id, title, detail, suggested_due_date, source_excerpt, assignee_confidence, suggested_assignee_id, account_id, client_id, project_id, status, task_id, created_at',
       )
       .eq('thread_id', threadId)
       .eq('user_id', user.id)
@@ -74,6 +78,50 @@ export async function loadEmailThreadDetail(
     return { ok: false, error: actionItemsResult.error.message };
   }
 
+  let actionItems = (actionItemsResult.data ?? []) as EmailActionItemRow[];
+
+  if (
+    thread.link.linked &&
+    (thread.link.clientId || thread.link.projectId)
+  ) {
+    const needsSync = actionItems.some(
+      (item) =>
+        item.status === 'suggested' &&
+        !item.client_id &&
+        !item.project_id,
+    );
+
+    if (needsSync) {
+      try {
+        await syncSuggestedActionItemsFromThreadLink(
+          client,
+          user.id,
+          threadId,
+          {
+            accountId: thread.link.accountId,
+            clientId: thread.link.clientId,
+            projectId: thread.link.projectId,
+          },
+        );
+
+        const { data: syncedItems, error: syncLoadError } = await client
+          .from('email_action_items')
+          .select(
+            'id, title, detail, suggested_due_date, source_excerpt, assignee_confidence, suggested_assignee_id, account_id, client_id, project_id, status, task_id, created_at',
+          )
+          .eq('thread_id', threadId)
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (!syncLoadError && syncedItems) {
+          actionItems = syncedItems as EmailActionItemRow[];
+        }
+      } catch {
+        // Keep showing items even if backfill fails.
+      }
+    }
+  }
+
   if (draftResult.error) {
     return { ok: false, error: draftResult.error.message };
   }
@@ -83,7 +131,7 @@ export async function loadEmailThreadDetail(
     data: {
       thread,
       messages: (messagesResult.data ?? []) as EmailMessageRow[],
-      actionItems: (actionItemsResult.data ?? []) as EmailActionItemRow[],
+      actionItems: await enrichEmailActionItemLinks(actionItems),
       draft: (draftResult.data as EmailDraftRow | null) ?? null,
     },
   };

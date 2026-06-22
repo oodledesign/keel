@@ -3,6 +3,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { extractEmailAddress } from './address-utils';
+import { syncSuggestedActionItemsFromThreadLink } from './action-item-links';
 
 type Participant = {
   name?: string | null;
@@ -252,6 +253,12 @@ export async function autoLinkEmailThread(
   if (updateError) {
     throw new Error(updateError.message);
   }
+
+  await syncSuggestedActionItemsFromThreadLink(admin, userId, threadId, {
+    accountId: client.account_id,
+    clientId: client.id,
+    projectId,
+  });
 
   return true;
 }

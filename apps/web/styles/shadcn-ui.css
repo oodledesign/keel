@@ -74,6 +74,7 @@
     --keel-gradient-hover-to: #1c4039;
     --keel-accent-blue: #2563eb;
     --keel-teal: #2a9d8f;
+    --keel-teal-hover: #238b7f;
 
     --workspace-control-surface: #0f1b35;
     --workspace-control-border: rgba(255, 255, 255, 0.12);
@@ -141,6 +142,7 @@
     --keel-gradient-hover-to: #1c4039;
     --keel-accent-blue: #2563eb;
     --keel-teal: #2a9d8f;
+    --keel-teal-hover: #238b7f;
 
     --workspace-control-surface: #0f1b35;
     --workspace-control-border: rgba(255, 255, 255, 0.12);

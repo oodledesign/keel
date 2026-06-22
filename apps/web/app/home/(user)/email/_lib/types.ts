@@ -45,6 +45,12 @@ export type EmailActionItemRow = {
   source_excerpt: string | null;
   assignee_confidence: number | null;
   suggested_assignee_id: string | null;
+  account_id: string | null;
+  client_id: string | null;
+  project_id: string | null;
+  clientName?: string | null;
+  projectName?: string | null;
+  linkLabel?: string | null;
   status: string;
   task_id: string | null;
   created_at: string;

@@ -28,13 +28,18 @@ import {
 } from '~/home/(user)/_lib/actions/task-actions';
 import { TaskAssignmentCombobox } from '~/home/(user)/_components/dashboard/task-assignment-combobox';
 
-import type { EmailActionItemRow, EmailWorkspaceOption } from '../_lib/types';
+import type {
+  EmailActionItemRow,
+  EmailThreadLink,
+  EmailWorkspaceOption,
+} from '../_lib/types';
 import { emailApiFetch } from '../_lib/email-api';
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   actionItem: EmailActionItemRow | null;
+  threadLink?: EmailThreadLink;
   workspaces: EmailWorkspaceOption[];
   onAccepted: () => void;
 };
@@ -45,6 +50,7 @@ export function AcceptActionItemDialog({
   open,
   onOpenChange,
   actionItem,
+  threadLink,
   workspaces,
   onAccepted,
 }: Props) {
@@ -61,6 +67,31 @@ export function AcceptActionItemDialog({
       setWorkspaceId('');
       setAssignTo('none');
       setOptions([]);
+      return;
+    }
+
+    const linkedAccountId =
+      actionItem?.account_id ?? threadLink?.accountId ?? '';
+    const linkedAssignTo =
+      actionItem?.project_id ??
+      actionItem?.client_id ??
+      threadLink?.projectId ??
+      threadLink?.clientId ??
+      'none';
+
+    if (linkedAccountId && linkedAssignTo !== 'none') {
+      setDestination('workspace');
+      setWorkspaceId(linkedAccountId);
+      setAssignTo(linkedAssignTo);
+    } else {
+      setDestination('personal');
+      setWorkspaceId('');
+      setAssignTo('none');
+    }
+  }, [open, actionItem, threadLink]);
+
+  useEffect(() => {
+    if (!open) {
       return;
     }
 
@@ -103,9 +134,16 @@ export function AcceptActionItemDialog({
     }
 
     const selected = options.find((option) => option.id === assignTo);
-    const isWorkspace = destination === 'workspace';
+    const projectId =
+      selected?.type === 'project'
+        ? selected.id
+        : actionItem.project_id ?? threadLink?.projectId ?? null;
+    const clientId =
+      selected?.type === 'client'
+        ? selected.id
+        : actionItem.client_id ?? threadLink?.clientId ?? null;
 
-    if (isWorkspace && (!workspaceId || assignTo === 'none' || !selected)) {
+    if (destination === 'workspace' && !projectId && !clientId) {
       toast.error('Choose a workspace project or client for this task.');
       return;
     }
@@ -117,8 +155,8 @@ export function AcceptActionItemDialog({
           {
             method: 'POST',
             body: JSON.stringify({
-              projectId: selected?.type === 'project' ? selected.id : null,
-              clientId: selected?.type === 'client' ? selected.id : null,
+              projectId,
+              clientId,
             }),
           },
         );

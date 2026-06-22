@@ -302,13 +302,7 @@ export function EmailThreadPanel({
             threadId={threadId}
             link={detail.thread.link}
             workspaces={workspaces}
-            onUpdated={(link) =>
-              setDetail((current) =>
-                current
-                  ? { ...current, thread: { ...current.thread, link } }
-                  : current,
-              )
-            }
+            onUpdated={() => refreshDetail()}
           />
         </div>
 
@@ -359,10 +353,22 @@ export function EmailThreadPanel({
                             {item.detail}
                           </p>
                         ) : null}
-                        {item.suggested_due_date ? (
-                          <p className="mt-2 text-xs text-zinc-500">
-                            Suggested due{' '}
-                            {formatDueDate(item.suggested_due_date)}
+                        {item.suggested_due_date || item.linkLabel ? (
+                          <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500">
+                            {item.suggested_due_date ? (
+                              <span>
+                                Suggested due{' '}
+                                {formatDueDate(item.suggested_due_date)}
+                              </span>
+                            ) : null}
+                            {item.suggested_due_date && item.linkLabel ? (
+                              <span className="text-zinc-600">·</span>
+                            ) : null}
+                            {item.linkLabel ? (
+                              <span className="text-[var(--keel-teal)]">
+                                {item.linkLabel}
+                              </span>
+                            ) : null}
                           </p>
                         ) : null}
                       </div>
@@ -471,6 +477,7 @@ export function EmailThreadPanel({
         open={acceptOpen}
         onOpenChange={setAcceptOpen}
         actionItem={acceptItem}
+        threadLink={detail.thread.link}
         workspaces={workspaces}
         onAccepted={refreshDetail}
       />

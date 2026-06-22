@@ -51,23 +51,17 @@ Optimize dropdowns for mobile
 
 @layer components {
   .keel-gradient-btn {
-    background-image: linear-gradient(
-      to right,
-      var(--keel-gradient-from),
-      var(--keel-gradient-to)
-    );
+    background-color: var(--keel-teal);
+    background-image: none;
     color: #ffffff;
     transition:
-      background-image 200ms ease,
+      background-color 200ms ease,
       opacity 200ms ease;
   }
 
   .keel-gradient-btn:hover {
-    background-image: linear-gradient(
-      to right,
-      var(--keel-gradient-hover-from),
-      var(--keel-gradient-hover-to)
-    );
+    background-color: var(--keel-teal-hover, #238b7f);
+    background-image: none;
   }
 
   .keel-gradient-active {

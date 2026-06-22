@@ -3,6 +3,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getDbForWorkspaceTaskAssignmentOptions } from '~/home/_lib/server/workspace-scope';
+import { syncSuggestedActionItemsFromThreadLink } from './action-item-links';
 
 type UpdateEmailThreadLinkInput = {
   accountId: string | null;
@@ -79,6 +80,12 @@ export async function updateEmailThreadLink(
       throw new Error(error.message);
     }
 
+    await syncSuggestedActionItemsFromThreadLink(client, userId, threadId, {
+      accountId: null,
+      clientId: null,
+      projectId: null,
+    });
+
     return;
   }
 
@@ -125,4 +132,10 @@ export async function updateEmailThreadLink(
   if (error) {
     throw new Error(error.message);
   }
+
+  await syncSuggestedActionItemsFromThreadLink(client, userId, threadId, {
+    accountId: input.accountId,
+    clientId: clientId ?? null,
+    projectId: projectId ?? null,
+  });
 }

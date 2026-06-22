@@ -11,6 +11,7 @@ import {
 import { resolveDraftOwnerContext } from '~/lib/email-assistant/draft-owner';
 import { buildThreadText } from '~/lib/email-assistant/thread-text';
 import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
+import { linkFieldsFromThread } from '~/lib/email-assistant/action-item-links';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -30,7 +31,7 @@ export async function POST(_request: Request, context: RouteContext) {
 
   const { data: thread, error: threadError } = await auth.client
     .from('email_threads')
-    .select('id, user_id, subject, account_id')
+    .select('id, user_id, subject, account_id, client_id, project_id')
     .eq('id', threadId)
     .eq('user_id', auth.user.id)
     .maybeSingle();
@@ -50,6 +51,13 @@ export async function POST(_request: Request, context: RouteContext) {
   }
 
   const accountId = (thread as { account_id?: string | null }).account_id;
+  const threadLink = linkFieldsFromThread(
+    thread as {
+      account_id?: string | null;
+      client_id?: string | null;
+      project_id?: string | null;
+    },
+  );
   const admin = getSupabaseServerAdminClient();
   const accountMembers = accountId
     ? await loadAccountMembersForExtraction(admin, accountId)
@@ -115,6 +123,9 @@ export async function POST(_request: Request, context: RouteContext) {
       accountMembers,
       owner.email,
     ),
+    account_id: threadLink.accountId,
+    client_id: threadLink.clientId,
+    project_id: threadLink.projectId,
     status: 'suggested',
   }));
 
@@ -122,7 +133,7 @@ export async function POST(_request: Request, context: RouteContext) {
     .from('email_action_items')
     .insert(rows)
     .select(
-      'id, thread_id, message_id, title, detail, suggested_due_date, source_excerpt, assignee_confidence, suggested_assignee_id, status, created_at',
+      'id, thread_id, message_id, title, detail, suggested_due_date, source_excerpt, assignee_confidence, suggested_assignee_id, account_id, client_id, project_id, status, created_at',
     );
 
   if (insertError) {

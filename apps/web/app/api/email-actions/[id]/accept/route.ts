@@ -70,7 +70,9 @@ export async function POST(request: Request, context: RouteContext) {
 
   const { data: actionItem, error: actionError } = await auth.client
     .from('email_action_items')
-    .select('id, user_id, title, detail, suggested_due_date, status, task_id')
+    .select(
+      'id, user_id, title, detail, suggested_due_date, account_id, client_id, project_id, status, task_id',
+    )
     .eq('id', actionId)
     .eq('user_id', auth.user.id)
     .maybeSingle();
@@ -88,6 +90,9 @@ export async function POST(request: Request, context: RouteContext) {
     title: string;
     detail: string | null;
     suggested_due_date: string | null;
+    account_id: string | null;
+    client_id: string | null;
+    project_id: string | null;
     status: string;
     task_id: string | null;
   };
@@ -105,8 +110,8 @@ export async function POST(request: Request, context: RouteContext) {
       title: item.title,
       detail: item.detail,
       suggestedDueDate: item.suggested_due_date,
-      projectId: body.projectId ?? null,
-      clientId: body.clientId ?? null,
+      projectId: body.projectId ?? item.project_id ?? null,
+      clientId: body.clientId ?? item.client_id ?? null,
     });
   } catch (error) {
     return jsonErr(
@@ -125,7 +130,7 @@ export async function POST(request: Request, context: RouteContext) {
     .eq('id', actionId)
     .eq('user_id', auth.user.id)
     .select(
-      'id, thread_id, message_id, title, detail, suggested_due_date, status, task_id, created_at',
+      'id, thread_id, message_id, title, detail, suggested_due_date, account_id, client_id, project_id, status, task_id, created_at',
     )
     .single();
 
