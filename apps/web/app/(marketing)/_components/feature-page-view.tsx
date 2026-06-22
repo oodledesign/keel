@@ -30,7 +30,10 @@ export function FeaturePageView({ slug }: { slug: FeatureSlug }) {
         />
       ) : null}
       <FeatureLandingPage
+        coverSlug={config.slug}
         {...config.props}
+        heroBadge={config.heroBadge}
+        secondaryCta={config.secondaryCta}
         primaryKeyword={config.primaryKeyword}
       />
     </>

@@ -1,11 +1,13 @@
 import Link from 'next/link';
 
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Download } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 
+import { FeatureCoverPreview } from './feature-cover-previews';
 import { FeatureLandingFaqs, type FAQItem } from './feature-landing-faqs';
 import { FeatureLandingIcon } from './feature-landing-icon';
+import type { FeatureSlug } from '~/lib/marketing/feature-landing-pages';
 
 export type FeatureHighlight = {
   icon: string;
@@ -21,6 +23,7 @@ export type ConnectedFeature = {
 export type { FAQItem };
 
 export interface FeatureLandingPageProps {
+  coverSlug: FeatureSlug;
   eyebrow: string;
   heading: string;
   subheading: string;
@@ -30,11 +33,17 @@ export interface FeatureLandingPageProps {
   connectionHeading?: string;
   connectionDescription?: string;
   faqs?: FAQItem[];
+  heroBadge?: string;
+  secondaryCta?: {
+    label: string;
+    href: string;
+  };
   ctaText?: string;
   ctaHref?: string;
 }
 
 export function FeatureLandingPage({
+  coverSlug,
   eyebrow,
   heading,
   subheading,
@@ -44,6 +53,8 @@ export function FeatureLandingPage({
   connectionHeading = 'Works with the rest of Ozer',
   connectionDescription,
   faqs,
+  heroBadge,
+  secondaryCta,
   ctaText = 'Get early access',
   ctaHref = '#early-access',
 }: FeatureLandingPageProps) {
@@ -54,11 +65,18 @@ export function FeatureLandingPage({
     >
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_22%)]" />
 
-      <section className="relative mx-auto flex w-full max-w-7xl flex-col gap-10 px-6 pb-16 pt-24 md:pt-28">
-        <div className="max-w-3xl space-y-8">
-          <span className="inline-flex items-center rounded-full border border-[#2A9D8F]/30 bg-[#2A9D8F]/10 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.14em] text-[#7ee8d8]">
-            {eyebrow}
-          </span>
+      <section className="relative mx-auto flex w-full max-w-7xl flex-col gap-10 px-6 pb-16 pt-24 md:pt-28 lg:flex-row lg:items-center lg:gap-12">
+        <div className="max-w-3xl flex-1 space-y-8">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center rounded-full border border-[#2A9D8F]/30 bg-[#2A9D8F]/10 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.14em] text-[#7ee8d8]">
+              {eyebrow}
+            </span>
+            {heroBadge ? (
+              <span className="inline-flex items-center rounded-full border border-violet-300/20 bg-violet-500/10 px-3 py-1.5 text-xs font-medium text-violet-100/90">
+                {heroBadge}
+              </span>
+            ) : null}
+          </div>
 
           <div className="space-y-5">
             <h1 className="font-heading text-4xl font-bold leading-tight text-white md:text-5xl lg:text-6xl">
@@ -80,6 +98,19 @@ export function FeatureLandingPage({
                 <ArrowRight className="ml-1.5 h-4 w-4" />
               </Link>
             </Button>
+            {secondaryCta ? (
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="h-11 rounded-full border-violet-300/25 bg-[#100d1f]/70 px-6 text-violet-100 hover:bg-[#17122e]"
+              >
+                <Link href={secondaryCta.href}>
+                  <Download className="mr-1.5 h-4 w-4" />
+                  {secondaryCta.label}
+                </Link>
+              </Button>
+            ) : null}
             <Button
               asChild
               variant="outline"
@@ -89,6 +120,10 @@ export function FeatureLandingPage({
               <Link href="/features">See all features</Link>
             </Button>
           </div>
+        </div>
+
+        <div className="w-full flex-1 lg:max-w-xl">
+          <FeatureCoverPreview slug={coverSlug} variant="hero" />
         </div>
       </section>
 

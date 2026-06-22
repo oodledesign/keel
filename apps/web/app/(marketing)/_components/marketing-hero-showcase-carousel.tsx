@@ -187,7 +187,7 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
   {
     id: 'meeting-assistant',
     width: 340,
-    featureTags: ['Meeting Assistant', 'Dictation'],
+    featureLabel: 'Desktop Assistant',
     render: () => (
       <div className="flex h-full flex-col rounded-[1.75rem] border border-violet-300/15 bg-[linear-gradient(160deg,#1a1630,#2d1f4e)] p-4">
         <div className="flex items-center justify-between">
@@ -222,12 +222,31 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
         </div>
         <div className="mt-2 flex flex-wrap gap-1">
           <span className="rounded-md border border-teal-400/20 bg-teal-500/10 px-1.5 py-0.5 text-[9px] text-teal-200">
-            2 action items
+            3 tasks extracted
           </span>
           <span className="rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 text-[9px] text-violet-100/70">
             Follow-up drafted
           </span>
         </div>
+      </div>
+    ),
+  },
+  {
+    id: 'dictation',
+    width: 300,
+    featureLabel: 'Dictation',
+    render: () => (
+      <div className="flex h-full flex-col rounded-[1.75rem] border border-sky-400/20 bg-[linear-gradient(155deg,#0c1929,#122a45)] p-4">
+        <div className="flex items-center gap-2">
+          <span className="rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 font-mono text-[9px] text-white/60">
+            fn
+          </span>
+          <p className="text-xs font-semibold text-sky-50">Dictating…</p>
+        </div>
+        <p className="mt-3 flex-1 text-[11px] leading-relaxed text-sky-50/90">
+          Thanks for the brief — I&apos;ll send the updated proposal by Friday.
+        </p>
+        <span className="text-[9px] text-sky-200/60">Paste into any Mac app</span>
       </div>
     ),
   },

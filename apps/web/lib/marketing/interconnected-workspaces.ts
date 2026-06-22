@@ -3,6 +3,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   CalendarDays,
+  Keyboard,
   Layers,
   LayoutDashboard,
   ListTodo,
@@ -123,9 +124,15 @@ export const INTERCONNECTED_WORKSPACES_MARKETING = {
     },
     {
       icon: Mic,
-      title: 'Meeting Assistant',
+      title: 'Meeting Assistant for Mac',
       description:
-        'Available at launch on Mac. Record any call or in-person meeting, transcribe with speaker labels, extract tasks, and sync everything to the right workspace — locally, with no per-minute fees.',
+        'Download Ozer Assistant for macOS. Record any call or in-person meeting, transcribe with speaker labels, extract tasks to your list, and sync everything to the right workspace — locally, with no per-minute fees.',
+    },
+    {
+      icon: Keyboard,
+      title: 'Dictation',
+      description:
+        'Press fn anywhere on your Mac and dictate into any app — polished punctuation and grammar, included in the same Ozer Assistant desktop download.',
     },
     {
       icon: Sparkles,

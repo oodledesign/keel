@@ -6,6 +6,7 @@ import { ArrowRight } from 'lucide-react';
 
 import { listFeaturePageConfigs } from '~/lib/marketing/feature-landing-pages';
 
+import { FeatureCoverPreview } from '../_components/feature-cover-previews';
 import { FeatureLandingIcon } from '../_components/feature-landing-icon';
 
 const FEATURES_INDEX_JSON_LD = {
@@ -64,24 +65,36 @@ export default function FeaturesIndexPage() {
             <Link
               key={feature.slug}
               href={`/features/${feature.slug}`}
-              className="group rounded-2xl border border-white/10 bg-white/[0.03] p-6 transition hover:border-[#2A9D8F]/30 hover:bg-white/[0.05]"
+              className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] transition hover:border-[#2A9D8F]/30 hover:bg-white/[0.05]"
             >
-              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-[#2A9D8F]/10 text-[#7ee8d8] transition group-hover:bg-[#2A9D8F]/15">
-                <FeatureLandingIcon
-                  name={feature.indexIcon}
-                  className="h-5 w-5"
-                />
+              <FeatureCoverPreview
+                slug={feature.slug}
+                variant="card"
+                className="rounded-none border-0 border-b border-white/10 shadow-none"
+              />
+              <div className="p-6">
+                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-[#2A9D8F]/10 text-[#7ee8d8] transition group-hover:bg-[#2A9D8F]/15">
+                  <FeatureLandingIcon
+                    name={feature.indexIcon}
+                    className="h-5 w-5"
+                  />
+                </div>
+                <h2 className="text-lg font-semibold text-violet-50">
+                  {feature.name}
+                </h2>
+                {feature.heroBadge ? (
+                  <p className="mt-1 text-xs font-medium text-violet-300/70">
+                    {feature.heroBadge}
+                  </p>
+                ) : null}
+                <p className="mt-2 text-sm leading-relaxed text-violet-100/75">
+                  {feature.shortDescription}
+                </p>
+                <span className="mt-4 inline-flex items-center text-sm font-medium text-[#7ee8d8]">
+                  Learn more
+                  <ArrowRight className="ml-1.5 h-4 w-4 transition group-hover:translate-x-0.5" />
+                </span>
               </div>
-              <h2 className="text-lg font-semibold text-violet-50">
-                {feature.name}
-              </h2>
-              <p className="mt-2 text-sm leading-relaxed text-violet-100/75">
-                {feature.shortDescription}
-              </p>
-              <span className="mt-4 inline-flex items-center text-sm font-medium text-[#7ee8d8]">
-                Learn more
-                <ArrowRight className="ml-1.5 h-4 w-4 transition group-hover:translate-x-0.5" />
-              </span>
             </Link>
           ))}
         </div>
