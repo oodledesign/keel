@@ -1,10 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
-import { ChevronDown, ChevronRight, Flag, FolderKanban, Plus } from 'lucide-react';
+import {
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Flag,
+  FolderKanban,
+  Loader2,
+  Pencil,
+  Plus,
+} from 'lucide-react';
 
 import { Avatar, AvatarFallback } from '@kit/ui/avatar';
 import { Badge } from '@kit/ui/badge';
@@ -17,7 +27,10 @@ import {
 } from '@kit/ui/collapsible';
 import { cn } from '@kit/ui/utils';
 
+import { updateTask } from '~/home/(user)/_lib/actions/task-actions';
 import { AddTaskDialog } from '~/home/(user)/_components/dashboard/add-task-dialog';
+import { EditTaskDialog } from '~/home/(user)/tasks/_components/edit-task-dialog';
+import { plannerTaskToPageTask } from '~/lib/planner/planner-task-to-page-task';
 import type {
   PlannerProjectNode,
   PlannerScope,
@@ -203,6 +216,7 @@ function WorkspaceNode({
               project={project}
               selectedTaskIds={selectedTaskIds}
               toggle={toggle}
+              scope={scope}
             />
           ))}
         </CollapsibleContent>
@@ -215,10 +229,12 @@ function ProjectNode({
   project,
   selectedTaskIds,
   toggle,
+  scope,
 }: {
   project: PlannerProjectNode;
   selectedTaskIds: Set<string>;
   toggle: (ids: string[], checked: boolean) => void;
+  scope: PlannerScope;
 }) {
   const [open, setOpen] = useState(true);
   const ids = project.tasks.map((task) => task.id);
@@ -250,6 +266,7 @@ function ProjectNode({
               task={task}
               checked={selectedTaskIds.has(task.id)}
               onCheckedChange={(checked) => toggle([task.id], checked)}
+              scope={scope}
             />
           ))}
         </CollapsibleContent>
@@ -262,50 +279,110 @@ function TaskRow({
   task,
   checked,
   onCheckedChange,
+  scope,
 }: {
   task: PlannerTask;
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
+  scope: PlannerScope;
 }) {
+  const router = useRouter();
+  const [editOpen, setEditOpen] = useState(false);
+  const [isCompleting, startCompleteTransition] = useTransition();
+
+  const handleMarkDone = () => {
+    startCompleteTransition(async () => {
+      const result = await updateTask(task.id, { status: 'completed' });
+      if (result.success) {
+        router.refresh();
+      }
+    });
+  };
+
   return (
-    <label
-      className={cn(
-        'flex cursor-pointer items-start gap-2 rounded-lg border border-transparent px-2 py-2 text-sm transition-colors hover:bg-white/5',
-        task.overdue && 'border-amber-400/20 bg-amber-400/10',
-      )}
-    >
-      <Checkbox
-        checked={checked}
-        onCheckedChange={(value) => onCheckedChange(Boolean(value))}
-        className="mt-0.5 border-white/30"
-      />
-      <span className="min-w-0 flex-1">
-        <span className="block leading-snug text-white/85">{task.title}</span>
-        <span className="mt-1 flex flex-wrap items-center gap-2">
-          <TaskClientLabel task={task} />
-          <span className="flex flex-wrap items-center gap-1.5">
-            <Badge
-              variant="outline"
-              className={cn('h-5 gap-1 px-1.5 text-[10px]', priorityClass[task.priority])}
-            >
-              <Flag className="h-3 w-3" />
-              {task.priority}
-            </Badge>
-            {task.dueDateLabel ? (
-              <span
-                className={cn(
-                  'text-[11px] text-white/40',
-                  task.overdue && 'text-amber-200',
-                )}
+    <>
+      <div
+        className={cn(
+          'flex items-start gap-2 rounded-lg border border-transparent px-2 py-2 text-sm transition-colors hover:bg-white/5',
+          task.overdue && 'border-amber-400/20 bg-amber-400/10',
+        )}
+      >
+        <Checkbox
+          checked={checked}
+          onCheckedChange={(value) => onCheckedChange(Boolean(value))}
+          className="mt-0.5 border-white/30"
+          aria-label={`Include ${task.title} in plan`}
+        />
+        <button
+          type="button"
+          className="min-w-0 flex-1 text-left"
+          onClick={() => setEditOpen(true)}
+        >
+          <span className="block leading-snug text-white/85">{task.title}</span>
+          <span className="mt-1 flex flex-wrap items-center gap-2">
+            <TaskClientLabel task={task} />
+            <span className="flex flex-wrap items-center gap-1.5">
+              <Badge
+                variant="outline"
+                className={cn('h-5 gap-1 px-1.5 text-[10px]', priorityClass[task.priority])}
               >
-                {task.overdue ? 'Overdue · ' : ''}
-                {task.dueDateLabel}
-              </span>
-            ) : null}
+                <Flag className="h-3 w-3" />
+                {task.priority}
+              </Badge>
+              {task.dueDateLabel ? (
+                <span
+                  className={cn(
+                    'text-[11px] text-white/40',
+                    task.overdue && 'text-amber-200',
+                  )}
+                >
+                  {task.overdue ? 'Overdue · ' : ''}
+                  {task.dueDateLabel}
+                </span>
+              ) : null}
+            </span>
           </span>
-        </span>
-      </span>
-    </label>
+        </button>
+        <div className="flex shrink-0 items-center gap-1 pt-0.5">
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7 text-white/45 hover:bg-white/10 hover:text-emerald-300"
+            aria-label={`Mark ${task.title} as done`}
+            disabled={isCompleting}
+            onClick={handleMarkDone}
+          >
+            {isCompleting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <CheckCircle2 className="h-3.5 w-3.5" />
+            )}
+          </Button>
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7 text-white/45 hover:bg-white/10 hover:text-white"
+            aria-label={`Edit ${task.title}`}
+            onClick={() => setEditOpen(true)}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      <EditTaskDialog
+        task={plannerTaskToPageTask(task)}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        workspaceAccountId={
+          scope.kind === 'workspace' ? scope.accountId : undefined
+        }
+        onSaved={() => router.refresh()}
+        onDeleted={() => router.refresh()}
+      />
+    </>
   );
 }
 

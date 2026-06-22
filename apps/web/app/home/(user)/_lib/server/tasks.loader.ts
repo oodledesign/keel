@@ -38,6 +38,7 @@ type ProjectEnrichment = {
   name?: string | null;
   account_id?: string | null;
   business_id?: string | null;
+  client_id?: string | null;
   businesses?: BusinessEnrichment | null;
 };
 
@@ -65,6 +66,7 @@ type AreaEnrichment = {
 type JobEnrichment = {
   id: string;
   account_id?: string | null;
+  client_id?: string | null;
 };
 
 function isWorkTaskRow(row: {
@@ -160,6 +162,58 @@ function formatDueDateLabel(due: string | null): string {
   });
 }
 
+function clientDisplayName(client: ClientEnrichment): string | null {
+  const displayName = client.display_name?.trim();
+  if (displayName) {
+    return displayName;
+  }
+
+  const fullName = [client.first_name, client.last_name]
+    .filter((value): value is string => Boolean(value && String(value).trim()))
+    .map((value) => String(value).trim())
+    .join(' ');
+
+  return fullName || null;
+}
+
+function applyClientContext(
+  clientId: string | null | undefined,
+  maps: {
+    clients: Map<string, ClientEnrichment>;
+    accountsById: Map<string, AccountWorkspaceRow>;
+  },
+  current: {
+    clientName: string | null;
+    resolvedAccountId: string | null;
+    workspaceName: string | null;
+    workspaceSlug: string | null;
+  },
+) {
+  if (!clientId) {
+    return current;
+  }
+
+  const client = maps.clients.get(clientId);
+  if (!client) {
+    return current;
+  }
+
+  const next = { ...current };
+  next.clientName = next.clientName ?? clientDisplayName(client);
+
+  if (!next.resolvedAccountId) {
+    next.resolvedAccountId = client.account_id ?? null;
+  }
+
+  if (!next.workspaceName) {
+    const workspace = workspaceFromAccountId(client.account_id, maps.accountsById);
+    next.workspaceName = workspace.name;
+    next.workspaceSlug = workspace.slug;
+  }
+
+  return next;
+}
+
 function taskRowToPageTask(
   row: TaskQueryRow,
   maps: {
@@ -192,25 +246,48 @@ function taskRowToPageTask(
     workspaceSlug = ws.slug;
   }
   if (row.client_id) {
-    const c = maps.clients.get(row.client_id);
-    if (c) {
-      const dn = c.display_name?.trim();
-      clientName =
-        dn ||
-        [c.first_name, c.last_name]
-          .filter((x): x is string => Boolean(x && String(x).trim()))
-          .map((x) => String(x).trim())
-          .join(' ') ||
-        null;
-      if (!resolvedAccountId) {
-        resolvedAccountId = c.account_id ?? null;
-      }
-      if (!workspaceName) {
-        const ws = workspaceFromAccountId(c.account_id, maps.accountsById);
-        workspaceName = ws.name;
-        workspaceSlug = ws.slug;
-      }
-    }
+    const resolved = applyClientContext(
+      row.client_id,
+      maps,
+      {
+        clientName,
+        resolvedAccountId,
+        workspaceName,
+        workspaceSlug,
+      },
+    );
+    clientName = resolved.clientName;
+    resolvedAccountId = resolved.resolvedAccountId;
+    workspaceName = resolved.workspaceName;
+    workspaceSlug = resolved.workspaceSlug;
+  }
+
+  if (!clientName && row.project_id) {
+    const projectClientId = maps.projects.get(row.project_id)?.client_id;
+    const resolved = applyClientContext(projectClientId, maps, {
+      clientName,
+      resolvedAccountId,
+      workspaceName,
+      workspaceSlug,
+    });
+    clientName = resolved.clientName;
+    resolvedAccountId = resolved.resolvedAccountId;
+    workspaceName = resolved.workspaceName;
+    workspaceSlug = resolved.workspaceSlug;
+  }
+
+  if (!clientName && row.job_id) {
+    const jobClientId = maps.jobs.get(row.job_id)?.client_id;
+    const resolved = applyClientContext(jobClientId, maps, {
+      clientName,
+      resolvedAccountId,
+      workspaceName,
+      workspaceSlug,
+    });
+    clientName = resolved.clientName;
+    resolvedAccountId = resolved.resolvedAccountId;
+    workspaceName = resolved.workspaceName;
+    workspaceSlug = resolved.workspaceSlug;
   }
 
   if (!resolvedAccountId && row.job_id) {
@@ -313,9 +390,6 @@ async function enrichTaskRows(
   const projectIds = [
     ...new Set(rows.map((r) => r.project_id).filter(Boolean)),
   ] as string[];
-  const clientIds = [
-    ...new Set(rows.map((r) => r.client_id).filter(Boolean)),
-  ] as string[];
   const areaIds = [
     ...new Set(rows.map((r) => r.area_id).filter(Boolean)),
   ] as string[];
@@ -323,35 +397,26 @@ async function enrichTaskRows(
     ...new Set(rows.map((r) => r.job_id).filter(Boolean)),
   ] as string[];
 
-  const [projectsResult, clientsResult, areasResult, jobsResult] =
-    await Promise.all([
+  const [projectsResult, areasResult, jobsResult] = await Promise.all([
     projectIds.length > 0
       ? rowDb
           .from('projects')
-          .select('id, name, account_id, business_id, businesses(colour, account_id)')
+          .select(
+            'id, name, account_id, business_id, client_id, businesses(colour, account_id)',
+          )
           .in('id', projectIds)
       : Promise.resolve({ data: [] as ProjectEnrichment[] }),
-    clientIds.length > 0
-      ? rowDb
-          .from('clients')
-          .select('id, display_name, first_name, last_name, account_id')
-          .in('id', clientIds)
-      : Promise.resolve({ data: [] as ClientEnrichment[] }),
     areaIds.length > 0
       ? client.from('areas').select('id, name, colour').in('id', areaIds)
       : Promise.resolve({ data: [] as AreaEnrichment[] }),
     jobIds.length > 0
-      ? rowDb.from('jobs').select('id, account_id').in('id', jobIds)
+      ? rowDb.from('jobs').select('id, account_id, client_id').in('id', jobIds)
       : Promise.resolve({ data: [] as JobEnrichment[] }),
   ]);
 
   const projects = new Map<string, ProjectEnrichment>();
   for (const p of (projectsResult.data ?? []) as ProjectEnrichment[]) {
     projects.set(p.id, p);
-  }
-  const clients = new Map<string, ClientEnrichment>();
-  for (const c of (clientsResult.data ?? []) as ClientEnrichment[]) {
-    clients.set(c.id, c);
   }
   const areas = new Map<string, AreaEnrichment>();
   for (const a of (areasResult.data ?? []) as AreaEnrichment[]) {
@@ -360,6 +425,29 @@ async function enrichTaskRows(
   const jobs = new Map<string, JobEnrichment>();
   for (const j of (jobsResult.data ?? []) as JobEnrichment[]) {
     jobs.set(j.id, j);
+  }
+
+  const clientIds = [
+    ...new Set(
+      [
+        ...rows.map((row) => row.client_id),
+        ...[...projects.values()].map((project) => project.client_id),
+        ...[...jobs.values()].map((job) => job.client_id),
+      ].filter(Boolean),
+    ),
+  ] as string[];
+
+  const clientsResult =
+    clientIds.length > 0
+      ? await rowDb
+          .from('clients')
+          .select('id, display_name, first_name, last_name, account_id')
+          .in('id', clientIds)
+      : { data: [] as ClientEnrichment[] };
+
+  const clients = new Map<string, ClientEnrichment>();
+  for (const c of (clientsResult.data ?? []) as ClientEnrichment[]) {
+    clients.set(c.id, c);
   }
 
   const accountIdSet = new Set<string>();

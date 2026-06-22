@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 
 import Link from 'next/link';
 
@@ -22,8 +22,17 @@ import { workspacePageMainClassName } from '~/components/workspace-shell/workspa
 import type { PlannerCalendarEvent } from '~/lib/integrations/google-calendar/types';
 import { parseDayScheduleFromMarkdown } from '~/lib/planner/parse-plan-markdown';
 import {
+  flattenPlanBlocks,
+  parsePlanDocument,
+  serializePlanDocument,
+  type PlanDocument,
+} from '~/lib/planner/plan-blocks';
+import { savePlannerPlanAction } from '~/lib/planner/plan-actions';
+import {
   loadStoredPlan,
   pickBestPlanMarkdown,
+  plannerScopeKey,
+  saveStoredPlan,
   toLocalDateYmd,
 } from '~/lib/planner/plan-storage';
 import type {
@@ -33,6 +42,7 @@ import type {
 } from '~/lib/planner/types';
 
 import { createTask, updateTask } from '../../_lib/actions/task-actions';
+import { DayScheduleEditor } from './DayScheduleEditor';
 import { PlannerRemindersToggle } from './PlannerRemindersToggle';
 import { PlannerViewTabs } from './PlannerViewTabs';
 import { ReplanDialog } from './ReplanDialog';
@@ -79,6 +89,7 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
   const [planMarkdown, setPlanMarkdown] = useState(
     initialData.planMarkdown ?? '',
   );
+  const [planDocument, setPlanDocument] = useState<PlanDocument | null>(null);
   const [calendarEvents, setCalendarEvents] = useState<PlannerCalendarEvent[]>(
     [],
   );
@@ -114,6 +125,44 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
   ]);
 
   useEffect(() => {
+    if (!planMarkdown.trim()) {
+      setPlanDocument(null);
+      return;
+    }
+
+    setPlanDocument(parsePlanDocument(planMarkdown));
+  }, [planMarkdown]);
+
+  const persistPlanDocument = useCallback(
+    async (document: PlanDocument) => {
+      const markdown = serializePlanDocument(document);
+      setPlanMarkdown(markdown);
+      setPlanDocument(document);
+
+      saveStoredPlan(initialData.scope, dateYmd, {
+        markdown,
+        updatedAt: new Date().toISOString(),
+        mode: 'day',
+      });
+
+      const result = await savePlannerPlanAction({
+        scopeKey: plannerScopeKey(initialData.scope),
+        planDate: dateYmd,
+        mode: 'day',
+        markdown,
+      });
+
+      if (!result.success) {
+        toast.error(
+          result.error ??
+            'Changes saved locally but could not sync to your account.',
+        );
+      }
+    },
+    [dateYmd, initialData.scope],
+  );
+
+  useEffect(() => {
     let cancelled = false;
 
     async function loadCalendar() {
@@ -139,17 +188,46 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
   }, []);
 
   const displayBlocks = useMemo<DisplayBlock[]>(() => {
-    const planBlocks = parseDayScheduleFromMarkdown(
-      planMarkdown,
-      new Date().toISOString(),
-    ).map((block, index) => ({
-      key: `plan-${index}-${block.start}`,
-      start: block.start,
-      end: block.end,
-      title: block.title,
-      isCalendarEvent: block.isCalendarEvent,
-      isBreak: block.isBreak,
-    }));
+    const dateIso = `${dateYmd}T12:00:00`;
+
+    if (planDocument) {
+      return flattenPlanBlocks(planDocument).map((block) => {
+        const start = new Date(dateIso);
+        const end = new Date(dateIso);
+        start.setHours(
+          Math.floor(block.startMinutes / 60),
+          block.startMinutes % 60,
+          0,
+          0,
+        );
+        end.setHours(
+          Math.floor(block.endMinutes / 60),
+          block.endMinutes % 60,
+          0,
+          0,
+        );
+
+        return {
+          key: block.id,
+          start: start.toISOString(),
+          end: end.toISOString(),
+          title: block.title,
+          isCalendarEvent: block.isCalendarEvent,
+          isBreak: block.isBreak,
+        };
+      });
+    }
+
+    const planBlocks = parseDayScheduleFromMarkdown(planMarkdown, dateIso).map(
+      (block, index) => ({
+        key: `plan-${index}-${block.start}`,
+        start: block.start,
+        end: block.end,
+        title: block.title,
+        isCalendarEvent: block.isCalendarEvent,
+        isBreak: block.isBreak,
+      }),
+    );
 
     if (planBlocks.length > 0) return planBlocks;
 
@@ -161,7 +239,12 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
       isCalendarEvent: true,
       isBreak: false,
     }));
-  }, [planMarkdown, calendarEvents]);
+  }, [calendarEvents, dateYmd, planDocument, planMarkdown]);
+
+  const editablePlanBlocks = planDocument
+    ? flattenPlanBlocks(planDocument)
+    : [];
+  const showEditableSchedule = editablePlanBlocks.length > 0;
 
   const currentBlock = displayBlocks.find(
     (block) => blockStatus(block, now) === 'current',
@@ -247,6 +330,14 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
           notes: null,
           overdue: false,
           context: 'life',
+          clientId: null,
+          projectId: null,
+          areaId: null,
+          parentTaskId: null,
+          calendarScheduleStatus: null,
+          clientName: null,
+          accentColor: null,
+          workspaceColor: null,
         },
       ]);
       setNewTaskTitle('');
@@ -304,6 +395,13 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
           </div>
           {displayBlocks.length === 0 ? (
             <EmptySchedule planHref={initialData.planViewHref} />
+          ) : showEditableSchedule && planDocument ? (
+            <DayScheduleEditor
+              document={planDocument}
+              onDocumentChange={setPlanDocument}
+              onPersist={persistPlanDocument}
+              now={now}
+            />
           ) : (
             <div className="space-y-2">
               {displayBlocks.map((block) => (

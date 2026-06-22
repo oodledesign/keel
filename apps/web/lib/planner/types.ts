@@ -14,6 +14,11 @@ export type PlannerTask = {
   notes: string | null;
   overdue: boolean;
   context: 'work' | 'life';
+  clientId: string | null;
+  projectId: string | null;
+  areaId: string | null;
+  parentTaskId: string | null;
+  calendarScheduleStatus: TasksPageTask['calendarScheduleStatus'];
   clientName: string | null;
   accentColor: string | null;
   workspaceColor: string | null;
