@@ -45,6 +45,9 @@ export function toPlannerTask(task: TasksPageTask): PlannerTask {
     notes: task.notes,
     overdue: isOverdue(task.dueDate),
     context: task.context,
+    clientName: task.clientName,
+    accentColor: task.accentColor,
+    workspaceColor: task.workspaceColor,
   };
 }
 

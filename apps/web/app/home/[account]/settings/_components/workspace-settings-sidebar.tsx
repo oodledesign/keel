@@ -43,13 +43,16 @@ export function WorkspaceSettingsSidebar({
               <Link
                 href={item.href}
                 className={cn(
-                  'block rounded-xl px-3 py-2 text-sm font-medium transition-colors',
+                  'flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors',
                   active
                     ? 'bg-white/10 text-white'
                     : 'text-[var(--workspace-shell-text-muted)] hover:bg-white/5 hover:text-white',
                 )}
                 aria-current={active ? 'page' : undefined}
               >
+                {item.icon ? (
+                  <item.icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                ) : null}
                 {item.label}
               </Link>
             </li>

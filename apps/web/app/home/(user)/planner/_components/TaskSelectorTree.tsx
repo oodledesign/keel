@@ -4,9 +4,11 @@ import { useState } from 'react';
 
 import Link from 'next/link';
 
-import { ChevronDown, ChevronRight, Flag, FolderKanban } from 'lucide-react';
+import { ChevronDown, ChevronRight, Flag, FolderKanban, Plus } from 'lucide-react';
 
+import { Avatar, AvatarFallback } from '@kit/ui/avatar';
 import { Badge } from '@kit/ui/badge';
+import { Button } from '@kit/ui/button';
 import { Checkbox } from '@kit/ui/checkbox';
 import {
   Collapsible,
@@ -15,8 +17,10 @@ import {
 } from '@kit/ui/collapsible';
 import { cn } from '@kit/ui/utils';
 
+import { AddTaskDialog } from '~/home/(user)/_components/dashboard/add-task-dialog';
 import type {
   PlannerProjectNode,
+  PlannerScope,
   PlannerTask,
   PlannerWorkspaceNode,
 } from '~/lib/planner/types';
@@ -27,6 +31,7 @@ type Props = {
   onSelectedTaskIdsChange: (ids: Set<string>) => void;
   includeWorkspaceTasks: boolean;
   settingsHref: string;
+  scope: PlannerScope;
 };
 
 const priorityClass: Record<PlannerTask['priority'], string> = {
@@ -42,7 +47,10 @@ export function TaskSelectorTree({
   onSelectedTaskIdsChange,
   includeWorkspaceTasks,
   settingsHref,
+  scope,
 }: Props) {
+  const [addTaskOpen, setAddTaskOpen] = useState(false);
+
   function toggle(ids: string[], checked: boolean) {
     const next = new Set(selectedTaskIds);
     for (const id of ids) {
@@ -75,28 +83,67 @@ export function TaskSelectorTree({
             ) : null}
           </p>
         </div>
-        {allCount > 0 ? (
-          <button
+        <div className="flex shrink-0 items-center gap-2">
+          <Button
             type="button"
-            className="text-xs font-medium text-[#5eead4] hover:underline"
-            onClick={() => {
-              const allIds = taskTree.flatMap((workspace) =>
-                workspace.projects.flatMap((project) =>
-                  project.tasks.map((task) => task.id),
-                ),
-              );
-              toggle(allIds, selectedCount !== allIds.length);
-            }}
+            size="sm"
+            variant="outline"
+            className="h-8 border-white/15 bg-white/5 text-xs text-white hover:bg-white/10"
+            onClick={() => setAddTaskOpen(true)}
           >
-            {selectedCount === allCount ? 'Clear all' : 'Select all'}
-          </button>
-        ) : null}
+            <Plus className="h-3.5 w-3.5" />
+            Add task
+          </Button>
+          {allCount > 0 ? (
+            <button
+              type="button"
+              className="text-xs font-medium text-[#5eead4] hover:underline"
+              onClick={() => {
+                const allIds = taskTree.flatMap((workspace) =>
+                  workspace.projects.flatMap((project) =>
+                    project.tasks.map((task) => task.id),
+                  ),
+                );
+                toggle(allIds, selectedCount !== allIds.length);
+              }}
+            >
+              {selectedCount === allCount ? 'Clear all' : 'Select all'}
+            </button>
+          ) : null}
+        </div>
       </div>
 
+      {scope.kind === 'workspace' ? (
+        <AddTaskDialog
+          workspaceAccountId={scope.accountId}
+          workspaceAccountSlug={scope.accountSlug}
+          open={addTaskOpen}
+          onOpenChange={setAddTaskOpen}
+          hideTrigger
+          allowInlineClientCreate
+        />
+      ) : (
+        <AddTaskDialog
+          open={addTaskOpen}
+          onOpenChange={setAddTaskOpen}
+          hideTrigger
+        />
+      )}
+
       {taskTree.length === 0 ? (
-        <p className="rounded-lg border border-white/8 bg-white/5 p-3 text-sm text-white/55">
-          No open tasks found.
-        </p>
+        <div className="space-y-3 rounded-lg border border-white/8 bg-white/5 p-3">
+          <p className="text-sm text-white/55">No open tasks found.</p>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="border-white/15 bg-white/5 text-white hover:bg-white/10"
+            onClick={() => setAddTaskOpen(true)}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add a task to plan
+          </Button>
+        </div>
       ) : (
         <div className="max-h-[520px] space-y-2 overflow-y-auto pr-1">
           {taskTree.map((workspace) => (
@@ -234,27 +281,54 @@ function TaskRow({
       />
       <span className="min-w-0 flex-1">
         <span className="block leading-snug text-white/85">{task.title}</span>
-        <span className="mt-1 flex flex-wrap items-center gap-1.5">
-          <Badge
-            variant="outline"
-            className={cn('h-5 gap-1 px-1.5 text-[10px]', priorityClass[task.priority])}
-          >
-            <Flag className="h-3 w-3" />
-            {task.priority}
-          </Badge>
-          {task.dueDateLabel ? (
-            <span
-              className={cn(
-                'text-[11px] text-white/40',
-                task.overdue && 'text-amber-200',
-              )}
+        <span className="mt-1 flex flex-wrap items-center gap-2">
+          <TaskClientLabel task={task} />
+          <span className="flex flex-wrap items-center gap-1.5">
+            <Badge
+              variant="outline"
+              className={cn('h-5 gap-1 px-1.5 text-[10px]', priorityClass[task.priority])}
             >
-              {task.overdue ? 'Overdue · ' : ''}
-              {task.dueDateLabel}
-            </span>
-          ) : null}
+              <Flag className="h-3 w-3" />
+              {task.priority}
+            </Badge>
+            {task.dueDateLabel ? (
+              <span
+                className={cn(
+                  'text-[11px] text-white/40',
+                  task.overdue && 'text-amber-200',
+                )}
+              >
+                {task.overdue ? 'Overdue · ' : ''}
+                {task.dueDateLabel}
+              </span>
+            ) : null}
+          </span>
         </span>
       </span>
     </label>
+  );
+}
+
+function TaskClientLabel({ task }: { task: PlannerTask }) {
+  const name = task.clientName?.trim();
+  if (!name) {
+    return null;
+  }
+
+  const color = task.accentColor ?? task.workspaceColor ?? '#64748B';
+  const initial = (name[0] ?? '?').toUpperCase();
+
+  return (
+    <span className="flex min-w-0 items-center gap-1.5" title={name}>
+      <Avatar className="h-5 w-5 shrink-0">
+        <AvatarFallback
+          className="text-[9px] font-semibold text-white"
+          style={{ backgroundColor: color }}
+        >
+          {initial}
+        </AvatarFallback>
+      </Avatar>
+      <span className="truncate text-[11px] text-zinc-400">{name}</span>
+    </span>
   );
 }

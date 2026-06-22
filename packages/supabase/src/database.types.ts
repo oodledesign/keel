@@ -6526,6 +6526,7 @@ export type Database = {
           dismissed: boolean
           expires_at: string | null
           id: number
+          muted: boolean
           link: string | null
           type: Database["public"]["Enums"]["notification_type"]
         }
@@ -6535,6 +6536,7 @@ export type Database = {
           channel?: Database["public"]["Enums"]["notification_channel"]
           created_at?: string
           dismissed?: boolean
+          muted?: boolean
           expires_at?: string | null
           id?: never
           link?: string | null
@@ -6546,6 +6548,7 @@ export type Database = {
           channel?: Database["public"]["Enums"]["notification_channel"]
           created_at?: string
           dismissed?: boolean
+          muted?: boolean
           expires_at?: string | null
           id?: never
           link?: string | null

@@ -4,6 +4,8 @@ import { randomUUID, createHmac, timingSafeEqual } from 'node:crypto';
 
 import { SendRawEmailCommand, SESClient } from '@aws-sdk/client-ses';
 import { sanitizeEmailSender } from '@kit/mailers';
+
+import { isEmailSuppressed } from '~/lib/email/is-suppressed';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { insertPlatformEmailLog } from '@kit/supabase/platform-email-log';
 
@@ -1057,6 +1059,12 @@ async function sendSesEmail(params: {
   campaignId: string;
   listUnsubscribeUrl?: string;
 }) {
+  if (await isEmailSuppressed(params.to)) {
+    console.warn(`[email] Skipping suppressed campaign recipient: ${params.to}`);
+    const config = getSesConfig();
+    return config.from;
+  }
+
   const config = getSesConfig();
   const client = new SESClient({
     region: config.region,

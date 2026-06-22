@@ -10,6 +10,7 @@ import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 import type { PlannerCalendarEvent } from '~/lib/integrations/google-calendar/types';
 
 import type { PlannerWorkspaceNode } from '~/lib/planner/types';
+import type { PlannerScope } from '~/lib/planner/types';
 import { CalendarEventsSection } from './CalendarEventsSection';
 import { PlanningModeToggle } from './PlanningModeToggle';
 import { PreferencesSection } from './PreferencesSection';
@@ -37,6 +38,7 @@ type Props = {
   selectedTaskCount: number;
   includeWorkspaceTasks: boolean;
   settingsHref: string;
+  scope: PlannerScope;
   onGenerate: () => void;
   isGenerating: boolean;
 };
@@ -72,6 +74,7 @@ export function PlannerInputPanel(props: Props) {
         onSelectedTaskIdsChange={props.onSelectedTaskIdsChange}
         includeWorkspaceTasks={props.includeWorkspaceTasks}
         settingsHref={props.settingsHref}
+        scope={props.scope}
       />
 
       <Button

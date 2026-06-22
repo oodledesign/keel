@@ -1,3 +1,6 @@
+import type { LucideIcon } from 'lucide-react';
+import { CalendarOff } from 'lucide-react';
+
 import featureFlagsConfig from '~/config/feature-flags.config';
 import pathsConfig from '~/config/paths.config';
 import type { TeamAccountAccess } from '~/home/[account]/_lib/role-access';
@@ -14,6 +17,7 @@ export type WorkspaceSettingsNavItem = {
   href: string;
   /** Match pathname exactly (used for General). */
   exact?: boolean;
+  icon?: LucideIcon;
 };
 
 function settingsPath(
@@ -37,6 +41,12 @@ export function buildWorkspaceSettingsNav(input: {
       label: 'General',
       href: settingsPath(pathsConfig.app.accountSettings, accountSlug),
       exact: true,
+    },
+    {
+      id: 'focus',
+      label: 'Focus & Availability',
+      href: settingsPath(pathsConfig.app.accountFocusSettings, accountSlug),
+      icon: CalendarOff,
     },
   ];
 

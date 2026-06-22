@@ -28,7 +28,10 @@ import { loadTeamWorkspace } from './_lib/server/team-account-workspace.loader';
 import { buildWorkspaceShellMetadata } from '~/lib/seo/app-shell-metadata';
 import { spaceTypeFromProfile } from './_lib/workspace-profile';
 import { enforceWorkspaceBilling } from './_lib/server/workspace-billing-guard';
+import { WorkspaceFocusProviderShell } from '~/components/workspace-shell/workspace-focus-provider-shell';
+import { serializeWorkspaceFocusMap } from '~/components/workspace-shell/workspace-focus-context';
 import { loadWorkspaceSwitcherAccounts } from '../_lib/server/workspace-switcher.loader';
+import { loadWorkspaceFocusSettingsMap } from '~/lib/workspace-focus/load-workspace-focus-settings';
 import { loadWorkNavCounts } from './_lib/server/work-nav-counts.loader';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 import {
@@ -121,10 +124,17 @@ async function SidebarLayout({
   });
 
   const access = getTeamAccountAccess(accountAccess);
+  const focusAccountIds = [
+    ...new Set([accountId, ...accounts.map((row) => row.id)]),
+  ];
+  const focusSettingsByAccountId = serializeWorkspaceFocusMap(
+    await loadWorkspaceFocusSettingsMap(client, user.id, focusAccountIds),
+  );
 
   return (
     <TeamAccountWorkspaceContextProvider value={data}>
-      <SidebarProvider defaultOpen={state.open}>
+      <WorkspaceFocusProviderShell settingsByAccountId={focusSettingsByAccountId}>
+        <SidebarProvider defaultOpen={state.open}>
         <Page
           style={'sidebar'}
           contentContainerClassName="mx-auto flex h-svh min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)]"
@@ -159,6 +169,7 @@ async function SidebarLayout({
           </TeamWorkspaceMobileChrome>
         </Page>
       </SidebarProvider>
+      </WorkspaceFocusProviderShell>
     </TeamAccountWorkspaceContextProvider>
   );
 }
@@ -220,10 +231,17 @@ async function HeaderLayout({
   });
 
   const access = getTeamAccountAccess(accountAccess);
+  const focusAccountIds = [
+    ...new Set([accountId, ...accounts.map((row) => row.id)]),
+  ];
+  const focusSettingsByAccountId = serializeWorkspaceFocusMap(
+    await loadWorkspaceFocusSettingsMap(client, user.id, focusAccountIds),
+  );
 
   return (
     <TeamAccountWorkspaceContextProvider value={data}>
-      <Page style={'header'}>
+      <WorkspaceFocusProviderShell settingsByAccountId={focusSettingsByAccountId}>
+        <Page style={'header'}>
         <PageNavigation>
           <TeamAccountNavigationMenu workspace={data} />
         </PageNavigation>
@@ -243,6 +261,7 @@ async function HeaderLayout({
           {children}
         </TeamWorkspaceMobileChrome>
       </Page>
+      </WorkspaceFocusProviderShell>
     </TeamAccountWorkspaceContextProvider>
   );
 }

@@ -1,15 +1,19 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 
 import { Loader2, RefreshCw } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 
-import {
-  getBrainKnowledgeStats,
-} from '../../brain/_lib/server/brain-actions';
+import { getBrainKnowledgeStats } from '../../brain/_lib/server/brain-actions';
+
+type KnowledgeStats = {
+  totalChunks: number;
+  byType: Record<string, { count: number; lastIndexedAt: string | null }>;
+  voyageConfigured: boolean;
+};
 
 export function KnowledgeBaseSettings({
   accountId,
@@ -19,62 +23,58 @@ export function KnowledgeBaseSettings({
 }: {
   accountId: string;
   accountSlug: string;
-  initialStats: {
-    totalChunks: number;
-    byType: Record<string, { count: number; lastIndexedAt: string | null }>;
-    voyageConfigured: boolean;
-  };
+  initialStats: KnowledgeStats;
   voyageConfigured: boolean;
 }) {
-  const [stats, setStats] = useState(initialStats);
-  const [pending, startTransition] = useTransition();
+  const [stats, setStats] = useState<KnowledgeStats>(initialStats);
+  const [isReindexing, setIsReindexing] = useState(false);
+  const [lastErrors, setLastErrors] = useState<string[]>([]);
 
-  const refreshStats = () => {
-    startTransition(async () => {
-      try {
-        const next = await getBrainKnowledgeStats({ accountId, accountSlug });
-        setStats(next as typeof initialStats);
-      } catch {
-        toast.error('Could not refresh stats');
+  const handleReindex = async () => {
+    setIsReindexing(true);
+    setLastErrors([]);
+
+    try {
+      const res = await fetch('/api/brain/reindex', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ accountId, accountSlug }),
+      });
+
+      const result = (await res.json()) as {
+        indexed?: number;
+        chunks?: number;
+        totalChunks?: number;
+        errors?: string[];
+        error?: string;
+      };
+
+      if (!res.ok) {
+        throw new Error(result.error ?? 'Re-index failed');
       }
-    });
-  };
 
-  const handleReindex = () => {
-    startTransition(async () => {
-      try {
-        const res = await fetch('/api/brain/reindex', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ accountId, accountSlug }),
-        });
+      const errorCount = result.errors?.length ?? 0;
+      const totalChunks = result.totalChunks ?? result.chunks ?? 0;
+      const indexed = result.indexed ?? 0;
 
-        const result = (await res.json()) as {
-          indexed?: number;
-          chunks?: number;
-          errors?: string[];
-          error?: string;
-        };
-
-        if (!res.ok) {
-          throw new Error(result.error ?? 'Re-index failed');
-        }
-
-        const errorCount = result.errors?.length ?? 0;
-        if (errorCount > 0) {
-          toast.warning(
-            `Indexed ${result.indexed ?? 0} sources (${result.chunks ?? 0} chunks). ${errorCount} source${errorCount === 1 ? '' : 's'} failed.`,
-          );
-        } else {
-          toast.success(
-            `Indexed ${result.indexed ?? 0} sources (${result.chunks ?? 0} chunks)`,
-          );
-        }
-        refreshStats();
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Re-index failed');
+      if (errorCount > 0) {
+        setLastErrors(result.errors ?? []);
+        toast.warning(
+          `Indexed ${indexed} sources — ${totalChunks} chunk${totalChunks === 1 ? '' : 's'} in knowledge base. ${errorCount} source${errorCount === 1 ? '' : 's'} failed.`,
+        );
+      } else {
+        toast.success(
+          `Indexed ${indexed} sources — ${totalChunks} chunk${totalChunks === 1 ? '' : 's'} in knowledge base.`,
+        );
       }
-    });
+
+      const next = await getBrainKnowledgeStats({ accountId, accountSlug });
+      setStats(next as KnowledgeStats);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Re-index failed');
+    } finally {
+      setIsReindexing(false);
+    }
   };
 
   return (
@@ -91,10 +91,10 @@ export function KnowledgeBaseSettings({
           type="button"
           variant="outline"
           className="border-zinc-600"
-          disabled={pending || !voyageConfigured}
-          onClick={handleReindex}
+          disabled={isReindexing || !voyageConfigured}
+          onClick={() => void handleReindex()}
         >
-          {pending ? (
+          {isReindexing ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
             <RefreshCw className="mr-2 h-4 w-4" />
@@ -108,6 +108,17 @@ export function KnowledgeBaseSettings({
           Add VOYAGE_API_KEY to your environment to enable indexing and chat
           search.
         </p>
+      )}
+
+      {lastErrors.length > 0 && (
+        <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+          <p className="font-medium">Sources that failed to index</p>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-amber-50/90">
+            {lastErrors.map((error) => (
+              <li key={error}>{error}</li>
+            ))}
+          </ul>
+        </div>
       )}
 
       <dl className="mt-5 grid gap-3 sm:grid-cols-2">

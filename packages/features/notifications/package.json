@@ -11,7 +11,8 @@
   "exports": {
     "./api": "./src/server/api.ts",
     "./components": "./src/components/index.ts",
-    "./hooks": "./src/hooks/index.ts"
+    "./hooks": "./src/hooks/index.ts",
+    "./types": "./src/types.ts"
   },
   "devDependencies": {
     "@kit/eslint-config": "workspace:*",

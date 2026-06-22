@@ -286,7 +286,39 @@ export async function loadAccountIndexables(
     });
   }
 
-  return records;
+  return dedupeIndexablesBySourceId(records);
+}
+
+/** `brain_chunks` is unique on (source_id, chunk_index) only — merge duplicate sources. */
+function dedupeIndexablesBySourceId(
+  records: IndexableRecord[],
+): IndexableRecord[] {
+  const bySourceId = new Map<string, IndexableRecord>();
+
+  for (const record of records) {
+    const existing = bySourceId.get(record.sourceId);
+    if (!existing) {
+      bySourceId.set(record.sourceId, record);
+      continue;
+    }
+
+    const mergedText =
+      record.text.length > existing.text.length ? record.text : existing.text;
+    const mergedUpdatedAt =
+      record.updatedAt > existing.updatedAt
+        ? record.updatedAt
+        : existing.updatedAt;
+    const preferred =
+      record.text.length >= existing.text.length ? record : existing;
+
+    bySourceId.set(record.sourceId, {
+      ...preferred,
+      text: mergedText,
+      updatedAt: mergedUpdatedAt,
+    });
+  }
+
+  return [...bySourceId.values()];
 }
 
 function buildMetadata(record: IndexableRecord): BrainChunkMetadata {
@@ -411,7 +443,15 @@ export async function indexSource(
 
 export async function indexAccount(admin: AdminClient, accountId: string) {
   if (!isVoyageConfigured()) {
-    return { indexed: 0, chunks: 0, skipped: true as const, errors: [] as string[] };
+    return {
+      indexed: 0,
+      chunks: 0,
+      chunksWritten: 0,
+      totalChunks: 0,
+      byType: {},
+      skipped: true as const,
+      errors: [] as string[],
+    };
   }
 
   const records = await loadAccountIndexables(admin, accountId);
@@ -441,15 +481,26 @@ export async function indexAccount(admin: AdminClient, accountId: string) {
     }
   }
 
+  const stats = await getBrainIndexStats(admin, accountId);
+
   console.log(
-    `[brain] indexed account ${accountId}: ${indexed}/${records.length} sources, ${chunkTotal} chunks, ${errors.length} errors`,
+    `[brain] indexed account ${accountId}: ${indexed}/${records.length} sources, ${stats.totalChunks} chunks in db (${chunkTotal} written this run), ${errors.length} errors`,
   );
 
   if (indexed === 0 && errors.length > 0) {
     throw new Error(errors[0] ?? 'Indexing failed');
   }
 
-  return { indexed, chunks: chunkTotal, errors };
+  return {
+    indexed,
+    /** Chunks upserted during this run (can exceed net DB total when source_ids overlap). */
+    chunksWritten: chunkTotal,
+    /** Authoritative chunk count in the database after indexing. */
+    chunks: stats.totalChunks,
+    totalChunks: stats.totalChunks,
+    byType: stats.byType,
+    errors,
+  };
 }
 
 export async function getBrainIndexStats(admin: AdminClient, accountId: string) {

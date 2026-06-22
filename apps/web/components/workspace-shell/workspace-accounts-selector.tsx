@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 import { CaretSortIcon } from '@radix-ui/react-icons';
-import { CheckCircle, Plus } from 'lucide-react';
+import { CheckCircle, Mail, Plus } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import {
@@ -22,6 +22,13 @@ import { cn } from '@kit/ui/utils';
 import { SidebarContext } from '@kit/ui/shadcn-sidebar';
 
 import pathsConfig from '~/config/paths.config';
+import {
+  getWorkspaceFocusMutedClassName,
+} from '~/components/workspace-shell/workspace-focus-sidebar-decorations';
+import { useWorkspaceFocusSettings } from '~/components/workspace-shell/workspace-focus-context';
+import { useWorkspaceFocusSnapshot } from '~/lib/hooks/use-workspace-focus';
+import { FocusStatusBadge } from '~/home/[account]/settings/focus/_components/FocusStatusBadge';
+import { holidayEmoji } from '~/home/[account]/settings/focus/_lib/focus-form';
 import { getExplicitPersonalHomePath } from '~/lib/dashboard-shortcuts/personal-home-url';
 import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
 import {
@@ -128,29 +135,12 @@ export function WorkspaceAccountsSelector({
       <CommandList className="max-h-[min(50dvh,var(--radix-popover-content-available-height,50dvh))]">
         <CommandGroup heading="Your workspaces">
           {accounts.map((account) => (
-            <CommandItem
+            <WorkspaceSwitcherAccountRow
               key={account.id}
-              value={`${account.label} ${account.slug} ${account.typeLabel}`}
-              className="my-1 cursor-pointer aria-selected:bg-white/10"
+              account={account}
+              selectedAccount={selectedAccount}
               onSelect={() => navigateTo(account)}
-            >
-              <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                <WorkspaceAvatar
-                  name={account.label}
-                  color={account.accentColor}
-                  image={account.image}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{account.label}</p>
-                  <p className="truncate text-[11px] text-zinc-500">
-                    {account.typeLabel}
-                  </p>
-                </div>
-              </div>
-              {selectedAccount === account.value ? (
-                <CheckCircle className="h-4 w-4 shrink-0 text-[#57C87F]" />
-              ) : null}
-            </CommandItem>
+            />
           ))}
         </CommandGroup>
 
@@ -269,3 +259,73 @@ function WorkspaceInitial({
 }
 
 export { WorkspaceInitial };
+
+function WorkspaceSwitcherAccountRow({
+  account,
+  selectedAccount,
+  onSelect,
+}: {
+  account: WorkspaceSwitcherAccount;
+  selectedAccount: string;
+  onSelect: () => void;
+}) {
+  const isPersonal = isPersonalWorkspaceValue(account.value);
+  const focusSettings = useWorkspaceFocusSettings(isPersonal ? null : account.id);
+  const focusState = useWorkspaceFocusSnapshot(focusSettings);
+
+  return (
+    <CommandItem
+      value={`${account.label} ${account.slug} ${account.typeLabel}`}
+      className={cn(
+        'my-1 cursor-pointer aria-selected:bg-white/10',
+        getWorkspaceFocusMutedClassName(focusSettings),
+      )}
+      onSelect={onSelect}
+    >
+      <div className="flex min-w-0 flex-1 items-center gap-2.5">
+        <WorkspaceAvatar
+          name={account.label}
+          color={account.accentColor}
+          image={account.image}
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className="truncate text-sm font-medium">{account.label}</p>
+            {!isPersonal && focusState.isWorkspaceSilenced ? (
+              <FocusStatusBadge settings={focusSettings} compact />
+            ) : null}
+          </div>
+          {!isPersonal && focusSettings ? (
+            <div className="mt-0.5 space-y-0.5">
+              {focusState.isHolidayModeActive ? (
+                <p className="truncate text-[11px] text-zinc-500">
+                  {holidayEmoji(focusSettings.holiday_mode_label)}{' '}
+                  {focusSettings.holiday_mode_label}
+                </p>
+              ) : (
+                <p className="truncate text-[11px] text-zinc-500">
+                  {account.typeLabel}
+                </p>
+              )}
+              {focusState.isOOOActive &&
+              !focusState.isHolidayModeActive &&
+              !focusState.isWorkspaceSilenced ? (
+                <p className="inline-flex items-center gap-1 text-[11px] text-sky-300/90">
+                  <Mail className="h-3 w-3" aria-hidden />
+                  OOO
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <p className="truncate text-[11px] text-zinc-500">
+              {account.typeLabel}
+            </p>
+          )}
+        </div>
+      </div>
+      {selectedAccount === account.value ? (
+        <CheckCircle className="h-4 w-4 shrink-0 text-[#57C87F]" />
+      ) : null}
+    </CommandItem>
+  );
+}

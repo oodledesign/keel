@@ -14,6 +14,9 @@ export type PlannerTask = {
   notes: string | null;
   overdue: boolean;
   context: 'work' | 'life';
+  clientName: string | null;
+  accentColor: string | null;
+  workspaceColor: string | null;
 };
 
 export type PlannerProjectNode = {

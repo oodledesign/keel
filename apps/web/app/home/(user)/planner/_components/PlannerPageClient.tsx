@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { toast } from '@kit/ui/sonner';
 
@@ -32,6 +32,16 @@ const defaultPreferences: PlannerPreferences = {
 };
 
 export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
+  const previousTaskIdsRef = useRef(
+    new Set(
+      initialData.taskTree.flatMap((workspace) =>
+        workspace.projects.flatMap((project) =>
+          project.tasks.map((task) => task.id),
+        ),
+      ),
+    ),
+  );
+
   const allTaskIds = useMemo(
     () =>
       new Set(
@@ -62,6 +72,25 @@ export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
   const [lastPayload, setLastPayload] = useState<PlannerGeneratePayload | null>(
     null,
   );
+
+  useEffect(() => {
+    const currentIds = allTaskIds;
+    const added = [...currentIds].filter(
+      (id) => !previousTaskIdsRef.current.has(id),
+    );
+
+    if (added.length > 0) {
+      setSelectedTaskIds((existing) => {
+        const next = new Set(existing);
+        for (const id of added) {
+          next.add(id);
+        }
+        return next;
+      });
+    }
+
+    previousTaskIdsRef.current = currentIds;
+  }, [allTaskIds]);
 
   useEffect(() => {
     const raw = window.localStorage.getItem('keel-planner-preferences');
@@ -217,6 +246,7 @@ export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
           selectedTaskCount={selectedTasks.length}
           includeWorkspaceTasks={initialData.includeWorkspaceTasks}
           settingsHref={initialData.settingsHref}
+          scope={initialData.scope}
           onGenerate={() => generatePlan()}
           isGenerating={isGenerating}
         />

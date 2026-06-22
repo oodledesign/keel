@@ -1,6 +1,6 @@
-import { NotificationsPopover } from '@kit/notifications/components';
-
 import featuresFlagConfig from '~/config/feature-flags.config';
+
+import { WorkspaceNotificationsPopover } from '~/components/workspace-shell/workspace-notifications-popover';
 
 export function TeamAccountNotifications(params: {
   userId: string;
@@ -11,8 +11,9 @@ export function TeamAccountNotifications(params: {
   }
 
   return (
-    <NotificationsPopover
+    <WorkspaceNotificationsPopover
       accountIds={[params.userId, params.accountId]}
+      userId={params.userId}
       realtime={featuresFlagConfig.realtimeNotifications}
     />
   );

@@ -3,6 +3,8 @@ import 'server-only';
 import { getMailer, sanitizeEmailSender } from '@kit/mailers';
 import { insertPlatformEmailLog } from '@kit/supabase/platform-email-log';
 
+import { isEmailSuppressed } from '~/lib/email/is-suppressed';
+
 export const PLATFORM_EMAIL_TYPES = [
   'invitation',
   'invoice',
@@ -40,6 +42,13 @@ export async function sendPlatformEmail(params: {
   mail: MailPayload;
   metadata?: Record<string, unknown>;
 }): Promise<void> {
+  const recipient = params.mail.to.trim();
+
+  if (await isEmailSuppressed(recipient)) {
+    console.warn(`[email] Skipping suppressed recipient: ${recipient}`);
+    return;
+  }
+
   const mailer = await getMailer();
   const mail = {
     ...params.mail,

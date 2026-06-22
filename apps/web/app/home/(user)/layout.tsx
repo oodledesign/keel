@@ -11,6 +11,8 @@ import { Page, PageMobileNavigation, PageNavigation } from '@kit/ui/page';
 import { SidebarProvider } from '@kit/ui/shadcn-sidebar';
 
 import { AppLogo } from '~/components/app-logo';
+import { WorkspaceFocusProviderShell } from '~/components/workspace-shell/workspace-focus-provider-shell';
+import { serializeWorkspaceFocusMap } from '~/components/workspace-shell/workspace-focus-context';
 import { WorkspaceTopBar } from '~/components/workspace-shell/workspace-top-bar';
 import pathsConfig from '~/config/paths.config';
 import { getExplicitPersonalHomePath } from '~/lib/dashboard-shortcuts/personal-home-url';
@@ -33,6 +35,7 @@ import { loadPersonalMobileNavShortcuts } from '~/lib/dashboard-shortcuts/load-s
 import { enrichPersonalShortcutsWithWorkspaceAvatars } from '~/lib/dashboard-shortcuts/enrich-workspace-shortcut-avatars';
 import { resolveMobileBottomNavTabs } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
 import { loadWorkspaceSwitcherAccounts } from '~/home/_lib/server/workspace-switcher.loader';
+import { loadWorkspaceFocusSettingsMap } from '~/lib/workspace-focus/load-workspace-focus-settings';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 import { buildPersonalShellMetadata } from '~/lib/seo/app-shell-metadata';
 import {
@@ -109,9 +112,22 @@ async function SidebarLayout({ children }: React.PropsWithChildren) {
     shortcuts: mobileNavShortcuts,
   });
 
+  const focusAccountIds = [
+    ...new Set([
+      ...sharedWorkspaces.map((workspace) => workspace.id),
+      ...switcherAccounts.map((account) => account.id),
+    ]),
+  ];
+  const focusSettingsByAccountId = client
+    ? serializeWorkspaceFocusMap(
+        await loadWorkspaceFocusSettingsMap(client, user.id, focusAccountIds),
+      )
+    : {};
+
   return (
     <UserWorkspaceContextProvider value={workspace}>
-      <SidebarProvider defaultOpen={state.open}>
+      <WorkspaceFocusProviderShell settingsByAccountId={focusSettingsByAccountId}>
+        <SidebarProvider defaultOpen={state.open}>
         <Page
           style={'sidebar'}
           contentContainerClassName="mx-auto flex h-svh min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)]"
@@ -143,6 +159,7 @@ async function SidebarLayout({ children }: React.PropsWithChildren) {
           </PersonalHomeMobileChrome>
         </Page>
       </SidebarProvider>
+      </WorkspaceFocusProviderShell>
     </UserWorkspaceContextProvider>
   );
 }
