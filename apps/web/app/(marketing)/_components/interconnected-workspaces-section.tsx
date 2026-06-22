@@ -1,6 +1,7 @@
 import {
   Briefcase,
   Check,
+  Heart,
   Home,
   Link2,
   Users,
@@ -25,8 +26,7 @@ type Props = {
 
 const NODE_ICONS: Record<string, typeof Home> = {
   work: Briefcase,
-  family: Users,
-  property: Home,
+  family: Heart,
   community: Users,
 };
 
@@ -146,7 +146,7 @@ function WorkspaceHubDiagram({
           aria-hidden
         />
 
-        <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {nodes.map((node) => {
             const Icon = NODE_ICONS[node.id] ?? Briefcase;
             return (

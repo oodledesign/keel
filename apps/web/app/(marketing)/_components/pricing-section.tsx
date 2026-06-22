@@ -6,9 +6,8 @@
  * - Business tiers: Lite (£0), Solo (£29/£290), Team (£79/£790), Scale (£149/£1490).
  * - Property tiers: Starter (£19/£190), Portfolio (£29/£290).
  * - Community is £12/mo, £120/yr.
- * - Personal add-on: Email Assistant (£9/mo).
+ * - Personal add-ons: Email Assistant (£9/mo); Meeting Assistant (at launch, Stripe TBD).
  * - Workspace add-ons: Signatures (£9), Rankly (£36), Feedflow (£9), Videos (£5–£47).
- * - TODO: Meeting transcription / Ozer Assistant — no Stripe product in billing.config.ts yet.
  * - Trial length: 14 days (billing.config.ts TRIAL_DAYS).
  * - Currency: GBP (KEEL_BILLING_CURRENCY).
  */
@@ -76,7 +75,7 @@ const PRICING_CONFIG = {
       ],
       assistants: {
         email: { tooltip: 'Email assistant — £9/mo add-on', state: 'addon' as const },
-        meeting: { tooltip: 'Meeting assistant — coming soon', state: 'coming-soon' as const },
+        meeting: { tooltip: 'Meeting Assistant — personal add-on, available at launch', state: 'addon' as const },
         planner: { tooltip: 'AI planner included', state: 'included' as const },
       },
     },
@@ -101,7 +100,7 @@ const PRICING_CONFIG = {
       ],
       assistants: {
         email: { tooltip: 'Email assistant on your personal account', state: 'addon' as const },
-        meeting: { tooltip: 'Meeting assistant — coming soon', state: 'coming-soon' as const },
+        meeting: { tooltip: 'Meeting Assistant — personal add-on, available at launch', state: 'addon' as const },
         planner: { tooltip: 'AI planner via your personal home', state: 'included' as const },
       },
     },
@@ -126,7 +125,7 @@ const PRICING_CONFIG = {
       ],
       assistants: {
         email: { tooltip: 'Email assistant on your personal account', state: 'addon' as const },
-        meeting: { tooltip: 'Meeting assistant — coming soon', state: 'coming-soon' as const },
+        meeting: { tooltip: 'Meeting Assistant — personal add-on, available at launch', state: 'addon' as const },
         planner: { tooltip: 'AI planner via your personal home', state: 'included' as const },
       },
     },
@@ -151,7 +150,7 @@ const PRICING_CONFIG = {
       ],
       assistants: {
         email: { tooltip: 'Email assistant on your personal account', state: 'addon' as const },
-        meeting: { tooltip: 'Meeting assistant — coming soon', state: 'coming-soon' as const },
+        meeting: { tooltip: 'Meeting Assistant — personal add-on, available at launch', state: 'addon' as const },
         planner: { tooltip: 'AI planner via your personal home', state: 'included' as const },
       },
     },
@@ -258,7 +257,7 @@ const PRICING_CONFIG = {
         'Record, transcribe, and extract tasks from meetings — synced to the right workspace',
       monthlyPrice: 0,
       icon: 'Mic' as const,
-      comingSoon: true,
+      availableAtLaunch: true,
       planId: '',
       productId: '',
       variantId: '',
@@ -975,6 +974,8 @@ function AddonsPanel({
           {PRICING_CONFIG.personalAddons.map((addon) => {
             const Icon = ADDON_ICONS[addon.icon];
             const isComingSoon = 'comingSoon' in addon && addon.comingSoon;
+            const isAvailableAtLaunch =
+              'availableAtLaunch' in addon && addon.availableAtLaunch;
             const isIncluded = 'included' in addon && addon.included;
 
             return (
@@ -988,10 +989,12 @@ function AddonsPanel({
                     ? 'Included'
                     : isComingSoon
                       ? 'Coming soon'
-                      : `${formatWorkspacePrice(addon.monthlyPrice)}/mo`
+                      : isAvailableAtLaunch
+                        ? 'At launch'
+                        : `${formatWorkspacePrice(addon.monthlyPrice)}/mo`
                 }
                 selected={isIncluded || selectedAddons.has(addon.id)}
-                disabled={isComingSoon || isIncluded}
+                disabled={isComingSoon || isIncluded || isAvailableAtLaunch}
                 onToggle={() => onToggleAddon(addon.id)}
               />
             );

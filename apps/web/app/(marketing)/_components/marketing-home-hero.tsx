@@ -17,6 +17,8 @@ const FEATURE_CHIPS = [
   'Invoicing',
   'Email',
   'Planner',
+  'Second Brain',
+  'Meeting Assistant',
   'Notes',
   'Pipeline',
 ] as const;
@@ -61,8 +63,8 @@ export function MarketingHomeHero() {
             {...fadeUpProps(0.12, 0.5)}
           >
             Your agency, your family, your personal life — each in its own workspace.
-            But one home that sees across all of them. No more switching between apps
-            to feel like you&apos;ve got it together.
+            One home that sees across all of them, with Meeting Assistant ready at launch
+            and AI planner built in from day one.
           </motion.p>
 
           <motion.div

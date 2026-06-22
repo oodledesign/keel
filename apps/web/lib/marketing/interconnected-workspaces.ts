@@ -6,10 +6,53 @@ import {
   Layers,
   LayoutDashboard,
   ListTodo,
+  Mail,
   Mic,
   Smartphone,
   Sparkles,
 } from 'lucide-react';
+
+export type PersonalAssistantBilling = 'addon' | 'included';
+
+export type PersonalAssistantMarketing = {
+  id: 'email' | 'meeting' | 'planner';
+  label: string;
+  description: string;
+  icon: LucideIcon;
+  billing: PersonalAssistantBilling;
+  addonTooltip: string;
+};
+
+/** Personal-home assistant layer — shared by orbit diagram and marketing copy. */
+export const PERSONAL_ASSISTANTS_MARKETING: PersonalAssistantMarketing[] = [
+  {
+    id: 'email',
+    label: 'Email Assistant',
+    description:
+      'Gmail sync, AI action items, and draft replies in your personal home',
+    icon: Mail,
+    billing: 'addon',
+    addonTooltip: 'Email Assistant — £9/mo personal add-on',
+  },
+  {
+    id: 'meeting',
+    label: 'Meeting Assistant',
+    description:
+      'Record, transcribe, and extract tasks from meetings — synced to the right workspace',
+    icon: Mic,
+    billing: 'addon',
+    addonTooltip: 'Meeting Assistant — personal add-on, available at launch',
+  },
+  {
+    id: 'planner',
+    label: 'AI Planner',
+    description:
+      'Today view, day planning, and priorities pulled from every workspace',
+    icon: Sparkles,
+    billing: 'included',
+    addonTooltip: 'AI Planner included with your personal home',
+  },
+];
 
 export type InterconnectedBenefit = {
   icon: LucideIcon;
@@ -29,7 +72,7 @@ export const INTERCONNECTED_WORKSPACES_MARKETING = {
   title: 'One OS.',
   titleAccent: 'Every workspace connected.',
   subtitle:
-    'Most CRMs lock work in a silo. Ozer links your personal life, business, family, property, and community spaces — so tasks, plans, and shortcuts flow through one calm home, not five disconnected apps.',
+    'Most CRMs lock work in a silo. Ozer links your personal life, business, family, and community spaces — with Email and Meeting Assistants, AI planner, and a second brain that all connect through one calm home.',
   comparison: {
     heading: 'Not another siloed CRM',
     traditionalLabel: 'Typical CRM',
@@ -60,15 +103,9 @@ export const INTERCONNECTED_WORKSPACES_MARKETING = {
     },
     {
       id: 'family',
-      label: 'Family',
+      label: 'Family workspace',
       color: '#7C3AED',
       examples: 'Calendar, meals, shopping',
-    },
-    {
-      id: 'property',
-      label: 'Property',
-      color: '#D97706',
-      examples: 'Tenants, maintenance',
     },
     {
       id: 'community',
@@ -88,7 +125,7 @@ export const INTERCONNECTED_WORKSPACES_MARKETING = {
       icon: Mic,
       title: 'Meeting Assistant',
       description:
-        'Record, transcribe, and extract tasks from any meeting — automatically synced to the right workspace. Runs locally on your Mac. No per-minute fees.',
+        'Available at launch on Mac. Record any call or in-person meeting, transcribe with speaker labels, extract tasks, and sync everything to the right workspace — locally, with no per-minute fees.',
     },
     {
       icon: Sparkles,
