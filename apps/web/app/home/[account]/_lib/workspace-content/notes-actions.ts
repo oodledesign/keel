@@ -93,8 +93,6 @@ export const saveWorkspaceNoteAction = enhanceAction(
         .eq('id', data.noteId)
         .eq('account_id', data.accountId);
       if (error) throw error;
-      queueBrainIndexSource(data.accountId, 'note', data.noteId);
-      revalidateNotesPaths(data.accountSlug, data.noteId, data.personalScope);
       return { noteId: data.noteId };
     }
 
@@ -111,6 +109,33 @@ export const saveWorkspaceNoteAction = enhanceAction(
     return { noteId };
   },
   { schema: SaveNoteSchema },
+);
+
+export const syncWorkspaceNoteBrainIndexAction = enhanceAction(
+  async (data) => {
+    queueBrainIndexSource(data.accountId, 'note', data.noteId);
+    return { ok: true };
+  },
+  {
+    schema: z.object({
+      accountId: z.string().uuid(),
+      noteId: z.string().uuid(),
+    }),
+  },
+);
+
+export const revalidateWorkspaceNotesAction = enhanceAction(
+  async (data) => {
+    revalidateNotesPaths(data.accountSlug, data.noteId, data.personalScope);
+    return { ok: true };
+  },
+  {
+    schema: z.object({
+      accountSlug: z.string().min(1),
+      noteId: z.string().uuid().optional(),
+      personalScope: z.boolean().optional(),
+    }),
+  },
 );
 
 export const deleteWorkspaceNoteAction = enhanceAction(

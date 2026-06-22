@@ -289,6 +289,48 @@ export async function loadAccountIndexables(
   return dedupeIndexablesBySourceId(records);
 }
 
+export async function loadIndexableSource(
+  admin: AdminClient,
+  accountId: string,
+  sourceType: BrainSourceType,
+  sourceId: string,
+): Promise<IndexableRecord | null> {
+  const accountSlug = await loadAccountSlug(admin, accountId);
+
+  if (sourceType === 'note') {
+    const { data: row } = await admin
+      .from('notes')
+      .select('id, title, content, updated_at, job_id, client_id')
+      .eq('account_id', accountId)
+      .eq('id', sourceId)
+      .maybeSingle();
+
+    if (!row) return null;
+
+    const content = (row.content as string)?.trim();
+    if (!content) return null;
+
+    return {
+      sourceType: 'note',
+      sourceId: row.id as string,
+      accountId,
+      accountSlug,
+      title: ((row.title as string) || 'Note').trim(),
+      text: content,
+      updatedAt: row.updated_at as string,
+      jobId: (row.job_id as string | null) ?? null,
+      clientId: (row.client_id as string | null) ?? null,
+    };
+  }
+
+  const records = await loadAccountIndexables(admin, accountId);
+  return (
+    records.find(
+      (row) => row.sourceType === sourceType && row.sourceId === sourceId,
+    ) ?? null
+  );
+}
+
 /** `brain_chunks` is unique on (source_id, chunk_index) only — merge duplicate sources. */
 function dedupeIndexablesBySourceId(
   records: IndexableRecord[],
@@ -427,9 +469,11 @@ export async function indexSource(
 ) {
   if (!isVoyageConfigured()) return { skipped: true as const, reason: 'no_voyage_key' };
 
-  const records = await loadAccountIndexables(admin, accountId);
-  const record = records.find(
-    (row) => row.sourceType === sourceType && row.sourceId === sourceId,
+  const record = await loadIndexableSource(
+    admin,
+    accountId,
+    sourceType,
+    sourceId,
   );
 
   if (!record) {

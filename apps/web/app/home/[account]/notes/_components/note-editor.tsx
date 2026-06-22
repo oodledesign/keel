@@ -42,7 +42,11 @@ import type {
   LinkOption,
   NoteFileCategory,
 } from '../../_lib/workspace-content/types';
-import { saveWorkspaceNoteAction } from '../../_lib/workspace-content/notes-actions';
+import {
+  revalidateWorkspaceNotesAction,
+  saveWorkspaceNoteAction,
+  syncWorkspaceNoteBrainIndexAction,
+} from '../../_lib/workspace-content/notes-actions';
 import { useFormFieldScrollPassthroughRefs } from '~/lib/scroll-passthrough';
 
 import { NoteMarkdownToolbar } from './note-markdown-toolbar';
@@ -102,6 +106,7 @@ export function NoteEditor({
   );
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const brainIndexTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isDirtyRef = useRef(false);
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -132,6 +137,16 @@ export function NoteEditor({
     isDirtyRef.current = false;
   }, [note.id]);
 
+  const scheduleBrainIndex = useCallback(() => {
+    if (brainIndexTimerRef.current) clearTimeout(brainIndexTimerRef.current);
+    brainIndexTimerRef.current = setTimeout(() => {
+      void syncWorkspaceNoteBrainIndexAction({
+        accountId,
+        noteId: note.id,
+      });
+    }, 45_000);
+  }, [accountId, note.id]);
+
   const persist = useCallback(async () => {
     const snapshot = latestRef.current;
 
@@ -151,11 +166,12 @@ export function NoteEditor({
       });
       setSaveState('saved');
       isDirtyRef.current = false;
+      scheduleBrainIndex();
     } catch {
       setSaveState('error');
       toast.error('Could not save note');
     }
-  }, [accountId, accountSlug, note.id, personalScope]);
+  }, [accountId, accountSlug, note.id, personalScope, scheduleBrainIndex]);
 
   const scheduleSave = useCallback(() => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -167,8 +183,40 @@ export function NoteEditor({
   useEffect(() => {
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+
+      if (isDirtyRef.current) {
+        void saveWorkspaceNoteAction({
+          accountId,
+          accountSlug,
+          noteId: note.id,
+          title: latestRef.current.title.trim(),
+          content: latestRef.current.content,
+          isPinned: latestRef.current.isPinned,
+          category: latestRef.current.category,
+          tags: latestRef.current.tags,
+          link: latestRef.current.link,
+          personalScope,
+        });
+        void revalidateWorkspaceNotesAction({
+          accountSlug,
+          noteId: note.id,
+          personalScope,
+        });
+      }
+
+      const hadPendingBrainIndex = brainIndexTimerRef.current != null;
+      if (brainIndexTimerRef.current) {
+        clearTimeout(brainIndexTimerRef.current);
+        brainIndexTimerRef.current = null;
+      }
+      if (hadPendingBrainIndex) {
+        void syncWorkspaceNoteBrainIndexAction({
+          accountId,
+          noteId: note.id,
+        });
+      }
     };
-  }, []);
+  }, [accountId, accountSlug, note.id, personalScope]);
 
   const syncTextareaHeight = useCallback((node: HTMLTextAreaElement | null) => {
     if (!node) return;
