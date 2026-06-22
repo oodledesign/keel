@@ -1,9 +1,26 @@
 import 'server-only';
 
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { PostgrestError, SupabaseClient } from '@supabase/supabase-js';
 
 import type { WorkNavCounts } from '~/config/work-account-navigation.config';
+import { countOpenSupportTickets } from '~/home/[account]/support/_lib/server/support-tickets.service';
 import { isWorkModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
+
+function formatSupabaseError(error: PostgrestError | null | undefined): string {
+  if (!error) return 'Unknown error';
+  const parts = [error.message, error.details, error.hint, error.code].filter(
+    (part) => typeof part === 'string' && part.trim().length > 0,
+  );
+  return parts.join(' · ') || 'Unknown error';
+}
+
+function isMissingRelationError(error: PostgrestError): boolean {
+  return (
+    error.code === '42P01' ||
+    error.code === 'PGRST205' ||
+    /relation .* does not exist/i.test(error.message ?? '')
+  );
+}
 
 export async function loadWorkNavCounts(
   client: SupabaseClient,
@@ -17,20 +34,17 @@ export async function loadWorkNavCounts(
   }
 
   try {
-    const { count, error } = await client
-      .from('support_tickets')
-      .select('id', { count: 'exact', head: true })
-      .eq('business_id', accountId)
-      .in('status', ['open', 'in-progress', 'waiting']);
-
-    if (error) {
-      console.error('[work-nav-counts] supportOpenCount:', error.message);
+    counts.supportOpenCount = await countOpenSupportTickets(client, accountId);
+  } catch (error) {
+    const pgError = error as PostgrestError;
+    if (pgError?.code && isMissingRelationError(pgError)) {
       return counts;
     }
 
-    counts.supportOpenCount = count ?? 0;
-  } catch (error) {
-    console.error('[work-nav-counts] supportOpenCount:', error);
+    console.warn(
+      '[work-nav-counts] supportOpenCount:',
+      formatSupabaseError(pgError),
+    );
   }
 
   return counts;

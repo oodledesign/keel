@@ -56,7 +56,8 @@ export type TeamMemberOption = {
 
 type TicketRow = {
   id: string;
-  business_id: string;
+  business_id?: string | null;
+  account_id?: string | null;
   client_org_id?: string | null;
   website_id?: string | null;
   title?: string | null;
@@ -91,6 +92,10 @@ type ProfileRow = {
   avatar_url?: string | null;
 };
 
+function supportTicketAccountFilter(accountId: string) {
+  return `business_id.eq.${accountId},account_id.eq.${accountId}`;
+}
+
 export async function countOpenSupportTickets(
   client: SupabaseClient,
   accountId: string,
@@ -98,11 +103,18 @@ export async function countOpenSupportTickets(
   const { count, error } = await client
     .from('support_tickets')
     .select('id', { count: 'exact', head: true })
-    .eq('business_id', accountId)
+    .or(supportTicketAccountFilter(accountId))
     .in('status', ['open', 'in-progress', 'waiting']);
 
   if (error) {
-    console.error('[support] countOpenSupportTickets:', error.message);
+    const message = [error.message, error.details, error.code]
+      .filter((part) => typeof part === 'string' && part.trim().length > 0)
+      .join(' · ');
+
+    if (message) {
+      console.warn('[support] countOpenSupportTickets:', message);
+    }
+
     return 0;
   }
 
@@ -120,7 +132,7 @@ function mapTicketRow(
 
   return {
     id: row.id,
-    businessId: row.business_id,
+    businessId: row.business_id ?? row.account_id ?? '',
     clientOrgId: row.client_org_id ?? null,
     websiteId: row.website_id ?? null,
     title: row.title ?? 'Untitled',
@@ -212,7 +224,7 @@ class SupportTicketsService {
     const { data } = await this.db
       .from('support_tickets')
       .select('ticket_number')
-      .eq('business_id', accountId)
+      .or(supportTicketAccountFilter(accountId))
       .order('ticket_number', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -227,7 +239,7 @@ class SupportTicketsService {
     let query = this.db
       .from('support_tickets')
       .select('*, client_orgs(name), websites(name, domain)')
-      .eq('business_id', input.accountId)
+      .or(supportTicketAccountFilter(input.accountId))
       .order('created_at', { ascending: false });
 
     if (input.status) {
@@ -264,7 +276,7 @@ class SupportTicketsService {
       .from('support_tickets')
       .select('*, client_orgs(name), websites(name, domain)')
       .eq('id', input.ticketId)
-      .eq('business_id', input.accountId)
+      .or(supportTicketAccountFilter(input.accountId))
       .maybeSingle();
 
     if (error || !data) return null;
@@ -318,7 +330,7 @@ class SupportTicketsService {
     const { data, error } = await this.db
       .from('client_orgs')
       .select('id, name')
-      .eq('business_id', accountId)
+      .or(supportTicketAccountFilter(accountId))
       .order('name');
 
     if (error) return [];
@@ -340,7 +352,7 @@ class SupportTicketsService {
     let query = this.db
       .from('websites')
       .select('id, name, domain')
-      .eq('business_id', accountId)
+      .or(supportTicketAccountFilter(accountId))
       .order('name');
 
     if (clientOrgId) {
@@ -383,6 +395,7 @@ class SupportTicketsService {
       .from('support_tickets')
       .insert({
         business_id: input.accountId,
+        account_id: input.accountId,
         title: input.title,
         description: input.description,
         client_org_id: input.client_org_id ?? null,
@@ -438,7 +451,7 @@ class SupportTicketsService {
       .from('support_tickets')
       .update(updates)
       .eq('id', input.ticketId)
-      .eq('business_id', input.accountId)
+      .or(supportTicketAccountFilter(input.accountId))
       .select('*, client_orgs(name), websites(name, domain)')
       .single();
 
