@@ -27,25 +27,6 @@ export const PLATFORM_EMAIL_TYPES = [
 
 export type PlatformEmailType = (typeof PLATFORM_EMAIL_TYPES)[number];
 
-function usesSesApi() {
-  if (process.env.MAILER_PROVIDER === 'ses') {
-    return true;
-  }
-
-  if (
-    process.env.MAILER_PROVIDER === 'nodemailer' ||
-    process.env.MAILER_PROVIDER === 'resend'
-  ) {
-    return false;
-  }
-
-  return Boolean(
-    process.env.AWS_ACCESS_KEY_ID &&
-      process.env.AWS_SECRET_ACCESS_KEY &&
-      (process.env.AWS_REGION ?? process.env.SES_REGION),
-  );
-}
-
 type MailPayload = {
   to: string;
   from: string;
@@ -79,16 +60,16 @@ export async function sendPlatformEmail(params: {
   let errorMessage: string | null = null;
 
   try {
-    if (usesSesApi()) {
+    if (process.env.MAILER_PROVIDER === 'resend') {
+      const mailer = await getMailer();
+      await mailer.sendEmail(mail);
+    } else {
       await sendSesRawEmail({
         to: mail.to,
         from: mail.from,
         subject: mail.subject,
         ...('html' in mail ? { html: mail.html } : { text: mail.text }),
       });
-    } else {
-      const mailer = await getMailer();
-      await mailer.sendEmail(mail);
     }
   } catch (error) {
     status = 'failed';

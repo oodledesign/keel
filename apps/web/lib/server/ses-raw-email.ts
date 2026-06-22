@@ -3,20 +3,62 @@ import 'server-only';
 import { randomUUID } from 'crypto';
 
 import { SendRawEmailCommand, SESClient } from '@aws-sdk/client-ses';
-import { sanitizeEmailSender } from '@kit/mailers';
+import { getMailer, sanitizeEmailSender } from '@kit/mailers';
 
-export function getSesConfig() {
-  const region = process.env.AWS_REGION ?? process.env.SES_REGION;
-  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+export type OutboundEmailTransport = 'ses-api' | 'smtp';
+
+export function getEmailSender() {
   const from =
     process.env.SES_FROM_EMAIL ??
     process.env.SES_FROM_ADDRESS ??
     process.env.EMAIL_SENDER;
 
-  if (!region || !accessKeyId || !secretAccessKey || !from) {
+  if (!from?.trim()) {
     throw new Error(
-      'Missing SES configuration. Set AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and EMAIL_SENDER.',
+      'EMAIL_SENDER is not configured. Set EMAIL_SENDER in Vercel (e.g. Ozer <hi@ozer.so>).',
+    );
+  }
+
+  return sanitizeEmailSender(from);
+}
+
+/** Which transport Ozer uses for outbound mail (matches Supabase when smtp). */
+export function resolveOutboundTransport(): OutboundEmailTransport {
+  if (process.env.MAILER_PROVIDER === 'nodemailer' && process.env.EMAIL_HOST?.trim()) {
+    return 'smtp';
+  }
+
+  return 'ses-api';
+}
+
+export function getOutboundEmailDiagnostics() {
+  const transport = resolveOutboundTransport();
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID?.trim() ?? '';
+  const smtpUser = process.env.EMAIL_USER?.trim() ?? '';
+
+  return {
+    mailerProvider: process.env.MAILER_PROVIDER ?? '(unset, defaults to nodemailer in code)',
+    transport,
+    region: process.env.AWS_REGION ?? process.env.SES_REGION ?? null,
+    emailSender: getEmailSender(),
+    awsAccessKeyIdSuffix: accessKeyId ? accessKeyId.slice(-4) : null,
+    smtpHost: process.env.EMAIL_HOST ?? null,
+    smtpUserSuffix: smtpUser ? smtpUser.slice(-4) : null,
+    hint:
+      transport === 'ses-api'
+        ? 'App uses SES API (AWS_ACCESS_KEY_ID). Supabase magic links use SES SMTP — different credentials. If API fails but SMTP works, set MAILER_PROVIDER=nodemailer and copy Supabase SMTP settings into Vercel.'
+        : 'App uses SES SMTP (same path as Supabase Auth).',
+  };
+}
+
+export function getSesApiConfig() {
+  const region = process.env.AWS_REGION ?? process.env.SES_REGION;
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+
+  if (!region || !accessKeyId || !secretAccessKey) {
+    throw new Error(
+      'Missing SES API configuration. Set AWS_REGION, AWS_ACCESS_KEY_ID, and AWS_SECRET_ACCESS_KEY in Vercel, or switch to MAILER_PROVIDER=nodemailer with SES SMTP credentials (same as Supabase).',
     );
   }
 
@@ -24,8 +66,13 @@ export function getSesConfig() {
     region,
     accessKeyId,
     secretAccessKey,
-    from: sanitizeEmailSender(from),
+    from: getEmailSender(),
   };
+}
+
+/** @deprecated use getSesApiConfig */
+export function getSesConfig() {
+  return getSesApiConfig();
 }
 
 export function htmlToPlainText(html: string) {
@@ -115,27 +162,33 @@ function buildRawEmail(params: {
   ].join('\r\n');
 }
 
-/**
- * Send via the same SES SendRawEmail path used by admin campaigns (proven in production).
- */
-export async function sendSesRawEmail(params: {
+async function sendViaSmtp(params: {
   to: string;
+  from: string;
   subject: string;
-  from?: string;
-  html?: string;
-  text?: string;
+  html: string;
+  text: string;
+}) {
+  const mailer = await getMailer();
+  await mailer.sendEmail({
+    to: params.to,
+    from: params.from,
+    subject: params.subject,
+    html: params.html,
+    text: params.text,
+  });
+}
+
+async function sendViaSesApi(params: {
+  to: string;
+  from: string;
+  subject: string;
+  html: string;
+  text: string;
   campaignId?: string;
   listUnsubscribeUrl?: string;
-}): Promise<string> {
-  const config = getSesConfig();
-  const from = params.from ?? config.from;
-  const html = params.html ?? (params.text ? `<pre>${params.text}</pre>` : '');
-  const text = params.text ?? (params.html ? htmlToPlainText(params.html) : '');
-
-  if (!html && !text) {
-    throw new Error('Email must include html or text content.');
-  }
-
+}) {
+  const config = getSesApiConfig();
   const client = new SESClient({
     region: config.region,
     credentials: {
@@ -146,24 +199,50 @@ export async function sendSesRawEmail(params: {
 
   await client.send(
     new SendRawEmailCommand({
-      Source: extractEnvelopeFrom(from),
+      Source: extractEnvelopeFrom(params.from),
       Destinations: [params.to],
       RawMessage: {
-        Data: Buffer.from(
-          buildRawEmail({
-            from,
-            to: params.to,
-            subject: params.subject,
-            html,
-            text,
-            campaignId: params.campaignId,
-            listUnsubscribeUrl: params.listUnsubscribeUrl,
-          }),
-          'utf8',
-        ),
+        Data: Buffer.from(buildRawEmail(params), 'utf8'),
       },
     }),
   );
+}
+
+/**
+ * Send outbound mail via SES SMTP (Supabase path) or SES API (IAM access keys).
+ */
+export async function sendSesRawEmail(params: {
+  to: string;
+  subject: string;
+  from?: string;
+  html?: string;
+  text?: string;
+  campaignId?: string;
+  listUnsubscribeUrl?: string;
+}): Promise<string> {
+  const from = params.from ?? getEmailSender();
+  const html = params.html ?? (params.text ? `<pre>${params.text}</pre>` : '');
+  const text = params.text ?? (params.html ? htmlToPlainText(params.html) : '');
+
+  if (!html && !text) {
+    throw new Error('Email must include html or text content.');
+  }
+
+  const payload = {
+    to: params.to,
+    from,
+    subject: params.subject,
+    html,
+    text,
+    campaignId: params.campaignId,
+    listUnsubscribeUrl: params.listUnsubscribeUrl,
+  };
+
+  if (resolveOutboundTransport() === 'smtp') {
+    await sendViaSmtp(payload);
+  } else {
+    await sendViaSesApi(payload);
+  }
 
   return from;
 }

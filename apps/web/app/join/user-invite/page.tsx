@@ -98,14 +98,15 @@ async function AdminUserInvitePage(props: AdminUserInvitePageProps) {
     );
   }
 
+  let result: { redirectTo: string };
+
   try {
-    const result = await fulfillAdminUserInvite(
+    result = await fulfillAdminUserInvite(
       adminClient,
       token,
       auth.data.id,
       auth.data.email,
     );
-    redirect(result.redirectTo);
   } catch (error) {
     return (
       <AuthLayoutShell Logo={AppLogo}>
@@ -117,6 +118,8 @@ async function AdminUserInvitePage(props: AdminUserInvitePageProps) {
       </AuthLayoutShell>
     );
   }
+
+  redirect(result.redirectTo);
 }
 
 function InviteError(props: { message: string }) {

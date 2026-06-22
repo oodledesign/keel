@@ -5,7 +5,7 @@ import { randomUUID, createHmac, timingSafeEqual } from 'node:crypto';
 import { isEmailSuppressed } from '~/lib/email/is-suppressed';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { insertPlatformEmailLog } from '@kit/supabase/platform-email-log';
-import { getSesConfig, htmlToPlainText, sendSesRawEmail } from '~/lib/server/ses-raw-email';
+import { htmlToPlainText, sendSesRawEmail } from '~/lib/server/ses-raw-email';
 
 import {
   prepareCampaignHtmlForDelivery,
@@ -961,8 +961,9 @@ async function sendSesEmail(params: {
   listUnsubscribeUrl?: string;
 }) {
   if (await isEmailSuppressed(params.to)) {
-    console.warn(`[email] Skipping suppressed campaign recipient: ${params.to}`);
-    return getSesConfig().from;
+    throw new Error(
+      `${params.to} is on the email suppression list (bounce or complaint). Remove it in Supabase email_suppressions before retrying.`,
+    );
   }
 
   return sendSesRawEmail({
