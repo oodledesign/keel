@@ -1,6 +1,7 @@
 'use client';
 
 import type {
+  CustomNoteCategory,
   DocListItem,
   LinkOption,
   NoteListItem,
@@ -19,6 +20,7 @@ export function NotesPageContent({
   docsTableAvailable = true,
   variant,
   linkOptions,
+  customCategories = [],
 }: {
   accountSlug: string;
   notes: NoteListItem[];
@@ -28,6 +30,7 @@ export function NotesPageContent({
   variant: WorkspaceNotesVariant;
   accountId: string;
   linkOptions: LinkOption[];
+  customCategories?: CustomNoteCategory[];
 }) {
   return (
     <WorkspaceNotesPage
@@ -39,6 +42,7 @@ export function NotesPageContent({
       docsTableAvailable={docsTableAvailable}
       variant={variant}
       linkOptions={linkOptions}
+      customCategories={customCategories}
     />
   );
 }

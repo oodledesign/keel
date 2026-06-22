@@ -10,8 +10,6 @@ import pathsConfig from '~/config/paths.config';
 
 import { queueBrainDeleteSource, queueBrainIndexSource } from '~/lib/brain/sync';
 
-import { NOTE_FILE_CATEGORY_OPTIONS } from './types';
-
 const LinkSchema = z
   .object({
     type: z.enum(['project', 'job', 'client', 'property', 'task']),
@@ -27,7 +25,14 @@ const SaveNoteSchema = z.object({
   title: z.string().max(500).optional(),
   content: z.string(),
   isPinned: z.boolean().optional(),
-  category: z.enum(NOTE_FILE_CATEGORY_OPTIONS).optional(),
+  category: z
+    .string()
+    .trim()
+    .min(1)
+    .max(64)
+    .regex(/^[a-z0-9_]+$/)
+    .optional(),
+  personalScope: z.boolean().optional(),
   tags: z.array(z.string()).optional(),
   link: LinkSchema,
 });
@@ -89,7 +94,7 @@ export const saveWorkspaceNoteAction = enhanceAction(
         .eq('account_id', data.accountId);
       if (error) throw error;
       queueBrainIndexSource(data.accountId, 'note', data.noteId);
-      revalidateNotesPaths(data.accountSlug);
+      revalidateNotesPaths(data.accountSlug, data.noteId, data.personalScope);
       return { noteId: data.noteId };
     }
 
@@ -102,7 +107,7 @@ export const saveWorkspaceNoteAction = enhanceAction(
     if (error) throw error;
     const noteId = inserted.id as string;
     queueBrainIndexSource(data.accountId, 'note', noteId);
-    revalidateNotesPaths(data.accountSlug, noteId);
+    revalidateNotesPaths(data.accountSlug, noteId, data.personalScope);
     return { noteId };
   },
   { schema: SaveNoteSchema },
@@ -118,7 +123,7 @@ export const deleteWorkspaceNoteAction = enhanceAction(
       .eq('account_id', data.accountId);
     if (error) throw error;
     queueBrainDeleteSource(data.noteId);
-    revalidateNotesPaths(data.accountSlug);
+    revalidateNotesPaths(data.accountSlug, undefined, data.personalScope);
     return { ok: true };
   },
   {
@@ -126,11 +131,27 @@ export const deleteWorkspaceNoteAction = enhanceAction(
       accountId: z.string().uuid(),
       accountSlug: z.string().min(1),
       noteId: z.string().uuid(),
+      personalScope: z.boolean().optional(),
     }),
   },
 );
 
-function revalidateNotesPaths(accountSlug: string, noteId?: string) {
+function revalidateNotesPaths(
+  accountSlug: string,
+  noteId?: string,
+  personalScope?: boolean,
+) {
+  if (personalScope) {
+    revalidatePath(pathsConfig.app.personalNotes);
+    revalidatePath(pathsConfig.app.home);
+    if (noteId) {
+      revalidatePath(
+        pathsConfig.app.personalNoteDetail.replace('[noteId]', noteId),
+      );
+    }
+    return;
+  }
+
   const base = pathsConfig.app.accountNotes.replace('[account]', accountSlug);
   revalidatePath(base);
   revalidatePath(`/home/${accountSlug}`);

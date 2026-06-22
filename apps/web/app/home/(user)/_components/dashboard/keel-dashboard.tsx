@@ -75,7 +75,7 @@ export function KeelDashboard({ data }: Props) {
       {data.recentNotes.length > 0 ? (
         <DashboardSection
           title="Recent notes"
-          subtitle="Latest from across your workspaces"
+          subtitle="Latest from personal and your workspaces"
         >
           <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-1 [scrollbar-width:none] md:mx-0 md:grid md:snap-none md:grid-cols-2 md:overflow-visible lg:grid-cols-3 [&::-webkit-scrollbar]:hidden">
             {data.recentNotes.map((note) => (
@@ -346,9 +346,11 @@ function WorkspaceOverviewCardView(props: { card: WorkspaceOverviewCard }) {
 }
 
 function RecentNoteCard(props: { note: PersonalRecentNote }) {
-  const href = pathsConfig.app.accountNoteDetail
-    .replace('[account]', props.note.workspaceSlug)
-    .replace('[noteId]', props.note.id);
+  const href = props.note.isPersonal
+    ? pathsConfig.app.personalNoteDetail.replace('[noteId]', props.note.id)
+    : pathsConfig.app.accountNoteDetail
+        .replace('[account]', props.note.workspaceSlug)
+        .replace('[noteId]', props.note.id);
 
   return (
     <Link

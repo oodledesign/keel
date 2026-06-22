@@ -38,16 +38,22 @@ import { LinkToSelect, type LinkValue } from '../../_components/workspace-conten
 import { PublicSharingSection } from '../../_components/workspace-content/public-sharing-section';
 import { TagsInput } from '../../_components/workspace-content/tags-input';
 import type {
+  CustomNoteCategory,
   LinkOption,
   NoteFileCategory,
 } from '../../_lib/workspace-content/types';
 import { saveWorkspaceNoteAction } from '../../_lib/workspace-content/notes-actions';
 import { useFormFieldScrollPassthroughRefs } from '~/lib/scroll-passthrough';
 
+import { NoteMarkdownToolbar } from './note-markdown-toolbar';
+
 type NoteEditorProps = {
   accountId: string;
   accountSlug: string;
   linkOptions: LinkOption[];
+  customCategories?: CustomNoteCategory[];
+  notesListHref?: string;
+  personalScope?: boolean;
   note: {
     id: string;
     title: string;
@@ -75,9 +81,14 @@ export function NoteEditor({
   accountId,
   accountSlug,
   linkOptions,
+  customCategories: initialCustomCategories = [],
+  notesListHref,
+  personalScope,
   note,
 }: NoteEditorProps) {
-  const notesHref = pathsConfig.app.accountNotes.replace('[account]', accountSlug);
+  const notesHref =
+    notesListHref ??
+    pathsConfig.app.accountNotes.replace('[account]', accountSlug);
 
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
@@ -85,6 +96,7 @@ export function NoteEditor({
   const [category, setCategory] = useState(note.category);
   const [tags, setTags] = useState(note.tags);
   const [link, setLink] = useState<LinkValue>(linkFromNote(note));
+  const [customCategories, setCustomCategories] = useState(initialCustomCategories);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>(
     'idle',
   );
@@ -105,6 +117,10 @@ export function NoteEditor({
   useEffect(() => {
     latestRef.current = { title, content, isPinned, category, tags, link };
   }, [title, content, isPinned, category, tags, link]);
+
+  useEffect(() => {
+    setCustomCategories(initialCustomCategories);
+  }, [initialCustomCategories]);
 
   useEffect(() => {
     setTitle(note.title);
@@ -131,6 +147,7 @@ export function NoteEditor({
         category: snapshot.category,
         tags: snapshot.tags,
         link: snapshot.link,
+        personalScope,
       });
       setSaveState('saved');
       isDirtyRef.current = false;
@@ -138,7 +155,7 @@ export function NoteEditor({
       setSaveState('error');
       toast.error('Could not save note');
     }
-  }, [accountId, accountSlug, note.id]);
+  }, [accountId, accountSlug, note.id, personalScope]);
 
   const scheduleSave = useCallback(() => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -155,14 +172,20 @@ export function NoteEditor({
 
   const syncTextareaHeight = useCallback((node: HTMLTextAreaElement | null) => {
     if (!node) return;
+
+    const scrollY = window.scrollY;
+    const previousHeight = node.offsetHeight;
+
     node.style.height = 'auto';
-    node.style.height = `${node.scrollHeight}px`;
+    const nextHeight = Math.max(node.scrollHeight, previousHeight);
+    node.style.height = `${nextHeight}px`;
+
+    window.scrollTo(0, scrollY);
   }, []);
 
   useLayoutEffect(() => {
     syncTextareaHeight(titleRef.current);
-    syncTextareaHeight(textareaRef.current);
-  }, [title, content, syncTextareaHeight]);
+  }, [title, syncTextareaHeight]);
 
   useFormFieldScrollPassthroughRefs(
     () => [titleRef.current, textareaRef.current],
@@ -213,11 +236,17 @@ export function NoteEditor({
         ? 'Saved'
         : saveState === 'error'
           ? 'Save failed'
-          : '';
+          : ' ';
+
+  const noteDetailPath = personalScope
+    ? pathsConfig.app.personalNoteDetail.replace('[noteId]', note.id)
+    : pathsConfig.app.accountNoteDetail
+        .replace('[account]', accountSlug)
+        .replace('[noteId]', note.id);
 
   return (
     <div className="flex flex-col">
-      <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-white/8 bg-[var(--workspace-shell-canvas)] px-3 py-2 lg:px-0">
+      <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-white/8 bg-[var(--workspace-shell-canvas)] px-4 py-2 sm:px-6 lg:px-10 xl:px-14">
         <div className="flex min-w-0 items-center gap-1">
           <Button
             asChild
@@ -230,16 +259,15 @@ export function NoteEditor({
               <ChevronLeft className="h-5 w-5" />
             </Link>
           </Button>
-          {saveLabel ? (
-            <span
-              className={cn(
-                'truncate text-xs',
-                saveState === 'error' ? 'text-red-400' : 'text-zinc-500',
-              )}
-            >
-              {saveLabel}
-            </span>
-          ) : null}
+          <span
+            className={cn(
+              'min-w-[4.5rem] truncate text-xs',
+              saveState === 'error' ? 'text-red-400' : 'text-zinc-500',
+            )}
+            aria-live="polite"
+          >
+            {saveLabel}
+          </span>
         </div>
 
         <div className="flex shrink-0 items-center gap-0.5">
@@ -256,6 +284,18 @@ export function NoteEditor({
               <CategorySelect
                 value={category}
                 onChange={(value) => onMetaChange(setCategory, value)}
+                accountId={accountId}
+                accountSlug={accountSlug}
+                customCategories={customCategories}
+                personalScope={personalScope}
+                onCustomCategoryCreated={(created) => {
+                  setCustomCategories((prev) => {
+                    if (prev.some((c) => c.slug === created.slug)) return prev;
+                    return [...prev, created].sort((a, b) =>
+                      a.label.localeCompare(b.label),
+                    );
+                  });
+                }}
               />
             </PopoverContent>
           </Popover>
@@ -341,13 +381,13 @@ export function NoteEditor({
               ) : null}
               <DropdownMenuItem
                 onClick={() => {
-                  const url = `${window.location.origin}${pathsConfig.app.accountNoteDetail.replace('[account]', accountSlug).replace('[noteId]', note.id)}`;
+                  const url = `${window.location.origin}${noteDetailPath}`;
                   void navigator.clipboard.writeText(url);
-                  toast.success('Team link copied');
+                  toast.success('Link copied');
                 }}
               >
                 <Users className="mr-2 h-4 w-4" />
-                Copy link for team
+                Copy link
               </DropdownMenuItem>
               {note.isPublic ? (
                 <DropdownMenuItem disabled className="text-[#5eead4]">
@@ -361,7 +401,7 @@ export function NoteEditor({
       </div>
 
       {(note.projectName || note.clientName) && (
-        <p className="px-3 pt-2 text-xs text-zinc-500 lg:px-0">
+        <p className="px-4 pt-2 text-xs text-zinc-500 sm:px-6 lg:px-10 xl:px-14">
           {[note.projectName, note.clientName].filter(Boolean).join(' · ')}
         </p>
       )}
@@ -374,8 +414,14 @@ export function NoteEditor({
         placeholder="Untitled"
         rows={1}
         aria-label="Note title"
-        className="w-full resize-none overflow-hidden rounded-none border-0 bg-transparent px-3 pb-2 pt-4 font-heading text-[1.75rem] font-bold leading-tight tracking-tight text-white shadow-none focus-visible:ring-0 touch-pan-y lg:px-0 lg:text-3xl"
+        className="w-full resize-none overflow-hidden rounded-none border-0 bg-transparent px-4 pb-2 pt-4 font-heading text-[1.75rem] font-bold leading-tight tracking-tight text-white shadow-none focus-visible:ring-0 touch-pan-y sm:px-6 lg:px-10 lg:text-3xl xl:px-14"
         spellCheck
+      />
+
+      <NoteMarkdownToolbar
+        textareaRef={textareaRef}
+        onChange={onContentChange}
+        className="px-4 sm:px-6 lg:px-10 xl:px-14"
       />
 
       <Textarea
@@ -383,9 +429,9 @@ export function NoteEditor({
         value={content}
         onChange={(e) => onContentChange(e.target.value)}
         placeholder="Start writing…"
-        rows={1}
+        rows={12}
         aria-label="Note content"
-        className="min-h-[50vh] w-full resize-none overflow-hidden rounded-none border-0 bg-transparent px-3 pb-4 pt-1 text-base leading-relaxed text-white shadow-none focus-visible:ring-0 touch-pan-y lg:px-0 lg:text-[15px]"
+        className="min-h-[50vh] w-full resize-none overflow-hidden rounded-none border-0 bg-transparent px-4 pb-4 pt-1 text-base leading-relaxed text-white shadow-none focus-visible:ring-0 touch-pan-y sm:px-6 lg:px-10 lg:text-[15px] xl:px-14"
         spellCheck
       />
     </div>

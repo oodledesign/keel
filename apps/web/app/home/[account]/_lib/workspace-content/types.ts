@@ -11,12 +11,34 @@ export const NOTE_FILE_CATEGORY_OPTIONS = [
 
 export type NoteFileCategory = (typeof NOTE_FILE_CATEGORY_OPTIONS)[number];
 
+/** Stored slug on notes.category — system or custom per account. */
+export type NoteCategorySlug = string;
+
 export const NOTE_FILE_CATEGORY_LABELS: Record<NoteFileCategory, string> = {
   meeting_transcript: 'Meeting transcript',
   idea: 'Idea',
   future: 'Future',
   development: 'Development',
 };
+
+export type CustomNoteCategory = {
+  slug: string;
+  label: string;
+};
+
+export function getNoteCategoryLabel(
+  slug: string,
+  customCategories: CustomNoteCategory[] = [],
+): string {
+  if (slug in NOTE_FILE_CATEGORY_LABELS) {
+    return NOTE_FILE_CATEGORY_LABELS[slug as NoteFileCategory];
+  }
+
+  const custom = customCategories.find((c) => c.slug === slug);
+  if (custom) return custom.label;
+
+  return slug.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 export type NoteContextLink = {
   type: 'project' | 'client' | 'property' | 'task' | 'job';

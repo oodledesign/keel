@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Mail,
   Settings,
+  StickyNote,
   Users,
 } from 'lucide-react';
 import { z } from 'zod';
@@ -60,6 +61,11 @@ export function buildPersonalHomeNavRoutes() {
           label: 'Email',
           path: pathsConfig.app.personalEmailAssistant,
           Icon: <Mail className={iconClasses} />,
+        },
+        {
+          label: 'Notes',
+          path: pathsConfig.app.personalNotes,
+          Icon: <StickyNote className={iconClasses} />,
         },
         {
           label: 'People',
@@ -129,6 +135,12 @@ export function buildPersonalShortcutRoutes(): PersonalShortcutRoute[] {
       path: pathsConfig.app.personalPlanner,
       description: 'AI day planning across personal life and workspaces',
       keywords: ['planner', 'plan', 'schedule', 'today'],
+    },
+    {
+      label: 'Notes',
+      path: pathsConfig.app.personalNotes,
+      description: 'Personal notes saved as Markdown',
+      keywords: ['notes', 'journal', 'writing'],
     },
     {
       label: 'Today',

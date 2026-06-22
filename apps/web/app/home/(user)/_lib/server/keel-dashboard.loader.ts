@@ -22,6 +22,7 @@ import { requireUserInServerComponent } from '~/lib/server/require-user-in-serve
 
 import type { PersonalNavWorkspace } from '~/config/personal-account-navigation.config';
 import pathsConfig from '~/config/paths.config';
+import { getPersonalAccountId } from '~/lib/recorder/personal-account';
 
 import {
   createPeopleService,
@@ -82,6 +83,7 @@ export type PersonalRecentNote = {
   workspaceName: string;
   workspaceSlug: string;
   workspaceColor: string;
+  isPersonal?: boolean;
 };
 
 export type KeelDashboardData = {
@@ -483,12 +485,26 @@ async function buildWorkspaceOverview(
 async function loadRecentNotesAcrossWorkspaces(
   client: ReturnType<typeof getSupabaseServerClient>,
   workspaceRows: WorkspaceAccountRow[],
+  personalAccountId: string | null,
 ): Promise<PersonalRecentNote[]> {
   const withSlug = workspaceRows.filter((w) => w.slug);
-  if (withSlug.length === 0) return [];
+  const accountIds = [
+    ...withSlug.map((w) => w.id),
+    ...(personalAccountId ? [personalAccountId] : []),
+  ];
 
-  const accountIds = withSlug.map((w) => w.id);
+  if (accountIds.length === 0) return [];
+
   const workspaceById = new Map(withSlug.map((w) => [w.id, w]));
+  if (personalAccountId) {
+    workspaceById.set(personalAccountId, {
+      id: personalAccountId,
+      name: 'Personal',
+      slug: null,
+      space_type: null,
+      is_personal_account: true,
+    });
+  }
 
   const { data, error } = await client
     .from('notes')
@@ -528,15 +544,21 @@ async function loadRecentNotesAcrossWorkspaces(
       .replace(/\s+/g, ' ')
       .trim();
     const spaceType = normalizeSpaceType(workspace?.space_type ?? null);
+    const isPersonal = workspace?.is_personal_account === true;
 
     return {
       id: row.id,
       title,
       excerpt: plain.slice(0, 120) || 'No content yet',
       updatedAt: row.updated_at,
-      workspaceName: workspace?.name?.trim() || workspace?.slug || 'Workspace',
-      workspaceSlug: workspace?.slug ?? '',
-      workspaceColor: workspaceColorForSpaceType(spaceType),
+      workspaceName: isPersonal
+        ? 'Personal'
+        : workspace?.name?.trim() || workspace?.slug || 'Workspace',
+      workspaceSlug: isPersonal ? '' : (workspace?.slug ?? ''),
+      workspaceColor: isPersonal
+        ? '#5eead4'
+        : workspaceColorForSpaceType(spaceType),
+      isPersonal,
     };
   });
 }
@@ -733,7 +755,12 @@ export const loadKeelDashboard = cache(async (): Promise<KeelDashboardData> => {
 
   let recentNotes: PersonalRecentNote[] = [];
   try {
-    recentNotes = await loadRecentNotesAcrossWorkspaces(client, workspaceRows);
+    const personalAccountId = await getPersonalAccountId(client, userId);
+    recentNotes = await loadRecentNotesAcrossWorkspaces(
+      client,
+      workspaceRows,
+      personalAccountId,
+    );
   } catch {
     recentNotes = [];
   }

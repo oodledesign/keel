@@ -23,11 +23,12 @@ const NOTES_SELECT = `
 `;
 
 function parseCategory(value: unknown): NoteFileCategory {
-  const v = String(value ?? 'idea');
+  const v = String(value ?? '').trim();
+  if (!v) return 'idea';
   if ((NOTE_FILE_CATEGORY_OPTIONS as readonly string[]).includes(v)) {
     return v as NoteFileCategory;
   }
-  return 'idea';
+  return v as NoteFileCategory;
 }
 
 function isTableMissing(error: { message?: string; code?: string } | null) {

@@ -58,11 +58,12 @@ async function NoteDetailPage({ params }: NoteDetailPageProps) {
   const data = await loadNoteDetailData(accountSlug, noteId);
 
   return (
-    <div className="bg-[var(--workspace-shell-canvas)] px-3 text-white lg:mx-auto lg:max-w-3xl lg:px-8">
+    <div className="w-full bg-[var(--workspace-shell-canvas)] px-4 text-white sm:px-6 lg:px-10 xl:px-14">
       <NoteEditor
         accountId={data.accountId}
         accountSlug={data.accountSlug}
         linkOptions={data.linkOptions}
+        customCategories={data.customCategories}
         note={data.note}
       />
     </div>

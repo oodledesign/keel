@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 
 import pathsConfig from '~/config/paths.config';
 
+import { loadAccountNoteCategories } from '../../../_lib/workspace-content/note-categories.loader';
 import {
   linkOptionsForProfile,
   loadWorkspaceLinkOptions,
@@ -39,10 +40,12 @@ export async function loadNotesPageData(accountSlug: string) {
     business_type: workspace.businessType,
   });
 
-  const [{ notes, tableAvailable }, docsResult, linkOpts] = await Promise.all([
+  const [{ notes, tableAvailable }, docsResult, linkOpts, categoryResult] =
+    await Promise.all([
     loadAccountNotes(accountId),
     loadAccountDocs(accountId),
     loadWorkspaceLinkOptions(accountId, profile),
+    loadAccountNoteCategories(accountId),
   ]);
 
   return {
@@ -54,6 +57,10 @@ export async function loadNotesPageData(accountSlug: string) {
     docsTableAvailable: docsResult.tableAvailable,
     variant: notesVariantFromProfile(profile),
     linkOptions: linkOptionsForProfile(linkOpts, profile),
+    customCategories: categoryResult.categories.map((c) => ({
+      slug: c.slug,
+      label: c.label,
+    })),
   };
 }
 
@@ -82,6 +89,9 @@ export async function loadNoteDetailData(
       pathsConfig.app.accountNotes.replace('[account]', accountSlug),
     );
   }
+
+  const { categories: customCategories } =
+    await loadAccountNoteCategories(accountId);
 
   return {
     accountId,
@@ -112,5 +122,9 @@ export async function loadNoteDetailData(
       await loadWorkspaceLinkOptions(accountId, profile),
       profile,
     ),
+    customCategories: customCategories.map((c) => ({
+      slug: c.slug,
+      label: c.label,
+    })),
   };
 }

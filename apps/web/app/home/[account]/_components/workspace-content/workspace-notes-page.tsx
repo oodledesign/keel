@@ -50,6 +50,7 @@ import {
   saveWorkspaceNoteAction,
 } from '../../_lib/workspace-content/notes-actions';
 import type {
+  CustomNoteCategory,
   DocListItem,
   LinkOption,
   NoteFileCategory,
@@ -128,6 +129,8 @@ export function WorkspaceNotesPage({
   canEdit = true,
   defaultLink,
   hideFilters = false,
+  newNoteHref,
+  customCategories = [],
 }: {
   accountId: string;
   accountSlug: string;
@@ -140,14 +143,14 @@ export function WorkspaceNotesPage({
   canEdit?: boolean;
   defaultLink?: LinkValue;
   hideFilters?: boolean;
+  newNoteHref?: string;
+  customCategories?: CustomNoteCategory[];
 }) {
   const [notes, setNotes] = useState(initialNotes);
   const [docs, setDocs] = useState(initialDocs);
   const [listFilter, setListFilter] = useState<ListFilter>('all');
-  const [createNoteOpen, setCreateNoteOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [editingFile, setEditingFile] = useState<DocListItem | null>(null);
-  const [pending, startTransition] = useTransition();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -192,9 +195,15 @@ export function WorkspaceNotesPage({
     );
 
   const noteDetailPath = (noteId: string) =>
-    pathsConfig.app.accountNoteDetail
-      .replace('[account]', accountSlug)
-      .replace('[noteId]', noteId);
+    newNoteHref
+      ? pathsConfig.app.personalNoteDetail.replace('[noteId]', noteId)
+      : pathsConfig.app.accountNoteDetail
+          .replace('[account]', accountSlug)
+          .replace('[noteId]', noteId);
+
+  const createNoteHref =
+    newNoteHref ??
+    pathsConfig.app.accountNoteNew.replace('[account]', accountSlug);
 
   return (
     <div className="space-y-4">
@@ -239,14 +248,16 @@ export function WorkspaceNotesPage({
               align="end"
               className="border-white/10 bg-[var(--workspace-shell-panel)] text-white"
             >
-              <DropdownMenuItem onClick={() => setCreateNoteOpen(true)}>
+              <DropdownMenuItem onClick={() => router.push(createNoteHref)}>
                 <Plus className="mr-2 h-4 w-4" />
                 New note
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setUploadOpen(true)}>
-                <Upload className="mr-2 h-4 w-4" />
-                Upload file
-              </DropdownMenuItem>
+              {docsTableAvailable ? (
+                <DropdownMenuItem onClick={() => setUploadOpen(true)}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload file
+                </DropdownMenuItem>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         ) : null}
@@ -270,6 +281,7 @@ export function WorkspaceNotesPage({
                   <NoteListRow
                     note={item.data}
                     showPin={variant === 'work' || variant === 'property'}
+                    customCategories={customCategories}
                   />
                 </button>
               </li>
@@ -285,22 +297,6 @@ export function WorkspaceNotesPage({
           )}
         </ul>
       )}
-
-      <NoteFormSheet
-        open={createNoteOpen}
-        onOpenChange={setCreateNoteOpen}
-        title="New note"
-        accountId={accountId}
-        accountSlug={accountSlug}
-        linkOptions={linkOptions}
-        defaultLink={defaultLink ?? null}
-        pending={pending}
-        onSaved={() => {
-          setCreateNoteOpen(false);
-          router.refresh();
-        }}
-        startTransition={startTransition}
-      />
 
       <UploadFileSheet
         open={uploadOpen}
@@ -331,9 +327,11 @@ export function WorkspaceNotesPage({
 function NoteListRow({
   note,
   showPin,
+  customCategories = [],
 }: {
   note: NoteListItem;
   showPin: boolean;
+  customCategories?: CustomNoteCategory[];
 }) {
   return (
     <div className="flex items-start justify-between gap-3">
@@ -343,7 +341,7 @@ function NoteListRow({
             <Pin className="h-3.5 w-3.5 shrink-0 text-amber-400" />
           ) : null}
           <Badge className="bg-white/5 text-[10px] text-zinc-400">Note</Badge>
-          <CategoryBadge category={note.category} />
+          <CategoryBadge category={note.category} customCategories={customCategories} />
           {note.isPublic ? (
             <Globe className="h-3.5 w-3.5 text-[#5eead4]" aria-label="Public" />
           ) : null}
