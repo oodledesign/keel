@@ -10,7 +10,7 @@ import pathsConfig from '~/config/paths.config';
 
 import { queueBrainDeleteSource, queueBrainIndexSource } from '~/lib/brain/sync';
 
-import { workAccountPath } from '../../work-account-path';
+import { workAccountPath } from '../work-account-path';
 
 const LinkSchema = z
   .object({
