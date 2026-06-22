@@ -32,6 +32,19 @@ describe('buildMeetingTranscriptIndexText', () => {
     expect(text).toContain('## Transcript');
     expect(text).toContain('Speaker 1: Hello');
   });
+
+  it('indexes summary and action items when transcript body is empty', () => {
+    const text = buildMeetingTranscriptIndexText({
+      title: 'Strategy sync',
+      content: '(Transcript text not stored — see summary and action items below.)',
+      summaryText: 'Agreed to launch in March.',
+      actionItems: [{ suggested_title: 'Confirm launch date' }],
+    });
+
+    expect(text).toContain('## Meeting summary');
+    expect(text).toContain('Agreed to launch in March.');
+    expect(text).toContain('Confirm launch date');
+  });
 });
 
 describe('meetingTranscriptIndexUpdatedAt', () => {

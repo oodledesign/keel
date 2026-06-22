@@ -217,21 +217,17 @@ function AssistantLayerCard({ assistant }: { assistant: PersonalAssistantMarketi
   const Icon = assistant.icon;
 
   return (
-    <div className="relative z-10 w-[min(220px,42vw)] rounded-lg border border-violet-400/20 border-l-2 border-l-violet-400/60 bg-[#120f24] px-3 py-2.5 shadow-[0_4px_16px_rgba(0,0,0,0.3)]">
-      <div className="flex items-start gap-2.5">
-        <span className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-violet-500/15 text-violet-300">
-          <Icon className="h-4 w-4" aria-hidden />
-          <AssistantBillingBadge assistant={assistant} />
-        </span>
-        <div className="min-w-0 flex-1 text-left">
-          <p className="text-xs font-semibold leading-tight text-white">
-            {assistant.label}
-          </p>
-          <p className="mt-1 text-[10px] leading-snug text-violet-200/65">
-            {assistant.description}
-          </p>
-        </div>
-      </div>
+    <div className="relative z-10 w-[132px] rounded-lg border border-violet-400/20 border-l-2 border-l-violet-400/60 bg-[#120f24]/95 px-2.5 py-2.5 text-center shadow-[0_4px_16px_rgba(0,0,0,0.25)]">
+      <span className="relative mx-auto flex h-8 w-8 items-center justify-center rounded-md bg-violet-500/15 text-violet-300">
+        <Icon className="h-4 w-4" aria-hidden />
+        <AssistantBillingBadge assistant={assistant} />
+      </span>
+      <p className="mt-2 text-[11px] font-semibold leading-tight text-white">
+        {assistant.label}
+      </p>
+      <p className="mt-1.5 text-[10px] leading-snug text-violet-200/65">
+        {assistant.description}
+      </p>
     </div>
   );
 }
@@ -275,12 +271,7 @@ export function WorkspaceOrbitDiagram({
   return (
     <TooltipProvider delayDuration={200}>
       <div
-        className="relative mx-auto aspect-[5/4] min-h-[420px] w-full max-w-[600px] rounded-2xl bg-[#0d0b1e]/60"
-        style={{
-          backgroundImage:
-            'radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)',
-          backgroundSize: '24px 24px',
-        }}
+        className="relative mx-auto aspect-[5/4] min-h-[440px] w-full max-w-[690px]"
         aria-hidden
       >
         <svg
@@ -293,7 +284,7 @@ export function WorkspaceOrbitDiagram({
           <CircuitPaths paths={OUTER_CIRCUIT_PATHS} />
         </svg>
 
-        <div className="absolute left-0 top-1/2 z-10 max-w-[46%] -translate-y-1/2 space-y-2.5 pl-1 sm:left-[1%] sm:max-w-none sm:space-y-3 sm:pl-0">
+        <div className="absolute left-0 top-1/2 z-10 flex -translate-y-1/2 flex-col gap-2 pl-0">
           {PERSONAL_ASSISTANTS_MARKETING.map((assistant) => (
             <AssistantLayerCard key={assistant.id} assistant={assistant} />
           ))}

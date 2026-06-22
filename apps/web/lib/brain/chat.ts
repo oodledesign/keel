@@ -5,7 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { extractJsonObject } from '~/lib/ai/extract-json-object';
 import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
 
-import { formatBrainContext, searchBrainChunks, type BrainMatch } from './search';
+import { formatBrainContext, searchBrainChunks, type BrainMatch, type BrainSearchScope } from './search';
 import { isVoyageConfigured } from './voyage';
 
 const SYSTEM_PROMPT = `You are Ozer's second brain assistant. Answer from the sources below only.
@@ -25,6 +25,32 @@ export type BrainChatScope = {
   jobTitle?: string | null;
   clientName?: string | null;
 };
+
+async function resolveBrainSearchScope(
+  client: SupabaseClient,
+  accountId: string,
+  scope?: BrainChatScope,
+): Promise<BrainSearchScope | undefined> {
+  if (!scope?.jobId && !scope?.clientId) return undefined;
+
+  let clientId = scope.clientId ?? null;
+
+  if (scope.jobId && !clientId) {
+    const { data: job } = await client
+      .from('jobs')
+      .select('client_id')
+      .eq('id', scope.jobId)
+      .eq('account_id', accountId)
+      .maybeSingle();
+
+    clientId = (job?.client_id as string | null) ?? null;
+  }
+
+  return {
+    jobId: scope.jobId ?? null,
+    clientId,
+  };
+}
 
 export type BrainContextRef = {
   source_type: string;
@@ -56,15 +82,17 @@ export async function prepareBrainChat(params: {
     throw new Error('VOYAGE_API_KEY is not configured');
   }
 
+  const searchScope = await resolveBrainSearchScope(
+    params.client,
+    params.accountId,
+    params.scope,
+  );
+
   const matches = await searchBrainChunks(params.client, {
     accountId: params.accountId,
     query: params.userMessage,
-    matchCount: 10,
-    threshold: 0.32,
-    scope: {
-      jobId: params.scope?.jobId ?? null,
-      clientId: params.scope?.clientId ?? null,
-    },
+    matchCount: 16,
+    scope: searchScope,
   });
 
   const contextBlock = formatBrainContext(matches);

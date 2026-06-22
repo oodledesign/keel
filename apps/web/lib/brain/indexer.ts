@@ -230,7 +230,6 @@ export async function loadAccountIndexables(
 
   for (const row of transcriptRows) {
     const content = (row.content as string)?.trim();
-    if (!content) continue;
     const title = ((row.title as string) || 'Meeting transcript').trim();
     const clientName = transcriptClientName(
       row.clients as Parameters<typeof transcriptClientName>[0],
@@ -238,6 +237,10 @@ export async function loadAccountIndexables(
     const meetingDate = (row.meeting_date as string | null) ?? null;
     const transcriptId = row.id as string;
     const enrichment = enrichmentByTranscriptId.get(transcriptId);
+    const hasSummary = Boolean(enrichment?.summaryText?.trim());
+    const hasActionItems = Boolean(enrichment?.actionItems?.length);
+
+    if (!content && !hasSummary && !hasActionItems) continue;
 
     records.push({
       sourceType: 'transcript',
@@ -247,7 +250,7 @@ export async function loadAccountIndexables(
       title,
       text: buildMeetingTranscriptIndexText({
         title,
-        content,
+        content: content || '(Transcript text not stored — see summary and action items below.)',
         meetingDate,
         clientName,
         summaryText: enrichment?.summaryText ?? null,

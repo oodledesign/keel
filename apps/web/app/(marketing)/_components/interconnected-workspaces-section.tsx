@@ -1,4 +1,7 @@
+import Link from 'next/link';
+
 import {
+  ArrowRight,
   Briefcase,
   Check,
   Heart,
@@ -8,6 +11,7 @@ import {
   X,
 } from 'lucide-react';
 
+import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
 
 import {
@@ -47,15 +51,20 @@ export function InterconnectedWorkspacesSection({
     <section
       id="connected-workspaces"
       className={cn(
-        'relative overflow-hidden border-y border-[#2A9D8F]/20 bg-[linear-gradient(180deg,rgba(42,157,143,0.08)_0%,rgba(5,5,11,0)_45%,rgba(37,99,235,0.06)_100%)] py-20 md:py-28',
+        'relative overflow-hidden border-y border-[#2A9D8F]/20 bg-[#0d0b1e] py-20 md:py-28',
         className,
       )}
+      style={{
+        backgroundImage:
+          'radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)',
+        backgroundSize: '24px 24px',
+      }}
       aria-labelledby="connected-workspaces-heading"
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(42,157,143,0.12),transparent_55%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(42,157,143,0.1),transparent_50%)]" />
 
       <div className="relative mx-auto w-full max-w-7xl px-6">
-        <div className="grid gap-12 lg:grid-cols-[45%_55%] lg:items-start lg:gap-10">
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,38fr)_minmax(0,62fr)] lg:items-center lg:gap-8">
           <div>
             <span className="inline-flex items-center gap-2 rounded-full border border-[#2A9D8F]/35 bg-[#2A9D8F]/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[#7ee8d8]">
               <Link2 className="h-3.5 w-3.5" aria-hidden />
@@ -70,15 +79,9 @@ export function InterconnectedWorkspacesSection({
                 {m.titleAccent}
               </span>
             </h2>
-            <p className="mt-5 max-w-2xl text-base leading-relaxed text-violet-100/85 md:text-lg">
+            <p className="mt-5 max-w-xl text-base leading-relaxed text-violet-100/85 md:text-lg">
               {subtitle}
             </p>
-
-            <div className="mt-8 space-y-4">
-              {m.benefits.map((benefit) => (
-                <BenefitCard key={benefit.title} benefit={benefit} />
-              ))}
-            </div>
           </div>
 
           <div className="hidden lg:block">
@@ -86,12 +89,32 @@ export function InterconnectedWorkspacesSection({
           </div>
         </div>
 
-        <div className="mt-14 lg:hidden">
+        <div className="mt-12 lg:hidden">
           <WorkspaceHubDiagram
             hubLabel={m.hubLabel}
             hubCaption={m.hubCaption}
             nodes={m.workspaceNodes}
           />
+        </div>
+
+        <div className="mt-14 lg:mt-16">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {m.benefits.map((benefit) => (
+              <BenefitCard key={benefit.title} benefit={benefit} />
+            ))}
+          </div>
+          <div className="mt-8 flex justify-center">
+            <Button
+              asChild
+              variant="outline"
+              className="h-11 rounded-full border-violet-300/25 bg-white/[0.03] px-6 text-violet-100 hover:bg-white/[0.06]"
+            >
+              <Link href="/features">
+                All features
+                <ArrowRight className="ml-1.5 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
         </div>
 
         <div className="mt-16 rounded-3xl border border-white/10 bg-[#0B132B]/90 p-6 md:p-10">
@@ -179,12 +202,12 @@ function WorkspaceHubDiagram({
 function BenefitCard({ benefit }: { benefit: InterconnectedBenefit }) {
   const Icon = benefit.icon;
   return (
-    <article className="rounded-2xl border border-white/10 bg-[#0F1B35]/60 p-5 backdrop-blur">
-      <Icon className="h-5 w-5 text-[#2A9D8F]" aria-hidden />
-      <h3 className="mt-3 font-heading text-lg font-semibold text-white">
+    <article className="flex h-full flex-col rounded-2xl border border-white/10 bg-[#0F1B35]/50 p-4 backdrop-blur-sm md:p-5">
+      <Icon className="h-5 w-5 shrink-0 text-[#2A9D8F]" aria-hidden />
+      <h3 className="mt-3 font-heading text-base font-semibold leading-snug text-white md:text-lg">
         {benefit.title}
       </h3>
-      <p className="mt-2 text-sm leading-relaxed text-violet-100/75">
+      <p className="mt-2 flex-1 text-sm leading-relaxed text-violet-100/70">
         {benefit.description}
       </p>
     </article>

@@ -84,6 +84,29 @@ async function keywordSearchBrainChunks(
   return scoped.slice(0, params.matchCount ?? 10);
 }
 
+function mergeBrainMatches(
+  semantic: BrainMatch[],
+  keyword: BrainMatch[],
+  limit: number,
+): BrainMatch[] {
+  const byId = new Map<string, BrainMatch>();
+
+  for (const row of semantic) {
+    byId.set(row.id, row);
+  }
+
+  for (const row of keyword) {
+    const existing = byId.get(row.id);
+    if (!existing || row.similarity > existing.similarity) {
+      byId.set(row.id, row);
+    }
+  }
+
+  return Array.from(byId.values())
+    .sort((a, b) => b.similarity - a.similarity)
+    .slice(0, limit);
+}
+
 export async function searchBrainChunks(
   client: SupabaseClient,
   params: {
@@ -94,30 +117,31 @@ export async function searchBrainChunks(
     scope?: BrainSearchScope;
   },
 ): Promise<BrainMatch[]> {
+  const limit = params.matchCount ?? 16;
+  const threshold = params.threshold ?? 0.28;
   const embedding = await embedQuery(params.query);
 
   const { data, error } = await client.rpc('match_brain_chunks', {
     query_embedding: embedding,
     match_account_id: params.accountId,
-    match_threshold: params.threshold ?? 0.32,
-    match_count: params.scope
-      ? (params.matchCount ?? 10) * 3
-      : (params.matchCount ?? 10),
+    match_threshold: threshold,
+    match_count: params.scope ? limit * 4 : limit * 2,
   });
 
   if (error) throw new Error(error.message);
 
-  let rows = (data ?? []) as BrainMatch[];
+  let semantic = (data ?? []) as BrainMatch[];
 
   if (params.scope) {
-    rows = rows.filter((row) => matchesScope(row.metadata ?? {}, params.scope));
+    semantic = semantic.filter((row) => matchesScope(row.metadata ?? {}, params.scope));
   }
 
-  if (rows.length === 0) {
-    rows = await keywordSearchBrainChunks(client, params);
-  }
+  const keyword = await keywordSearchBrainChunks(client, {
+    ...params,
+    matchCount: limit * 2,
+  });
 
-  return rows.slice(0, params.matchCount ?? 10);
+  return mergeBrainMatches(semantic, keyword, limit);
 }
 
 export function formatBrainContext(matches: BrainMatch[]): string {
