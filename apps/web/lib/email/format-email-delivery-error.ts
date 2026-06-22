@@ -4,14 +4,18 @@
 export function formatEmailDeliveryError(error: unknown): string {
   const message = extractErrorMessage(error);
 
-  if (/AccessDenied/i.test(message) && /ses:SendEmail/i.test(message)) {
+  if (
+    /AccessDenied/i.test(message) &&
+    /ses:Send(Raw)?Email/i.test(message)
+  ) {
     const identityMatch = message.match(/identity\/([^'"\s]+)/i);
-    const identity = identityMatch?.[1] ?? 'the configured sender address';
+    const identity = identityMatch?.[1] ?? 'an address in this send';
 
     return (
-      `Email could not be sent: AWS SES denied access to send from ${identity}. ` +
-      'Update the IAM policy for your SES user to allow ses:SendEmail on that identity, ' +
-      'or change the Vercel EMAIL_SENDER variable to a verified address your SES user can use.'
+      `Email could not be sent: AWS SES denied this send involving ${identity}. ` +
+      'While your SES account is in sandbox, both EMAIL_SENDER and the recipient must be verified in eu-west-2. ' +
+      'Ensure keel-ses-api allows ses:SendRawEmail (and ses:SendEmail) on identity/ozer.so. ' +
+      'Request SES production access to send to any address.'
     );
   }
 

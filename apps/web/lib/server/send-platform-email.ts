@@ -5,6 +5,7 @@ import { insertPlatformEmailLog } from '@kit/supabase/platform-email-log';
 
 import { isEmailSuppressed } from '~/lib/email/is-suppressed';
 import { formatEmailDeliveryError } from '~/lib/email/format-email-delivery-error';
+import { sendSesRawEmail } from '~/lib/server/ses-raw-email';
 
 export const PLATFORM_EMAIL_TYPES = [
   'invitation',
@@ -26,6 +27,25 @@ export const PLATFORM_EMAIL_TYPES = [
 
 export type PlatformEmailType = (typeof PLATFORM_EMAIL_TYPES)[number];
 
+function usesSesApi() {
+  if (process.env.MAILER_PROVIDER === 'ses') {
+    return true;
+  }
+
+  if (
+    process.env.MAILER_PROVIDER === 'nodemailer' ||
+    process.env.MAILER_PROVIDER === 'resend'
+  ) {
+    return false;
+  }
+
+  return Boolean(
+    process.env.AWS_ACCESS_KEY_ID &&
+      process.env.AWS_SECRET_ACCESS_KEY &&
+      (process.env.AWS_REGION ?? process.env.SES_REGION),
+  );
+}
+
 type MailPayload = {
   to: string;
   from: string;
@@ -46,11 +66,11 @@ export async function sendPlatformEmail(params: {
   const recipient = params.mail.to.trim();
 
   if (await isEmailSuppressed(recipient)) {
-    console.warn(`[email] Skipping suppressed recipient: ${recipient}`);
-    return;
+    throw new Error(
+      `Email could not be sent: ${recipient} is on the suppression list.`,
+    );
   }
 
-  const mailer = await getMailer();
   const mail = {
     ...params.mail,
     from: sanitizeEmailSender(params.mail.from),
@@ -59,7 +79,17 @@ export async function sendPlatformEmail(params: {
   let errorMessage: string | null = null;
 
   try {
-    await mailer.sendEmail(mail);
+    if (usesSesApi()) {
+      await sendSesRawEmail({
+        to: mail.to,
+        from: mail.from,
+        subject: mail.subject,
+        ...('html' in mail ? { html: mail.html } : { text: mail.text }),
+      });
+    } else {
+      const mailer = await getMailer();
+      await mailer.sendEmail(mail);
+    }
   } catch (error) {
     status = 'failed';
     errorMessage = error instanceof Error ? error.message : String(error);
