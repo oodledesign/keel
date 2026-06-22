@@ -4,6 +4,7 @@ import { getMailer, sanitizeEmailSender } from '@kit/mailers';
 import { insertPlatformEmailLog } from '@kit/supabase/platform-email-log';
 
 import { isEmailSuppressed } from '~/lib/email/is-suppressed';
+import { formatEmailDeliveryError } from '~/lib/email/format-email-delivery-error';
 
 export const PLATFORM_EMAIL_TYPES = [
   'invitation',
@@ -62,7 +63,7 @@ export async function sendPlatformEmail(params: {
   } catch (error) {
     status = 'failed';
     errorMessage = error instanceof Error ? error.message : String(error);
-    throw error;
+    throw new Error(formatEmailDeliveryError(error));
   } finally {
     await insertPlatformEmailLog({
       emailType: params.type,

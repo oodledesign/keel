@@ -155,12 +155,12 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
   personal: {
     slug: 'personal',
     seo: {
-      title: 'Ozer Personal — Free Life CRM Hub for Every Workspace',
+      title: 'Ozer Personal — Free Workspace Hub for Every Workspace',
       description:
-        'Free personal home that connects tasks, planner, and shortcuts across business, family, property, and community workspaces. One Life CRM — not separate apps. No credit card required.',
+        'Free personal home that connects tasks, planner, and shortcuts across business, family, property, and community workspaces. One workspace OS — not separate apps. No credit card required.',
       keywords: [
         'connected CRM',
-        'Life CRM',
+        'workspace OS',
         'personal CRM',
         'life organizer app',
         'unified task manager',
@@ -267,12 +267,12 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
   work: {
     slug: 'work',
     seo: {
-      title: 'Ozer for Business — Connected CRM Inside Your Life CRM',
+      title: 'Ozer for Business — Connected CRM Inside Your Workspace OS',
       description:
         'Business CRM, jobs, invoices, and client portal that connects to your personal Ozer home — one login, unified tasks and planning. Not another siloed CRM. Free Business Lite or from £29/mo.',
       keywords: [
         'connected business CRM',
-        'Life CRM for business',
+        'workspace OS for business',
         'small business CRM UK',
         'work and personal unified',
         'trade business software',

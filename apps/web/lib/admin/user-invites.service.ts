@@ -442,12 +442,17 @@ export async function createAdminUserInvite(
 
   const invite = data as AdminUserInviteRow;
 
-  await sendAdminUserInviteEmail({
-    email: normalizedEmail,
-    inviteToken: invite.invite_token,
-    accessSummary: summarizeAccessConfig(params.accessConfig),
-    inviterName: params.inviterName,
-  });
+  try {
+    await sendAdminUserInviteEmail({
+      email: normalizedEmail,
+      inviteToken: invite.invite_token,
+      accessSummary: summarizeAccessConfig(params.accessConfig),
+      inviterName: params.inviterName,
+    });
+  } catch (error) {
+    await admin.from('admin_user_invites').delete().eq('id', invite.id);
+    throw error;
+  }
 
   await logAdminAction(admin, {
     actorUserId: params.invitedBy,

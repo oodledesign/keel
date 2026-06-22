@@ -40,8 +40,6 @@ export async function buildLlmsTxt(): Promise<string> {
     '',
     `> ${appConfig.description}`,
     '',
-    'Ozer is a Life CRM — personal life, work, property, and community workspaces in one account.',
-    '',
     '## Primary pages',
     `- [Home](${url(base, '/')}): Main marketing homepage`,
     `- [Pricing](${url(base, '/pricing')}): Plans and add-ons`,

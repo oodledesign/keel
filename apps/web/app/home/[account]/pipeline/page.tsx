@@ -38,21 +38,18 @@ async function TeamAccountPipelinePage({ params }: TeamAccountPipelinePageProps)
   const data = await loadPipelineDataForAccount(accountId);
 
   return (
-    <>
+    <PageBody className="flex min-h-0 flex-1 flex-col bg-[var(--workspace-shell-canvas)] p-0">
       <TeamAccountLayoutPageHeader
         title={<Trans i18nKey="common:routes.pipeline" />}
         description="Track leads and opportunities for this workspace. Won leads can be turned into clients."
         account={accountSlug}
       />
-
-      <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
-        <WorkspacePipelineBoardWrapper
-          initialData={data}
-          accountSlug={accountSlug}
-          accountId={accountId}
-        />
-      </PageBody>
-    </>
+      <WorkspacePipelineBoardWrapper
+        initialData={data}
+        accountSlug={accountSlug}
+        accountId={accountId}
+      />
+    </PageBody>
   );
 }
 

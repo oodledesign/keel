@@ -420,6 +420,11 @@ async function getRedirects() {
       destination: '/sitemap.xml',
       permanent: true,
     },
+    {
+      source: '/features/freeagent',
+      destination: '/features/finances',
+      permanent: true,
+    },
     ...marketingRedirects,
   ];
 }

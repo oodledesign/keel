@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
 import {
   DndContext,
@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 
 import type { PipelineData, PipelineDeal } from '../../_lib/server/pipeline.loader';
+import { scrollWheelDeltaToScrollParent } from '~/lib/scroll-passthrough';
 import { moveDealToStage } from '../actions';
 import { AddDealDialog } from './add-deal-dialog';
 import { EditDealDialog } from './edit-deal-dialog';
@@ -93,6 +94,26 @@ export function PipelineBoard({
   const [dealToEdit, setDealToEdit] = useState<PipelineDeal | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const kanbanScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const kanban = kanbanScrollRef.current;
+    if (!kanban) return;
+
+    const onWheel = (event: WheelEvent) => {
+      if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) {
+        return;
+      }
+
+      scrollWheelDeltaToScrollParent(kanban, event);
+    };
+
+    kanban.addEventListener('wheel', onWheel, { passive: false });
+
+    return () => {
+      kanban.removeEventListener('wheel', onWheel);
+    };
+  }, []);
 
   const handleEditDeal = useCallback((deal: PipelineDeal) => {
     setDealToEdit(deal);
@@ -201,7 +222,7 @@ export function PipelineBoard({
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 px-4 pb-12 pt-6 text-white md:px-6 lg:px-8">
+    <div className="flex min-h-full w-full flex-col gap-6 px-4 pb-12 pt-6 text-white md:px-6 lg:px-8">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -264,7 +285,10 @@ export function PipelineBoard({
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
       >
-        <div className="flex gap-4 overflow-x-auto pb-4">
+        <div
+          ref={kanbanScrollRef}
+          className="flex min-h-0 flex-1 gap-4 overflow-x-auto overscroll-x-contain pb-4"
+        >
           {STAGES.map((stage) => {
             const stageDeals = dealsByStage.get(stage.key) ?? [];
             const stageValue = stageDeals.reduce((s, d) => s + d.value, 0);

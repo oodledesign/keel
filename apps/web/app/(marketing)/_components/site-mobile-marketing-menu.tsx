@@ -21,6 +21,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
+import { cn } from '@kit/ui/utils';
 import { Trans } from '@kit/ui/trans';
 
 import { getMarketingAppNavLinks } from '~/lib/marketing/app-landing-pages';
@@ -28,8 +29,20 @@ import { FEATURE_NAV_GROUPS } from '~/lib/marketing/feature-landing-pages';
 import { getMarketingWorkspaceNavLinks } from '~/lib/marketing/segment-landing-pages';
 import pathsConfig from '~/config/paths.config';
 
+import {
+  marketingNavPanelClass,
+  marketingNavScrollClass,
+  marketingNavSubContentClass,
+} from './site-marketing-nav-styles';
+
 const workspaceNavLinks = getMarketingWorkspaceNavLinks();
 const appNavLinks = getMarketingAppNavLinks();
+
+const mobileSubContentProps = {
+  side: 'bottom' as const,
+  align: 'end' as const,
+  collisionPadding: 16,
+};
 
 export function SiteMobileMarketingMenu() {
   return (
@@ -43,14 +56,22 @@ export function SiteMobileMarketingMenu() {
 
       <DropdownMenuContent
         align="end"
-        className="w-[min(100vw-1.5rem,20rem)] border-violet-200/20 bg-[#100d1f]/98 p-2 text-violet-100"
+        collisionPadding={16}
+        className={cn(
+          'w-[min(100vw-1.5rem,20rem)] p-2',
+          marketingNavPanelClass,
+          marketingNavScrollClass,
+        )}
       >
         <DropdownMenuSub>
           <DropdownMenuSubTrigger className="flex h-12 items-center gap-3 rounded-md px-3 text-base text-violet-100/90 focus:bg-violet-500/15 focus:text-violet-50">
             <LayoutTemplate className="h-5 w-5 shrink-0 opacity-80" />
             Workspaces
           </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="border-violet-200/20 bg-[#100d1f]/98 text-violet-100">
+          <DropdownMenuSubContent
+            {...mobileSubContentProps}
+            className={marketingNavSubContentClass}
+          >
             {workspaceNavLinks.map((item) => {
               const Icon = item.icon;
 
@@ -86,7 +107,13 @@ export function SiteMobileMarketingMenu() {
             <Layers className="h-5 w-5 shrink-0 opacity-80" />
             Features
           </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="border-violet-200/20 bg-[#100d1f]/98 text-violet-100">
+          <DropdownMenuSubContent
+            {...mobileSubContentProps}
+            className={cn(
+              marketingNavSubContentClass,
+              'w-[min(100vw-1.5rem,18rem)]',
+            )}
+          >
             <DropdownMenuItem asChild>
               <Link
                 className="flex h-11 w-full items-center rounded-md px-3 text-sm font-medium text-violet-100/90 hover:bg-violet-500/15 hover:text-violet-50"
@@ -95,26 +122,31 @@ export function SiteMobileMarketingMenu() {
                 All features
               </Link>
             </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-violet-200/15" />
             {FEATURE_NAV_GROUPS.map((group) => (
-              <div key={group.label}>
-                <DropdownMenuSeparator className="bg-violet-200/15" />
-                <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-violet-300/60">
+              <DropdownMenuSub key={group.label}>
+                <DropdownMenuSubTrigger className="rounded-md px-3 text-sm text-violet-100/90 focus:bg-violet-500/15 focus:text-violet-50">
                   {group.label}
-                </p>
-                {group.items.map((item) => (
-                  <DropdownMenuItem
-                    key={`${group.label}-${item.href}-${item.label}`}
-                    asChild
-                  >
-                    <Link
-                      className="flex h-11 w-full items-center rounded-md px-3 text-sm text-violet-100/85 hover:bg-violet-500/15 hover:text-violet-50"
-                      href={item.href}
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent
+                  {...mobileSubContentProps}
+                  className={marketingNavSubContentClass}
+                >
+                  {group.items.map((item) => (
+                    <DropdownMenuItem
+                      key={`${group.label}-${item.href}-${item.label}`}
+                      asChild
                     >
-                      {item.label}
-                    </Link>
-                  </DropdownMenuItem>
-                ))}
-              </div>
+                      <Link
+                        className="flex h-11 w-full items-center rounded-md px-3 text-sm text-violet-100/85 hover:bg-violet-500/15 hover:text-violet-50"
+                        href={item.href}
+                      >
+                        {item.label}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
             ))}
           </DropdownMenuSubContent>
         </DropdownMenuSub>
@@ -124,7 +156,19 @@ export function SiteMobileMarketingMenu() {
             <LayoutGrid className="h-5 w-5 shrink-0 opacity-80" />
             Apps
           </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="border-violet-200/20 bg-[#100d1f]/98 text-violet-100">
+          <DropdownMenuSubContent
+            {...mobileSubContentProps}
+            className={marketingNavSubContentClass}
+          >
+            <DropdownMenuItem asChild>
+              <Link
+                className="flex h-11 w-full items-center rounded-md px-3 text-sm font-medium text-violet-100/90 hover:bg-violet-500/15 hover:text-violet-50"
+                href="/apps"
+              >
+                All Ozer apps
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-violet-200/15" />
             {appNavLinks.map((item) => (
               <DropdownMenuItem key={item.path} asChild>
                 <Link

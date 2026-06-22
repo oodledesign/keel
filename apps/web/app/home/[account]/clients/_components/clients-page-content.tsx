@@ -33,7 +33,6 @@ import type { ClientOverviewItem } from '../_lib/clients-overview.types';
 import { listClientsOverview } from '../_lib/server/server-actions';
 import { ClientCard } from './client-card';
 import { ClientDetailDrawer } from './client-detail-drawer';
-import { ClientDetailSidebar } from './client-detail-sidebar';
 import { ClientOverviewCard } from './client-overview-card';
 
 type ViewMode = 'cards' | 'list';
@@ -123,9 +122,12 @@ export function ClientsPageContent({
   >([]);
   const pageSize = 20;
 
-  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [createNew, setCreateNew] = useState(false);
+  const clientsBasePath = pathsConfig.app.accountClients.replace(
+    '[account]',
+    accountSlug,
+  );
+
+  const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
   const [createFormInitialValues, setCreateFormInitialValues] = useState<
     { first_name: string; company_name: string } | undefined
   >(undefined);
@@ -195,29 +197,17 @@ export function ClientsPageContent({
     return () => clearTimeout(t);
   }, [search]);
 
-  const [isDesktop, setIsDesktop] = useState(true);
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 768px)');
-    setIsDesktop(mq.matches);
-    const fn = () => setIsDesktop(mq.matches);
-    mq.addEventListener('change', fn);
-    return () => mq.removeEventListener('change', fn);
-  }, []);
-
-  useEffect(() => {
-    if (isDesktop && selectedClientId && !createNew) setDrawerOpen(false);
-  }, [isDesktop, selectedClientId, createNew]);
-
-  const openDetail = (clientId: string | null) => {
-    setSelectedClientId(clientId);
-    setCreateNew(!clientId);
-    setDrawerOpen(true);
+  const openClient = (clientId: string) => {
+    router.push(`${clientsBasePath}/${clientId}`);
   };
 
-  const closeDetail = () => {
-    setDrawerOpen(false);
-    setSelectedClientId(null);
-    setCreateNew(false);
+  const openCreate = () => {
+    setCreateFormInitialValues(undefined);
+    setCreateDrawerOpen(true);
+  };
+
+  const closeCreate = () => {
+    setCreateDrawerOpen(false);
     setCreateFormInitialValues(undefined);
     void fetchClients();
   };
@@ -231,7 +221,7 @@ export function ClientsPageContent({
       first_name: searchParams.get('first_name') ?? '',
       company_name: searchParams.get('company_name') ?? '',
     });
-    openDetail(null);
+    setCreateDrawerOpen(true);
 
     const nextParams = new URLSearchParams(searchParams.toString());
     nextParams.delete('create');
@@ -296,7 +286,7 @@ export function ClientsPageContent({
             <Button
               size="sm"
               className="bg-[var(--keel-teal)] hover:bg-[#238b7f]"
-              onClick={() => openDetail(null)}
+              onClick={openCreate}
               data-test="add-client-button"
             >
               <PlusCircle className="mr-2 h-4 w-4" />
@@ -402,7 +392,6 @@ export function ClientsPageContent({
                   accountSlug={accountSlug}
                   isFavorite={favorites.has(client.id)}
                   onToggleFavorite={() => toggleFavorite(client.id)}
-                  onSelect={() => openDetail(client.id)}
                 />
               ))}
             </div>
@@ -419,10 +408,10 @@ export function ClientsPageContent({
                   updated_at={client.updatedAt}
                   projectCount={client.projectCount}
                   dueTaskCount={client.dueTaskCount}
-                  selected={selectedClientId === client.id}
-                  onSelect={() => openDetail(client.id)}
-                  detailHref={`${pathsConfig.app.accountClients.replace('[account]', accountSlug)}/${client.id}`}
-                  onNotes={() => openDetail(client.id)}
+                  selected={false}
+                  onSelect={() => openClient(client.id)}
+                  detailHref={`${clientsBasePath}/${client.id}`}
+                  onNotes={() => openClient(client.id)}
                   onEmail={
                     client.email
                       ? () => window.open(`mailto:${client.email}`, '_blank')
@@ -468,33 +457,13 @@ export function ClientsPageContent({
         </div>
       </div>
 
-      <If condition={selectedClientId && !createNew}>
-        <div className="hidden md:block">
-          <ClientDetailSidebar
-            accountSlug={accountSlug}
-            accountId={accountId}
-            clientId={selectedClientId!}
-            canEditClients={canEditClients}
-            isContractorView={isContractorView}
-            onClose={closeDetail}
-            onSaved={closeDetail}
-            onDeleted={closeDetail}
-          />
-        </div>
-      </If>
-
       <ClientDetailDrawer
-        open={drawerOpen && (createNew || !isDesktop)}
-        onOpenChange={(open) => !open && closeDetail()}
-        accountSlug={accountSlug}
+        open={createDrawerOpen}
+        onOpenChange={(open) => !open && closeCreate()}
         accountId={accountId}
-        clientId={createNew ? null : selectedClientId}
-        createNew={createNew}
         createInitialValues={createFormInitialValues}
         canEditClients={canEditClients}
-        isContractorView={isContractorView}
-        onSaved={closeDetail}
-        onDeleted={closeDetail}
+        onSaved={closeCreate}
       />
     </div>
   );

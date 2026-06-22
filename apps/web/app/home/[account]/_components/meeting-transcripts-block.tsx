@@ -11,6 +11,7 @@ import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 
@@ -39,12 +40,15 @@ export function MeetingTranscriptsBlock({
   clientId,
   dealId,
   canEdit,
+  variant = 'default',
 }: {
   accountId: string;
   accountSlug: string;
   clientId?: string;
   dealId?: string;
   canEdit: boolean;
+  /** List-only layout for client detail — no inline create form. */
+  variant?: 'default' | 'list';
 }) {
   const [rows, setRows] = useState<TranscriptRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,6 +61,9 @@ export function MeetingTranscriptsBlock({
     '[account]',
     accountSlug,
   );
+  const newMeetingHref = clientId
+    ? `${meetingsPath}?clientId=${encodeURIComponent(clientId)}&create=1`
+    : `${meetingsPath}?create=1`;
   const meetingDetailPath = (id: string) =>
     pathsConfig.app.accountMeetingDetail
       .replace('[account]', accountSlug)
@@ -143,6 +150,77 @@ export function MeetingTranscriptsBlock({
     });
   };
 
+  const meetingList = loading ? (
+    <p className="text-sm text-zinc-500">Loading…</p>
+  ) : rows.length === 0 ? (
+    <p className="text-sm text-zinc-500">No meetings yet.</p>
+  ) : (
+    <ul className="space-y-2">
+      {rows.map((row) => (
+        <li
+          key={row.id}
+          className={cn(
+            'flex items-start justify-between gap-3 rounded-lg border border-white/[0.08]',
+            variant === 'list'
+              ? 'bg-[var(--workspace-shell-panel)] px-4 py-3 transition-colors hover:border-[var(--keel-teal)]/30'
+              : 'border-white/6 bg-white/3 px-3 py-2',
+          )}
+        >
+          <div className="min-w-0">
+            {accountSlug ? (
+              <Link
+                href={meetingDetailPath(row.id)}
+                className="truncate text-sm font-medium text-white hover:text-[#5eead4]"
+              >
+                {row.title}
+              </Link>
+            ) : (
+              <p className="truncate text-sm font-medium text-white">{row.title}</p>
+            )}
+            <p className="mt-1 text-xs text-zinc-500">
+              {meetingDisplayDate(row.meetingDate, row.createdAt)}
+              {' · '}
+              {row.content.length.toLocaleString()} chars
+            </p>
+          </div>
+          {canEdit ? (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8 shrink-0 text-red-400"
+              disabled={pending}
+              onClick={() => handleDelete(row.id)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          ) : null}
+        </li>
+      ))}
+    </ul>
+  );
+
+  if (variant === 'list') {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-end gap-2">
+          {canEdit ? (
+            <Button
+              size="sm"
+              className="bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+              asChild
+            >
+              <Link href={newMeetingHref}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                New meeting
+              </Link>
+            </Button>
+          ) : null}
+        </div>
+        {meetingList}
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-xl border border-white/10 bg-[var(--workspace-shell-panel)] p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -226,47 +304,7 @@ export function MeetingTranscriptsBlock({
         </div>
       ) : null}
 
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : rows.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No transcripts yet.</p>
-      ) : (
-        <ul className="space-y-2">
-          {rows.map((row) => (
-            <li
-              key={row.id}
-              className="flex items-start justify-between gap-3 rounded-lg border border-white/6 bg-white/3 px-3 py-2"
-            >
-              <div className="min-w-0">
-                {accountSlug ? (
-                  <Link
-                    href={meetingDetailPath(row.id)}
-                    className="truncate text-sm font-medium text-white hover:text-[#5eead4]"
-                  >
-                    {row.title}
-                  </Link>
-                ) : (
-                  <p className="truncate text-sm font-medium text-white">{row.title}</p>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  {meetingDisplayDate(row.meetingDate, row.createdAt)} ·{' '}
-                  {row.content.length.toLocaleString()} chars
-                </p>
-              </div>
-              {canEdit ? (
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-8 w-8 shrink-0 text-red-400"
-                  onClick={() => handleDelete(row.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      )}
+      {meetingList}
     </div>
   );
 }

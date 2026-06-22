@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { PageBody } from '@kit/ui/page';
 
 import pathsConfig from '~/config/paths.config';
+import { getAgencyBrandingByBusinessId } from '~/lib/agency-branding';
 
 import { getTeamAccountAccess } from '../../_lib/role-access';
 import { isWorkModuleEnabled } from '../../_lib/server/account-modules';
@@ -64,6 +65,25 @@ export default async function ClientDetailPage({ params }: Props) {
     '[account]',
     accountSlug,
   );
+  const accountHomeHref = pathsConfig.app.accountHome.replace(
+    '[account]',
+    accountSlug,
+  );
+
+  const agencyBranding = await getAgencyBrandingByBusinessId(accountId);
+  const portalHref = agencyBranding?.slug
+    ? pathsConfig.app.clientPortalHome.replace('[clientSlug]', agencyBranding.slug)
+    : null;
+
+  const clientRecord = client as {
+    display_name?: string | null;
+    first_name?: string | null;
+    last_name?: string | null;
+  };
+  const clientDisplayName =
+    clientRecord.display_name?.trim() ||
+    [clientRecord.first_name, clientRecord.last_name].filter(Boolean).join(' ').trim() ||
+    'Client';
 
   const workspaceContent = await loadContextWorkspaceContent({
     accountId,
@@ -83,12 +103,13 @@ export default async function ClientDetailPage({ params }: Props) {
       : [null, null, []];
 
   return (
-    <PageBody className="flex flex-col bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
+    <PageBody className="flex min-h-0 flex-1 flex-col bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
       <ClientDetailPageNav
-        accountSlug={accountSlug}
+        accountHomeHref={accountHomeHref}
         clientsListHref={clientsListHref}
+        clientDisplayName={clientDisplayName}
       />
-      <div className="mt-4 max-w-3xl">
+      <div className="mt-4 flex min-h-0 flex-1 flex-col">
         <ClientDetailPageContent
           accountSlug={accountSlug}
           accountId={accountId}
@@ -96,6 +117,7 @@ export default async function ClientDetailPage({ params }: Props) {
           canEditClients={canEditClients}
           isContractorView={isContractorView}
           clientsListHref={clientsListHref}
+          portalHref={portalHref}
           workspaceNotes={workspaceContent.notes}
           workspaceDocs={workspaceContent.docs}
           notesTableAvailable={workspaceContent.notesTableAvailable}

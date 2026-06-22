@@ -100,14 +100,19 @@ const columns: ColumnDef<AdminUserRow>[] = [
     id: 'email',
     header: 'Email',
     accessorKey: 'email',
-    cell: ({ row }) => (
-      <Link
-        className="hover:underline"
-        href={`/admin/accounts/${row.original.personalAccountId ?? row.original.id}`}
-      >
-        {row.original.email ?? '—'}
-      </Link>
-    ),
+    cell: ({ row }) => {
+      const accountId = row.original.personalAccountId;
+
+      if (!accountId) {
+        return row.original.email ?? '—';
+      }
+
+      return (
+        <Link className="hover:underline" href={`/admin/accounts/${accountId}`}>
+          {row.original.email ?? '—'}
+        </Link>
+      );
+    },
   },
   {
     id: 'status',
@@ -139,14 +144,18 @@ const columns: ColumnDef<AdminUserRow>[] = [
   {
     id: 'actions',
     header: '',
-    cell: ({ row }) => (
-      <Button asChild variant="outline" size="sm">
-        <Link
-          href={`/admin/accounts/${row.original.personalAccountId ?? row.original.id}`}
-        >
-          View account
-        </Link>
-      </Button>
-    ),
+    cell: ({ row }) => {
+      const accountId = row.original.personalAccountId;
+
+      if (!accountId) {
+        return <span className="text-muted-foreground text-sm">No account</span>;
+      }
+
+      return (
+        <Button asChild variant="outline" size="sm">
+          <Link href={`/admin/accounts/${accountId}`}>View account</Link>
+        </Button>
+      );
+    },
   },
 ];

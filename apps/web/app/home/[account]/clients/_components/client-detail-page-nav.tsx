@@ -2,24 +2,35 @@
 
 import Link from 'next/link';
 
-import { ChevronLeft } from 'lucide-react';
+import { ChevronRight, Home } from 'lucide-react';
 
 export function ClientDetailPageNav({
-  accountSlug,
+  accountHomeHref,
   clientsListHref,
+  clientDisplayName,
 }: {
-  accountSlug: string;
+  accountHomeHref: string;
   clientsListHref: string;
+  clientDisplayName: string;
 }) {
   return (
-    <div className="flex items-center gap-2">
+    <nav
+      aria-label="Breadcrumb"
+      className="flex flex-wrap items-center gap-1.5 text-sm text-zinc-400"
+    >
       <Link
-        href={clientsListHref}
-        className="flex items-center gap-1 text-sm text-zinc-400 transition hover:text-white"
+        href={accountHomeHref}
+        className="inline-flex items-center transition hover:text-white"
+        aria-label="Home"
       >
-        <ChevronLeft className="h-4 w-4" />
-        Back to clients
+        <Home className="h-4 w-4" />
       </Link>
-    </div>
+      <ChevronRight className="h-3.5 w-3.5 shrink-0 text-zinc-600" aria-hidden />
+      <Link href={clientsListHref} className="transition hover:text-white">
+        Clients
+      </Link>
+      <ChevronRight className="h-3.5 w-3.5 shrink-0 text-zinc-600" aria-hidden />
+      <span className="truncate font-medium text-white">{clientDisplayName}</span>
+    </nav>
   );
 }

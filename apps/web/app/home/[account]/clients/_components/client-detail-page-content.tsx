@@ -18,6 +18,7 @@ type Props = {
   canEditClients: boolean;
   isContractorView: boolean;
   clientsListHref: string;
+  portalHref: string | null;
   workspaceNotes: NoteListItem[];
   workspaceDocs: DocListItem[];
   notesTableAvailable: boolean;
@@ -38,6 +39,7 @@ export function ClientDetailPageContent({
   canEditClients,
   isContractorView,
   clientsListHref,
+  portalHref,
   workspaceNotes,
   workspaceDocs,
   notesTableAvailable,
@@ -64,6 +66,7 @@ export function ClientDetailPageContent({
       onClose={goToList}
       onSaved={goToList}
       onDeleted={goToList}
+      portalHref={portalHref}
       fullPage
       workspaceNotes={workspaceNotes}
       workspaceDocs={workspaceDocs}

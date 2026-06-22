@@ -62,7 +62,6 @@ type ClientOverviewCardProps = {
   accountSlug: string;
   isFavorite: boolean;
   onToggleFavorite: () => void;
-  onSelect?: () => void;
 };
 
 export function ClientOverviewCard({
@@ -70,7 +69,6 @@ export function ClientOverviewCard({
   accountSlug,
   isFavorite,
   onToggleFavorite,
-  onSelect,
 }: ClientOverviewCardProps) {
   const detailHref = `${pathsConfig.app.accountClients.replace('[account]', accountSlug)}/${client.id}`;
   const jobsHref = pathsConfig.app.accountJobs.replace('[account]', accountSlug);
@@ -86,7 +84,6 @@ export function ClientOverviewCard({
             'flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-lg font-semibold text-white',
             avatarColor,
           )}
-          onClick={onSelect}
         >
           {clientInitial(client.displayName)}
         </Link>
@@ -96,7 +93,6 @@ export function ClientOverviewCard({
             <Link
               href={detailHref}
               className="truncate text-base font-semibold text-white hover:text-[#5eead4]"
-              onClick={onSelect}
             >
               {client.displayName}
             </Link>

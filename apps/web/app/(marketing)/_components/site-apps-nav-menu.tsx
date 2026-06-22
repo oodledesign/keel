@@ -12,6 +12,11 @@ import { cn, isRouteActive } from '@kit/ui/utils';
 
 import { listAppLandingSummaries } from '~/lib/marketing/app-landing-pages';
 
+import {
+  marketingNavPanelClass,
+  marketingNavScrollClass,
+} from './site-marketing-nav-styles';
+
 const apps = listAppLandingSummaries();
 
 function appsNavActive(pathname: string) {
@@ -36,7 +41,13 @@ export function SiteAppsNavMenu() {
         Apps
       </NavigationMenuTrigger>
       <NavigationMenuContent>
-        <div className="grid w-[min(100vw-2rem,22rem)] gap-1 border-violet-200/20 bg-[#100d1f]/98 p-2 md:w-[22rem]">
+        <div
+          className={cn(
+            'grid w-[min(100vw-2rem,22rem)] gap-1 p-2',
+            marketingNavPanelClass,
+            marketingNavScrollClass,
+          )}
+        >
           <Link
             href="/apps"
             className="block rounded-lg px-3 py-2.5 text-sm font-medium text-violet-50 transition hover:bg-violet-500/15"

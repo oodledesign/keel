@@ -59,7 +59,7 @@ export function ClientJobHistoryBlock({
 
   return (
     <div className="space-y-3 border-t border-zinc-700 pt-4">
-      <h3 className="text-sm font-semibold text-white">Job history</h3>
+      <h3 className="text-sm font-semibold text-white">Projects</h3>
       {loading ? (
         <p className="text-sm text-zinc-500">Loading…</p>
       ) : jobs.length === 0 ? (

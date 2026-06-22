@@ -26,6 +26,8 @@ export function PipelineBoardWrapper({ initialData }: Props) {
   };
 
   return (
-    <PipelineBoard initialData={initialData} onDealWon={handleDealWon} />
+    <div className="flex min-h-full min-w-0 flex-1 flex-col">
+      <PipelineBoard initialData={initialData} onDealWon={handleDealWon} />
+    </div>
   );
 }

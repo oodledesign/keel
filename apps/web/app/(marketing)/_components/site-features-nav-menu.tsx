@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import {
@@ -8,9 +7,9 @@ import {
   NavigationMenuItem,
   NavigationMenuTrigger,
 } from '@kit/ui/navigation-menu';
-import { cn, isRouteActive } from '@kit/ui/utils';
+import { cn } from '@kit/ui/utils';
 
-import { FEATURE_NAV_GROUPS } from '~/lib/marketing/feature-landing-pages';
+import { SiteFeaturesNavPanel } from './site-features-nav-panel';
 
 function featuresNavActive(pathname: string) {
   return pathname === '/features' || pathname.startsWith('/features/');
@@ -34,41 +33,7 @@ export function SiteFeaturesNavMenu() {
         Features
       </NavigationMenuTrigger>
       <NavigationMenuContent>
-        <div className="grid w-[min(100vw-2rem,24rem)] gap-3 border-violet-200/20 bg-[#100d1f]/98 p-2 md:w-[24rem]">
-          <Link
-            href="/features"
-            className="block rounded-lg px-3 py-2.5 text-sm font-medium text-violet-50 transition hover:bg-violet-500/15"
-          >
-            All features
-            <span className="mt-0.5 block text-xs font-normal text-violet-200/70">
-              One connected system for your agency
-            </span>
-          </Link>
-          {FEATURE_NAV_GROUPS.map((group) => (
-            <div key={group.label}>
-              <div className="my-1 border-t border-white/10" />
-              <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-violet-300/60">
-                {group.label}
-              </p>
-              {group.items.map((item) => {
-                const itemActive = isRouteActive(item.href, pathname, false);
-
-                return (
-                  <Link
-                    key={`${group.label}-${item.href}-${item.label}`}
-                    href={item.href}
-                    className={cn(
-                      'block rounded-lg px-3 py-2 text-sm text-violet-100/85 transition hover:bg-violet-500/15 hover:text-violet-50',
-                      itemActive && 'bg-violet-500/10 text-violet-50',
-                    )}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </div>
-          ))}
-        </div>
+        <SiteFeaturesNavPanel />
       </NavigationMenuContent>
     </NavigationMenuItem>
   );

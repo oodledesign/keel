@@ -30,11 +30,13 @@ export function WorkspacePipelineBoardWrapper({
   };
 
   return (
-    <PipelineBoard
-      initialData={initialData}
-      onDealWon={handleDealWon}
-      workspaceAccountSlug={accountSlug}
-      workspaceAccountId={accountId}
-    />
+    <div className="flex min-h-full min-w-0 flex-1 flex-col">
+      <PipelineBoard
+        initialData={initialData}
+        onDealWon={handleDealWon}
+        workspaceAccountSlug={accountSlug}
+        workspaceAccountId={accountId}
+      />
+    </div>
   );
 }

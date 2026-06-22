@@ -2,11 +2,11 @@ import 'server-only';
 
 import { cache } from 'react';
 
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 export const loadAdminAccountBillingState = cache(
   async (accountId: string) => {
-    const client = getSupabaseServerClient();
+    const client = getSupabaseServerAdminClient();
 
     const [entitlements, exempt] = await Promise.all([
       client

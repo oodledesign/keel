@@ -15,6 +15,11 @@ import {
   isWorkspaceNavPath,
 } from '~/lib/marketing/segment-landing-pages';
 
+import {
+  marketingNavPanelClass,
+  marketingNavScrollClass,
+} from './site-marketing-nav-styles';
+
 const workspaces = getMarketingWorkspaceNavLinks();
 
 export function SiteWorkspacesNavMenu() {
@@ -35,7 +40,13 @@ export function SiteWorkspacesNavMenu() {
         Workspaces
       </NavigationMenuTrigger>
       <NavigationMenuContent>
-        <div className="grid w-[min(100vw-2rem,22rem)] gap-1 border-violet-200/20 bg-[#100d1f]/98 p-2 md:w-[22rem]">
+        <div
+          className={cn(
+            'grid w-[min(100vw-2rem,22rem)] gap-1 p-2',
+            marketingNavPanelClass,
+            marketingNavScrollClass,
+          )}
+        >
           {workspaces.map((workspace) => {
             const Icon = workspace.icon;
             const itemActive = pathname === workspace.path;

@@ -2,7 +2,6 @@ import { BadgeX, Ban, ShieldPlus, VenetianMask } from 'lucide-react';
 
 import { Tables } from '@kit/supabase/database';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
 import { AppBreadcrumbs } from '@kit/ui/app-breadcrumbs';
 import { Badge } from '@kit/ui/badge';
@@ -31,9 +30,7 @@ import { AdminReactivateUserDialog } from './admin-reactivate-user-dialog';
 type Account = Tables<'accounts'>;
 type Membership = Tables<'accounts_memberships'>;
 
-export function AdminAccountPage(props: {
-  account: Account & { memberships: Membership[] };
-}) {
+export function AdminAccountPage(props: { account: Account }) {
   const isPersonalAccount = props.account.is_personal_account;
 
   if (isPersonalAccount) {
@@ -161,9 +158,7 @@ async function PersonalAccountPage(props: { account: Account }) {
   );
 }
 
-async function TeamAccountPage(props: {
-  account: Account & { memberships: Membership[] };
-}) {
+async function TeamAccountPage(props: { account: Account }) {
   const members = await getMembers(props.account.slug ?? '');
 
   return (
@@ -228,7 +223,7 @@ async function TeamAccountPage(props: {
 }
 
 async function SubscriptionsTable(props: { accountId: string }) {
-  const client = getSupabaseServerClient();
+  const client = getSupabaseServerAdminClient();
 
   const { data: subscription, error } = await client
     .from('subscriptions')
@@ -369,7 +364,7 @@ async function SubscriptionsTable(props: { accountId: string }) {
 }
 
 async function getMemberships(userId: string) {
-  const client = getSupabaseServerClient();
+  const client = getSupabaseServerAdminClient();
 
   const memberships = await client
     .from('accounts_memberships')
@@ -392,7 +387,7 @@ async function getMemberships(userId: string) {
 }
 
 async function getMembers(accountSlug: string) {
-  const client = getSupabaseServerClient();
+  const client = getSupabaseServerAdminClient();
 
   const members = await client.rpc('get_account_members', {
     account_slug: accountSlug,

@@ -13,7 +13,6 @@ import {
   Kanban,
   Keyboard,
   LayoutDashboard,
-  Link2,
   ListChecks,
   Mail,
   MessageSquare,
@@ -96,8 +95,6 @@ function renderCover(slug: FeatureSlug, compact: boolean) {
       return <SopsCover compact={compact} />;
     case 'finances':
       return <FinancesCover compact={compact} />;
-    case 'freeagent':
-      return <FreeAgentCover compact={compact} />;
     default:
       return null;
   }
@@ -565,39 +562,6 @@ function FinancesCover({ compact }: { compact: boolean }) {
         <RefreshCw className="h-3 w-3" />
         FreeAgent synced
       </div>
-    </div>
-  );
-}
-
-function FreeAgentCover({ compact }: { compact: boolean }) {
-  return (
-    <div className="flex h-full flex-col rounded-[1.25rem] border border-sky-400/20 bg-[linear-gradient(155deg,#0c1929,#122a45)] p-4">
-      <div className="flex items-center gap-2">
-        <Link2 className="h-4 w-4 text-sky-300" />
-        <p className={cn('font-semibold text-sky-50', compact ? 'text-xs' : 'text-sm')}>
-          FreeAgent → Ozer
-        </p>
-      </div>
-      <div className="mt-3 space-y-1.5">
-        {[
-          { label: 'Business account', amount: '−£240.00', cat: 'Software' },
-          { label: 'Client payment', amount: '+£2,400', cat: 'Sales' },
-        ].map((row) => (
-          <div
-            key={row.label}
-            className="flex items-center justify-between rounded-lg border border-white/8 bg-white/[0.04] px-2.5 py-1.5"
-          >
-            <div className="min-w-0">
-              <p className={cn('truncate text-white/85', compact ? 'text-[10px]' : 'text-[11px]')}>
-                {row.label}
-              </p>
-              <p className="text-[9px] text-sky-200/60">{row.cat}</p>
-            </div>
-            <p className="shrink-0 text-[10px] font-medium text-sky-100">{row.amount}</p>
-          </div>
-        ))}
-      </div>
-      <p className="mt-2 text-[9px] text-sky-200/50">Bank sync · categories imported</p>
     </div>
   );
 }

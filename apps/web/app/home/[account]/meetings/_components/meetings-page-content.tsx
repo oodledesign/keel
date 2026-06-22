@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, useTransition } from 'react';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import { Loader2, Mic, PlusCircle, Trash2, Upload } from 'lucide-react';
 
@@ -83,6 +83,7 @@ export function MeetingsPageContent({
   canEdit,
 }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [rows, setRows] = useState(() =>
     initialTranscripts.map((row) => mapTranscript(row)),
   );
@@ -96,6 +97,27 @@ export function MeetingsPageContent({
   useEffect(() => {
     setRows(initialTranscripts.map((row) => mapTranscript(row)));
   }, [initialTranscripts]);
+
+  useEffect(() => {
+    if (!canEdit || searchParams.get('create') !== '1') {
+      return;
+    }
+
+    const clientFromQuery = searchParams.get('clientId');
+    if (clientFromQuery) {
+      setClientId(clientFromQuery);
+    }
+    setShowForm(true);
+
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.delete('create');
+    nextParams.delete('clientId');
+    const nextPath = nextParams.toString()
+      ? `${pathsConfig.app.accountMeetings.replace('[account]', accountSlug)}?${nextParams.toString()}`
+      : pathsConfig.app.accountMeetings.replace('[account]', accountSlug);
+
+    router.replace(nextPath, { scroll: false });
+  }, [accountSlug, canEdit, router, searchParams]);
 
   const meetingDetailPath = (id: string) =>
     pathsConfig.app.accountMeetingDetail
@@ -343,8 +365,8 @@ export function MeetingsPageContent({
       )}
 
       <p className="text-xs text-zinc-500">
-        Tip: you can also add transcripts from a client&apos;s Transcripts tab — they
-        appear here automatically.
+        Tip: you can also add meetings from a client&apos;s Meetings tab — they appear
+        here automatically.
       </p>
     </div>
   );

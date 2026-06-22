@@ -70,7 +70,7 @@ const appConfig = AppConfigSchema.parse({
   title: process.env.NEXT_PUBLIC_SITE_TITLE ?? productName,
   description:
     process.env.NEXT_PUBLIC_SITE_DESCRIPTION ??
-    'Ozer is the Life CRM that connects personal life, business, family, and community in one account.',
+    'Ozer is the workspace OS for freelancers and small agencies — personal, business, property, and community in one account. One home for tasks, planner, and every workspace.',
   url: process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000',
   locale: process.env.NEXT_PUBLIC_DEFAULT_LOCALE,
   theme: (process.env.NEXT_PUBLIC_DEFAULT_THEME_MODE ?? 'light') as

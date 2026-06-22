@@ -19,7 +19,6 @@ export type FeatureSlug =
   | 'client-portals'
   | 'invoicing'
   | 'finances'
-  | 'freeagent'
   | 'second-brain'
   | 'messaging'
   | 'notes';
@@ -68,7 +67,6 @@ export const FEATURE_INDEX_ORDER: FeatureSlug[] = [
   'client-portals',
   'invoicing',
   'finances',
-  'freeagent',
   'messaging',
   'notes',
   'second-brain',
@@ -101,10 +99,7 @@ export const FEATURE_NAV_GROUPS = [
   },
   {
     label: 'Finance',
-    items: [
-      { label: 'Finances', href: '/features/finances' },
-      { label: 'FreeAgent', href: '/features/freeagent' },
-    ],
+    items: [{ label: 'Finances', href: '/features/finances' }],
   },
   {
     label: 'Intelligence',
@@ -1409,6 +1404,18 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
             'Connect your FreeAgent account to import bank transactions and category explanations. Ozer keeps your finance view aligned with what your accountant sees.',
         },
         {
+          icon: 'Link',
+          title: 'Secure OAuth connection',
+          description:
+            'Authorise Ozer to read your FreeAgent company data. Tokens refresh automatically — no manual re-auth unless you disconnect.',
+        },
+        {
+          icon: 'FolderKanban',
+          title: 'Categories mapped to Ozer',
+          description:
+            'FreeAgent chart-of-accounts categories sync into Ozer so AI categorisation and reporting speak the same language as your books.',
+        },
+        {
           icon: 'AlertTriangle',
           title: 'Outstanding payments, surfaced',
           description:
@@ -1416,7 +1423,6 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         },
       ],
       connectedTo: [
-        { label: 'FreeAgent', href: '/features/freeagent' },
         { label: 'Invoicing', href: '/features/invoicing' },
         { label: 'Projects', href: '/features/project-management' },
         { label: 'Pipeline', href: '/features/pipeline' },
@@ -1436,99 +1442,24 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
             'Bank accounts, transactions, and category explanations from FreeAgent import into Ozer on a schedule. You get a unified finance dashboard without manually exporting CSVs.',
         },
         {
+          question: 'Do I need a FreeAgent account?',
+          answer:
+            'Only if you want the integration. Ozer Finances works on its own for revenue, invoices, and project profitability. FreeAgent sync is optional for UK users who already keep their books there.',
+        },
+        {
+          question: 'Is the FreeAgent integration UK-only?',
+          answer:
+            'FreeAgent is built for UK small businesses, so the bank sync integration is aimed at UK freelancers and agencies using FreeAgent today.',
+        },
+        {
+          question: 'Can I disconnect FreeAgent at any time?',
+          answer:
+            'Yes. Disconnect FreeAgent from workspace settings. Previously imported transactions remain in Ozer unless you choose to remove them.',
+        },
+        {
           question: 'Is financial data included in the second brain?',
           answer:
             "Invoice history and project financials are part of your Ozer record and accessible via search — so you can ask things like 'what did Thistleleaf spend last quarter' and get an answer.",
-        },
-      ],
-    },
-  },
-  freeagent: {
-    slug: 'freeagent',
-    name: 'FreeAgent Integration',
-    shortDescription:
-      'Sync bank transactions and categories from FreeAgent into Ozer Finances.',
-    indexIcon: 'RefreshCw',
-    primaryKeyword: 'FreeAgent integration for freelancers',
-    heroBadge: 'UK accounting · OAuth connect',
-    metadata: {
-      title: 'FreeAgent Integration | Ozer',
-      description:
-        'Connect FreeAgent to Ozer and sync bank transactions, categories, and explanations automatically. Operational finance that stays aligned with your books.',
-      keywords: [
-        'FreeAgent integration',
-        'FreeAgent bank sync',
-        'freelance accounting integration',
-        'UK freelancer FreeAgent',
-        'Ozer FreeAgent',
-      ],
-      canonical: 'https://ozer.so/features/freeagent',
-      openGraphTitle: 'FreeAgent Integration | Ozer',
-    },
-    jsonLd: {
-      '@context': 'https://schema.org',
-      '@type': 'WebPage',
-      name: 'FreeAgent Integration',
-      description:
-        'Connect FreeAgent to Ozer to sync bank transactions and category data into your finance dashboard.',
-      url: 'https://ozer.so/features/freeagent',
-      isPartOf: { '@type': 'WebSite', name: 'Ozer', url: 'https://ozer.so' },
-    },
-    props: {
-      eyebrow: 'FreeAgent × Ozer',
-      heading: 'Your FreeAgent Books and Your Ozer Projects — Finally in Sync',
-      subheading:
-        'Connect FreeAgent once. Bank transactions and category explanations flow into Ozer Finances automatically — so your operational dashboard reflects your real accounts without double entry.',
-      highlights: [
-        {
-          icon: 'Link',
-          title: 'Secure OAuth connection',
-          description:
-            'Authorise Ozer to read your FreeAgent company data. Tokens refresh automatically — no manual re-auth unless you disconnect.',
-        },
-        {
-          icon: 'RefreshCw',
-          title: 'Scheduled bank sync',
-          description:
-            'Transactions import on a regular schedule — full or incremental sync keeps new activity current without you running exports.',
-        },
-        {
-          icon: 'FolderKanban',
-          title: 'Categories mapped to Ozer',
-          description:
-            'FreeAgent chart-of-accounts categories sync into Ozer so AI categorisation and reporting speak the same language as your books.',
-        },
-        {
-          icon: 'BarChart3',
-          title: 'One finance dashboard',
-          description:
-            'See bank activity alongside Ozer invoices and project revenue. Understand cash flow in the context of the work that generated it.',
-        },
-      ],
-      connectedTo: [
-        { label: 'Finances', href: '/features/finances' },
-        { label: 'Invoicing', href: '/features/invoicing' },
-        { label: 'Projects', href: '/features/project-management' },
-        { label: 'Pipeline', href: '/features/pipeline' },
-      ],
-      connectionHeading: 'Accounting data that feeds your workflow',
-      connectionDescription:
-        'FreeAgent handles the books. Ozer handles the work. The integration means you see both in one place.',
-      faqs: [
-        {
-          question: 'Do I need a FreeAgent account?',
-          answer:
-            'Yes. The integration connects to your existing FreeAgent company. Ozer reads bank and category data — it does not replace FreeAgent for statutory accounts or tax.',
-        },
-        {
-          question: 'Is this UK-only?',
-          answer:
-            'FreeAgent is built for UK small businesses, so this integration is aimed at UK freelancers and agencies using FreeAgent today.',
-        },
-        {
-          question: 'Can I disconnect at any time?',
-          answer:
-            'Yes. Disconnect FreeAgent from workspace settings. Previously imported transactions remain in Ozer unless you choose to remove them.',
         },
       ],
     },

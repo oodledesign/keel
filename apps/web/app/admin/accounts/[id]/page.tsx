@@ -1,13 +1,11 @@
-import { cache } from 'react';
-
 import { AdminAccountPage } from '@kit/admin/components/admin-account-page';
 import { AdminGuard } from '@kit/admin/components/admin-guard';
 import { PageBody } from '@kit/ui/page';
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { AdminBillingGrantsPanel } from './_components/admin-billing-grants-panel';
 import { AdminPersonalAddonsPanel } from './_components/admin-personal-addons-panel';
 import { loadAdminAccountBillingState } from './_lib/load-admin-account-billing';
+import { loadAdminAccount } from './_lib/load-admin-account';
 
 interface Params {
   params: Promise<{
@@ -17,7 +15,7 @@ interface Params {
 
 export const generateMetadata = async (props: Params) => {
   const params = await props.params;
-  const account = await loadAccount(params.id);
+  const account = await loadAdminAccount(params.id);
 
   return {
     title: `Admin | ${account.name}`,
@@ -26,8 +24,8 @@ export const generateMetadata = async (props: Params) => {
 
 async function AccountPage(props: Params) {
   const params = await props.params;
-  const account = await loadAccount(params.id);
-  const billing = await loadAdminAccountBillingState(params.id);
+  const account = await loadAdminAccount(params.id);
+  const billing = await loadAdminAccountBillingState(account.id);
   const isPersonal = account.is_personal_account;
 
   return (
@@ -37,7 +35,7 @@ async function AccountPage(props: Params) {
         <PageBody className="border-t py-4">
           <div className="mx-auto max-w-3xl px-4">
             <AdminPersonalAddonsPanel
-              accountId={params.id}
+              accountId={account.id}
               entitlements={billing.entitlements}
               billingExempt={billing.billingExempt}
             />
@@ -47,7 +45,7 @@ async function AccountPage(props: Params) {
         <PageBody className="border-t py-4">
           <div className="mx-auto max-w-3xl px-4">
             <AdminBillingGrantsPanel
-              accountId={params.id}
+              accountId={account.id}
               entitlements={billing.entitlements}
               billingExempt={billing.billingExempt}
             />
@@ -59,21 +57,3 @@ async function AccountPage(props: Params) {
 }
 
 export default AdminGuard(AccountPage);
-
-const loadAccount = cache(accountLoader);
-
-async function accountLoader(id: string) {
-  const client = getSupabaseServerClient();
-
-  const { data, error } = await client
-    .from('accounts')
-    .select('*, memberships: accounts_memberships (*)')
-    .eq('id', id)
-    .single();
-
-  if (error) {
-    throw error;
-  }
-
-  return data;
-}

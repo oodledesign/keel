@@ -98,7 +98,7 @@ export const loadAdminUsersPage = cache(
           user.banned_until != null &&
           user.banned_until !== 'none',
         isSuperAdmin: user.app_metadata?.role === 'super-admin',
-        personalAccountId: personalAccountByUserId.get(user.id) ?? user.id,
+        personalAccountId: personalAccountByUserId.get(user.id) ?? null,
       }));
 
       if (query?.trim()) {

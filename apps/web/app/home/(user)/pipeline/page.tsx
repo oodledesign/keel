@@ -9,7 +9,7 @@ export const metadata = { title: 'Pipeline' };
 
 export default function PipelinePage() {
   return (
-    <PageBody className="bg-[var(--workspace-shell-canvas)]">
+    <PageBody className="flex min-h-0 flex-1 flex-col bg-[var(--workspace-shell-canvas)] p-0">
       <Suspense fallback={<PipelineSkeleton />}>
         <PipelineContent />
       </Suspense>
@@ -24,7 +24,7 @@ async function PipelineContent() {
 
 function PipelineSkeleton() {
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 px-4 pb-12 pt-6 md:px-6 lg:px-8">
+    <div className="flex min-h-full w-full flex-col gap-6 px-4 pb-12 pt-6 md:px-6 lg:px-8">
       <div className="h-10 w-48 animate-pulse rounded-xl bg-white/[0.04]" />
       <div className="flex gap-4 overflow-x-auto">
         {Array.from({ length: 7 }).map((_, i) => (
