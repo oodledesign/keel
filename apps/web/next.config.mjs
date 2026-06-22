@@ -289,7 +289,12 @@ async function getRedirects() {
     },
     {
       source: '/home/planner',
-      destination: '/app/planner',
+      destination: '/app/planner/plan',
+      permanent: false,
+    },
+    {
+      source: '/home/planner/:path*',
+      destination: '/app/planner/:path*',
       permanent: false,
     },
     {
@@ -370,6 +375,16 @@ async function getRedirects() {
 
   return [
     ...legacyHomeRedirects,
+    {
+      source: '/app/planner',
+      destination: '/app/planner/plan',
+      permanent: false,
+    },
+    {
+      source: '/app/:account/planner',
+      destination: '/app/:account/planner/plan',
+      permanent: false,
+    },
     {
       source: '/app/work/:account/:path*',
       destination: '/app/:account/:path*',

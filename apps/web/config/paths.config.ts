@@ -139,7 +139,7 @@ const pathsConfig = PathsSchema.parse({
   },
   app: {
     home: '/app',
-    personalPlanner: '/app/planner',
+    personalPlanner: '/app/planner/plan',
     personalPlannerDay: '/app/planner/day',
     personalPeople: '/app/people',
     personalPeopleDetail: '/app/people/[personId]',
@@ -180,7 +180,7 @@ const pathsConfig = PathsSchema.parse({
     accountTasksExtract: `/app/[account]/tasks/extract`,
     accountTasksReview: `/app/[account]/tasks/review`,
     accountTaskAutomationSettings: `/app/[account]/settings/task-automation`,
-    accountPlanner: `/app/[account]/planner`,
+    accountPlanner: `/app/[account]/planner/plan`,
     accountPlannerDay: `/app/[account]/planner/day`,
     accountPipeline: `/app/[account]/pipeline`,
     accountJobDetail: `/app/[account]/jobs/[id]`,

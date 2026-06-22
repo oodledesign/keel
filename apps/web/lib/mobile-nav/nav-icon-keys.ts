@@ -98,6 +98,26 @@ export function resolveNavIconKey(path: string): MobileNavIconKey {
     return 'today';
   }
 
+  if (normalized === normalizeNavPath(pathsConfig.app.personalPlanner)) {
+    return 'planner';
+  }
+
+  if (
+    parts.length >= 4 &&
+    parts[2] === 'planner' &&
+    parts[3] === 'day'
+  ) {
+    return 'today';
+  }
+
+  if (
+    parts.length >= 4 &&
+    parts[2] === 'planner' &&
+    parts[3] === 'plan'
+  ) {
+    return 'planner';
+  }
+
   if (normalized === normalizeNavPath(pathsConfig.app.personalEmailAssistant)) {
     return 'email';
   }

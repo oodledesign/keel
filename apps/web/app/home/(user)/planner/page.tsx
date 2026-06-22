@@ -1,20 +1,7 @@
-import { PageBody } from '@kit/ui/page';
+import { redirect } from 'next/navigation';
 
-import { withI18n } from '~/lib/i18n/with-i18n';
+import pathsConfig from '~/config/paths.config';
 
-import { PlannerPageClient } from './_components/PlannerPageClient';
-import { loadPlannerPageData } from './_lib/server/planner.loader';
-
-export const metadata = { title: 'Planner' };
-
-async function PlannerPage() {
-  const data = await loadPlannerPageData();
-
-  return (
-    <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-white lg:px-6">
-      <PlannerPageClient initialData={data} />
-    </PageBody>
-  );
+export default function PersonalPlannerIndexPage() {
+  redirect(pathsConfig.app.personalPlanner);
 }
-
-export default withI18n(PlannerPage);
