@@ -78,6 +78,7 @@ export async function refreshGoogleCalendarToken(refreshToken: string) {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: params,
+    signal: AbortSignal.timeout(15_000),
   });
 
   if (!res.ok) {

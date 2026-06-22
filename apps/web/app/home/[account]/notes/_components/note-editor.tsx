@@ -232,7 +232,6 @@ export function NoteEditor({
 
     flushBrainIndex();
     router.push(notesHref);
-    router.refresh();
   }, [flushBrainIndex, flushPendingSave, notesHref, router]);
 
   useEffect(() => {

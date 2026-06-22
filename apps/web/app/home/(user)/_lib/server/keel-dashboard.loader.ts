@@ -603,8 +603,14 @@ export const loadKeelDashboard = cache(async (): Promise<KeelDashboardData> => {
     }));
 
   const bizIdsByWorkspace = new Map<string, string[]>();
-  for (const w of workspaceRows) {
-    bizIdsByWorkspace.set(w.id, await loadBusinessIdsForTeamAccount(client, w.id));
+  const bizIdEntries = await Promise.all(
+    workspaceRows.map(async (w) => {
+      const ids = await loadBusinessIdsForTeamAccount(client, w.id);
+      return [w.id, ids] as const;
+    }),
+  );
+  for (const [workspaceId, ids] of bizIdEntries) {
+    bizIdsByWorkspace.set(workspaceId, ids);
   }
 
   const workspaceIds = workspaceRows.map((w) => w.id);

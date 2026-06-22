@@ -96,6 +96,7 @@ async function googleJson<T>(
 ): Promise<T> {
   const res = await fetch(`${GOOGLE_CALENDAR_API}${path}`, {
     ...init,
+    signal: init?.signal ?? AbortSignal.timeout(15_000),
     headers: {
       authorization: `Bearer ${connection.accessToken}`,
       'content-type': 'application/json',
