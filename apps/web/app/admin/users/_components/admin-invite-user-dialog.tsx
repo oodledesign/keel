@@ -155,7 +155,13 @@ export function AdminInviteUserDialog(props: React.PropsWithChildren) {
   const onSubmit = (data: CreateAdminUserInviteInput) => {
     startTransition(async () => {
       try {
-        await createAdminUserInviteAction(data);
+        const result = await createAdminUserInviteAction(data);
+
+        if (!result.success) {
+          toast.error(result.error);
+          return;
+        }
+
         toast.success(`Invitation sent to ${data.email}`);
         form.reset();
         setSelectedWorkspaceKeys(new Set([workspaceKey(WORKSPACE_OPTIONS[0]!)]));
@@ -177,7 +183,9 @@ export function AdminInviteUserDialog(props: React.PropsWithChildren) {
           <AlertDialogTitle>Invite user</AlertDialogTitle>
           <AlertDialogDescription>
             Send an email invitation with access configured before they sign in.
-            Workspaces and add-ons are created automatically on acceptance.
+            Workspaces and add-ons are created automatically on acceptance. If SES is
+            still in sandbox mode, verify both the sender and the invitee email in
+            Amazon SES, or request production access.
           </AlertDialogDescription>
         </AlertDialogHeader>
 

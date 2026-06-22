@@ -41,10 +41,19 @@ function PendingInviteRow(props: { invite: AdminUserInviteRow }) {
   const summary = summarizeAccessConfig(config);
   const expires = new Date(props.invite.expires_at).toLocaleDateString();
 
-  const run = (action: () => Promise<{ success: boolean }>, success: string) => {
+  const run = (
+    action: () => Promise<{ success: boolean; error?: string }>,
+    success: string,
+  ) => {
     startTransition(async () => {
       try {
-        await action();
+        const result = await action();
+
+        if (!result.success) {
+          toast.error(result.error ?? 'Action failed');
+          return;
+        }
+
         toast.success(success);
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'Action failed');

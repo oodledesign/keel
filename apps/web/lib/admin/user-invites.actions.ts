@@ -12,12 +12,17 @@ import {
   buildAccessConfigFromInput,
   CreateAdminUserInviteSchema,
 } from '~/lib/admin/user-invites.schema';
+import { formatEmailDeliveryError } from '~/lib/email/format-email-delivery-error';
 import {
   createAdminUserInvite,
   fulfillAdminUserInvite,
   resendAdminUserInvite,
   revokeAdminUserInvite,
 } from '~/lib/admin/user-invites.service';
+
+export type AdminUserInviteActionResult =
+  | { success: true }
+  | { success: false; error: string };
 
 async function requireSuperAdminActor() {
   const client = getSupabaseServerClient();
@@ -46,22 +51,28 @@ async function requireSuperAdminActor() {
 }
 
 export const createAdminUserInviteAction = enhanceAction(
-  async (input) => {
-    const { user, inviterName } = await requireSuperAdminActor();
-    const admin = getSupabaseServerAdminClient();
-    const accessConfig = buildAccessConfigFromInput(input);
+  async (input): Promise<AdminUserInviteActionResult> => {
+    try {
+      const { user, inviterName } = await requireSuperAdminActor();
+      const admin = getSupabaseServerAdminClient();
+      const accessConfig = buildAccessConfigFromInput(input);
 
-    await createAdminUserInvite(admin, {
-      email: input.email,
-      invitedBy: user.id,
-      inviterName,
-      accessConfig,
-    });
+      await createAdminUserInvite(admin, {
+        email: input.email,
+        invitedBy: user.id,
+        inviterName,
+        accessConfig,
+      });
 
-    revalidatePath('/admin/users');
-    revalidatePath('/admin/audit');
+      revalidatePath('/admin/users');
+      revalidatePath('/admin/audit');
 
-    return { success: true };
+      return { success: true };
+    } catch (error) {
+      const message = formatEmailDeliveryError(error);
+      console.error('[admin-user-invite] create failed:', error);
+      return { success: false, error: message };
+    }
   },
   { schema: CreateAdminUserInviteSchema },
 );
@@ -86,15 +97,21 @@ export const revokeAdminUserInviteAction = enhanceAction(
 );
 
 export const resendAdminUserInviteAction = enhanceAction(
-  async (input) => {
-    const { inviterName } = await requireSuperAdminActor();
-    const admin = getSupabaseServerAdminClient();
+  async (input): Promise<AdminUserInviteActionResult> => {
+    try {
+      const { inviterName } = await requireSuperAdminActor();
+      const admin = getSupabaseServerAdminClient();
 
-    await resendAdminUserInvite(admin, input.inviteId, inviterName);
+      await resendAdminUserInvite(admin, input.inviteId, inviterName);
 
-    revalidatePath('/admin/users');
+      revalidatePath('/admin/users');
 
-    return { success: true };
+      return { success: true };
+    } catch (error) {
+      const message = formatEmailDeliveryError(error);
+      console.error('[admin-user-invite] resend failed:', error);
+      return { success: false, error: message };
+    }
   },
   {
     schema: z.object({
