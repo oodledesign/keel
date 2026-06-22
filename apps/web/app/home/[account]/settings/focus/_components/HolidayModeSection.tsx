@@ -29,9 +29,11 @@ import {
   getGmailVacationStatus,
   syncHolidayModeToGmail,
   turnOffGmailVacationResponder,
-  type GmailVacationStatus,
-  type WorkspaceFocusSettings,
 } from '~/home/[account]/settings/focus/actions';
+import type {
+  GmailVacationStatus,
+  WorkspaceFocusSettings,
+} from '~/home/[account]/settings/focus/_lib/focus-settings.schema';
 
 import {
   HOLIDAY_LABEL_PRESETS,

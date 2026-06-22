@@ -1,5 +1,7 @@
-import type { WorkspaceFocusSettings } from '~/home/[account]/settings/focus/actions';
-import { WorkspaceFocusSettingsSchema } from '~/home/[account]/settings/focus/actions';
+import {
+  WorkspaceFocusSettingsSchema,
+  type WorkspaceFocusSettings,
+} from '~/home/[account]/settings/focus/_lib/focus-settings.schema';
 import type { z } from 'zod';
 
 export type FocusFormValues = z.infer<typeof WorkspaceFocusSettingsSchema>;

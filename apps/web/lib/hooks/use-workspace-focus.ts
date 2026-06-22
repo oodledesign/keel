@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { autoDisableHolidayMode } from '~/home/[account]/settings/focus/actions';
-import type { WorkspaceFocusSettings } from '~/home/[account]/settings/focus/actions';
+import type { WorkspaceFocusSettings } from '~/home/[account]/settings/focus/_lib/focus-settings.schema';
 import {
   computeWorkspaceFocusState,
   DEFAULT_WORKSPACE_FOCUS_STATE,

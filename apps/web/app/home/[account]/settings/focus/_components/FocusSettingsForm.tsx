@@ -14,9 +14,11 @@ import {
   getWorkspaceFocusSettings,
   syncHolidayModeToGmail,
   upsertWorkspaceFocusSettings,
+} from '~/home/[account]/settings/focus/actions';
+import {
   WorkspaceFocusSettingsSchema,
   type WorkspaceFocusSettings,
-} from '~/home/[account]/settings/focus/actions';
+} from '~/home/[account]/settings/focus/_lib/focus-settings.schema';
 
 import { buildFocusFormDefaults } from '../_lib/focus-form';
 import { HolidayModeSection } from './HolidayModeSection';

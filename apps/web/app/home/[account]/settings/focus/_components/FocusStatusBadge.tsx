@@ -10,7 +10,7 @@ import {
 } from '@kit/ui/tooltip';
 import { cn } from '@kit/ui/utils';
 
-import type { WorkspaceFocusSettings } from '~/home/[account]/settings/focus/actions';
+import type { WorkspaceFocusSettings } from '~/home/[account]/settings/focus/_lib/focus-settings.schema';
 import useWorkspaceFocus, {
   useWorkspaceFocusSnapshot,
 } from '~/lib/hooks/use-workspace-focus';

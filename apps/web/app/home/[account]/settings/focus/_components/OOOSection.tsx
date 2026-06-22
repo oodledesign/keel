@@ -25,7 +25,7 @@ import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
-import type { WorkspaceFocusSettings } from '~/home/[account]/settings/focus/actions';
+import type { WorkspaceFocusSettings } from '~/home/[account]/settings/focus/_lib/focus-settings.schema';
 import useWorkspaceFocus from '~/lib/hooks/use-workspace-focus';
 
 import {
