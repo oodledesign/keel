@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+import { SendRawEmailCommand, SESClient } from '@aws-sdk/client-ses';
 import { z } from 'zod';
 
 import { Mailer, MailerSchema } from '@kit/mailers-shared';
@@ -21,12 +21,49 @@ function getSesConfiguration() {
   });
 }
 
+function sanitizeHeader(value: string) {
+  return value.replace(/[\r\n]+/g, ' ').trim();
+}
+
+function buildRawEmail(config: Config) {
+  const from = sanitizeHeader(config.from);
+  const to = sanitizeHeader(config.to);
+  const subject = sanitizeHeader(config.subject);
+
+  if ('text' in config) {
+    return [
+      `From: ${from}`,
+      `To: ${to}`,
+      `Subject: ${subject}`,
+      'MIME-Version: 1.0',
+      'Content-Type: text/plain; charset=UTF-8',
+      'Content-Transfer-Encoding: 8bit',
+      '',
+      config.text,
+      '',
+    ].join('\r\n');
+  }
+
+  return [
+    `From: ${from}`,
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    'MIME-Version: 1.0',
+    'Content-Type: text/html; charset=UTF-8',
+    'Content-Transfer-Encoding: 8bit',
+    '',
+    config.html,
+    '',
+  ].join('\r\n');
+}
+
 export function createSesMailer() {
   return new SesMailer();
 }
 
 /**
- * Sends email via Amazon SES API (not SMTP).
+ * Sends email via Amazon SES API using SendRawEmail so IAM policies that
+ * only grant ses:SendRawEmail (common for SMTP credential users) still work.
  */
 class SesMailer implements Mailer {
   async sendEmail(config: Config) {
@@ -39,20 +76,12 @@ class SesMailer implements Mailer {
       },
     });
 
-    const body =
-      'text' in config
-        ? { Text: { Data: config.text, Charset: 'UTF-8' } }
-        : { Html: { Data: config.html, Charset: 'UTF-8' } };
-
     await client.send(
-      new SendEmailCommand({
+      new SendRawEmailCommand({
         Source: config.from,
-        Destination: {
-          ToAddresses: [config.to],
-        },
-        Message: {
-          Subject: { Data: config.subject, Charset: 'UTF-8' },
-          Body: body,
+        Destinations: [config.to],
+        RawMessage: {
+          Data: Buffer.from(buildRawEmail(config), 'utf8'),
         },
       }),
     );
