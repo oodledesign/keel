@@ -4,7 +4,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 
-import { requirePersonalAccountId } from './_lib/server/personal-notes.loader';
+import { requirePersonalAccountId } from '../_lib/server/personal-notes.loader';
 
 async function PersonalNewNotePage() {
   const { accountId, userId } = await requirePersonalAccountId();

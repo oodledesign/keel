@@ -1,6 +1,6 @@
 import { withI18n } from '~/lib/i18n/with-i18n';
 
-import { NoteEditor } from '../../[account]/notes/_components/note-editor';
+import { NoteEditor } from '~/home/[account]/notes/_components/note-editor';
 import { loadPersonalNoteDetailData } from '../_lib/server/personal-notes.loader';
 
 import pathsConfig from '~/config/paths.config';

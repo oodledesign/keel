@@ -2,12 +2,8 @@ import Link from 'next/link';
 
 import {
   ArrowRight,
-  Briefcase,
   Check,
-  Heart,
-  Home,
   Link2,
-  Users,
   X,
 } from 'lucide-react';
 
@@ -17,7 +13,6 @@ import { cn } from '@kit/ui/utils';
 import {
   INTERCONNECTED_WORKSPACES_MARKETING,
   type InterconnectedBenefit,
-  type InterconnectedWorkspaceNode,
 } from '~/lib/marketing/interconnected-workspaces';
 
 import { WorkspaceOrbitDiagram } from './workspace-orbit-diagram';
@@ -26,12 +21,6 @@ type Props = {
   className?: string;
   /** Emphasise personal-free angle on /personal */
   variant?: 'default' | 'personal' | 'work';
-};
-
-const NODE_ICONS: Record<string, typeof Home> = {
-  work: Briefcase,
-  family: Heart,
-  community: Users,
 };
 
 export function InterconnectedWorkspacesSection({
@@ -84,17 +73,9 @@ export function InterconnectedWorkspacesSection({
             </p>
           </div>
 
-          <div className="hidden lg:block">
+          <div className="w-full">
             <WorkspaceOrbitDiagram nodes={m.workspaceNodes} />
           </div>
-        </div>
-
-        <div className="mt-12 lg:hidden">
-          <WorkspaceHubDiagram
-            hubLabel={m.hubLabel}
-            hubCaption={m.hubCaption}
-            nodes={m.workspaceNodes}
-          />
         </div>
 
         <div className="mt-14 lg:mt-16">
@@ -139,63 +120,6 @@ export function InterconnectedWorkspacesSection({
         </div>
       </div>
     </section>
-  );
-}
-
-function WorkspaceHubDiagram({
-  hubLabel,
-  hubCaption,
-  nodes,
-}: {
-  hubLabel: string;
-  hubCaption: string;
-  nodes: InterconnectedWorkspaceNode[];
-}) {
-  return (
-    <div className="relative mx-auto max-w-4xl">
-      <div className="flex flex-col items-center gap-8">
-        <div className="relative z-10 w-full max-w-md rounded-2xl border border-[#2A9D8F]/40 bg-[linear-gradient(145deg,rgba(42,157,143,0.18),rgba(11,19,43,0.95))] px-6 py-5 text-center shadow-[0_0_60px_rgba(42,157,143,0.15)]">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#7ee8d8]">
-            {hubLabel}
-          </p>
-          <p className="mt-2 text-lg font-semibold text-white">
-            One calm command centre
-          </p>
-          <p className="mt-1 text-sm text-violet-100/70">{hubCaption}</p>
-        </div>
-
-        <div
-          className="hidden h-8 w-px bg-gradient-to-b from-[#2A9D8F]/60 to-white/10 md:block"
-          aria-hidden
-        />
-
-        <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {nodes.map((node) => {
-            const Icon = NODE_ICONS[node.id] ?? Briefcase;
-            return (
-              <div
-                key={node.id}
-                className="relative rounded-xl border border-white/10 bg-white/[0.04] px-4 py-4 text-center transition hover:border-white/20"
-              >
-                <span
-                  className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl border border-white/10"
-                  style={{ backgroundColor: `${node.color}22` }}
-                >
-                  <Icon className="h-5 w-5" style={{ color: node.color }} />
-                </span>
-                <p className="mt-3 text-sm font-semibold text-white">{node.label}</p>
-                <p className="mt-1 text-xs text-violet-100/60">{node.examples}</p>
-              </div>
-            );
-          })}
-        </div>
-
-        <p className="max-w-lg text-center text-xs text-violet-200/55">
-          Add workspaces as life grows — personal home stays the hub that ties them
-          together. Unlike traditional CRMs, nothing gets walled off.
-        </p>
-      </div>
-    </div>
   );
 }
 

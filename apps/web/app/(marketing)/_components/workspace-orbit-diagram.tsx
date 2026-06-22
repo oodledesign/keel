@@ -159,7 +159,7 @@ function OrbitWorkspaceCard({
   return (
     <div
       className={cn(
-        'relative z-10 w-[140px] rounded-xl border border-white/10 bg-[#0F1B35]/90 px-3 py-3 text-center shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-sm',
+        'relative z-10 w-[104px] rounded-xl border border-white/10 bg-[#0F1B35]/90 px-2 py-2.5 text-center shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-sm sm:w-[128px] sm:px-3 sm:py-3 lg:w-[140px]',
         className,
       )}
     >
@@ -170,7 +170,7 @@ function OrbitWorkspaceCard({
         <Icon className="h-4 w-4" style={{ color: node.color }} aria-hidden />
       </span>
       <p className="mt-2 text-sm font-bold text-white">{node.label}</p>
-      <p className="mt-0.5 text-[10px] leading-snug text-violet-100/60">
+      <p className="mt-1.5 text-[9px] leading-snug text-violet-100/60 sm:mt-2 sm:text-[10px]">
         {node.examples}
       </p>
     </div>
@@ -217,7 +217,7 @@ function AssistantLayerCard({ assistant }: { assistant: PersonalAssistantMarketi
   const Icon = assistant.icon;
 
   return (
-    <div className="relative z-10 w-[132px] rounded-lg border border-violet-400/20 border-l-2 border-l-violet-400/60 bg-[#120f24]/95 px-2.5 py-2.5 text-center shadow-[0_4px_16px_rgba(0,0,0,0.25)]">
+    <div className="relative z-10 w-[96px] rounded-lg border border-violet-400/20 border-l-2 border-l-violet-400/60 bg-[#120f24]/95 px-2 py-2 text-center shadow-[0_4px_16px_rgba(0,0,0,0.25)] sm:w-[118px] sm:px-2.5 sm:py-2.5 lg:w-[132px]">
       <span className="relative mx-auto flex h-8 w-8 items-center justify-center rounded-md bg-violet-500/15 text-violet-300">
         <Icon className="h-4 w-4" aria-hidden />
         <AssistantBillingBadge assistant={assistant} />
@@ -225,7 +225,7 @@ function AssistantLayerCard({ assistant }: { assistant: PersonalAssistantMarketi
       <p className="mt-2 text-[11px] font-semibold leading-tight text-white">
         {assistant.label}
       </p>
-      <p className="mt-1.5 text-[10px] leading-snug text-violet-200/65">
+      <p className="mt-1.5 text-[9px] leading-snug text-violet-200/65 sm:mt-1.5 sm:text-[10px]">
         {assistant.description}
       </p>
     </div>
@@ -242,7 +242,7 @@ function PersonalHomeCard({
   return (
     <div
       className={cn(
-        'relative z-20 w-[160px] scale-110 rounded-xl border-2 bg-[#0d0b1e] px-4 py-4 text-center transition-[border-color,box-shadow] duration-200',
+        'relative z-20 w-[118px] rounded-xl border-2 bg-[#0d0b1e] px-3 py-3 text-center transition-[border-color,box-shadow] duration-200 sm:w-[140px] sm:px-4 sm:py-4 lg:w-[160px] lg:scale-110',
         flashing
           ? 'border-[#5eead4] shadow-[0_0_30px_rgba(45,212,191,0.42)]'
           : 'border-[#2dd4bf] shadow-[0_0_18px_rgba(45,212,191,0.22)]',
@@ -271,7 +271,7 @@ export function WorkspaceOrbitDiagram({
   return (
     <TooltipProvider delayDuration={200}>
       <div
-        className="relative mx-auto aspect-[5/4] min-h-[440px] w-full max-w-[690px]"
+        className="relative mx-auto aspect-[5/4] min-h-[300px] w-full max-w-[690px] sm:min-h-[360px] md:min-h-[440px]"
         aria-hidden
       >
         <svg
@@ -284,7 +284,7 @@ export function WorkspaceOrbitDiagram({
           <CircuitPaths paths={OUTER_CIRCUIT_PATHS} />
         </svg>
 
-        <div className="absolute left-0 top-1/2 z-10 flex -translate-y-1/2 flex-col gap-2 pl-0">
+        <div className="absolute left-0 top-1/2 z-10 flex -translate-y-1/2 flex-col gap-1.5 pl-0 sm:gap-2">
           {PERSONAL_ASSISTANTS_MARKETING.map((assistant) => (
             <AssistantLayerCard key={assistant.id} assistant={assistant} />
           ))}
@@ -296,7 +296,7 @@ export function WorkspaceOrbitDiagram({
           ) : null}
         </div>
 
-        <div className="absolute right-[3%] top-1/2 z-10 -translate-y-1/2">
+        <div className="absolute right-[1%] top-1/2 z-10 -translate-y-1/2 sm:right-[3%]">
           {family ? (
             <OrbitWorkspaceCard node={{ ...family, orbitId: 'family' }} />
           ) : null}

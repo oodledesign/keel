@@ -8,8 +8,11 @@ import pathsConfig from '~/config/paths.config';
 import { getPersonalAccountId } from '~/lib/recorder/personal-account';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
-import { loadAccountNoteCategories } from '../../[account]/_lib/workspace-content/note-categories.loader';
-import { loadAccountNoteById, loadAccountNotes } from '../../[account]/_lib/workspace-content/notes-loader';
+import { loadAccountNoteCategories } from '~/home/[account]/_lib/workspace-content/note-categories.loader';
+import {
+  loadAccountNoteById,
+  loadAccountNotes,
+} from '~/home/[account]/_lib/workspace-content/notes-loader';
 
 export const PERSONAL_NOTES_ACCOUNT_SLUG = 'personal';
 

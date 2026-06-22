@@ -3,8 +3,8 @@
 import type {
   CustomNoteCategory,
   NoteListItem,
-} from '../../[account]/_lib/workspace-content/types';
-import { WorkspaceNotesPage } from '../../[account]/_components/workspace-content/workspace-notes-page';
+} from '~/home/[account]/_lib/workspace-content/types';
+import { WorkspaceNotesPage } from '~/home/[account]/_components/workspace-content/workspace-notes-page';
 
 import pathsConfig from '~/config/paths.config';
 
