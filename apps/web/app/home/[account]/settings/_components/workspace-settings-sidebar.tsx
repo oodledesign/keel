@@ -3,12 +3,19 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import { CalendarOff, type LucideIcon } from 'lucide-react';
+
 import { cn } from '@kit/ui/utils';
 
 import {
   isWorkspaceSettingsNavActive,
+  type WorkspaceSettingsNavIcon,
   type WorkspaceSettingsNavItem,
 } from '../_lib/workspace-settings-nav';
+
+const NAV_ICONS: Record<WorkspaceSettingsNavIcon, LucideIcon> = {
+  'calendar-off': CalendarOff,
+};
 
 type WorkspaceSettingsSidebarProps = {
   accountSlug: string;
@@ -37,6 +44,7 @@ export function WorkspaceSettingsSidebar({
             item,
             accountSlug,
           );
+          const Icon = item.icon ? NAV_ICONS[item.icon] : null;
 
           return (
             <li key={item.id} className="shrink-0">
@@ -50,8 +58,8 @@ export function WorkspaceSettingsSidebar({
                 )}
                 aria-current={active ? 'page' : undefined}
               >
-                {item.icon ? (
-                  <item.icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                {Icon ? (
+                  <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
                 ) : null}
                 {item.label}
               </Link>

@@ -12,7 +12,7 @@ import { SidebarProvider } from '@kit/ui/shadcn-sidebar';
 
 import { AppLogo } from '~/components/app-logo';
 import { WorkspaceFocusProviderShell } from '~/components/workspace-shell/workspace-focus-provider-shell';
-import { serializeWorkspaceFocusMap } from '~/components/workspace-shell/workspace-focus-context';
+import { serializeWorkspaceFocusMap } from '~/lib/workspace-focus/serialize-focus-map';
 import { WorkspaceTopBar } from '~/components/workspace-shell/workspace-top-bar';
 import pathsConfig from '~/config/paths.config';
 import { getExplicitPersonalHomePath } from '~/lib/dashboard-shortcuts/personal-home-url';

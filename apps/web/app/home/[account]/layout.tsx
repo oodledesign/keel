@@ -29,7 +29,7 @@ import { buildWorkspaceShellMetadata } from '~/lib/seo/app-shell-metadata';
 import { spaceTypeFromProfile } from './_lib/workspace-profile';
 import { enforceWorkspaceBilling } from './_lib/server/workspace-billing-guard';
 import { WorkspaceFocusProviderShell } from '~/components/workspace-shell/workspace-focus-provider-shell';
-import { serializeWorkspaceFocusMap } from '~/components/workspace-shell/workspace-focus-context';
+import { serializeWorkspaceFocusMap } from '~/lib/workspace-focus/serialize-focus-map';
 import { loadWorkspaceSwitcherAccounts } from '../_lib/server/workspace-switcher.loader';
 import { loadWorkspaceFocusSettingsMap } from '~/lib/workspace-focus/load-workspace-focus-settings';
 import { loadWorkNavCounts } from './_lib/server/work-nav-counts.loader';

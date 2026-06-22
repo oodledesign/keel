@@ -1,6 +1,3 @@
-import type { LucideIcon } from 'lucide-react';
-import { CalendarOff } from 'lucide-react';
-
 import featureFlagsConfig from '~/config/feature-flags.config';
 import pathsConfig from '~/config/paths.config';
 import type { TeamAccountAccess } from '~/home/[account]/_lib/role-access';
@@ -11,13 +8,15 @@ import {
 } from '~/home/[account]/_lib/workspace-profile';
 import { isVideosModuleEnabled, isWorkModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
 
+export type WorkspaceSettingsNavIcon = 'calendar-off';
+
 export type WorkspaceSettingsNavItem = {
   id: string;
   label: string;
   href: string;
   /** Match pathname exactly (used for General). */
   exact?: boolean;
-  icon?: LucideIcon;
+  icon?: WorkspaceSettingsNavIcon;
 };
 
 function settingsPath(
@@ -46,7 +45,7 @@ export function buildWorkspaceSettingsNav(input: {
       id: 'focus',
       label: 'Focus & Availability',
       href: settingsPath(pathsConfig.app.accountFocusSettings, accountSlug),
-      icon: CalendarOff,
+      icon: 'calendar-off',
     },
   ];
 

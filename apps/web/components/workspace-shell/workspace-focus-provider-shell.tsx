@@ -3,11 +3,9 @@
 import { useMemo } from 'react';
 
 import type { WorkspaceFocusInput } from '~/lib/workspace-focus';
+import { deserializeWorkspaceFocusMap } from '~/lib/workspace-focus/serialize-focus-map';
 
-import {
-  deserializeWorkspaceFocusMap,
-  WorkspaceFocusProvider,
-} from './workspace-focus-context';
+import { WorkspaceFocusProvider } from './workspace-focus-context';
 
 export function WorkspaceFocusProviderShell({
   children,
