@@ -88,6 +88,7 @@ async function NotesPage({ params }: NotesPageProps) {
             tableAvailable={data.tableAvailable}
             docsTableAvailable={data.docsTableAvailable}
             variant={data.variant}
+            linkOptions={data.linkOptions}
             customCategories={data.customCategories}
           />
         </Suspense>

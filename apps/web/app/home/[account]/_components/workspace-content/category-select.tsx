@@ -97,6 +97,11 @@ export function CategorySelect({
                 {cat.label}
               </SelectItem>
             ))}
+            {value &&
+            !NOTE_FILE_CATEGORY_OPTIONS.includes(value) &&
+            !customCategories.some((cat) => cat.slug === value) ? (
+              <SelectItem value={value}>{getNoteCategoryLabel(value)}</SelectItem>
+            ) : null}
           </SelectContent>
         </Select>
       </div>

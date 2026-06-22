@@ -125,7 +125,7 @@ export function WorkspaceNotesPage({
   tableAvailable,
   docsTableAvailable = true,
   variant,
-  linkOptions,
+  linkOptions = [],
   canEdit = true,
   defaultLink,
   hideFilters = false,
