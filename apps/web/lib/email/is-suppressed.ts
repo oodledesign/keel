@@ -1,11 +1,9 @@
-import { createClient } from '@supabase/supabase-js';
+import 'server-only';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 export async function isEmailSuppressed(email: string): Promise<boolean> {
+  const supabase = getSupabaseServerAdminClient();
   const { data } = await supabase
     .from('email_suppressions')
     .select('id')

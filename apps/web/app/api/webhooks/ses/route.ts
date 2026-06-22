@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
@@ -50,6 +46,7 @@ export async function POST(req: NextRequest) {
 }
 
 async function handleBounce(notification: Record<string, unknown>) {
+  const supabase = getSupabaseServerAdminClient();
   const bounce = notification['bounce'] as Record<string, unknown>;
   const bounceType = bounce['bounceType'] as string;
   const bounceSubtype = bounce['bounceSubType'] as string;
@@ -91,6 +88,7 @@ async function handleBounce(notification: Record<string, unknown>) {
 }
 
 async function handleComplaint(notification: Record<string, unknown>) {
+  const supabase = getSupabaseServerAdminClient();
   const complaint = notification['complaint'] as Record<string, unknown>;
   const complaintType = complaint['complaintFeedbackType'] as string;
   const recipients = complaint['complainedRecipients'] as Array<{ emailAddress: string }>;
