@@ -82,16 +82,17 @@ export async function loadNoteDetailData(
     business_type: workspace.businessType,
   });
 
-  const note = await loadAccountNoteById(accountId, noteId);
+  const [note, categoryResult, linkOpts] = await Promise.all([
+    loadAccountNoteById(accountId, noteId),
+    loadAccountNoteCategories(accountId),
+    loadWorkspaceLinkOptions(accountId, profile),
+  ]);
 
   if (!note) {
     redirect(
       pathsConfig.app.accountNotes.replace('[account]', accountSlug),
     );
   }
-
-  const { categories: customCategories } =
-    await loadAccountNoteCategories(accountId);
 
   return {
     accountId,
@@ -118,11 +119,8 @@ export async function loadNoteDetailData(
       createdAt: note.createdAt,
       updatedAt: note.updatedAt,
     },
-    linkOptions: linkOptionsForProfile(
-      await loadWorkspaceLinkOptions(accountId, profile),
-      profile,
-    ),
-    customCategories: customCategories.map((c) => ({
+    linkOptions: linkOptionsForProfile(linkOpts, profile),
+    customCategories: categoryResult.categories.map((c) => ({
       slug: c.slug,
       label: c.label,
     })),

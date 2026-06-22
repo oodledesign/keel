@@ -10,6 +10,8 @@ import pathsConfig from '~/config/paths.config';
 
 import { queueBrainDeleteSource, queueBrainIndexSource } from '~/lib/brain/sync';
 
+import { workAccountPath } from '../../work-account-path';
+
 const LinkSchema = z
   .object({
     type: z.enum(['project', 'job', 'client', 'property', 'task']),
@@ -179,7 +181,7 @@ function revalidateNotesPaths(
 
   const base = pathsConfig.app.accountNotes.replace('[account]', accountSlug);
   revalidatePath(base);
-  revalidatePath(`/home/${accountSlug}`);
+  revalidatePath(workAccountPath(pathsConfig.app.accountHome, accountSlug));
   if (noteId) {
     revalidatePath(
       pathsConfig.app.accountNoteDetail

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import {
   ChevronLeft,
@@ -43,7 +43,6 @@ import type {
   NoteFileCategory,
 } from '../../_lib/workspace-content/types';
 import {
-  revalidateWorkspaceNotesAction,
   saveWorkspaceNoteAction,
   syncWorkspaceNoteBrainIndexAction,
 } from '../../_lib/workspace-content/notes-actions';
@@ -90,6 +89,7 @@ export function NoteEditor({
   personalScope,
   note,
 }: NoteEditorProps) {
+  const router = useRouter();
   const notesHref =
     notesListHref ??
     pathsConfig.app.accountNotes.replace('[account]', accountSlug);
@@ -108,6 +108,7 @@ export function NoteEditor({
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const brainIndexTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isDirtyRef = useRef(false);
+  const leavingRef = useRef(false);
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const latestRef = useRef({
@@ -180,8 +181,64 @@ export function NoteEditor({
     }, 900);
   }, [persist]);
 
+  const flushBrainIndex = useCallback(() => {
+    const hadPendingBrainIndex = brainIndexTimerRef.current != null;
+    if (brainIndexTimerRef.current) {
+      clearTimeout(brainIndexTimerRef.current);
+      brainIndexTimerRef.current = null;
+    }
+    if (hadPendingBrainIndex) {
+      void syncWorkspaceNoteBrainIndexAction({
+        accountId,
+        noteId: note.id,
+      });
+    }
+  }, [accountId, note.id]);
+
+  const flushPendingSave = useCallback(async () => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    if (!isDirtyRef.current) return;
+
+    const snapshot = latestRef.current;
+    await saveWorkspaceNoteAction({
+      accountId,
+      accountSlug,
+      noteId: note.id,
+      title: snapshot.title.trim(),
+      content: snapshot.content,
+      isPinned: snapshot.isPinned,
+      category: snapshot.category,
+      tags: snapshot.tags,
+      link: snapshot.link,
+      personalScope,
+    });
+    isDirtyRef.current = false;
+  }, [accountId, accountSlug, note.id, personalScope]);
+
+  const goBackToList = useCallback(async () => {
+    if (leavingRef.current) return;
+    leavingRef.current = true;
+
+    try {
+      await flushPendingSave();
+    } catch {
+      toast.error('Could not save note');
+      leavingRef.current = false;
+      return;
+    }
+
+    flushBrainIndex();
+    router.push(notesHref);
+    router.refresh();
+  }, [flushBrainIndex, flushPendingSave, notesHref, router]);
+
   useEffect(() => {
     return () => {
+      if (leavingRef.current) return;
+
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
 
       if (isDirtyRef.current) {
@@ -197,26 +254,11 @@ export function NoteEditor({
           link: latestRef.current.link,
           personalScope,
         });
-        void revalidateWorkspaceNotesAction({
-          accountSlug,
-          noteId: note.id,
-          personalScope,
-        });
       }
 
-      const hadPendingBrainIndex = brainIndexTimerRef.current != null;
-      if (brainIndexTimerRef.current) {
-        clearTimeout(brainIndexTimerRef.current);
-        brainIndexTimerRef.current = null;
-      }
-      if (hadPendingBrainIndex) {
-        void syncWorkspaceNoteBrainIndexAction({
-          accountId,
-          noteId: note.id,
-        });
-      }
+      flushBrainIndex();
     };
-  }, [accountId, accountSlug, note.id, personalScope]);
+  }, [accountId, accountSlug, flushBrainIndex, note.id, personalScope]);
 
   const syncTextareaHeight = useCallback((node: HTMLTextAreaElement | null) => {
     if (!node) return;
@@ -297,15 +339,14 @@ export function NoteEditor({
       <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-white/8 bg-[var(--workspace-shell-canvas)] px-4 py-2 sm:px-6 lg:px-10 xl:px-14">
         <div className="flex min-w-0 items-center gap-1">
           <Button
-            asChild
             type="button"
             variant="ghost"
             size="sm"
             className="h-9 w-9 shrink-0 p-0 text-zinc-300 hover:bg-white/6 hover:text-white"
+            aria-label="Back to notes"
+            onClick={() => void goBackToList()}
           >
-            <Link href={notesHref} aria-label="Back to notes">
-              <ChevronLeft className="h-5 w-5" />
-            </Link>
+            <ChevronLeft className="h-5 w-5" />
           </Button>
           <span
             className={cn(
