@@ -56,6 +56,14 @@
     {
       "path": "/api/gmail/sync",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/ai/batch/submit",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/ai/batch/poll",
+      "schedule": "0 */2 * * *"
     }
   ]
 }

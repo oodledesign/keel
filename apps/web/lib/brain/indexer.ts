@@ -6,6 +6,11 @@ import { htmlToMarkdown } from '~/lib/markdown';
 
 import { splitIntoChunks } from './chunking';
 import {
+  buildMeetingTranscriptIndexText,
+  loadMeetingTranscriptEnrichmentByIds,
+  meetingTranscriptIndexUpdatedAt,
+} from './meeting-transcript-index';
+import {
   buildBrainSourceUrl,
   buildPhaseSourceUrl,
   type BrainChunkMetadata,
@@ -65,19 +70,6 @@ function transcriptClientName(
     row.name?.trim() ||
     null
   );
-}
-
-function buildTranscriptIndexText(params: {
-  title: string;
-  content: string;
-  meetingDate?: string | null;
-  clientName?: string | null;
-}) {
-  const lines = [`# ${params.title}`];
-  if (params.clientName) lines.push(`Client: ${params.clientName}`);
-  if (params.meetingDate) lines.push(`Meeting date: ${params.meetingDate}`);
-  lines.push('', params.content);
-  return lines.join('\n');
 }
 
 export async function loadAccountIndexables(
@@ -229,7 +221,14 @@ export async function loadAccountIndexables(
     )
     .eq('account_id', accountId);
 
-  for (const row of transcripts ?? []) {
+  const transcriptRows = transcripts ?? [];
+  const enrichmentByTranscriptId = await loadMeetingTranscriptEnrichmentByIds(
+    admin,
+    accountId,
+    transcriptRows.map((row) => row.id as string),
+  );
+
+  for (const row of transcriptRows) {
     const content = (row.content as string)?.trim();
     if (!content) continue;
     const title = ((row.title as string) || 'Meeting transcript').trim();
@@ -237,19 +236,28 @@ export async function loadAccountIndexables(
       row.clients as Parameters<typeof transcriptClientName>[0],
     );
     const meetingDate = (row.meeting_date as string | null) ?? null;
+    const transcriptId = row.id as string;
+    const enrichment = enrichmentByTranscriptId.get(transcriptId);
+
     records.push({
       sourceType: 'transcript',
-      sourceId: row.id as string,
+      sourceId: transcriptId,
       accountId,
       accountSlug,
       title,
-      text: buildTranscriptIndexText({
+      text: buildMeetingTranscriptIndexText({
         title,
         content,
         meetingDate,
         clientName,
+        summaryText: enrichment?.summaryText ?? null,
+        attendeeEmails: enrichment?.attendeeEmails ?? [],
+        actionItems: enrichment?.actionItems ?? [],
       }),
-      updatedAt: row.updated_at as string,
+      updatedAt: meetingTranscriptIndexUpdatedAt(
+        row.updated_at as string,
+        enrichment,
+      ),
       clientId: (row.client_id as string | null) ?? null,
       meetingDate,
     });
@@ -474,7 +482,15 @@ export async function listActiveAccountIds(admin: AdminClient) {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const ids = new Set<string>();
 
-  const tables = ['notes', 'docs', 'jobs', 'job_notes', 'meeting_transcripts', 'proposals', 'project_phases'] as const;
+  const tables = [
+    'notes',
+    'docs',
+    'jobs',
+    'job_notes',
+    'meeting_transcripts',
+    'proposals',
+    'project_phases',
+  ] as const;
 
   for (const table of tables) {
     const { data } = await admin
@@ -484,6 +500,24 @@ export async function listActiveAccountIds(admin: AdminClient) {
     for (const row of data ?? []) {
       ids.add(row.account_id as string);
     }
+  }
+
+  const { data: summaryAccounts } = await admin
+    .from('meeting_summaries')
+    .select('account_id')
+    .gte('generated_at', since);
+
+  for (const row of summaryAccounts ?? []) {
+    ids.add(row.account_id as string);
+  }
+
+  const { data: actionItemAccounts } = await admin
+    .from('meeting_action_items')
+    .select('account_id')
+    .gte('created_at', since);
+
+  for (const row of actionItemAccounts ?? []) {
+    ids.add(row.account_id as string);
   }
 
   return Array.from(ids);

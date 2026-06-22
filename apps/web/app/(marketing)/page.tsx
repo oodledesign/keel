@@ -16,9 +16,9 @@ import PricingSection from './_components/pricing-section';
 // Task A: Life CRM → OS copy (business segment card).
 
 export const metadata = {
-  title: 'Ozer - The Life CRM',
+  title: 'Ozer — The Workspace OS',
   description:
-    'Ozer is the Life CRM that connects personal life, business, family, and community in one account — not another siloed CRM. One home for tasks, planner, and every workspace.',
+    'Ozer is the workspace OS for freelancers and small agencies — personal, business, property, and community in one account. One home for tasks, planner, and every workspace.',
 };
 
 const features = [

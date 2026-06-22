@@ -5,6 +5,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { htmlToMarkdown } from '~/lib/markdown';
 
 import {
+  buildMeetingTranscriptIndexText,
+  loadMeetingTranscriptEnrichmentByIds,
+} from './meeting-transcript-index';
+import {
   buildBrainSourceUrl,
   buildPhaseSourceUrl,
   type BrainSourceType,
@@ -146,16 +150,63 @@ export async function loadBrainSourcePreview(
     case 'transcript': {
       const { data } = await client
         .from('meeting_transcripts')
-        .select('title, content, updated_at')
+        .select(
+          'title, content, updated_at, meeting_date, client_id, clients(display_name, company_name, first_name, last_name, name)',
+        )
         .eq('id', sourceId)
         .eq('account_id', accountId)
         .maybeSingle();
       if (!data) return null;
+
+      const enrichment = await loadMeetingTranscriptEnrichmentByIds(
+        client,
+        accountId,
+        [sourceId],
+      );
+      const bundle = enrichment.get(sourceId);
+      const clientRow = data.clients as
+        | {
+            display_name?: string | null;
+            company_name?: string | null;
+            first_name?: string | null;
+            last_name?: string | null;
+            name?: string | null;
+          }
+        | {
+            display_name?: string | null;
+            company_name?: string | null;
+            first_name?: string | null;
+            last_name?: string | null;
+            name?: string | null;
+          }[]
+        | null;
+      const clientRecord = Array.isArray(clientRow) ? clientRow[0] : clientRow;
+      const clientName =
+        clientRecord?.display_name?.trim() ||
+        clientRecord?.company_name?.trim() ||
+        [clientRecord?.first_name, clientRecord?.last_name]
+          .filter(Boolean)
+          .join(' ')
+          .trim() ||
+        clientRecord?.name?.trim() ||
+        null;
+
+      const title = ((data.title as string) || 'Meeting transcript').trim();
+      const content = (data.content as string) ?? '';
+
       return {
-        title: ((data.title as string) || 'Meeting transcript').trim(),
+        title,
         sourceType,
         updatedAt: (data.updated_at as string | null) ?? null,
-        content: (data.content as string) ?? '',
+        content: buildMeetingTranscriptIndexText({
+          title,
+          content,
+          meetingDate: (data.meeting_date as string | null) ?? null,
+          clientName,
+          summaryText: bundle?.summaryText ?? null,
+          attendeeEmails: bundle?.attendeeEmails ?? [],
+          actionItems: bundle?.actionItems ?? [],
+        }),
         sourceUrl: buildBrainSourceUrl(accountSlug, 'transcript', sourceId),
       };
     }

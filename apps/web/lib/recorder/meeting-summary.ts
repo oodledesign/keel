@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { queueBrainIndexSource } from '~/lib/brain/sync';
 import {
   extractAndPersistMeetingActionItems,
 } from '~/lib/recorder/meeting-action-items';
@@ -70,6 +71,12 @@ export async function generateAndPersistMeetingSummary(
       error: error instanceof Error ? error.message : String(error),
     });
   }
+
+  queueBrainIndexSource(
+    input.accountId,
+    'transcript',
+    input.meetingTranscriptId,
+  );
 }
 
 export function queueMeetingSummaryGeneration(input: MeetingSummaryJobInput) {

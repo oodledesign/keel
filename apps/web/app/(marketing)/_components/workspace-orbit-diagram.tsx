@@ -1,4 +1,4 @@
-import { Briefcase, Home, Users } from 'lucide-react';
+import { Briefcase, CalendarDays, Home, Mail, Mic, Users } from 'lucide-react';
 
 import { cn } from '@kit/ui/utils';
 
@@ -10,27 +10,105 @@ const OUTER_NODE_ICONS: Record<string, typeof Home> = {
   community: Users,
 };
 
+const ASSISTANT_NODES = [
+  {
+    id: 'email',
+    label: 'Email Assistant',
+    caption: 'Gmail sync & drafts',
+    icon: Mail,
+    top: '22%',
+  },
+  {
+    id: 'meeting',
+    label: 'Meeting Assistant',
+    caption: 'Record & transcribe',
+    icon: Mic,
+    top: '50%',
+  },
+  {
+    id: 'planner',
+    label: 'AI Planner',
+    caption: 'Today & day planning',
+    icon: CalendarDays,
+    top: '78%',
+  },
+] as const;
+
 type OrbitNode = InterconnectedWorkspaceNode & {
   orbitId: 'business' | 'property' | 'community';
 };
 
-const CIRCUIT_PATHS = [
+const HUB_X = 50;
+const HUB_Y = 50;
+
+const OUTER_CIRCUIT_PATHS = [
   {
     id: 'business',
-    d: 'M 50 14 L 50 34 L 40 34 L 40 50 L 50 50',
+    d: `M ${HUB_X} 14 L ${HUB_X} 34 L 40 34 L 40 ${HUB_Y} L ${HUB_X} ${HUB_Y}`,
     dotBegin: ['0s', '1.25s'],
   },
   {
     id: 'property',
-    d: 'M 86 50 L 58 50 L 58 42 L 50 42 L 50 50',
+    d: `M 86 ${HUB_Y} L 58 ${HUB_Y} L 58 42 L ${HUB_X} 42 L ${HUB_X} ${HUB_Y}`,
     dotBegin: ['0.8s', '2.05s'],
   },
   {
     id: 'community',
-    d: 'M 50 86 L 50 58 L 60 58 L 60 50 L 50 50',
+    d: `M ${HUB_X} 86 L ${HUB_X} 58 L 60 58 L 60 ${HUB_Y} L ${HUB_X} ${HUB_Y}`,
     dotBegin: ['1.6s', '2.85s'],
   },
 ] as const;
+
+const ASSISTANT_CIRCUIT_PATHS = [
+  {
+    id: 'email',
+    d: `M 14 22 L 32 22 L 32 44 L ${HUB_X} 44 L ${HUB_X} ${HUB_Y}`,
+    dotBegin: ['0.2s', '1.45s'],
+  },
+  {
+    id: 'meeting',
+    d: `M 14 ${HUB_Y} L 40 ${HUB_Y} L ${HUB_X} ${HUB_Y}`,
+    dotBegin: ['0.6s', '1.85s'],
+  },
+  {
+    id: 'planner',
+    d: `M 14 78 L 32 78 L 32 56 L ${HUB_X} 56 L ${HUB_X} ${HUB_Y}`,
+    dotBegin: ['1s', '2.25s'],
+  },
+] as const;
+
+function CircuitPaths({ paths }: { paths: readonly { id: string; d: string; dotBegin: readonly string[] }[] }) {
+  return (
+    <>
+      {paths.map((path) => (
+        <g key={path.id}>
+          <path
+            d={path.d}
+            fill="none"
+            stroke="rgba(45,212,191,0.2)"
+            strokeWidth="1.5"
+            vectorEffect="non-scaling-stroke"
+          />
+          {path.dotBegin.map((begin) => (
+            <circle
+              key={`${path.id}-${begin}`}
+              r="1"
+              fill="#2dd4bf"
+              style={{ filter: 'drop-shadow(0 0 1.5px #2dd4bf)' }}
+            >
+              <animateMotion
+                dur="2.5s"
+                repeatCount="indefinite"
+                begin={begin}
+                path={path.d}
+              />
+            </circle>
+          ))}
+        </g>
+      ))}
+    </>
+  );
+}
 
 function OrbitWorkspaceCard({
   node,
@@ -58,6 +136,30 @@ function OrbitWorkspaceCard({
       <p className="mt-0.5 text-[10px] leading-snug text-violet-100/60">
         {node.examples}
       </p>
+    </div>
+  );
+}
+
+function AssistantLayerCard({
+  label,
+  caption,
+  icon: Icon,
+}: {
+  label: string;
+  caption: string;
+  icon: typeof Mail;
+}) {
+  return (
+    <div className="w-[128px] rounded-lg border border-violet-400/20 border-l-2 border-l-violet-400/60 bg-[#120f24]/90 px-2.5 py-2 shadow-[0_4px_16px_rgba(0,0,0,0.3)] backdrop-blur-sm">
+      <div className="flex items-center gap-2">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-violet-500/15 text-violet-300">
+          <Icon className="h-3.5 w-3.5" aria-hidden />
+        </span>
+        <div className="min-w-0 text-left">
+          <p className="truncate text-[11px] font-semibold text-white">{label}</p>
+          <p className="truncate text-[9px] text-violet-200/55">{caption}</p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -90,7 +192,7 @@ export function WorkspaceOrbitDiagram({
 
   return (
     <div
-      className="relative mx-auto aspect-square min-h-[420px] w-full max-w-[520px] rounded-2xl bg-[#0d0b1e]/60"
+      className="relative mx-auto aspect-[5/4] min-h-[420px] w-full max-w-[600px] rounded-2xl bg-[#0d0b1e]/60"
       style={{
         backgroundImage:
           'radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)',
@@ -104,33 +206,20 @@ export function WorkspaceOrbitDiagram({
         preserveAspectRatio="xMidYMid meet"
         aria-hidden
       >
-        {CIRCUIT_PATHS.map((path) => (
-          <g key={path.id}>
-            <path
-              d={path.d}
-              fill="none"
-              stroke="rgba(45,212,191,0.2)"
-              strokeWidth="1.5"
-              vectorEffect="non-scaling-stroke"
-            />
-            {path.dotBegin.map((begin) => (
-              <circle
-                key={`${path.id}-${begin}`}
-                r="3"
-                fill="#2dd4bf"
-                style={{ filter: 'drop-shadow(0 0 4px #2dd4bf)' }}
-              >
-                <animateMotion
-                  dur="2.5s"
-                  repeatCount="indefinite"
-                  begin={begin}
-                  path={path.d}
-                />
-              </circle>
-            ))}
-          </g>
-        ))}
+        <CircuitPaths paths={ASSISTANT_CIRCUIT_PATHS} />
+        <CircuitPaths paths={OUTER_CIRCUIT_PATHS} />
       </svg>
+
+      <div className="absolute left-[2%] top-1/2 -translate-y-1/2 space-y-3">
+        {ASSISTANT_NODES.map((assistant) => (
+          <AssistantLayerCard
+            key={assistant.id}
+            label={assistant.label}
+            caption={assistant.caption}
+            icon={assistant.icon}
+          />
+        ))}
+      </div>
 
       <div className="absolute left-1/2 top-[5%] -translate-x-1/2">
         {business ? (

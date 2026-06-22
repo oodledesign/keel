@@ -32,6 +32,7 @@ import {
   Home,
   Lock,
   Mail,
+  Mic,
   Puzzle,
   Sparkles,
   Users,
@@ -39,6 +40,12 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@kit/ui/tooltip';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
@@ -62,6 +69,16 @@ const PRICING_CONFIG = {
       hasTiers: false,
       planId: '',
       variantIds: { monthly: '', annual: '' },
+      highlights: [
+        'Today view & unified task list',
+        'AI planner & custom shortcuts',
+        'Hub connecting every workspace',
+      ],
+      assistants: {
+        email: { tooltip: 'Email assistant — £9/mo add-on', state: 'addon' as const },
+        meeting: { tooltip: 'Meeting assistant — coming soon', state: 'coming-soon' as const },
+        planner: { tooltip: 'AI planner included', state: 'included' as const },
+      },
     },
     {
       id: 'business',
@@ -76,6 +93,16 @@ const PRICING_CONFIG = {
       variantIds: {
         monthly: KEEL_STRIPE_PRICES.business_solo_monthly,
         annual: KEEL_STRIPE_PRICES.business_solo_yearly,
+      },
+      highlights: [
+        'Clients, projects & pipeline',
+        'Invoicing, proposals & quotes',
+        'CRM tiers from Lite to Scale',
+      ],
+      assistants: {
+        email: { tooltip: 'Email assistant on your personal account', state: 'addon' as const },
+        meeting: { tooltip: 'Meeting assistant — coming soon', state: 'coming-soon' as const },
+        planner: { tooltip: 'AI planner via your personal home', state: 'included' as const },
       },
     },
     {
@@ -92,6 +119,16 @@ const PRICING_CONFIG = {
         monthly: KEEL_STRIPE_PRICES.property_starter_monthly,
         annual: KEEL_STRIPE_PRICES.property_starter_yearly,
       },
+      highlights: [
+        'Tenants & maintenance tracking',
+        'Portfolio finances & documents',
+        'Starter or Portfolio tiers',
+      ],
+      assistants: {
+        email: { tooltip: 'Email assistant on your personal account', state: 'addon' as const },
+        meeting: { tooltip: 'Meeting assistant — coming soon', state: 'coming-soon' as const },
+        planner: { tooltip: 'AI planner via your personal home', state: 'included' as const },
+      },
     },
     {
       id: 'community',
@@ -106,6 +143,16 @@ const PRICING_CONFIG = {
       variantIds: {
         monthly: KEEL_STRIPE_PRICES.community_monthly,
         annual: KEEL_STRIPE_PRICES.community_yearly,
+      },
+      highlights: [
+        'Events & volunteer coordination',
+        'Shared group schedules',
+        'Community task boards',
+      ],
+      assistants: {
+        email: { tooltip: 'Email assistant on your personal account', state: 'addon' as const },
+        meeting: { tooltip: 'Meeting assistant — coming soon', state: 'coming-soon' as const },
+        planner: { tooltip: 'AI planner via your personal home', state: 'included' as const },
       },
     },
   ],
@@ -199,9 +246,33 @@ const PRICING_CONFIG = {
       label: 'Email Assistant',
       description: 'Gmail sync, AI action items, and draft replies in your personal home',
       monthlyPrice: 9,
+      icon: 'Mail' as const,
       planId: 'email-assistant-monthly',
       productId: 'keel-addon-email-assistant',
       variantId: KEEL_STRIPE_PRICES.addon_email_assistant_monthly,
+    },
+    {
+      id: 'meeting-assistant',
+      label: 'Meeting Assistant',
+      description:
+        'Record, transcribe, and extract tasks from meetings — synced to the right workspace',
+      monthlyPrice: 0,
+      icon: 'Mic' as const,
+      comingSoon: true,
+      planId: '',
+      productId: '',
+      variantId: '',
+    },
+    {
+      id: 'planner',
+      label: 'AI Planner',
+      description: 'Today view, day planning, and priorities pulled from every workspace',
+      monthlyPrice: 0,
+      icon: 'Sparkles' as const,
+      included: true,
+      planId: '',
+      productId: '',
+      variantId: '',
     },
   ],
   workspaceAddons: [
@@ -298,6 +369,18 @@ const WORKSPACE_ICONS: Record<WorkspaceConfig['icon'], LucideIcon> = {
   Building2,
   Users,
 };
+
+const ADDON_ICONS: Record<'Mail' | 'Mic' | 'Sparkles', LucideIcon> = {
+  Mail,
+  Mic,
+  Sparkles,
+};
+
+const ASSISTANT_BADGE_ICONS = {
+  email: Mail,
+  meeting: Mic,
+  planner: Sparkles,
+} as const;
 
 function computeAnnualDiscountPercent() {
   const tierPrices = [
@@ -436,6 +519,8 @@ function buildSummaryLineItems(params: {
 
   for (const addon of PRICING_CONFIG.personalAddons) {
     if (!params.selectedAddons.has(addon.id)) continue;
+    if ('comingSoon' in addon && addon.comingSoon) continue;
+    if ('included' in addon && addon.included) continue;
 
     items.push({
       id: addon.id,
@@ -557,6 +642,50 @@ function BillingToggle({
   );
 }
 
+function WorkspaceAssistantBadges({
+  assistants,
+}: {
+  assistants: WorkspaceConfig['assistants'];
+}) {
+  return (
+    <div className="mt-3 flex flex-wrap gap-1.5">
+      {(Object.keys(ASSISTANT_BADGE_ICONS) as Array<keyof typeof ASSISTANT_BADGE_ICONS>).map(
+        (key) => {
+          const Icon = ASSISTANT_BADGE_ICONS[key];
+          const badge = assistants[key];
+          const isIncluded = badge.state === 'included';
+          const isComingSoon = badge.state === 'coming-soon';
+
+          return (
+            <Tooltip key={key}>
+              <TooltipTrigger asChild>
+                <span
+                  className={cn(
+                    'inline-flex h-7 w-7 items-center justify-center rounded-md border',
+                    isIncluded
+                      ? 'border-[#2dd4bf]/40 bg-[#2dd4bf]/10 text-[#2dd4bf]'
+                      : isComingSoon
+                        ? 'border-white/10 bg-white/5 text-slate-500'
+                        : 'border-violet-400/30 bg-violet-500/10 text-violet-300',
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" aria-hidden />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent
+                side="top"
+                className="max-w-[200px] border border-white/10 bg-[#0d0b1e] text-white"
+              >
+                {badge.tooltip}
+              </TooltipContent>
+            </Tooltip>
+          );
+        },
+      )}
+    </div>
+  );
+}
+
 function WorkspaceCard({
   workspace,
   billing,
@@ -650,7 +779,18 @@ function WorkspaceCard({
       <h3 className="mt-4 font-heading text-lg font-semibold text-white">{workspace.label}</h3>
       <p className="mt-1 text-sm leading-relaxed text-slate-300">{workspace.description}</p>
 
-      <div className="mt-auto pt-5">
+      <WorkspaceAssistantBadges assistants={workspace.assistants} />
+
+      <ul className="mt-3 space-y-1">
+        {workspace.highlights.map((line) => (
+          <li key={line} className="flex gap-2 text-xs leading-relaxed text-slate-400">
+            <Check className="mt-0.5 h-3 w-3 shrink-0 text-[#2dd4bf]/70" aria-hidden />
+            <span>{line}</span>
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-auto pt-4">
         <p className="font-heading text-2xl font-semibold text-white">{priceLabel}</p>
         {workspace.hasTiers && selected ? (
           <p className="mt-1 text-xs text-slate-400">Choose your tier below</p>
@@ -731,32 +871,61 @@ function AddonToggle({
   priceLabel,
   selected,
   onToggle,
+  icon: Icon,
+  disabled,
 }: {
   label: string;
   description: string;
   priceLabel: string;
   selected: boolean;
   onToggle: () => void;
+  icon?: LucideIcon;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       role="checkbox"
       aria-checked={selected}
-      onClick={onToggle}
+      aria-disabled={disabled}
+      disabled={disabled}
+      onClick={disabled ? undefined : onToggle}
       className={cn(
         'rounded-xl border px-4 py-3 text-left transition-colors',
-        selected
-          ? 'border-[#2dd4bf]/60 bg-[#2dd4bf]/10'
-          : 'border-white/10 bg-white/[0.02] hover:border-white/20',
+        disabled
+          ? 'cursor-default border-white/8 bg-white/[0.02] opacity-90'
+          : selected
+            ? 'border-[#2dd4bf]/60 bg-[#2dd4bf]/10'
+            : 'border-white/10 bg-white/[0.02] hover:border-white/20',
       )}
     >
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="font-medium text-white">{label}</p>
-          <p className="mt-1 text-xs leading-relaxed text-slate-400">{description}</p>
+        <div className="flex gap-3">
+          {Icon ? (
+            <span
+              className={cn(
+                'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
+                selected && !disabled
+                  ? 'bg-[#2dd4bf]/15 text-[#2dd4bf]'
+                  : 'bg-violet-500/10 text-violet-300',
+              )}
+            >
+              <Icon className="h-4 w-4" aria-hidden />
+            </span>
+          ) : null}
+          <div>
+            <p className="font-medium text-white">{label}</p>
+            <p className="mt-1 text-xs leading-relaxed text-slate-400">{description}</p>
+          </div>
         </div>
-        <span className="shrink-0 text-sm font-semibold text-[#2dd4bf]">{priceLabel}</span>
+        <span
+          className={cn(
+            'shrink-0 text-sm font-semibold',
+            disabled ? 'text-slate-500' : 'text-[#2dd4bf]',
+          )}
+        >
+          {priceLabel}
+        </span>
       </div>
     </button>
   );
@@ -795,25 +964,39 @@ function AddonsPanel({
 
       <div className="space-y-3">
         <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-violet-200/80">
-          <Mail className="h-3.5 w-3.5" aria-hidden />
+          <span className="inline-flex items-center gap-1">
+            <Mail className="h-3.5 w-3.5" aria-hidden />
+            <Mic className="h-3.5 w-3.5" aria-hidden />
+            <Sparkles className="h-3.5 w-3.5" aria-hidden />
+          </span>
           Personal add-ons
         </div>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {PRICING_CONFIG.personalAddons.map((addon) => (
-            <AddonToggle
-              key={addon.id}
-              label={addon.label}
-              description={addon.description}
-              priceLabel={`${formatWorkspacePrice(addon.monthlyPrice)}/mo`}
-              selected={selectedAddons.has(addon.id)}
-              onToggle={() => onToggleAddon(addon.id)}
-            />
-          ))}
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {PRICING_CONFIG.personalAddons.map((addon) => {
+            const Icon = ADDON_ICONS[addon.icon];
+            const isComingSoon = 'comingSoon' in addon && addon.comingSoon;
+            const isIncluded = 'included' in addon && addon.included;
+
+            return (
+              <AddonToggle
+                key={addon.id}
+                icon={Icon}
+                label={addon.label}
+                description={addon.description}
+                priceLabel={
+                  isIncluded
+                    ? 'Included'
+                    : isComingSoon
+                      ? 'Coming soon'
+                      : `${formatWorkspacePrice(addon.monthlyPrice)}/mo`
+                }
+                selected={isIncluded || selectedAddons.has(addon.id)}
+                disabled={isComingSoon || isIncluded}
+                onToggle={() => onToggleAddon(addon.id)}
+              />
+            );
+          })}
         </div>
-        <p className="text-xs text-slate-500">
-          Meeting transcription for Ozer Assistant is not yet on a public plan — coming
-          soon.
-        </p>
       </div>
 
       <div className="space-y-3">
@@ -1151,6 +1334,11 @@ export default function PricingSection() {
   };
 
   const toggleAddon = (id: string) => {
+    const addon = PRICING_CONFIG.personalAddons.find((item) => item.id === id);
+
+    if (addon && 'comingSoon' in addon && addon.comingSoon) return;
+    if (addon && 'included' in addon && addon.included) return;
+
     setSelectedAddons((current) => {
       const next = new Set(current);
 
@@ -1166,6 +1354,7 @@ export default function PricingSection() {
   };
 
   return (
+    <TooltipProvider delayDuration={200}>
     <section className="relative overflow-hidden bg-[radial-gradient(circle_at_15%_0%,rgba(124,58,237,0.25),transparent_42%),linear-gradient(180deg,#0d0b1e_0%,#080711_100%)] py-20 text-white">
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_22%)]" />
 
@@ -1191,7 +1380,7 @@ export default function PricingSection() {
 
         <div className="mt-12 grid gap-8 lg:grid-cols-[1.2fr,0.8fr] lg:items-start">
           <div className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
               {PRICING_CONFIG.workspaces.map((workspace) => (
                 <WorkspaceCard
                   key={workspace.id}
@@ -1365,5 +1554,6 @@ export default function PricingSection() {
         }
       `}</style>
     </section>
+    </TooltipProvider>
   );
 }

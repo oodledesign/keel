@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Suspense, use } from 'react';
 
 import { PersonalAccountSettingsContainer } from '@kit/accounts/personal-account-settings';
@@ -88,6 +89,14 @@ function PersonalAccountSettingsPage() {
           <Suspense fallback={<p className="text-sm text-[var(--workspace-shell-text-muted)]">Loading…</p>}>
             <PersonalApiTokensSection />
           </Suspense>
+          <p className="mt-4 text-sm">
+            <Link
+              href={pathsConfig.app.personalAccountDictationHistory}
+              className="text-[var(--workspace-shell-text-muted)] underline-offset-4 hover:text-[var(--workspace-shell-text)] hover:underline"
+            >
+              View dictation history
+            </Link>
+          </p>
         </div>
 
         <div className="mt-6 rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
