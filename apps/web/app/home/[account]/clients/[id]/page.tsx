@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import { getAgencyBrandingByBusinessId } from '~/lib/agency-branding';
@@ -18,9 +19,12 @@ import {
   redirectIfSpaceNotIn,
 } from '../../_lib/server/workspace-route-guard';
 import { loadContextWorkspaceContent } from '../../_lib/workspace-content/context-loader';
-import { notesVariantFromProfile } from '../../_lib/server/workspace-profile';
+import type { LinkOption, NoteListItem } from '../../_lib/workspace-content/types';
+import type { DocListItem } from '../../_lib/workspace-content/types';
+import type { LinkValue } from '../../_components/workspace-content/link-to-select';
+import { notesVariantFromProfile, resolveWorkspaceProfile } from '../../_lib/server/workspace-profile';
 import { loadClientsPageData } from '../_lib/server/clients-page.loader';
-import { getClient } from '../_lib/server/server-actions';
+import { createClientsService } from '../_lib/server/clients.service';
 import { ClientDetailPageContent } from '../_components/client-detail-page-content';
 import { ClientDetailPageNav } from '../_components/client-detail-page-nav';
 
@@ -53,10 +57,12 @@ export default async function ClientDetailPage({ params }: Props) {
   const { accountId, canEditClients, isContractorView } =
     await loadClientsPageData(accountSlug);
 
-  let client: unknown;
+  const clientsService = createClientsService(getSupabaseServerClient());
+  let client: Awaited<ReturnType<typeof clientsService.getClient>> | null = null;
   try {
-    client = await getClient({ accountId, clientId });
-  } catch {
+    client = await clientsService.getClient({ accountId, clientId });
+  } catch (error) {
+    console.error('[client-detail] getClient failed', error);
     notFound();
   }
   if (!client) notFound();
@@ -85,22 +91,56 @@ export default async function ClientDetailPage({ params }: Props) {
     [clientRecord.first_name, clientRecord.last_name].filter(Boolean).join(' ').trim() ||
     'Client';
 
-  const workspaceContent = await loadContextWorkspaceContent({
-    accountId,
-    spaceType: (workspace.account as { space_type?: string }).space_type,
-    businessType: workspace.businessType,
-    scope: { clientOrgId: clientId },
+  const workspaceProfile = resolveWorkspaceProfile({
+    space_type: (workspace.account as { space_type?: string }).space_type,
+    business_type: workspace.businessType,
   });
 
+  let workspaceNotes: NoteListItem[] = [];
+  let workspaceDocs: DocListItem[] = [];
+  let notesTableAvailable = false;
+  let docsTableAvailable = false;
+  let linkOptions: LinkOption[] = [];
+  let defaultLink: LinkValue = { type: 'client', id: clientId };
+
+  try {
+    const workspaceContent = await loadContextWorkspaceContent({
+      accountId,
+      spaceType: (workspace.account as { space_type?: string }).space_type,
+      businessType: workspace.businessType,
+      scope: { clientOrgId: clientId },
+    });
+    workspaceNotes = workspaceContent.notes;
+    workspaceDocs = workspaceContent.docs;
+    notesTableAvailable = workspaceContent.notesTableAvailable;
+    docsTableAvailable = workspaceContent.docsTableAvailable;
+    linkOptions = workspaceContent.linkOptions;
+    defaultLink = workspaceContent.defaultLink;
+  } catch (error) {
+    console.error('[client-detail] workspace content failed', error);
+  }
+
+  const notesVariant = notesVariantFromProfile(workspaceProfile);
+
   const ranklyEnabled = isWorkModuleEnabled(workspace.moduleSettings, 'rankly');
-  const [ranklyProject, ranklyImportSeed, ranklyClientImportOptions] =
-    ranklyEnabled
-      ? await Promise.all([
+  let ranklyProject = null;
+  let ranklyImportSeed = null;
+  let ranklyClientImportOptions: Awaited<
+    ReturnType<typeof loadRanklyClientImportOptions>
+  > = [];
+
+  if (ranklyEnabled) {
+    try {
+      [ranklyProject, ranklyImportSeed, ranklyClientImportOptions] =
+        await Promise.all([
           loadRanklyProjectForClient(accountId, clientId),
           loadRanklyImportSeedForClient(accountId, clientId),
           loadRanklyClientImportOptions(accountId),
-        ])
-      : [null, null, []];
+        ]);
+    } catch (error) {
+      console.error('[client-detail] rankly data failed', error);
+    }
+  }
 
   return (
     <PageBody className="flex min-h-0 flex-1 flex-col bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
@@ -118,13 +158,13 @@ export default async function ClientDetailPage({ params }: Props) {
           isContractorView={isContractorView}
           clientsListHref={clientsListHref}
           portalHref={portalHref}
-          workspaceNotes={workspaceContent.notes}
-          workspaceDocs={workspaceContent.docs}
-          notesTableAvailable={workspaceContent.notesTableAvailable}
-          docsTableAvailable={workspaceContent.docsTableAvailable}
-          linkOptions={workspaceContent.linkOptions}
-          defaultLink={workspaceContent.defaultLink}
-          notesVariant={notesVariantFromProfile(workspaceContent.profile)}
+          workspaceNotes={workspaceNotes}
+          workspaceDocs={workspaceDocs}
+          notesTableAvailable={notesTableAvailable}
+          docsTableAvailable={docsTableAvailable}
+          linkOptions={linkOptions}
+          defaultLink={defaultLink}
+          notesVariant={notesVariant}
           ranklyEnabled={ranklyEnabled}
           ranklyProject={ranklyProject}
           ranklyImportSeed={ranklyImportSeed}

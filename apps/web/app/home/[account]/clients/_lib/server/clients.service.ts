@@ -25,6 +25,11 @@ import type {
   ListNotesInput,
   UpdateClientInput,
 } from '../schema/clients.schema';
+import {
+  isMissingColumnError,
+  isMissingRelationError,
+  logMissingRelation,
+} from '../../../_lib/server/supabase-errors';
 import { buildClientsOverview } from './clients-overview.builder';
 
 export function createClientsService(client: SupabaseClient<Database>) {
@@ -437,6 +442,32 @@ class ClientsService {
 
   async listContacts(params: ListContactsInput) {
     await this.ensureUser();
+
+    const mapJunctionRows = (rows: Array<{
+      role?: string | null;
+      is_primary?: boolean | null;
+      contacts?: {
+        id?: string;
+        full_name?: string;
+        email?: string | null;
+        phone?: string | null;
+      } | null;
+    }>) =>
+      rows
+        .map((row) => {
+          const contact = row.contacts;
+          if (!contact?.id) return null;
+          return {
+            id: contact.id as string,
+            full_name: contact.full_name as string,
+            email: (contact.email as string | null) ?? null,
+            phone: (contact.phone as string | null) ?? null,
+            role: (row.role as string | null) ?? null,
+            is_primary: Boolean(row.is_primary),
+          };
+        })
+        .filter(Boolean);
+
     const { data, error } = await this.adminDb
       .from('client_contacts')
       .select(
@@ -446,24 +477,42 @@ class ClientsService {
       .order('is_primary', { ascending: false })
       .order('created_at', { ascending: true });
 
-    if (error) throw error;
+    if (!error) {
+      return { data: mapJunctionRows(data ?? []) };
+    }
 
-    const rows = (data ?? [])
-      .map((row: any) => {
-        const contact = row.contacts;
-        if (!contact?.id) return null;
-        return {
-          id: contact.id as string,
-          full_name: contact.full_name as string,
-          email: (contact.email as string | null) ?? null,
-          phone: (contact.phone as string | null) ?? null,
-          role: (row.role as string | null) ?? null,
-          is_primary: Boolean(row.is_primary),
-        };
-      })
-      .filter(Boolean);
+    if (!isMissingRelationError(error)) {
+      throw error;
+    }
 
-    return { data: rows };
+    logMissingRelation('clients.listContacts', error);
+
+    const { data: legacyRows, error: legacyError } = await this.adminDb
+      .from('contacts')
+      .select('id, full_name, email, phone, role, is_primary, created_at')
+      .eq('client_id', params.clientId)
+      .order('is_primary', { ascending: false })
+      .order('created_at', { ascending: true });
+
+    if (legacyError) throw legacyError;
+
+    return {
+      data: (legacyRows ?? []).map((row: {
+        id: string;
+        full_name: string;
+        email: string | null;
+        phone: string | null;
+        role: string | null;
+        is_primary: boolean;
+      }) => ({
+        id: row.id,
+        full_name: row.full_name,
+        email: row.email,
+        phone: row.phone,
+        role: row.role,
+        is_primary: row.is_primary,
+      })),
+    };
   }
 
   async listAccountContacts(params: ListAccountContactsInput) {
@@ -475,20 +524,63 @@ class ClientsService {
       .select('contact_id')
       .eq('client_id', params.clientId);
 
-    if (linkedError) throw linkedError;
-
-    const linkedIds = new Set(
-      (linkedRows ?? []).map((row: { contact_id: string }) => row.contact_id),
-    );
+    const linkedIds = new Set<string>();
+    if (!linkedError) {
+      for (const row of linkedRows ?? []) {
+        linkedIds.add((row as { contact_id: string }).contact_id);
+      }
+    } else if (!isMissingRelationError(linkedError)) {
+      throw linkedError;
+    } else {
+      logMissingRelation('clients.listAccountContacts.links', linkedError);
+      const { data: legacyLinked } = await this.adminDb
+        .from('contacts')
+        .select('id')
+        .eq('client_id', params.clientId);
+      for (const row of legacyLinked ?? []) {
+        linkedIds.add((row as { id: string }).id);
+      }
+    }
 
     let query = this.adminDb
       .from('contacts')
       .select('id, full_name, email, phone')
-      .eq('account_id', params.accountId)
       .order('full_name', { ascending: true })
       .limit(100);
 
-    const { data, error } = await query;
+    const { data: scopedRows, error: scopedError } = await query.eq(
+      'account_id',
+      params.accountId,
+    );
+
+    let data = scopedRows;
+    let error = scopedError;
+
+    if (error && isMissingColumnError(error)) {
+      const { data: accountClients, error: clientsError } = await this.adminDb
+        .from('clients')
+        .select('id')
+        .eq('account_id', params.accountId);
+
+      if (clientsError) throw clientsError;
+
+      const clientIds = (accountClients ?? []).map(
+        (row: { id: string }) => row.id,
+      );
+
+      const fallback = clientIds.length
+        ? await this.adminDb
+            .from('contacts')
+            .select('id, full_name, email, phone')
+            .in('client_id', clientIds)
+            .order('full_name', { ascending: true })
+            .limit(200)
+        : { data: [], error: null };
+
+      data = fallback.data;
+      error = fallback.error;
+    }
+
     if (error) throw error;
 
     const search = params.query?.trim().toLowerCase();
@@ -523,17 +615,53 @@ class ClientsService {
       .select('id')
       .single();
 
-    if (error) throw error;
+    let contactRow = contact;
+    let contactError = error;
+
+    if (contactError && isMissingColumnError(contactError)) {
+      const legacyInsert = await this.adminDb
+        .from('contacts')
+        .insert({
+          user_id: user.id,
+          client_id: input.clientId,
+          full_name: input.fullName,
+          email: input.email ?? null,
+          phone: input.phone ?? null,
+          role: input.role ?? null,
+          is_primary: input.isPrimary ?? false,
+        })
+        .select('id')
+        .single();
+      contactRow = legacyInsert.data;
+      contactError = legacyInsert.error;
+    }
+
+    if (contactError) throw contactError;
+    if (!contactRow?.id) throw new Error('Failed to create contact');
 
     const { error: linkError } = await this.adminDb.from('client_contacts').insert({
       client_id: input.clientId,
-      contact_id: contact.id,
+      contact_id: contactRow.id,
       role: input.role ?? null,
       is_primary: input.isPrimary ?? false,
     });
 
-    if (linkError) throw mapClientWriteError(linkError);
-    return contact;
+    if (linkError) {
+      if (isMissingRelationError(linkError)) {
+        logMissingRelation('clients.createContact.link', linkError);
+        await this.adminDb
+          .from('contacts')
+          .update({
+            client_id: input.clientId,
+            role: input.role ?? null,
+            is_primary: input.isPrimary ?? false,
+          })
+          .eq('id', contactRow.id);
+      } else {
+        throw mapClientWriteError(linkError);
+      }
+    }
+    return contactRow;
   }
 
   async linkContact(input: LinkContactInput) {
@@ -562,6 +690,11 @@ class ClientsService {
     if (linkError) {
       if (linkError.code === '23505') {
         throw new Error('This contact is already linked to this client.');
+      }
+      if (isMissingRelationError(linkError)) {
+        throw new Error(
+          'Shared contacts require the latest database migration. Run `pnpm exec supabase db push` from apps/web.',
+        );
       }
       throw mapClientWriteError(linkError);
     }

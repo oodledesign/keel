@@ -37,6 +37,7 @@ import {
   getClientPortalStatus,
   getJobHistory,
 } from '../_lib/server/server-actions';
+import { ClientContactsBlock } from './client-contacts-block';
 import { ClientImageUploader } from './client-image-uploader';
 import { ClientForm } from './client-form';
 import { ClientInvoicesBlock } from './client-invoices-block';
