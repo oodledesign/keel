@@ -28,18 +28,10 @@ import {
   deleteMeetingTranscript,
 } from '../../meeting-transcripts/_lib/server/server-actions';
 import { meetingDisplayDate, todayIsoDate } from '../_lib/format-meeting-date';
+import type { MeetingTranscriptListRow } from '../_lib/server/meetings-page.loader';
+import { MeetingParticipantAvatars } from './meeting-participant-avatars';
 
-type TranscriptRow = {
-  id: string;
-  title: string;
-  content: string;
-  source: string;
-  meetingDate: string | null;
-  createdAt: string;
-  clientId: string | null;
-  clientName: string | null;
-  dealTitle: string | null;
-};
+type TranscriptRow = MeetingTranscriptListRow;
 
 type ClientOption = { id: string; name: string };
 
@@ -51,28 +43,8 @@ type Props = {
   canEdit: boolean;
 };
 
-function mapTranscript(row: {
-  id: string;
-  title: string;
-  content: string;
-  source: string;
-  meetingDate?: string | null;
-  createdAt: string;
-  clientId?: string | null;
-  clientName?: string | null;
-  dealTitle?: string | null;
-}): TranscriptRow {
-  return {
-    id: row.id,
-    title: row.title,
-    content: row.content,
-    source: row.source,
-    meetingDate: row.meetingDate ?? null,
-    createdAt: row.createdAt,
-    clientId: row.clientId ?? null,
-    clientName: row.clientName ?? null,
-    dealTitle: row.dealTitle ?? null,
-  };
+function mapTranscript(row: MeetingTranscriptListRow): TranscriptRow {
+  return row;
 }
 
 export function MeetingsPageContent({
@@ -348,17 +320,20 @@ export function MeetingsPageContent({
                   {row.content.length.toLocaleString()} chars
                 </p>
               </div>
-              {canEdit ? (
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-8 w-8 shrink-0 text-red-400"
-                  disabled={pending}
-                  onClick={() => handleDelete(row.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              ) : null}
+              <div className="flex shrink-0 items-center gap-2">
+                <MeetingParticipantAvatars participants={row.participants} />
+                {canEdit ? (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 text-red-400"
+                    disabled={pending}
+                    onClick={() => handleDelete(row.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                ) : null}
+              </div>
             </li>
           ))}
         </ul>

@@ -458,11 +458,9 @@ export async function listPlannerCalendarEvents(
   };
 }
 
-async function ensurePlannerCalendar(
-  client: SupabaseClient,
-  userId: string,
+async function resolvePlannerCalendarId(
   connection: GoogleCalendarConnection,
-) {
+): Promise<string> {
   if (connection.plannerCalendarId) {
     return connection.plannerCalendarId;
   }
@@ -477,21 +475,48 @@ async function ensurePlannerCalendar(
   );
 
   if (existing?.id) {
-    await updatePlannerCalendarId(client, userId, existing.id);
     return existing.id;
   }
 
-  const created = await googleJson<{ id: string }>(connection, '/calendars', {
-    method: 'POST',
-    body: JSON.stringify({
-      summary: PLANNER_CALENDAR_NAME,
-      description: 'Tasks scheduled by Ozer Planner',
-      timeZone: 'Europe/London',
-    }),
-  });
+  const hasFullCalendarScope = (connection.scopes ?? '')
+    .split(/\s+/)
+    .includes('https://www.googleapis.com/auth/calendar');
 
-  await updatePlannerCalendarId(client, userId, created.id);
-  return created.id;
+  if (hasFullCalendarScope) {
+    try {
+      const created = await googleJson<{ id: string }>(connection, '/calendars', {
+        method: 'POST',
+        body: JSON.stringify({
+          summary: PLANNER_CALENDAR_NAME,
+          description: 'Tasks scheduled by Ozer Planner',
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+        }),
+      });
+
+      if (created.id) {
+        return created.id;
+      }
+    } catch {
+      // Workspace policy or missing permission — use primary calendar below.
+    }
+  }
+
+  const primary = (calendars.items ?? []).find((calendar) => calendar.primary)?.id;
+  return primary ?? connection.calendarId ?? 'primary';
+}
+
+async function ensurePlannerCalendar(
+  client: SupabaseClient,
+  userId: string,
+  connection: GoogleCalendarConnection,
+) {
+  const calendarId = await resolvePlannerCalendarId(connection);
+
+  if (calendarId !== connection.plannerCalendarId) {
+    await updatePlannerCalendarId(client, userId, calendarId);
+  }
+
+  return calendarId;
 }
 
 export async function createPlannerCalendarEvents(

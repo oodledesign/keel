@@ -453,6 +453,7 @@ class ClientsService {
         full_name?: string;
         email?: string | null;
         phone?: string | null;
+        picture_url?: string | null;
       } | null;
     }>) =>
       rows
@@ -466,6 +467,7 @@ class ClientsService {
             phone: (contact.phone as string | null) ?? null,
             role: (row.role as string | null) ?? null,
             is_primary: Boolean(row.is_primary),
+            picture_url: (contact.picture_url as string | null) ?? null,
           };
         })
         .filter(Boolean);
@@ -473,7 +475,7 @@ class ClientsService {
     const { data, error } = await this.adminDb
       .from('client_contacts')
       .select(
-        'role, is_primary, created_at, contacts ( id, full_name, email, phone )',
+        'role, is_primary, created_at, contacts ( id, full_name, email, phone, picture_url )',
       )
       .eq('client_id', params.clientId)
       .order('is_primary', { ascending: false })
@@ -481,6 +483,21 @@ class ClientsService {
 
     if (!error) {
       return { data: mapJunctionRows(data ?? []) };
+    }
+
+    if (isMissingColumnError(error)) {
+      const { data: fallbackData, error: fallbackError } = await this.adminDb
+        .from('client_contacts')
+        .select(
+          'role, is_primary, created_at, contacts ( id, full_name, email, phone )',
+        )
+        .eq('client_id', params.clientId)
+        .order('is_primary', { ascending: false })
+        .order('created_at', { ascending: true });
+
+      if (!fallbackError) {
+        return { data: mapJunctionRows(fallbackData ?? []) };
+      }
     }
 
     if (!isMissingRelationError(error)) {
@@ -491,10 +508,41 @@ class ClientsService {
 
     const { data: legacyRows, error: legacyError } = await this.adminDb
       .from('contacts')
-      .select('id, full_name, email, phone, role, is_primary, created_at')
+      .select('id, full_name, email, phone, role, is_primary, created_at, picture_url')
       .eq('client_id', params.clientId)
       .order('is_primary', { ascending: false })
       .order('created_at', { ascending: true });
+
+    if (legacyError && isMissingColumnError(legacyError)) {
+      const { data: legacyWithoutPhoto, error: legacyWithoutPhotoError } =
+        await this.adminDb
+          .from('contacts')
+          .select('id, full_name, email, phone, role, is_primary, created_at')
+          .eq('client_id', params.clientId)
+          .order('is_primary', { ascending: false })
+          .order('created_at', { ascending: true });
+
+      if (legacyWithoutPhotoError) throw legacyWithoutPhotoError;
+
+      return {
+        data: (legacyWithoutPhoto ?? []).map((row: {
+          id: string;
+          full_name: string;
+          email: string | null;
+          phone: string | null;
+          role: string | null;
+          is_primary: boolean;
+        }) => ({
+          id: row.id,
+          full_name: row.full_name,
+          email: row.email,
+          phone: row.phone,
+          role: row.role,
+          is_primary: row.is_primary,
+          picture_url: null,
+        })),
+      };
+    }
 
     if (legacyError) throw legacyError;
 
@@ -506,6 +554,7 @@ class ClientsService {
         phone: string | null;
         role: string | null;
         is_primary: boolean;
+        picture_url?: string | null;
       }) => ({
         id: row.id,
         full_name: row.full_name,
@@ -513,6 +562,7 @@ class ClientsService {
         phone: row.phone,
         role: row.role,
         is_primary: row.is_primary,
+        picture_url: row.picture_url ?? null,
       })),
     };
   }
@@ -546,7 +596,7 @@ class ClientsService {
 
     let query = this.adminDb
       .from('contacts')
-      .select('id, full_name, email, phone')
+      .select('id, full_name, email, phone, picture_url')
       .order('full_name', { ascending: true })
       .limit(100);
 
@@ -746,7 +796,7 @@ class ClientsService {
 
     const { data, error } = await this.adminDb
       .from('contacts')
-      .select('id, full_name, email, phone')
+      .select('id, full_name, email, phone, picture_url')
       .eq('account_id', params.accountId)
       .order('full_name', { ascending: true })
       .limit(500);
@@ -758,17 +808,43 @@ class ClientsService {
           full_name: string;
           email: string | null;
           phone: string | null;
+          picture_url?: string | null;
         }) => ({
           id: row.id,
           full_name: row.full_name,
           email: row.email,
           phone: row.phone,
+          picture_url: row.picture_url ?? null,
         })),
       };
     }
 
     if (!isMissingColumnError(error)) {
       throw error;
+    }
+
+    const { data: withoutPhoto, error: withoutPhotoError } = await this.adminDb
+      .from('contacts')
+      .select('id, full_name, email, phone')
+      .eq('account_id', params.accountId)
+      .order('full_name', { ascending: true })
+      .limit(500);
+
+    if (!withoutPhotoError) {
+      return {
+        data: (withoutPhoto ?? []).map((row: {
+          id: string;
+          full_name: string;
+          email: string | null;
+          phone: string | null;
+        }) => ({
+          id: row.id,
+          full_name: row.full_name,
+          email: row.email,
+          phone: row.phone,
+          picture_url: null,
+        })),
+      };
     }
 
     const { data: accountClients, error: clientsError } = await this.adminDb
@@ -785,7 +861,7 @@ class ClientsService {
 
     const { data: junctionRows, error: junctionError } = await this.adminDb
       .from('client_contacts')
-      .select('contact_id, contacts ( id, full_name, email, phone )')
+      .select('contact_id, contacts ( id, full_name, email, phone, picture_url )')
       .in('client_id', clientIds);
 
     if (!junctionError) {
@@ -794,6 +870,7 @@ class ClientsService {
         full_name: string;
         email: string | null;
         phone: string | null;
+        picture_url: string | null;
       }>();
 
       for (const row of junctionRows ?? []) {
@@ -802,6 +879,7 @@ class ClientsService {
           full_name?: string;
           email?: string | null;
           phone?: string | null;
+          picture_url?: string | null;
         } | null }).contacts;
         if (!contact?.id || !contact.full_name) continue;
         byId.set(contact.id, {
@@ -809,6 +887,7 @@ class ClientsService {
           full_name: contact.full_name,
           email: contact.email ?? null,
           phone: contact.phone ?? null,
+          picture_url: contact.picture_url ?? null,
         });
       }
 
@@ -821,7 +900,7 @@ class ClientsService {
 
     const { data: legacyRows, error: legacyError } = await this.adminDb
       .from('contacts')
-      .select('id, full_name, email, phone')
+      .select('id, full_name, email, phone, picture_url')
       .in('client_id', clientIds)
       .order('full_name', { ascending: true });
 
@@ -832,6 +911,7 @@ class ClientsService {
       full_name: string;
       email: string | null;
       phone: string | null;
+      picture_url: string | null;
     }>();
     for (const row of legacyRows ?? []) {
       const contact = row as {
@@ -839,8 +919,12 @@ class ClientsService {
         full_name: string;
         email: string | null;
         phone: string | null;
+        picture_url?: string | null;
       };
-      byId.set(contact.id, contact);
+      byId.set(contact.id, {
+        ...contact,
+        picture_url: contact.picture_url ?? null,
+      });
     }
 
     return { data: [...byId.values()] };

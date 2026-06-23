@@ -8,14 +8,36 @@ import { createClientsService } from '~/home/[account]/clients/_lib/server/clien
 import { getTeamAccountAccess } from '~/home/[account]/_lib/role-access';
 import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
 
-import { createMeetingTranscriptsService } from '~/home/[account]/_lib/server/meeting-transcripts.service';
+import { createMeetingTranscriptsService, type MeetingTranscriptListItem } from '~/home/[account]/_lib/server/meeting-transcripts.service';
+import {
+  resolveMeetingParticipants,
+  type MeetingParticipant,
+} from '~/lib/recorder/meeting-participants';
 import { loadMeetingSummary } from '~/lib/recorder/meeting-summary';
 
-export type MeetingClientOption = { id: string; name: string };
+export type MeetingClientOption = {
+  id: string;
+  name: string;
+  pictureUrl?: string | null;
+};
 export type MeetingContactOption = {
   id: string;
   name: string;
   email?: string | null;
+  pictureUrl?: string | null;
+};
+
+export type MeetingTranscriptListRow = {
+  id: string;
+  title: string;
+  content: string;
+  source: string;
+  meetingDate: string | null;
+  createdAt: string;
+  clientId: string | null;
+  clientName: string | null;
+  dealTitle: string | null;
+  participants: MeetingParticipant[];
 };
 
 function mapClientOptions(
@@ -25,6 +47,7 @@ function mapClientOptions(
     first_name?: string | null;
     last_name?: string | null;
     company_name?: string | null;
+    picture_url?: string | null;
   }>,
 ): MeetingClientOption[] {
   return rows
@@ -38,6 +61,7 @@ function mapClientOptions(
           .join(' ')
           .trim() ||
         'Unnamed client',
+      pictureUrl: row.picture_url ?? null,
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -47,6 +71,7 @@ function mapContactOptions(
     id: string;
     full_name: string;
     email?: string | null;
+    picture_url?: string | null;
   }>,
 ): MeetingContactOption[] {
   return rows
@@ -54,8 +79,32 @@ function mapContactOptions(
       id: row.id,
       name: row.full_name.trim() || 'Unnamed contact',
       email: row.email ?? null,
+      pictureUrl: row.picture_url ?? null,
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function mapTranscriptListRow(
+  transcript: MeetingTranscriptListItem,
+  clients: MeetingClientOption[],
+  contacts: MeetingContactOption[],
+): MeetingTranscriptListRow {
+  return {
+    id: transcript.id,
+    title: transcript.title,
+    content: transcript.content,
+    source: transcript.source,
+    meetingDate: transcript.meetingDate,
+    createdAt: transcript.createdAt,
+    clientId: transcript.clientId,
+    clientName: transcript.clientName,
+    dealTitle: transcript.dealTitle,
+    participants: resolveMeetingParticipants(
+      transcript.speakerMappings,
+      clients,
+      contacts,
+    ),
+  };
 }
 
 export const loadMeetingsPageData = cache(loadMeetingsPageDataImpl);
@@ -76,22 +125,27 @@ async function loadMeetingsPageDataImpl(accountSlug: string) {
   const transcriptsService = createMeetingTranscriptsService(client);
   const clientsService = createClientsService(client);
 
-  const [transcripts, clientsResult] = await Promise.all([
+  const [transcripts, clientsResult, contactsResult] = await Promise.all([
     transcriptsService.listForAccount({ accountId }),
     clientsService.listClients({
       accountId,
       page: 1,
       pageSize: 100,
     }),
+    clientsService.listWorkspaceContacts({ accountId }),
   ]);
 
   const clients = mapClientOptions(clientsResult.data ?? []);
+  const contacts = mapContactOptions(contactsResult.data ?? []);
 
   return {
     accountId,
     accountSlug,
-    transcripts,
+    transcripts: transcripts.map((transcript) =>
+      mapTranscriptListRow(transcript, clients, contacts),
+    ),
     clients,
+    contacts,
     canEdit: access.canEditClients,
     canView: access.canViewClients,
   };

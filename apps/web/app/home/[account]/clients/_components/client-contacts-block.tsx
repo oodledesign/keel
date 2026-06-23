@@ -32,6 +32,7 @@ import {
   listAccountContacts,
   listContacts,
 } from '../_lib/server/server-actions';
+import { ContactImageUploader } from './contact-image-uploader';
 
 type Contact = {
   id: string;
@@ -40,6 +41,7 @@ type Contact = {
   phone: string | null;
   role: string | null;
   is_primary: boolean;
+  picture_url: string | null;
 };
 
 type AccountContact = {
@@ -384,6 +386,7 @@ export function ClientContactsBlock({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-zinc-700 bg-zinc-900">
+                <th className="w-12 px-2 py-2" />
                 <th className="px-3 py-2 text-left text-xs font-medium text-zinc-400">Name</th>
                 <th className="hidden px-3 py-2 text-left text-xs font-medium text-zinc-400 sm:table-cell">Role</th>
                 <th className="hidden px-3 py-2 text-left text-xs font-medium text-zinc-400 md:table-cell">Email</th>
@@ -394,6 +397,16 @@ export function ClientContactsBlock({
             <tbody className="divide-y divide-zinc-700">
               {contacts.map((contact) => (
                 <tr key={contact.id} className="bg-[var(--workspace-shell-panel)] hover:bg-zinc-800/50">
+                  <td className="px-2 py-2.5 align-middle">
+                    <ContactImageUploader
+                      accountId={accountId}
+                      contactId={contact.id}
+                      displayName={contact.full_name}
+                      pictureUrl={contact.picture_url}
+                      disabled={!canEdit}
+                      onUpdated={fetchContacts}
+                    />
+                  </td>
                   <td className="px-3 py-2.5">
                     <div>
                       <p className="font-medium text-white">{contact.full_name}</p>
