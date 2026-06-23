@@ -1,10 +1,12 @@
 -- Meeting transcripts belong to the clients module, not invoicing.
--- Align RLS with clients.view / clients.edit so the /meetings page works for
--- anyone who can view clients (including contractors).
+-- SELECT: clients.view OR clients.edit (owner/admin/staff only have clients.edit in role_permissions).
 
 DROP POLICY IF EXISTS meeting_transcripts_select ON public.meeting_transcripts;
 CREATE POLICY meeting_transcripts_select ON public.meeting_transcripts FOR SELECT TO authenticated
-USING (public.has_permission(auth.uid(), account_id, 'clients.view'::public.app_permissions));
+USING (
+  public.has_permission(auth.uid(), account_id, 'clients.view'::public.app_permissions)
+  OR public.has_permission(auth.uid(), account_id, 'clients.edit'::public.app_permissions)
+);
 
 DROP POLICY IF EXISTS meeting_transcripts_insert ON public.meeting_transcripts;
 CREATE POLICY meeting_transcripts_insert ON public.meeting_transcripts FOR INSERT TO authenticated
@@ -20,7 +22,10 @@ USING (public.has_permission(auth.uid(), account_id, 'clients.edit'::public.app_
 
 DROP POLICY IF EXISTS meeting_summaries_select ON public.meeting_summaries;
 CREATE POLICY meeting_summaries_select ON public.meeting_summaries FOR SELECT TO authenticated
-USING (public.has_permission(auth.uid(), account_id, 'clients.view'::public.app_permissions));
+USING (
+  public.has_permission(auth.uid(), account_id, 'clients.view'::public.app_permissions)
+  OR public.has_permission(auth.uid(), account_id, 'clients.edit'::public.app_permissions)
+);
 
 DROP POLICY IF EXISTS meeting_summaries_insert ON public.meeting_summaries;
 CREATE POLICY meeting_summaries_insert ON public.meeting_summaries FOR INSERT TO authenticated

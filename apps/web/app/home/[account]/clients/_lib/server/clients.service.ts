@@ -934,7 +934,7 @@ class ClientsService {
     const user = await this.ensureUserAndPermission(input.accountId, 'clients.edit');
 
     if (input.linkClientId) {
-      await this.ensureClientInAccount(input.accountId, input.linkClientId);
+      await this.ensureClientInAccount(input.linkClientId, input.accountId);
     }
 
     const { data: contact, error } = await this.adminDb
@@ -968,7 +968,7 @@ class ClientsService {
       contactError = legacyInsert.error;
     }
 
-    if (contactError) throw contactError;
+    if (contactError) throw mapClientWriteError(contactError);
     if (!contactRow?.id) throw new Error('Failed to create contact');
 
     if (input.linkClientId) {
