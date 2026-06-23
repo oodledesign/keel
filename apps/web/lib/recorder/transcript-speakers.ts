@@ -3,6 +3,16 @@ export type TranscriptSegment = {
   text: string;
 };
 
+export type SpeakerBinding =
+  | { type: 'custom'; name: string }
+  | { type: 'client'; clientId: string }
+  | { type: 'contact'; contactId: string };
+
+export type SpeakerMappings = Record<string, SpeakerBinding>;
+
+export type SpeakerLookupClient = { id: string; name: string };
+export type SpeakerLookupContact = { id: string; name: string };
+
 const SPEAKER_LINE_RE = /^([^:]+):\s*(.*)$/;
 
 export function parseTranscriptContent(content: string): {
@@ -142,4 +152,90 @@ export function collectSpeakerNameSuggestions(input: {
   }
 
   return [...suggestions].sort((a, b) => a.localeCompare(b));
+}
+
+function isSpeakerBinding(value: unknown): value is SpeakerBinding {
+  if (!value || typeof value !== 'object') return false;
+  const type = (value as { type?: unknown }).type;
+  if (type === 'custom') {
+    const name = (value as { name?: unknown }).name;
+    return typeof name === 'string' && name.trim().length > 0;
+  }
+  if (type === 'client') {
+    const clientId = (value as { clientId?: unknown }).clientId;
+    return typeof clientId === 'string' && clientId.length > 0;
+  }
+  if (type === 'contact') {
+    const contactId = (value as { contactId?: unknown }).contactId;
+    return typeof contactId === 'string' && contactId.length > 0;
+  }
+  return false;
+}
+
+export function normalizeSpeakerMappings(value: unknown): SpeakerMappings {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+
+  const mappings: SpeakerMappings = {};
+  for (const [key, binding] of Object.entries(value)) {
+    const trimmedKey = key.trim();
+    if (!trimmedKey || !isSpeakerBinding(binding)) continue;
+    if (binding.type === 'custom') {
+      mappings[trimmedKey] = { type: 'custom', name: binding.name.trim() };
+      continue;
+    }
+    if (binding.type === 'client') {
+      mappings[trimmedKey] = { type: 'client', clientId: binding.clientId };
+      continue;
+    }
+    mappings[trimmedKey] = { type: 'contact', contactId: binding.contactId };
+  }
+
+  return mappings;
+}
+
+export function resolveSpeakerLabel(
+  speakerKey: string,
+  mappings: SpeakerMappings,
+  clients: SpeakerLookupClient[],
+  contacts: SpeakerLookupContact[],
+): string {
+  const binding = mappings[speakerKey];
+  if (!binding) return speakerKey;
+
+  if (binding.type === 'custom') {
+    return binding.name;
+  }
+
+  if (binding.type === 'client') {
+    const client = clients.find((row) => row.id === binding.clientId);
+    return client?.name ?? speakerKey;
+  }
+
+  const contact = contacts.find((row) => row.id === binding.contactId);
+  return contact?.name ?? speakerKey;
+}
+
+export function segmentsWithResolvedSpeakers(
+  segments: TranscriptSegment[],
+  mappings: SpeakerMappings,
+  clients: SpeakerLookupClient[],
+  contacts: SpeakerLookupContact[],
+): TranscriptSegment[] {
+  return segments.map((segment) => ({
+    ...segment,
+    speaker: resolveSpeakerLabel(segment.speaker, mappings, clients, contacts),
+  }));
+}
+
+export function serializeResolvedTranscriptSegments(
+  segments: TranscriptSegment[],
+  mappings: SpeakerMappings,
+  clients: SpeakerLookupClient[],
+  contacts: SpeakerLookupContact[],
+): string {
+  return serializeTranscriptSegments(
+    segmentsWithResolvedSpeakers(segments, mappings, clients, contacts),
+  );
 }

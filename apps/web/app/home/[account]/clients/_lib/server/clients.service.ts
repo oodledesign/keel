@@ -12,6 +12,7 @@ import type {
   CreateClientInput,
   CreateContactInput,
   CreateNoteInput,
+  CreateWorkspaceContactInput,
   DeleteClientInput,
   DeleteContactInput,
   DeleteNoteInput,
@@ -23,6 +24,7 @@ import type {
   ListClientsInput,
   ListContactsInput,
   ListNotesInput,
+  ListWorkspaceContactsInput,
   UpdateClientInput,
 } from '../schema/clients.schema';
 import {
@@ -737,5 +739,165 @@ class ClientsService {
 
       if (deleteError) throw deleteError;
     }
+  }
+
+  async listWorkspaceContacts(params: ListWorkspaceContactsInput) {
+    await this.ensureUserAndPermission(params.accountId, 'clients.view');
+
+    const { data, error } = await this.adminDb
+      .from('contacts')
+      .select('id, full_name, email, phone')
+      .eq('account_id', params.accountId)
+      .order('full_name', { ascending: true })
+      .limit(500);
+
+    if (!error) {
+      return {
+        data: (data ?? []).map((row: {
+          id: string;
+          full_name: string;
+          email: string | null;
+          phone: string | null;
+        }) => ({
+          id: row.id,
+          full_name: row.full_name,
+          email: row.email,
+          phone: row.phone,
+        })),
+      };
+    }
+
+    if (!isMissingColumnError(error)) {
+      throw error;
+    }
+
+    const { data: accountClients, error: clientsError } = await this.adminDb
+      .from('clients')
+      .select('id')
+      .eq('account_id', params.accountId);
+
+    if (clientsError) throw clientsError;
+
+    const clientIds = (accountClients ?? []).map((row: { id: string }) => row.id);
+    if (clientIds.length === 0) {
+      return { data: [] };
+    }
+
+    const { data: junctionRows, error: junctionError } = await this.adminDb
+      .from('client_contacts')
+      .select('contact_id, contacts ( id, full_name, email, phone )')
+      .in('client_id', clientIds);
+
+    if (!junctionError) {
+      const byId = new Map<string, {
+        id: string;
+        full_name: string;
+        email: string | null;
+        phone: string | null;
+      }>();
+
+      for (const row of junctionRows ?? []) {
+        const contact = (row as { contacts?: {
+          id?: string;
+          full_name?: string;
+          email?: string | null;
+          phone?: string | null;
+        } | null }).contacts;
+        if (!contact?.id || !contact.full_name) continue;
+        byId.set(contact.id, {
+          id: contact.id,
+          full_name: contact.full_name,
+          email: contact.email ?? null,
+          phone: contact.phone ?? null,
+        });
+      }
+
+      return { data: [...byId.values()].sort((a, b) => a.full_name.localeCompare(b.full_name)) };
+    }
+
+    if (!isMissingRelationError(junctionError)) {
+      throw junctionError;
+    }
+
+    const { data: legacyRows, error: legacyError } = await this.adminDb
+      .from('contacts')
+      .select('id, full_name, email, phone')
+      .in('client_id', clientIds)
+      .order('full_name', { ascending: true });
+
+    if (legacyError) throw legacyError;
+
+    const byId = new Map<string, {
+      id: string;
+      full_name: string;
+      email: string | null;
+      phone: string | null;
+    }>();
+    for (const row of legacyRows ?? []) {
+      const contact = row as {
+        id: string;
+        full_name: string;
+        email: string | null;
+        phone: string | null;
+      };
+      byId.set(contact.id, contact);
+    }
+
+    return { data: [...byId.values()] };
+  }
+
+  async createWorkspaceContact(input: CreateWorkspaceContactInput) {
+    const user = await this.ensureUserAndPermission(input.accountId, 'clients.edit');
+
+    if (input.linkClientId) {
+      await this.ensureClientInAccount(input.accountId, input.linkClientId);
+    }
+
+    const { data: contact, error } = await this.adminDb
+      .from('contacts')
+      .insert({
+        account_id: input.accountId,
+        user_id: user.id,
+        full_name: input.fullName.trim(),
+        email: input.email ?? null,
+        phone: input.phone ?? null,
+      })
+      .select('id, full_name, email, phone')
+      .single();
+
+    let contactRow = contact;
+    let contactError = error;
+
+    if (contactError && isMissingColumnError(contactError)) {
+      const legacyInsert = await this.adminDb
+        .from('contacts')
+        .insert({
+          user_id: user.id,
+          client_id: input.linkClientId ?? null,
+          full_name: input.fullName.trim(),
+          email: input.email ?? null,
+          phone: input.phone ?? null,
+        })
+        .select('id, full_name, email, phone')
+        .single();
+      contactRow = legacyInsert.data;
+      contactError = legacyInsert.error;
+    }
+
+    if (contactError) throw contactError;
+    if (!contactRow?.id) throw new Error('Failed to create contact');
+
+    if (input.linkClientId) {
+      const { error: linkError } = await this.adminDb.from('client_contacts').insert({
+        client_id: input.linkClientId,
+        contact_id: contactRow.id,
+      });
+
+      if (linkError && !isMissingRelationError(linkError)) {
+        throw mapClientWriteError(linkError);
+      }
+    }
+
+    return contactRow;
   }
 }

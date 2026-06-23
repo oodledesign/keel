@@ -11,6 +11,7 @@ import {
   CreateClientSchema,
   CreateContactSchema,
   CreateNoteSchema,
+  CreateWorkspaceContactSchema,
   DeleteClientSchema,
   DeleteContactSchema,
   DeleteNoteSchema,
@@ -22,6 +23,7 @@ import {
   ListClientsSchema,
   ListContactsSchema,
   ListNotesSchema,
+  ListWorkspaceContactsSchema,
   UpdateClientSchema,
 } from '../schema/clients.schema';
 
@@ -159,6 +161,22 @@ export const linkContact = enhanceAction(
     return service.linkContact(input);
   },
   { schema: LinkContactSchema },
+);
+
+export const listWorkspaceContacts = enhanceAction(
+  async (input) => {
+    const service = getService();
+    return service.listWorkspaceContacts(input);
+  },
+  { schema: ListWorkspaceContactsSchema },
+);
+
+export const createWorkspaceContact = enhanceAction(
+  async (input) => {
+    const service = getService();
+    return service.createWorkspaceContact(input);
+  },
+  { schema: CreateWorkspaceContactSchema },
 );
 
 export const deleteContact = enhanceAction(

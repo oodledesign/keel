@@ -9,10 +9,12 @@ import type { Database } from '~/lib/database.types';
 
 import { queueBrainDeleteSource, queueBrainIndexSource } from '~/lib/brain/sync';
 import {
+  normalizeSpeakerMappings,
   parseTranscriptContent,
-  renameSpeakersInSegments,
   resolveTranscriptSegments,
-  serializeTranscriptSegments,
+  serializeResolvedTranscriptSegments,
+  type SpeakerBinding,
+  type SpeakerMappings,
   type TranscriptSegment,
 } from '~/lib/recorder/transcript-speakers';
 
@@ -29,6 +31,7 @@ export type MeetingTranscript = {
   title: string;
   content: string;
   speakerSegments: TranscriptSegment[];
+  speakerMappings: SpeakerMappings;
   calendarAttendees: MeetingCalendarAttendee[];
   source: 'paste' | 'upload' | 'desktop_recorder';
   filePath: string | null;
@@ -51,6 +54,7 @@ type MeetingTranscriptRow = {
   title?: string | null;
   content?: string | null;
   speaker_segments?: unknown;
+  speaker_mappings?: unknown;
   calendar_attendees?: unknown;
   source?: string | null;
   file_path?: string | null;
@@ -90,6 +94,7 @@ function mapMeetingTranscript(row: MeetingTranscriptRow): MeetingTranscript {
       content,
       speakerSegments: row.speaker_segments,
     }),
+    speakerMappings: normalizeSpeakerMappings(row.speaker_mappings),
     calendarAttendees: normalizeCalendarAttendees(row.calendar_attendees),
     source:
       row.source === 'upload'
@@ -543,10 +548,10 @@ class MeetingTranscriptsService {
     return updated;
   }
 
-  async updateSpeakerLabels(input: {
+  async updateSpeakerMappings(input: {
     accountId: string;
     transcriptId: string;
-    renames: Record<string, string>;
+    mappings: SpeakerMappings;
   }): Promise<MeetingTranscriptListItem> {
     await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
 
@@ -558,28 +563,28 @@ class MeetingTranscriptsService {
 
     const segments = existing.speakerSegments;
     if (segments.length === 0) {
-      throw new Error('This transcript has no speaker labels to rename');
+      throw new Error('This transcript has no speaker labels to assign');
     }
 
-    const normalizedRenames: Record<string, string> = {};
-    for (const [from, to] of Object.entries(input.renames)) {
-      const next = to.trim();
-      if (!from.trim() || !next || from.trim() === next) continue;
-      normalizedRenames[from.trim()] = next;
-    }
+    const mappings = normalizeSpeakerMappings(input.mappings);
+    const { clients, contacts } = await this.loadSpeakerResolutionData(
+      input.accountId,
+      mappings,
+    );
 
-    if (Object.keys(normalizedRenames).length === 0) {
-      return existing;
-    }
-
-    const nextSegments = renameSpeakersInSegments(segments, normalizedRenames);
-    const content = serializeTranscriptSegments(nextSegments);
+    const content = serializeResolvedTranscriptSegments(
+      segments,
+      mappings,
+      clients,
+      contacts,
+    );
 
     const { error } = await this.db
       .from('meeting_transcripts')
       .update({
         content,
-        speaker_segments: nextSegments,
+        speaker_mappings: mappings,
+        speaker_segments: segments,
       })
       .eq('id', input.transcriptId)
       .eq('account_id', input.accountId);
@@ -594,6 +599,68 @@ class MeetingTranscriptsService {
     });
     if (!updated) throw new Error('Transcript not found');
     return updated;
+  }
+
+  private async loadSpeakerResolutionData(
+    accountId: string,
+    mappings: SpeakerMappings,
+  ) {
+    const clientIds = [
+      ...new Set(
+        Object.values(mappings)
+          .filter((binding): binding is Extract<SpeakerBinding, { type: 'client' }> => binding.type === 'client')
+          .map((binding) => binding.clientId),
+      ),
+    ];
+    const contactIds = [
+      ...new Set(
+        Object.values(mappings)
+          .filter((binding): binding is Extract<SpeakerBinding, { type: 'contact' }> => binding.type === 'contact')
+          .map((binding) => binding.contactId),
+      ),
+    ];
+
+    const clients: Array<{ id: string; name: string }> = [];
+    if (clientIds.length > 0) {
+      const { data, error } = await this.db
+        .from('clients')
+        .select('id, display_name, company_name, first_name, last_name')
+        .eq('account_id', accountId)
+        .in('id', clientIds);
+
+      if (error) throw new Error(error.message);
+
+      for (const row of data ?? []) {
+        const name =
+          (row as { display_name?: string | null }).display_name?.trim() ||
+          (row as { company_name?: string | null }).company_name?.trim() ||
+          [(row as { first_name?: string | null }).first_name, (row as { last_name?: string | null }).last_name]
+            .filter(Boolean)
+            .join(' ')
+            .trim() ||
+          'Unnamed client';
+        clients.push({ id: row.id as string, name });
+      }
+    }
+
+    const contacts: Array<{ id: string; name: string }> = [];
+    if (contactIds.length > 0) {
+      const { data, error } = await this.db
+        .from('contacts')
+        .select('id, full_name')
+        .in('id', contactIds);
+
+      if (error) throw new Error(error.message);
+
+      for (const row of data ?? []) {
+        contacts.push({
+          id: row.id as string,
+          name: ((row as { full_name?: string }).full_name ?? 'Contact').trim(),
+        });
+      }
+    }
+
+    return { clients, contacts };
   }
 
   async delete(input: {

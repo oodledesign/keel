@@ -24,6 +24,12 @@ function clientPhotoPath(accountId: string, clientId: string) {
   return `${accountId}/client-${clientId}`;
 }
 
+function isMissingPictureUrlColumn(error: { code?: string; message?: string } | null) {
+  if (!error) return false;
+  const blob = `${error.message ?? ''} ${error.code ?? ''}`.toLowerCase();
+  return blob.includes('picture_url');
+}
+
 async function ensureClientsEditPermission(
   userId: string,
   accountId: string,
@@ -52,79 +58,184 @@ async function ensureClientsEditPermission(
 async function loadClient(
   accountId: string,
   clientId: string,
-): Promise<{ id: string; account_id: string; picture_url: string | null } | null> {
-  const client = getSupabaseServerClient();
-  const { data, error } = await client
+): Promise<{
+  id: string;
+  account_id: string;
+  picture_url: string | null;
+  pictureUrlAvailable: boolean;
+} | null> {
+  const admin = getSupabaseServerAdminClient();
+  const { data, error } = await admin
     .from('clients')
     .select('id, account_id, picture_url')
     .eq('id', clientId)
     .eq('account_id', accountId)
     .maybeSingle();
 
-  if (error) throw new Error(error.message);
-  if (!data) return null;
+  if (!error && data) {
+    return {
+      id: data.id as string,
+      account_id: data.account_id as string,
+      picture_url: (data.picture_url as string | null) ?? null,
+      pictureUrlAvailable: true,
+    };
+  }
 
-  return data as {
-    id: string;
-    account_id: string;
-    picture_url: string | null;
+  if (!isMissingPictureUrlColumn(error)) {
+    if (error) throw new Error(error.message);
+    return null;
+  }
+
+  const { data: fallback, error: fallbackError } = await admin
+    .from('clients')
+    .select('id, account_id')
+    .eq('id', clientId)
+    .eq('account_id', accountId)
+    .maybeSingle();
+
+  if (fallbackError) throw new Error(fallbackError.message);
+  if (!fallback) return null;
+
+  return {
+    id: fallback.id as string,
+    account_id: fallback.account_id as string,
+    picture_url: null,
+    pictureUrlAvailable: false,
   };
 }
 
 export async function POST(request: Request) {
-  const userClient = getSupabaseServerClient();
-  const {
-    data: { user },
-  } = await userClient.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  let formData: FormData;
   try {
-    formData = await request.formData();
-  } catch {
-    return NextResponse.json({ error: 'Invalid form data' }, { status: 400 });
-  }
+    const userClient = getSupabaseServerClient();
+    const {
+      data: { user },
+    } = await userClient.auth.getUser();
 
-  const accountId = formData.get('accountId');
-  const clientId = formData.get('clientId');
-  const remove = formData.get('remove') === '1';
-  const file = formData.get('file');
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-  if (typeof accountId !== 'string' || !accountId.trim()) {
-    return NextResponse.json({ error: 'accountId is required' }, { status: 400 });
-  }
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+    } catch {
+      return NextResponse.json({ error: 'Invalid form data' }, { status: 400 });
+    }
 
-  if (typeof clientId !== 'string' || !clientId.trim()) {
-    return NextResponse.json({ error: 'clientId is required' }, { status: 400 });
-  }
+    const accountId = formData.get('accountId');
+    const clientId = formData.get('clientId');
+    const remove = formData.get('remove') === '1';
+    const file = formData.get('file');
 
-  const canEdit = await ensureClientsEditPermission(user.id, accountId.trim());
-  if (!canEdit) {
-    return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
-  }
+    if (typeof accountId !== 'string' || !accountId.trim()) {
+      return NextResponse.json({ error: 'accountId is required' }, { status: 400 });
+    }
 
-  const clientRow = await loadClient(accountId.trim(), clientId.trim());
-  if (!clientRow) {
-    return NextResponse.json({ error: 'Client not found' }, { status: 404 });
-  }
+    if (typeof clientId !== 'string' || !clientId.trim()) {
+      return NextResponse.json({ error: 'clientId is required' }, { status: 400 });
+    }
 
-  const admin = getSupabaseServerAdminClient();
-  const bucket = admin.storage.from(AVATARS_BUCKET);
-  const existingPath = storagePathFromPictureUrl(clientRow.picture_url);
-  const nextPath = clientPhotoPath(clientRow.account_id, clientRow.id);
+    const canEdit = await ensureClientsEditPermission(user.id, accountId.trim());
+    if (!canEdit) {
+      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
+    }
 
-  if (remove) {
-    if (existingPath) {
+    const clientRow = await loadClient(accountId.trim(), clientId.trim());
+    if (!clientRow) {
+      return NextResponse.json({ error: 'Client not found' }, { status: 404 });
+    }
+
+    if (!clientRow.pictureUrlAvailable) {
+      return NextResponse.json(
+        {
+          error:
+            'Client photos are not enabled on this database yet. Run the latest migrations from apps/web (`pnpm exec supabase db push`).',
+        },
+        { status: 503 },
+      );
+    }
+
+    const admin = getSupabaseServerAdminClient();
+    const bucket = admin.storage.from(AVATARS_BUCKET);
+    const existingPath = storagePathFromPictureUrl(clientRow.picture_url);
+    const nextPath = clientPhotoPath(clientRow.account_id, clientRow.id);
+
+    if (remove) {
+      if (existingPath) {
+        await bucket.remove([existingPath]);
+      }
+
+      const { error: updateError } = await admin
+        .from('clients')
+        .update({
+          picture_url: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', clientRow.id)
+        .eq('account_id', clientRow.account_id);
+
+      if (updateError) {
+        return NextResponse.json({ error: updateError.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ pictureUrl: null });
+    }
+
+    if (!(file instanceof File)) {
+      return NextResponse.json({ error: 'file is required' }, { status: 400 });
+    }
+
+    if (!file.type.startsWith('image/')) {
+      return NextResponse.json(
+        { error: 'Only image uploads are allowed.' },
+        { status: 400 },
+      );
+    }
+
+    if (file.size > MAX_PHOTO_SIZE_BYTES) {
+      return NextResponse.json(
+        { error: 'Image is too large. Max size is 5MB.' },
+        { status: 400 },
+      );
+    }
+
+    const bytes = Buffer.from(await file.arrayBuffer());
+
+    if (existingPath && existingPath !== nextPath) {
       await bucket.remove([existingPath]);
     }
+
+    const { error: uploadError } = await bucket.upload(nextPath, bytes, {
+      contentType: file.type || 'image/jpeg',
+      upsert: true,
+    });
+
+    if (uploadError) {
+      console.error('[clients] upload-photo:', uploadError.message);
+      return NextResponse.json(
+        { error: uploadError.message || 'Failed to upload photo.' },
+        { status: 500 },
+      );
+    }
+
+    const publicUrl = toSupabasePublicStorageUrl(
+      bucket.getPublicUrl(nextPath).data.publicUrl,
+    );
+
+    if (!publicUrl) {
+      return NextResponse.json(
+        { error: 'Upload succeeded but public URL could not be generated.' },
+        { status: 500 },
+      );
+    }
+
+    const { nanoid } = await import('nanoid');
+    const pictureUrl = `${publicUrl}?v=${nanoid(16)}`;
 
     const { error: updateError } = await admin
       .from('clients')
       .update({
-        picture_url: null,
+        picture_url: pictureUrl,
         updated_at: new Date().toISOString(),
       })
       .eq('id', clientRow.id)
@@ -134,72 +245,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
-    return NextResponse.json({ pictureUrl: null });
-  }
-
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: 'file is required' }, { status: 400 });
-  }
-
-  if (!file.type.startsWith('image/')) {
+    return NextResponse.json({ pictureUrl });
+  } catch (error) {
+    console.error('[clients] upload-photo unhandled:', error);
     return NextResponse.json(
-      { error: 'Only image uploads are allowed.' },
-      { status: 400 },
-    );
-  }
-
-  if (file.size > MAX_PHOTO_SIZE_BYTES) {
-    return NextResponse.json(
-      { error: 'Image is too large. Max size is 5MB.' },
-      { status: 400 },
-    );
-  }
-
-  const bytes = Buffer.from(await file.arrayBuffer());
-
-  if (existingPath && existingPath !== nextPath) {
-    await bucket.remove([existingPath]);
-  }
-
-  const { error: uploadError } = await bucket.upload(nextPath, bytes, {
-    contentType: file.type || 'image/jpeg',
-    upsert: true,
-  });
-
-  if (uploadError) {
-    console.error('[clients] upload-photo:', uploadError.message);
-    return NextResponse.json(
-      { error: uploadError.message || 'Failed to upload photo.' },
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to upload client photo.',
+      },
       { status: 500 },
     );
   }
-
-  const publicUrl = toSupabasePublicStorageUrl(
-    bucket.getPublicUrl(nextPath).data.publicUrl,
-  );
-
-  if (!publicUrl) {
-    return NextResponse.json(
-      { error: 'Upload succeeded but public URL could not be generated.' },
-      { status: 500 },
-    );
-  }
-
-  const { nanoid } = await import('nanoid');
-  const pictureUrl = `${publicUrl}?v=${nanoid(16)}`;
-
-  const { error: updateError } = await admin
-    .from('clients')
-    .update({
-      picture_url: pictureUrl,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', clientRow.id)
-    .eq('account_id', clientRow.account_id);
-
-  if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ pictureUrl });
 }

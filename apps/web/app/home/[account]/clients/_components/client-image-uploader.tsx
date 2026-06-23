@@ -179,6 +179,27 @@ export function ClientImageUploader({
   );
 }
 
+async function readUploadPhotoResponse(response: Response) {
+  const raw = await response.text();
+
+  if (!raw.trim()) {
+    return {} as { pictureUrl?: string | null; error?: string };
+  }
+
+  try {
+    return JSON.parse(raw) as {
+      pictureUrl?: string | null;
+      error?: string;
+    };
+  } catch {
+    throw new Error(
+      raw.startsWith('<')
+        ? `Upload failed (${response.status}). The server returned an error page instead of JSON.`
+        : raw.slice(0, 200) || `Upload failed (${response.status})`,
+    );
+  }
+}
+
 async function uploadClientPhotoViaApi(
   file: File,
   accountId: string,
@@ -194,10 +215,7 @@ async function uploadClientPhotoViaApi(
     body,
   });
 
-  const payload = (await response.json()) as {
-    pictureUrl?: string | null;
-    error?: string;
-  };
+  const payload = await readUploadPhotoResponse(response);
 
   if (!response.ok) {
     throw new Error(payload.error ?? 'Upload failed');
@@ -222,7 +240,7 @@ async function removeClientPhotoViaApi(accountId: string, clientId: string) {
     body,
   });
 
-  const payload = (await response.json()) as { error?: string };
+  const payload = await readUploadPhotoResponse(response);
 
   if (!response.ok) {
     throw new Error(payload.error ?? 'Remove failed');

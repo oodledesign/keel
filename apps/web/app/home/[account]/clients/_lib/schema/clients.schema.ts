@@ -110,6 +110,18 @@ export const DeleteContactSchema = z.object({
   contactId: z.string().uuid(),
 });
 
+export const ListWorkspaceContactsSchema = z.object({
+  accountId: z.string().uuid(),
+});
+
+export const CreateWorkspaceContactSchema = z.object({
+  accountId: z.string().uuid(),
+  fullName: z.string().min(1, 'Name is required'),
+  email: z.string().email().optional(),
+  phone: z.string().optional(),
+  linkClientId: z.string().uuid().optional(),
+});
+
 export type ListClientsInput = z.infer<typeof ListClientsSchema>;
 export type GetClientInput = z.infer<typeof GetClientSchema>;
 export type CreateClientInput = z.infer<typeof CreateClientSchema>;
@@ -125,3 +137,5 @@ export type ListAccountContactsInput = z.infer<typeof ListAccountContactsSchema>
 export type CreateContactInput = z.infer<typeof CreateContactSchema>;
 export type LinkContactInput = z.infer<typeof LinkContactSchema>;
 export type DeleteContactInput = z.infer<typeof DeleteContactSchema>;
+export type ListWorkspaceContactsInput = z.infer<typeof ListWorkspaceContactsSchema>;
+export type CreateWorkspaceContactInput = z.infer<typeof CreateWorkspaceContactSchema>;

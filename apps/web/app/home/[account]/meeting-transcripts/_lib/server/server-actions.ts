@@ -47,11 +47,26 @@ const UpdateSchema = z.object({
   dealId: z.string().uuid().nullable().optional(),
 });
 
-const UpdateSpeakerLabelsSchema = z.object({
+const SpeakerBindingSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('custom'),
+    name: z.string().min(1),
+  }),
+  z.object({
+    type: z.literal('client'),
+    clientId: z.string().uuid(),
+  }),
+  z.object({
+    type: z.literal('contact'),
+    contactId: z.string().uuid(),
+  }),
+]);
+
+const UpdateSpeakerMappingsSchema = z.object({
   accountId: z.string().uuid(),
   accountSlug: z.string().min(1).max(200).optional(),
   transcriptId: z.string().uuid(),
-  renames: z.record(z.string(), z.string()),
+  mappings: z.record(z.string(), SpeakerBindingSchema),
 });
 
 const DeleteSchema = z.object({
@@ -157,12 +172,12 @@ export const updateMeetingTranscript = enhanceAction(
   { schema: UpdateSchema },
 );
 
-export const updateMeetingTranscriptSpeakerLabels = enhanceAction(
+export const updateMeetingTranscriptSpeakerMappings = enhanceAction(
   async (input) => {
-    const row = await getService().updateSpeakerLabels({
+    const row = await getService().updateSpeakerMappings({
       accountId: input.accountId,
       transcriptId: input.transcriptId,
-      renames: input.renames,
+      mappings: input.mappings,
     });
 
     if (input.accountSlug) {
@@ -171,7 +186,7 @@ export const updateMeetingTranscriptSpeakerLabels = enhanceAction(
 
     return row;
   },
-  { schema: UpdateSpeakerLabelsSchema },
+  { schema: UpdateSpeakerMappingsSchema },
 );
 
 export const deleteMeetingTranscript = enhanceAction(

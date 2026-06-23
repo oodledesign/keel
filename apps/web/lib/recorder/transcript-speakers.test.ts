@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import {
   distinctTranscriptSpeakers,
+  normalizeSpeakerMappings,
   parseTranscriptContent,
   renameSpeakersInSegments,
+  resolveSpeakerLabel,
   resolveTranscriptSegments,
+  serializeResolvedTranscriptSegments,
   serializeTranscriptSegments,
 } from './transcript-speakers';
 
@@ -88,5 +91,62 @@ describe('resolveTranscriptSegments', () => {
     });
 
     expect(segments).toEqual([{ speaker: 'Sarah Chen', text: 'Stored line' }]);
+  });
+});
+
+describe('speaker mappings', () => {
+  const clients = [{ id: 'c1', name: 'Acme Corp' }];
+  const contacts = [{ id: 'p1', name: 'Jane Doe' }];
+
+  it('normalizes valid bindings and ignores invalid entries', () => {
+    expect(
+      normalizeSpeakerMappings({
+        'Speaker 1': { type: 'custom', name: ' Alex ' },
+        'Speaker 2': { type: 'client', clientId: 'c1' },
+        'Speaker 3': { type: 'contact', contactId: 'p1' },
+        'Speaker 4': { type: 'custom', name: '   ' },
+        bad: null,
+      }),
+    ).toEqual({
+      'Speaker 1': { type: 'custom', name: 'Alex' },
+      'Speaker 2': { type: 'client', clientId: 'c1' },
+      'Speaker 3': { type: 'contact', contactId: 'p1' },
+    });
+  });
+
+  it('resolves labels from clients, contacts, and custom names', () => {
+    const mappings = {
+      'Speaker 1': { type: 'client' as const, clientId: 'c1' },
+      'Speaker 2': { type: 'contact' as const, contactId: 'p1' },
+      'Speaker 3': { type: 'custom' as const, name: 'Guest' },
+    };
+
+    expect(resolveSpeakerLabel('Speaker 1', mappings, clients, contacts)).toBe(
+      'Acme Corp',
+    );
+    expect(resolveSpeakerLabel('Speaker 2', mappings, clients, contacts)).toBe(
+      'Jane Doe',
+    );
+    expect(resolveSpeakerLabel('Speaker 3', mappings, clients, contacts)).toBe(
+      'Guest',
+    );
+    expect(resolveSpeakerLabel('Speaker 4', mappings, clients, contacts)).toBe(
+      'Speaker 4',
+    );
+  });
+
+  it('serializes segments with resolved speaker names', () => {
+    const segments = [
+      { speaker: 'Speaker 1', text: 'Hello' },
+      { speaker: 'Speaker 2', text: 'Hi there' },
+    ];
+    const mappings = {
+      'Speaker 1': { type: 'client' as const, clientId: 'c1' },
+      'Speaker 2': { type: 'custom' as const, name: 'Bob' },
+    };
+
+    expect(
+      serializeResolvedTranscriptSegments(segments, mappings, clients, contacts),
+    ).toBe('Acme Corp: Hello\n\nBob: Hi there');
   });
 });

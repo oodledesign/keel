@@ -12,6 +12,11 @@ import { createMeetingTranscriptsService } from '~/home/[account]/_lib/server/me
 import { loadMeetingSummary } from '~/lib/recorder/meeting-summary';
 
 export type MeetingClientOption = { id: string; name: string };
+export type MeetingContactOption = {
+  id: string;
+  name: string;
+  email?: string | null;
+};
 
 function mapClientOptions(
   rows: Array<{
@@ -33,6 +38,22 @@ function mapClientOptions(
           .join(' ')
           .trim() ||
         'Unnamed client',
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function mapContactOptions(
+  rows: Array<{
+    id: string;
+    full_name: string;
+    email?: string | null;
+  }>,
+): MeetingContactOption[] {
+  return rows
+    .map((row) => ({
+      id: row.id,
+      name: row.full_name.trim() || 'Unnamed contact',
+      email: row.email ?? null,
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -99,7 +120,7 @@ async function loadMeetingTranscriptPageDataImpl(
   const transcriptsService = createMeetingTranscriptsService(client);
   const clientsService = createClientsService(client);
 
-  const [transcript, clientsResult, summary] = await Promise.all([
+  const [transcript, clientsResult, contactsResult, summary] = await Promise.all([
     transcriptsService.getById({
       accountId,
       transcriptId,
@@ -109,6 +130,7 @@ async function loadMeetingTranscriptPageDataImpl(
       page: 1,
       pageSize: 100,
     }),
+    clientsService.listWorkspaceContacts({ accountId }),
     loadMeetingSummary(client, { meetingTranscriptId: transcriptId, accountId }),
   ]);
 
@@ -118,6 +140,7 @@ async function loadMeetingTranscriptPageDataImpl(
     transcript,
     summary,
     clients: mapClientOptions(clientsResult.data ?? []),
+    contacts: mapContactOptions(contactsResult.data ?? []),
     canEdit: access.canEditClients,
     canView: access.canViewClients,
   };

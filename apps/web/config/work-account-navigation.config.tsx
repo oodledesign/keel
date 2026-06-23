@@ -160,6 +160,21 @@ export function buildWorkSpaceNavChildren(
             label: 'Projects',
             path: createPath(pathsConfig.app.accountJobs, account),
             Icon: <ClipboardList className={iconClasses} />,
+            collapsible: true,
+            collapsed: false,
+            children: [
+              {
+                label: 'Delivery',
+                path: createPath(pathsConfig.app.accountJobs, account),
+                Icon: <ClipboardList className={iconClasses} />,
+              },
+              {
+                label: 'Campaigns',
+                path: createPath(pathsConfig.app.accountCampaigns, account),
+                Icon: <LayoutGrid className={iconClasses} />,
+                description: 'Spreadsheet-style campaign trackers.',
+              },
+            ],
           }
         : null,
     tasks: () =>

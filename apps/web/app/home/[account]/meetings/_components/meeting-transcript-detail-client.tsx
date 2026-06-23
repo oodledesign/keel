@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -40,8 +40,8 @@ import pathsConfig from '~/config/paths.config';
 import type { TaskAssignmentOption } from '~/home/(user)/_lib/actions/task-actions';
 import { ExtractWorkspaceTasksClient } from '~/home/[account]/tasks/_components/extract-workspace-tasks-client';
 import {
-  collectSpeakerNameSuggestions,
-  serializeTranscriptSegments,
+  serializeResolvedTranscriptSegments,
+  type SpeakerMappings,
   type TranscriptSegment,
 } from '~/lib/recorder/transcript-speakers';
 
@@ -51,12 +51,15 @@ import {
 } from '../../meeting-transcripts/_lib/server/server-actions';
 import { meetingDisplayDate } from '../_lib/format-meeting-date';
 import { MeetingSpeakerLabelsEditor } from './meeting-speaker-labels-editor';
+import { MeetingTranscriptSegments } from './meeting-transcript-segments';
+import type { SpeakerPickerContact } from './speaker-label-picker';
 
 type Transcript = {
   id: string;
   title: string;
   content: string;
   speakerSegments: TranscriptSegment[];
+  speakerMappings: SpeakerMappings;
   calendarAttendees: Array<{ name: string; email: string }>;
   meetingDate: string | null;
   createdAt: string;
@@ -73,6 +76,7 @@ type MeetingSummary = {
 } | null;
 
 type ClientOption = { id: string; name: string };
+type ContactOption = { id: string; name: string; email?: string | null };
 
 type Props = {
   accountId: string;
@@ -80,6 +84,7 @@ type Props = {
   transcript: Transcript;
   summary: MeetingSummary;
   clients: ClientOption[];
+  contacts: ContactOption[];
   canEdit: boolean;
   assignmentOptions: TaskAssignmentOption[];
 };
@@ -93,6 +98,7 @@ export function MeetingTranscriptDetailClient({
   transcript,
   summary,
   clients,
+  contacts: initialContacts,
   canEdit,
   assignmentOptions,
 }: Props) {
@@ -102,9 +108,23 @@ export function MeetingTranscriptDetailClient({
     transcript.meetingDate ?? transcript.createdAt.slice(0, 10),
   );
   const [clientId, setClientId] = useState(transcript.clientId ?? '');
+  const [mappings, setMappings] = useState<SpeakerMappings>(
+    transcript.speakerMappings,
+  );
+  const [contacts, setContacts] = useState<SpeakerPickerContact[]>(
+    initialContacts,
+  );
   const [copied, setCopied] = useState(false);
   const [extractOpen, setExtractOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setMappings(transcript.speakerMappings);
+  }, [transcript.speakerMappings]);
+
+  useEffect(() => {
+    setContacts(initialContacts);
+  }, [initialContacts]);
 
   const meetingsPath = pathsConfig.app.accountMeetings.replace(
     '[account]',
@@ -123,14 +143,14 @@ export function MeetingTranscriptDetailClient({
     clients.find((client) => client.id === clientId)?.name ||
     null;
   const contextLabel = resolvedClientName || transcript.dealTitle;
-  const speakerSuggestions = collectSpeakerNameSuggestions({
-    calendarAttendees: transcript.calendarAttendees,
-    clientName: resolvedClientName,
-    clients,
-  });
   const displayContent =
     transcript.speakerSegments.length > 0
-      ? serializeTranscriptSegments(transcript.speakerSegments)
+      ? serializeResolvedTranscriptSegments(
+          transcript.speakerSegments,
+          mappings,
+          clients,
+          contacts,
+        )
       : transcript.content;
 
   const saveMeta = () => {
@@ -274,18 +294,20 @@ export function MeetingTranscriptDetailClient({
           </div>
           <div className="max-h-[min(70vh,720px)] overflow-auto rounded-xl border border-white/6 bg-black/20 p-4 text-sm leading-relaxed text-zinc-200">
             {transcript.speakerSegments.length > 0 ? (
-              <div className="space-y-4">
-                {transcript.speakerSegments.map((segment, index) => (
-                  <div key={`${segment.speaker}-${index}`}>
-                    <p className="text-xs font-semibold text-[var(--keel-teal)]">
-                      {segment.speaker}
-                    </p>
-                    <p className="mt-1 whitespace-pre-wrap text-sm text-zinc-200">
-                      {segment.text}
-                    </p>
-                  </div>
-                ))}
-              </div>
+              <MeetingTranscriptSegments
+                accountId={accountId}
+                accountSlug={accountSlug}
+                transcriptId={transcript.id}
+                segments={transcript.speakerSegments}
+                mappings={mappings}
+                clients={clients}
+                contacts={contacts}
+                linkClientId={clientId || transcript.clientId}
+                canEdit={canEdit}
+                onSaved={() => router.refresh()}
+                onMappingsChange={setMappings}
+                onContactsChange={setContacts}
+              />
             ) : (
               <pre className="whitespace-pre-wrap">{displayContent}</pre>
             )}
@@ -434,9 +456,14 @@ export function MeetingTranscriptDetailClient({
             accountSlug={accountSlug}
             transcriptId={transcript.id}
             speakerSegments={transcript.speakerSegments}
-            suggestions={speakerSuggestions}
+            initialMappings={mappings}
+            clients={clients}
+            contacts={contacts}
+            linkClientId={clientId || transcript.clientId}
             canEdit={canEdit}
             onSaved={() => router.refresh()}
+            onMappingsChange={setMappings}
+            onContactsChange={setContacts}
           />
         </aside>
       </div>

@@ -70,6 +70,7 @@ async function MeetingDetailPage({ params }: MeetingDetailPageProps) {
           transcript={data.transcript}
           summary={data.summary}
           clients={data.clients}
+          contacts={data.contacts}
           canEdit={data.canEdit}
           assignmentOptions={assignmentOptions}
         />
