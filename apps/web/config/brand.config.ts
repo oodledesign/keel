@@ -4,12 +4,11 @@
  */
 
 export const brandAssets = {
-  /** Dark wordmark for light surfaces */
-  wordmarkLight: '/brand/keel-dark-transparent.png',
-  /** White wordmark for dark surfaces */
-  wordmarkDark: '/brand/keel-white-transparent.png',
-  /** Icon mark for favicons, collapsed sidebar, etc. */
-  icon: '/brand/keel-icon.png',
+  /** Wordmark for light and dark surfaces (transparent PNG) */
+  wordmarkLight: '/brand/ozer-wordmark.png',
+  wordmarkDark: '/brand/ozer-wordmark.png',
+  /** Z mark for favicons, collapsed sidebar, etc. */
+  icon: '/brand/ozer-icon.png',
 } as const;
 
 export const brandConfig = {

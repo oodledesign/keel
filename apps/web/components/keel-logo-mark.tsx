@@ -15,28 +15,15 @@ type KeelLogoMarkProps = {
 export function KeelLogoMark({
   className,
   collapsed = false,
-  tone = 'auto',
+  tone: _tone = 'auto',
 }: KeelLogoMarkProps) {
-  const lightClass =
-    tone === 'dark'
-      ? 'hidden'
-      : tone === 'light'
-        ? 'block'
-        : 'dark:hidden';
-  const darkClass =
-    tone === 'light'
-      ? 'hidden'
-      : tone === 'dark'
-        ? 'block'
-        : 'hidden dark:block';
-
   if (collapsed) {
     return (
       <Image
         src={brandAssets.icon}
         alt=""
-        width={791}
-        height={633}
+        width={380}
+        height={380}
         priority
         className={cn('h-8 w-8 shrink-0 object-contain', className)}
         aria-hidden
@@ -48,33 +35,17 @@ export function KeelLogoMark({
     <span
       className={cn(
         'relative flex shrink-0 items-center overflow-hidden',
-        'h-8 w-[100px] lg:h-9 lg:w-[120px]',
+        'h-8 w-[112px] lg:h-9 lg:w-[128px]',
         className,
       )}
     >
       <Image
         src={brandAssets.wordmarkLight}
-        alt=""
-        width={1044}
-        height={304}
+        alt="Ozer"
+        width={1024}
+        height={285}
         priority
-        className={cn(
-          'h-full w-auto max-w-full object-contain object-left',
-          lightClass,
-        )}
-        aria-hidden
-      />
-      <Image
-        src={brandAssets.wordmarkDark}
-        alt=""
-        width={1027}
-        height={304}
-        priority
-        className={cn(
-          'absolute inset-y-0 left-0 h-full w-auto max-w-full object-contain object-left',
-          darkClass,
-        )}
-        aria-hidden
+        className="h-full w-auto max-w-full object-contain object-left"
       />
     </span>
   );

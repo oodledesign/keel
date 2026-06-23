@@ -73,7 +73,7 @@ export function InterconnectedWorkspacesSection({
             </p>
           </div>
 
-          <div className="w-full">
+          <div className="w-full pt-2 md:pt-0">
             <WorkspaceOrbitDiagram nodes={m.workspaceNodes} />
           </div>
         </div>

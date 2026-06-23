@@ -150,29 +150,50 @@ function CircuitPaths({
 function OrbitWorkspaceCard({
   node,
   className,
+  compact = false,
 }: {
   node: OrbitNode;
   className?: string;
+  compact?: boolean;
 }) {
   const Icon = OUTER_NODE_ICONS[node.id] ?? Briefcase;
 
   return (
     <div
       className={cn(
-        'relative z-10 w-[104px] rounded-xl border border-white/10 bg-[#0F1B35]/90 px-2 py-2.5 text-center shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-sm sm:w-[128px] sm:px-3 sm:py-3 lg:w-[140px]',
+        'relative z-10 rounded-xl border border-white/10 bg-[#0F1B35]/90 text-center shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-sm',
+        compact
+          ? 'w-full px-1.5 py-2'
+          : 'w-[104px] px-2 py-2.5 sm:w-[128px] sm:px-3 sm:py-3 lg:w-[140px]',
         className,
       )}
     >
       <span
-        className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg border border-white/10"
+        className={cn(
+          'mx-auto flex items-center justify-center rounded-lg border border-white/10',
+          compact ? 'h-7 w-7' : 'h-8 w-8',
+        )}
         style={{ backgroundColor: `${node.color}22` }}
       >
-        <Icon className="h-4 w-4" style={{ color: node.color }} aria-hidden />
+        <Icon
+          className={cn(compact ? 'h-3.5 w-3.5' : 'h-4 w-4')}
+          style={{ color: node.color }}
+          aria-hidden
+        />
       </span>
-      <p className="mt-2 text-sm font-bold text-white">{node.label}</p>
-      <p className="mt-1.5 text-[9px] leading-snug text-violet-100/60 sm:mt-2 sm:text-[10px]">
-        {node.examples}
+      <p
+        className={cn(
+          'font-bold text-white',
+          compact ? 'mt-1.5 text-[10px] leading-tight' : 'mt-2 text-sm',
+        )}
+      >
+        {compact && node.id === 'family' ? 'Family' : node.label}
       </p>
+      {!compact ? (
+        <p className="mt-1.5 text-[9px] leading-snug text-violet-100/60 sm:mt-2 sm:text-[10px]">
+          {node.examples}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -213,21 +234,46 @@ function AssistantBillingBadge({
   );
 }
 
-function AssistantLayerCard({ assistant }: { assistant: PersonalAssistantMarketing }) {
+function AssistantLayerCard({
+  assistant,
+  compact = false,
+}: {
+  assistant: PersonalAssistantMarketing;
+  compact?: boolean;
+}) {
   const Icon = assistant.icon;
 
   return (
-    <div className="relative z-10 w-[96px] rounded-lg border border-violet-400/20 border-l-2 border-l-violet-400/60 bg-[#120f24]/95 px-2 py-2 text-center shadow-[0_4px_16px_rgba(0,0,0,0.25)] sm:w-[118px] sm:px-2.5 sm:py-2.5 lg:w-[132px]">
-      <span className="relative mx-auto flex h-8 w-8 items-center justify-center rounded-md bg-violet-500/15 text-violet-300">
-        <Icon className="h-4 w-4" aria-hidden />
+    <div
+      className={cn(
+        'relative z-10 rounded-lg border border-violet-400/20 border-l-2 border-l-violet-400/60 bg-[#120f24]/95 text-center shadow-[0_4px_16px_rgba(0,0,0,0.25)]',
+        compact
+          ? 'w-full px-1.5 py-2'
+          : 'w-[96px] px-2 py-2 sm:w-[118px] sm:px-2.5 sm:py-2.5 lg:w-[132px]',
+      )}
+    >
+      <span
+        className={cn(
+          'relative mx-auto flex items-center justify-center rounded-md bg-violet-500/15 text-violet-300',
+          compact ? 'h-7 w-7' : 'h-8 w-8',
+        )}
+      >
+        <Icon className={cn(compact ? 'h-3.5 w-3.5' : 'h-4 w-4')} aria-hidden />
         <AssistantBillingBadge assistant={assistant} />
       </span>
-      <p className="mt-2 text-[11px] font-semibold leading-tight text-white">
+      <p
+        className={cn(
+          'font-semibold leading-tight text-white',
+          compact ? 'mt-1.5 text-[9px]' : 'mt-2 text-[11px]',
+        )}
+      >
         {assistant.label}
       </p>
-      <p className="mt-1.5 text-[9px] leading-snug text-violet-200/65 sm:mt-1.5 sm:text-[10px]">
-        {assistant.description}
-      </p>
+      {!compact ? (
+        <p className="mt-1.5 text-[9px] leading-snug text-violet-200/65 sm:mt-1.5 sm:text-[10px]">
+          {assistant.description}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -235,14 +281,19 @@ function AssistantLayerCard({ assistant }: { assistant: PersonalAssistantMarketi
 function PersonalHomeCard({
   className,
   flashing,
+  compact = false,
 }: {
   className?: string;
   flashing: boolean;
+  compact?: boolean;
 }) {
   return (
     <div
       className={cn(
-        'relative z-20 w-[118px] rounded-xl border-2 bg-[#0d0b1e] px-3 py-3 text-center transition-[border-color,box-shadow] duration-200 sm:w-[140px] sm:px-4 sm:py-4 lg:w-[160px] lg:scale-110',
+        'relative z-20 rounded-xl border-2 bg-[#0d0b1e] text-center transition-[border-color,box-shadow] duration-200',
+        compact
+          ? 'w-[118px] px-3 py-3'
+          : 'w-[118px] px-3 py-3 sm:w-[140px] sm:px-4 sm:py-4 lg:w-[160px] lg:scale-110',
         flashing
           ? 'border-[#5eead4] shadow-[0_0_30px_rgba(45,212,191,0.42)]'
           : 'border-[#2dd4bf] shadow-[0_0_18px_rgba(45,212,191,0.22)]',
@@ -254,6 +305,113 @@ function PersonalHomeCard({
       </span>
       <p className="mt-2 text-sm font-bold text-white">Personal Home</p>
       <p className="mt-0.5 text-[10px] text-violet-100/70">Your command centre</p>
+    </div>
+  );
+}
+
+function MobileWorkspaceDiagram({
+  business,
+  family,
+  community,
+  hubFlashing,
+}: {
+  business: InterconnectedWorkspaceNode | undefined;
+  family: InterconnectedWorkspaceNode | undefined;
+  community: InterconnectedWorkspaceNode | undefined;
+  hubFlashing: boolean;
+}) {
+  return (
+    <div className="flex w-full flex-col gap-4 py-2">
+      <div className="grid grid-cols-3 gap-2">
+        {business ? (
+          <OrbitWorkspaceCard
+            compact
+            node={{ ...business, orbitId: 'business' }}
+          />
+        ) : (
+          <div />
+        )}
+        {family ? (
+          <OrbitWorkspaceCard compact node={{ ...family, orbitId: 'family' }} />
+        ) : (
+          <div />
+        )}
+        {community ? (
+          <OrbitWorkspaceCard
+            compact
+            node={{ ...community, orbitId: 'community' }}
+          />
+        ) : (
+          <div />
+        )}
+      </div>
+
+      <div className="flex justify-center py-1">
+        <PersonalHomeCard compact flashing={hubFlashing} />
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        {PERSONAL_ASSISTANTS_MARKETING.map((assistant) => (
+          <AssistantLayerCard key={assistant.id} compact assistant={assistant} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DesktopWorkspaceDiagram({
+  business,
+  family,
+  community,
+  hubFlashing,
+}: {
+  business: InterconnectedWorkspaceNode | undefined;
+  family: InterconnectedWorkspaceNode | undefined;
+  community: InterconnectedWorkspaceNode | undefined;
+  hubFlashing: boolean;
+}) {
+  return (
+    <div
+      className="relative mx-auto aspect-[5/4] min-h-[360px] w-full max-w-[690px] md:min-h-[440px]"
+      aria-hidden
+    >
+      <svg
+        className="pointer-events-none absolute inset-0 z-0 h-full w-full"
+        viewBox="0 0 100 100"
+        preserveAspectRatio="xMidYMid meet"
+        aria-hidden
+      >
+        <CircuitPaths paths={ASSISTANT_CIRCUIT_PATHS} />
+        <CircuitPaths paths={OUTER_CIRCUIT_PATHS} />
+      </svg>
+
+      <div className="absolute left-0 top-1/2 z-10 flex -translate-y-1/2 flex-col gap-1.5 pl-0 sm:gap-2">
+        {PERSONAL_ASSISTANTS_MARKETING.map((assistant) => (
+          <AssistantLayerCard key={assistant.id} assistant={assistant} />
+        ))}
+      </div>
+
+      <div className="absolute left-1/2 top-[5%] z-10 -translate-x-1/2">
+        {business ? (
+          <OrbitWorkspaceCard node={{ ...business, orbitId: 'business' }} />
+        ) : null}
+      </div>
+
+      <div className="absolute right-[1%] top-1/2 z-10 -translate-y-1/2 sm:right-[3%]">
+        {family ? (
+          <OrbitWorkspaceCard node={{ ...family, orbitId: 'family' }} />
+        ) : null}
+      </div>
+
+      <div className="absolute bottom-[5%] left-1/2 z-10 -translate-x-1/2">
+        {community ? (
+          <OrbitWorkspaceCard node={{ ...community, orbitId: 'community' }} />
+        ) : null}
+      </div>
+
+      <div className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2">
+        <PersonalHomeCard flashing={hubFlashing} />
+      </div>
     </div>
   );
 }
@@ -270,46 +428,23 @@ export function WorkspaceOrbitDiagram({
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div
-        className="relative mx-auto aspect-[5/4] min-h-[300px] w-full max-w-[690px] sm:min-h-[360px] md:min-h-[440px]"
-        aria-hidden
-      >
-        <svg
-          className="pointer-events-none absolute inset-0 z-0 h-full w-full"
-          viewBox="0 0 100 100"
-          preserveAspectRatio="xMidYMid meet"
-          aria-hidden
-        >
-          <CircuitPaths paths={ASSISTANT_CIRCUIT_PATHS} />
-          <CircuitPaths paths={OUTER_CIRCUIT_PATHS} />
-        </svg>
-
-        <div className="absolute left-0 top-1/2 z-10 flex -translate-y-1/2 flex-col gap-1.5 pl-0 sm:gap-2">
-          {PERSONAL_ASSISTANTS_MARKETING.map((assistant) => (
-            <AssistantLayerCard key={assistant.id} assistant={assistant} />
-          ))}
+      <div className="w-full">
+        <div className="md:hidden">
+          <MobileWorkspaceDiagram
+            business={business}
+            family={family}
+            community={community}
+            hubFlashing={hubFlashing}
+          />
         </div>
 
-        <div className="absolute left-1/2 top-[5%] z-10 -translate-x-1/2">
-          {business ? (
-            <OrbitWorkspaceCard node={{ ...business, orbitId: 'business' }} />
-          ) : null}
-        </div>
-
-        <div className="absolute right-[1%] top-1/2 z-10 -translate-y-1/2 sm:right-[3%]">
-          {family ? (
-            <OrbitWorkspaceCard node={{ ...family, orbitId: 'family' }} />
-          ) : null}
-        </div>
-
-        <div className="absolute bottom-[5%] left-1/2 z-10 -translate-x-1/2">
-          {community ? (
-            <OrbitWorkspaceCard node={{ ...community, orbitId: 'community' }} />
-          ) : null}
-        </div>
-
-        <div className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2">
-          <PersonalHomeCard flashing={hubFlashing} />
+        <div className="hidden md:block">
+          <DesktopWorkspaceDiagram
+            business={business}
+            family={family}
+            community={community}
+            hubFlashing={hubFlashing}
+          />
         </div>
       </div>
     </TooltipProvider>

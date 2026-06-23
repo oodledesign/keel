@@ -1,5 +1,23 @@
 -- Campaign project trackers: custom columns per project + per-client field values.
 
+-- Remote DBs may be missing this helper if an earlier migration was skipped or repaired.
+CREATE OR REPLACE FUNCTION public.contractor_assigned_to_project(project_id uuid)
+RETURNS boolean
+SET search_path = ''
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.project_assignments
+    WHERE public.project_assignments.project_id = contractor_assigned_to_project.project_id
+      AND public.project_assignments.user_id = auth.uid()
+  );
+$$;
+
+GRANT EXECUTE ON FUNCTION public.contractor_assigned_to_project(uuid) TO authenticated;
+
 CREATE TABLE IF NOT EXISTS public.project_field_definitions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   account_id uuid NOT NULL REFERENCES public.accounts (id) ON DELETE CASCADE,

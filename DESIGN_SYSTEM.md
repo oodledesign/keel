@@ -29,7 +29,7 @@ CSS variables: `--keel-gradient-from`, `--keel-gradient-to`, `--keel-gradient-ho
 ### Sidebar (all workspaces)
 
 - Fixed width **240px** (`15rem`, `--sidebar-width`)
-- **Top:** Keel logo (`/brand/keel-white-transparent.png` on dark sidebar), then workspace switcher (avatar, name, role badge, chevron)
+- **Top:** Ozer logo (`/brand/ozer-wordmark.png`), then workspace switcher (avatar, name, role badge, chevron)
 - **Nav:** icon + label, **40px** row height, **12px** horizontal padding; active item uses primary gradient; hover uses subtle white tint
 - Nav items from `account_module_settings` (enabled modules), ordered per `config/workspace-module-order.ts`
 - No “Application” / “Settings” section headings — **8px** gap between nav groups (`mt-2` on adjacent groups)
@@ -45,9 +45,8 @@ CSS variables: `--keel-gradient-from`, `--keel-gradient-to`, `--keel-gradient-ho
 
 | Asset | Path |
 |--------|------|
-| Dark sidebar / dark UI | `apps/web/public/brand/keel-white-transparent.png` |
-| Light surfaces | `apps/web/public/brand/keel-dark-transparent.png` |
-| Collapsed sidebar icon | `apps/web/public/brand/keel-icon.png` |
+| Wordmark (all surfaces) | `apps/web/public/brand/ozer-wordmark.png` |
+| Collapsed sidebar / favicon | `apps/web/public/brand/ozer-icon.png` |
 
 ## Implementation map
 

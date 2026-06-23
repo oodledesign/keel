@@ -277,7 +277,7 @@ class MeetingTranscriptsService {
 
   private async ensureUserAndPermission(
     accountId: string,
-    permission: 'invoices.view' | 'invoices.edit',
+    permission: 'clients.view' | 'clients.edit',
   ) {
     const user = await this.ensureUser();
     const api = createTeamAccountsApi(this.client);
@@ -298,15 +298,16 @@ class MeetingTranscriptsService {
     if (error) throw error;
 
     const role = membership?.account_role;
-    if (permission === 'invoices.edit') {
+    if (permission === 'clients.edit') {
       if (role === 'owner' || role === 'admin' || role === 'staff') {
         return user;
       }
     } else if (
-      role === 'owner' ||
-      role === 'admin' ||
-      role === 'staff' ||
-      role === 'member'
+      permission === 'clients.view' &&
+      (role === 'owner' ||
+        role === 'admin' ||
+        role === 'staff' ||
+        role === 'contractor')
     ) {
       return user;
     }
@@ -317,7 +318,7 @@ class MeetingTranscriptsService {
   async listForAccount(input: {
     accountId: string;
   }): Promise<MeetingTranscriptListItem[]> {
-    await this.ensureUserAndPermission(input.accountId, 'invoices.view');
+    await this.ensureUserAndPermission(input.accountId, 'clients.view');
 
     const { data, error } = await this.db
       .from('meeting_transcripts')
@@ -359,7 +360,7 @@ class MeetingTranscriptsService {
     accountId: string;
     transcriptId: string;
   }): Promise<MeetingTranscriptListItem | null> {
-    await this.ensureUserAndPermission(input.accountId, 'invoices.view');
+    await this.ensureUserAndPermission(input.accountId, 'clients.view');
 
     const { data, error } = await this.db
       .from('meeting_transcripts')
@@ -391,7 +392,7 @@ class MeetingTranscriptsService {
     accountId: string;
     clientId: string;
   }): Promise<MeetingTranscript[]> {
-    await this.ensureUserAndPermission(input.accountId, 'invoices.view');
+    await this.ensureUserAndPermission(input.accountId, 'clients.view');
 
     const { data, error } = await this.db
       .from('meeting_transcripts')
@@ -408,7 +409,7 @@ class MeetingTranscriptsService {
     accountId: string;
     dealId: string;
   }): Promise<MeetingTranscript[]> {
-    await this.ensureUserAndPermission(input.accountId, 'invoices.view');
+    await this.ensureUserAndPermission(input.accountId, 'clients.view');
 
     const { data, error } = await this.db
       .from('meeting_transcripts')
@@ -433,7 +434,7 @@ class MeetingTranscriptsService {
   }): Promise<MeetingTranscript> {
     const user = await this.ensureUserAndPermission(
       input.accountId,
-      'invoices.edit',
+      'clients.edit',
     );
 
     const clientId = input.clientId?.trim() || null;
@@ -485,7 +486,7 @@ class MeetingTranscriptsService {
     clientId?: string | null;
     dealId?: string | null;
   }): Promise<MeetingTranscriptListItem> {
-    await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    await this.ensureUserAndPermission(input.accountId, 'clients.edit');
 
     const existing = await this.getById({
       accountId: input.accountId,
@@ -553,7 +554,7 @@ class MeetingTranscriptsService {
     transcriptId: string;
     mappings: SpeakerMappings;
   }): Promise<MeetingTranscriptListItem> {
-    await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    await this.ensureUserAndPermission(input.accountId, 'clients.edit');
 
     const existing = await this.getById({
       accountId: input.accountId,
@@ -667,7 +668,7 @@ class MeetingTranscriptsService {
     accountId: string;
     transcriptId: string;
   }): Promise<void> {
-    await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    await this.ensureUserAndPermission(input.accountId, 'clients.edit');
 
     const { error } = await this.db
       .from('meeting_transcripts')
