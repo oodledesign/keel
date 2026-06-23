@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { ClipboardList, Mail, Phone, User } from 'lucide-react';
+import { ClipboardList, Mail, Phone } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { ProfileAvatar } from '@kit/ui/profile-avatar';
 import { cn } from '@kit/ui/utils';
 
 type ClientCardProps = {
@@ -12,6 +13,7 @@ type ClientCardProps = {
   company_name: string | null;
   email: string | null;
   city: string | null;
+  picture_url?: string | null;
   updated_at: string;
   projectCount?: number;
   dueTaskCount?: number;
@@ -40,6 +42,7 @@ export function ClientCard({
   display_name,
   company_name,
   city,
+  picture_url,
   updated_at,
   projectCount,
   dueTaskCount,
@@ -61,9 +64,12 @@ export function ClientCard({
 
   const content = (
     <>
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-700 text-zinc-400">
-        <User className="h-5 w-5" />
-      </div>
+      <ProfileAvatar
+        displayName={display_name ?? 'Unnamed client'}
+        pictureUrl={picture_url ?? null}
+        className="h-10 w-10 shrink-0"
+        fallbackClassName="bg-zinc-700 text-zinc-200"
+      />
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium text-white">
           {display_name ?? 'Unnamed client'}

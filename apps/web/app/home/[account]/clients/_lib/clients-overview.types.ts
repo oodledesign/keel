@@ -20,6 +20,7 @@ export type ClientOverviewItem = {
   email: string | null;
   phone: string | null;
   city: string | null;
+  pictureUrl: string | null;
   tagline: string;
   updatedAt: string;
   projectCount: number;
@@ -36,6 +37,7 @@ export type ClientRow = {
   email: string | null;
   phone: string | null;
   city: string | null;
+  picture_url?: string | null;
   created_at: string;
   updated_at: string;
 };

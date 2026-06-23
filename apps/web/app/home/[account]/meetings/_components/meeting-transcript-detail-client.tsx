@@ -39,17 +39,25 @@ import { workspacePageContentClassName } from '~/components/workspace-shell/work
 import pathsConfig from '~/config/paths.config';
 import type { TaskAssignmentOption } from '~/home/(user)/_lib/actions/task-actions';
 import { ExtractWorkspaceTasksClient } from '~/home/[account]/tasks/_components/extract-workspace-tasks-client';
+import {
+  collectSpeakerNameSuggestions,
+  serializeTranscriptSegments,
+  type TranscriptSegment,
+} from '~/lib/recorder/transcript-speakers';
 
 import {
   deleteMeetingTranscript,
   updateMeetingTranscript,
 } from '../../meeting-transcripts/_lib/server/server-actions';
 import { meetingDisplayDate } from '../_lib/format-meeting-date';
+import { MeetingSpeakerLabelsEditor } from './meeting-speaker-labels-editor';
 
 type Transcript = {
   id: string;
   title: string;
   content: string;
+  speakerSegments: TranscriptSegment[];
+  calendarAttendees: Array<{ name: string; email: string }>;
   meetingDate: string | null;
   createdAt: string;
   clientId: string | null;
@@ -115,6 +123,15 @@ export function MeetingTranscriptDetailClient({
     clients.find((client) => client.id === clientId)?.name ||
     null;
   const contextLabel = resolvedClientName || transcript.dealTitle;
+  const speakerSuggestions = collectSpeakerNameSuggestions({
+    calendarAttendees: transcript.calendarAttendees,
+    clientName: resolvedClientName,
+    clients,
+  });
+  const displayContent =
+    transcript.speakerSegments.length > 0
+      ? serializeTranscriptSegments(transcript.speakerSegments)
+      : transcript.content;
 
   const saveMeta = () => {
     if (!canEdit) return;
@@ -180,13 +197,13 @@ export function MeetingTranscriptDetailClient({
   };
 
   const copyTranscript = async () => {
-    if (!transcript.content.trim()) {
+    if (!displayContent.trim()) {
       toast.error('Nothing to copy');
       return;
     }
 
     try {
-      await navigator.clipboard.writeText(transcript.content);
+      await navigator.clipboard.writeText(displayContent);
       setCopied(true);
       toast.success('Transcript copied');
       window.setTimeout(() => setCopied(false), 2000);
@@ -255,9 +272,24 @@ export function MeetingTranscriptDetailClient({
               {copied ? 'Copied' : 'Copy transcript'}
             </Button>
           </div>
-          <pre className="max-h-[min(70vh,720px)] overflow-auto whitespace-pre-wrap rounded-xl border border-white/6 bg-black/20 p-4 text-sm leading-relaxed text-zinc-200">
-            {transcript.content}
-          </pre>
+          <div className="max-h-[min(70vh,720px)] overflow-auto rounded-xl border border-white/6 bg-black/20 p-4 text-sm leading-relaxed text-zinc-200">
+            {transcript.speakerSegments.length > 0 ? (
+              <div className="space-y-4">
+                {transcript.speakerSegments.map((segment, index) => (
+                  <div key={`${segment.speaker}-${index}`}>
+                    <p className="text-xs font-semibold text-[var(--keel-teal)]">
+                      {segment.speaker}
+                    </p>
+                    <p className="mt-1 whitespace-pre-wrap text-sm text-zinc-200">
+                      {segment.text}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <pre className="whitespace-pre-wrap">{displayContent}</pre>
+            )}
+          </div>
         </section>
         </div>
 
@@ -396,6 +428,16 @@ export function MeetingTranscriptDetailClient({
               Extract tasks with AI
             </Button>
           </section>
+
+          <MeetingSpeakerLabelsEditor
+            accountId={accountId}
+            accountSlug={accountSlug}
+            transcriptId={transcript.id}
+            speakerSegments={transcript.speakerSegments}
+            suggestions={speakerSuggestions}
+            canEdit={canEdit}
+            onSaved={() => router.refresh()}
+          />
         </aside>
       </div>
 
@@ -415,7 +457,7 @@ export function MeetingTranscriptDetailClient({
                 accountSlug={accountSlug}
                 assignmentOptions={assignmentOptions}
                 embedded
-                initialRawText={transcript.content}
+                initialRawText={displayContent}
                 defaultClientId={clientId || transcript.clientId}
                 successRedirectHref={tasksPath}
               />

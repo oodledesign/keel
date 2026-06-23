@@ -37,7 +37,7 @@ import {
   getClientPortalStatus,
   getJobHistory,
 } from '../_lib/server/server-actions';
-import { ClientContactsBlock } from './client-contacts-block';
+import { ClientImageUploader } from './client-image-uploader';
 import { ClientForm } from './client-form';
 import { ClientInvoicesBlock } from './client-invoices-block';
 import { ClientJobHistoryBlock } from './client-job-history-block';
@@ -406,8 +406,8 @@ export function ClientDetailSidebar({
     if (activeTab === 'contacts') {
       return (
         <ClientContactsBlock
+          accountId={accountId}
           clientId={client.id}
-          userId={client.account_id}
           canEdit={canEditClients}
         />
       );
@@ -513,12 +513,22 @@ export function ClientDetailSidebar({
         <>
           <div className="rounded-xl border border-white/[0.08] bg-[var(--workspace-shell-panel)] p-5 md:p-6">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
-              <ProfileAvatar
-                displayName={displayName}
-                pictureUrl={client.picture_url}
-                className="h-24 w-24 shrink-0 rounded-xl md:h-28 md:w-28"
-                fallbackClassName="rounded-xl bg-zinc-700 text-2xl text-zinc-200"
-              />
+              {canEditClients ? (
+                <ClientImageUploader
+                  accountId={accountId}
+                  clientId={client.id}
+                  displayName={displayName}
+                  pictureUrl={client.picture_url}
+                  onUpdated={fetchClient}
+                />
+              ) : (
+                <ProfileAvatar
+                  displayName={displayName}
+                  pictureUrl={client.picture_url}
+                  className="h-24 w-24 shrink-0 rounded-xl md:h-28 md:w-28"
+                  fallbackClassName="rounded-xl bg-zinc-700 text-2xl text-zinc-200"
+                />
+              )}
 
               <div className="min-w-0 flex-1">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

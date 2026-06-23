@@ -14,15 +14,6 @@ import type {
   ClientProjectHealth,
 } from '../_lib/clients-overview.types';
 
-const AVATAR_COLORS = [
-  'bg-blue-600',
-  'bg-violet-600',
-  'bg-teal-600',
-  'bg-amber-600',
-  'bg-rose-600',
-  'bg-indigo-600',
-] as const;
-
 const HEALTH_STYLES: Record<
   ClientProjectHealth,
   { label: string; dot: string; badge: string }
@@ -44,19 +35,6 @@ const HEALTH_STYLES: Record<
   },
 };
 
-function avatarColorForId(id: string) {
-  let hash = 0;
-  for (let i = 0; i < id.length; i += 1) {
-    hash = (hash + id.charCodeAt(i)) % AVATAR_COLORS.length;
-  }
-  return AVATAR_COLORS[hash] ?? AVATAR_COLORS[0];
-}
-
-function clientInitial(name: string) {
-  const trimmed = name.trim();
-  return trimmed ? trimmed.charAt(0).toUpperCase() : '?';
-}
-
 type ClientOverviewCardProps = {
   client: ClientOverviewItem;
   accountSlug: string;
@@ -72,20 +50,18 @@ export function ClientOverviewCard({
 }: ClientOverviewCardProps) {
   const detailHref = `${pathsConfig.app.accountClients.replace('[account]', accountSlug)}/${client.id}`;
   const jobsHref = pathsConfig.app.accountJobs.replace('[account]', accountSlug);
-  const avatarColor = avatarColorForId(client.id);
   const remainingProjects = Math.max(0, client.projectCount - client.projects.length);
 
   return (
     <article className="flex h-full flex-col rounded-2xl border border-white/[0.08] bg-[var(--workspace-shell-panel)] p-5 shadow-sm transition hover:border-white/[0.14] hover:bg-[var(--workspace-shell-panel-hover)]">
       <div className="flex items-start gap-3">
-        <Link
-          href={detailHref}
-          className={cn(
-            'flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-lg font-semibold text-white',
-            avatarColor,
-          )}
-        >
-          {clientInitial(client.displayName)}
+        <Link href={detailHref} className="shrink-0">
+          <ProfileAvatar
+            displayName={client.displayName}
+            pictureUrl={client.pictureUrl}
+            className="h-12 w-12 rounded-full"
+            fallbackClassName="rounded-full bg-zinc-700 text-lg text-zinc-200"
+          />
         </Link>
 
         <div className="min-w-0 flex-1">

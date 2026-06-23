@@ -16,11 +16,21 @@ import { queueBrainIndexSource } from '~/lib/brain/sync';
 import { resolveMeetingCalendarMetadata } from '~/lib/recorder/calendar-metadata';
 import { queueMeetingSummaryGeneration } from '~/lib/recorder/meeting-summary';
 import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
+import {
+  parseTranscriptContent,
+  serializeTranscriptSegments,
+  type TranscriptSegment,
+} from '~/lib/recorder/transcript-speakers';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const MAX_CONTENT_BYTES = 2 * 1024 * 1024;
+
+const TranscriptSegmentSchema = z.object({
+  speaker: z.string().min(1),
+  text: z.string(),
+});
 
 const SyncBodySchema = z.object({
   content: z.string().min(1),
@@ -34,6 +44,7 @@ const SyncBodySchema = z.object({
   client_id: z.string().uuid().optional(),
   deal_id: z.string().uuid().optional(),
   account_id: z.string().uuid().optional(),
+  segments: z.array(TranscriptSegmentSchema).optional(),
 });
 
 function badRequest(message: string) {
@@ -171,6 +182,19 @@ export async function POST(request: Request) {
     recordedAt: recordedAt ? new Date(recordedAt) : null,
   });
 
+  const parsedFromContent = parseTranscriptContent(input.content.trim());
+  const speakerSegments: TranscriptSegment[] | null = input.segments?.length
+    ? input.segments.map((segment) => ({
+        speaker: segment.speaker.trim(),
+        text: segment.text,
+      }))
+    : parsedFromContent.hasSpeakerLabels
+      ? parsedFromContent.segments
+      : null;
+  const transcriptContent = speakerSegments
+    ? serializeTranscriptSegments(speakerSegments)
+    : input.content.trim();
+
   const { data: row, error } = await admin
     .from('meeting_transcripts')
     .insert({
@@ -179,7 +203,8 @@ export async function POST(request: Request) {
       client_id: clientId,
       deal_id: dealId,
       title: input.title?.trim() || 'Meeting transcript',
-      content: input.content.trim(),
+      content: transcriptContent,
+      speaker_segments: speakerSegments,
       source: 'desktop_recorder',
       recorded_at: recordedAt,
       duration_seconds: input.duration_seconds ?? null,
@@ -206,7 +231,7 @@ export async function POST(request: Request) {
     accountId: targetAccountId,
     createdByUserId: token.user_id,
     title: input.title?.trim() || 'Meeting transcript',
-    content: input.content.trim(),
+    content: transcriptContent,
     meetingDate: input.meeting_date ?? null,
     calendarAttendees: calendarMetadata.calendar_attendees,
   });

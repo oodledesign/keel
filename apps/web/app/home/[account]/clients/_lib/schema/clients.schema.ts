@@ -81,9 +81,15 @@ export const ListContactsSchema = z.object({
   clientId: z.string().uuid(),
 });
 
-export const CreateContactSchema = z.object({
+export const ListAccountContactsSchema = z.object({
+  accountId: z.string().uuid(),
   clientId: z.string().uuid(),
-  userId: z.string().uuid(),
+  query: z.string().optional(),
+});
+
+export const CreateContactSchema = z.object({
+  accountId: z.string().uuid(),
+  clientId: z.string().uuid(),
   fullName: z.string().min(1, 'Name is required'),
   email: z.string().email().optional(),
   phone: z.string().optional(),
@@ -91,7 +97,16 @@ export const CreateContactSchema = z.object({
   isPrimary: z.boolean().optional().default(false),
 });
 
+export const LinkContactSchema = z.object({
+  accountId: z.string().uuid(),
+  clientId: z.string().uuid(),
+  contactId: z.string().uuid(),
+  role: z.string().optional(),
+  isPrimary: z.boolean().optional().default(false),
+});
+
 export const DeleteContactSchema = z.object({
+  clientId: z.string().uuid(),
   contactId: z.string().uuid(),
 });
 
@@ -106,5 +121,7 @@ export type DeleteNoteInput = z.infer<typeof DeleteNoteSchema>;
 export type GetJobHistoryInput = z.infer<typeof GetJobHistorySchema>;
 export type ListClientInvoicesInput = z.infer<typeof ListClientInvoicesSchema>;
 export type ListContactsInput = z.infer<typeof ListContactsSchema>;
+export type ListAccountContactsInput = z.infer<typeof ListAccountContactsSchema>;
 export type CreateContactInput = z.infer<typeof CreateContactSchema>;
+export type LinkContactInput = z.infer<typeof LinkContactSchema>;
 export type DeleteContactInput = z.infer<typeof DeleteContactSchema>;

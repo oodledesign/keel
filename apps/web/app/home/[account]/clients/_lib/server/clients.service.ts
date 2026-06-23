@@ -17,6 +17,8 @@ import type {
   DeleteNoteInput,
   GetClientInput,
   GetJobHistoryInput,
+  LinkContactInput,
+  ListAccountContactsInput,
   ListClientInvoicesInput,
   ListClientsInput,
   ListContactsInput,
@@ -209,6 +211,7 @@ class ClientsService {
         email: string | null;
         phone: string | null;
         city: string | null;
+        picture_url?: string | null;
         created_at: string;
         updated_at: string;
       }>,
@@ -266,14 +269,30 @@ class ClientsService {
     // For individual clients, auto-create the primary contact record
     if (clientType === 'individual' && data?.id) {
       const contactName = [input.first_name, input.last_name].filter(Boolean).join(' ').trim();
-      await this.adminDb.from('contacts').insert({
-        user_id: user.id,
-        client_id: data.id,
-        full_name: contactName || input.first_name,
-        email: input.email ?? null,
-        phone: input.phone ?? null,
-        is_primary: true,
-      });
+      const { data: contact, error: contactError } = await this.adminDb
+        .from('contacts')
+        .insert({
+          account_id: input.accountId,
+          user_id: user.id,
+          client_id: data.id,
+          full_name: contactName || input.first_name,
+          email: input.email ?? null,
+          phone: input.phone ?? null,
+          is_primary: true,
+        })
+        .select('id')
+        .single();
+
+      if (contactError) throw mapClientWriteError(contactError);
+
+      if (contact?.id) {
+        const { error: linkError } = await this.adminDb.from('client_contacts').insert({
+          client_id: data.id,
+          contact_id: contact.id,
+          is_primary: true,
+        });
+        if (linkError) throw mapClientWriteError(linkError);
+      }
     }
 
     return data;
@@ -402,46 +421,188 @@ class ClientsService {
 
   // ─── Contacts ──────────────────────────────────────────────────────────────
 
+  private async ensureClientInAccount(clientId: string, accountId: string) {
+    const { data, error } = await this.adminDb
+      .from('clients')
+      .select('id')
+      .eq('id', clientId)
+      .eq('account_id', accountId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) {
+      throw new Error('Client not found in this workspace.');
+    }
+  }
+
   async listContacts(params: ListContactsInput) {
     await this.ensureUser();
     const { data, error } = await this.adminDb
-      .from('contacts')
-      .select('id, full_name, email, phone, role, is_primary, created_at')
+      .from('client_contacts')
+      .select(
+        'role, is_primary, created_at, contacts ( id, full_name, email, phone )',
+      )
       .eq('client_id', params.clientId)
       .order('is_primary', { ascending: false })
       .order('created_at', { ascending: true });
 
     if (error) throw error;
-    return { data: data ?? [] };
+
+    const rows = (data ?? [])
+      .map((row: any) => {
+        const contact = row.contacts;
+        if (!contact?.id) return null;
+        return {
+          id: contact.id as string,
+          full_name: contact.full_name as string,
+          email: (contact.email as string | null) ?? null,
+          phone: (contact.phone as string | null) ?? null,
+          role: (row.role as string | null) ?? null,
+          is_primary: Boolean(row.is_primary),
+        };
+      })
+      .filter(Boolean);
+
+    return { data: rows };
+  }
+
+  async listAccountContacts(params: ListAccountContactsInput) {
+    await this.ensureUserAndPermission(params.accountId, 'clients.view');
+    await this.ensureClientInAccount(params.clientId, params.accountId);
+
+    const { data: linkedRows, error: linkedError } = await this.adminDb
+      .from('client_contacts')
+      .select('contact_id')
+      .eq('client_id', params.clientId);
+
+    if (linkedError) throw linkedError;
+
+    const linkedIds = new Set(
+      (linkedRows ?? []).map((row: { contact_id: string }) => row.contact_id),
+    );
+
+    let query = this.adminDb
+      .from('contacts')
+      .select('id, full_name, email, phone')
+      .eq('account_id', params.accountId)
+      .order('full_name', { ascending: true })
+      .limit(100);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const search = params.query?.trim().toLowerCase();
+    let contacts = (data ?? []).filter(
+      (row: { id: string }) => !linkedIds.has(row.id),
+    );
+
+    if (search) {
+      contacts = contacts.filter((row: { full_name?: string | null; email?: string | null }) => {
+        const name = row.full_name?.toLowerCase() ?? '';
+        const email = row.email?.toLowerCase() ?? '';
+        return name.includes(search) || email.includes(search);
+      });
+    }
+
+    return { data: contacts.slice(0, 50) };
   }
 
   async createContact(input: CreateContactInput) {
-    await this.ensureUser();
-    const { data, error } = await this.adminDb
+    const user = await this.ensureUserAndPermission(input.accountId, 'clients.edit');
+    await this.ensureClientInAccount(input.clientId, input.accountId);
+
+    const { data: contact, error } = await this.adminDb
       .from('contacts')
       .insert({
-        client_id: input.clientId,
-        user_id: input.userId,
+        account_id: input.accountId,
+        user_id: user.id,
         full_name: input.fullName,
         email: input.email ?? null,
         phone: input.phone ?? null,
-        role: input.role ?? null,
-        is_primary: input.isPrimary ?? false,
       })
-      .select()
+      .select('id')
       .single();
 
     if (error) throw error;
-    return data;
+
+    const { error: linkError } = await this.adminDb.from('client_contacts').insert({
+      client_id: input.clientId,
+      contact_id: contact.id,
+      role: input.role ?? null,
+      is_primary: input.isPrimary ?? false,
+    });
+
+    if (linkError) throw mapClientWriteError(linkError);
+    return contact;
+  }
+
+  async linkContact(input: LinkContactInput) {
+    await this.ensureUserAndPermission(input.accountId, 'clients.edit');
+    await this.ensureClientInAccount(input.clientId, input.accountId);
+
+    const { data: contact, error: contactError } = await this.adminDb
+      .from('contacts')
+      .select('id')
+      .eq('id', input.contactId)
+      .eq('account_id', input.accountId)
+      .maybeSingle();
+
+    if (contactError) throw contactError;
+    if (!contact) {
+      throw new Error('Contact not found in this workspace.');
+    }
+
+    const { error: linkError } = await this.adminDb.from('client_contacts').insert({
+      client_id: input.clientId,
+      contact_id: input.contactId,
+      role: input.role ?? null,
+      is_primary: input.isPrimary ?? false,
+    });
+
+    if (linkError) {
+      if (linkError.code === '23505') {
+        throw new Error('This contact is already linked to this client.');
+      }
+      throw mapClientWriteError(linkError);
+    }
   }
 
   async deleteContact(params: DeleteContactInput) {
-    await this.ensureUser();
-    const { error } = await this.adminDb
-      .from('contacts')
-      .delete()
-      .eq('id', params.contactId);
+    const { data: client, error: clientError } = await this.adminDb
+      .from('clients')
+      .select('account_id')
+      .eq('id', params.clientId)
+      .maybeSingle();
 
-    if (error) throw error;
+    if (clientError) throw clientError;
+    if (!client?.account_id) {
+      throw new Error('Client not found.');
+    }
+
+    await this.ensureUserAndPermission(client.account_id, 'clients.edit');
+
+    const { error: unlinkError } = await this.adminDb
+      .from('client_contacts')
+      .delete()
+      .eq('client_id', params.clientId)
+      .eq('contact_id', params.contactId);
+
+    if (unlinkError) throw unlinkError;
+
+    const { count, error: countError } = await this.adminDb
+      .from('client_contacts')
+      .select('id', { count: 'exact', head: true })
+      .eq('contact_id', params.contactId);
+
+    if (countError) throw countError;
+
+    if ((count ?? 0) === 0) {
+      const { error: deleteError } = await this.adminDb
+        .from('contacts')
+        .delete()
+        .eq('id', params.contactId);
+
+      if (deleteError) throw deleteError;
+    }
   }
 }

@@ -23,8 +23,8 @@ export async function loadPrimaryContactEmailsByClientId(
   if (clientIds.length === 0) return out;
 
   const { data: rows, error } = await admin
-    .from('contacts')
-    .select('client_id, email, is_primary, created_at')
+    .from('client_contacts')
+    .select('client_id, is_primary, created_at, contacts ( email )')
     .in('client_id', clientIds)
     .order('is_primary', { ascending: false })
     .order('created_at', { ascending: true });
@@ -36,7 +36,8 @@ export async function loadPrimaryContactEmailsByClientId(
 
   for (const row of rows ?? []) {
     const clientId = row.client_id as string;
-    const email = (row.email as string | null)?.trim();
+    const contact = row.contacts as { email?: string | null } | null;
+    const email = (contact?.email as string | null)?.trim();
     if (!email || out.has(clientId)) continue;
     out.set(clientId, email);
   }

@@ -231,7 +231,7 @@ export async function buildClientsOverview(params: {
   }
 
   const contactsResult = await db
-    .from('contacts')
+    .from('client_contacts')
     .select('client_id')
     .in('client_id', clientIds);
 
@@ -322,6 +322,7 @@ export async function buildClientsOverview(params: {
       email: client.email,
       phone: client.phone,
       city: client.city,
+      pictureUrl: client.picture_url ?? null,
       tagline: buildTagline(client),
       updatedAt: client.updated_at,
       projectCount,

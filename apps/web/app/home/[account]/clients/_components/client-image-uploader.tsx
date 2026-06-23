@@ -1,128 +1,230 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { Camera, Trash2 } from 'lucide-react';
 
-import { useSupabase } from '@kit/supabase/hooks/use-supabase';
-import { ImageUploader } from '@kit/ui/image-uploader';
+import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
+import { cn } from '@kit/ui/utils';
 
-const AVATARS_BUCKET = 'account_image';
+import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
-export function ClientImageUploader(props: {
+function normalizeClientPhotoUrl(url: string | null | undefined) {
+  return toSupabasePublicStorageUrl(url) ?? url?.trim() ?? null;
+}
+
+function clientInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0]!.charAt(0).toUpperCase();
+  return `${parts[0]!.charAt(0)}${parts[parts.length - 1]!.charAt(0)}`.toUpperCase();
+}
+
+export function ClientImageUploader({
+  accountId,
+  clientId,
+  displayName,
+  pictureUrl,
+  onUpdated,
+  size = 'lg',
+  className,
+}: {
   accountId: string;
   clientId: string;
+  displayName: string;
   pictureUrl: string | null;
   onUpdated: () => void;
+  size?: 'md' | 'lg';
+  className?: string;
 }) {
-  const client = useSupabase();
-
-  const createToaster = useCallback(
-    (promise: () => Promise<unknown>) => {
-      return toast.promise(promise, {
-        success: 'Client photo updated',
-        error: 'Failed to update client photo',
-        loading: 'Updating client photo…',
-      });
-    },
-    [],
+  const inputId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(() =>
+    normalizeClientPhotoUrl(pictureUrl),
   );
 
-  const onValueChange = useCallback(
-    (file: File | null) => {
-      const removeExistingStorageFile = () => {
-        if (props.pictureUrl) {
-          return (
-            deleteProfilePhoto(client, props.pictureUrl) ?? Promise.resolve()
-          );
-        }
+  useEffect(() => {
+    setPreviewUrl(normalizeClientPhotoUrl(pictureUrl));
+  }, [pictureUrl]);
 
-        return Promise.resolve();
-      };
+  const dimension = size === 'lg' ? 'h-24 w-24 md:h-28 md:w-28' : 'h-20 w-20';
 
-      if (file) {
-        const promise = () =>
-          removeExistingStorageFile().then(() =>
-            uploadClientPhoto(client, file, props.accountId, props.clientId)
-              .then((pictureUrl) =>
-                client
-                  .from('clients')
-                  .update({ picture_url: pictureUrl })
-                  .eq('id', props.clientId)
-                  .throwOnError(),
-              )
-              .then(() => {
-                props.onUpdated();
-              }),
-          );
+  const uploadFile = useCallback(
+    async (file: File) => {
+      setUploading(true);
 
-        createToaster(promise);
-      } else {
-        const promise = () =>
-          removeExistingStorageFile()
-            .then(() =>
-              client
-                .from('clients')
-                .update({ picture_url: null })
-                .eq('id', props.clientId)
-                .throwOnError(),
-            )
-            .then(() => {
-              props.onUpdated();
-            });
-
-        createToaster(promise);
+      try {
+        const nextUrl = await uploadClientPhotoViaApi(file, accountId, clientId);
+        setPreviewUrl(nextUrl);
+        toast.success('Client photo updated');
+        onUpdated();
+      } catch (error) {
+        console.error('[clients] photo upload', error);
+        toast.error(
+          error instanceof Error ? error.message : 'Failed to update photo',
+        );
+      } finally {
+        setUploading(false);
       }
     },
-    [client, createToaster, props],
+    [accountId, clientId, onUpdated],
   );
+
+  const onFileSelected = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      event.target.value = '';
+
+      if (!file) return;
+
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please choose an image file');
+        return;
+      }
+
+      void uploadFile(file);
+    },
+    [uploadFile],
+  );
+
+  const onRemovePhoto = useCallback(async () => {
+    setUploading(true);
+
+    try {
+      await removeClientPhotoViaApi(accountId, clientId);
+      setPreviewUrl(null);
+      toast.success('Client photo removed');
+      onUpdated();
+    } catch (error) {
+      console.error('[clients] photo remove', error);
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to remove photo',
+      );
+    } finally {
+      setUploading(false);
+    }
+  }, [accountId, clientId, onUpdated]);
+
+  const openPicker = () => {
+    inputRef.current?.click();
+  };
 
   return (
-    <ImageUploader value={props.pictureUrl} onValueChange={onValueChange}>
-      <span className="text-xs text-zinc-400">Change photo</span>
-    </ImageUploader>
+    <div className={cn('flex flex-col items-start gap-2', className)}>
+      <button
+        type="button"
+        disabled={uploading}
+        onClick={openPicker}
+        className={cn(
+          'group relative shrink-0 overflow-hidden rounded-xl border border-white/10',
+          'bg-zinc-800 ring-2 ring-white/10 transition',
+          'hover:border-[var(--keel-teal)]/40 hover:ring-[var(--keel-teal)]/30',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--keel-teal)]',
+          'disabled:cursor-not-allowed disabled:opacity-60',
+          dimension,
+        )}
+        aria-label={previewUrl ? 'Change client photo' : 'Add client photo'}
+      >
+        {previewUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={previewUrl}
+            alt=""
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <span className="flex h-full w-full flex-col items-center justify-center gap-1 text-zinc-200">
+            <span className="text-2xl font-semibold">
+              {clientInitials(displayName)}
+            </span>
+            <Camera className="h-4 w-4 text-[#5eead4] opacity-90" />
+          </span>
+        )}
+
+        <span
+          className={cn(
+            'absolute inset-0 flex items-center justify-center bg-black/45 text-xs font-medium text-white',
+            'opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100',
+          )}
+        >
+          {previewUrl ? 'Change' : 'Add photo'}
+        </span>
+      </button>
+
+      <input
+        id={inputId}
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="sr-only"
+        onChange={onFileSelected}
+      />
+
+      {previewUrl ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled={uploading}
+          className="h-8 px-2 text-zinc-400 hover:text-red-300"
+          onClick={() => void onRemovePhoto()}
+        >
+          <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+          Remove photo
+        </Button>
+      ) : null}
+    </div>
   );
 }
 
-function deleteProfilePhoto(client: SupabaseClient, url: string) {
-  const bucket = client.storage.from(AVATARS_BUCKET);
-  // Full path for account-scoped client images (account_id/client-client_id), or filename for legacy
-  const path = url.includes('/account_image/')
-    ? url.split('/account_image/')[1]?.split('?')[0]
-    : url.split('/').pop()?.split('?')[0];
-
-  if (!path) return;
-
-  return bucket.remove([path]);
-}
-
-async function uploadClientPhoto(
-  client: SupabaseClient,
-  photoFile: File,
+async function uploadClientPhotoViaApi(
+  file: File,
   accountId: string,
   clientId: string,
 ) {
-  const bytes = await photoFile.arrayBuffer();
-  const bucket = client.storage.from(AVATARS_BUCKET);
-  const fileName = getClientPhotoPath(accountId, clientId);
-  const { nanoid } = await import('nanoid');
-  const cacheBuster = nanoid(16);
+  const body = new FormData();
+  body.append('accountId', accountId);
+  body.append('clientId', clientId);
+  body.append('file', file);
 
-  const result = await bucket.upload(fileName, bytes, {
-    contentType: photoFile.type,
-    upsert: true,
+  const response = await fetch('/api/clients/upload-photo', {
+    method: 'POST',
+    body,
   });
 
-  if (!result.error) {
-    const url = bucket.getPublicUrl(fileName).data.publicUrl;
-    return `${url}?v=${cacheBuster}`;
+  const payload = (await response.json()) as {
+    pictureUrl?: string | null;
+    error?: string;
+  };
+
+  if (!response.ok) {
+    throw new Error(payload.error ?? 'Upload failed');
   }
 
-  throw result.error;
+  const nextUrl = normalizeClientPhotoUrl(payload.pictureUrl);
+  if (!nextUrl) {
+    throw new Error('Upload succeeded but no photo URL was returned');
+  }
+
+  return nextUrl;
 }
 
-function getClientPhotoPath(accountId: string, clientId: string) {
-  return `${accountId}/client-${clientId}`;
-}
+async function removeClientPhotoViaApi(accountId: string, clientId: string) {
+  const body = new FormData();
+  body.append('accountId', accountId);
+  body.append('clientId', clientId);
+  body.append('remove', '1');
 
+  const response = await fetch('/api/clients/upload-photo', {
+    method: 'POST',
+    body,
+  });
+
+  const payload = (await response.json()) as { error?: string };
+
+  if (!response.ok) {
+    throw new Error(payload.error ?? 'Remove failed');
+  }
+}

@@ -214,19 +214,19 @@ class MessagesNotificationsService {
       clientIds.length > 0
         ? await this.client
             .from('client_contacts')
-            .select('client_id, email, is_primary, created_at')
+            .select('client_id, is_primary, created_at, contacts ( email )')
             .in('client_id', clientIds)
             .order('is_primary', { ascending: false })
             .order('created_at', { ascending: true })
         : { data: [] as Array<{
             client_id: string;
-            email: string | null;
             is_primary: boolean | null;
+            contacts: { email: string | null } | null;
           }> };
 
     const contactEmailByClientId = new Map<string, string>();
     for (const row of clientContactRows ?? []) {
-      const email = row.email?.trim();
+      const email = row.contacts?.email?.trim();
       if (!email || contactEmailByClientId.has(row.client_id)) continue;
       contactEmailByClientId.set(row.client_id, email);
     }

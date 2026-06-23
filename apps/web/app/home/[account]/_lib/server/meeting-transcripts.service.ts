@@ -8,6 +8,18 @@ import { createTeamAccountsApi } from '@kit/team-accounts/api';
 import type { Database } from '~/lib/database.types';
 
 import { queueBrainDeleteSource, queueBrainIndexSource } from '~/lib/brain/sync';
+import {
+  parseTranscriptContent,
+  renameSpeakersInSegments,
+  resolveTranscriptSegments,
+  serializeTranscriptSegments,
+  type TranscriptSegment,
+} from '~/lib/recorder/transcript-speakers';
+
+export type MeetingCalendarAttendee = {
+  name: string;
+  email: string;
+};
 
 export type MeetingTranscript = {
   id: string;
@@ -16,6 +28,8 @@ export type MeetingTranscript = {
   dealId: string | null;
   title: string;
   content: string;
+  speakerSegments: TranscriptSegment[];
+  calendarAttendees: MeetingCalendarAttendee[];
   source: 'paste' | 'upload' | 'desktop_recorder';
   filePath: string | null;
   meetingDate: string | null;
@@ -36,6 +50,8 @@ type MeetingTranscriptRow = {
   deal_id?: string | null;
   title?: string | null;
   content?: string | null;
+  speaker_segments?: unknown;
+  calendar_attendees?: unknown;
   source?: string | null;
   file_path?: string | null;
   meeting_date?: string | null;
@@ -44,14 +60,37 @@ type MeetingTranscriptRow = {
   updated_at: string;
 };
 
+function normalizeCalendarAttendees(value: unknown): MeetingCalendarAttendee[] {
+  if (!Array.isArray(value)) return [];
+
+  const attendees: MeetingCalendarAttendee[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue;
+    const name = (item as { name?: unknown }).name;
+    const email = (item as { email?: unknown }).email;
+    attendees.push({
+      name: typeof name === 'string' && name.trim() ? name.trim() : 'Guest',
+      email: typeof email === 'string' ? email.trim() : '',
+    });
+  }
+
+  return attendees;
+}
+
 function mapMeetingTranscript(row: MeetingTranscriptRow): MeetingTranscript {
+  const content = row.content ?? '';
   return {
     id: row.id,
     accountId: row.account_id,
     clientId: row.client_id ?? null,
     dealId: row.deal_id ?? null,
     title: row.title?.trim() || 'Meeting transcript',
-    content: row.content ?? '',
+    content,
+    speakerSegments: resolveTranscriptSegments({
+      content,
+      speakerSegments: row.speaker_segments,
+    }),
+    calendarAttendees: normalizeCalendarAttendees(row.calendar_attendees),
     source:
       row.source === 'upload'
         ? 'upload'
@@ -398,6 +437,10 @@ class MeetingTranscriptsService {
       throw new Error('A client or deal is required');
     }
 
+    const content = input.content.trim();
+    const parsed = parseTranscriptContent(content);
+    const speakerSegments = parsed.hasSpeakerLabels ? parsed.segments : null;
+
     const { data, error } = await this.db
       .from('meeting_transcripts')
       .insert({
@@ -406,7 +449,8 @@ class MeetingTranscriptsService {
         deal_id: dealId,
         title: input.title?.trim() || 'Meeting transcript',
         // Content MUST be a Markdown string — see lib/markdown.ts contract.
-        content: input.content.trim(),
+        content,
+        speaker_segments: speakerSegments,
         source: input.source ?? 'paste',
         file_path: input.filePath?.trim() || null,
         meeting_date: input.meetingDate?.trim() || null,
@@ -488,6 +532,59 @@ class MeetingTranscriptsService {
     if (error || !data) {
       throw new Error(error?.message ?? 'Failed to update meeting transcript');
     }
+
+    queueBrainIndexSource(input.accountId, 'transcript', input.transcriptId);
+
+    const updated = await this.getById({
+      accountId: input.accountId,
+      transcriptId: input.transcriptId,
+    });
+    if (!updated) throw new Error('Transcript not found');
+    return updated;
+  }
+
+  async updateSpeakerLabels(input: {
+    accountId: string;
+    transcriptId: string;
+    renames: Record<string, string>;
+  }): Promise<MeetingTranscriptListItem> {
+    await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+
+    const existing = await this.getById({
+      accountId: input.accountId,
+      transcriptId: input.transcriptId,
+    });
+    if (!existing) throw new Error('Transcript not found');
+
+    const segments = existing.speakerSegments;
+    if (segments.length === 0) {
+      throw new Error('This transcript has no speaker labels to rename');
+    }
+
+    const normalizedRenames: Record<string, string> = {};
+    for (const [from, to] of Object.entries(input.renames)) {
+      const next = to.trim();
+      if (!from.trim() || !next || from.trim() === next) continue;
+      normalizedRenames[from.trim()] = next;
+    }
+
+    if (Object.keys(normalizedRenames).length === 0) {
+      return existing;
+    }
+
+    const nextSegments = renameSpeakersInSegments(segments, normalizedRenames);
+    const content = serializeTranscriptSegments(nextSegments);
+
+    const { error } = await this.db
+      .from('meeting_transcripts')
+      .update({
+        content,
+        speaker_segments: nextSegments,
+      })
+      .eq('id', input.transcriptId)
+      .eq('account_id', input.accountId);
+
+    if (error) throw new Error(error.message);
 
     queueBrainIndexSource(input.accountId, 'transcript', input.transcriptId);
 

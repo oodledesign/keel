@@ -405,6 +405,7 @@ export function ClientsPageContent({
                   company_name={client.companyName}
                   email={client.email}
                   city={client.city}
+                  picture_url={client.pictureUrl}
                   updated_at={client.updatedAt}
                   projectCount={client.projectCount}
                   dueTaskCount={client.dueTaskCount}

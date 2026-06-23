@@ -16,6 +16,8 @@ import {
   DeleteNoteSchema,
   GetClientSchema,
   GetJobHistorySchema,
+  LinkContactSchema,
+  ListAccountContactsSchema,
   ListClientInvoicesSchema,
   ListClientsSchema,
   ListContactsSchema,
@@ -135,12 +137,28 @@ export const listContacts = enhanceAction(
   { schema: ListContactsSchema },
 );
 
+export const listAccountContacts = enhanceAction(
+  async (input) => {
+    const service = getService();
+    return service.listAccountContacts(input);
+  },
+  { schema: ListAccountContactsSchema },
+);
+
 export const createContact = enhanceAction(
   async (input) => {
     const service = getService();
     return service.createContact(input);
   },
   { schema: CreateContactSchema },
+);
+
+export const linkContact = enhanceAction(
+  async (input) => {
+    const service = getService();
+    return service.linkContact(input);
+  },
+  { schema: LinkContactSchema },
 );
 
 export const deleteContact = enhanceAction(

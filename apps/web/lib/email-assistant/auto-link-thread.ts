@@ -105,14 +105,17 @@ async function findClientMatches(
     return [...matches.values()];
   }
 
-  const { data: contacts, error: contactsError } = await admin
-    .from('contacts')
-    .select('email, client_id')
+  const { data: contactLinks, error: contactLinksError } = await admin
+    .from('client_contacts')
+    .select('client_id, contacts ( email )')
     .in('client_id', clientIds);
 
-  if (contactsError) {
-    if (!contactsError.message.includes('contacts')) {
-      throw new Error(contactsError.message);
+  if (contactLinksError) {
+    if (
+      !contactLinksError.message.includes('client_contacts') &&
+      !contactLinksError.message.includes('contacts')
+    ) {
+      throw new Error(contactLinksError.message);
     }
 
     return [...matches.values()];
@@ -122,8 +125,9 @@ async function findClientMatches(
     clientRows.map((row) => [row.id as string, row.account_id as string]),
   );
 
-  for (const row of contacts ?? []) {
-    const email = extractEmailAddress(row.email as string | null);
+  for (const row of contactLinks ?? []) {
+    const contact = row.contacts as { email?: string | null } | null;
+    const email = extractEmailAddress(contact?.email ?? null);
     const clientId = row.client_id as string | null;
 
     if (!email || !clientId || !emails.includes(email)) {

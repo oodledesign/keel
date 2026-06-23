@@ -47,6 +47,13 @@ const UpdateSchema = z.object({
   dealId: z.string().uuid().nullable().optional(),
 });
 
+const UpdateSpeakerLabelsSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1).max(200).optional(),
+  transcriptId: z.string().uuid(),
+  renames: z.record(z.string(), z.string()),
+});
+
 const DeleteSchema = z.object({
   accountId: z.string().uuid(),
   accountSlug: z.string().min(1).max(200).optional(),
@@ -148,6 +155,23 @@ export const updateMeetingTranscript = enhanceAction(
     return row;
   },
   { schema: UpdateSchema },
+);
+
+export const updateMeetingTranscriptSpeakerLabels = enhanceAction(
+  async (input) => {
+    const row = await getService().updateSpeakerLabels({
+      accountId: input.accountId,
+      transcriptId: input.transcriptId,
+      renames: input.renames,
+    });
+
+    if (input.accountSlug) {
+      revalidateMeetingPages(input.accountSlug, input.transcriptId);
+    }
+
+    return row;
+  },
+  { schema: UpdateSpeakerLabelsSchema },
 );
 
 export const deleteMeetingTranscript = enhanceAction(
