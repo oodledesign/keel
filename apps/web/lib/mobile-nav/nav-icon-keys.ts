@@ -1,5 +1,8 @@
 import pathsConfig from '~/config/paths.config';
-import { navHrefPathname } from '~/lib/dashboard-shortcuts/personal-home-url';
+import {
+  navHrefPathname,
+  normalizeAppHref,
+} from '~/lib/dashboard-shortcuts/personal-home-url';
 
 /** Serializable icon keys for mobile bottom nav (resolved client-side). */
 export type MobileNavIconKey =
@@ -48,6 +51,7 @@ const PERSONAL_SEGMENT_KEYS: Record<string, MobileNavIconKey> = {
 
 const WORKSPACE_SEGMENT_KEYS: Record<string, MobileNavIconKey> = {
   jobs: 'jobs',
+  campaigns: 'jobs',
   tasks: 'tasks',
   planner: 'planner',
   schedule: 'schedule',
@@ -59,8 +63,10 @@ const WORKSPACE_SEGMENT_KEYS: Record<string, MobileNavIconKey> = {
   invoices: 'invoices',
   proposals: 'proposals',
   contracts: 'contracts',
+  members: 'people',
   people: 'people',
   notes: 'notes',
+  docs: 'notes',
   brain: 'brain',
   sops: 'sops',
   messages: 'messages',
@@ -71,11 +77,15 @@ const WORKSPACE_SEGMENT_KEYS: Record<string, MobileNavIconKey> = {
   feedflow: 'feedflow',
   reviews: 'reviews',
   social: 'social',
+  widgets: 'apps',
   apps: 'apps',
   properties: 'properties',
   calendar: 'calendar',
   shopping: 'shopping',
   meal: 'meal',
+  community: 'calendar',
+  settings: 'apps',
+  billing: 'finances',
 };
 
 function normalizeNavPath(path: string): string {
@@ -83,11 +93,11 @@ function normalizeNavPath(path: string): string {
 }
 
 export function resolveNavIconKey(path: string): MobileNavIconKey {
-  const normalized = normalizeNavPath(path);
+  const normalized = normalizeNavPath(normalizeAppHref(path));
   const parts = normalized.split('/').filter(Boolean);
 
   if (parts[0] !== 'app') {
-    return 'home';
+    return 'workspace';
   }
 
   if (parts.length === 1 || (parts.length === 2 && parts[1] === 'home')) {
@@ -135,5 +145,5 @@ export function resolveNavIconKey(path: string): MobileNavIconKey {
     if (workspace) return workspace;
   }
 
-  return 'home';
+  return 'workspace';
 }

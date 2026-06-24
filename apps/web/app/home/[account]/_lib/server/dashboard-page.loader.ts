@@ -482,7 +482,7 @@ async function loadDashboardPageDataImpl(
   );
 
   let upcomingTasks: DashboardTaskSummary[] = [];
-  const taskScopeFilters: string[] = [];
+  const taskScopeFilters: string[] = [`account_id.eq.${accountId}`];
   if (jobIds.length > 0) {
     taskScopeFilters.push(`job_id.in.(${jobIds.join(',')})`);
   }
@@ -493,34 +493,32 @@ async function loadDashboardPageDataImpl(
     taskScopeFilters.push(`client_id.in.(${clientIds.join(',')})`);
   }
 
-  if (taskScopeFilters.length > 0) {
-    const { data: taskRows, error: tasksError } = await client
-      .from('tasks')
-      .select('id, title, status, due_date, project_id, job_id, client_id')
-      .or(taskScopeFilters.join(','))
-      .is('parent_task_id', null)
-      .not('status', 'eq', 'done')
-      .order('due_date', { ascending: true, nullsFirst: false })
-      .limit(4);
+  const { data: taskRows, error: tasksError } = await client
+    .from('tasks')
+    .select('id, title, status, due_date, project_id, job_id, client_id')
+    .or(taskScopeFilters.join(','))
+    .is('parent_task_id', null)
+    .not('status', 'eq', 'done')
+    .order('due_date', { ascending: true, nullsFirst: false })
+    .limit(4);
 
-    if (!isTableMissingFromApi(tasksError) && tasksError) {
-      throw tasksError;
-    }
-
-    upcomingTasks = (taskRows ?? []).map((t) => ({
-      id: t.id as string,
-      title: (t.title as string | null) ?? 'Untitled task',
-      dueDate: toIsoDateString(t.due_date as string | null | undefined),
-      status: (t.status as string | null) ?? 'todo',
-      projectName: t.job_id
-        ? (jobNameMap.get(t.job_id as string) ?? null)
-        : t.project_id
-          ? (projectNameMap.get(t.project_id as string) ?? null)
-          : t.client_id
-            ? (clientNameMap.get(t.client_id as string) ?? null)
-            : null,
-    }));
+  if (!isTableMissingFromApi(tasksError) && tasksError) {
+    throw tasksError;
   }
+
+  upcomingTasks = (taskRows ?? []).map((t) => ({
+    id: t.id as string,
+    title: (t.title as string | null) ?? 'Untitled task',
+    dueDate: toIsoDateString(t.due_date as string | null | undefined),
+    status: (t.status as string | null) ?? 'todo',
+    projectName: t.job_id
+      ? (jobNameMap.get(t.job_id as string) ?? null)
+      : t.project_id
+        ? (projectNameMap.get(t.project_id as string) ?? null)
+        : t.client_id
+          ? (clientNameMap.get(t.client_id as string) ?? null)
+          : null,
+  }));
 
   const accountName =
     account.name?.trim() || account.slug || accountSlug;

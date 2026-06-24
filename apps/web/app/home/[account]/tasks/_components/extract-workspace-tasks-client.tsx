@@ -54,29 +54,36 @@ function parseAssignValue(v: string): { projectId: string | null; clientId: stri
 /** If AI only matched the first group, reuse that project/client for later parents. */
 function fillMissingParentAssignments(
   rows: ExtractedTaskReviewRow[],
+  defaultClientId?: string | null,
 ): ExtractedTaskReviewRow[] {
-  const donor = rows.find((r) => r.projectId || r.clientId);
-  if (!donor) return rows;
-  return rows.map((r) => {
-    if (r.projectId || r.clientId) return r;
+  return rows.map((row) => {
+    if (row.projectId || row.clientId) return row;
+
+    if (defaultClientId) {
+      return { ...row, clientId: defaultClientId };
+    }
+
+    const donor = rows.find((r) => r.projectId || r.clientId);
+    if (!donor) return row;
+
     return {
-      ...r,
+      ...row,
       projectId: donor.projectId,
       clientId: donor.clientId,
     };
   });
 }
 
-function applyDefaultClient(
+/** When a meeting is linked to a client, that client wins over AI name matching. */
+function applyMeetingClientDefault(
   rows: ExtractedTaskReviewRow[],
   defaultClientId: string | null | undefined,
 ): ExtractedTaskReviewRow[] {
   if (!defaultClientId) return rows;
-  return rows.map((row) =>
-    row.clientId || row.projectId
-      ? row
-      : { ...row, clientId: defaultClientId },
-  );
+  return rows.map((row) => ({
+    ...row,
+    clientId: defaultClientId,
+  }));
 }
 
 export function ExtractWorkspaceTasksClient({
@@ -118,10 +125,11 @@ export function ExtractWorkspaceTasksClient({
         const result = await extractWorkspaceTasksFromTranscript({
           accountId,
           rawText,
+          preferredClientId: defaultClientId ?? undefined,
         });
         setRows(
-          applyDefaultClient(
-            fillMissingParentAssignments(result.rows),
+          fillMissingParentAssignments(
+            applyMeetingClientDefault(result.rows, defaultClientId),
             defaultClientId,
           ),
         );
@@ -142,7 +150,10 @@ export function ExtractWorkspaceTasksClient({
 
   const commit = () => {
     if (!rows?.length) return;
-    const prepared = fillMissingParentAssignments(rows);
+    const prepared = fillMissingParentAssignments(
+      applyMeetingClientDefault(rows, defaultClientId),
+      defaultClientId,
+    );
     const missingLink = prepared.filter(
       (r) => r.included && !r.projectId && !r.clientId,
     );
@@ -261,8 +272,9 @@ export function ExtractWorkspaceTasksClient({
         <div className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="max-w-xl text-xs text-zinc-500">
-              If only the first group got a client or project from AI, we copy that link to
-              the other groups—you can still change any row before adding.
+              {defaultClientId
+                ? 'Tasks default to the client linked to this meeting. You can still change any row before adding.'
+                : 'If only the first group got a client or project from AI, we copy that link to the other groups—you can still change any row before adding.'}
             </p>
             <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" onClick={() => setRows(null)}>

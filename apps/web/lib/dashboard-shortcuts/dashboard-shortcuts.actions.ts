@@ -16,13 +16,21 @@ import {
 } from './types';
 
 function revalidatePersonalDashboard() {
-  revalidatePath('/app');
-  revalidatePath('/home');
+  revalidatePath('/home', 'layout');
+  revalidatePath('/app', 'layout');
   revalidatePath(pathsConfig.app.personalAccountSettings);
 }
 
 function revalidateWorkspaceDashboard(slug: string) {
-  revalidatePath(pathsConfig.app.accountHome.replace('[account]', slug));
+  const publicHome = pathsConfig.app.accountHome.replace('[account]', slug);
+
+  revalidatePath(`/home/${slug}`, 'layout');
+  revalidatePath(`/app/${slug}`, 'layout');
+  revalidatePath(publicHome, 'layout');
+  revalidatePath(publicHome);
+  revalidatePath(
+    pathsConfig.app.accountSettings.replace('[account]', slug),
+  );
 }
 
 export async function savePersonalDashboardShortcutsAction(

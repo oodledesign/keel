@@ -67,3 +67,7 @@ node-compile-cache/
 
 # Local dev notes / commands (may contain tokens or machine paths)
 /links.md
+
+# Supabase CLI temp state
+**/.supabase/
+**/supabase/.temp/

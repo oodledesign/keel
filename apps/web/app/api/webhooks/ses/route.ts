@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { verifySnsEnvelope } from '~/lib/webhooks/verify-sns-envelope';
+
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
   let envelope: Record<string, unknown>;
@@ -10,6 +12,16 @@ export async function POST(req: NextRequest) {
     envelope = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+
+  try {
+    await verifySnsEnvelope(envelope);
+  } catch (error) {
+    console.warn(
+      '[ses-webhook] SNS verification failed:',
+      error instanceof Error ? error.message : error,
+    );
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 403 });
   }
 
   const messageType = envelope['Type'] as string;

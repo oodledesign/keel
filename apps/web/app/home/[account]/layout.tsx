@@ -120,6 +120,7 @@ async function SidebarLayout({
   const homePath = pathsConfig.app.accountHome.replace('[account]', account);
   const bottomNavTabs = resolveMobileBottomNavTabs({
     homePath,
+    navLinks: mobileNavLinks,
     shortcuts: mobileNavShortcuts,
   });
 
@@ -227,6 +228,7 @@ async function HeaderLayout({
   const homePath = pathsConfig.app.accountHome.replace('[account]', account);
   const bottomNavTabs = resolveMobileBottomNavTabs({
     homePath,
+    navLinks: mobileNavLinks,
     shortcuts: mobileNavShortcuts,
   });
 

@@ -9,6 +9,8 @@ import { runBriefJob } from '~/lib/briefs/runner';
 import { estimateBriefCredits } from '~/lib/briefs/types';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { userIsAccountMember } from '~/lib/rankly/account-membership';
+import { denyUnlessRanklyAddon } from '~/lib/rankly/require-rankly-api-access';
+import { rateLimitApiRequest } from '~/lib/rate-limit/api-rate-limit';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 export const runtime = 'nodejs';
@@ -36,6 +38,9 @@ async function assertProjectAccess(
     return jsonErr('FORBIDDEN', 'Not a member of this account', 403);
   }
 
+    const addonDenied = await denyUnlessRanklyAddon(client, userId, accountId);
+    if (addonDenied) return addonDenied;
+
   const { data: project } = await supabaseCustomSchema(client, 'rankly')
     .from('projects')
     .select('id, domain')
@@ -60,6 +65,13 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return jsonErr('UNAUTHORIZED', 'Sign in required', 401);
     }
+
+    const limited = rateLimitApiRequest(request, {
+      scope: 'rankly-briefs',
+      limit: 15,
+      subject: user.id,
+    });
+    if (limited) return limited;
 
     const body = await request.json();
     const parsed = createBriefSchema.safeParse(body);

@@ -7,6 +7,7 @@ import { getRankCheckJob } from '~/lib/rank-tracking/db';
 import { syncRankCheckJobProgress } from '~/lib/rank-tracking/runner';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { userIsAccountMember } from '~/lib/rankly/account-membership';
+import { denyUnlessRanklyAddon } from '~/lib/rankly/require-rankly-api-access';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 export const runtime = 'nodejs';
@@ -48,6 +49,9 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     if (!isMember) {
       return jsonErr('FORBIDDEN', 'Not a member of this account', 403);
     }
+
+    const addonDenied = await denyUnlessRanklyAddon(client, user.id, project.account_id as string);
+    if (addonDenied) return addonDenied;
 
     await syncRankCheckJobProgress(jobId);
     const refreshedJob = await getRankCheckJob(jobId);
@@ -96,6 +100,9 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
     if (!isMember) {
       return jsonErr('FORBIDDEN', 'Not a member of this account', 403);
     }
+
+    const addonDenied = await denyUnlessRanklyAddon(client, user.id, project.account_id as string);
+    if (addonDenied) return addonDenied;
 
     if (job.status !== 'pending' && job.status !== 'running') {
       return jsonErr('VALIDATION', 'Only active rank checks can be cancelled', 400);

@@ -39,6 +39,8 @@ function revalidateWorkspaceTaskPages(accountSlug: string) {
 const extractSchema = z.object({
   accountId: z.string().uuid(),
   rawText: z.string().min(20).max(120_000),
+  /** When extracting from a meeting transcript, prefer this client for all tasks. */
+  preferredClientId: z.string().uuid().optional(),
 });
 
 export type ExtractedTaskReviewRow = {
@@ -92,7 +94,15 @@ export const extractWorkspaceTasksFromTranscript = enhanceAction(
       .filter((o) => o.type === 'client')
       .map((o) => ({ id: o.id, name: o.name }));
 
-    const context: WorkspaceContextForExtract = { projects, clients };
+    const preferredClient = input.preferredClientId
+      ? clients.find((c) => c.id === input.preferredClientId) ?? null
+      : null;
+
+    const context: WorkspaceContextForExtract = {
+      projects,
+      clients,
+      meetingClient: preferredClient,
+    };
     const drafts = await extractWorkspaceTasksWithAnthropic(
       input.rawText,
       context,
@@ -107,7 +117,7 @@ export const extractWorkspaceTasksFromTranscript = enhanceAction(
         dueDate: d.dueDate,
         priority: d.priority,
         projectId,
-        clientId,
+        clientId: preferredClient?.id ?? clientId,
         included: true,
         subtasks: d.subtasks.map((s) => ({
           id: randomId(),

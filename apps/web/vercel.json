@@ -5,7 +5,8 @@
   "build": {
     "env": {
       "NODE_OPTIONS": "--max-old-space-size=5120",
-      "NEXT_WEBPACK_PARALLELISM": "1"
+      "NEXT_WEBPACK_PARALLELISM": "1",
+      "ENABLE_STRICT_CSP": "true"
     }
   },
   "crons": [

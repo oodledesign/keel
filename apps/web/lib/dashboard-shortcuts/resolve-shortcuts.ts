@@ -3,6 +3,7 @@ import 'server-only';
 import type { ShortcutCatalogItem, ResolvedShortcut, StoredShortcut } from './types';
 import { catalogItemKey } from './types';
 import { catalogItemHref, resolveShortcutHref } from './resolve-href';
+import { normalizeAppHref } from './personal-home-url';
 
 export function resolveStoredShortcuts(
   stored: StoredShortcut[],
@@ -26,7 +27,7 @@ export function resolveStoredShortcuts(
     resolved.push({
       id: row.id,
       label: row.label?.trim() || match?.label || 'Shortcut',
-      href,
+      href: normalizeAppHref(href),
       description: match?.description,
     });
   }

@@ -8,6 +8,7 @@ import { buildInstagramAuthUrl } from '~/lib/feedflow/instagram';
 import { signFeedflowOAuthState } from '~/lib/feedflow/oauth-state';
 
 import { assertFeedflowWriteAccess } from '~/lib/feedflow/assert-feedflow-write';
+import { denyUnlessFeedflowAddon } from '~/lib/feedflow/require-feedflow-api-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,6 +48,15 @@ export async function GET(request: NextRequest) {
     const msg = e instanceof Error ? e.message : 'Forbidden';
     return NextResponse.redirect(
       absoluteUrl(`${pathsConfig.app.home}?feedflow_error=${encodeURIComponent(msg)}`),
+    );
+  }
+
+  const addonDenied = await denyUnlessFeedflowAddon(client, user.id, accountId);
+  if (addonDenied) {
+    return NextResponse.redirect(
+      absoluteUrl(
+        `${pathsConfig.app.home}?feedflow_error=${encodeURIComponent('Feedflow add-on required')}`,
+      ),
     );
   }
 

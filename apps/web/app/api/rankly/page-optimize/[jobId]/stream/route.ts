@@ -6,6 +6,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { loadPageOptimizeReportByJobId } from '~/lib/page-optimize/db';
 import { createJobSseResponse } from '~/lib/rankly/create-job-sse-response';
 import { jsonErr } from '~/lib/rankly/api-response';
+import { denyUnlessRanklyAddonForProject } from '~/lib/rankly/require-rankly-api-access';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 export const runtime = 'nodejs';
@@ -26,6 +27,31 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     if (!user) {
       return jsonErr('UNAUTHORIZED', 'Sign in required', 401);
     }
+
+    const { data: accessJob, error: accessError } = await supabaseCustomSchema(
+      client,
+      'rankly',
+    )
+      .from('page_optimization_jobs')
+      .select('project_id')
+      .eq('id', jobId)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (accessError) {
+      return jsonErr('DB_ERROR', accessError.message, 500);
+    }
+
+    if (!accessJob) {
+      return jsonErr('NOT_FOUND', 'Job not found', 404);
+    }
+
+    const addonDenied = await denyUnlessRanklyAddonForProject(
+      client,
+      user.id,
+      accessJob.project_id as string,
+    );
+    if (addonDenied) return addonDenied;
 
     return createJobSseResponse(async () => {
       const { data: job, error } = await supabaseCustomSchema(client, 'rankly')

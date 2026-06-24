@@ -6,6 +6,8 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
+import { isMissingColumnError } from '~/home/[account]/_lib/server/supabase-errors';
+
 export const runtime = 'nodejs';
 
 const AVATARS_BUCKET = 'account_image';
@@ -24,10 +26,8 @@ function clientPhotoPath(accountId: string, clientId: string) {
   return `${accountId}/client-${clientId}`;
 }
 
-function isMissingPictureUrlColumn(error: { code?: string; message?: string } | null) {
-  if (!error) return false;
-  const blob = `${error.message ?? ''} ${error.code ?? ''}`.toLowerCase();
-  return blob.includes('picture_url');
+function isMissingPictureUrlColumn(error: unknown) {
+  return isMissingColumnError(error);
 }
 
 async function ensureClientsEditPermission(
@@ -149,7 +149,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            'Client photos are not enabled on this database yet. Run the latest migrations from apps/web (`pnpm exec supabase db push`).',
+            'The clients.picture_url column is missing on this database. From apps/web run `pnpm exec supabase login` then `pnpm exec supabase db push` (migration 20260725170000_repair_clients_picture_url).',
         },
         { status: 503 },
       );

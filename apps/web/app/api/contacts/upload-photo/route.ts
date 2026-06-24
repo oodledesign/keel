@@ -6,6 +6,8 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
+import { isMissingColumnError } from '~/home/[account]/_lib/server/supabase-errors';
+
 export const runtime = 'nodejs';
 
 const AVATARS_BUCKET = 'account_image';
@@ -24,10 +26,8 @@ function contactPhotoPath(accountId: string, contactId: string) {
   return `${accountId}/contact-${contactId}`;
 }
 
-function isMissingPictureUrlColumn(error: { code?: string; message?: string } | null) {
-  if (!error) return false;
-  const blob = `${error.message ?? ''} ${error.code ?? ''}`.toLowerCase();
-  return blob.includes('picture_url');
+function isMissingPictureUrlColumn(error: unknown) {
+  return isMissingColumnError(error);
 }
 
 async function ensureClientsEditPermission(

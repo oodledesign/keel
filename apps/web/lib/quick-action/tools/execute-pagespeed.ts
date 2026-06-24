@@ -20,7 +20,7 @@ export async function executePagespeedScan(
     throw new Error('You are not a member of that workspace');
   }
 
-  await assertRanklyModuleEnabled(client, data.accountId);
+  await assertRanklyModuleEnabled(client, data.accountId, userId);
 
   const { data: project } = await supabaseCustomSchema(client, 'rankly')
     .from('projects')

@@ -52,9 +52,16 @@ export async function assertTasksModuleEnabled(
 export async function assertRanklyModuleEnabled(
   client: SupabaseClient,
   accountId: string,
+  userId: string,
 ): Promise<void> {
   const settings = await loadAccountModuleSettings(client, accountId);
   if (!isRanklyModuleEnabled(settings)) {
     throw new Error('Rankly module is disabled for this workspace');
+  }
+
+  const { canUseAddon } = await import('~/lib/billing/entitlements');
+  const allowed = await canUseAddon(client, userId, accountId, 'addon_rankly');
+  if (!allowed) {
+    throw new Error('Rankly add-on required. Subscribe from Billing in this workspace.');
   }
 }

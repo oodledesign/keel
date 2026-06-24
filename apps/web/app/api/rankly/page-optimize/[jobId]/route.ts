@@ -5,6 +5,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { loadPageOptimizeReportByJobId } from '~/lib/page-optimize/db';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
+import { denyUnlessRanklyAddonForProject } from '~/lib/rankly/require-rankly-api-access';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 export const runtime = 'nodejs';
@@ -39,6 +40,13 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     if (!job) {
       return jsonErr('NOT_FOUND', 'Job not found', 404);
     }
+
+    const addonDenied = await denyUnlessRanklyAddonForProject(
+      client,
+      user.id,
+      job.project_id as string,
+    );
+    if (addonDenied) return addonDenied;
 
     if (job.status !== 'done') {
       return jsonOk({ job, report: null, reportId: null });

@@ -25,3 +25,23 @@ export function navHrefPathname(href: string): string {
 
   return withoutQuery.replace(/\/$/, '') || '/';
 }
+
+/** Map legacy `/home/*` stored shortcuts to public `/app/*` paths. */
+export function normalizeAppHref(href: string): string {
+  const trimmed = href.trim();
+  if (!trimmed) return trimmed;
+
+  const [pathPart, ...rest] = trimmed.split('?');
+  const path = pathPart ?? trimmed;
+  const suffix = rest.length > 0 ? `?${rest.join('?')}` : '';
+
+  if (path === '/home') {
+    return `${pathsConfig.app.home}${suffix}`;
+  }
+
+  if (path.startsWith('/home/')) {
+    return `${pathsConfig.app.home}/${path.slice('/home/'.length)}${suffix}`;
+  }
+
+  return trimmed;
+}

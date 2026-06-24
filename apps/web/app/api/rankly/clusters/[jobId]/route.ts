@@ -6,6 +6,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { loadClusterJobBundle } from '~/lib/clusters/db';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
+import { denyUnlessRanklyAddonForProject } from '~/lib/rankly/require-rankly-api-access';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 export const runtime = 'nodejs';
@@ -41,6 +42,13 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       return jsonErr('NOT_FOUND', 'Job not found', 404);
     }
 
+    const addonDenied = await denyUnlessRanklyAddonForProject(
+      client,
+      user.id,
+      job.project_id as string,
+    );
+    if (addonDenied) return addonDenied;
+
     if (job.status !== 'done') {
       return jsonOk({ job, clusters: [], qualityGates: [], links: [] });
     }
@@ -70,7 +78,7 @@ export async function POST(_request: NextRequest, context: RouteContext) {
 
     const { data: job, error } = await supabaseCustomSchema(client, 'rankly')
       .from('keyword_cluster_jobs')
-      .select('id, status')
+      .select('id, status, project_id')
       .eq('id', jobId)
       .eq('user_id', user.id)
       .maybeSingle();
@@ -82,6 +90,13 @@ export async function POST(_request: NextRequest, context: RouteContext) {
     if (!job) {
       return jsonErr('NOT_FOUND', 'Job not found', 404);
     }
+
+    const addonDenied = await denyUnlessRanklyAddonForProject(
+      client,
+      user.id,
+      job.project_id as string,
+    );
+    if (addonDenied) return addonDenied;
 
     if (job.status !== 'awaiting_confirmation') {
       return jsonErr(

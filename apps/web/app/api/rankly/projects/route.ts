@@ -6,6 +6,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { userIsAccountMember } from '~/lib/rankly/account-membership';
+import { denyUnlessRanklyAddon } from '~/lib/rankly/require-rankly-api-access';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 import { createProjectSchema } from '~/lib/rankly/validations/project';
 
@@ -40,6 +41,9 @@ export async function GET(request: NextRequest) {
     if (!isMember) {
       return jsonErr('FORBIDDEN', 'Not a member of this account', 403);
     }
+
+    const addonDenied = await denyUnlessRanklyAddon(client, sessionData.user.id, account_id);
+    if (addonDenied) return addonDenied;
 
     const { data, error } = await supabaseCustomSchema(client, 'rankly')
       .from('projects')
@@ -81,6 +85,9 @@ export async function POST(request: Request) {
     if (!isMember) {
       return jsonErr('FORBIDDEN', 'Not a member of this account', 403);
     }
+
+    const addonDenied = await denyUnlessRanklyAddon(client, user.id, account_id);
+    if (addonDenied) return addonDenied;
 
     const { data, error } = await supabaseCustomSchema(client, 'rankly')
       .from('projects')

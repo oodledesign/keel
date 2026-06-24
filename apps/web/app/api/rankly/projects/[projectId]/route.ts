@@ -6,6 +6,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { userIsAccountMember } from '~/lib/rankly/account-membership';
+import { denyUnlessRanklyAddon } from '~/lib/rankly/require-rankly-api-access';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 const updateSchema = z.object({
@@ -47,6 +48,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     if (!isMember) {
       return jsonErr('FORBIDDEN', 'Not a member of this account', 403);
     }
+
+    const addonDenied = await denyUnlessRanklyAddon(client, user.id, parsed.data.accountId);
+    if (addonDenied) return addonDenied;
 
     const { accountId, ...updates } = parsed.data;
 

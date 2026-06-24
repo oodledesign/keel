@@ -6,6 +6,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { assertAccountAdmin } from '~/lib/signatures/account-access';
+import { denyUnlessSignaturesAddon } from '~/lib/signatures/require-signatures-api-access';
 import { syncStaffForAccount } from '~/lib/signatures/signatures-provider';
 
 const bodySchema = z.object({
@@ -34,6 +35,13 @@ export async function POST(request: NextRequest) {
       user.id,
     );
     if (adminErr) return adminErr;
+
+    const addonDenied = await denyUnlessSignaturesAddon(
+      client,
+      user.id,
+      parsed.data.accountId,
+    );
+    if (addonDenied) return addonDenied;
 
     const result = await syncStaffForAccount(parsed.data.accountId);
     return jsonOk(result);

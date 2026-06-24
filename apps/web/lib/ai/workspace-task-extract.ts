@@ -46,6 +46,8 @@ export type ExtractedWorkspaceTaskDraft = {
 export type WorkspaceContextForExtract = {
   projects: Array<{ id: string; name: string }>;
   clients: Array<{ id: string; name: string }>;
+  /** When set, the source is a meeting linked to this client. */
+  meetingClient?: { id: string; name: string } | null;
 };
 
 function normalizePriority(
@@ -99,6 +101,10 @@ export async function extractWorkspaceTasksWithAnthropic(
     .map((c) => `- "${c.name}" (id: ${c.id})`)
     .join('\n');
 
+  const meetingClientLine = context.meetingClient
+    ? `\nMeeting context: this transcript is for client "${context.meetingClient.name}" (id: ${context.meetingClient.id}). Link all extracted tasks to this client unless the text clearly concerns a different client or project.\n`
+    : '';
+
   const todayLocal = todayLocalYmd();
   const currentYearStr = todayLocal.slice(0, 4);
   const nextYearStr = String(Number(currentYearStr) + 1);
@@ -128,7 +134,7 @@ Rules:
 - Calendar context: today is ${todayLocal} (local). For actionable due dates, use year ${currentYearStr} or a later year when the source implies a future deadline. If the text gives month/day (or "June 20", "20/6") without a year, assume the next occurrence on or after today — almost always ${currentYearStr} or ${nextYearStr}. Do not use 2023, 2024, or other past years unless the source explicitly names that year for a historical reference (then prefer null for due_date if it is not an actionable deadline).`;
 
   const userContent = `Today (for interpreting relative deadlines): ${todayLocal}
-
+${meetingClientLine}
 Workspace projects (choose names that best match the text; we map to ids server-side):\n${projectLines || '(none)'}\n\nWorkspace clients:\n${clientLines || '(none)'}\n\n---\nSOURCE TEXT:\n${rawText}\n---\nRespond with JSON only.`;
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {

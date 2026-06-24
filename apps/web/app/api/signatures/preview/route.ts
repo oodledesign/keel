@@ -6,6 +6,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { loadSignatureRenderOptions } from '~/lib/signatures/render-context';
 import { jsonErr } from '~/lib/rankly/api-response';
 import { assertAccountMember } from '~/lib/signatures/account-access';
+import { denyUnlessSignaturesAddon } from '~/lib/signatures/require-signatures-api-access';
 import {
   type SignaturesStaffRow,
   getSignaturesSupabaseClient,
@@ -52,6 +53,9 @@ export async function GET(request: NextRequest) {
     const accountId = staffRow.account_id as string;
     const memberErr = await assertAccountMember(client, accountId, user.id);
     if (memberErr) return memberErr;
+
+    const addonDenied = await denyUnlessSignaturesAddon(client, user.id, accountId);
+    if (addonDenied) return addonDenied;
 
     const { data: templateRow, error: te } = await db
       .from('templates')

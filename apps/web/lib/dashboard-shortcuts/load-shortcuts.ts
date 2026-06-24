@@ -21,14 +21,20 @@ export async function loadPersonalMobileNavShortcuts(
 ): Promise<ResolvedShortcut[]> {
   const { data } = await client
     .from('user_settings')
-    .select('personal_mobile_nav_shortcuts')
+    .select('personal_dashboard_shortcuts, personal_mobile_nav_shortcuts')
     .eq('user_id', userId)
     .maybeSingle();
 
-  const stored = parseStoredShortcuts(
-    (data as { personal_mobile_nav_shortcuts?: unknown } | null)
-      ?.personal_mobile_nav_shortcuts,
-  );
+  const row = data as {
+    personal_dashboard_shortcuts?: unknown;
+    personal_mobile_nav_shortcuts?: unknown;
+  } | null;
+
+  let stored = parseStoredShortcuts(row?.personal_mobile_nav_shortcuts);
+
+  if (stored.length === 0) {
+    stored = parseStoredShortcuts(row?.personal_dashboard_shortcuts).slice(0, 3);
+  }
 
   if (stored.length === 0) return [];
 
@@ -44,14 +50,21 @@ export async function loadWorkspaceMobileNavShortcuts(
 ): Promise<ResolvedShortcut[]> {
   const { data } = await client
     .from('workspace_dashboard_shortcuts')
-    .select('mobile_nav_shortcuts')
+    .select('shortcuts, mobile_nav_shortcuts')
     .eq('user_id', userId)
     .eq('account_id', accountId)
     .maybeSingle();
 
-  const stored = parseStoredShortcuts(
-    (data as { mobile_nav_shortcuts?: unknown } | null)?.mobile_nav_shortcuts,
-  );
+  const row = data as {
+    shortcuts?: unknown;
+    mobile_nav_shortcuts?: unknown;
+  } | null;
+
+  let stored = parseStoredShortcuts(row?.mobile_nav_shortcuts);
+
+  if (stored.length === 0) {
+    stored = parseStoredShortcuts(row?.shortcuts).slice(0, 3);
+  }
 
   if (stored.length === 0) return [];
 

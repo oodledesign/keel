@@ -30,6 +30,7 @@ import {
 import {
   getMiddlewareAuthenticatedUser,
   getMiddlewareSessionUser,
+  validateMiddlewareSessionUser,
 } from '~/lib/server/middleware-auth';
 import { applyNoIndexResponseHeader } from '~/lib/seo/search-indexing';
 
@@ -254,6 +255,14 @@ async function adminMiddleware(request: NextRequest, response: NextResponse) {
   return response;
 }
 
+function isAuthCompletionPath(pathname: string) {
+  return (
+    pathname === pathsConfig.auth.callback ||
+    pathname === '/auth/confirm' ||
+    pathname.startsWith('/auth/callback/')
+  );
+}
+
 async function personalAppAuthHandler(req: NextRequest, res: NextResponse) {
   const { user, supabase } = await getMiddlewareAuthenticatedUser(req, res);
   const { origin, pathname: next } = req.nextUrl;
@@ -309,18 +318,29 @@ async function getPatterns() {
     {
       pattern: new URLPattern({ pathname: '/auth/*?' }),
       handler: async (req: NextRequest, res: NextResponse) => {
-        const user = await getMiddlewareSessionUser(req, res);
+        const pathname = req.nextUrl.pathname;
 
-        // the user is logged out, so we don't need to do anything
+        // OAuth / magic-link handlers must run even when stale cookies exist.
+        if (isAuthCompletionPath(pathname)) {
+          await getMiddlewareSessionUser(req, res);
+          return;
+        }
+
+        const { user: sessionUser, supabase } =
+          await getMiddlewareAuthenticatedUser(req, res);
+
+        if (!sessionUser) {
+          return;
+        }
+
+        const user = await validateMiddlewareSessionUser(req, res, supabase);
+
         if (!user) {
           return;
         }
 
-        // check if we need to verify MFA (user is authenticated but needs to verify MFA)
-        const isVerifyMfa = req.nextUrl.pathname === pathsConfig.auth.verifyMfa;
+        const isVerifyMfa = pathname === pathsConfig.auth.verifyMfa;
 
-        // If user is logged in and does not need to verify MFA,
-        // redirect to home page.
         if (!isVerifyMfa) {
           const nextParam = req.nextUrl.searchParams.get('next');
           const client = createMiddlewareClient(req, res);
@@ -387,9 +407,11 @@ function setRequestId(request: Request) {
  * This is disabled by default. To enable set ENABLE_STRICT_CSP=true
  */
 async function createResponseWithSecureHeaders() {
-  const enableStrictCsp = process.env.ENABLE_STRICT_CSP ?? 'false';
+  const enableStrictCsp =
+    process.env.ENABLE_STRICT_CSP ??
+    (process.env.NODE_ENV === 'production' ? 'true' : 'false');
 
-  // we disable ENABLE_STRICT_CSP by default
+  // we disable ENABLE_STRICT_CSP by default in development
   if (enableStrictCsp === 'false') {
     return {};
   }

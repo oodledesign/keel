@@ -13,6 +13,7 @@ import {
 import { projectCountryToCode } from '~/lib/site-overview/domain';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { userIsAccountMember } from '~/lib/rankly/account-membership';
+import { denyUnlessRanklyAddon } from '~/lib/rankly/require-rankly-api-access';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -38,6 +39,9 @@ async function assertAccess(
   if (!isMember) {
     return jsonErr('FORBIDDEN', 'Not a member of this account', 403);
   }
+
+    const addonDenied = await denyUnlessRanklyAddon(client, userId, accountId);
+    if (addonDenied) return addonDenied;
 
   const project = await assertProjectForOverview(client, projectId, accountId);
   if (!project) {

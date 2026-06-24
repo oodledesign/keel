@@ -8,6 +8,7 @@ import { enrichProjectKeywordMetrics } from '~/lib/rank-tracking/keyword-metrics
 import { estimateKeywordOverviewCostUsd } from '~/lib/dataforseo/keywords';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { userIsAccountMember } from '~/lib/rankly/account-membership';
+import { denyUnlessRanklyAddon } from '~/lib/rankly/require-rankly-api-access';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 export const runtime = 'nodejs';
@@ -35,6 +36,9 @@ async function assertProjectAccess(
   if (!isMember) {
     return jsonErr('FORBIDDEN', 'Not a member of this account', 403);
   }
+
+    const addonDenied = await denyUnlessRanklyAddon(client, userId, accountId);
+    if (addonDenied) return addonDenied;
 
   const { data: project } = await supabaseCustomSchema(client, 'rankly')
     .from('projects')

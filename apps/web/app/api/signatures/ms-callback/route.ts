@@ -4,6 +4,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import { assertAccountAdmin } from '~/lib/signatures/account-access';
+import { denyUnlessSignaturesAddon } from '~/lib/signatures/require-signatures-api-access';
 import {
   loadIntegrationInviteById,
   markIntegrationInviteUsed,
@@ -189,6 +190,13 @@ export async function GET(request: NextRequest) {
   if (forbidden) {
     return NextResponse.redirect(
       `${returnBase}?signatures_error=${encodeURIComponent('Account admin required')}`,
+    );
+  }
+
+  const addonDenied = await denyUnlessSignaturesAddon(client, user.id, accountId);
+  if (addonDenied) {
+    return NextResponse.redirect(
+      `${returnBase}?signatures_error=${encodeURIComponent('Signatures add-on required')}`,
     );
   }
 

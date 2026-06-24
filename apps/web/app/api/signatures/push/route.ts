@@ -6,6 +6,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { assertAccountAdmin } from '~/lib/signatures/account-access';
+import { denyUnlessSignaturesAddon } from '~/lib/signatures/require-signatures-api-access';
 import { getSignaturesSupabaseClient } from '~/lib/signatures/graph';
 import { pushSignatureToStaff } from '~/lib/signatures/signatures-provider';
 
@@ -49,6 +50,13 @@ export async function POST(request: NextRequest) {
       user.id,
     );
     if (adminErr) return adminErr;
+
+    const addonDenied = await denyUnlessSignaturesAddon(
+      client,
+      user.id,
+      staffRow.account_id as string,
+    );
+    if (addonDenied) return addonDenied;
 
     const result = await pushSignatureToStaff(parsed.data.staffId);
     return jsonOk(result);

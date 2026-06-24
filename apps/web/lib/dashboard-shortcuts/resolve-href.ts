@@ -1,5 +1,6 @@
 import pathsConfig from '~/config/paths.config';
 
+import { normalizeAppHref } from './personal-home-url';
 import {
   SHORTCUT_CATALOG_RANKLY_PROJECT,
   SHORTCUT_CATALOG_ROUTE,
@@ -56,7 +57,8 @@ export function resolveShortcutHref(
 ): string | null {
   if (catalogId === SHORTCUT_CATALOG_ROUTE) {
     const href = params.href?.trim();
-    return href && href.startsWith('/') ? href : null;
+    if (!href || !href.startsWith('/')) return null;
+    return normalizeAppHref(href);
   }
 
   if (catalogId === SHORTCUT_CATALOG_RANKLY_PROJECT) {

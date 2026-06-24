@@ -19,7 +19,7 @@ export async function proposePagespeedScan(
 ): Promise<ProposedQuickAction> {
   const parsed = proposePagespeedSchema.parse(input);
   await assertAccountMember(ctx.client, ctx.userId, parsed.account_id);
-  await assertRanklyModuleEnabled(ctx.client, parsed.account_id);
+  await assertRanklyModuleEnabled(ctx.client, parsed.account_id, ctx.userId);
 
   const workspace = workspaceById(ctx, parsed.account_id);
   if (!workspace) {

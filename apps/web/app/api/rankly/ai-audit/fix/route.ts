@@ -10,6 +10,8 @@ import {
   updateRecommendationSnippet,
 } from '~/lib/ai-audit/db';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
+import { denyUnlessRanklyAddonForProject } from '~/lib/rankly/require-rankly-api-access';
+import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 export const runtime = 'nodejs';
 
@@ -42,6 +44,32 @@ export async function POST(request: NextRequest) {
     if (!rec) {
       return jsonErr('NOT_FOUND', 'Recommendation not found', 404);
     }
+
+    const { data: report } = await supabaseCustomSchema(client, 'rankly')
+      .from('ai_audit_reports')
+      .select('job_id')
+      .eq('id', rec.report_id)
+      .maybeSingle();
+
+    const { data: job } = report
+      ? await supabaseCustomSchema(client, 'rankly')
+          .from('ai_audit_jobs')
+          .select('project_id')
+          .eq('id', report.job_id)
+          .eq('user_id', user.id)
+          .maybeSingle()
+      : { data: null };
+
+    if (!job?.project_id) {
+      return jsonErr('NOT_FOUND', 'Recommendation not found', 404);
+    }
+
+    const addonDenied = await denyUnlessRanklyAddonForProject(
+      client,
+      user.id,
+      job.project_id as string,
+    );
+    if (addonDenied) return addonDenied;
 
     if (rec.fix_snippet) {
       return jsonOk({ snippet: rec.fix_snippet });

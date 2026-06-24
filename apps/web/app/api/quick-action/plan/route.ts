@@ -6,6 +6,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { planQuickAction } from '~/lib/quick-action/agent';
 import { createQuickActionContext } from '~/lib/quick-action/context';
+import { rateLimitApiRequest } from '~/lib/rate-limit/api-rate-limit';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -30,6 +31,13 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'Sign in required' }, { status: 401 });
     }
+
+    const limited = rateLimitApiRequest(request, {
+      scope: 'quick-action-plan',
+      limit: 30,
+      subject: user.id,
+    });
+    if (limited) return limited;
 
     const json = await request.json();
     const parsed = bodySchema.safeParse(json);
