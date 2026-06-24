@@ -43,6 +43,8 @@ type TeamWorkspaceLayoutProps = React.PropsWithChildren<{
   params: Promise<{ account: string }>;
 }>;
 
+export const dynamic = 'force-dynamic';
+
 export async function generateMetadata({ params }: TeamWorkspaceLayoutProps) {
   const { account } = await params;
   const workspace = await loadTeamWorkspace(account);
@@ -120,7 +122,6 @@ async function SidebarLayout({
   const homePath = pathsConfig.app.accountHome.replace('[account]', account);
   const bottomNavTabs = resolveMobileBottomNavTabs({
     homePath,
-    navLinks: mobileNavLinks,
     shortcuts: mobileNavShortcuts,
   });
 
@@ -228,7 +229,6 @@ async function HeaderLayout({
   const homePath = pathsConfig.app.accountHome.replace('[account]', account);
   const bottomNavTabs = resolveMobileBottomNavTabs({
     homePath,
-    navLinks: mobileNavLinks,
     shortcuts: mobileNavShortcuts,
   });
 

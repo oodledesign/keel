@@ -109,7 +109,6 @@ async function SidebarLayout({ children }: React.PropsWithChildren) {
     : [];
   const bottomNavTabs = resolveMobileBottomNavTabs({
     homePath: getExplicitPersonalHomePath(),
-    navLinks: personalNavLinks,
     shortcuts: mobileNavShortcuts,
   });
 

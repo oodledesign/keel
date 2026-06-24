@@ -15,8 +15,10 @@ import { Input } from '@kit/ui/input';
 import { cn } from '@kit/ui/utils';
 
 import { searchShortcutCatalogAction } from '~/lib/dashboard-shortcuts/dashboard-shortcuts.actions';
+import { catalogItemHref } from '~/lib/dashboard-shortcuts/resolve-href';
 import type { ShortcutCatalogItem, StoredShortcut } from '~/lib/dashboard-shortcuts/types';
 import { catalogItemKey } from '~/lib/dashboard-shortcuts/types';
+import { resolveNavIconKey } from '~/lib/mobile-nav/nav-icon-keys';
 
 type Props = {
   scope: 'personal' | 'workspace';
@@ -70,6 +72,9 @@ export function DashboardShortcutsEditor({
     const key = catalogItemKey(item);
     if (selectedKeys.has(key) || shortcuts.length >= maxShortcuts) return;
 
+    const href = catalogItemHref(item);
+    const iconKey = href ? resolveNavIconKey(href) : undefined;
+
     onChange([
       ...shortcuts,
       {
@@ -77,6 +82,7 @@ export function DashboardShortcutsEditor({
         catalogId: item.catalogId,
         params: item.params,
         label: item.label,
+        iconKey,
       },
     ]);
     setPickerOpen(false);

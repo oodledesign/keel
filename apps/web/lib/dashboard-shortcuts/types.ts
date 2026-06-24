@@ -5,6 +5,8 @@ export const StoredShortcutSchema = z.object({
   catalogId: z.string().min(1),
   params: z.record(z.string(), z.string()).default({}),
   label: z.string().trim().max(120).optional(),
+  /** Cached at pick time so mobile nav icons stay stable even if URL parsing changes. */
+  iconKey: z.string().trim().optional(),
 });
 
 export type StoredShortcut = z.infer<typeof StoredShortcutSchema>;
@@ -27,6 +29,7 @@ export type ResolvedShortcut = {
   label: string;
   href: string;
   description?: string;
+  iconKey?: string;
   avatarUrl?: string | null;
   avatarColor?: string;
   avatarFallback?: string;

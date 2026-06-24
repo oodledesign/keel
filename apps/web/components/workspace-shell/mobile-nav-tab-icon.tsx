@@ -11,6 +11,7 @@ import {
   FileSignature,
   FileText,
   Globe,
+  Home,
   Kanban,
   LayoutDashboard,
   LayoutGrid,
@@ -34,7 +35,7 @@ import { cn } from '@kit/ui/utils';
 import type { MobileNavIconKey } from '~/lib/mobile-nav/nav-icon-keys';
 
 const ICON_BY_KEY: Record<MobileNavIconKey, LucideIcon> = {
-  home: LayoutDashboard,
+  home: Home,
   tasks: CheckSquare,
   pipeline: Kanban,
   email: Mail,
@@ -84,6 +85,8 @@ export function MobileNavTabIcon({
   avatarFallback,
   className,
 }: MobileNavTabIconProps) {
+  const resolvedKey = coerceIconKey(iconKey) ?? 'workspace';
+
   if (avatarUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
@@ -95,7 +98,7 @@ export function MobileNavTabIcon({
     );
   }
 
-  if (avatarFallback && iconKey === 'workspace') {
+  if (avatarFallback && resolvedKey === 'workspace') {
     return (
       <span
         className={cn(
@@ -109,6 +112,10 @@ export function MobileNavTabIcon({
     );
   }
 
-  const Icon = ICON_BY_KEY[iconKey] ?? LayoutDashboard;
+  const Icon = ICON_BY_KEY[resolvedKey] ?? LayoutDashboard;
   return <Icon className={cn('h-[21px] w-[21px]', className)} />;
+}
+
+function coerceIconKey(value: MobileNavIconKey): MobileNavIconKey {
+  return value in ICON_BY_KEY ? value : 'workspace';
 }
