@@ -263,20 +263,6 @@ export function ClientForm({
         </div>
       )}
 
-      {/* Business edit: also show company field */}
-      {!isIndividual && mode === 'edit' && (
-        <div className="space-y-2">
-          <Label htmlFor="company_name_edit">Company name</Label>
-          <Input
-            id="company_name_edit"
-            value={company_name}
-            onChange={(e) => setCompanyName(e.target.value)}
-            placeholder="Company name"
-            readOnly={isReadOnly}
-          />
-        </div>
-      )}
-
       {/* Contact details — shown for both types */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
