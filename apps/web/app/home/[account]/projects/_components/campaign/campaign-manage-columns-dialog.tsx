@@ -49,7 +49,7 @@ import {
   createProjectField,
   deleteProjectField,
   reorderProjectFields,
-} from '../_lib/server/server-actions';
+} from '../../_lib/campaign/server/server-actions';
 
 function SortableFieldRow({
   field,

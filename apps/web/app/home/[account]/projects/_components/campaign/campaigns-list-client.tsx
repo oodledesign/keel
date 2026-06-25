@@ -32,7 +32,7 @@ import type { CampaignProject } from '~/lib/campaign-projects/types';
 import {
   createCampaignProject,
   importWebsiteRevampCampaign,
-} from '../_lib/server/server-actions';
+} from '../../_lib/campaign/server/server-actions';
 
 export function CampaignsListClient({
   accountId,

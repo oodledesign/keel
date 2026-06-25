@@ -31,7 +31,7 @@ import {
   addClientToCampaign,
   removeClientFromCampaign,
   updateClientFieldValue,
-} from '../_lib/server/server-actions';
+} from '../../_lib/campaign/server/server-actions';
 import { CampaignFieldCell } from './campaign-field-cell';
 import { CampaignManageColumnsDialog } from './campaign-manage-columns-dialog';
 
