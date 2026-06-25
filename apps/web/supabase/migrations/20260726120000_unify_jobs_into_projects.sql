@@ -350,9 +350,58 @@ SET project_id = t.job_id
 WHERE t.job_id IS NOT NULL
   AND (t.project_id IS NULL OR t.project_id IS DISTINCT FROM t.job_id);
 
+DROP POLICY IF EXISTS tasks_select_via_job ON public.tasks;
+DROP POLICY IF EXISTS tasks_update_via_job ON public.tasks;
+
 ALTER TABLE public.tasks DROP CONSTRAINT IF EXISTS tasks_job_id_fkey;
 DROP INDEX IF EXISTS ix_tasks_job_id;
 ALTER TABLE public.tasks DROP COLUMN IF EXISTS job_id;
+
+-- Replace job-linked task policies (contractor / account visibility for delivery work).
+DROP POLICY IF EXISTS tasks_select_via_delivery_project ON public.tasks;
+CREATE POLICY tasks_select_via_delivery_project ON public.tasks
+  FOR SELECT TO authenticated
+  USING (
+    project_id IS NOT NULL
+    AND EXISTS (
+      SELECT 1
+      FROM public.projects p
+      WHERE p.id = tasks.project_id
+        AND p.project_type = 'delivery'
+        AND public.has_role_on_account (p.account_id)
+        AND NOT public.is_client_on_account (p.account_id)
+        AND (
+          NOT public.is_contractor_on_account (p.account_id)
+          OR public.contractor_assigned_to_project (p.id)
+        )
+    )
+  );
+
+DROP POLICY IF EXISTS tasks_update_via_delivery_project ON public.tasks;
+CREATE POLICY tasks_update_via_delivery_project ON public.tasks
+  FOR UPDATE TO authenticated
+  USING (
+    project_id IS NOT NULL
+    AND EXISTS (
+      SELECT 1
+      FROM public.projects p
+      WHERE p.id = tasks.project_id
+        AND p.project_type = 'delivery'
+        AND public.has_permission (auth.uid (), p.account_id, 'jobs.edit'::public.app_permissions)
+        AND NOT public.is_contractor_on_account (p.account_id)
+    )
+  )
+  WITH CHECK (
+    project_id IS NOT NULL
+    AND EXISTS (
+      SELECT 1
+      FROM public.projects p
+      WHERE p.id = tasks.project_id
+        AND p.project_type = 'delivery'
+        AND public.has_permission (auth.uid (), p.account_id, 'jobs.edit'::public.app_permissions)
+        AND NOT public.is_contractor_on_account (p.account_id)
+    )
+  );
 
 -- Other public tables referencing jobs
 DO $$
