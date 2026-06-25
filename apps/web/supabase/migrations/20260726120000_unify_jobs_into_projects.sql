@@ -82,6 +82,10 @@ CREATE INDEX IF NOT EXISTS ix_projects_account_id_due_date
   ON public.projects (account_id, due_date)
   WHERE project_type = 'delivery';
 
+-- Legacy Oodle `public.projects` (business_id era) enforced a different status enum than delivery jobs.
+ALTER TABLE public.projects DROP CONSTRAINT IF EXISTS projects_status_check;
+ALTER TABLE public.projects DROP CONSTRAINT IF EXISTS projects_priority_check;
+
 -- ---------------------------------------------------------------------------
 -- 2) Migrate jobs rows into projects (preserve ids)
 -- ---------------------------------------------------------------------------
