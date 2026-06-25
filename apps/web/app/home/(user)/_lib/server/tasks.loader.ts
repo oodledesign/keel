@@ -224,6 +224,7 @@ function taskRowToPageTask(
     accountsById: Map<string, AccountWorkspaceRow>;
   },
   contextOverride?: 'work' | 'life',
+  workspaceFallback?: { name: string; slug: string | null },
 ): TasksPageTask {
   const dueDateRaw = row.due_date ?? null;
   let projectName: string | null = null;
@@ -304,6 +305,11 @@ function taskRowToPageTask(
   const context: 'work' | 'life' =
     contextOverride ?? (isWorkTaskRow(row) ? 'work' : 'life');
 
+  if (!workspaceName && workspaceFallback && context === 'work') {
+    workspaceName = workspaceFallback.name;
+    workspaceSlug = workspaceFallback.slug;
+  }
+
   return {
     id: row.id,
     title: (row.title as string) ?? 'Untitled',
@@ -364,6 +370,7 @@ async function enrichTaskRows(
   /** Use for project/client names when session RLS hides rows (e.g. team workspace). */
   enrichmentClient?: SupabaseClient,
   nest = true,
+  workspaceFallback?: { name: string; slug: string | null },
 ): Promise<TasksPageTask[]> {
   const rowDb = enrichmentClient ?? client;
 
@@ -464,7 +471,9 @@ async function enrichTaskRows(
 
   const maps = { projects, clients, areas, accountsById };
 
-  const flat = rows.map((row) => taskRowToPageTask(row, maps, contextOverride));
+  const flat = rows.map((row) =>
+    taskRowToPageTask(row, maps, contextOverride, workspaceFallback),
+  );
   return nest ? nestTaskTree(flat) : flat;
 }
 
@@ -574,10 +583,21 @@ export const loadTasksForTeamAccount = cache(
       return [];
     }
 
-    const [{ data: projectsData }, { data: clientsData }] = await Promise.all([
+    const [{ data: projectsData }, { data: clientsData }, { data: accountData }] =
+      await Promise.all([
         scopedDb.from('projects').select('id').eq('account_id', accountId),
         scopedDb.from('clients').select('id').eq('account_id', accountId),
+        scopedDb
+          .from('accounts')
+          .select('name, slug')
+          .eq('id', accountId)
+          .maybeSingle(),
       ]);
+
+    const workspaceFallback = {
+      name: accountData?.name?.trim() || 'Workspace',
+      slug: accountData?.slug?.trim() || null,
+    };
 
     const projectIds = (projectsData ?? []).map((p: { id: string }) => p.id);
     const clientIds = (clientsData ?? []).map((c: { id: string }) => c.id);
@@ -604,6 +624,8 @@ export const loadTasksForTeamAccount = cache(
         (accountOnlyData ?? []) as TaskQueryRow[],
         'work',
         scopedDb,
+        true,
+        workspaceFallback,
       );
     }
 
@@ -639,6 +661,8 @@ export const loadTasksForTeamAccount = cache(
       (data ?? []) as TaskQueryRow[],
       'work',
       scopedDb,
+      true,
+      workspaceFallback,
     );
   },
 );

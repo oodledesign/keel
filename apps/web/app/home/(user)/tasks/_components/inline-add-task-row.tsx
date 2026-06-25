@@ -27,21 +27,16 @@ export function InlineAddTaskRow({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const needsAssignment = Boolean(workspaceAccountId) && !clientId;
-
   const submit = () => {
     const trimmed = title.trim();
     if (!trimmed) return;
-    if (needsAssignment) {
-      setError('Choose a client or project using Add Task above.');
-      return;
-    }
     setError(null);
     startTransition(async () => {
       const result = await createTask({
         title: trimmed,
         priority,
         clientId: clientId ?? undefined,
+        accountId: workspaceAccountId,
       });
       if (result.success) {
         setTitle('');

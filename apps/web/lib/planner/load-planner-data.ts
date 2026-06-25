@@ -228,7 +228,7 @@ async function buildPlannerBundle(scope: PlannerScope) {
     loadSavedDayPlanMarkdown(client, user.id, scope, todayLocalYmd()),
   ]);
 
-  const taskTree = buildTaskTree(tasks);
+  const taskTree = buildTaskTree(tasks, scope);
   let sopSuggestions: SopSuggestion[] = [];
 
   if (scope.kind === 'workspace') {

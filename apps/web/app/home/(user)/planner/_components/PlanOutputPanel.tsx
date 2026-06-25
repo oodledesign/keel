@@ -82,12 +82,12 @@ export function PlanOutputPanel({
   }
 
   return (
-    <section className="min-h-[720px] rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.22)]">
-      <div className="mb-5 flex items-start justify-between gap-3">
+    <section className="sticky top-4 min-h-[min(80vh,720px)] rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.22)]">
+      <div className="mb-4 flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold">Generated plan</h2>
-          <p className="mt-1 text-sm text-white/45">
-            Claude streams the plan here as it thinks through your workload.
+          <h2 className="text-base font-semibold">Generated plan</h2>
+          <p className="mt-1 text-xs text-white/45">
+            Preview updates as Claude streams your schedule.
           </p>
         </div>
         {isGenerating ? (
@@ -98,11 +98,11 @@ export function PlanOutputPanel({
         ) : null}
       </div>
 
-      <div className="min-h-[560px] rounded-2xl border border-white/8 bg-black/10 p-5">
+      <div className="min-h-[min(58vh,560px)] rounded-xl border border-white/8 bg-black/10 p-4">
         {markdown.trim() ? (
           <PlanOutputRenderer markdown={markdown} />
         ) : isGenerating ? (
-          <div className="flex min-h-[500px] flex-col items-center justify-center text-center text-white/55">
+          <div className="flex min-h-[min(52vh,500px)] flex-col items-center justify-center text-center text-white/55">
             <Loader2 className="mb-3 h-8 w-8 animate-spin text-[#5eead4]" />
             <p className="font-medium text-white">
               {mode === 'day' ? 'Planning your day…' : 'Planning your week…'}
@@ -112,8 +112,8 @@ export function PlanOutputPanel({
             </p>
           </div>
         ) : (
-          <div className="flex min-h-[500px] flex-col items-center justify-center text-center text-white/50">
-            <p className="text-lg font-semibold text-white/70">
+          <div className="flex min-h-[min(52vh,500px)] flex-col items-center justify-center text-center text-white/50">
+            <p className="text-sm font-semibold text-white/70">
               Ready when you are.
             </p>
             <p className="mt-2 max-w-md text-sm">

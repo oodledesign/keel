@@ -196,18 +196,13 @@ export const commitWorkspaceExtractedTasks = enhanceAction(
         clientId = lastValidClientId;
       }
 
-      if (!projectId && !clientId) {
-        throw new Error(
-          `Each included task must have a valid project or client (pick “Link to” for every group, or set the first one and we’ll reuse it for the rest). Check: ${item.title.slice(0, 40)}…`,
-        );
-      }
-
       const parentResult = await createTask({
         title: item.title,
         priority: item.priority,
         dueDate: item.dueDate ?? undefined,
         projectId: projectId ?? undefined,
         clientId: clientId ?? undefined,
+        accountId: input.accountId,
         notes: item.notes ?? undefined,
       });
 
@@ -227,6 +222,7 @@ export const commitWorkspaceExtractedTasks = enhanceAction(
           dueDate: st.dueDate ?? undefined,
           projectId: projectId ?? undefined,
           clientId: clientId ?? undefined,
+          accountId: input.accountId,
           parentTaskId: parentResult.id,
           notes: st.notes ?? undefined,
         });

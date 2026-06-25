@@ -154,11 +154,6 @@ export function AddTaskDialog({
 
     const selected = options.find((o) => o.id === assignTo);
 
-    if (isWorkspaceMode && (!selected || assignTo === 'none')) {
-      setError('Choose a project or client so this task appears in this workspace.');
-      return;
-    }
-
     startTransition(async () => {
       const result = await createTask({
         title,
@@ -167,6 +162,7 @@ export function AddTaskDialog({
         projectId: selected?.type === 'project' ? selected.id : undefined,
         areaId: selected?.type === 'area' ? selected.id : undefined,
         clientId: selected?.type === 'client' ? selected.id : undefined,
+        accountId: workspaceAccountId,
       });
 
       if (!result.success) {
@@ -203,7 +199,7 @@ export function AddTaskDialog({
           <DialogTitle>Add a new task</DialogTitle>
           <DialogDescription className="text-zinc-400">
             {isWorkspaceMode
-              ? 'Link the task to a project or client in this workspace. It will show up on this team’s Tasks list.'
+              ? 'Link to a project or client, or leave unassigned — the task still belongs to this workspace.'
               : 'Assign to a team workspace project or a personal life area. Projects are grouped by workspace.'}
           </DialogDescription>
         </DialogHeader>
@@ -254,7 +250,7 @@ export function AddTaskDialog({
 
           <div className="space-y-2">
             <Label className="text-zinc-300">
-              {isWorkspaceMode ? 'Link to project or client *' : 'Assign to'}
+              {isWorkspaceMode ? 'Link to project or client' : 'Assign to'}
             </Label>
             {optionsLoading ? (
               <div className="flex h-9 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-zinc-500">
@@ -269,7 +265,7 @@ export function AddTaskDialog({
                 isWorkspaceMode={isWorkspaceMode}
                 placeholder={
                   isWorkspaceMode
-                    ? 'Select project or client'
+                    ? 'Workspace only (no project/client)'
                     : 'No assignment'
                 }
               />

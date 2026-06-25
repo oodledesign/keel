@@ -241,6 +241,7 @@ function AddTaskForClientDialog({
         priority,
         dueDate: dueDate || undefined,
         clientId,
+        accountId: workspaceAccountId,
       });
       if (!result.success) {
         setError(result.error ?? 'Failed to create task');

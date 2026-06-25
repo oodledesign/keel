@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  ChevronDown,
   Filter,
   LayoutGrid,
   Plus,
@@ -46,11 +45,10 @@ export function JobsPmToolbar({
           size="sm"
           className="h-8 gap-1.5 rounded-md bg-[#0073ea] px-3 text-xs font-semibold text-white hover:bg-[#0060c2]"
           onClick={onNewProject}
-          data-test="create-job-button"
+          data-test="create-project-button"
         >
           <Plus className="h-3.5 w-3.5" />
           {newLabel}
-          <ChevronDown className="h-3.5 w-3.5 opacity-70" />
         </Button>
       )}
 

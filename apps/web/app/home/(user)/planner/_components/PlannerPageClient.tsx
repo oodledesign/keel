@@ -227,7 +227,7 @@ export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
         />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(360px,0.4fr)_minmax(0,0.6fr)]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
         <PlannerInputPanel
           mode={mode}
           onModeChange={setMode}

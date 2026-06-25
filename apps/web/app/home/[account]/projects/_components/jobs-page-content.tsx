@@ -21,11 +21,10 @@ import pathsConfig from '~/config/paths.config';
 import { getErrorMessage } from '../_lib/error-message';
 import { listCampaignProjects } from '../_lib/campaign/server/server-actions';
 import { listAccountMembers, listJobs } from '../_lib/server/server-actions';
-import { CreateJobSheet } from './create-job-sheet';
+import { CreateProjectDialog } from './create-project-dialog';
 import { JobsPmMainTable, type JobsPmRow } from './jobs-pm/jobs-pm-main-table';
 import { JobsPmTimelineView } from './jobs-pm/jobs-pm-timeline-view';
 import { JobsPmToolbar } from './jobs-pm/jobs-pm-toolbar';
-import { ProjectTypePickerDialog } from './project-type-picker';
 import {
   mapCampaignRowToKanbanItem,
   mapDeliveryRowToKanbanItem,
@@ -82,8 +81,10 @@ export function JobsPageContent({
   const [search, setSearch] = useState('');
   const [searchDebounced, setSearchDebounced] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
-  const [createSheetOpen, setCreateSheetOpen] = useState(false);
-  const [typePickerOpen, setTypePickerOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createDialogType, setCreateDialogType] = useState<'delivery' | 'campaign'>(
+    'delivery',
+  );
   const [members, setMembers] = useState<
     {
       user_id: string;
@@ -92,6 +93,21 @@ export function JobsPageContent({
       picture_url?: string | null;
     }[]
   >([]);
+
+  const openCreateDialog = useCallback((type: 'delivery' | 'campaign' = 'delivery') => {
+    setCreateDialogType(type);
+    setCreateDialogOpen(true);
+  }, []);
+
+  useEffect(() => {
+    if (searchParams.get('create') === 'campaign') {
+      openCreateDialog('campaign');
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('create');
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    }
+  }, [searchParams, pathname, router, openCreateDialog]);
 
   const schedulePath = pathsConfig.app.accountSchedule.replace(
     '[account]',
@@ -240,10 +256,10 @@ export function JobsPageContent({
             size="sm"
             variant="outline"
             className="h-8 border-white/10 text-xs text-zinc-300"
-            onClick={() => setTypePickerOpen(true)}
+            onClick={() => openCreateDialog('delivery')}
           >
             <Plus className="mr-1.5 h-3.5 w-3.5" />
-            Quick add
+            New project
           </Button>
         )}
       </div>
@@ -307,7 +323,7 @@ export function JobsPageContent({
           search={search}
           onSearchChange={setSearch}
           canEditJobs={canEditJobs}
-          onNewProject={() => setCreateSheetOpen(true)}
+          onNewProject={() => openCreateDialog('delivery')}
           priorityFilter={priorityFilter}
           onPriorityFilterChange={setPriorityFilter}
           uiVariant={uiVariant}
@@ -327,7 +343,7 @@ export function JobsPageContent({
           isContractorView={isContractorView}
           members={members}
           onRefresh={fetchJobs}
-          onAddProject={() => setCreateSheetOpen(true)}
+          onAddProject={() => openCreateDialog('delivery')}
           uiVariant={uiVariant}
         />
       ) : view === 'kanban' ? (
@@ -336,26 +352,14 @@ export function JobsPageContent({
         <JobsPmTimelineView jobs={jobs} jobDetailPath={jobDetailPath} />
       ) : null}
 
-      <ProjectTypePickerDialog
-        open={typePickerOpen}
-        onOpenChange={setTypePickerOpen}
-        onSelect={(type) => {
-          if (type === 'delivery') {
-            setCreateSheetOpen(true);
-            return;
-          }
-          router.push(
-            `${pathsConfig.app.accountProjects.replace('[account]', accountSlug)}?create=campaign`,
-          );
-        }}
-      />
-
-      <CreateJobSheet
-        open={createSheetOpen}
-        onOpenChange={setCreateSheetOpen}
+      <CreateProjectDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
         accountId={accountId}
         accountSlug={accountSlug}
         onSuccess={fetchJobs}
+        uiVariant={uiVariant}
+        defaultType={createDialogType}
       />
     </div>
   );

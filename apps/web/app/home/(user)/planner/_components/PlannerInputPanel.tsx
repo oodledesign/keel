@@ -45,7 +45,7 @@ type Props = {
 
 export function PlannerInputPanel(props: Props) {
   return (
-    <section className="space-y-5 rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.22)]">
+    <div className="space-y-6">
       <PlanningModeToggle
         mode={props.mode}
         onModeChange={props.onModeChange}
@@ -90,6 +90,6 @@ export function PlannerInputPanel(props: Props) {
             ? 'Plan my day'
             : 'Plan my week'}
       </Button>
-    </section>
+    </div>
   );
 }

@@ -2,9 +2,12 @@ import type { TasksPageTask } from '~/home/(user)/_lib/server/tasks.loader';
 
 import type {
   PlannerProjectNode,
+  PlannerScope,
   PlannerTask,
   PlannerWorkspaceNode,
 } from './types';
+
+const GENERIC_WORKSPACE_NAMES = new Set(['workspace', 'work']);
 
 function isOpenTask(task: TasksPageTask) {
   return task.status !== 'completed';
@@ -18,23 +21,45 @@ function isOverdue(dueDate: string | null) {
   return due.getTime() < today.getTime();
 }
 
-function workspaceLabel(task: TasksPageTask) {
+function workspaceLabel(task: TasksPageTask, scope?: PlannerScope) {
   if (task.workspaceName?.trim()) {
     return task.workspaceName.trim();
   }
-  return task.areaLabel ?? (task.context === 'work' ? 'Workspace' : 'Personal');
+
+  if (scope?.kind === 'workspace') {
+    if (
+      task.context === 'work' ||
+      task.areaLabel?.trim().toLowerCase() === 'workspace'
+    ) {
+      return scope.accountName;
+    }
+  }
+
+  const area = task.areaLabel?.trim();
+  if (area && task.context !== 'work') {
+    return area;
+  }
+
+  if (task.context === 'work') {
+    return scope?.kind === 'workspace' ? scope.accountName : 'Workspace';
+  }
+
+  return area ?? 'Personal';
 }
 
 function projectLabel(task: TasksPageTask) {
-  return task.projectName ?? task.clientName ?? 'No project';
+  return task.projectName ?? 'General';
 }
 
-export function toPlannerTask(task: TasksPageTask): PlannerTask {
+export function toPlannerTask(
+  task: TasksPageTask,
+  scope?: PlannerScope,
+): PlannerTask {
   return {
     id: task.id,
     title: task.title,
     project: projectLabel(task),
-    workspace: workspaceLabel(task),
+    workspace: workspaceLabel(task, scope),
     workspaceSlug: task.workspaceSlug,
     priority: task.priority,
     status: task.status,
@@ -67,11 +92,82 @@ function sortPlannerTasks(a: PlannerTask, b: PlannerTask) {
   return a.title.localeCompare(b.title);
 }
 
-export function buildTaskTree(tasks: TasksPageTask[]): PlannerWorkspaceNode[] {
+function mergeProjectsInto(
+  target: PlannerWorkspaceNode,
+  source: PlannerWorkspaceNode,
+): PlannerWorkspaceNode {
+  const projects = target.projects.map((project) => ({
+    ...project,
+    tasks: [...project.tasks],
+  }));
+
+  for (const project of source.projects) {
+    const existing = projects.find((entry) => entry.id === project.id);
+    if (existing) {
+      existing.tasks.push(...project.tasks);
+      existing.taskCount += project.taskCount;
+    } else {
+      projects.push({
+        ...project,
+        tasks: [...project.tasks],
+      });
+    }
+  }
+
+  return {
+    ...target,
+    taskCount: target.taskCount + source.taskCount,
+    projects: projects
+      .map((project) => ({
+        ...project,
+        tasks: project.tasks.sort(sortPlannerTasks),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+  };
+}
+
+/** Fold generic "Workspace" buckets into the real team workspace when unambiguous. */
+function mergeAmbiguousWorkspaceNodes(
+  nodes: PlannerWorkspaceNode[],
+): PlannerWorkspaceNode[] {
+  const generic = nodes.filter((node) =>
+    GENERIC_WORKSPACE_NAMES.has(node.name.trim().toLowerCase()),
+  );
+  if (generic.length === 0) {
+    return nodes;
+  }
+
+  const namedWorkspaces = nodes.filter(
+    (node) =>
+      !GENERIC_WORKSPACE_NAMES.has(node.name.trim().toLowerCase()) &&
+      node.name.trim().toLowerCase() !== 'personal',
+  );
+
+  if (namedWorkspaces.length !== 1) {
+    return nodes;
+  }
+
+  const target = namedWorkspaces[0];
+  let merged = target;
+  for (const bucket of generic) {
+    merged = mergeProjectsInto(merged, bucket);
+  }
+
+  const genericIds = new Set(generic.map((node) => node.id));
+  return nodes
+    .filter((node) => node.id === merged.id || !genericIds.has(node.id))
+    .map((node) => (node.id === merged.id ? merged : node))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function buildTaskTree(
+  tasks: TasksPageTask[],
+  scope?: PlannerScope,
+): PlannerWorkspaceNode[] {
   const workspaces = new Map<string, PlannerWorkspaceNode>();
 
   for (const task of tasks.filter(isOpenTask)) {
-    const plannerTask = toPlannerTask(task);
+    const plannerTask = toPlannerTask(task, scope);
     const workspaceKey = plannerTask.workspace;
     const projectKey = plannerTask.project;
 
@@ -101,7 +197,7 @@ export function buildTaskTree(tasks: TasksPageTask[]): PlannerWorkspaceNode[] {
     workspaces.set(workspaceKey, workspace);
   }
 
-  return [...workspaces.values()]
+  const tree = [...workspaces.values()]
     .map((workspace) => ({
       ...workspace,
       projects: workspace.projects
@@ -112,6 +208,8 @@ export function buildTaskTree(tasks: TasksPageTask[]): PlannerWorkspaceNode[] {
         .sort((a, b) => a.name.localeCompare(b.name)),
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
+
+  return mergeAmbiguousWorkspaceNodes(tree);
 }
 
 export function flattenPlannerTasks(
