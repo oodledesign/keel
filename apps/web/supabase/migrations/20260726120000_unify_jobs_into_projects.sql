@@ -407,6 +407,7 @@ CREATE POLICY tasks_update_via_delivery_project ON public.tasks
 DO $$
 DECLARE
   tbl text;
+  fk_name text;
 BEGIN
   FOREACH tbl IN ARRAY ARRAY[
     'invoices',
@@ -415,22 +416,48 @@ BEGIN
     'meeting_action_items'
   ]
   LOOP
-    IF EXISTS (
+    IF NOT EXISTS (
       SELECT 1 FROM information_schema.columns
       WHERE table_schema = 'public'
         AND table_name = tbl
         AND column_name = 'job_id'
     ) THEN
+      CONTINUE;
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = tbl
+        AND column_name = 'project_id'
+    ) THEN
       EXECUTE format(
-        'UPDATE public.%I SET project_id = job_id WHERE job_id IS NOT NULL AND project_id IS NULL',
+        'ALTER TABLE public.%I ADD COLUMN project_id uuid',
         tbl
       );
+    END IF;
+
+    EXECUTE format(
+      'UPDATE public.%I SET project_id = job_id WHERE job_id IS NOT NULL AND project_id IS NULL',
+      tbl
+    );
+
+    EXECUTE format(
+      'ALTER TABLE public.%I DROP CONSTRAINT IF EXISTS %I',
+      tbl,
+      tbl || '_job_id_fkey'
+    );
+    EXECUTE format('ALTER TABLE public.%I DROP COLUMN IF EXISTS job_id', tbl);
+
+    fk_name := tbl || '_project_id_fkey';
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_constraint WHERE conname = fk_name
+    ) THEN
       EXECUTE format(
-        'ALTER TABLE public.%I DROP CONSTRAINT IF EXISTS %I',
+        'ALTER TABLE public.%I ADD CONSTRAINT %I FOREIGN KEY (project_id) REFERENCES public.projects (id) ON DELETE SET NULL',
         tbl,
-        tbl || '_job_id_fkey'
+        fk_name
       );
-      EXECUTE format('ALTER TABLE public.%I DROP COLUMN IF EXISTS job_id', tbl);
     END IF;
   END LOOP;
 END $$;
@@ -442,18 +469,40 @@ BEGIN
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'notes' AND column_name = 'job_id'
   ) THEN
+    ALTER TABLE public.notes
+      ADD COLUMN IF NOT EXISTS project_id uuid;
+
     UPDATE public.notes SET project_id = job_id WHERE job_id IS NOT NULL AND project_id IS NULL;
     ALTER TABLE public.notes DROP CONSTRAINT IF EXISTS notes_job_id_fkey;
     ALTER TABLE public.notes DROP COLUMN IF EXISTS job_id;
+
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_constraint WHERE conname = 'notes_project_id_fkey'
+    ) THEN
+      ALTER TABLE public.notes
+        ADD CONSTRAINT notes_project_id_fkey
+        FOREIGN KEY (project_id) REFERENCES public.projects (id) ON DELETE SET NULL;
+    END IF;
   END IF;
 
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'docs' AND column_name = 'job_id'
   ) THEN
+    ALTER TABLE public.docs
+      ADD COLUMN IF NOT EXISTS project_id uuid;
+
     UPDATE public.docs SET project_id = job_id WHERE job_id IS NOT NULL AND project_id IS NULL;
     ALTER TABLE public.docs DROP CONSTRAINT IF EXISTS docs_job_id_fkey;
     ALTER TABLE public.docs DROP COLUMN IF EXISTS job_id;
+
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_constraint WHERE conname = 'docs_project_id_fkey'
+    ) THEN
+      ALTER TABLE public.docs
+        ADD CONSTRAINT docs_project_id_fkey
+        FOREIGN KEY (project_id) REFERENCES public.projects (id) ON DELETE SET NULL;
+    END IF;
   END IF;
 END $$;
 
@@ -464,9 +513,20 @@ BEGIN
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'sops' AND table_name = 'runs' AND column_name = 'job_id'
   ) THEN
+    ALTER TABLE sops.runs
+      ADD COLUMN IF NOT EXISTS project_id uuid;
+
     UPDATE sops.runs SET project_id = job_id WHERE job_id IS NOT NULL AND project_id IS NULL;
     ALTER TABLE sops.runs DROP CONSTRAINT IF EXISTS runs_job_id_fkey;
     ALTER TABLE sops.runs DROP COLUMN IF EXISTS job_id;
+
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_constraint WHERE conname = 'runs_project_id_fkey'
+    ) THEN
+      ALTER TABLE sops.runs
+        ADD CONSTRAINT runs_project_id_fkey
+        FOREIGN KEY (project_id) REFERENCES public.projects (id) ON DELETE SET NULL;
+    END IF;
   END IF;
 END $$;
 
