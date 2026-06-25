@@ -197,39 +197,45 @@ async function loadDashboardPageDataImpl(
     notesResult,
   ] = await Promise.all([
     client
-      .from('jobs')
+      .from('projects')
       .select('id, title, status, priority, due_date, clients(display_name)', {
         count: 'exact',
       })
       .eq('account_id', accountId)
+      .eq('project_type', 'delivery')
       .in('status', ['pending', 'in_progress'])
       .order('due_date', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: false })
       .range(0, 4),
     client
-      .from('jobs')
+      .from('projects')
       .select('id', { count: 'exact', head: true })
       .eq('account_id', accountId)
+      .eq('project_type', 'delivery')
       .in('status', ['pending', 'in_progress']),
     client
-      .from('jobs')
+      .from('projects')
       .select('id', { count: 'exact', head: true })
       .eq('account_id', accountId)
+      .eq('project_type', 'delivery')
       .eq('status', 'completed'),
     client
-      .from('jobs')
+      .from('projects')
       .select('id', { count: 'exact', head: true })
       .eq('account_id', accountId)
+      .eq('project_type', 'delivery')
       .eq('status', 'in_progress'),
     client
-      .from('jobs')
+      .from('projects')
       .select('id', { count: 'exact', head: true })
       .eq('account_id', accountId)
+      .eq('project_type', 'delivery')
       .eq('status', 'pending'),
     client
-      .from('jobs')
+      .from('projects')
       .select('id', { count: 'exact', head: true })
       .eq('account_id', accountId)
+      .eq('project_type', 'delivery')
       .lt('due_date', todayIso)
       .not('status', 'in', '("completed","cancelled")'),
     client
@@ -254,9 +260,10 @@ async function loadDashboardPageDataImpl(
       .eq('status', 'paid')
       .gte('paid_at', monthStartIso),
     client
-      .from('jobs')
+      .from('projects')
       .select('actual_minutes')
       .eq('account_id', accountId)
+      .eq('project_type', 'delivery')
       .gte('updated_at', weekStartIso)
       .not('actual_minutes', 'is', null),
     client
@@ -272,8 +279,9 @@ async function loadDashboardPageDataImpl(
       .order('transaction_date', { ascending: true }),
     client
       .from('projects')
-      .select('id, name')
-      .eq('account_id', accountId),
+      .select('id, name, title')
+      .eq('account_id', accountId)
+      .eq('project_type', 'delivery'),
     client
       .from('notes')
       .select('id, title, content, updated_at')
@@ -460,7 +468,7 @@ async function loadDashboardPageDataImpl(
   );
 
   const { data: jobRowsForTasks } = await client
-    .from('jobs')
+    .from('projects')
     .select('id, title')
     .eq('account_id', accountId);
   const jobIds = (jobRowsForTasks ?? []).map((j) => j.id as string);

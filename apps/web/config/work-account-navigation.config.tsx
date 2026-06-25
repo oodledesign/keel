@@ -158,23 +158,10 @@ export function buildWorkSpaceNavChildren(
       access.canViewProjects && isWorkNavModuleEnabled(ms, 'projects')
         ? {
             label: 'Projects',
-            path: createPath(pathsConfig.app.accountJobs, account),
+            path: createPath(pathsConfig.app.accountProjects, account),
             Icon: <ClipboardList className={iconClasses} />,
-            collapsible: true,
-            collapsed: false,
-            children: [
-              {
-                label: 'Delivery',
-                path: createPath(pathsConfig.app.accountJobs, account),
-                Icon: <ClipboardList className={iconClasses} />,
-              },
-              {
-                label: 'Campaigns',
-                path: createPath(pathsConfig.app.accountCampaigns, account),
-                Icon: <LayoutGrid className={iconClasses} />,
-                description: 'Spreadsheet-style campaign trackers.',
-              },
-            ],
+            description:
+              'Delivery projects, campaign trackers, and kanban overview.',
           }
         : null,
     tasks: () =>

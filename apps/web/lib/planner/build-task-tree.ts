@@ -19,11 +19,10 @@ function isOverdue(dueDate: string | null) {
 }
 
 function workspaceLabel(task: TasksPageTask) {
-  return (
-    task.workspaceName ??
-    task.areaLabel ??
-    (task.context === 'work' ? 'Work' : 'Personal')
-  );
+  if (task.workspaceName?.trim()) {
+    return task.workspaceName.trim();
+  }
+  return task.areaLabel ?? (task.context === 'work' ? 'Workspace' : 'Personal');
 }
 
 function projectLabel(task: TasksPageTask) {

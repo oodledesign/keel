@@ -1,76 +1,22 @@
 import { redirect } from 'next/navigation';
 
-import { PageBody } from '@kit/ui/page';
-import { withI18n } from '~/lib/i18n/with-i18n';
+import pathsConfig from '~/config/paths.config';
 
-import { getDefaultAccountPath } from '../_lib/role-access';
-import {
-  getSpaceTypeFromAccount,
-  isPropertyNavModuleEnabled,
-  isWorkModuleEnabled,
-} from '../_lib/server/account-modules';
-import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
-import { loadJobsPageData } from './_lib/server/jobs-page.loader';
-import { JobsPageContent } from './_components/jobs-page-content';
-
-interface JobsPageProps {
+interface LegacyJobsRedirectProps {
   params: Promise<{ account: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export const generateMetadata = async ({
+export default async function LegacyJobsRedirect({
   params,
-}: {
-  params: Promise<{ account: string }>;
-}) => {
-  const workspace = await loadTeamWorkspace((await params).account);
-  const spaceType = getSpaceTypeFromAccount(
-    workspace.account as { space_type?: string | null },
-  );
-  return {
-    title: spaceType === 'property' ? 'Maintenance' : 'Projects',
-  };
-};
-
-async function JobsPage({ params }: JobsPageProps) {
-  const accountSlug = (await params).account;
-  const workspace = await loadTeamWorkspace(accountSlug);
-  const spaceType = getSpaceTypeFromAccount(
-    workspace.account as { space_type?: string | null },
-  );
-
-  const jobsEnabled =
-    spaceType === 'property'
-      ? isPropertyNavModuleEnabled(workspace.moduleSettings, 'maintenance')
-      : isWorkModuleEnabled(workspace.moduleSettings, 'jobs');
-
-  if (!jobsEnabled) {
-    redirect(getDefaultAccountPath(accountSlug, workspace.account));
+  searchParams,
+}: LegacyJobsRedirectProps) {
+  const { account } = await params;
+  const query = await searchParams;
+  const qs = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (typeof value === 'string') qs.set(key, value);
   }
-
-  const {
-    accountId,
-    accountSlug: slug,
-    canViewJobs,
-    canEditJobs,
-    isContractorView,
-  } = await loadJobsPageData(accountSlug);
-
-  const isProperty = spaceType === 'property';
-
-  return (
-    <>
-      <PageBody className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)] px-3 py-3 md:px-4 md:py-4">
-        <JobsPageContent
-          accountSlug={slug}
-          accountId={accountId}
-          canViewJobs={canViewJobs}
-          canEditJobs={canEditJobs}
-          isContractorView={isContractorView}
-          uiVariant={isProperty ? 'maintenance' : 'projects'}
-        />
-      </PageBody>
-    </>
-  );
+  const base = pathsConfig.app.accountProjects.replace('[account]', account);
+  redirect(qs.size > 0 ? `${base}?${qs.toString()}` : base);
 }
-
-export default withI18n(JobsPage);

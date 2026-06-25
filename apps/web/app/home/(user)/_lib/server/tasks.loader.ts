@@ -22,7 +22,6 @@ type TaskQueryRow = {
   client_id?: string | null;
   area_id?: string | null;
   account_id?: string | null;
-  job_id?: string | null;
   parent_task_id?: string | null;
   notes?: string | null;
   calendar_schedule_status?: string | null;
@@ -36,6 +35,8 @@ type BusinessEnrichment = {
 type ProjectEnrichment = {
   id: string;
   name?: string | null;
+  title?: string | null;
+  project_type?: string | null;
   account_id?: string | null;
   business_id?: string | null;
   client_id?: string | null;
@@ -63,21 +64,21 @@ type AreaEnrichment = {
   colour?: string | null;
 };
 
-type JobEnrichment = {
-  id: string;
-  account_id?: string | null;
-  client_id?: string | null;
-};
+type JobEnrichment = never;
 
 function isWorkTaskRow(row: {
   project_id?: string | null;
   client_id?: string | null;
   account_id?: string | null;
-  job_id?: string | null;
 }): boolean {
-  return Boolean(
-    row.project_id || row.client_id || row.account_id || row.job_id,
-  );
+  return Boolean(row.project_id || row.client_id || row.account_id);
+}
+
+function deliveryProjectDisplayName(project: ProjectEnrichment): string | null {
+  if (project.project_type === 'campaign') {
+    return project.name?.trim() || null;
+  }
+  return project.title?.trim() || project.name?.trim() || null;
 }
 
 export type TasksPageTask = {
@@ -220,7 +221,6 @@ function taskRowToPageTask(
     projects: Map<string, ProjectEnrichment>;
     clients: Map<string, ClientEnrichment>;
     areas: Map<string, AreaEnrichment>;
-    jobs: Map<string, JobEnrichment>;
     accountsById: Map<string, AccountWorkspaceRow>;
   },
   contextOverride?: 'work' | 'life',
@@ -237,7 +237,10 @@ function taskRowToPageTask(
 
   if (row.project_id) {
     const p = maps.projects.get(row.project_id);
-    projectName = p?.name ?? null;
+    projectName =
+      p && p.project_type !== 'campaign'
+        ? deliveryProjectDisplayName(p)
+        : p?.name ?? null;
     const biz = p?.businesses;
     accentColor = biz?.colour ?? null;
     resolvedAccountId = p?.account_id ?? biz?.account_id ?? null;
@@ -274,29 +277,6 @@ function taskRowToPageTask(
     resolvedAccountId = resolved.resolvedAccountId;
     workspaceName = resolved.workspaceName;
     workspaceSlug = resolved.workspaceSlug;
-  }
-
-  if (!clientName && row.job_id) {
-    const jobClientId = maps.jobs.get(row.job_id)?.client_id;
-    const resolved = applyClientContext(jobClientId, maps, {
-      clientName,
-      resolvedAccountId,
-      workspaceName,
-      workspaceSlug,
-    });
-    clientName = resolved.clientName;
-    resolvedAccountId = resolved.resolvedAccountId;
-    workspaceName = resolved.workspaceName;
-    workspaceSlug = resolved.workspaceSlug;
-  }
-
-  if (!resolvedAccountId && row.job_id) {
-    resolvedAccountId = maps.jobs.get(row.job_id)?.account_id ?? null;
-    if (resolvedAccountId) {
-      const ws = workspaceFromAccountId(resolvedAccountId, maps.accountsById);
-      workspaceName = ws.name;
-      workspaceSlug = ws.slug;
-    }
   }
 
   if (!resolvedAccountId && row.account_id) {
@@ -393,25 +373,19 @@ async function enrichTaskRows(
   const areaIds = [
     ...new Set(rows.map((r) => r.area_id).filter(Boolean)),
   ] as string[];
-  const jobIds = [
-    ...new Set(rows.map((r) => r.job_id).filter(Boolean)),
-  ] as string[];
 
-  const [projectsResult, areasResult, jobsResult] = await Promise.all([
+  const [projectsResult, areasResult] = await Promise.all([
     projectIds.length > 0
       ? rowDb
           .from('projects')
           .select(
-            'id, name, account_id, business_id, client_id, businesses(colour, account_id)',
+            'id, name, title, project_type, account_id, business_id, client_id, businesses(colour, account_id)',
           )
           .in('id', projectIds)
       : Promise.resolve({ data: [] as ProjectEnrichment[] }),
     areaIds.length > 0
       ? client.from('areas').select('id, name, colour').in('id', areaIds)
       : Promise.resolve({ data: [] as AreaEnrichment[] }),
-    jobIds.length > 0
-      ? rowDb.from('jobs').select('id, account_id, client_id').in('id', jobIds)
-      : Promise.resolve({ data: [] as JobEnrichment[] }),
   ]);
 
   const projects = new Map<string, ProjectEnrichment>();
@@ -422,17 +396,12 @@ async function enrichTaskRows(
   for (const a of (areasResult.data ?? []) as AreaEnrichment[]) {
     areas.set(a.id, a);
   }
-  const jobs = new Map<string, JobEnrichment>();
-  for (const j of (jobsResult.data ?? []) as JobEnrichment[]) {
-    jobs.set(j.id, j);
-  }
 
   const clientIds = [
     ...new Set(
       [
         ...rows.map((row) => row.client_id),
         ...[...projects.values()].map((project) => project.client_id),
-        ...[...jobs.values()].map((job) => job.client_id),
       ].filter(Boolean),
     ),
   ] as string[];
@@ -469,12 +438,6 @@ async function enrichTaskRows(
     if (row.account_id) {
       accountIdSet.add(row.account_id);
     }
-    if (row.job_id) {
-      const jobAccountId = jobs.get(row.job_id)?.account_id;
-      if (jobAccountId) {
-        accountIdSet.add(jobAccountId);
-      }
-    }
   }
   const uniqueAccountIds = [...accountIdSet];
 
@@ -499,7 +462,7 @@ async function enrichTaskRows(
     }
   }
 
-  const maps = { projects, clients, areas, jobs, accountsById };
+  const maps = { projects, clients, areas, accountsById };
 
   const flat = rows.map((row) => taskRowToPageTask(row, maps, contextOverride));
   return nest ? nestTaskTree(flat) : flat;
@@ -516,7 +479,7 @@ export async function loadTaskById(
   const { data, error } = await client
     .from('tasks')
     .select(
-      'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, job_id, parent_task_id, notes, calendar_schedule_status',
+      'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, notes, calendar_schedule_status',
     )
     .eq('id', taskId)
     .maybeSingle();
@@ -557,7 +520,7 @@ export const loadTasksForUser = cache(async (): Promise<TasksPageTask[]> => {
   const { data, error } = await client
     .from('tasks')
     .select(
-      'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, job_id, parent_task_id, notes, calendar_schedule_status',
+      'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, notes, calendar_schedule_status',
     )
     .eq('user_id', user.id)
     .order('due_date', { ascending: true, nullsLast: true });
@@ -579,7 +542,7 @@ export const loadTasksForClient = cache(
     const { data, error } = await client
       .from('tasks')
       .select(
-        'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, job_id, parent_task_id, notes, calendar_schedule_status',
+        'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, notes, calendar_schedule_status',
       )
       .eq('user_id', user.id)
       .eq('client_id', clientId)
@@ -611,22 +574,19 @@ export const loadTasksForTeamAccount = cache(
       return [];
     }
 
-    const [{ data: projectsData }, { data: clientsData }, { data: jobsData }] =
-      await Promise.all([
+    const [{ data: projectsData }, { data: clientsData }] = await Promise.all([
         scopedDb.from('projects').select('id').eq('account_id', accountId),
         scopedDb.from('clients').select('id').eq('account_id', accountId),
-        scopedDb.from('jobs').select('id').eq('account_id', accountId),
       ]);
 
     const projectIds = (projectsData ?? []).map((p: { id: string }) => p.id);
     const clientIds = (clientsData ?? []).map((c: { id: string }) => c.id);
-    const jobIds = (jobsData ?? []).map((j: { id: string }) => j.id);
 
-    if (projectIds.length === 0 && clientIds.length === 0 && jobIds.length === 0) {
+    if (projectIds.length === 0 && clientIds.length === 0) {
       const { data: accountOnlyData, error: accountOnlyError } = await userClient
         .from('tasks')
         .select(
-          'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, job_id, parent_task_id, notes, calendar_schedule_status',
+          'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, notes, calendar_schedule_status',
         )
         .eq('account_id', accountId)
         .order('due_date', { ascending: true, nullsLast: true });
@@ -648,7 +608,7 @@ export const loadTasksForTeamAccount = cache(
     }
 
     let query = userClient.from('tasks').select(
-      'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, job_id, parent_task_id, notes, calendar_schedule_status',
+      'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, notes, calendar_schedule_status',
     );
 
     const filters: string[] = [`account_id.eq.${accountId}`];
@@ -657,9 +617,6 @@ export const loadTasksForTeamAccount = cache(
     }
     if (clientIds.length > 0) {
       filters.push(`client_id.in.(${clientIds.join(',')})`);
-    }
-    if (jobIds.length > 0) {
-      filters.push(`job_id.in.(${jobIds.join(',')})`);
     }
 
     query = query.or(filters.join(','));

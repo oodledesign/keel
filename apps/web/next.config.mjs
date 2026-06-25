@@ -376,6 +376,26 @@ async function getRedirects() {
   return [
     ...legacyHomeRedirects,
     {
+      source: '/app/:account/jobs',
+      destination: '/app/:account/projects',
+      permanent: true,
+    },
+    {
+      source: '/app/:account/jobs/:path*',
+      destination: '/app/:account/projects/:path*',
+      permanent: true,
+    },
+    {
+      source: '/app/:account/campaigns',
+      destination: '/app/:account/projects?type=campaign',
+      permanent: false,
+    },
+    {
+      source: '/app/:account/campaigns/:id',
+      destination: '/app/:account/projects/:id',
+      permanent: true,
+    },
+    {
       source: '/app/planner',
       destination: '/app/planner/plan',
       permanent: false,
