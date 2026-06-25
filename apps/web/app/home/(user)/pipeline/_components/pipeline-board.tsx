@@ -226,10 +226,8 @@ export function PipelineBoard({
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-            Pipeline
-          </h1>
-          <p className="mt-1 text-sm text-zinc-400">
+          <h1 className="text-lg font-bold text-white">Pipeline</h1>
+          <p className="mt-0.5 text-sm text-zinc-400">
             {activeCount} active leads · {formatCurrency(totalValue)} total
             value
             {isPending && (

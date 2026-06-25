@@ -1,13 +1,10 @@
 import { redirect } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
-import { Trans } from '@kit/ui/trans';
 
-import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { loadPipelineDataForAccount } from '~/home/(user)/_lib/server/pipeline.loader';
 
-import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
 import { getDefaultAccountPath } from '../_lib/role-access';
 import { isWorkModuleEnabled } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
@@ -20,9 +17,7 @@ interface TeamAccountPipelinePageProps {
 }
 
 export const generateMetadata = async () => {
-  const i18n = await createI18nServerInstance();
-  const title = i18n.t('common:routes.pipeline');
-  return { title };
+  return { title: 'Pipeline' };
 };
 
 async function TeamAccountPipelinePage({ params }: TeamAccountPipelinePageProps) {
@@ -39,11 +34,6 @@ async function TeamAccountPipelinePage({ params }: TeamAccountPipelinePageProps)
 
   return (
     <PageBody className="flex min-h-0 flex-1 flex-col bg-[var(--workspace-shell-canvas)] p-0">
-      <TeamAccountLayoutPageHeader
-        title={<Trans i18nKey="common:routes.pipeline" />}
-        description="Track leads and opportunities for this workspace. Won leads can be turned into clients."
-        account={accountSlug}
-      />
       <WorkspacePipelineBoardWrapper
         initialData={data}
         accountSlug={accountSlug}

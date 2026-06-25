@@ -19,7 +19,6 @@ type ClientCardProps = {
   dueTaskCount?: number;
   selected: boolean;
   onSelect: () => void;
-  /** When set, the card links to the client detail page */
   detailHref?: string;
   onNotes?: () => void;
   onCall?: () => void;
@@ -31,11 +30,28 @@ function formatLastActivity(updatedAt: string): string {
   const now = new Date();
   const diffMs = now.getTime() - d.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  if (diffDays === 0) return 'Last activity: Today';
-  if (diffDays === 1) return 'Last activity: Yesterday';
-  if (diffDays < 7) return `Last activity: ${diffDays} days ago`;
-  if (diffDays < 30) return `Last activity: ${Math.floor(diffDays / 7)} weeks ago`;
-  return `Last activity: ${Math.floor(diffDays / 30)} months ago`;
+
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+  return `${Math.floor(diffDays / 30)}mo ago`;
+}
+
+export function ClientListTableHeader() {
+  return (
+    <thead>
+      <tr className="border-b border-white/8 text-left text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+        <th className="px-3 py-2 font-medium md:px-4">Client</th>
+        <th className="hidden w-[120px] px-2 py-2 font-medium sm:table-cell">
+          Last activity
+        </th>
+        <th className="w-[88px] px-2 py-2 text-right font-medium">Projects</th>
+        <th className="w-[88px] px-2 py-2 text-right font-medium">Due tasks</th>
+        <th className="w-[96px] px-2 py-2 md:pr-4" aria-label="Actions" />
+      </tr>
+    </thead>
+  );
 }
 
 export function ClientCard({
@@ -53,109 +69,112 @@ export function ClientCard({
   onEmail,
   onCall,
 }: ClientCardProps) {
-  const location = [city, company_name].filter(Boolean).join(', ') || '—';
+  const subtitle = [company_name, city].filter(Boolean).join(' · ');
 
-  const className = cn(
-    'flex w-full items-center gap-4 rounded-lg border px-4 py-3 text-left transition-colors',
-    'border-zinc-700 bg-[var(--workspace-shell-panel)] hover:bg-[var(--workspace-shell-panel-hover)]',
-    selected &&
-      'border-[var(--keel-teal)]/50 bg-[var(--workspace-shell-panel-hover)] ring-2 ring-[var(--keel-teal)]/50',
+  const rowClassName = cn(
+    'group border-b border-white/4 transition-colors hover:bg-white/[0.03]',
+    selected && 'bg-[var(--workspace-shell-panel-hover)]',
   );
 
-  const content = (
-    <>
+  const nameCell = (
+    <div className="flex min-w-0 items-center gap-2.5">
       <ProfileAvatar
         displayName={display_name ?? 'Unnamed client'}
         pictureUrl={picture_url ?? null}
-        className="h-10 w-10 shrink-0"
-        fallbackClassName="bg-zinc-700 text-zinc-200"
+        className="h-7 w-7 shrink-0"
+        fallbackClassName="bg-zinc-700 text-xs text-zinc-200"
       />
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-medium text-white">
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium text-white group-hover:text-[#579bfc]">
           {display_name ?? 'Unnamed client'}
         </p>
-        <p className="truncate text-sm text-zinc-400">{location}</p>
-        <p className="mt-0.5 text-xs text-zinc-500">
-          {formatLastActivity(updated_at)}
-        </p>
-        {(projectCount !== undefined || dueTaskCount !== undefined) && (
-          <p className="mt-1 text-xs text-zinc-500">
-            {[
-              projectCount !== undefined ? `${projectCount} projects` : null,
-              dueTaskCount !== undefined ? `${dueTaskCount} due tasks` : null,
-            ]
-              .filter(Boolean)
-              .join(' · ')}
-          </p>
-        )}
+        {subtitle ? (
+          <p className="truncate text-xs text-zinc-500">{subtitle}</p>
+        ) : null}
       </div>
-      <div className="flex items-center gap-1">
-        <span className="flex items-center gap-1.5 rounded-full bg-[var(--keel-teal)]/20 px-2 py-0.5 text-xs font-medium text-[#5eead4]">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-          Active
-        </span>
-      </div>
-      <div className="flex shrink-0 gap-1">
-        {onNotes && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-zinc-400 hover:bg-zinc-700 hover:text-white"
-            onClick={(e) => {
-              e.stopPropagation();
-              onNotes();
-            }}
-            aria-label="Notes"
-          >
-            <ClipboardList className="h-4 w-4" />
-          </Button>
-        )}
-        {onCall && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-zinc-400 hover:bg-zinc-700 hover:text-white"
-            onClick={(e) => {
-              e.stopPropagation();
-              onCall();
-            }}
-            aria-label="Call"
-          >
-            <Phone className="h-4 w-4" />
-          </Button>
-        )}
-        {onEmail && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-zinc-400 hover:bg-zinc-700 hover:text-white"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEmail();
-            }}
-            aria-label="Email"
-          >
-            <Mail className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
-    </>
+    </div>
   );
 
-  if (detailHref) {
-    return (
-      <Link href={detailHref} className={className}>
-        {content}
-      </Link>
-    );
-  }
+  const actions = (
+    <div className="flex shrink-0 justify-end gap-0.5 opacity-70 transition-opacity group-hover:opacity-100">
+      {onNotes ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-zinc-400 hover:bg-zinc-700 hover:text-white"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onNotes();
+          }}
+          aria-label="Notes"
+        >
+          <ClipboardList className="h-3.5 w-3.5" />
+        </Button>
+      ) : null}
+      {onCall ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-zinc-400 hover:bg-zinc-700 hover:text-white"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onCall();
+          }}
+          aria-label="Call"
+        >
+          <Phone className="h-3.5 w-3.5" />
+        </Button>
+      ) : null}
+      {onEmail ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-zinc-400 hover:bg-zinc-700 hover:text-white"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onEmail();
+          }}
+          aria-label="Email"
+        >
+          <Mail className="h-3.5 w-3.5" />
+        </Button>
+      ) : null}
+    </div>
+  );
 
   return (
-    <button type="button" onClick={onSelect} className={className}>
-      {content}
-    </button>
+    <tr className={rowClassName}>
+      <td className="px-3 py-1.5 md:px-4">
+        {detailHref ? (
+          <Link href={detailHref} className="block min-w-0">
+            {nameCell}
+          </Link>
+        ) : (
+          <button type="button" onClick={onSelect} className="block min-w-0 text-left">
+            {nameCell}
+          </button>
+        )}
+      </td>
+      <td className="hidden px-2 py-1.5 text-sm text-zinc-400 sm:table-cell">
+        {formatLastActivity(updated_at)}
+      </td>
+      <td className="px-2 py-1.5 text-right text-sm tabular-nums text-zinc-300">
+        {projectCount ?? 0}
+      </td>
+      <td className="px-2 py-1.5 text-right text-sm tabular-nums text-zinc-300">
+        {(dueTaskCount ?? 0) > 0 ? (
+          <span className="text-amber-300/90">{dueTaskCount}</span>
+        ) : (
+          <span className="text-zinc-500">0</span>
+        )}
+      </td>
+      <td className="px-2 py-1.5 md:pr-4">{actions}</td>
+    </tr>
   );
 }

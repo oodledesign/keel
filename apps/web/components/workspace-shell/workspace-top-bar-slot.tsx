@@ -19,6 +19,7 @@ export async function TeamWorkspaceTopBarSlot(props: { account: string }) {
     <WorkspaceTopBar
       variant="team"
       userId={workspace.user.id}
+      user={workspace.user}
       accountId={workspace.account.id}
       accountSlug={props.account}
       spaceType={spaceType}

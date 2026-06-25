@@ -26,7 +26,6 @@ import {
   buildPersonalSwitcherAccounts,
 } from '~/components/workspace-shell/workspace-accounts-selector';
 import { workspaceSidebarClassName } from '~/components/workspace-shell/workspace-shell-styles';
-import { WorkspaceProfileBlock } from '~/components/workspace-shell/workspace-profile-block';
 import featureFlagsConfig from '~/config/feature-flags.config';
 import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
 import { PERSONAL_WORKSPACE_VALUE } from '~/lib/workspace-personal-switcher';
@@ -90,18 +89,6 @@ export function HomeSidebar(props: HomeSidebarProps) {
           <SidebarTrigger className="h-8 w-8 rounded-md border border-white/12 text-white/80 hover:bg-white/[0.06] hover:text-white" />
         </div>
         <PersonalSettingsNavLink />
-        <WorkspaceProfileBlockWithCollapse
-          user={user}
-          account={
-            workspace
-              ? {
-                  id: workspace.id,
-                  name: workspace.name,
-                  picture_url: workspace.picture_url,
-                }
-              : undefined
-          }
-        />
       </SidebarFooter>
     </Sidebar>
   );
@@ -139,25 +126,5 @@ function PersonalSettingsNavLink() {
         </SidebarMenuButton>
       </SidebarMenuItem>
     </SidebarMenu>
-  );
-}
-
-function WorkspaceProfileBlockWithCollapse(props: {
-  user: UserWorkspace['user'];
-  account?: {
-    id: string | null;
-    name: string | null;
-    picture_url: string | null;
-  };
-}) {
-  const ctx = useContext(SidebarContext);
-  const collapsed = ctx ? !ctx.open : false;
-
-  return (
-    <WorkspaceProfileBlock
-      user={props.user}
-      account={props.account}
-      collapsed={collapsed}
-    />
   );
 }

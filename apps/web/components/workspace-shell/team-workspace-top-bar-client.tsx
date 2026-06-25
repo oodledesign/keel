@@ -21,6 +21,7 @@ export function TeamWorkspaceTopBarClient({ accountSlug }: { accountSlug: string
     <WorkspaceTopBar
       variant="team"
       userId={workspace.user.id}
+      user={workspace.user}
       accountId={workspace.account.id}
       accountSlug={accountSlug}
       spaceType={spaceType}

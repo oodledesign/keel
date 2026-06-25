@@ -1,25 +1,34 @@
 'use client';
 
+import type { JWTUserData } from '@kit/supabase/types';
+
 import type { WorkspaceSpaceType } from '~/home/[account]/_lib/server/account-modules';
 
 import { WorkspaceDesktopTopBar } from './workspace-top-bar-actions';
 
+type WorkspaceTopBarBaseProps = {
+  userId: string;
+  user?: JWTUserData | null;
+  account?: {
+    id: string | null;
+    name: string | null;
+    picture_url: string | null;
+  };
+  showNewMenu?: boolean;
+};
+
 export function WorkspaceTopBar(
   props:
-    | {
+    | ({
         variant: 'team';
-        userId: string;
         accountId: string;
         accountSlug: string;
         spaceType?: WorkspaceSpaceType;
-        showNewMenu?: boolean;
-      }
-    | {
+      } & WorkspaceTopBarBaseProps)
+    | ({
         variant: 'personal';
-        userId: string;
         accountId?: string;
-        showNewMenu?: boolean;
-      },
+      } & WorkspaceTopBarBaseProps),
 ) {
   return <WorkspaceDesktopTopBar {...props} />;
 }

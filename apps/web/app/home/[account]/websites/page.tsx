@@ -5,7 +5,6 @@ import { PageBody } from '@kit/ui/page';
 
 import { withI18n } from '~/lib/i18n/with-i18n';
 
-import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
 import { getDefaultAccountPath } from '../_lib/role-access';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import { loadWebsitesPageData } from './_lib/server/websites-page.loader';
@@ -44,12 +43,6 @@ async function WebsitesPage({ params }: WebsitesPageProps) {
 
   return (
     <>
-      <TeamAccountLayoutPageHeader
-        title="Websites"
-        description="Manage client websites, domains, and launch status"
-        account={accountSlug}
-      />
-
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
         <WebsitesPageContent
           accountSlug={accountSlug}

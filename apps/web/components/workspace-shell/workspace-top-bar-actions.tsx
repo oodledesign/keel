@@ -1,29 +1,38 @@
 'use client';
 
 import { NotificationsPopover } from '@kit/notifications/components';
+import type { JWTUserData } from '@kit/supabase/types';
 
+import { ProfileAccountDropdownContainer } from '~/components/personal-account-dropdown-container';
 import featureFlagsConfig from '~/config/feature-flags.config';
 
 import { WorkspaceSearchButton } from './workspace-search-button';
 import { WorkspaceNewMenu } from './workspace-new-menu';
 import type { WorkspaceSpaceType } from '~/home/[account]/_lib/server/account-modules';
 
+type WorkspaceTopBarBaseProps = {
+  userId: string;
+  user?: JWTUserData | null;
+  account?: {
+    id: string | null;
+    name: string | null;
+    picture_url: string | null;
+  };
+  showNewMenu?: boolean;
+};
+
 export function WorkspaceMobileTopActions(
   props:
-    | {
+    | ({
         variant: 'team';
-        userId: string;
         accountId: string;
         accountSlug: string;
         spaceType?: WorkspaceSpaceType;
-        showNewMenu?: boolean;
-      }
-    | {
+      } & WorkspaceTopBarBaseProps)
+    | ({
         variant: 'personal';
-        userId: string;
         accountId?: string;
-        showNewMenu?: boolean;
-      },
+      } & WorkspaceTopBarBaseProps),
 ) {
   const notificationAccountIds = [
     props.userId,
@@ -44,20 +53,16 @@ export function WorkspaceMobileTopActions(
 
 export function WorkspaceDesktopTopBar(
   props:
-    | {
+    | ({
         variant: 'team';
-        userId: string;
         accountId: string;
         accountSlug: string;
         spaceType?: WorkspaceSpaceType;
-        showNewMenu?: boolean;
-      }
-    | {
+      } & WorkspaceTopBarBaseProps)
+    | ({
         variant: 'personal';
-        userId: string;
         accountId?: string;
-        showNewMenu?: boolean;
-      },
+      } & WorkspaceTopBarBaseProps),
 ) {
   const showNew = props.showNewMenu ?? true;
   const notificationAccountIds = [
@@ -87,6 +92,15 @@ export function WorkspaceDesktopTopBar(
           ) : (
             <WorkspaceNewMenu variant="personal" />
           )
+        ) : null}
+
+        {props.user ? (
+          <ProfileAccountDropdownContainer
+            user={props.user}
+            account={props.account}
+            showProfileName={false}
+            className="shrink-0"
+          />
         ) : null}
       </div>
     </header>

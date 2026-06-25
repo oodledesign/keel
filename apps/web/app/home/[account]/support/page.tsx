@@ -5,7 +5,6 @@ import { PageBody } from '@kit/ui/page';
 
 import { withI18n } from '~/lib/i18n/with-i18n';
 
-import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
 import { getDefaultAccountPath } from '../_lib/role-access';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import { SupportTicketsPageContent } from './_components/support-tickets-page-content';
@@ -41,12 +40,6 @@ async function SupportPage({ params }: SupportPageProps) {
 
   return (
     <>
-      <TeamAccountLayoutPageHeader
-        title="Support"
-        description="Manage client support tickets"
-        account={accountSlug}
-      />
-
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
         <SupportTicketsPageContent
           accountSlug={accountSlug}

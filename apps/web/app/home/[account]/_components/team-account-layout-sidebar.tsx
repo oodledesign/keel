@@ -14,7 +14,6 @@ import {
 
 import { KeelSidebarLogo } from '~/components/workspace-shell/keel-sidebar-logo';
 import { workspaceSidebarClassName } from '~/components/workspace-shell/workspace-shell-styles';
-import { WorkspaceProfileBlock } from '~/components/workspace-shell/workspace-profile-block';
 import { getTeamAccountSidebarConfig } from '~/config/team-account-navigation.config';
 import pathsConfig from '~/config/paths.config';
 import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
@@ -68,7 +67,6 @@ export function TeamAccountLayoutSidebar(props: {
         <div className="flex justify-center">
           <SidebarTrigger className="h-8 w-8 rounded-md border border-white/12 text-white/80 hover:bg-white/[0.06] hover:text-white" />
         </div>
-        <WorkspaceProfileBlockWithCollapse user={props.user} />
       </SidebarFooter>
     </Sidebar>
   );
@@ -82,11 +80,4 @@ function SidebarLogoLink(props: { account: string }) {
   return (
     <KeelSidebarLogo href={href} collapsed={collapsed} />
   );
-}
-
-function WorkspaceProfileBlockWithCollapse(props: { user: JWTUserData }) {
-  const ctx = useContext(SidebarContext);
-  const collapsed = ctx ? !ctx.open : false;
-
-  return <WorkspaceProfileBlock user={props.user} collapsed={collapsed} />;
 }

@@ -4,7 +4,6 @@ import { PageBody } from '@kit/ui/page';
 
 import { withI18n } from '~/lib/i18n/with-i18n';
 
-import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
 import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access';
 import {
   getSpaceTypeFromAccount,
@@ -58,29 +57,19 @@ async function ClientsPage({ params }: ClientsPageProps) {
   const isProperty = spaceType === 'property';
 
   return (
-    <>
-      <TeamAccountLayoutPageHeader
-        title={isProperty ? 'Tenants' : 'Clients'}
-        description={
-          isProperty
-            ? 'Active tenancies and contacts'
-            : 'Projects, delivery health, and client relationships'
-        }
-        account={accountSlug}
+    <PageBody className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)] px-3 py-3 md:px-4 md:py-4">
+      <ClientsPageContent
+        accountSlug={accountSlug}
+        accountId={accountId}
+        canViewClients={canViewClients}
+        canEditClients={canEditClients}
+        isContractorView={isContractorView}
+        initialOverview={initialOverview}
+        initialTotal={initialTotal}
+        pageTitle={isProperty ? 'Tenants' : 'Clients'}
+        addClientLabel={isProperty ? 'Add tenant' : 'Add client'}
       />
-
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
-        <ClientsPageContent
-          accountSlug={accountSlug}
-          accountId={accountId}
-          canViewClients={canViewClients}
-          canEditClients={canEditClients}
-          isContractorView={isContractorView}
-          initialOverview={initialOverview}
-          initialTotal={initialTotal}
-        />
-      </PageBody>
-    </>
+    </PageBody>
   );
 }
 

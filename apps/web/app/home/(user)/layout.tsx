@@ -152,6 +152,16 @@ async function SidebarLayout({ children }: React.PropsWithChildren) {
               <WorkspaceTopBar
                 variant="personal"
                 userId={workspace.user.id}
+                user={workspace.user}
+                account={
+                  workspace.workspace
+                    ? {
+                        id: workspace.workspace.id,
+                        name: workspace.workspace.name,
+                        picture_url: workspace.workspace.picture_url,
+                      }
+                    : undefined
+                }
                 accountId={workspace.workspace?.id}
               />
             </div>

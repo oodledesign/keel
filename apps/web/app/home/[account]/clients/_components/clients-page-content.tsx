@@ -22,7 +22,6 @@ import {
 } from '@kit/ui/select';
 import { Sheet, SheetContent } from '@kit/ui/sheet';
 import { toast } from '@kit/ui/sonner';
-import { If } from '@kit/ui/if';
 import { Trans } from '@kit/ui/trans';
 import { cn } from '@kit/ui/utils';
 
@@ -31,7 +30,7 @@ import pathsConfig from '~/config/paths.config';
 import { listAccountMembers } from '../../jobs/_lib/server/server-actions';
 import type { ClientOverviewItem } from '../_lib/clients-overview.types';
 import { listClientsOverview } from '../_lib/server/server-actions';
-import { ClientCard } from './client-card';
+import { ClientCard, ClientListTableHeader } from './client-card';
 import { ClientDetailDrawer } from './client-detail-drawer';
 import { ClientOverviewCard } from './client-overview-card';
 
@@ -87,6 +86,35 @@ function sortClients(items: ClientOverviewItem[], sort: SortKey) {
   return list;
 }
 
+function mergeClients(
+  existing: ClientOverviewItem[],
+  incoming: ClientOverviewItem[],
+): ClientOverviewItem[] {
+  if (incoming.length === 0) return existing;
+  const byId = new Map(existing.map((client) => [client.id, client]));
+  for (const client of incoming) {
+    byId.set(client.id, client);
+  }
+  return [...byId.values()];
+}
+
+function clientMatchesSearch(client: ClientOverviewItem, query: string): boolean {
+  const haystack = [
+    client.displayName,
+    client.companyName,
+    client.email,
+    client.city,
+    client.tagline,
+    client.phone,
+    ...client.projects.map((project) => project.title),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  return haystack.includes(query);
+}
+
 export function ClientsPageContent({
   accountSlug,
   accountId,
@@ -95,6 +123,8 @@ export function ClientsPageContent({
   isContractorView,
   initialOverview = [],
   initialTotal = 0,
+  pageTitle = 'Clients',
+  addClientLabel = 'Add client',
 }: {
   accountSlug: string;
   accountId: string;
@@ -103,14 +133,19 @@ export function ClientsPageContent({
   isContractorView: boolean;
   initialOverview?: ClientOverviewItem[];
   initialTotal?: number;
+  pageTitle?: string;
+  addClientLabel?: string;
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [clients, setClients] = useState<ClientOverviewItem[]>(initialOverview);
+  const [pageClients, setPageClients] = useState<ClientOverviewItem[]>(initialOverview);
+  const [cachedClients, setCachedClients] =
+    useState<ClientOverviewItem[]>(initialOverview);
   const [total, setTotal] = useState(Number(initialTotal) || 0);
-  const [loading, setLoading] = useState(false);
+  const [loadingPage, setLoadingPage] = useState(false);
+  const [enrichingSearch, setEnrichingSearch] = useState(false);
   const [search, setSearch] = useState('');
   const [searchDebounced, setSearchDebounced] = useState('');
   const [page, setPage] = useState(1);
@@ -156,41 +191,112 @@ export function ClientsPageContent({
       });
   }, [accountSlug]);
 
-  const fetchClients = useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await listClientsOverview({
-        accountId,
-        search: searchDebounced || undefined,
-        page,
-        pageSize,
-        members,
-      });
-      const list = Array.isArray((result as { data?: unknown })?.data)
-        ? ((result as { data: ClientOverviewItem[] }).data ?? [])
-        : [];
-      const count =
-        typeof (result as { total?: number })?.total === 'number'
-          ? (result as { total: number }).total
-          : 0;
-      setClients(list);
-      setTotal(count);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to load clients');
-      setClients([]);
-      setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [accountId, searchDebounced, page, pageSize, members]);
+  const fetchClientsPage = useCallback(
+    async (pageNum: number) => {
+      setLoadingPage(true);
+      try {
+        const result = await listClientsOverview({
+          accountId,
+          page: pageNum,
+          pageSize,
+          members,
+        });
+        const list = Array.isArray((result as { data?: unknown })?.data)
+          ? ((result as { data: ClientOverviewItem[] }).data ?? [])
+          : [];
+        const count =
+          typeof (result as { total?: number })?.total === 'number'
+            ? (result as { total: number }).total
+            : 0;
+        setPageClients(list);
+        setCachedClients((current) => mergeClients(current, list));
+        setTotal(count);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Failed to load clients');
+      } finally {
+        setLoadingPage(false);
+      }
+    },
+    [accountId, pageSize, members],
+  );
+
+  const refreshClients = useCallback(async () => {
+    setPage(1);
+    await fetchClientsPage(1);
+  }, [fetchClientsPage]);
 
   useEffect(() => {
-    if (page === 1 && !searchDebounced && members.length === 0) {
+    if (search.trim() || searchDebounced.trim()) {
       return;
     }
 
-    void fetchClients();
-  }, [accountId, searchDebounced, page, pageSize, members, fetchClients]);
+    const isDefaultFirstPage = page === 1;
+
+    if (isDefaultFirstPage && initialOverview.length > 0) {
+      return;
+    }
+
+    void fetchClientsPage(page);
+  }, [page, search, searchDebounced, fetchClientsPage, initialOverview.length]);
+
+  useEffect(() => {
+    const query = searchDebounced.trim().toLowerCase();
+    if (!query) {
+      setEnrichingSearch(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const enrichFromServer = async () => {
+      setEnrichingSearch(true);
+      try {
+        let nextPage = 1;
+        let serverTotal = 0;
+
+        while (!cancelled) {
+          const result = await listClientsOverview({
+            accountId,
+            search: searchDebounced.trim(),
+            page: nextPage,
+            pageSize,
+            members,
+          });
+          const list = Array.isArray((result as { data?: unknown })?.data)
+            ? ((result as { data: ClientOverviewItem[] }).data ?? [])
+            : [];
+          serverTotal =
+            typeof (result as { total?: number })?.total === 'number'
+              ? (result as { total: number }).total
+              : list.length;
+
+          if (!cancelled && list.length > 0) {
+            setCachedClients((current) => mergeClients(current, list));
+          }
+
+          if (list.length < pageSize || nextPage * pageSize >= serverTotal) {
+            break;
+          }
+
+          nextPage += 1;
+        }
+      } catch (e) {
+        if (!cancelled) {
+          toast.error(e instanceof Error ? e.message : 'Failed to search clients');
+        }
+      } finally {
+        if (!cancelled) {
+          setEnrichingSearch(false);
+        }
+      }
+    };
+
+    void enrichFromServer();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [accountId, searchDebounced, pageSize, members]);
 
   useEffect(() => {
     const t = setTimeout(() => setSearchDebounced(search), 300);
@@ -209,7 +315,7 @@ export function ClientsPageContent({
   const closeCreate = () => {
     setCreateDrawerOpen(false);
     setCreateFormInitialValues(undefined);
-    void fetchClients();
+    void refreshClients();
   };
 
   useEffect(() => {
@@ -234,10 +340,21 @@ export function ClientsPageContent({
     router.replace(nextPath, { scroll: false });
   }, [canEditClients, pathname, router, searchParams]);
 
-  const sortedClients = useMemo(
-    () => sortClients(clients, sort),
-    [clients, sort],
-  );
+  const searchQuery = search.trim().toLowerCase();
+  const isSearching = searchQuery.length > 0;
+
+  const displayedClients = useMemo(() => {
+    if (isSearching) {
+      const matches = cachedClients.filter((client) =>
+        clientMatchesSearch(client, searchQuery),
+      );
+      return sortClients(matches, sort);
+    }
+
+    return sortClients(pageClients, sort);
+  }, [cachedClients, isSearching, pageClients, searchQuery, sort]);
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   const toggleFavorite = (clientId: string) => {
     setFavorites((current) => {
@@ -257,8 +374,6 @@ export function ClientsPageContent({
     window.localStorage.setItem(viewStorageKey(accountId), mode);
   };
 
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-
   if (!canViewClients) {
     return (
       <div className="flex min-h-[60vh] w-full items-center justify-center rounded-lg border border-zinc-700 bg-[var(--workspace-shell-panel)] p-8">
@@ -270,32 +385,23 @@ export function ClientsPageContent({
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-1">
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-700 px-4 py-4 md:px-6">
-          <div>
-            <h2 className="text-lg font-semibold text-white">
-              Projects / Clients Overview
-            </h2>
-            <p className="mt-1 text-sm text-zinc-400">
-              Active client accounts and delivery health
-            </p>
-          </div>
+    <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden rounded-xl border border-white/8 bg-[var(--workspace-shell-panel)]/40">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-5">
+        <h1 className="text-lg font-bold text-white">{pageTitle}</h1>
+        {canEditClients ? (
+          <Button
+            size="sm"
+            className="h-8 bg-[var(--keel-teal)] text-xs hover:bg-[#238b7f]"
+            onClick={openCreate}
+            data-test="add-client-button"
+          >
+            <PlusCircle className="mr-1.5 h-3.5 w-3.5" />
+            {addClientLabel}
+          </Button>
+        ) : null}
+      </div>
 
-          <If condition={canEditClients}>
-            <Button
-              size="sm"
-              className="bg-[var(--keel-teal)] hover:bg-[#238b7f]"
-              onClick={openCreate}
-              data-test="add-client-button"
-            >
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Client
-            </Button>
-          </If>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3 border-b border-zinc-700 p-4 md:px-6">
+      <div className="flex flex-wrap items-center gap-2 px-4 pb-3 md:px-5">
           <div className="relative min-w-[220px] flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
             <Input
@@ -303,7 +409,6 @@ export function ClientsPageContent({
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
-                setPage(1);
               }}
               className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] pl-9 text-white placeholder:text-zinc-500 focus-visible:ring-[var(--keel-teal)]"
             />
@@ -372,20 +477,20 @@ export function ClientsPageContent({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-6">
-          {loading ? (
+        <div className="flex-1 overflow-y-auto px-4 pb-4 md:px-5 md:pb-5">
+          {loadingPage && displayedClients.length === 0 ? (
             <div className="py-12 text-center text-sm text-zinc-500">
               <Trans i18nKey="common:loading" />
             </div>
-          ) : sortedClients.length === 0 ? (
+          ) : displayedClients.length === 0 ? (
             <div className="py-12 text-center text-sm text-zinc-500">
-              {searchDebounced
+              {isSearching
                 ? 'No clients match your search.'
                 : 'No clients yet. Add your first client to get started.'}
             </div>
           ) : viewMode === 'cards' ? (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {sortedClients.map((client) => (
+              {displayedClients.map((client) => (
                 <ClientOverviewCard
                   key={client.id}
                   client={client}
@@ -396,39 +501,50 @@ export function ClientsPageContent({
               ))}
             </div>
           ) : (
-            <div className="space-y-2">
-              {sortedClients.map((client) => (
-                <ClientCard
-                  key={client.id}
-                  id={client.id}
-                  display_name={client.displayName}
-                  company_name={client.companyName}
-                  email={client.email}
-                  city={client.city}
-                  picture_url={client.pictureUrl}
-                  updated_at={client.updatedAt}
-                  projectCount={client.projectCount}
-                  dueTaskCount={client.dueTaskCount}
-                  selected={false}
-                  onSelect={() => openClient(client.id)}
-                  detailHref={`${clientsBasePath}/${client.id}`}
-                  onNotes={() => openClient(client.id)}
-                  onEmail={
-                    client.email
-                      ? () => window.open(`mailto:${client.email}`, '_blank')
-                      : undefined
-                  }
-                  onCall={
-                    client.phone
-                      ? () => window.open(`tel:${client.phone}`, '_blank')
-                      : undefined
-                  }
-                />
-              ))}
+            <div className="overflow-x-auto rounded-lg border border-white/8 bg-[var(--workspace-shell-panel)]/40">
+              <table className="w-full min-w-[640px] border-collapse text-sm">
+                <ClientListTableHeader />
+                <tbody>
+                  {displayedClients.map((client) => (
+                    <ClientCard
+                      key={client.id}
+                      id={client.id}
+                      display_name={client.displayName}
+                      company_name={client.companyName}
+                      email={client.email}
+                      city={client.city}
+                      picture_url={client.pictureUrl}
+                      updated_at={client.updatedAt}
+                      projectCount={client.projectCount}
+                      dueTaskCount={client.dueTaskCount}
+                      selected={false}
+                      onSelect={() => openClient(client.id)}
+                      detailHref={`${clientsBasePath}/${client.id}`}
+                      onNotes={() => openClient(client.id)}
+                      onEmail={
+                        client.email
+                          ? () => window.open(`mailto:${client.email}`, '_blank')
+                          : undefined
+                      }
+                      onCall={
+                        client.phone
+                          ? () => window.open(`tel:${client.phone}`, '_blank')
+                          : undefined
+                      }
+                    />
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
 
-          {totalPages > 1 && (
+          {isSearching && enrichingSearch ? (
+            <p className="mt-4 text-center text-xs text-zinc-500">
+              Finding more matches…
+            </p>
+          ) : null}
+
+          {!isSearching && totalPages > 1 && (
             <div className="mt-6 flex items-center justify-between text-sm text-zinc-500">
               <span>
                 Page {page} of {totalPages} ({total} clients)
@@ -456,7 +572,6 @@ export function ClientsPageContent({
             </div>
           )}
         </div>
-      </div>
 
       <ClientDetailDrawer
         open={createDrawerOpen}
