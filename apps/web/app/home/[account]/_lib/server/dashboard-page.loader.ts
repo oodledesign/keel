@@ -461,19 +461,14 @@ async function loadDashboardPageDataImpl(
   const projectRows = (projectsResult.data ?? []) as Array<{
     id: string;
     name?: string | null;
+    title?: string | null;
   }>;
   const projectIds = projectRows.map((p) => p.id);
   const projectNameMap = new Map(
-    projectRows.map((p) => [p.id, p.name ?? 'Project']),
-  );
-
-  const { data: jobRowsForTasks } = await client
-    .from('projects')
-    .select('id, title')
-    .eq('account_id', accountId);
-  const jobIds = (jobRowsForTasks ?? []).map((j) => j.id as string);
-  const jobNameMap = new Map(
-    (jobRowsForTasks ?? []).map((j) => [j.id as string, (j.title as string) ?? 'Project']),
+    projectRows.map((p) => [
+      p.id,
+      p.title?.trim() || p.name?.trim() || 'Project',
+    ]),
   );
 
   const { data: clientRowsForTasks } = await client
@@ -491,9 +486,6 @@ async function loadDashboardPageDataImpl(
 
   let upcomingTasks: DashboardTaskSummary[] = [];
   const taskScopeFilters: string[] = [`account_id.eq.${accountId}`];
-  if (jobIds.length > 0) {
-    taskScopeFilters.push(`job_id.in.(${jobIds.join(',')})`);
-  }
   if (projectIds.length > 0) {
     taskScopeFilters.push(`project_id.in.(${projectIds.join(',')})`);
   }
@@ -503,7 +495,7 @@ async function loadDashboardPageDataImpl(
 
   const { data: taskRows, error: tasksError } = await client
     .from('tasks')
-    .select('id, title, status, due_date, project_id, job_id, client_id')
+    .select('id, title, status, due_date, project_id, client_id')
     .or(taskScopeFilters.join(','))
     .is('parent_task_id', null)
     .not('status', 'eq', 'done')
@@ -519,13 +511,11 @@ async function loadDashboardPageDataImpl(
     title: (t.title as string | null) ?? 'Untitled task',
     dueDate: toIsoDateString(t.due_date as string | null | undefined),
     status: (t.status as string | null) ?? 'todo',
-    projectName: t.job_id
-      ? (jobNameMap.get(t.job_id as string) ?? null)
-      : t.project_id
-        ? (projectNameMap.get(t.project_id as string) ?? null)
-        : t.client_id
-          ? (clientNameMap.get(t.client_id as string) ?? null)
-          : null,
+    projectName: t.project_id
+      ? (projectNameMap.get(t.project_id as string) ?? null)
+      : t.client_id
+        ? (clientNameMap.get(t.client_id as string) ?? null)
+        : null,
   }));
 
   const accountName =
