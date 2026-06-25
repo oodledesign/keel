@@ -15,7 +15,13 @@ ALTER TABLE public.projects
   ADD COLUMN IF NOT EXISTS actual_minutes integer,
   ADD COLUMN IF NOT EXISTS value_pence integer,
   ADD COLUMN IF NOT EXISTS cost_pence integer,
-  ADD COLUMN IF NOT EXISTS created_by uuid REFERENCES auth.users (id) ON DELETE SET NULL;
+  ADD COLUMN IF NOT EXISTS created_by uuid REFERENCES auth.users (id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS client_id uuid REFERENCES public.clients (id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS ix_projects_client_id ON public.projects (client_id);
+
+COMMENT ON COLUMN public.projects.client_id IS
+  'Primary client for delivery projects; campaign membership uses clients.project_id.';
 
 UPDATE public.projects
 SET project_type = 'campaign'
@@ -79,62 +85,74 @@ CREATE INDEX IF NOT EXISTS ix_projects_account_id_due_date
 -- ---------------------------------------------------------------------------
 -- 2) Migrate jobs rows into projects (preserve ids)
 -- ---------------------------------------------------------------------------
-INSERT INTO public.projects (
-  id,
-  account_id,
-  name,
-  project_type,
-  title,
-  description,
-  status,
-  priority,
-  start_date,
-  due_date,
-  estimated_minutes,
-  actual_minutes,
-  value_pence,
-  cost_pence,
-  created_by,
-  client_id,
-  created_at,
-  updated_at
-)
-SELECT
-  j.id,
-  j.account_id,
-  j.title,
-  'delivery',
-  j.title,
-  j.description,
-  j.status,
-  j.priority,
-  j.start_date,
-  j.due_date,
-  j.estimated_minutes,
-  j.actual_minutes,
-  j.value_pence,
-  j.cost_pence,
-  j.created_by,
-  j.client_id,
-  j.created_at,
-  j.updated_at
-FROM public.jobs j
-ON CONFLICT (id) DO UPDATE SET
-  project_type = EXCLUDED.project_type,
-  name = EXCLUDED.name,
-  title = EXCLUDED.title,
-  description = EXCLUDED.description,
-  status = EXCLUDED.status,
-  priority = EXCLUDED.priority,
-  start_date = EXCLUDED.start_date,
-  due_date = EXCLUDED.due_date,
-  estimated_minutes = EXCLUDED.estimated_minutes,
-  actual_minutes = EXCLUDED.actual_minutes,
-  value_pence = EXCLUDED.value_pence,
-  cost_pence = EXCLUDED.cost_pence,
-  created_by = EXCLUDED.created_by,
-  client_id = COALESCE(public.projects.client_id, EXCLUDED.client_id),
-  updated_at = EXCLUDED.updated_at;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public'
+      AND table_name = 'jobs'
+  ) THEN
+    RETURN;
+  END IF;
+
+  INSERT INTO public.projects (
+    id,
+    account_id,
+    name,
+    project_type,
+    title,
+    description,
+    status,
+    priority,
+    start_date,
+    due_date,
+    estimated_minutes,
+    actual_minutes,
+    value_pence,
+    cost_pence,
+    created_by,
+    client_id,
+    created_at,
+    updated_at
+  )
+  SELECT
+    j.id,
+    j.account_id,
+    j.title,
+    'delivery',
+    j.title,
+    j.description,
+    j.status,
+    j.priority,
+    j.start_date,
+    j.due_date,
+    j.estimated_minutes,
+    j.actual_minutes,
+    j.value_pence,
+    j.cost_pence,
+    j.created_by,
+    j.client_id,
+    j.created_at,
+    j.updated_at
+  FROM public.jobs j
+  ON CONFLICT (id) DO UPDATE SET
+    project_type = EXCLUDED.project_type,
+    name = EXCLUDED.name,
+    title = EXCLUDED.title,
+    description = EXCLUDED.description,
+    status = EXCLUDED.status,
+    priority = EXCLUDED.priority,
+    start_date = EXCLUDED.start_date,
+    due_date = EXCLUDED.due_date,
+    estimated_minutes = EXCLUDED.estimated_minutes,
+    actual_minutes = EXCLUDED.actual_minutes,
+    value_pence = EXCLUDED.value_pence,
+    cost_pence = EXCLUDED.cost_pence,
+    created_by = EXCLUDED.created_by,
+    client_id = COALESCE(public.projects.client_id, EXCLUDED.client_id),
+    updated_at = EXCLUDED.updated_at;
+END $$;
 
 -- ---------------------------------------------------------------------------
 -- 3) Merge job_assignments → project_assignments
@@ -143,27 +161,68 @@ ALTER TABLE public.project_assignments
   ADD COLUMN IF NOT EXISTS role_on_project text,
   ADD COLUMN IF NOT EXISTS account_id uuid REFERENCES public.accounts (id) ON DELETE CASCADE;
 
-INSERT INTO public.project_assignments (project_id, user_id, role_on_project, account_id)
-SELECT ja.job_id, ja.user_id, ja.role_on_job, ja.account_id
-FROM public.job_assignments ja
-ON CONFLICT (project_id, user_id) DO UPDATE SET
-  role_on_project = COALESCE(EXCLUDED.role_on_project, public.project_assignments.role_on_project),
-  account_id = COALESCE(EXCLUDED.account_id, public.project_assignments.account_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public'
+      AND table_name = 'job_assignments'
+  ) THEN
+    RETURN;
+  END IF;
+
+  INSERT INTO public.project_assignments (project_id, user_id, role_on_project, account_id)
+  SELECT ja.job_id, ja.user_id, ja.role_on_job, ja.account_id
+  FROM public.job_assignments ja
+  ON CONFLICT (project_id, user_id) DO UPDATE SET
+    role_on_project = COALESCE(EXCLUDED.role_on_project, public.project_assignments.role_on_project),
+    account_id = COALESCE(EXCLUDED.account_id, public.project_assignments.account_id);
+END $$;
 
 -- ---------------------------------------------------------------------------
 -- 4) Rename job_id → project_id on child tables
 -- ---------------------------------------------------------------------------
 
 -- project_phases
-ALTER TABLE public.project_phases
-  DROP CONSTRAINT IF EXISTS project_phases_job_id_fkey;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'project_phases'
+      AND column_name = 'job_id'
+  ) THEN
+    RETURN;
+  END IF;
 
-ALTER TABLE public.project_phases
-  RENAME COLUMN job_id TO project_id;
+  ALTER TABLE public.project_phases
+    DROP CONSTRAINT IF EXISTS project_phases_job_id_fkey;
 
-ALTER TABLE public.project_phases
-  ADD CONSTRAINT project_phases_project_id_fkey
-  FOREIGN KEY (project_id) REFERENCES public.projects (id) ON DELETE CASCADE;
+  ALTER TABLE public.project_phases
+    RENAME COLUMN job_id TO project_id;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'project_phases'
+      AND column_name = 'project_id'
+  ) THEN
+    RETURN;
+  END IF;
+
+  ALTER TABLE public.project_phases
+    DROP CONSTRAINT IF EXISTS project_phases_project_id_fkey;
+
+  ALTER TABLE public.project_phases
+    ADD CONSTRAINT project_phases_project_id_fkey
+    FOREIGN KEY (project_id) REFERENCES public.projects (id) ON DELETE CASCADE;
+END $$;
 
 DROP INDEX IF EXISTS ix_project_phases_job_id;
 DROP INDEX IF EXISTS ix_project_phases_job_id_sort_order;
@@ -189,27 +248,37 @@ BEGIN
   END IF;
 END $$;
 
-ALTER TABLE public.project_delivery_notes
-  DROP CONSTRAINT IF EXISTS job_notes_job_id_fkey;
-
 DO $$
 BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public'
+      AND table_name = 'project_delivery_notes'
+  ) THEN
+    RETURN;
+  END IF;
+
+  ALTER TABLE public.project_delivery_notes
+    DROP CONSTRAINT IF EXISTS job_notes_job_id_fkey;
+
   IF EXISTS (
-    SELECT 1 FROM information_schema.columns
+    SELECT 1
+    FROM information_schema.columns
     WHERE table_schema = 'public'
       AND table_name = 'project_delivery_notes'
       AND column_name = 'job_id'
   ) THEN
     ALTER TABLE public.project_delivery_notes RENAME COLUMN job_id TO project_id;
   END IF;
+
+  ALTER TABLE public.project_delivery_notes
+    DROP CONSTRAINT IF EXISTS project_delivery_notes_project_id_fkey;
+
+  ALTER TABLE public.project_delivery_notes
+    ADD CONSTRAINT project_delivery_notes_project_id_fkey
+    FOREIGN KEY (project_id) REFERENCES public.projects (id) ON DELETE CASCADE;
 END $$;
-
-ALTER TABLE public.project_delivery_notes
-  DROP CONSTRAINT IF EXISTS project_delivery_notes_project_id_fkey;
-
-ALTER TABLE public.project_delivery_notes
-  ADD CONSTRAINT project_delivery_notes_project_id_fkey
-  FOREIGN KEY (project_id) REFERENCES public.projects (id) ON DELETE CASCADE;
 
 -- job_events
 DO $$
@@ -225,27 +294,37 @@ BEGIN
   END IF;
 END $$;
 
-ALTER TABLE public.project_events
-  DROP CONSTRAINT IF EXISTS job_events_job_id_fkey;
-
 DO $$
 BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public'
+      AND table_name = 'project_events'
+  ) THEN
+    RETURN;
+  END IF;
+
+  ALTER TABLE public.project_events
+    DROP CONSTRAINT IF EXISTS job_events_job_id_fkey;
+
   IF EXISTS (
-    SELECT 1 FROM information_schema.columns
+    SELECT 1
+    FROM information_schema.columns
     WHERE table_schema = 'public'
       AND table_name = 'project_events'
       AND column_name = 'job_id'
   ) THEN
     ALTER TABLE public.project_events RENAME COLUMN job_id TO project_id;
   END IF;
+
+  ALTER TABLE public.project_events
+    DROP CONSTRAINT IF EXISTS project_events_project_id_fkey;
+
+  ALTER TABLE public.project_events
+    ADD CONSTRAINT project_events_project_id_fkey
+    FOREIGN KEY (project_id) REFERENCES public.projects (id) ON DELETE CASCADE;
 END $$;
-
-ALTER TABLE public.project_events
-  DROP CONSTRAINT IF EXISTS project_events_project_id_fkey;
-
-ALTER TABLE public.project_events
-  ADD CONSTRAINT project_events_project_id_fkey
-  FOREIGN KEY (project_id) REFERENCES public.projects (id) ON DELETE CASCADE;
 
 -- job_event_assignments
 DO $$
