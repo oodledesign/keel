@@ -22,6 +22,8 @@ import {
   WEBSITE_REVAMP_IMPORT_CLIENTS,
 } from '~/lib/campaign-projects/website-revamp-template';
 
+import { isMissingColumnError } from '../../../../_lib/server/supabase-errors';
+
 import type {
   AddClientToCampaignInput,
   CreateCampaignProjectInput,
@@ -128,37 +130,109 @@ class CampaignProjectsService {
     throw new Error(msg);
   }
 
+  /** Count campaign members; falls back to field-value rows when clients.project_id is missing. */
+  private async countClientsByProject(
+    accountId: string,
+    projectIds: string[],
+  ): Promise<Map<string, number>> {
+    const counts = new Map<string, number>();
+    if (projectIds.length === 0) return counts;
+
+    const { data: clients, error: clientsError } = await this.db
+      .from('clients')
+      .select('project_id')
+      .eq('account_id', accountId)
+      .in('project_id', projectIds);
+
+    if (!clientsError) {
+      for (const row of clients ?? []) {
+        const projectId = row.project_id as string;
+        counts.set(projectId, (counts.get(projectId) ?? 0) + 1);
+      }
+      return counts;
+    }
+
+    if (!isMissingColumnError(clientsError)) {
+      this.throwErr(clientsError);
+    }
+
+    const { data: values, error: valuesError } = await this.db
+      .from('project_client_field_values')
+      .select('project_id, client_id')
+      .eq('account_id', accountId)
+      .in('project_id', projectIds);
+
+    if (valuesError) this.throwErr(valuesError);
+
+    const uniqueByProject = new Map<string, Set<string>>();
+    for (const row of values ?? []) {
+      const projectId = row.project_id as string;
+      const clientId = row.client_id as string;
+      if (!uniqueByProject.has(projectId)) {
+        uniqueByProject.set(projectId, new Set());
+      }
+      uniqueByProject.get(projectId)!.add(clientId);
+    }
+
+    for (const [projectId, clientIds] of uniqueByProject) {
+      counts.set(projectId, clientIds.size);
+    }
+
+    return counts;
+  }
+
+  private async listCampaignClients(
+    accountId: string,
+    projectId: string,
+    valueRows: ValueRow[],
+  ) {
+    const { data, error } = await this.db
+      .from('clients')
+      .select('id, display_name, company_name, email')
+      .eq('account_id', accountId)
+      .eq('project_id', projectId)
+      .order('display_name', { ascending: true });
+
+    if (!error) return data ?? [];
+
+    if (!isMissingColumnError(error)) {
+      this.throwErr(error);
+    }
+
+    const clientIds = [...new Set(valueRows.map((row) => row.client_id))];
+    if (clientIds.length === 0) return [];
+
+    const { data: fallbackClients, error: fallbackError } = await this.db
+      .from('clients')
+      .select('id, display_name, company_name, email')
+      .eq('account_id', accountId)
+      .in('id', clientIds)
+      .order('display_name', { ascending: true });
+
+    if (fallbackError) this.throwErr(fallbackError);
+    return fallbackClients ?? [];
+  }
+
   async listProjects(params: ListCampaignProjectsInput): Promise<CampaignProject[]> {
     await this.ensureUser();
 
     const { data: projects, error } = await this.db
       .from('projects')
-      .select('id, account_id, name, created_at, updated_at')
+      .select('id, account_id, name, created_at, updated_at, project_type')
       .eq('account_id', params.accountId)
-      .eq('project_type', 'campaign')
+      .or('project_type.eq.campaign,project_type.is.null')
       .order('updated_at', { ascending: false });
 
     if (error) this.throwErr(error);
 
     const ids = (projects ?? []).map((row: { id: string }) => row.id);
-    const counts = new Map<string, number>();
+    const counts = await this.countClientsByProject(params.accountId, ids);
 
-    if (ids.length > 0) {
-      const { data: clients, error: clientsError } = await this.db
-        .from('clients')
-        .select('project_id')
-        .eq('account_id', params.accountId)
-        .in('project_id', ids);
-
-      if (clientsError) this.throwErr(clientsError);
-
-      for (const row of clients ?? []) {
-        const projectId = row.project_id as string;
-        counts.set(projectId, (counts.get(projectId) ?? 0) + 1);
-      }
-    }
-
-    return (projects ?? []).map(
+    return (projects ?? [])
+      .filter(
+        (row: { project_type?: string | null }) => row.project_type !== 'delivery',
+      )
+      .map(
       (row: {
         id: string;
         account_id: string;
@@ -181,27 +255,23 @@ class CampaignProjectsService {
 
     const { data: project, error } = await this.db
       .from('projects')
-      .select('id, account_id, name, created_at, updated_at')
+      .select('id, account_id, name, created_at, updated_at, project_type')
       .eq('account_id', params.accountId)
       .eq('id', params.projectId)
-      .eq('project_type', 'campaign')
       .maybeSingle();
 
     if (error) this.throwErr(error);
     if (!project) throw new Error('Campaign project not found');
+    if ((project as { project_type?: string | null }).project_type === 'delivery') {
+      throw new Error('Campaign project not found');
+    }
 
-    const [fieldsResult, clientsResult, valuesResult] = await Promise.all([
+    const [fieldsResult, valuesResult] = await Promise.all([
       this.db
         .from('project_field_definitions')
         .select('*')
         .eq('project_id', params.projectId)
         .order('sort_order', { ascending: true }),
-      this.db
-        .from('clients')
-        .select('id, display_name, company_name, email')
-        .eq('account_id', params.accountId)
-        .eq('project_id', params.projectId)
-        .order('display_name', { ascending: true }),
       this.db
         .from('project_client_field_values')
         .select('client_id, values')
@@ -209,8 +279,14 @@ class CampaignProjectsService {
     ]);
 
     if (fieldsResult.error) this.throwErr(fieldsResult.error);
-    if (clientsResult.error) this.throwErr(clientsResult.error);
     if (valuesResult.error) this.throwErr(valuesResult.error);
+
+    const valueRows = (valuesResult.data ?? []) as ValueRow[];
+    const clientsData = await this.listCampaignClients(
+      params.accountId,
+      params.projectId,
+      valueRows,
+    );
 
     const fields = ((fieldsResult.data ?? []) as FieldRow[]).map(mapField);
     const valuesByClient = new Map<string, Record<string, ProjectFieldValue>>();
@@ -221,7 +297,7 @@ class CampaignProjectsService {
 
     const websiteUrlField = fields.find((field) => field.fieldKey === 'website_url');
 
-    const rows = (clientsResult.data ?? []).map(
+    const rows = clientsData.map(
       (client: {
         id: string;
         display_name: string | null;

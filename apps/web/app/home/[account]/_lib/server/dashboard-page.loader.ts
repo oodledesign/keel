@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
+import { PROJECT_PRIMARY_CLIENT_EMBED } from '~/lib/projects/delivery-project-db';
 import { aggregateTransactionsByMonth } from '~/lib/date-range/analytics-date-range';
 import { accumulateFinanceTotals } from '~/lib/finance/transaction-totals';
 import { displayTitle } from '../workspace-content/context-resolve';
@@ -198,9 +199,12 @@ async function loadDashboardPageDataImpl(
   ] = await Promise.all([
     client
       .from('projects')
-      .select('id, title, status, priority, due_date, clients(display_name)', {
-        count: 'exact',
-      })
+      .select(
+        `id, title, status, priority, due_date, ${PROJECT_PRIMARY_CLIENT_EMBED}`,
+        {
+          count: 'exact',
+        },
+      )
       .eq('account_id', accountId)
       .eq('project_type', 'delivery')
       .in('status', ['pending', 'in_progress'])

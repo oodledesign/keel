@@ -3,7 +3,27 @@ export function isMissingColumnError(err: unknown): boolean {
   const e = err as { code?: string; message?: string; details?: string };
   const blob = `${e?.message ?? ''} ${e?.details ?? ''}`.toLowerCase();
 
-  return e?.code === 'PGRST204' || /could not find the .* column/i.test(blob);
+  return (
+    e?.code === 'PGRST204' ||
+    e?.code === '42703' ||
+    /could not find the .* column/i.test(blob) ||
+    (blob.includes('column') && blob.includes('does not exist'))
+  );
+}
+
+/** PostgREST PGRST201 — multiple FKs between two tables (e.g. projects ↔ clients). */
+export function isAmbiguousEmbedError(err: unknown): boolean {
+  const e = err as { code?: string; message?: string; details?: string };
+  const blob = `${e?.message ?? ''} ${e?.details ?? ''}`.toLowerCase();
+
+  return (
+    e?.code === 'PGRST201' ||
+    blob.includes('more than one relationship was found')
+  );
+}
+
+export function isRecoverableProjectsClientsEmbedError(err: unknown): boolean {
+  return isMissingColumnError(err) || isAmbiguousEmbedError(err);
 }
 
 /** PostgREST / Postgres errors when a relation is missing on the remote project. */

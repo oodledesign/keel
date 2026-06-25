@@ -5,6 +5,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody } from '@kit/ui/page';
 import pathsConfig from '~/config/paths.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { DELIVERY_PROJECT_TYPE } from '~/lib/projects/project-types';
 
 import { isWorkModuleEnabled } from '../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
@@ -63,29 +64,35 @@ async function ProjectDetailPage({ params }: ProjectDetailPageProps) {
     notFound();
   }
 
-  const projectType = (projectRow as { project_type?: string }).project_type;
+  const projectType = (projectRow as { project_type?: string | null }).project_type;
 
-  if (projectType === 'campaign') {
-    const data = await loadCampaignDetailPageData(accountSlug, id);
-    const listPath = pathsConfig.app.accountProjects.replace('[account]', accountSlug);
+  if (projectType !== DELIVERY_PROJECT_TYPE) {
+    try {
+      const data = await loadCampaignDetailPageData(accountSlug, id);
+      const listPath = pathsConfig.app.accountProjects.replace('[account]', accountSlug);
 
-    return (
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 md:px-6">
-        <a
-          href={listPath}
-          className="mb-4 inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-white"
-        >
-          ← All projects
-        </a>
-        <CampaignTableClient
-          accountId={data.accountId}
-          accountSlug={data.accountSlug}
-          project={data.project}
-          linkOptions={data.linkOptions}
-          canEdit={data.canEdit}
-        />
-      </PageBody>
-    );
+      return (
+        <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 md:px-6">
+          <a
+            href={listPath}
+            className="mb-4 inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-white"
+          >
+            ← All projects
+          </a>
+          <CampaignTableClient
+            accountId={data.accountId}
+            accountSlug={data.accountSlug}
+            project={data.project}
+            linkOptions={data.linkOptions}
+            canEdit={data.canEdit}
+          />
+        </PageBody>
+      );
+    } catch {
+      if (projectType === 'campaign') {
+        notFound();
+      }
+    }
   }
 
   const service = createJobsService(client);

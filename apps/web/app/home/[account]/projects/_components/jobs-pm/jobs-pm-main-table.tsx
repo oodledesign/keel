@@ -7,6 +7,7 @@ import {
   ChevronRight,
   ExternalLink,
   FileText,
+  LayoutGrid,
   Plus,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -63,6 +64,7 @@ type MemberPreview = {
 
 export function JobsPmMainTable({
   jobs,
+  campaigns = [],
   accountSlug,
   accountId,
   canEditJobs,
@@ -73,6 +75,7 @@ export function JobsPmMainTable({
   uiVariant,
 }: {
   jobs: JobsPmRow[];
+  campaigns?: Array<{ id: string; name: string; clientCount?: number }>;
   accountSlug: string;
   accountId: string;
   canEditJobs: boolean;
@@ -134,8 +137,62 @@ export function JobsPmMainTable({
 
   const projectLabel = uiVariant === 'maintenance' ? 'Job' : 'Project';
 
+  const showCampaigns = uiVariant !== 'maintenance' && campaigns.length > 0;
+
   return (
     <div className="min-h-0 flex-1 overflow-auto">
+      {showCampaigns ? (
+        <section className="mb-4 border-b border-white/8">
+          <div className="sticky top-0 z-10 flex w-full items-center gap-2 border-b border-white/8 bg-[var(--workspace-shell-canvas)] px-4 py-2.5 md:px-5">
+            <LayoutGrid className="h-4 w-4 text-[#5eead4]" />
+            <span className="text-sm font-semibold text-white">Campaign trackers</span>
+            <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-zinc-400">
+              {campaigns.length}
+            </span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-white/6 text-left text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+                  <th className="px-4 py-2 md:px-5">Campaign</th>
+                  <th className="px-2 py-2">Clients</th>
+                  <th className="w-[56px] px-2 py-2 md:pr-5" />
+                </tr>
+              </thead>
+              <tbody>
+                {campaigns.map((campaign) => (
+                  <tr
+                    key={campaign.id}
+                    className="group border-b border-white/4 hover:bg-white/[0.03]"
+                  >
+                    <td className="px-4 py-2 md:px-5">
+                      <Link
+                        href={jobDetailPath.replace('[id]', campaign.id)}
+                        className="font-medium text-white hover:text-[#579bfc]"
+                      >
+                        {campaign.name}
+                      </Link>
+                      <p className="mt-0.5 text-xs text-zinc-500">Campaign tracker</p>
+                    </td>
+                    <td className="px-2 py-2 text-zinc-400">
+                      {campaign.clientCount ?? 0}
+                    </td>
+                    <td className="px-2 py-2 md:pr-5">
+                      <Link
+                        href={jobDetailPath.replace('[id]', campaign.id)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded text-zinc-500 opacity-0 transition-opacity hover:bg-white/5 hover:text-white group-hover:opacity-100"
+                        aria-label={`Open ${campaign.name}`}
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
       {grouped.map((group) => {
         const isCollapsed = collapsed[group.id] ?? false;
         const phaseStyle = PHASE_CELL[group.id];

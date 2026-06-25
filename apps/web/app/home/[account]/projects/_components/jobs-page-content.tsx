@@ -66,7 +66,9 @@ export function JobsPageContent({
   const searchParams = useSearchParams();
 
   const [jobs, setJobs] = useState<JobsPmRow[]>([]);
-  const [campaigns, setCampaigns] = useState<Array<{ id: string; name: string }>>([]);
+  const [campaigns, setCampaigns] = useState<
+    Array<{ id: string; name: string; clientCount?: number }>
+  >([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<PageView>(
     searchParams.get('view') === 'kanban' ? 'kanban' : 'table',
@@ -121,7 +123,7 @@ export function JobsPageContent({
   const fetchJobs = useCallback(async () => {
     setLoading(true);
     try {
-      const [jobsResult, campaignsResult] = await Promise.all([
+      const [jobsSettled, campaignsSettled] = await Promise.allSettled([
         typeFilter === 'campaign'
           ? Promise.resolve({ data: [], total: 0 })
           : listJobs({
@@ -145,30 +147,42 @@ export function JobsPageContent({
           : listCampaignProjects({ accountId }),
       ]);
 
-      const payload = jobsResult as {
-        data?: unknown;
-        total?: number;
-        error?: unknown;
-      };
-
-      if (payload?.error) {
-        toast.error(getErrorMessage(payload.error));
+      if (jobsSettled.status === 'rejected') {
+        toast.error(getErrorMessage(jobsSettled.reason));
         setJobs([]);
       } else {
-        const rows = Array.isArray(payload?.data) ? payload.data : [];
-        setJobs(rows as JobsPmRow[]);
+        const payload = jobsSettled.value as {
+          data?: unknown;
+          total?: number;
+          error?: unknown;
+        };
+
+        if (payload?.error) {
+          toast.error(getErrorMessage(payload.error));
+          setJobs([]);
+        } else {
+          const rows = Array.isArray(payload?.data) ? payload.data : [];
+          setJobs(rows as JobsPmRow[]);
+        }
       }
 
-      const campaignRows = Array.isArray(campaignsResult)
-        ? campaignsResult
-        : ((campaignsResult as { projects?: Array<{ id: string; name: string }> })
-            ?.projects ?? []);
-      setCampaigns(
-        campaignRows.map((row) => ({
-          id: row.id,
-          name: (row as { name: string }).name,
-        })),
-      );
+      if (campaignsSettled.status === 'rejected') {
+        toast.error(getErrorMessage(campaignsSettled.reason));
+        setCampaigns([]);
+      } else {
+        const campaignsResult = campaignsSettled.value;
+        const campaignRows = Array.isArray(campaignsResult)
+          ? campaignsResult
+          : ((campaignsResult as { projects?: Array<{ id: string; name: string }> })
+              ?.projects ?? []);
+        setCampaigns(
+          campaignRows.map((row) => ({
+            id: row.id,
+            name: (row as { name: string }).name,
+            clientCount: (row as { clientCount?: number }).clientCount,
+          })),
+        );
+      }
     } catch (e) {
       toast.error(getErrorMessage(e));
       setJobs([]);
@@ -232,9 +246,18 @@ export function JobsPageContent({
     { key: 'schedule', label: 'Schedule', icon: CalendarDays },
   ];
 
+  const visibleCampaigns =
+    typeFilter === 'delivery'
+      ? []
+      : campaigns.filter((row) => {
+          if (!searchDebounced.trim()) return true;
+          return row.name.toLowerCase().includes(searchDebounced.trim().toLowerCase());
+        });
+
+  const visibleJobs = typeFilter === 'campaign' ? [] : jobs;
   const kanbanItems: ProjectsKanbanItem[] = [
-    ...jobs.map((row) => mapDeliveryRowToKanbanItem(row as Record<string, unknown>)),
-    ...campaigns.map((row) => mapCampaignRowToKanbanItem(row)),
+    ...visibleJobs.map((row) => mapDeliveryRowToKanbanItem(row as Record<string, unknown>)),
+    ...visibleCampaigns.map((row) => mapCampaignRowToKanbanItem(row)),
   ];
 
   const typeFilters: { key: ProjectTypeFilter; label: string }[] = [
@@ -336,7 +359,8 @@ export function JobsPageContent({
         </div>
       ) : view === 'table' ? (
         <JobsPmMainTable
-          jobs={jobs}
+          jobs={visibleJobs}
+          campaigns={visibleCampaigns}
           accountSlug={accountSlug}
           accountId={accountId}
           canEditJobs={canEditJobs}
@@ -349,7 +373,7 @@ export function JobsPageContent({
       ) : view === 'kanban' ? (
         <ProjectsKanbanView accountSlug={accountSlug} items={kanbanItems} />
       ) : view === 'timeline' ? (
-        <JobsPmTimelineView jobs={jobs} jobDetailPath={jobDetailPath} />
+        <JobsPmTimelineView jobs={visibleJobs} jobDetailPath={jobDetailPath} />
       ) : null}
 
       <CreateProjectDialog

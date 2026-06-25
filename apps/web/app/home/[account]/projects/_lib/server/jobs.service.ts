@@ -11,9 +11,12 @@ import {
   DELIVERY_PROJECT_FILTER,
   PROJECT_ASSIGNMENTS_TABLE,
   PROJECT_DELIVERY_NOTES_TABLE,
+  PROJECT_PRIMARY_CLIENT_EMBED,
   PROJECTS_TABLE,
 } from '~/lib/projects/delivery-project-db';
 import { deliveryProjectTitle } from '~/lib/projects/project-types';
+
+import { isRecoverableProjectsClientsEmbedError } from '../../../_lib/server/supabase-errors';
 
 import type {
   AddJobAssignmentInput,
@@ -131,7 +134,7 @@ class JobsService {
 
     let q = this.db
       .from(PROJECTS_TABLE)
-      .select('*, clients(display_name)', { count: 'exact' })
+      .select(`*, ${PROJECT_PRIMARY_CLIENT_EMBED}`, { count: 'exact' })
       .eq('account_id', accountId)
       .eq('project_type', DELIVERY_PROJECT_FILTER.project_type)
       .order('due_date', { ascending: true, nullsFirst: false })
@@ -161,14 +164,25 @@ class JobsService {
     count = result.count ?? null;
 
     if (error) {
+      const errorBlob = `${error?.message ?? ''}`.toLowerCase();
+      const omitProjectType =
+        isRecoverableProjectsClientsEmbedError(error) &&
+        errorBlob.includes('project_type');
+
       let fallbackQ = this.db
         .from(PROJECTS_TABLE)
         .select('*', { count: 'exact' })
         .eq('account_id', accountId)
-        .eq('project_type', DELIVERY_PROJECT_FILTER.project_type)
         .order('due_date', { ascending: true, nullsFirst: false })
         .order('created_at', { ascending: false })
         .range(from, to);
+
+      if (!omitProjectType) {
+        fallbackQ = fallbackQ.eq(
+          'project_type',
+          DELIVERY_PROJECT_FILTER.project_type,
+        );
+      }
       if (tab === 'active') {
         fallbackQ = fallbackQ.not('status', 'in', '("completed","cancelled")');
       } else if (tab === 'completed') {
@@ -176,7 +190,7 @@ class JobsService {
       }
       if (query?.trim()) {
         const term = `%${query.trim()}%`;
-        fallbackQ = fallbackQ.or(`title.ilike.${term},description.ilike.${term}`);
+        fallbackQ = fallbackQ.or(`name.ilike.${term},title.ilike.${term},description.ilike.${term}`);
       }
       if (status) fallbackQ = fallbackQ.eq('status', status);
       if (priority) fallbackQ = fallbackQ.eq('priority', priority);
@@ -226,7 +240,7 @@ class JobsService {
 
     const { data, error } = await this.db
       .from(PROJECTS_TABLE)
-      .select('*, clients(display_name)')
+      .select(`*, ${PROJECT_PRIMARY_CLIENT_EMBED}`)
       .eq('id', params.jobId)
       .eq('account_id', params.accountId)
       .eq('project_type', DELIVERY_PROJECT_FILTER.project_type)
