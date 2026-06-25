@@ -7,6 +7,11 @@ import { createTeamAccountsApi } from '@kit/team-accounts/api';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { Database } from '~/lib/database.types';
+import {
+  DELIVERY_PROJECT_FILTER,
+  PROJECTS_TABLE,
+} from '~/lib/projects/delivery-project-db';
+import { deliveryProjectTitle } from '~/lib/projects/project-types';
 
 import type {
   CreateClientInput,
@@ -399,15 +404,41 @@ class ClientsService {
   async getJobHistory(params: GetJobHistoryInput) {
     await this.ensureUser();
 
-    const { data, error } = await this.db
-      .from('jobs')
-      .select('id, title, status, value_pence, created_at, updated_at')
+    let result = await this.db
+      .from(PROJECTS_TABLE)
+      .select('id, title, name, status, value_pence, created_at, updated_at')
       .eq('client_id', params.clientId)
       .eq('account_id', params.accountId)
+      .eq('project_type', DELIVERY_PROJECT_FILTER.project_type)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
-    return data ?? [];
+    if (result.error && isMissingColumnError(result.error)) {
+      result = await this.db
+        .from(PROJECTS_TABLE)
+        .select('id, title, name, status, value_pence, created_at, updated_at')
+        .eq('client_id', params.clientId)
+        .eq('account_id', params.accountId)
+        .order('created_at', { ascending: false });
+    }
+
+    if (result.error) {
+      if (isMissingRelationError(result.error)) {
+        const legacy = await this.db
+          .from('jobs')
+          .select('id, title, status, value_pence, created_at, updated_at')
+          .eq('client_id', params.clientId)
+          .eq('account_id', params.accountId)
+          .order('created_at', { ascending: false });
+        if (legacy.error) throw legacy.error;
+        return legacy.data ?? [];
+      }
+      throw result.error;
+    }
+
+    return ((result.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+      ...row,
+      title: deliveryProjectTitle(row as { title?: string | null; name?: string | null }),
+    }));
   }
 
   async listClientInvoices(params: ListClientInvoicesInput) {

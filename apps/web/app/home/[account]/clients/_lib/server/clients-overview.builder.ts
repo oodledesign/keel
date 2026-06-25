@@ -1,6 +1,14 @@
 import 'server-only';
 
 import {
+  DELIVERY_PROJECT_FILTER,
+  PROJECT_ASSIGNMENTS_TABLE,
+  PROJECTS_TABLE,
+} from '~/lib/projects/delivery-project-db';
+import { deliveryProjectTitle } from '~/lib/projects/project-types';
+
+import {
+  isMissingColumnError,
   isMissingRelationError,
   logMissingRelation,
 } from '../../../_lib/server/supabase-errors';
@@ -24,13 +32,13 @@ type JobRow = {
 type TaskRow = {
   id: string;
   client_id: string | null;
-  job_id: string | null;
+  project_id: string | null;
   status: string | null;
   due_date: string | null;
 };
 
 type AssignmentRow = {
-  job_id: string;
+  project_id: string;
   user_id: string;
 };
 
@@ -52,11 +60,8 @@ function isTaskOpen(status: string | null | undefined): boolean {
   return !COMPLETED_TASK_STATUSES.has(status);
 }
 
-function jobProgressPercent(
-  job: JobRow,
-  tasks: TaskRow[],
-): number {
-  const jobTasks = tasks.filter((t) => t.job_id === job.id);
+function jobProgressPercent(job: JobRow, tasks: TaskRow[]): number {
+  const jobTasks = tasks.filter((t) => t.project_id === job.id);
   if (jobTasks.length > 0) {
     const done = jobTasks.filter((t) => !isTaskOpen(t.status)).length;
     return Math.round((done / jobTasks.length) * 100);
@@ -133,6 +138,191 @@ function memberPreview(
   };
 }
 
+function mergeTasks(existing: TaskRow[], incoming: TaskRow[]): TaskRow[] {
+  const seen = new Set(existing.map((task) => task.id));
+  const merged = [...existing];
+  for (const task of incoming) {
+    if (!seen.has(task.id)) {
+      merged.push(task);
+      seen.add(task.id);
+    }
+  }
+  return merged;
+}
+
+function mapLegacyTaskRows(rows: Array<Record<string, unknown>>): TaskRow[] {
+  return rows.map((row) => ({
+    id: String(row.id),
+    client_id: (row.client_id as string | null) ?? null,
+    project_id: (row.project_id as string | null) ?? (row.job_id as string | null) ?? null,
+    status: (row.status as string | null) ?? null,
+    due_date: (row.due_date as string | null) ?? null,
+  }));
+}
+
+async function loadDeliveryProjectsForClients(
+  db: any,
+  accountId: string,
+  clientIds: string[],
+): Promise<JobRow[]> {
+  const selectFields = 'id, client_id, title, name, status, due_date';
+
+  let result = await db
+    .from(PROJECTS_TABLE)
+    .select(selectFields)
+    .eq('account_id', accountId)
+    .eq('project_type', DELIVERY_PROJECT_FILTER.project_type)
+    .in('client_id', clientIds);
+
+  if (result.error && isMissingColumnError(result.error)) {
+    result = await db
+      .from(PROJECTS_TABLE)
+      .select(selectFields)
+      .eq('account_id', accountId)
+      .in('client_id', clientIds);
+  }
+
+  if (!result.error) {
+    return ((result.data ?? []) as Array<{
+      id: string;
+      client_id: string | null;
+      title: string | null;
+      name: string | null;
+      status: string | null;
+      due_date: string | null;
+    }>).map((row) => ({
+      id: row.id,
+      client_id: row.client_id,
+      title: deliveryProjectTitle(row),
+      status: row.status ?? 'pending',
+      due_date: row.due_date,
+    }));
+  }
+
+  if (!isMissingRelationError(result.error)) {
+    throw result.error;
+  }
+
+  logMissingRelation('clients-overview.projects', result.error);
+
+  const legacy = await db
+    .from('jobs')
+    .select('id, client_id, title, status, due_date')
+    .eq('account_id', accountId)
+    .in('client_id', clientIds);
+
+  if (legacy.error) {
+    if (!isMissingRelationError(legacy.error)) {
+      throw legacy.error;
+    }
+    logMissingRelation('clients-overview.jobs', legacy.error);
+    return [];
+  }
+
+  return (legacy.data ?? []) as JobRow[];
+}
+
+async function loadTasksByProjectIds(
+  db: any,
+  projectIds: string[],
+): Promise<TaskRow[]> {
+  if (projectIds.length === 0) return [];
+
+  let result = await db
+    .from('tasks')
+    .select('id, client_id, project_id, status, due_date')
+    .in('project_id', projectIds);
+
+  if (result.error && isMissingColumnError(result.error)) {
+    result = await db
+      .from('tasks')
+      .select('id, client_id, job_id, status, due_date')
+      .in('job_id', projectIds);
+  }
+
+  if (result.error) {
+    if (!isMissingRelationError(result.error) && !isMissingColumnError(result.error)) {
+      throw result.error;
+    }
+    logMissingRelation('clients-overview.tasks', result.error);
+    return [];
+  }
+
+  return mapLegacyTaskRows((result.data ?? []) as Array<Record<string, unknown>>);
+}
+
+async function loadTasksByClientIds(
+  db: any,
+  clientIds: string[],
+): Promise<TaskRow[]> {
+  let result = await db
+    .from('tasks')
+    .select('id, client_id, project_id, status, due_date')
+    .in('client_id', clientIds);
+
+  if (result.error && isMissingColumnError(result.error)) {
+    result = await db
+      .from('tasks')
+      .select('id, client_id, job_id, status, due_date')
+      .in('client_id', clientIds);
+  }
+
+  if (result.error) {
+    if (!isMissingRelationError(result.error) && !isMissingColumnError(result.error)) {
+      throw result.error;
+    }
+    logMissingRelation('clients-overview.client-tasks', result.error);
+    return [];
+  }
+
+  return mapLegacyTaskRows((result.data ?? []) as Array<Record<string, unknown>>);
+}
+
+async function loadProjectAssignments(
+  db: any,
+  accountId: string,
+  projectIds: string[],
+): Promise<AssignmentRow[]> {
+  if (projectIds.length === 0) return [];
+
+  let result = await db
+    .from(PROJECT_ASSIGNMENTS_TABLE)
+    .select('project_id, user_id')
+    .eq('account_id', accountId)
+    .in('project_id', projectIds);
+
+  if (!result.error) {
+    return (result.data ?? []) as AssignmentRow[];
+  }
+
+  if (!isMissingRelationError(result.error)) {
+    throw result.error;
+  }
+
+  logMissingRelation('clients-overview.assignments', result.error);
+
+  const legacy = await db
+    .from('job_assignments')
+    .select('job_id, user_id')
+    .eq('account_id', accountId)
+    .in('job_id', projectIds);
+
+  if (legacy.error) {
+    if (!isMissingRelationError(legacy.error)) {
+      throw legacy.error;
+    }
+    logMissingRelation('clients-overview.legacy-assignments', legacy.error);
+    return [];
+  }
+
+  return ((legacy.data ?? []) as Array<{ job_id: string; user_id: string }>).map(
+    (row) => ({
+      project_id: row.job_id,
+      user_id: row.user_id,
+    }),
+  );
+}
+
 export async function buildClientsOverview(params: {
   db: any;
   accountId: string;
@@ -147,25 +337,7 @@ export async function buildClientsOverview(params: {
   const clientIds = clients.map((c) => c.id);
   const membersById = new Map(members.map((m) => [m.user_id, m]));
 
-  let jobs: JobRow[] = [];
-  let tasks: TaskRow[] = [];
-  let assignments: AssignmentRow[] = [];
-  let contacts: ContactRow[] = [];
-
-  const jobsResult = await db
-    .from('jobs')
-    .select('id, client_id, title, status, due_date')
-    .eq('account_id', accountId)
-    .in('client_id', clientIds);
-
-  if (jobsResult.error) {
-    if (!isMissingRelationError(jobsResult.error)) {
-      throw jobsResult.error;
-    }
-    logMissingRelation('clients-overview', jobsResult.error);
-  } else {
-    jobs = jobsResult.data ?? [];
-  }
+  const jobs = await loadDeliveryProjectsForClients(db, accountId, clientIds);
 
   const jobsForClient = jobs.filter(
     (j) => j.client_id && j.status !== 'cancelled',
@@ -174,61 +346,25 @@ export async function buildClientsOverview(params: {
     (j) => !COMPLETED_JOB_STATUSES.has(j.status),
   );
 
-  const allJobIds = jobsForClient.map((j) => j.id);
-  const activeJobIds = activeJobs.map((j) => j.id);
+  const allProjectIds = jobsForClient.map((j) => j.id);
+  const activeProjectIds = activeJobs.map((j) => j.id);
 
-  if (allJobIds.length > 0) {
-    const [tasksResult, assignmentsResult] = await Promise.all([
-      db
-        .from('tasks')
-        .select('id, client_id, job_id, status, due_date')
-        .in('job_id', activeJobIds.length > 0 ? activeJobIds : allJobIds),
-      db
-        .from('job_assignments')
-        .select('job_id, user_id')
-        .eq('account_id', accountId)
-        .in('job_id', allJobIds),
+  let tasks: TaskRow[] = [];
+  let assignments: AssignmentRow[] = [];
+  let contacts: ContactRow[] = [];
+
+  if (allProjectIds.length > 0) {
+    const scopedProjectIds =
+      activeProjectIds.length > 0 ? activeProjectIds : allProjectIds;
+    const [projectTasks, assignmentRows] = await Promise.all([
+      loadTasksByProjectIds(db, scopedProjectIds),
+      loadProjectAssignments(db, accountId, allProjectIds),
     ]);
-
-    if (tasksResult.error) {
-      if (!isMissingRelationError(tasksResult.error)) {
-        throw tasksResult.error;
-      }
-      logMissingRelation('clients-overview.tasks', tasksResult.error);
-    } else {
-      tasks = tasksResult.data ?? [];
-    }
-
-    if (assignmentsResult.error) {
-      if (!isMissingRelationError(assignmentsResult.error)) {
-        throw assignmentsResult.error;
-      }
-      logMissingRelation('clients-overview.assignments', assignmentsResult.error);
-    } else {
-      assignments = assignmentsResult.data ?? [];
-    }
+    tasks = projectTasks;
+    assignments = assignmentRows;
   }
 
-  const clientTasksResult = await db
-    .from('tasks')
-    .select('id, client_id, job_id, status, due_date')
-    .in('client_id', clientIds);
-
-  if (clientTasksResult.error) {
-    if (!isMissingRelationError(clientTasksResult.error)) {
-      throw clientTasksResult.error;
-    }
-    logMissingRelation('clients-overview.client-tasks', clientTasksResult.error);
-  } else {
-    const clientScoped = clientTasksResult.data ?? [];
-    const seen = new Set(tasks.map((t) => t.id));
-    for (const task of clientScoped) {
-      if (!seen.has(task.id)) {
-        tasks.push(task);
-        seen.add(task.id);
-      }
-    }
-  }
+  tasks = mergeTasks(tasks, await loadTasksByClientIds(db, clientIds));
 
   const contactsResult = await db
     .from('client_contacts')
@@ -258,13 +394,13 @@ export async function buildClientsOverview(params: {
     }
   }
 
-  const assignmentsByJob = new Map<string, string[]>();
+  const assignmentsByProject = new Map<string, string[]>();
   for (const row of assignments) {
-    const list = assignmentsByJob.get(row.job_id) ?? [];
+    const list = assignmentsByProject.get(row.project_id) ?? [];
     if (!list.includes(row.user_id)) {
       list.push(row.user_id);
     }
-    assignmentsByJob.set(row.job_id, list);
+    assignmentsByProject.set(row.project_id, list);
   }
 
   const contactsByClient = new Map<string, number>();
@@ -283,7 +419,7 @@ export async function buildClientsOverview(params: {
 
     const teamUserIds = new Set<string>();
     for (const job of clientJobs) {
-      for (const userId of assignmentsByJob.get(job.id) ?? []) {
+      for (const userId of assignmentsByProject.get(job.id) ?? []) {
         teamUserIds.add(userId);
       }
     }

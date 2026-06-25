@@ -667,16 +667,18 @@ class CampaignProjectsService {
   }
 
   async listLinkOptions(accountId: string) {
-    await this.ensureUser();
+    await this.ensurePermission(accountId);
+
+    const readDb = this.adminDb;
 
     const [clientsResult, projectsResult] = await Promise.all([
-      this.db
+      readDb
         .from('clients')
         .select('id, display_name, company_name')
         .eq('account_id', accountId)
         .order('display_name', { ascending: true })
         .limit(500),
-      this.db
+      readDb
         .from('projects')
         .select('id, name')
         .eq('account_id', accountId)
