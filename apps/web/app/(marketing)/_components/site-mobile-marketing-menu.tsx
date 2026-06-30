@@ -34,6 +34,7 @@ import {
   marketingNavScrollClass,
   marketingNavSubContentClass,
 } from './site-marketing-nav-styles';
+import { marketingNavDropdownItem } from '~/lib/marketing/marketing-ui';
 
 const workspaceNavLinks = getMarketingWorkspaceNavLinks();
 const appNavLinks = getMarketingAppNavLinks();
@@ -49,7 +50,7 @@ export function SiteMobileMarketingMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label="Open Menu"
-        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-violet-200/20 bg-violet-500/10 text-violet-100 transition-colors hover:bg-violet-500/20"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/70 text-[var(--workspace-shell-text)] transition-colors hover:bg-[var(--workspace-shell-panel-hover)]"
       >
         <Menu className="h-5 w-5" />
       </DropdownMenuTrigger>
@@ -64,7 +65,7 @@ export function SiteMobileMarketingMenu() {
         )}
       >
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger className="flex h-12 items-center gap-3 rounded-md px-3 text-base text-violet-100/90 focus:bg-violet-500/15 focus:text-violet-50">
+          <DropdownMenuSubTrigger className={cn('flex h-12 items-center gap-3 rounded-md px-3 text-base', marketingNavDropdownItem)}>
             <LayoutTemplate className="h-5 w-5 shrink-0 opacity-80" />
             Workspaces
           </DropdownMenuSubTrigger>
@@ -78,7 +79,7 @@ export function SiteMobileMarketingMenu() {
               return (
                 <DropdownMenuItem key={item.path} asChild>
                   <Link
-                    className="flex h-11 w-full items-center gap-3 rounded-md px-3 text-sm text-violet-100/85 hover:bg-violet-500/15 hover:text-violet-50"
+                    className={cn('flex h-11 w-full items-center gap-3 rounded-md px-3 text-sm', marketingNavDropdownItem)}
                     href={item.path}
                   >
                     <Icon className="h-4 w-4 shrink-0 opacity-80" />
@@ -92,7 +93,7 @@ export function SiteMobileMarketingMenu() {
 
         <DropdownMenuItem asChild>
           <Link
-            className="flex h-12 w-full items-center gap-3 rounded-md px-3 text-base text-violet-100/90 transition-colors hover:bg-violet-500/15 hover:text-violet-50"
+            className={cn('flex h-12 w-full items-center gap-3 rounded-md px-3 text-base transition-colors', marketingNavDropdownItem)}
             href="/pricing"
           >
             <CreditCard className="h-5 w-5 shrink-0 opacity-80" />
@@ -100,10 +101,10 @@ export function SiteMobileMarketingMenu() {
           </Link>
         </DropdownMenuItem>
 
-        <DropdownMenuSeparator className="bg-violet-200/15" />
+        <DropdownMenuSeparator className="bg-[color:var(--workspace-shell-border)]" />
 
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger className="flex h-12 items-center gap-3 rounded-md px-3 text-base text-violet-100/90 focus:bg-violet-500/15 focus:text-violet-50">
+          <DropdownMenuSubTrigger className={cn('flex h-12 items-center gap-3 rounded-md px-3 text-base', marketingNavDropdownItem)}>
             <Layers className="h-5 w-5 shrink-0 opacity-80" />
             Features
           </DropdownMenuSubTrigger>
@@ -116,16 +117,16 @@ export function SiteMobileMarketingMenu() {
           >
             <DropdownMenuItem asChild>
               <Link
-                className="flex h-11 w-full items-center rounded-md px-3 text-sm font-medium text-violet-100/90 hover:bg-violet-500/15 hover:text-violet-50"
+                className={cn('flex h-11 w-full items-center rounded-md px-3 text-sm font-medium', marketingNavDropdownItem)}
                 href="/features"
               >
                 All features
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-violet-200/15" />
+            <DropdownMenuSeparator className="bg-[color:var(--workspace-shell-border)]" />
             {FEATURE_NAV_GROUPS.map((group) => (
               <DropdownMenuSub key={group.label}>
-                <DropdownMenuSubTrigger className="rounded-md px-3 text-sm text-violet-100/90 focus:bg-violet-500/15 focus:text-violet-50">
+                <DropdownMenuSubTrigger className={cn('rounded-md px-3 text-sm', marketingNavDropdownItem)}>
                   {group.label}
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent
@@ -138,7 +139,7 @@ export function SiteMobileMarketingMenu() {
                       asChild
                     >
                       <Link
-                        className="flex h-11 w-full items-center rounded-md px-3 text-sm text-violet-100/85 hover:bg-violet-500/15 hover:text-violet-50"
+                        className={cn('flex h-11 w-full items-center rounded-md px-3 text-sm', marketingNavDropdownItem)}
                         href={item.href}
                       >
                         {item.label}
@@ -152,7 +153,7 @@ export function SiteMobileMarketingMenu() {
         </DropdownMenuSub>
 
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger className="flex h-12 items-center gap-3 rounded-md px-3 text-base text-violet-100/90 focus:bg-violet-500/15 focus:text-violet-50">
+          <DropdownMenuSubTrigger className={cn('flex h-12 items-center gap-3 rounded-md px-3 text-base', marketingNavDropdownItem)}>
             <LayoutGrid className="h-5 w-5 shrink-0 opacity-80" />
             Apps
           </DropdownMenuSubTrigger>
@@ -162,17 +163,17 @@ export function SiteMobileMarketingMenu() {
           >
             <DropdownMenuItem asChild>
               <Link
-                className="flex h-11 w-full items-center rounded-md px-3 text-sm font-medium text-violet-100/90 hover:bg-violet-500/15 hover:text-violet-50"
+                className={cn('flex h-11 w-full items-center rounded-md px-3 text-sm font-medium', marketingNavDropdownItem)}
                 href="/apps"
               >
                 All Ozer apps
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-violet-200/15" />
+            <DropdownMenuSeparator className="bg-[color:var(--workspace-shell-border)]" />
             {appNavLinks.map((item) => (
               <DropdownMenuItem key={item.path} asChild>
                 <Link
-                  className="flex h-11 w-full items-center rounded-md px-3 text-sm text-violet-100/85 hover:bg-violet-500/15 hover:text-violet-50"
+                  className={cn('flex h-11 w-full items-center rounded-md px-3 text-sm', marketingNavDropdownItem)}
                   href={item.path}
                 >
                   {item.label}
@@ -182,11 +183,11 @@ export function SiteMobileMarketingMenu() {
           </DropdownMenuSubContent>
         </DropdownMenuSub>
 
-        <DropdownMenuSeparator className="bg-violet-200/15" />
+        <DropdownMenuSeparator className="bg-[color:var(--workspace-shell-border)]" />
 
         <DropdownMenuItem asChild>
           <Link
-            className="flex h-12 w-full items-center gap-3 rounded-md px-3 text-base font-medium text-violet-100/90 hover:bg-violet-500/15 hover:text-violet-50"
+            className={cn('flex h-12 w-full items-center gap-3 rounded-md px-3 text-base font-medium', marketingNavDropdownItem)}
             href={pathsConfig.auth.signIn}
           >
             <LogIn className="h-5 w-5 shrink-0 opacity-80" />

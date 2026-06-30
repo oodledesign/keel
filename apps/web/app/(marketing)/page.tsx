@@ -70,7 +70,7 @@ function Home() {
         <PricingSection />
       </div>
 
-      <section className="relative mx-auto w-full max-w-7xl px-6 pb-24">
+      <section className="relative mx-auto w-full max-w-7xl px-6 pb-24 pt-16 md:pt-24">
         <div className="mb-8">
           <h2 className="font-heading text-3xl font-semibold text-[var(--workspace-shell-text)] md:text-4xl">
             Everything connects through your personal home.

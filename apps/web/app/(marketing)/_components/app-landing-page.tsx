@@ -10,7 +10,18 @@ import {
   formatGbp,
 } from '~/lib/billing/pricing-marketing';
 import type { AppLandingConfig } from '~/lib/marketing/app-landing-pages';
-import { marketingBtnGradient, marketingHeadlineGradient } from '~/lib/marketing/marketing-ui';
+import {
+  marketingBodyText,
+  marketingBtnGradient,
+  marketingBtnOutline,
+  marketingEyebrow,
+  marketingFeatureCard,
+  marketingHeadlineGradient,
+  marketingMutedText,
+  marketingPanelDeep,
+  marketingPanelInner,
+  marketingSectionMuted,
+} from '~/lib/marketing/marketing-ui';
 
 import { MarketingFaqsSection } from './marketing-faqs';
 
@@ -35,10 +46,8 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
         <div className="grid items-center gap-12 lg:grid-cols-[1.05fr,0.95fr]">
           <div className="space-y-8">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center rounded-full border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-4 py-1.5 text-xs font-medium uppercase tracking-[0.14em] text-[var(--ozer-accent-muted)]">
-                {config.hero.eyebrow}
-              </span>
-              <span className="inline-flex items-center rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-1 text-xs font-medium text-violet-100/90">
+              <span className={marketingEyebrow}>{config.hero.eyebrow}</span>
+              <span className={`inline-flex items-center rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/70 px-3 py-1 text-xs font-medium ${marketingBodyText}`}>
                 From {formatGbp(config.fromPriceGbp)}/mo per workspace
               </span>
             </div>
@@ -52,7 +61,7 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
                 </span>
                 .
               </h1>
-              <p className="max-w-xl text-base leading-relaxed text-violet-100/85 md:text-lg">
+              <p className={`max-w-xl text-base leading-relaxed md:text-lg ${marketingBodyText}`}>
                 {config.hero.subtitle}
               </p>
             </div>
@@ -68,35 +77,35 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
                 asChild
                 variant="outline"
                 size="lg"
-                className="h-11 rounded-full border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-6 text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                className={marketingBtnOutline}
               >
                 <Link href="/pricing">View pricing</Link>
               </Button>
             </div>
           </div>
 
-          <div className="relative rounded-3xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)]/85 p-5 shadow-[0_30px_100px_rgba(8,20,40,0.55)] backdrop-blur">
-            <div className="absolute -inset-px rounded-3xl bg-[linear-gradient(135deg,rgba(42,157,143,0.35),rgba(37,99,235,0.2),transparent_58%)] opacity-70" />
-            <div className="relative space-y-4 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] p-5">
+          <div className={`relative rounded-3xl p-5 ${marketingPanelDeep}`}>
+            <div className="absolute -inset-px rounded-3xl bg-[linear-gradient(135deg,var(--ozer-coral-alpha-15),transparent_58%)] opacity-70" />
+            <div className={`relative space-y-4 p-5 ${marketingPanelInner}`}>
               <div className="flex items-center gap-3">
-                <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--ozer-accent)]">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-alpha-08)] text-[var(--ozer-accent)]">
                   <Icon className="h-5 w-5" aria-hidden />
                 </span>
                 <div>
                   <p className="font-semibold text-[var(--workspace-shell-text)]">{config.name}</p>
-                  <p className="text-xs text-violet-200/75">Ozer workspace add-on</p>
+                  <p className={`text-xs ${marketingMutedText}`}>Ozer workspace add-on</p>
                 </div>
               </div>
               <ul className="space-y-3">
                 {config.features.map((feature) => (
                   <li
                     key={feature.title}
-                    className="flex items-start gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-3"
+                    className="flex items-start gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/80 px-3 py-3"
                   >
                     <feature.icon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
                     <div>
                       <p className="text-sm font-medium text-[var(--workspace-shell-text)]">{feature.title}</p>
-                      <p className="mt-0.5 text-xs leading-relaxed text-violet-100/75">
+                      <p className={`mt-0.5 text-xs leading-relaxed ${marketingMutedText}`}>
                         {feature.description}
                       </p>
                     </div>
@@ -120,7 +129,7 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
           >
             What {config.name} includes
           </h2>
-          <p className="mt-3 text-violet-100/80">
+          <p className={`mt-3 ${marketingBodyText}`}>
             Install {config.name} on any Ozer business workspace. Business Lite is free — you only pay for the apps you need.
           </p>
         </div>
@@ -128,13 +137,13 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
           {config.features.map((feature) => (
             <article
               key={feature.title}
-              className="rounded-2xl border border-[color:var(--workspace-shell-border)] marketing-feature-card p-6"
+              className={`rounded-2xl border border-[color:var(--workspace-shell-border)] ${marketingFeatureCard} p-6`}
             >
               <feature.icon className="h-5 w-5 text-[var(--ozer-accent)]" aria-hidden />
               <h3 className="mt-4 font-heading text-xl font-semibold text-[var(--workspace-shell-text)]">
                 {feature.title}
               </h3>
-              <p className="mt-2 text-sm leading-relaxed text-violet-100/80">
+              <p className={`mt-2 text-sm leading-relaxed ${marketingMutedText}`}>
                 {feature.description}
               </p>
             </article>
@@ -143,7 +152,7 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
       </section>
 
       <section
-        className="border-y border-[color:var(--workspace-shell-border)] bg-[#070610]/80 py-20"
+        className={`border-y py-20 ${marketingSectionMuted}`}
         aria-labelledby="app-how-heading"
       >
         <div className="mx-auto w-full max-w-7xl px-6">
@@ -157,13 +166,13 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
             {config.steps.map((step, index) => (
               <li
                 key={step.title}
-                className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-6"
+                className={`rounded-2xl border border-[color:var(--workspace-shell-border)] ${marketingFeatureCard} p-6`}
               >
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--ozer-accent-subtle)] text-sm font-bold text-[var(--ozer-accent-muted)]">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--ozer-accent-subtle)] text-sm font-bold text-[var(--ozer-coral-600)]">
                   {index + 1}
                 </span>
                 <h3 className="mt-4 text-lg font-semibold text-[var(--workspace-shell-text)]">{step.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-violet-100/80">
+                <p className={`mt-2 text-sm leading-relaxed ${marketingMutedText}`}>
                   {step.description}
                 </p>
               </li>
@@ -180,11 +189,11 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
       />
 
       <section className="relative mx-auto w-full max-w-7xl px-6 py-20">
-        <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-gradient-to-br from-[var(--ozer-surface-panel)] to-[var(--ozer-surface-canvas)] px-8 py-12 text-center">
+        <div className={`rounded-2xl border border-[color:var(--workspace-shell-border)] px-8 py-12 text-center ${marketingFeatureCard}`}>
           <h2 className="font-heading text-3xl font-semibold text-[var(--workspace-shell-text)]">
             Add {config.name} to your workspace
           </h2>
-          <p className="mx-auto mt-3 max-w-xl text-violet-100/80">
+          <p className={`mx-auto mt-3 max-w-xl ${marketingBodyText}`}>
             Create a free Business Lite workspace, then subscribe to {config.name} from billing when you are ready.
           </p>
           <Button
@@ -194,7 +203,7 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
           >
             <Link href={BUSINESS_LITE_SIGNUP}>Get started free</Link>
           </Button>
-          <p className="mt-4 text-xs text-violet-200/60">
+          <p className={`mt-4 text-xs ${marketingMutedText}`}>
             Explore all apps on the{' '}
             <Link href="/apps" className="underline hover:text-[var(--workspace-shell-text)]">
               Ozer apps page

@@ -10,7 +10,13 @@ import {
   formatGbp,
 } from '~/lib/billing/pricing-marketing';
 import { listAppLandingSummaries } from '~/lib/marketing/app-landing-pages';
-import { marketingBtnGradient, marketingHeadlineGradient } from '~/lib/marketing/marketing-ui';
+import {
+  marketingBodyText,
+  marketingBtnGradient,
+  marketingEyebrow,
+  marketingHeadlineGradient,
+  marketingMutedText,
+} from '~/lib/marketing/marketing-ui';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 const BUSINESS_LITE_SIGNUP = buildPricingSignupUrl({
@@ -34,9 +40,7 @@ function AppsMarketingPage() {
 
       <section className="relative mx-auto w-full max-w-7xl px-6 pb-20 pt-24 md:pt-28">
         <div className="max-w-3xl space-y-6">
-          <span className="inline-flex items-center rounded-full border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-4 py-1.5 text-xs font-medium uppercase tracking-[0.14em] text-[var(--ozer-accent-muted)]">
-            Ozer apps
-          </span>
+          <span className={marketingEyebrow}>Ozer apps</span>
           <h1 className="font-heading text-4xl font-bold leading-tight text-[var(--workspace-shell-text)] md:text-5xl lg:text-6xl">
             Add the tools you need to any{' '}
             <span className={marketingHeadlineGradient}>
@@ -44,7 +48,7 @@ function AppsMarketingPage() {
             </span>
             .
           </h1>
-          <p className="text-base leading-relaxed text-violet-100/85 md:text-lg">
+          <p className={`text-base leading-relaxed md:text-lg ${marketingBodyText}`}>
             Ozer apps install per workspace — start with free Business Lite, then subscribe to Signatures, Rankly, Feedflow, or Videos when you need them. No bundle bloat.
           </p>
           <Button asChild size="lg" className={marketingBtnGradient}>
@@ -74,11 +78,11 @@ function AppsMarketingPage() {
                       <h2 className="font-heading text-xl font-semibold text-[var(--workspace-shell-text)]">
                         {app.name}
                       </h2>
-                      <span className="text-xs font-medium text-violet-200/70">
+                      <span className={`text-xs font-medium ${marketingMutedText}`}>
                         From {formatGbp(app.fromPriceGbp)}/mo
                       </span>
                     </div>
-                    <p className="mt-2 text-sm leading-relaxed text-violet-100/80">
+                    <p className={`mt-2 text-sm leading-relaxed ${marketingMutedText}`}>
                       {app.description}
                     </p>
                     <span className="mt-4 inline-flex items-center text-sm font-medium text-[var(--ozer-accent-muted)]">
@@ -92,7 +96,7 @@ function AppsMarketingPage() {
           })}
         </div>
 
-        <p className="mt-12 text-center text-sm text-violet-200/70">
+        <p className={`mt-12 text-center text-sm ${marketingMutedText}`}>
           Need a full CRM too?{' '}
           <Link href="/work" className="underline underline-offset-2 hover:text-[var(--workspace-shell-text)]">
             Explore business workspaces

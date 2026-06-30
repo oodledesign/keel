@@ -53,6 +53,11 @@ import {
   KEEL_STRIPE_PRICES,
 } from '~/lib/billing/stripe-price-ids';
 
+import {
+  MarketingFaqsSection,
+  type MarketingFaqItem,
+} from './marketing-faqs';
+
 const PRICING_CONFIG = {
   currency: KEEL_BILLING_CURRENCY,
   trialDays: 14,
@@ -628,7 +633,7 @@ function BillingToggle({
                   animate={{
                     opacity: selected ? 1 : 0.75,
                   }}
-                  className="rounded-full bg-[#2dd4bf]/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#2dd4bf]"
+                  className="rounded-full bg-[var(--ozer-accent-subtle)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--ozer-accent)]"
                 >
                   Save {ANNUAL_DISCOUNT_PERCENT}%
                 </motion.span>
@@ -662,10 +667,10 @@ function WorkspaceAssistantBadges({
                   className={cn(
                     'inline-flex h-7 w-7 items-center justify-center rounded-md border',
                     isIncluded
-                      ? 'border-[#2dd4bf]/40 bg-[#2dd4bf]/10 text-[#2dd4bf]'
+                      ? 'border-[var(--ozer-accent)]/40 bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]'
                       : isComingSoon
-                        ? 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--ozer-text-on-light-muted)]'
-                        : 'border-violet-400/30 bg-violet-500/10 text-violet-300',
+                        ? 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--ozer-text-on-dark-muted)]'
+                        : 'border-[var(--ozer-gold-500)]/30 bg-[var(--ozer-gold-500)]/10 text-[var(--ozer-gold-500)]',
                   )}
                 >
                   <Icon className="h-3.5 w-3.5" aria-hidden />
@@ -732,7 +737,7 @@ function WorkspaceCard({
         'relative flex h-full flex-col rounded-2xl border p-5 text-left transition-shadow duration-150',
         'bg-[var(--ozer-plum-950)]/60 backdrop-blur-sm',
         selected
-          ? 'border-[#2dd4bf]/60 bg-[#2dd4bf]/10 shadow-[0_12px_40px_rgba(45,212,191,0.12)]'
+          ? 'border-[var(--ozer-accent)]/60 bg-[var(--ozer-accent-subtle)] shadow-[0_12px_40px_var(--ozer-coral-alpha-15)]'
           : 'border-[color:var(--workspace-shell-border)] shadow-none hover:border-[color:var(--workspace-shell-border)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.35)]',
         locked ? 'cursor-default' : 'cursor-pointer',
       )}
@@ -751,7 +756,7 @@ function WorkspaceCard({
           className={cn(
             'flex h-6 w-6 items-center justify-center rounded-md border',
             selected
-              ? 'border-[#2dd4bf]/50 bg-[#2dd4bf]/20 text-[#2dd4bf]'
+              ? 'border-[var(--ozer-accent)]/50 bg-[var(--ozer-accent)]/20 text-[var(--ozer-accent)]'
               : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-transparent',
           )}
         >
@@ -783,7 +788,7 @@ function WorkspaceCard({
       <ul className="mt-3 space-y-1">
         {workspace.highlights.map((line) => (
           <li key={line} className="flex gap-2 text-xs leading-relaxed text-[var(--ozer-text-on-dark-muted)]">
-            <Check className="mt-0.5 h-3 w-3 shrink-0 text-[#2dd4bf]/70" aria-hidden />
+            <Check className="mt-0.5 h-3 w-3 shrink-0 text-[var(--ozer-accent)]/70" aria-hidden />
             <span>{line}</span>
           </li>
         ))}
@@ -839,14 +844,14 @@ function TierPicker({
               className={cn(
                 'rounded-xl border px-4 py-3 text-left transition-colors',
                 selected
-                  ? 'border-[#2dd4bf]/60 bg-[#2dd4bf]/10'
+                  ? 'border-[var(--ozer-accent)]/60 bg-[var(--ozer-accent-subtle)]'
                   : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] hover:border-[color:var(--workspace-shell-border)]',
               )}
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="font-medium text-[var(--ozer-text-on-dark)]">{tier.label}</span>
                 {'badge' in tier && tier.badge ? (
-                  <span className="rounded-full bg-[#7c3aed]/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-200">
+                  <span className="rounded-full bg-[var(--ozer-gold-500)]/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--ozer-gold-500)]">
                     {tier.badge}
                   </span>
                 ) : null}
@@ -894,7 +899,7 @@ function AddonToggle({
         disabled
           ? 'cursor-default border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] opacity-90'
           : selected
-            ? 'border-[#2dd4bf]/60 bg-[#2dd4bf]/10'
+            ? 'border-[var(--ozer-accent)]/60 bg-[var(--ozer-accent-subtle)]'
             : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] hover:border-[color:var(--workspace-shell-border)]',
       )}
     >
@@ -905,8 +910,8 @@ function AddonToggle({
               className={cn(
                 'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
                 selected && !disabled
-                  ? 'bg-[#2dd4bf]/15 text-[#2dd4bf]'
-                  : 'bg-violet-500/10 text-violet-300',
+                  ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]'
+                  : 'bg-[var(--ozer-gold-500)]/10 text-[var(--ozer-gold-500)]',
               )}
             >
               <Icon className="h-4 w-4" aria-hidden />
@@ -920,7 +925,7 @@ function AddonToggle({
         <span
           className={cn(
             'shrink-0 text-sm font-semibold',
-            disabled ? 'text-[var(--ozer-text-on-light-muted)]' : 'text-[#2dd4bf]',
+            disabled ? 'text-[var(--ozer-text-on-dark-muted)]' : 'text-[var(--ozer-accent)]',
           )}
         >
           {priceLabel}
@@ -1007,7 +1012,7 @@ function AddonsPanel({
           <Puzzle className="h-3.5 w-3.5" aria-hidden />
           Workspace apps
           {paidWorkspaceCount === 0 ? (
-            <span className="font-normal normal-case text-[var(--ozer-text-on-light-muted)]">
+            <span className="font-normal normal-case text-[var(--ozer-text-on-dark-muted)]">
               — select a paid workspace first
             </span>
           ) : null}
@@ -1067,16 +1072,16 @@ function AddonsPanel({
       </div>
 
       {selected.has('business') ? (
-        <p className="flex items-start gap-2 text-xs text-[var(--ozer-text-on-light-muted)]">
-          <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-300" aria-hidden />
+        <p className="flex items-start gap-2 text-xs text-[var(--ozer-text-on-dark-muted)]">
+          <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--ozer-gold-500)]" aria-hidden />
           Business Lite is free and built for the apps marketplace — pick Lite above if you
           only need Signatures, Rankly, or other add-ons without full CRM features.
         </p>
       ) : null}
 
-      <p className="text-xs text-[var(--ozer-text-on-light-muted)]">
+      <p className="text-xs text-[var(--ozer-text-on-dark-muted)]">
         Add-ons are monthly only today. See{' '}
-        <Link href="/pricing" className="text-[#2dd4bf] underline-offset-4 hover:underline">
+        <Link href="/pricing" className="text-[var(--ozer-accent)] underline-offset-4 hover:underline">
           full pricing
         </Link>{' '}
         for feature lists.
@@ -1084,6 +1089,36 @@ function AddonsPanel({
     </div>
   );
 }
+
+const PRICING_FAQS: MarketingFaqItem[] = [
+  {
+    question: 'How do add-ons like Email Assistant or Rankly work?',
+    answer:
+      'Personal add-ons attach to your home account. Workspace apps attach to each business, property, or community workspace you run — so Rankly on two workspaces means two subscriptions.',
+  },
+  {
+    question: 'Can I add workspaces later?',
+    answer:
+      "Yes — add or remove any workspace from your account settings at any time. You're only charged for what you have active.",
+  },
+  {
+    question: 'Is there a free trial?',
+    answer: `Yes — paid workspaces include a ${PRICING_CONFIG.trialDays}-day trial on your first subscription.`,
+  },
+  {
+    question: 'What if I need more than one business?',
+    answer: 'Each business gets its own workspace. Contact us for multi-business pricing.',
+  },
+  {
+    question: 'Can I cancel anytime?',
+    answer: 'Yes. No lock-in, no cancellation fees.',
+  },
+  {
+    question: 'Is my data secure?',
+    answer:
+      'Ozer is hosted on Supabase/AWS in the EU, with encrypted storage and strict access controls.',
+  },
+];
 
 function ComparisonTable({ reducedMotion }: { reducedMotion: boolean }) {
   const [expanded, setExpanded] = useState(false);
@@ -1128,7 +1163,7 @@ function ComparisonTable({ reducedMotion }: { reducedMotion: boolean }) {
           <tr className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
             <th className="px-4 py-3 font-medium text-[var(--ozer-text-on-dark-muted)]">Feature</th>
             <th className="px-4 py-3 font-medium text-[var(--ozer-text-on-dark-muted)]">Typical tools</th>
-            <th className="px-4 py-3 font-medium text-[#2dd4bf]">Ozer</th>
+            <th className="px-4 py-3 font-medium text-[var(--ozer-accent)]">Ozer</th>
           </tr>
         </thead>
         <tbody>
@@ -1138,7 +1173,7 @@ function ComparisonTable({ reducedMotion }: { reducedMotion: boolean }) {
               <td className="px-4 py-3 text-[var(--ozer-text-on-dark-muted)]">
                 {typeof row.typical === 'boolean' ? (
                   row.typical ? (
-                    <Check className="h-4 w-4 text-[#2dd4bf]" aria-label="Yes" />
+                    <Check className="h-4 w-4 text-[var(--ozer-accent)]" aria-label="Yes" />
                   ) : (
                     <span aria-label="No">✗</span>
                   )
@@ -1149,7 +1184,7 @@ function ComparisonTable({ reducedMotion }: { reducedMotion: boolean }) {
               <td className="px-4 py-3">
                 {typeof row.ozer === 'boolean' ? (
                   row.ozer ? (
-                    <Check className="h-4 w-4 text-[#2dd4bf]" aria-label="Yes" />
+                    <Check className="h-4 w-4 text-[var(--ozer-accent)]" aria-label="Yes" />
                   ) : (
                     <span aria-label="No">✗</span>
                   )
@@ -1171,7 +1206,7 @@ function ComparisonTable({ reducedMotion }: { reducedMotion: boolean }) {
         <button
           type="button"
           onClick={() => setExpanded((value) => !value)}
-          className="text-sm text-[#2dd4bf] underline-offset-4 hover:underline"
+          className="text-sm text-[var(--ozer-accent)] underline-offset-4 hover:underline"
         >
           {expanded ? 'Hide comparison' : 'Show comparison'}
         </button>
@@ -1197,93 +1232,6 @@ function ComparisonTable({ reducedMotion }: { reducedMotion: boolean }) {
           </motion.div>
         ) : null}
       </AnimatePresence>
-    </div>
-  );
-}
-
-function PricingFaq({ reducedMotion }: { reducedMotion: boolean }) {
-  const items = [
-    {
-      id: 'addons',
-      question: 'How do add-ons like Email Assistant or Rankly work?',
-      answer:
-        'Personal add-ons attach to your home account. Workspace apps attach to each business, property, or community workspace you run — so Rankly on two workspaces means two subscriptions.',
-    },
-    {
-      id: 'add-later',
-      question: 'Can I add workspaces later?',
-      answer:
-        "Yes — add or remove any workspace from your account settings at any time. You're only charged for what you have active.",
-    },
-    {
-      id: 'trial',
-      question: 'Is there a free trial?',
-      answer: `Yes — paid workspaces include a ${PRICING_CONFIG.trialDays}-day trial on your first subscription.`,
-    },
-    {
-      id: 'multi-business',
-      question: 'What if I need more than one business?',
-      answer:
-        'Each business gets its own workspace. Contact us for multi-business pricing.',
-    },
-    {
-      id: 'cancel',
-      question: 'Can I cancel anytime?',
-      answer: 'Yes. No lock-in, no cancellation fees.',
-    },
-    {
-      id: 'security',
-      question: 'Is my data secure?',
-      answer:
-        'Ozer is hosted on Supabase/AWS in the EU, with encrypted storage and strict access controls.',
-    },
-  ] as const;
-
-  const [openId, setOpenId] = useState<string | null>(items[0]?.id ?? null);
-
-  return (
-    <div className="space-y-3">
-      <h3 className="font-heading text-xl font-semibold text-[var(--ozer-text-on-dark)]">Pricing FAQ</h3>
-      {items.map((item) => {
-        const open = openId === item.id;
-
-        return (
-          <div key={item.id} className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)]/50">
-            <button
-              type="button"
-              aria-expanded={open}
-              aria-controls={`faq-${item.id}`}
-              onClick={() => setOpenId(open ? null : item.id)}
-              className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left"
-            >
-              <span className="font-medium text-[var(--ozer-text-on-dark)]">{item.question}</span>
-              <motion.span
-                animate={{ rotate: open ? 180 : 0 }}
-                transition={{ duration: reducedMotion ? 0 : 0.2 }}
-              >
-                <ChevronDown className="h-4 w-4 text-[var(--ozer-text-on-dark-muted)]" aria-hidden />
-              </motion.span>
-            </button>
-            <AnimatePresence initial={false}>
-              {open ? (
-                <motion.div
-                  id={`faq-${item.id}`}
-                  role="region"
-                  initial={reducedMotion ? false : { height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={reducedMotion ? undefined : { height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2, ease: 'easeOut' }}
-                  className="overflow-hidden"
-                >
-                  <p className="px-4 pb-4 text-sm leading-relaxed text-[var(--ozer-text-on-dark-muted)]">
-                    {item.answer}
-                  </p>
-                </motion.div>
-              ) : null}
-            </AnimatePresence>
-          </div>
-        );
-      })}
     </div>
   );
 }
@@ -1358,7 +1306,7 @@ export default function PricingSection() {
 
   return (
     <TooltipProvider delayDuration={200}>
-    <section className="relative overflow-hidden bg-[radial-gradient(circle_at_15%_0%,var(--ozer-coral-alpha-15),transparent_42%),linear-gradient(180deg,var(--ozer-plum-950)_0%,var(--ozer-plum-900)_100%)] py-20 text-[var(--ozer-text-on-dark)]">
+    <section className="relative overflow-hidden bg-[radial-gradient(circle_at_15%_0%,var(--ozer-coral-alpha-15),transparent_42%),linear-gradient(180deg,var(--ozer-plum-950)_0%,var(--ozer-plum-900)_100%)] pb-24 pt-20 text-[var(--ozer-text-on-dark)] md:pb-32">
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_22%)]" />
 
       <div className="relative mx-auto w-full max-w-7xl px-6">
@@ -1515,7 +1463,7 @@ export default function PricingSection() {
                   >
                     {PRICING_CONFIG.alwaysIncludedFeatures.map((feature) => (
                       <li key={feature} className="flex items-start gap-2 text-sm text-[var(--ozer-text-on-dark-muted)]">
-                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#2dd4bf]" aria-hidden />
+                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]" aria-hidden />
                         {feature}
                       </li>
                     ))}
@@ -1540,10 +1488,18 @@ export default function PricingSection() {
           </aside>
         </div>
 
-        <div className="mt-16 space-y-16">
+        <div className="mt-16">
           <ComparisonTable reducedMotion={reducedMotion} />
-          <PricingFaq reducedMotion={reducedMotion} />
         </div>
+
+        <MarketingFaqsSection
+          faqs={PRICING_FAQS}
+          tone="dark"
+          title="Pricing FAQ"
+          headingId="pricing-faq-heading"
+          sectionClassName="mt-16 py-0"
+          className="px-0"
+        />
       </div>
 
       <style jsx global>{`

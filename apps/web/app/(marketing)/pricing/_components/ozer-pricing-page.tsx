@@ -21,7 +21,14 @@ import {
 } from '~/lib/billing/pricing-marketing';
 import { getSegmentPricingComparison } from '~/lib/marketing/pricing-comparison';
 import type { SegmentSlug } from '~/lib/marketing/segment-landing-pages';
-import { marketingBtnGradient } from '~/lib/marketing/marketing-ui';
+import {
+  marketingBodyText,
+  marketingBtnGradient,
+  marketingBtnOutline,
+  marketingFeatureCard,
+  marketingFeaturedPlan,
+  marketingMutedText,
+} from '~/lib/marketing/marketing-ui';
 
 import { PricingComparisonTable } from '../../_components/pricing-comparison-table';
 import { InterconnectedWorkspacesSection } from '../../_components/interconnected-workspaces-section';
@@ -65,7 +72,7 @@ export function OzerPricingPage() {
   return (
     <div className="space-y-16">
       <section className="text-center">
-        <p className="mx-auto max-w-2xl text-lg leading-relaxed text-violet-100/85">
+        <p className={cn('mx-auto max-w-2xl text-lg leading-relaxed', marketingBodyText)}>
           Start free with personal and family workspaces — your hub for every
           connected space. Subscribe when you add community, business, or
           property workspaces. One Ozer account, not a pile of siloed tools.
@@ -77,16 +84,11 @@ export function OzerPricingPage() {
               <ArrowRight className="ml-1.5 h-4 w-4" />
             </Link>
           </Button>
-          <Button
-            asChild
-            size="lg"
-            variant="outline"
-            className="h-11 rounded-full border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
-          >
+          <Button asChild size="lg" variant="outline" className={marketingBtnOutline}>
             <Link href={pathsConfig.auth.signIn}>Sign in</Link>
           </Button>
         </div>
-        <p className="mt-4 text-sm text-violet-200/70">
+        <p className={cn('mt-4 text-sm', marketingMutedText)}>
           14-day trial on your first paid workspace · Annual plans save ~2 months
         </p>
       </section>
@@ -124,7 +126,7 @@ export function OzerPricingPage() {
                 'rounded-full px-4 py-2 text-sm font-medium transition',
                 category === key
                   ? 'bg-[var(--ozer-accent)] text-[var(--ozer-plum-950)]'
-                  : 'border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-violet-100 hover:bg-[var(--workspace-shell-sidebar-accent)]',
+                  : cn(marketingBtnOutline, 'h-auto px-4 py-2'),
               )}
             >
               {CATEGORY_LABELS[key]}
@@ -154,9 +156,9 @@ export function OzerPricingPage() {
         </div>
       </PricingSection>
 
-      <section className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-6 py-10 text-center backdrop-blur-sm">
+      <section className={cn('rounded-2xl border border-[color:var(--workspace-shell-border)] px-6 py-10 text-center', marketingFeatureCard)}>
         <h2 className="text-xl font-semibold text-[var(--workspace-shell-text)]">Ready to get organised?</h2>
-        <p className="mx-auto mt-2 max-w-lg text-sm text-violet-100/80">
+        <p className={cn('mx-auto mt-2 max-w-lg text-sm', marketingBodyText)}>
           Create your free account, choose your workspaces, and start a trial when you
           are ready. Invited team members never pay — billing stays with the workspace
           owner.
@@ -179,15 +181,15 @@ function BillingIntervalToggle(props: {
 }) {
   return (
     <div className="flex justify-center">
-      <div className="inline-flex rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-1">
+      <div className="inline-flex rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/70 p-1">
         <button
           type="button"
           onClick={() => props.onChange('month')}
           className={cn(
             'rounded-full px-4 py-2 text-sm font-medium transition',
             props.interval === 'month'
-              ? 'bg-white text-[var(--ozer-plum-950)]'
-              : 'text-violet-100 hover:text-[var(--workspace-shell-text)]',
+              ? 'bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] shadow-sm'
+              : cn(marketingMutedText, 'hover:text-[var(--workspace-shell-text)]'),
           )}
         >
           Monthly
@@ -198,8 +200,8 @@ function BillingIntervalToggle(props: {
           className={cn(
             'rounded-full px-4 py-2 text-sm font-medium transition',
             props.interval === 'year'
-              ? 'bg-white text-[var(--ozer-plum-950)]'
-              : 'text-violet-100 hover:text-[var(--workspace-shell-text)]',
+              ? 'bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] shadow-sm'
+              : cn(marketingMutedText, 'hover:text-[var(--workspace-shell-text)]'),
           )}
         >
           Annual
@@ -212,17 +214,13 @@ function BillingIntervalToggle(props: {
 
 function FreePlanCard() {
   return (
-    <article className="flex h-full flex-col rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)]/80 p-6 text-[var(--workspace-shell-text)]">
+    <article className={cn('flex h-full flex-col rounded-2xl border border-[color:var(--workspace-shell-border)] p-6 text-[var(--workspace-shell-text)]', marketingFeatureCard)}>
       <h3 className="text-lg font-semibold">{MARKETING_FREE_TIER.name}</h3>
-      <p className="mt-1 text-sm text-violet-100/75">{MARKETING_FREE_TIER.description}</p>
+      <p className={cn('mt-1 text-sm', marketingMutedText)}>{MARKETING_FREE_TIER.description}</p>
       <p className="mt-4 text-3xl font-bold tracking-tight">Free</p>
       <FeatureList features={[...MARKETING_FREE_TIER.features]} />
       <div className="mt-6">
-        <Button
-          asChild
-          className="w-full rounded-full border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] hover:bg-white/15"
-          variant="outline"
-        >
+        <Button asChild className={cn(marketingBtnOutline, 'w-full')} variant="outline">
           <Link href={buildPricingSignupUrl({ profile: 'family' })}>Get free access</Link>
         </Button>
       </div>
@@ -250,8 +248,8 @@ function WorkspacePlanCard(props: {
       className={cn(
         'relative flex h-full flex-col rounded-2xl border p-6 text-[var(--workspace-shell-text)]',
         plan.highlighted
-          ? 'border-[var(--ozer-accent)] bg-[var(--ozer-surface-panel)] shadow-[0_0_0_1px_var(--ozer-coral-alpha-45)]'
-          : 'border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)]/80',
+          ? marketingFeaturedPlan
+          : cn('border-[color:var(--workspace-shell-border)]', marketingFeatureCard),
       )}
     >
       {plan.badge ? (
@@ -260,10 +258,10 @@ function WorkspacePlanCard(props: {
         </span>
       ) : null}
       <h3 className="text-lg font-semibold">{plan.name}</h3>
-      <p className="mt-1 text-sm text-violet-100/75">{plan.description}</p>
+      <p className={cn('mt-1 text-sm', marketingMutedText)}>{plan.description}</p>
       <p className="mt-4 text-3xl font-bold tracking-tight">
         {formatGbp(price)}
-        <span className="text-base font-normal text-violet-100/70">
+        <span className={cn('text-base font-normal', marketingMutedText)}>
           {interval === 'year' ? '/yr' : '/mo'}
         </span>
       </p>
@@ -280,7 +278,7 @@ function WorkspacePlanCard(props: {
             'w-full rounded-full',
             plan.highlighted
               ? 'bg-[var(--ozer-accent)] text-[var(--ozer-plum-950)] hover:bg-[var(--ozer-accent-hover)] hover:text-[var(--ozer-white)]'
-              : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] hover:bg-white/15',
+              : cn(marketingBtnOutline, 'h-auto'),
           )}
           variant={plan.highlighted ? 'default' : 'outline'}
         >
@@ -289,7 +287,7 @@ function WorkspacePlanCard(props: {
             <ArrowRight className="ml-1.5 h-4 w-4" />
           </Link>
         </Button>
-        <p className="text-center text-xs text-violet-200/60">
+        <p className={cn('text-center text-xs', marketingMutedText)}>
           Sign up → create workspace → checkout
         </p>
       </div>
@@ -303,23 +301,19 @@ function AddonPlanCard(props: {
   const { plan } = props;
 
   return (
-    <article className="flex h-full flex-col rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)]/60 p-6 text-[var(--workspace-shell-text)]">
+    <article className={cn('flex h-full flex-col rounded-2xl border border-[color:var(--workspace-shell-border)] p-6 text-[var(--workspace-shell-text)]', marketingFeatureCard)}>
       <h3 className="text-lg font-semibold">{plan.name}</h3>
-      <p className="mt-1 text-sm text-violet-100/75">{plan.description}</p>
+      <p className={cn('mt-1 text-sm', marketingMutedText)}>{plan.description}</p>
       <p className="mt-4 text-2xl font-bold tracking-tight">
         {formatGbp(plan.monthlyPriceGbp)}
-        <span className="text-base font-normal text-violet-100/70">/mo</span>
+        <span className={cn('text-base font-normal', marketingMutedText)}>/mo</span>
       </p>
       <FeatureList features={plan.features} compact />
       <div className="mt-6">
-        <Button
-          asChild
-          className="w-full rounded-full border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] hover:bg-white/15"
-          variant="outline"
-        >
+        <Button asChild className={cn(marketingBtnOutline, 'w-full')} variant="outline">
           <Link href={buildPricingSignupUrl({})}>Get started free</Link>
         </Button>
-        <p className="mt-2 text-center text-xs text-violet-200/60">
+        <p className={cn('mt-2 text-center text-xs', marketingMutedText)}>
           Add-ons attach to a workspace after signup
         </p>
       </div>
@@ -333,7 +327,7 @@ function FeatureList(props: { features: string[]; compact?: boolean }) {
       {props.features.map((feature) => (
         <li key={feature} className="flex gap-2">
           <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
-          <span className="text-violet-50/90">{feature}</span>
+          <span className={marketingBodyText}>{feature}</span>
         </li>
       ))}
     </ul>
@@ -349,7 +343,7 @@ function PricingSection(props: {
     <section className="space-y-6">
       <div className="text-center">
         <h2 className="text-2xl font-bold tracking-tight text-[var(--workspace-shell-text)]">{props.title}</h2>
-        <p className="mt-1 text-sm text-violet-100/75">{props.subtitle}</p>
+        <p className={cn('mt-1 text-sm', marketingMutedText)}>{props.subtitle}</p>
       </div>
       {props.children}
     </section>
