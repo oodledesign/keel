@@ -120,7 +120,7 @@ export function SignaturesIntegrationLinksCard({
   };
 
   return (
-    <Card className="border-white/10 bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+    <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
       <CardHeader>
         <CardTitle>Share with IT admin</CardTitle>
       </CardHeader>
@@ -171,12 +171,12 @@ export function SignaturesIntegrationLinksCard({
         </div>
 
         {generatedUrl ? (
-          <div className="space-y-2 rounded-2xl border border-[var(--keel-teal)]/30 bg-[var(--keel-teal)]/5 p-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-[#5eead4]">
+          <div className="space-y-2 rounded-2xl border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent)]/5 p-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-[var(--ozer-accent-muted)]">
               Copy and send this link
             </p>
             <div className="flex flex-wrap items-center gap-2">
-              <code className="min-w-0 flex-1 break-all text-xs text-white">
+              <code className="min-w-0 flex-1 break-all text-xs text-[var(--workspace-shell-text)]">
                 {generatedUrl}
               </code>
               <Button type="button" size="sm" variant="outline" onClick={copyUrl}>
@@ -195,15 +195,15 @@ export function SignaturesIntegrationLinksCard({
         ) : null}
 
         {activeInvites.length > 0 ? (
-          <div className="space-y-2 rounded-2xl border border-white/10 bg-black/10 p-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+          <div className="space-y-2 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-black/10 p-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
               Active links
             </p>
             <ul className="space-y-2">
               {activeInvites.map((invite) => (
                 <li
                   key={invite.id}
-                  className="flex flex-wrap items-center justify-between gap-2 border-b border-white/6 py-2 last:border-b-0"
+                  className="flex flex-wrap items-center justify-between gap-2 border-b border-[color:var(--workspace-shell-border)] py-2 last:border-b-0"
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-medium">

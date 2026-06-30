@@ -99,16 +99,16 @@ export function AccessibilityStep({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-white">
+        <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
           Set Up Your Preferences
         </h2>
-        <p className="mt-1 text-sm text-zinc-400">
+        <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
           Customise the app to work best for you. You can change these anytime in settings.
         </p>
       </div>
 
       <div className="space-y-2">
-        <span className="text-sm font-medium text-zinc-300">
+        <span className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">
           Text size
         </span>
         <SegmentedControl

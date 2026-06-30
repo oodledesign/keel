@@ -20,7 +20,7 @@ export type TaskListItemProps = {
 };
 
 const priorityConfig = {
-  low: { label: 'Low', className: 'text-zinc-400' },
+  low: { label: 'Low', className: 'text-[var(--workspace-shell-text-muted)]' },
   medium: { label: 'Med', className: 'text-blue-400' },
   high: { label: 'High', className: 'text-amber-400' },
   urgent: { label: 'Urgent', className: 'text-rose-400' },
@@ -48,12 +48,12 @@ export function TaskListItem({
 
   return (
     <>
-    <div className="group flex items-start gap-3 rounded-xl border border-white/6 bg-[var(--workspace-shell-panel)] px-4 py-3 transition-colors hover:border-white/10">
+    <div className="group flex items-start gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-3 transition-colors hover:border-[color:var(--workspace-shell-border)]">
       <span className="mt-0.5 shrink-0">
         {status === 'completed' ? (
-          <CheckCircle2 className="h-4 w-4 text-[#5eead4]" />
+          <CheckCircle2 className="h-4 w-4 text-[var(--ozer-accent-muted)]" />
         ) : (
-          <StatusIcon className="h-4 w-4 text-zinc-500" />
+          <StatusIcon className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
         )}
       </span>
 
@@ -61,13 +61,13 @@ export function TaskListItem({
         <p
           className={`text-sm font-medium leading-snug ${
             status === 'completed'
-              ? 'text-zinc-500 line-through'
-              : 'text-white'
+              ? 'text-[var(--workspace-shell-text-muted)] line-through'
+              : 'text-[var(--workspace-shell-text)]'
           }`}
         >
           {title}
         </p>
-        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
           {editTask?.workspaceName && (
             <span className="rounded-md border border-violet-400/20 bg-violet-500/10 px-1.5 py-0.5 font-medium text-violet-200">
               {editTask.workspaceName}
@@ -99,7 +99,7 @@ export function TaskListItem({
         <button
           type="button"
           onClick={() => setEditOpen(true)}
-          className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-lg border border-white/8 px-2 py-1 text-[11px] text-zinc-400 transition-colors hover:border-white/16 hover:text-white"
+          className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-lg border border-[color:var(--workspace-shell-border)] px-2 py-1 text-[11px] text-[var(--workspace-shell-text-muted)] transition-colors hover:border-[color:var(--workspace-shell-border)] hover:text-[var(--workspace-shell-text)]"
           aria-label="Edit task"
         >
           <Pencil className="h-3 w-3" />

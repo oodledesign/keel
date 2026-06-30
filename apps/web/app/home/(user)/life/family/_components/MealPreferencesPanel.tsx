@@ -113,10 +113,10 @@ export function MealPreferencesPanel({
   return (
     <div className="max-w-2xl space-y-5">
       <div className={cn(panelClass, 'p-5')}>
-        <h3 className="text-sm font-semibold text-white">
+        <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
           Dietary requirements
         </h3>
-        <p className="mt-1 text-xs text-zinc-400">
+        <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
           Hard constraints the generator must always respect.
         </p>
         <div className="mt-3 flex flex-wrap gap-1.5">
@@ -130,8 +130,8 @@ export function MealPreferencesPanel({
                 className={cn(
                   'rounded-full border px-3 py-1.5 text-xs font-medium capitalize transition-colors',
                   active
-                    ? 'border-transparent text-white'
-                    : 'border-white/10 text-zinc-400 hover:text-white',
+                    ? 'border-transparent text-[var(--workspace-shell-text)]'
+                    : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
                 )}
                 style={active ? { backgroundColor: ACCENT } : undefined}
               >
@@ -160,8 +160,8 @@ export function MealPreferencesPanel({
       </div>
 
       <div className={cn(panelClass, 'p-5')}>
-        <h3 className="text-sm font-semibold text-white">Priorities</h3>
-        <p className="mt-1 text-xs text-zinc-400">
+        <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Priorities</h3>
+        <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
           What matters most when the planner suggests meals.
         </p>
         <div className="mt-3 flex flex-wrap gap-1.5">
@@ -175,8 +175,8 @@ export function MealPreferencesPanel({
                 className={cn(
                   'rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
                   active
-                    ? 'border-transparent text-white'
-                    : 'border-white/10 text-zinc-400 hover:text-white',
+                    ? 'border-transparent text-[var(--workspace-shell-text)]'
+                    : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
                 )}
                 style={active ? { backgroundColor: ACCENT } : undefined}
               >
@@ -190,8 +190,8 @@ export function MealPreferencesPanel({
       <div className={cn(panelClass, 'p-5')}>
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-white">Household size</h3>
-            <p className="mt-1 text-xs text-zinc-400">
+            <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Household size</h3>
+            <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
               How many people you usually cook for.
             </p>
           </div>
@@ -205,7 +205,7 @@ export function MealPreferencesPanel({
             >
               <Minus className="h-4 w-4" />
             </Button>
-            <span className="w-8 text-center text-lg font-semibold text-white">
+            <span className="w-8 text-center text-lg font-semibold text-[var(--workspace-shell-text)]">
               {householdSize}
             </span>
             <Button
@@ -222,10 +222,10 @@ export function MealPreferencesPanel({
       </div>
 
       <div className={cn(panelClass, 'p-5')}>
-        <h3 className="text-sm font-semibold text-white">
+        <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
           Ingredients to avoid
         </h3>
-        <p className="mt-1 text-xs text-zinc-400">
+        <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
           Things the household dislikes (soft preference).
         </p>
         {dislikes.length > 0 ? (
@@ -233,7 +233,7 @@ export function MealPreferencesPanel({
             {dislikes.map((item) => (
               <span
                 key={item}
-                className="flex items-center gap-1 rounded-full bg-white/[0.06] px-2.5 py-1 text-xs capitalize text-zinc-200"
+                className="flex items-center gap-1 rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-1 text-xs capitalize text-[var(--workspace-shell-text)]"
               >
                 {item}
                 <button
@@ -243,7 +243,7 @@ export function MealPreferencesPanel({
                   }
                   aria-label={`Remove ${item}`}
                 >
-                  <X className="h-3 w-3 text-zinc-400 hover:text-white" />
+                  <X className="h-3 w-3 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]" />
                 </button>
               </span>
             ))}
@@ -269,7 +269,7 @@ export function MealPreferencesPanel({
       </div>
 
       <div className={cn(panelClass, 'p-5')}>
-        <Label htmlFor="pref-notes" className="text-sm font-semibold text-white">
+        <Label htmlFor="pref-notes" className="text-sm font-semibold text-[var(--workspace-shell-text)]">
           Notes for the planner
         </Label>
         <Textarea
@@ -287,7 +287,7 @@ export function MealPreferencesPanel({
           onClick={handleSave}
           disabled={isPending}
           style={{ backgroundColor: ACCENT }}
-          className="text-white hover:opacity-90"
+          className="text-[var(--workspace-shell-text)] hover:opacity-90"
         >
           {isPending ? 'Saving…' : 'Save preferences'}
         </Button>

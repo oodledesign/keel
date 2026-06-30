@@ -72,7 +72,7 @@ async function WorkspaceAppsPage({ params }: WorkspaceAppsPageProps) {
             Need another app? Manage modules in{' '}
             <a
               href={pathsConfig.app.accountSettings.replace('[account]', accountSlug)}
-              className="text-[var(--keel-teal)] hover:underline"
+              className="text-[var(--ozer-accent)] hover:underline"
             >
               workspace settings
             </a>

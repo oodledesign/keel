@@ -30,10 +30,10 @@ export default async function DesktopRecorderConnectPage({ searchParams }: PageP
   if (!state) {
     return (
       <main className="mx-auto flex min-h-svh max-w-lg flex-col justify-center px-4 py-16">
-        <div className="rounded-2xl border border-white/10 bg-[#0F1B35] p-8 text-white shadow-xl">
+        <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] p-8 text-[var(--workspace-shell-text)] shadow-xl">
           <h1 className="text-2xl font-bold tracking-tight">Connect Ozer Assistant</h1>
-          <p className="mt-3 text-sm text-zinc-400">
-            Open Ozer Assistant on your Mac and choose <strong className="text-white">Sign in to Ozer</strong>{' '}
+          <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">
+            Open Ozer Assistant on your Mac and choose <strong className="text-[var(--workspace-shell-text)]">Sign in to Ozer</strong>{' '}
             to start the connection.
           </p>
           <Button asChild className="mt-6 w-full">
@@ -63,9 +63,9 @@ export default async function DesktopRecorderConnectPage({ searchParams }: PageP
       error instanceof Error ? error.message : 'Could not connect Ozer Assistant.';
     return (
       <main className="mx-auto flex min-h-svh max-w-lg flex-col justify-center px-4 py-16">
-        <div className="rounded-2xl border border-white/10 bg-[#0F1B35] p-8 text-white shadow-xl">
+        <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] p-8 text-[var(--workspace-shell-text)] shadow-xl">
           <h1 className="text-2xl font-bold tracking-tight">Connection failed</h1>
-          <p className="mt-3 text-sm text-zinc-400">{message}</p>
+          <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">{message}</p>
           <Button asChild variant="outline" className="mt-6 w-full">
             <Link href={pathsConfig.app.personalAccountSettings}>Back to settings</Link>
           </Button>

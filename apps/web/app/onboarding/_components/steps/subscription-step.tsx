@@ -68,23 +68,23 @@ export function SubscriptionStep({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-white">
+        <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
           Subscription
         </h2>
-        <p className="mt-1 text-sm text-zinc-400">
+        <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
           You need an active trial or subscription to continue.
         </p>
       </div>
 
       {hasActiveSubscription ? (
         <>
-          <p className="text-sm text-[#5eead4]">
+          <p className="text-sm text-[var(--ozer-accent-muted)]">
             You have an active subscription. You can continue onboarding.
           </p>
           <div className="flex justify-end">
             <PrimaryButton
               onClick={handleContinue}
-              className="gap-1.5 bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+              className="gap-1.5 bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
             >
               Continue
               <ChevronRight className="h-4 w-4" />
@@ -93,11 +93,11 @@ export function SubscriptionStep({
         </>
       ) : (
         <>
-          <p className="text-sm text-zinc-400">
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
             Start a trial or subscribe to unlock your workspace.
           </p>
           <div className="flex flex-wrap items-center gap-3">
-            <PrimaryButton asChild className="gap-1.5 bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]">
+            <PrimaryButton asChild className="gap-1.5 bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]">
               <Link href={billingPath}>
                 Go to billing
                 <ChevronRight className="h-4 w-4" />
@@ -107,13 +107,13 @@ export function SubscriptionStep({
               <button
                 type="button"
                 onClick={handleTestSubscription}
-                className="rounded-lg border border-dashed border-zinc-600 px-4 py-2 text-sm text-zinc-400 hover:border-zinc-500 hover:text-zinc-300"
+                className="rounded-lg border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-2 text-sm text-[var(--workspace-shell-text-muted)] hover:border-[color:var(--workspace-shell-border)] hover:text-[var(--workspace-shell-text-muted)]"
               >
                 Add test subscription (dev only)
               </button>
             )}
           </div>
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
             After you have an active subscription, return here to continue.
           </p>
         </>

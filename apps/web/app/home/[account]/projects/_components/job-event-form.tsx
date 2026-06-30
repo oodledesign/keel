@@ -221,23 +221,23 @@ export function JobEventForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div>
-        <Label className="text-zinc-300">Title *</Label>
+        <Label className="text-[var(--workspace-shell-text-muted)]">Title *</Label>
         <Input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="mt-1 border-zinc-600 bg-zinc-800 text-white"
+          className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
           placeholder="e.g. Initial site visit"
           disabled={!canEditAll}
         />
       </div>
       <div>
-        <Label className="text-zinc-300">Type</Label>
+        <Label className="text-[var(--workspace-shell-text-muted)]">Type</Label>
         <Select
           value={eventType}
           onValueChange={(v) => setEventType(v as 'site_visit' | 'meeting')}
           disabled={!canEditAll}
         >
-          <SelectTrigger className="mt-1 border-zinc-600 bg-zinc-800 text-white">
+          <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -247,7 +247,7 @@ export function JobEventForm({
         </Select>
       </div>
       <div>
-        <Label className="text-zinc-300">Client</Label>
+        <Label className="text-[var(--workspace-shell-text-muted)]">Client</Label>
         <div className="mt-1">
           <ClientCombobox
             clients={clients.map((c) => ({ id: c.id, display_name: c.display_name }))}
@@ -261,54 +261,54 @@ export function JobEventForm({
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label className="text-zinc-300">Start *</Label>
+          <Label className="text-[var(--workspace-shell-text-muted)]">Start *</Label>
           <Input
             type="datetime-local"
             value={scheduledStartAt}
             onChange={(e) => setScheduledStartAt(e.target.value)}
-            className="mt-1 border-zinc-600 bg-zinc-800 text-white"
+            className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
             disabled={!canEditAll}
           />
         </div>
         <div>
-          <Label className="text-zinc-300">End</Label>
+          <Label className="text-[var(--workspace-shell-text-muted)]">End</Label>
           <Input
             type="datetime-local"
             value={scheduledEndAt}
             onChange={(e) => setScheduledEndAt(e.target.value)}
-            className="mt-1 border-zinc-600 bg-zinc-800 text-white"
+            className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
             disabled={!canEditAll}
           />
         </div>
       </div>
       <div>
-        <Label className="text-zinc-300">Location</Label>
+        <Label className="text-[var(--workspace-shell-text-muted)]">Location</Label>
         <Input
           value={location}
           onChange={(e) => setLocation(e.target.value)}
-          className="mt-1 border-zinc-600 bg-zinc-800 text-white"
+          className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
           placeholder="Address or place"
           disabled={!canEditAll}
         />
       </div>
       <div>
-        <Label className="text-zinc-300">Prep notes</Label>
+        <Label className="text-[var(--workspace-shell-text-muted)]">Prep notes</Label>
         <textarea
           value={prepNotes}
           onChange={(e) => setPrepNotes(e.target.value)}
           rows={3}
-          className="mt-1 w-full rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-white placeholder:text-zinc-500"
+          className="mt-1 w-full rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] px-3 py-2 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
           placeholder="Notes before the visit/meeting"
         />
       </div>
       {!isCreate && (
         <div>
-          <Label className="text-zinc-300">Outcome notes</Label>
+          <Label className="text-[var(--workspace-shell-text-muted)]">Outcome notes</Label>
           <textarea
             value={outcomeNotes}
             onChange={(e) => setOutcomeNotes(e.target.value)}
             rows={3}
-            className="mt-1 w-full rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-white placeholder:text-zinc-500"
+            className="mt-1 w-full rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] px-3 py-2 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
             placeholder="Notes after the visit/meeting"
           />
         </div>
@@ -331,43 +331,43 @@ export function JobEventForm({
             }
           }}
           disabled={!canEditAll}
-          className="rounded border-zinc-600 bg-zinc-800"
+          className="rounded border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]"
         />
-        <Label htmlFor="follow_up" className="text-zinc-300">
+        <Label htmlFor="follow_up" className="text-[var(--workspace-shell-text-muted)]">
           Follow-up required
         </Label>
       </div>
       {followUpRequired && (
         <div>
-          <Label className="text-zinc-300">Follow-up by</Label>
+          <Label className="text-[var(--workspace-shell-text-muted)]">Follow-up by</Label>
           <Input
             type="datetime-local"
             value={followUpAt}
             onChange={(e) => setFollowUpAt(e.target.value)}
-            className="mt-1 border-zinc-600 bg-zinc-800 text-white"
+            className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
             disabled={!canEditAll}
           />
         </div>
       )}
 
       {!isCreate && eventId && canEditAll && (
-        <div className="border-t border-zinc-700 pt-4">
-          <Label className="text-zinc-300">Assigned team</Label>
-          <ul className="mt-2 space-y-1.5 text-sm text-zinc-300">
+        <div className="border-t border-[color:var(--workspace-shell-border)] pt-4">
+          <Label className="text-[var(--workspace-shell-text-muted)]">Assigned team</Label>
+          <ul className="mt-2 space-y-1.5 text-sm text-[var(--workspace-shell-text-muted)]">
             {assignments.map((a) => {
               const m = members.find((x) => x.user_id === a.user_id);
               const label = m ? m.name || m.email || a.user_id.slice(0, 8) : a.user_id.slice(0, 8);
               return (
                 <li
                   key={a.user_id}
-                  className="flex items-center justify-between rounded-md border border-zinc-700 bg-[var(--workspace-shell-panel)] px-3 py-2"
+                  className="flex items-center justify-between rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 py-2"
                 >
                   <span>{a.role_on_event ? `${a.role_on_event}: ` : ''}{label}</span>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="h-7 text-zinc-400 hover:text-red-400"
+                    className="h-7 text-[var(--workspace-shell-text-muted)] hover:text-red-400"
                     onClick={() => handleRemoveAssignment(a.user_id)}
                   >
                     Remove
@@ -382,7 +382,7 @@ export function JobEventForm({
               onValueChange={(v) => setSelectedMemberId(v === 'none' ? '' : v)}
               disabled={membersNotAssigned.length === 0}
             >
-              <SelectTrigger className="min-w-[160px] border-zinc-600 bg-zinc-800 text-white">
+              <SelectTrigger className="min-w-[160px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
                 <SelectValue placeholder="Select member" />
               </SelectTrigger>
               <SelectContent>
@@ -398,12 +398,12 @@ export function JobEventForm({
               placeholder="Role (optional)"
               value={assignRole}
               onChange={(e) => setAssignRole(e.target.value)}
-              className="h-9 w-28 border-zinc-600 bg-zinc-800 text-white"
+              className="h-9 w-28 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
             />
             <Button
               type="button"
               size="sm"
-              className={selectedMemberId ? 'bg-[var(--keel-teal)] hover:bg-[#238b7f] text-white' : 'bg-zinc-700 hover:bg-zinc-600 text-zinc-400'}
+              className={selectedMemberId ? 'bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)] text-[var(--ozer-white)]' : 'bg-[var(--workspace-shell-panel-hover)] hover:bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text-muted)]'}
               disabled={!selectedMemberId}
               onClick={handleAddAssignment}
             >
@@ -414,11 +414,11 @@ export function JobEventForm({
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2 border-t border-zinc-700 pt-4">
+      <div className="flex flex-wrap items-center gap-2 border-t border-[color:var(--workspace-shell-border)] pt-4">
         <Button
           type="submit"
           disabled={submitting}
-          className="bg-[var(--keel-teal)] hover:bg-[#238b7f]"
+          className="bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]"
         >
           {submitting ? 'Saving…' : isCreate ? 'Create' : 'Save'}
         </Button>

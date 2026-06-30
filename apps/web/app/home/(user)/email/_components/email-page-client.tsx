@@ -279,12 +279,12 @@ export function EmailPageClient({ initialData }: Props) {
 
   return (
     <div className={cn(workspacePageMainClassName, 'min-h-0')}>
-      <div className="flex flex-col gap-4 border-b border-white/10 pb-5 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-4 border-b border-[color:var(--workspace-shell-border)] pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white md:text-3xl">
+          <h1 className="text-2xl font-semibold tracking-tight text-[var(--workspace-shell-text)] md:text-3xl">
             Email
           </h1>
-          <p className="mt-1 max-w-2xl text-sm text-zinc-400">
+          <p className="mt-1 max-w-2xl text-sm text-[var(--workspace-shell-text-muted)]">
             Sync Gmail threads, auto-draft replies that need a response, and save
             them back to Gmail.
           </p>
@@ -294,7 +294,7 @@ export function EmailPageClient({ initialData }: Props) {
           <Button
             type="button"
             variant="outline"
-            className="border-white/10 bg-[var(--workspace-shell-panel)] text-white hover:bg-white/5"
+            className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
             onClick={() => setShowSettings((value) => !value)}
           >
             <Settings2 className="mr-2 h-4 w-4" />
@@ -302,7 +302,7 @@ export function EmailPageClient({ initialData }: Props) {
           </Button>
           <Button
             type="button"
-            className="keel-gradient-btn text-white"
+            className="keel-gradient-btn text-[var(--ozer-white)]"
             onClick={syncNow}
             disabled={!connected || syncing}
           >

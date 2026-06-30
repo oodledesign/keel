@@ -91,7 +91,7 @@ export function PagespeedJobPoller({
 
   if (job.status === 'done') {
     return (
-      <p className="text-sm text-[var(--keel-teal)]">PageSpeed check complete</p>
+      <p className="text-sm text-[var(--ozer-accent)]">PageSpeed check complete</p>
     );
   }
 
@@ -101,7 +101,7 @@ export function PagespeedJobPoller({
       : 10;
 
   return (
-    <div className="max-w-xl space-y-2 rounded-lg border border-white/10 bg-black/20 p-4">
+    <div className="max-w-xl space-y-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
         <span className="text-muted-foreground">
           {job.status === 'pending' ? 'Queued…' : 'Running PageSpeed Insights…'}
@@ -112,7 +112,7 @@ export function PagespeedJobPoller({
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-black/30">
         <div
-          className="h-full rounded-full bg-[var(--keel-teal)] transition-all duration-500"
+          className="h-full rounded-full bg-[var(--ozer-accent)] transition-all duration-500"
           style={{ width: `${percent}%` }}
         />
       </div>

@@ -50,7 +50,7 @@ const priorityClass: Record<PlannerTask['priority'], string> = {
   urgent: 'border-rose-400/40 bg-rose-400/10 text-rose-200',
   high: 'border-orange-400/40 bg-orange-400/10 text-orange-200',
   medium: 'border-sky-400/40 bg-sky-400/10 text-sky-200',
-  low: 'border-white/15 bg-white/5 text-white/55',
+  low: 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/55',
 };
 
 export function TaskSelectorTree({
@@ -76,19 +76,19 @@ export function TaskSelectorTree({
   const selectedCount = selectedTaskIds.size;
 
   return (
-    <div className="space-y-3 border-t border-white/8 pt-5">
+    <div className="space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
-            <ListTodo className="h-4 w-4 text-[#5eead4]" />
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-[var(--workspace-shell-text)]">
+            <ListTodo className="h-4 w-4 text-[var(--ozer-accent-muted)]" />
             Tasks to plan
           </h2>
-          <p className="mt-1 text-xs text-white/45">
+          <p className="mt-1 text-xs text-[var(--workspace-shell-text)]/45">
             {selectedCount} of {allCount} open tasks selected.
             {!includeWorkspaceTasks ? (
               <>
                 {' '}
-                <Link href={settingsHref} className="text-[#5eead4] hover:underline">
+                <Link href={settingsHref} className="text-[var(--ozer-accent-muted)] hover:underline">
                   Workspace tasks off
                 </Link>
               </>
@@ -100,7 +100,7 @@ export function TaskSelectorTree({
             type="button"
             size="sm"
             variant="outline"
-            className="h-8 border-white/15 bg-white/5 text-xs text-white hover:bg-white/10"
+            className="h-8 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
             onClick={() => setAddTaskOpen(true)}
           >
             <Plus className="h-3.5 w-3.5" />
@@ -109,7 +109,7 @@ export function TaskSelectorTree({
           {allCount > 0 ? (
             <button
               type="button"
-              className="text-xs font-medium text-[#5eead4] hover:underline"
+              className="text-xs font-medium text-[var(--ozer-accent-muted)] hover:underline"
               onClick={() => {
                 const allIds = taskTree.flatMap((workspace) =>
                   workspace.projects.flatMap((project) =>
@@ -143,13 +143,13 @@ export function TaskSelectorTree({
       )}
 
       {taskTree.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-white/10 px-4 py-8 text-center">
-          <p className="text-sm text-white/55">No open tasks found.</p>
+        <div className="rounded-lg border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center">
+          <p className="text-sm text-[var(--workspace-shell-text)]/55">No open tasks found.</p>
           <Button
             type="button"
             size="sm"
             variant="outline"
-            className="mt-3 border-white/15 bg-white/5 text-white hover:bg-white/10"
+            className="mt-3 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
             onClick={() => setAddTaskOpen(true)}
           >
             <Plus className="h-3.5 w-3.5" />
@@ -196,16 +196,16 @@ function WorkspaceNode({
         <Checkbox
           checked={checked}
           onCheckedChange={(value) => toggle(ids, Boolean(value))}
-          className="border-white/30"
+          className="border-[color:var(--workspace-shell-border)]"
         />
-        <CollapsibleTrigger className="flex flex-1 items-center gap-2 text-left text-sm font-medium text-white">
+        <CollapsibleTrigger className="flex flex-1 items-center gap-2 text-left text-sm font-medium text-[var(--workspace-shell-text)]">
           {open ? (
-            <ChevronDown className="h-4 w-4 shrink-0 text-white/45" />
+            <ChevronDown className="h-4 w-4 shrink-0 text-[var(--workspace-shell-text)]/45" />
           ) : (
-            <ChevronRight className="h-4 w-4 shrink-0 text-white/45" />
+            <ChevronRight className="h-4 w-4 shrink-0 text-[var(--workspace-shell-text)]/45" />
           )}
           <span className="truncate">{workspace.name}</span>
-          <span className="ml-auto text-xs font-normal text-white/40">
+          <span className="ml-auto text-xs font-normal text-[var(--workspace-shell-text)]/40">
             {workspace.taskCount}
           </span>
         </CollapsibleTrigger>
@@ -248,18 +248,18 @@ function ProjectNode({
           <Checkbox
             checked={checked}
             onCheckedChange={(value) => toggle(ids, Boolean(value))}
-            className="border-white/30"
+            className="border-[color:var(--workspace-shell-border)]"
           />
-          <CollapsibleTrigger className="flex flex-1 items-center gap-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/45">
+          <CollapsibleTrigger className="flex flex-1 items-center gap-2 text-left text-[11px] font-semibold uppercase tracking-wide text-[var(--workspace-shell-text)]/45">
             {open ? (
               <ChevronDown className="h-3.5 w-3.5" />
             ) : (
               <ChevronRight className="h-3.5 w-3.5" />
             )}
-            <span className="truncate normal-case tracking-normal text-white/70">
+            <span className="truncate normal-case tracking-normal text-[var(--workspace-shell-text)]/70">
               {project.name}
             </span>
-            <span className="ml-auto text-white/35">{project.taskCount}</span>
+            <span className="ml-auto text-[var(--workspace-shell-text)]/35">{project.taskCount}</span>
           </CollapsibleTrigger>
         </div>
       ) : null}
@@ -307,14 +307,14 @@ function TaskRow({
     <>
       <div
         className={cn(
-          'group flex items-start gap-2 rounded-md px-1 py-1.5 text-sm transition-colors hover:bg-white/[0.04]',
+          'group flex items-start gap-2 rounded-md px-1 py-1.5 text-sm transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]',
           task.overdue && 'bg-amber-400/5',
         )}
       >
         <Checkbox
           checked={checked}
           onCheckedChange={(value) => onCheckedChange(Boolean(value))}
-          className="mt-0.5 border-white/30"
+          className="mt-0.5 border-[color:var(--workspace-shell-border)]"
           aria-label={`Include ${task.title} in plan`}
         />
         <button
@@ -323,9 +323,9 @@ function TaskRow({
           onClick={() => setEditOpen(true)}
         >
           <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-            <span className="leading-snug text-white/90">{task.title}</span>
+            <span className="leading-snug text-[var(--workspace-shell-text)]/90">{task.title}</span>
             {clientName ? (
-              <span className="text-xs text-zinc-500">{clientName}</span>
+              <span className="text-xs text-[var(--workspace-shell-text-muted)]">{clientName}</span>
             ) : null}
           </span>
           <span className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -339,7 +339,7 @@ function TaskRow({
             {task.dueDateLabel ? (
               <span
                 className={cn(
-                  'text-[11px] text-white/40',
+                  'text-[11px] text-[var(--workspace-shell-text)]/40',
                   task.overdue && 'text-amber-200',
                 )}
               >
@@ -354,7 +354,7 @@ function TaskRow({
             type="button"
             size="icon"
             variant="ghost"
-            className="h-7 w-7 text-white/45 hover:bg-white/10 hover:text-emerald-300"
+            className="h-7 w-7 text-[var(--workspace-shell-text)]/45 hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-emerald-300"
             aria-label={`Mark ${task.title} as done`}
             disabled={isCompleting}
             onClick={handleMarkDone}
@@ -369,7 +369,7 @@ function TaskRow({
             type="button"
             size="icon"
             variant="ghost"
-            className="h-7 w-7 text-white/45 hover:bg-white/10 hover:text-white"
+            className="h-7 w-7 text-[var(--workspace-shell-text)]/45 hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
             aria-label={`Edit ${task.title}`}
             onClick={() => setEditOpen(true)}
           >

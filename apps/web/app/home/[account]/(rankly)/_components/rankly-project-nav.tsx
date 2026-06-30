@@ -37,7 +37,7 @@ function NavLink(props: {
         props.collapsed ? 'justify-center px-0' : 'gap-2.5 px-3',
         props.active
           ? 'keel-gradient-active'
-          : 'text-muted-foreground hover:bg-white/5 hover:text-white',
+          : 'text-muted-foreground hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
       )}
     >
       {props.icon}
@@ -97,7 +97,7 @@ export function RanklyProjectNav(props: {
       <TooltipProvider>
         <nav
           aria-label="Project sections"
-          className="rounded-lg border border-white/10 bg-[var(--workspace-shell-panel)] p-2"
+          className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-2"
         >
           <div
             className={cn(
@@ -109,7 +109,7 @@ export function RanklyProjectNav(props: {
               type="button"
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-white"
+              className="h-8 w-8 text-muted-foreground hover:text-[var(--workspace-shell-text)]"
               onClick={toggleCollapsed}
               aria-label={collapsed ? 'Expand project navigation' : 'Collapse project navigation'}
               aria-expanded={!collapsed}

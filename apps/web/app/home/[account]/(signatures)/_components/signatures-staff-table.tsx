@@ -40,7 +40,7 @@ export function SignaturesStaffTable({
 }) {
   if (!staff.length) {
     return (
-      <div className="rounded-2xl border border-white/10 bg-black/10 p-8 text-sm text-muted-foreground">
+      <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-black/10 p-8 text-sm text-muted-foreground">
         No staff synced yet. Connect Microsoft 365, then sync staff from M365.
       </div>
     );
@@ -49,10 +49,10 @@ export function SignaturesStaffTable({
   const visibleStaff = compact ? staff.slice(0, 8) : staff;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)]">
+    <div className="overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
       <Table>
-        <TableHeader className="bg-black/20">
-          <TableRow className="border-white/10 hover:bg-transparent">
+        <TableHeader className="bg-[var(--workspace-shell-sidebar-accent)]">
+          <TableRow className="border-[color:var(--workspace-shell-border)] hover:bg-transparent">
             <TableHead className="px-4 py-3">Name</TableHead>
             <TableHead className="px-4 py-3">Job Title</TableHead>
             <TableHead className="px-4 py-3">Branch</TableHead>
@@ -69,9 +69,9 @@ export function SignaturesStaffTable({
               .replace('[staffId]', row.id);
 
             return (
-              <TableRow key={row.id} className="border-white/5">
+              <TableRow key={row.id} className="border-[color:var(--workspace-shell-border)]">
                 <TableCell className="px-4 py-3">
-                  <div className="font-medium text-white">
+                  <div className="font-medium text-[var(--workspace-shell-text)]">
                     {row.full_name || row.email}
                   </div>
                   <div className="text-xs text-muted-foreground">{row.email}</div>

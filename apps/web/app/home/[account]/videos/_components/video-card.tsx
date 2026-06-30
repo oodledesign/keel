@@ -35,7 +35,7 @@ export function VideoCard(props: {
     .replace('[videoId]', video.id);
 
   return (
-    <article className="group overflow-hidden rounded-xl border border-white/10 bg-black/20">
+    <article className="group overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
       <button
         type="button"
         className="relative aspect-video w-full overflow-hidden bg-black/40 text-left"
@@ -48,19 +48,19 @@ export function VideoCard(props: {
           className="object-cover transition group-hover:scale-[1.02]"
         />
         <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition group-hover:bg-black/30 group-hover:opacity-100">
-          <Play className="h-10 w-10 text-white" />
+          <Play className="h-10 w-10 text-[var(--workspace-shell-text)]" />
         </div>
-        <span className="absolute bottom-2 right-2 rounded bg-black/70 px-1.5 py-0.5 text-xs text-white">
+        <span className="absolute bottom-2 right-2 rounded bg-black/70 px-1.5 py-0.5 text-xs text-[var(--workspace-shell-text)]">
           {formatDuration(video.duration_seconds)}
         </span>
         {video.status === 'processing' || video.status === 'uploading' ? (
-          <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded bg-black/70 px-2 py-0.5 text-xs text-white">
+          <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded bg-black/70 px-2 py-0.5 text-xs text-[var(--workspace-shell-text)]">
             <Loader2 className="h-3 w-3 animate-spin" />
             {video.status === 'uploading' ? 'Uploading' : 'Processing'}
           </span>
         ) : null}
         {video.status === 'failed' ? (
-          <span className="absolute left-2 top-2 rounded bg-red-500/90 px-2 py-0.5 text-xs text-white">
+          <span className="absolute left-2 top-2 rounded bg-red-500/90 px-2 py-0.5 text-xs text-[var(--workspace-shell-text)]">
             Failed
           </span>
         ) : null}

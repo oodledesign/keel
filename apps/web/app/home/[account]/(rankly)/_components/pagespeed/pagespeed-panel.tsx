@@ -31,7 +31,7 @@ type ApiResponse<T> =
 
 function scoreTone(score: number | null | undefined): string {
   if (score == null) return 'text-muted-foreground';
-  if (score >= 90) return 'text-[var(--keel-teal)]';
+  if (score >= 90) return 'text-[var(--ozer-accent)]';
   if (score >= 50) return 'text-amber-400';
   return 'text-red-400';
 }
@@ -230,7 +230,7 @@ export function PagespeedPanel(props: {
       {props.settings?.lastCheckAt ? (
         <p className="text-muted-foreground text-sm">
           Last scan{' '}
-          <time dateTime={props.settings.lastCheckAt} className="text-white">
+          <time dateTime={props.settings.lastCheckAt} className="text-[var(--workspace-shell-text)]">
             {formatScanDate(props.settings.lastCheckAt)}
           </time>
           {props.settings.nextCheckAt && interval !== 'manual' ? (
@@ -295,8 +295,8 @@ export function PagespeedPanel(props: {
         </div>
       </div>
 
-      <p className="text-muted-foreground rounded-lg border border-white/10 bg-black/20 px-4 py-3 text-sm">
-        Homepage is tracked automatically for <strong className="text-white">{props.domain}</strong>{' '}
+      <p className="text-muted-foreground rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-3 text-sm">
+        Homepage is tracked automatically for <strong className="text-[var(--workspace-shell-text)]">{props.domain}</strong>{' '}
         on desktop and mobile. Scores are from Google PageSpeed Insights (0–100).
         Open a page to view score history and Lighthouse fix recommendations.
       </p>
@@ -335,7 +335,7 @@ export function PagespeedPanel(props: {
       </form>
 
       {props.snapshots.length === 0 ? (
-        <p className="text-muted-foreground rounded-lg border border-white/10 bg-black/10 px-4 py-6 text-sm">
+        <p className="text-muted-foreground rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-6 text-sm">
           No pages yet. Run PageSpeed to fetch scores.
         </p>
       ) : (
@@ -352,9 +352,9 @@ export function PagespeedPanel(props: {
             return (
               <div
                 key={page.pageId}
-                className="overflow-x-auto rounded-lg border border-white/10"
+                className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]"
               >
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-black/20 px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-3">
                   <div>
                     <p className="font-medium">
                       {page.label ?? page.url}
@@ -408,7 +408,7 @@ export function PagespeedPanel(props: {
                 </div>
 
                 <table className="w-full min-w-[40rem] text-left text-sm">
-                  <thead className="border-b border-white/10 text-xs uppercase tracking-wide text-muted-foreground">
+                  <thead className="border-b border-[color:var(--workspace-shell-border)] text-xs uppercase tracking-wide text-muted-foreground">
                     <tr>
                       <th className="px-4 py-2">Device</th>
                       <th className="px-4 py-2 text-right">Perf</th>
@@ -419,7 +419,7 @@ export function PagespeedPanel(props: {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-b border-white/5">
+                    <tr className="border-b border-[color:var(--workspace-shell-border)]">
                       <td className="px-4 py-3 text-muted-foreground">Mobile</td>
                       <MetricCell label="Mobile" metrics={page.mobile} />
                     </tr>

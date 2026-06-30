@@ -82,15 +82,15 @@ export function PersonalDashboardShortcutsSettingsForm({
     <div className="space-y-8">
       <section className="space-y-4">
         <div>
-          <h2 className="text-base font-semibold text-white">Default landing</h2>
-          <p className="mt-1 text-sm text-zinc-400">
+          <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">Default landing</h2>
+          <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
             Choose where Ozer opens after you sign in.
           </p>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+            <p className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
               Open on sign-in
             </p>
             <Select
@@ -99,10 +99,10 @@ export function PersonalDashboardShortcutsSettingsForm({
                 setLandingType(v as DefaultLandingPreference['type'])
               }
             >
-              <SelectTrigger className="border-white/10 bg-[var(--workspace-shell-panel)] text-white">
+              <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="border-white/10 bg-[#0F1B35] text-white">
+              <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] text-[var(--workspace-shell-text)]">
                 <SelectItem value="personal">Personal home</SelectItem>
                 <SelectItem value="workspace">A workspace</SelectItem>
               </SelectContent>
@@ -111,14 +111,14 @@ export function PersonalDashboardShortcutsSettingsForm({
 
           {landingType === 'workspace' ? (
             <div className="space-y-2">
-              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+              <p className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
                 Workspace
               </p>
               <Select value={workspaceSlug || 'none'} onValueChange={setWorkspaceSlug}>
-                <SelectTrigger className="border-white/10 bg-[var(--workspace-shell-panel)] text-white">
+                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
                   <SelectValue placeholder="Choose workspace" />
                 </SelectTrigger>
-                <SelectContent className="border-white/10 bg-[#0F1B35] text-white">
+                <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] text-[var(--workspace-shell-text)]">
                   {workspaceOptions.length === 0 ? (
                     <SelectItem value="none" disabled>
                       No workspaces available
@@ -137,29 +137,29 @@ export function PersonalDashboardShortcutsSettingsForm({
         </div>
       </section>
 
-      <section className="space-y-4 border-t border-white/10 pt-8">
+      <section className="space-y-4 border-t border-[color:var(--workspace-shell-border)] pt-8">
         <div>
-          <h2 className="text-base font-semibold text-white">
+          <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">
             Unified task view
           </h2>
-          <p className="mt-1 text-sm text-zinc-400">
+          <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
             Your personal home can show tasks from every workspace in one list —
             or keep work tasks inside each workspace only.
           </p>
         </div>
 
-        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-[var(--workspace-shell-panel)] px-4 py-3">
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-3">
           <input
             type="checkbox"
             checked={includeWorkspaceTasks}
             onChange={(e) => setIncludeWorkspaceTasks(e.target.checked)}
-            className="mt-1 h-4 w-4 rounded border-white/20 bg-transparent accent-[var(--keel-teal)]"
+            className="mt-1 h-4 w-4 rounded border-[color:var(--workspace-shell-border)] bg-transparent accent-[var(--ozer-accent)]"
           />
           <span className="min-w-0">
-            <span className="block text-sm font-medium text-white">
+            <span className="block text-sm font-medium text-[var(--workspace-shell-text)]">
               Show tasks from all workspaces on personal home
             </span>
-            <span className="mt-0.5 block text-xs text-zinc-400">
+            <span className="mt-0.5 block text-xs text-[var(--workspace-shell-text-muted)]">
               When on, Today&apos;s Focus, Upcoming, and the Tasks page include
               work linked to your team workspaces. When off, only personal life
               areas appear there — workspace tasks stay in each workspace.
@@ -168,12 +168,12 @@ export function PersonalDashboardShortcutsSettingsForm({
         </label>
       </section>
 
-      <section className="space-y-4 border-t border-white/10 pt-8">
+      <section className="space-y-4 border-t border-[color:var(--workspace-shell-border)] pt-8">
         <div>
-          <h2 className="text-base font-semibold text-white">
+          <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">
             Personal dashboard shortcuts
           </h2>
-          <p className="mt-1 text-sm text-zinc-400">
+          <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
             Quick links at the top of your personal home — including pages in any
             workspace you can access, like finances or Rankly.
           </p>
@@ -186,12 +186,12 @@ export function PersonalDashboardShortcutsSettingsForm({
         />
       </section>
 
-      <section className="space-y-4 border-t border-white/10 pt-8">
+      <section className="space-y-4 border-t border-[color:var(--workspace-shell-border)] pt-8">
         <div>
-          <h2 className="text-base font-semibold text-white">
+          <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">
             Mobile bottom navigation
           </h2>
-          <p className="mt-1 text-sm text-zinc-400">
+          <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
             Choose up to three icon shortcuts beside Home and Menu on your phone.
             Leave empty for Home and Menu only.
           </p>
@@ -208,7 +208,7 @@ export function PersonalDashboardShortcutsSettingsForm({
       </section>
 
       <Button
-        className="bg-[var(--keel-teal)] hover:bg-[#238b7f]"
+        className="bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]"
         disabled={pending}
         onClick={saveAll}
       >

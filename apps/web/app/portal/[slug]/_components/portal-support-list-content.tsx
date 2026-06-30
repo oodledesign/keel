@@ -53,8 +53,8 @@ export function PortalSupportListContent({
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-slate-900">Support</h2>
-          <p className="text-sm text-slate-500">
+          <h2 className="text-xl font-semibold text-[var(--ozer-text-on-light)]">Support</h2>
+          <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
             {filteredTickets.length}{' '}
             {filteredTickets.length === 1 ? 'ticket' : 'tickets'}
           </p>
@@ -78,8 +78,8 @@ export function PortalSupportListContent({
               onClick={() => setStatusFilter(tab.value)}
               className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
                 active
-                  ? 'bg-[var(--keel-teal)]/15 text-[#1d6f65]'
-                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+                  ? 'bg-[var(--ozer-accent-subtle)] text-[#1d6f65]'
+                  : 'text-[var(--ozer-text-on-light-muted)] hover:bg-slate-100 hover:text-[var(--ozer-text-on-light)]'
               }`}
             >
               {tab.label}
@@ -91,9 +91,9 @@ export function PortalSupportListContent({
       {filteredTickets.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <LifeBuoy className="mb-4 h-12 w-12 text-slate-300" />
-            <p className="font-medium text-slate-900">No support tickets yet</p>
-            <p className="mt-1 max-w-md text-sm text-slate-500">
+            <LifeBuoy className="mb-4 h-12 w-12 text-[var(--workspace-shell-text-muted)]" />
+            <p className="font-medium text-[var(--ozer-text-on-light)]">No support tickets yet</p>
+            <p className="mt-1 max-w-md text-sm text-[var(--ozer-text-on-light-muted)]">
               Need help? Raise a ticket and our team will get back to you.
             </p>
             <Button asChild className="mt-4">
@@ -108,7 +108,7 @@ export function PortalSupportListContent({
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-[var(--ozer-text-on-light-muted)]">
                 <tr>
                   <th className="px-4 py-3 font-medium">Ticket</th>
                   <th className="px-4 py-3 font-medium">Title</th>
@@ -131,7 +131,7 @@ export function PortalSupportListContent({
                       <td className="px-4 py-3 font-mono text-xs text-slate-600">
                         <Link
                           href={detailHref}
-                          className="hover:text-[var(--keel-teal)]"
+                          className="hover:text-[var(--ozer-accent)]"
                         >
                           {formatPortalTicketNumber(ticket.ticketNumber)}
                         </Link>
@@ -139,7 +139,7 @@ export function PortalSupportListContent({
                       <td className="px-4 py-3">
                         <Link
                           href={detailHref}
-                          className="font-medium text-slate-900 hover:text-[var(--keel-teal)]"
+                          className="font-medium text-[var(--ozer-text-on-light)] hover:text-[var(--ozer-accent)]"
                         >
                           {ticket.title}
                         </Link>

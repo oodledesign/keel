@@ -18,7 +18,7 @@ import { SITE_CRAWL_ISSUE_LABELS } from '~/lib/site-crawl/types';
 const PRIORITY_COLOURS = {
   high: 'bg-red-500/20 text-red-200',
   medium: 'bg-amber-500/20 text-amber-200',
-  low: 'bg-white/10 text-muted-foreground',
+  low: 'bg-[var(--workspace-shell-sidebar-accent)] text-muted-foreground',
 } as const;
 
 function formatScore(score: number | null | undefined): string {
@@ -44,7 +44,7 @@ function ScoreBreakdownCard(props: {
   score: number | null;
 }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+    <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
       <p className="text-muted-foreground text-xs uppercase tracking-wide">
         {props.label}
       </p>
@@ -62,7 +62,7 @@ function RecommendationRow(props: {
   const rec = props.recommendation;
 
   return (
-    <div className="rounded-lg border border-white/10 bg-black/20">
+    <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
       <button
         type="button"
         className="flex w-full items-start gap-3 p-3 text-left"
@@ -87,10 +87,10 @@ function RecommendationRow(props: {
       </button>
 
       {expanded ? (
-        <div className="space-y-2 border-t border-white/10 px-3 pb-3 pt-2">
+        <div className="space-y-2 border-t border-[color:var(--workspace-shell-border)] px-3 pb-3 pt-2">
           <p className="text-muted-foreground text-sm leading-relaxed">{rec.detail}</p>
           {rec.action ? (
-            <p className="rounded-md border border-[var(--keel-teal)]/20 bg-[var(--keel-teal)]/5 px-3 py-2 text-sm text-[var(--keel-teal)]">
+            <p className="rounded-md border border-[var(--ozer-accent)]/20 bg-[var(--ozer-accent)]/5 px-3 py-2 text-sm text-[var(--ozer-accent)]">
               {rec.action}
             </p>
           ) : null}
@@ -118,28 +118,28 @@ function CrawlDataSection(props: { page: RanklyPageDetail }) {
     <section className="space-y-4">
       <h2 className="text-sm font-medium">On-page data</h2>
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+        <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
           <p className="text-muted-foreground text-[10px] uppercase">Title</p>
           <p className="mt-1 text-sm">{crawl.title || '—'}</p>
           <p className="text-muted-foreground mt-1 text-xs">
             {crawl.title.length} characters
           </p>
         </div>
-        <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+        <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
           <p className="text-muted-foreground text-[10px] uppercase">Meta description</p>
           <p className="mt-1 text-sm">{crawl.meta_description || '—'}</p>
           <p className="text-muted-foreground mt-1 text-xs">
             {crawl.meta_description.length} characters
           </p>
         </div>
-        <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+        <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
           <p className="text-muted-foreground text-[10px] uppercase">H1</p>
           <p className="mt-1 text-sm">{crawl.h1 || '—'}</p>
           <p className="text-muted-foreground mt-1 text-xs">
             {crawl.h1_count} H1 tag{crawl.h1_count === 1 ? '' : 's'}
           </p>
         </div>
-        <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+        <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
           <p className="text-muted-foreground text-[10px] uppercase">Technical</p>
           <p className="mt-1 text-sm">
             HTTP {crawl.status_code}
@@ -217,7 +217,7 @@ function PagespeedSection(props: {
         {props.pagespeedDetailHref ? (
           <Link
             href={props.pagespeedDetailHref}
-            className="text-xs text-[var(--keel-teal)] underline-offset-4 hover:underline"
+            className="text-xs text-[var(--ozer-accent)] underline-offset-4 hover:underline"
           >
             Full PageSpeed history →
           </Link>
@@ -229,7 +229,7 @@ function PagespeedSection(props: {
           metrics && !metrics.errorMsg ? (
             <div
               key={label}
-              className="rounded-lg border border-white/10 bg-black/20 p-4"
+              className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4"
             >
               <p className="text-muted-foreground text-xs uppercase">{label}</p>
               <p
@@ -251,7 +251,7 @@ function PagespeedSection(props: {
           ) : (
             <div
               key={label}
-              className="rounded-lg border border-white/10 bg-black/20 p-4"
+              className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4"
             >
               <p className="text-muted-foreground text-xs uppercase">{label}</p>
               <p className="text-muted-foreground mt-2 text-sm">
@@ -332,7 +332,7 @@ export function RanklyPageDetailView(props: {
 
       <PagespeedSection page={page} pagespeedDetailHref={props.pagespeedDetailHref} />
 
-      <section className="space-y-3 rounded-lg border border-white/10 bg-black/10 p-4">
+      <section className="space-y-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-4">
         <h2 className="text-sm font-medium">URL optimization</h2>
         <PageOptimizePanel
           accountId={props.accountId}
@@ -352,7 +352,7 @@ export function RanklyPageDetailView(props: {
         </div>
 
         {page.recommendations.length === 0 ? (
-          <p className="text-muted-foreground rounded-lg border border-white/10 bg-black/20 p-4 text-sm">
+          <p className="text-muted-foreground rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4 text-sm">
             No issues found from the latest crawl and PageSpeed scans.
           </p>
         ) : (

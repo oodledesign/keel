@@ -31,13 +31,13 @@ function EmailPage() {
 function EmailPageSkeleton() {
   return (
     <div className={cn(workspacePageMainClassName, 'min-h-0')}>
-      <div className="space-y-2 border-b border-white/10 pb-5">
-        <div className="h-8 w-32 animate-pulse rounded-xl bg-white/[0.04]" />
-        <div className="h-4 w-96 max-w-full animate-pulse rounded-xl bg-white/[0.04]" />
+      <div className="space-y-2 border-b border-[color:var(--workspace-shell-border)] pb-5">
+        <div className="h-8 w-32 animate-pulse rounded-xl bg-[var(--workspace-shell-sidebar-accent)]" />
+        <div className="h-4 w-96 max-w-full animate-pulse rounded-xl bg-[var(--workspace-shell-sidebar-accent)]" />
       </div>
       <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-        <div className="h-[480px] animate-pulse rounded-2xl bg-white/[0.04]" />
-        <div className="h-[480px] animate-pulse rounded-2xl bg-white/[0.04]" />
+        <div className="h-[480px] animate-pulse rounded-2xl bg-[var(--workspace-shell-sidebar-accent)]" />
+        <div className="h-[480px] animate-pulse rounded-2xl bg-[var(--workspace-shell-sidebar-accent)]" />
       </div>
     </div>
   );

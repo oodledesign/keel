@@ -70,21 +70,21 @@ function SortableFieldRow({
         transform: CSS.Transform.toString(transform),
         transition,
       }}
-      className={`flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 ${
+      className={`flex items-center gap-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-2 ${
         isDragging ? 'opacity-60' : ''
       }`}
     >
       <button
         type="button"
-        className="cursor-grab text-zinc-500 hover:text-white"
+        className="cursor-grab text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
         {...attributes}
         {...listeners}
       >
         <GripVertical className="h-4 w-4" />
       </button>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-white">{field.label}</p>
-        <p className="text-xs text-zinc-500">
+        <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">{field.label}</p>
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
           {PROJECT_FIELD_TYPE_LABELS[field.fieldType]}
         </p>
       </div>
@@ -93,7 +93,7 @@ function SortableFieldRow({
           type="button"
           size="icon"
           variant="ghost"
-          className="h-8 w-8 text-zinc-400 hover:text-red-400"
+          className="h-8 w-8 text-[var(--workspace-shell-text-muted)] hover:text-red-400"
           onClick={onDelete}
         >
           <Trash2 className="h-4 w-4" />
@@ -217,10 +217,10 @@ export function CampaignManageColumnsDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-hidden border-white/10 bg-[var(--workspace-shell-panel)] text-white sm:max-w-lg">
+      <DialogContent className="max-h-[85vh] overflow-hidden border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Manage columns</DialogTitle>
-          <DialogDescription className="text-zinc-400">
+          <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
             Drag to reorder display columns. Add custom fields with different types.
           </DialogDescription>
         </DialogHeader>
@@ -248,27 +248,27 @@ export function CampaignManageColumnsDialog({
         </div>
 
         {canEdit ? (
-          <div className="space-y-3 border-t border-white/10 pt-4">
-            <p className="text-sm font-medium text-white">Add column</p>
+          <div className="space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-4">
+            <p className="text-sm font-medium text-[var(--workspace-shell-text)]">Add column</p>
             <div>
-              <Label className="text-xs text-zinc-500">Label</Label>
+              <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Label</Label>
               <Input
                 value={label}
                 onChange={(event) => setLabel(event.target.value)}
                 placeholder="e.g. Campaign Status"
-                className="mt-1 border-white/10 bg-white/5 text-white"
+                className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
               />
             </div>
             <div>
-              <Label className="text-xs text-zinc-500">Type</Label>
+              <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Type</Label>
               <Select
                 value={fieldType}
                 onValueChange={(value) => setFieldType(value as ProjectFieldType)}
               >
-                <SelectTrigger className="mt-1 border-white/10 bg-white/5 text-white">
+                <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="border-white/10 bg-[#1A2535] text-white">
+                <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
                   {PROJECT_FIELD_TYPES.map((type) => (
                     <SelectItem key={type} value={type}>
                       {PROJECT_FIELD_TYPE_LABELS[type]}
@@ -279,19 +279,19 @@ export function CampaignManageColumnsDialog({
             </div>
             {fieldType === 'select' ? (
               <div>
-                <Label className="text-xs text-zinc-500">Options (comma-separated)</Label>
+                <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Options (comma-separated)</Label>
                 <Input
                   value={choices}
                   onChange={(event) => setChoices(event.target.value)}
                   placeholder="Option 1, Option 2, Option 3"
-                  className="mt-1 border-white/10 bg-white/5 text-white"
+                  className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
                 />
               </div>
             ) : null}
             <Button
               type="button"
               disabled={pending}
-              className="w-full bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+              className="w-full bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
               onClick={handleAddField}
             >
               <Plus className="mr-2 h-4 w-4" />

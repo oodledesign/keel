@@ -134,7 +134,7 @@ export function EmbedCode(props: {
             onClick={() => void copyCode()}
           >
             {copied ? (
-              <Check className="h-3.5 w-3.5 text-[var(--keel-teal)]" />
+              <Check className="h-3.5 w-3.5 text-[var(--ozer-accent)]" />
             ) : (
               <Copy className="h-3.5 w-3.5" />
             )}
@@ -144,7 +144,7 @@ export function EmbedCode(props: {
       </div>
 
       <Tabs value={tab} onValueChange={(value) => setTab(value as EmbedTab)}>
-        <TabsList className="flex h-auto flex-wrap gap-1 bg-black/20 p-1">
+        <TabsList className="flex h-auto flex-wrap gap-1 bg-[var(--workspace-shell-sidebar-accent)] p-1">
           <TabsTrigger value="iframe" className="text-xs">
             iframe
           </TabsTrigger>
@@ -161,7 +161,7 @@ export function EmbedCode(props: {
 
         {(['iframe', 'html5', 'javascript', 'webflow'] as const).map((key) => (
           <TabsContent key={key} value={key} className="mt-3">
-            <div className="overflow-x-auto rounded-lg border border-white/10 bg-[#0d1117] p-4">
+            <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)] bg-[#0d1117] p-4">
               <pre className="m-0 text-xs leading-relaxed">
                 <code ref={key === tab ? codeRef : undefined}>
                   {codes[key]}

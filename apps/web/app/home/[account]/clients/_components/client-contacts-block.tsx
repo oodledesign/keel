@@ -157,16 +157,16 @@ function AddContactForm({
   };
 
   return (
-    <div className="space-y-3 rounded-lg border border-zinc-700 bg-zinc-900 p-4">
+    <div className="space-y-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-medium text-white">Add contact</p>
-        <div className="flex rounded-md border border-zinc-700 p-0.5 text-xs">
+        <p className="text-sm font-medium text-[var(--workspace-shell-text)]">Add contact</p>
+        <div className="flex rounded-md border border-[color:var(--workspace-shell-border)] p-0.5 text-xs">
           <button
             type="button"
             onClick={() => setMode('new')}
             className={cn(
               'rounded px-2 py-1',
-              mode === 'new' ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-white',
+              mode === 'new' ? 'bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text)]' : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
             )}
           >
             New
@@ -176,7 +176,7 @@ function AddContactForm({
             onClick={() => setMode('existing')}
             className={cn(
               'rounded px-2 py-1',
-              mode === 'existing' ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-white',
+              mode === 'existing' ? 'bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text)]' : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
             )}
           >
             Existing
@@ -251,8 +251,8 @@ function AddContactForm({
                   role="combobox"
                   aria-expanded={searchOpen}
                   className={cn(
-                    'w-full justify-between border-zinc-600 bg-zinc-800 text-white hover:bg-zinc-700 hover:text-white',
-                    !selectedContact && 'text-zinc-500',
+                    'w-full justify-between border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel-hover)] hover:text-[var(--workspace-shell-text)]',
+                    !selectedContact && 'text-[var(--workspace-shell-text-muted)]',
                   )}
                 >
                   {selectedContact
@@ -262,15 +262,15 @@ function AddContactForm({
                 </Button>
               </PopoverTrigger>
               <PopoverContent
-                className="w-[var(--radix-popover-trigger-width)] border-zinc-700 bg-zinc-900 p-0"
+                className="w-[var(--radix-popover-trigger-width)] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0"
                 align="start"
               >
-                <Command className="bg-zinc-900" shouldFilter={false}>
+                <Command className="bg-[var(--workspace-shell-panel)]" shouldFilter={false}>
                   <CommandInput
                     placeholder="Search by name or email…"
                     value={searchQuery}
                     onValueChange={setSearchQuery}
-                    className="border-zinc-700 bg-zinc-800 text-white placeholder:text-zinc-500"
+                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
                   />
                   <CommandList>
                     <CommandEmpty>
@@ -287,7 +287,7 @@ function AddContactForm({
                               setSelectedContactId(contact.id);
                               setSearchOpen(false);
                             }}
-                            className="text-zinc-300 aria-selected:bg-zinc-800"
+                            className="text-[var(--workspace-shell-text-muted)] aria-selected:bg-[var(--workspace-control-surface)]"
                           >
                             <Check
                               className={cn(
@@ -370,33 +370,33 @@ export function ClientContactsBlock({
   };
 
   if (loading) {
-    return <p className="text-xs text-zinc-500">Loading contacts…</p>;
+    return <p className="text-xs text-[var(--workspace-shell-text-muted)]">Loading contacts…</p>;
   }
 
   return (
     <div className="space-y-3">
       {contacts.length === 0 && !showAddForm && (
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
           No contacts yet. Add someone new or link an existing workspace contact.
         </p>
       )}
 
       {contacts.length > 0 && (
-        <div className="overflow-hidden rounded-lg border border-zinc-700">
+        <div className="overflow-hidden rounded-lg border border-[color:var(--workspace-shell-border)]">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-zinc-700 bg-zinc-900">
+              <tr className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
                 <th className="w-12 px-2 py-2" />
-                <th className="px-3 py-2 text-left text-xs font-medium text-zinc-400">Name</th>
-                <th className="hidden px-3 py-2 text-left text-xs font-medium text-zinc-400 sm:table-cell">Role</th>
-                <th className="hidden px-3 py-2 text-left text-xs font-medium text-zinc-400 md:table-cell">Email</th>
-                <th className="hidden px-3 py-2 text-left text-xs font-medium text-zinc-400 md:table-cell">Phone</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-[var(--workspace-shell-text-muted)]">Name</th>
+                <th className="hidden px-3 py-2 text-left text-xs font-medium text-[var(--workspace-shell-text-muted)] sm:table-cell">Role</th>
+                <th className="hidden px-3 py-2 text-left text-xs font-medium text-[var(--workspace-shell-text-muted)] md:table-cell">Email</th>
+                <th className="hidden px-3 py-2 text-left text-xs font-medium text-[var(--workspace-shell-text-muted)] md:table-cell">Phone</th>
                 {canEdit && <th className="w-8 px-2 py-2" />}
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-700">
               {contacts.map((contact) => (
-                <tr key={contact.id} className="bg-[var(--workspace-shell-panel)] hover:bg-zinc-800/50">
+                <tr key={contact.id} className="bg-[var(--workspace-shell-panel)] hover:bg-[var(--workspace-control-surface)]/50">
                   <td className="px-2 py-2.5 align-middle">
                     <ContactImageUploader
                       accountId={accountId}
@@ -409,53 +409,53 @@ export function ClientContactsBlock({
                   </td>
                   <td className="px-3 py-2.5">
                     <div>
-                      <p className="font-medium text-white">{contact.full_name}</p>
+                      <p className="font-medium text-[var(--workspace-shell-text)]">{contact.full_name}</p>
                       {contact.is_primary && (
-                        <span className="text-[10px] text-[#5eead4]">Primary</span>
+                        <span className="text-[10px] text-[var(--ozer-accent-muted)]">Primary</span>
                       )}
                       <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 sm:hidden">
                         {contact.role && (
-                          <span className="text-[11px] text-zinc-500">{contact.role}</span>
+                          <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">{contact.role}</span>
                         )}
                         {contact.email && (
-                          <a href={`mailto:${contact.email}`} className="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-[#5eead4]">
+                          <a href={`mailto:${contact.email}`} className="flex items-center gap-1 text-[11px] text-[var(--workspace-shell-text-muted)] hover:text-[var(--ozer-accent-muted)]">
                             <Mail className="h-3 w-3" />{contact.email}
                           </a>
                         )}
                         {contact.phone && (
-                          <a href={`tel:${contact.phone}`} className="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-[#5eead4]">
+                          <a href={`tel:${contact.phone}`} className="flex items-center gap-1 text-[11px] text-[var(--workspace-shell-text-muted)] hover:text-[var(--ozer-accent-muted)]">
                             <Phone className="h-3 w-3" />{contact.phone}
                           </a>
                         )}
                       </div>
                     </div>
                   </td>
-                  <td className="hidden px-3 py-2.5 text-xs text-zinc-400 sm:table-cell">
+                  <td className="hidden px-3 py-2.5 text-xs text-[var(--workspace-shell-text-muted)] sm:table-cell">
                     {contact.role ?? '—'}
                   </td>
                   <td className="hidden px-3 py-2.5 md:table-cell">
                     {contact.email ? (
-                      <a href={`mailto:${contact.email}`} className="flex items-center gap-1 text-xs text-zinc-400 hover:text-[#5eead4]">
+                      <a href={`mailto:${contact.email}`} className="flex items-center gap-1 text-xs text-[var(--workspace-shell-text-muted)] hover:text-[var(--ozer-accent-muted)]">
                         <Mail className="h-3 w-3" />{contact.email}
                       </a>
                     ) : (
-                      <span className="text-xs text-zinc-600">—</span>
+                      <span className="text-xs text-[var(--workspace-shell-text-muted)]">—</span>
                     )}
                   </td>
                   <td className="hidden px-3 py-2.5 md:table-cell">
                     {contact.phone ? (
-                      <a href={`tel:${contact.phone}`} className="flex items-center gap-1 text-xs text-zinc-400 hover:text-[#5eead4]">
+                      <a href={`tel:${contact.phone}`} className="flex items-center gap-1 text-xs text-[var(--workspace-shell-text-muted)] hover:text-[var(--ozer-accent-muted)]">
                         <Phone className="h-3 w-3" />{contact.phone}
                       </a>
                     ) : (
-                      <span className="text-xs text-zinc-600">—</span>
+                      <span className="text-xs text-[var(--workspace-shell-text-muted)]">—</span>
                     )}
                   </td>
                   {canEdit && (
                     <td className="px-2 py-2.5">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-500 hover:text-white">
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -496,7 +496,7 @@ export function ClientContactsBlock({
             type="button"
             variant="outline"
             size="sm"
-            className="border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+            className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-control-surface)] hover:text-[var(--workspace-shell-text)]"
             onClick={() => setShowAddForm(true)}
           >
             <PlusCircle className="mr-2 h-4 w-4" />

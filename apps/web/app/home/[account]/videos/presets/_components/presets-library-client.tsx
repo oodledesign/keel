@@ -52,20 +52,20 @@ function PresetSummary(props: { values: VideoPlayerConfigValues }) {
 
   return (
     <div className="text-muted-foreground mt-3 flex flex-wrap gap-2 text-xs">
-      <span className="rounded bg-white/5 px-2 py-0.5">
+      <span className="rounded bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5">
         Autoplay: {values.autoplay ? 'On' : 'Off'}
       </span>
-      <span className="rounded bg-white/5 px-2 py-0.5">
+      <span className="rounded bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5">
         Loop: {values.loop ? 'On' : 'Off'}
       </span>
-      <span className="inline-flex items-center gap-1 rounded bg-white/5 px-2 py-0.5">
+      <span className="inline-flex items-center gap-1 rounded bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5">
         <span
-          className="h-3 w-3 rounded-sm border border-white/10"
+          className="h-3 w-3 rounded-sm border border-[color:var(--workspace-shell-border)]"
           style={{ backgroundColor: values.primary_color }}
         />
         {values.primary_color}
       </span>
-      <span className="rounded bg-white/5 px-2 py-0.5">
+      <span className="rounded bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5">
         Controls: {values.show_controls ? 'On' : 'Off'}
       </span>
     </div>
@@ -189,7 +189,7 @@ export function PresetsLibraryClient(props: {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href={videosPath}
-          className="text-muted-foreground text-sm hover:text-white"
+          className="text-muted-foreground text-sm hover:text-[var(--workspace-shell-text)]"
         >
           ← Back to videos
         </Link>
@@ -204,7 +204,7 @@ export function PresetsLibraryClient(props: {
       </div>
 
       {presets.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/10 bg-black/10 px-6 py-16 text-center">
+        <div className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] bg-black/10 px-6 py-16 text-center">
           <p className="text-lg font-medium">No presets yet</p>
           <p className="text-muted-foreground mt-2 text-sm">
             Save reusable player configurations for consistent embeds across
@@ -224,14 +224,14 @@ export function PresetsLibraryClient(props: {
           {presets.map((preset) => (
             <article
               key={preset.id}
-              className="rounded-xl border border-white/10 bg-black/20 p-4"
+              className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="truncate text-sm font-medium">{preset.name}</h3>
                     {preset.isDefault ? (
-                      <span className="inline-flex items-center gap-1 rounded bg-[var(--keel-teal)]/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--keel-teal)]">
+                      <span className="inline-flex items-center gap-1 rounded bg-[var(--ozer-accent-subtle)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--ozer-accent)]">
                         <Star className="h-3 w-3" />
                         Default
                       </span>

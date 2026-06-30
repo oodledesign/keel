@@ -118,10 +118,10 @@ export function ClientImageUploader({
         disabled={uploading}
         onClick={openPicker}
         className={cn(
-          'group relative shrink-0 overflow-hidden rounded-xl border border-white/10',
-          'bg-zinc-800 ring-2 ring-white/10 transition',
-          'hover:border-[var(--keel-teal)]/40 hover:ring-[var(--keel-teal)]/30',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--keel-teal)]',
+          'group relative shrink-0 overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)]',
+          'bg-[var(--workspace-control-surface)] ring-2 ring-white/10 transition',
+          'hover:border-[var(--ozer-accent)]/40 hover:ring-[var(--ozer-accent)]/30',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)]',
           'disabled:cursor-not-allowed disabled:opacity-60',
           dimension,
         )}
@@ -135,17 +135,17 @@ export function ClientImageUploader({
             className="h-full w-full object-cover"
           />
         ) : (
-          <span className="flex h-full w-full flex-col items-center justify-center gap-1 text-zinc-200">
+          <span className="flex h-full w-full flex-col items-center justify-center gap-1 text-[var(--workspace-shell-text)]">
             <span className="text-2xl font-semibold">
               {clientInitials(displayName)}
             </span>
-            <Camera className="h-4 w-4 text-[#5eead4] opacity-90" />
+            <Camera className="h-4 w-4 text-[var(--ozer-accent-muted)] opacity-90" />
           </span>
         )}
 
         <span
           className={cn(
-            'absolute inset-0 flex items-center justify-center bg-black/45 text-xs font-medium text-white',
+            'absolute inset-0 flex items-center justify-center bg-black/45 text-xs font-medium text-[var(--workspace-shell-text)]',
             'opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100',
           )}
         >
@@ -168,7 +168,7 @@ export function ClientImageUploader({
           variant="ghost"
           size="sm"
           disabled={uploading}
-          className="h-8 px-2 text-zinc-400 hover:text-red-300"
+          className="h-8 px-2 text-[var(--workspace-shell-text-muted)] hover:text-red-300"
           onClick={() => void onRemovePhoto()}
         >
           <Trash2 className="mr-1.5 h-3.5 w-3.5" />

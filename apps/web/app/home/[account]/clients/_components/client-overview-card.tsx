@@ -53,14 +53,14 @@ export function ClientOverviewCard({
   const remainingProjects = Math.max(0, client.projectCount - client.projects.length);
 
   return (
-    <article className="flex h-full flex-col rounded-2xl border border-white/[0.08] bg-[var(--workspace-shell-panel)] p-5 shadow-sm transition hover:border-white/[0.14] hover:bg-[var(--workspace-shell-panel-hover)]">
+    <article className="flex h-full flex-col rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 shadow-sm transition hover:border-[color:var(--workspace-shell-border)] hover:bg-[var(--workspace-shell-panel-hover)]">
       <div className="flex items-start gap-3">
         <Link href={detailHref} className="shrink-0">
           <ProfileAvatar
             displayName={client.displayName}
             pictureUrl={client.pictureUrl}
             className="h-12 w-12 rounded-full"
-            fallbackClassName="rounded-full bg-zinc-700 text-lg text-zinc-200"
+            fallbackClassName="rounded-full bg-[var(--workspace-shell-panel-hover)] text-lg text-[var(--workspace-shell-text)]"
           />
         </Link>
 
@@ -68,7 +68,7 @@ export function ClientOverviewCard({
           <div className="flex items-start gap-2">
             <Link
               href={detailHref}
-              className="truncate text-base font-semibold text-white hover:text-[#5eead4]"
+              className="truncate text-base font-semibold text-[var(--workspace-shell-text)] hover:text-[var(--ozer-accent-muted)]"
             >
               {client.displayName}
             </Link>
@@ -79,7 +79,7 @@ export function ClientOverviewCard({
                 event.stopPropagation();
                 onToggleFavorite();
               }}
-              className="shrink-0 rounded-md p-1 text-zinc-500 transition hover:bg-white/5 hover:text-amber-300"
+              className="shrink-0 rounded-md p-1 text-[var(--workspace-shell-text-muted)] transition hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-amber-300"
               aria-label={isFavorite ? 'Remove favourite' : 'Add favourite'}
             >
               <Star
@@ -90,32 +90,32 @@ export function ClientOverviewCard({
               />
             </button>
           </div>
-          <p className="mt-1 line-clamp-2 text-sm text-zinc-400">{client.tagline}</p>
+          <p className="mt-1 line-clamp-2 text-sm text-[var(--workspace-shell-text-muted)]">{client.tagline}</p>
         </div>
       </div>
 
-      <dl className="mt-5 grid grid-cols-3 gap-3 border-y border-white/[0.06] py-4">
+      <dl className="mt-5 grid grid-cols-3 gap-3 border-y border-[color:var(--workspace-shell-border)] py-4">
         <div>
-          <dd className="text-xl font-semibold text-white">{client.projectCount}</dd>
-          <dt className="text-xs text-zinc-500">Projects</dt>
+          <dd className="text-xl font-semibold text-[var(--workspace-shell-text)]">{client.projectCount}</dd>
+          <dt className="text-xs text-[var(--workspace-shell-text-muted)]">Projects</dt>
         </div>
         <div>
-          <dd className="text-xl font-semibold text-white">{client.teamMemberCount}</dd>
-          <dt className="text-xs text-zinc-500">Team Members</dt>
+          <dd className="text-xl font-semibold text-[var(--workspace-shell-text)]">{client.teamMemberCount}</dd>
+          <dt className="text-xs text-[var(--workspace-shell-text-muted)]">Team Members</dt>
         </div>
         <div>
-          <dd className="text-xl font-semibold text-white">{client.dueTaskCount}</dd>
-          <dt className="text-xs text-zinc-500">Due Tasks</dt>
+          <dd className="text-xl font-semibold text-[var(--workspace-shell-text)]">{client.dueTaskCount}</dd>
+          <dt className="text-xs text-[var(--workspace-shell-text-muted)]">Due Tasks</dt>
         </div>
       </dl>
 
       <div className="mt-4 flex-1">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--workspace-shell-text-muted)]">
           Projects
         </p>
 
         {client.projects.length === 0 ? (
-          <p className="mt-3 text-sm text-zinc-500">No active projects yet.</p>
+          <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">No active projects yet.</p>
         ) : (
           <ul className="mt-3 space-y-3">
             {client.projects.map((project) => {
@@ -126,16 +126,16 @@ export function ClientOverviewCard({
 
               return (
                 <li key={project.id}>
-                  <Link href={projectHref} className="block rounded-lg hover:bg-white/[0.03]">
+                  <Link href={projectHref} className="block rounded-lg hover:bg-[var(--workspace-shell-sidebar-accent)]">
                     <div className="flex items-center gap-2">
                       <span
                         className={cn('h-2 w-2 shrink-0 rounded-full', health.dot)}
                         aria-hidden
                       />
-                      <span className="min-w-0 flex-1 truncate text-sm text-zinc-200">
+                      <span className="min-w-0 flex-1 truncate text-sm text-[var(--workspace-shell-text)]">
                         {project.title}
                       </span>
-                      <span className="text-xs text-zinc-500">{project.progress}%</span>
+                      <span className="text-xs text-[var(--workspace-shell-text-muted)]">{project.progress}%</span>
                     </div>
                     <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
                       <div
@@ -163,7 +163,7 @@ export function ClientOverviewCard({
         {remainingProjects > 0 ? (
           <Link
             href={jobsHref}
-            className="inline-flex items-center gap-1 text-sm font-medium text-[var(--keel-accent-blue)] hover:text-[#5eead4]"
+            className="inline-flex items-center gap-1 text-sm font-medium text-[var(--keel-accent-blue)] hover:text-[var(--ozer-accent-muted)]"
           >
             View all {client.projectCount} projects
             <ArrowRight className="h-3.5 w-3.5" />
@@ -171,7 +171,7 @@ export function ClientOverviewCard({
         ) : client.projectCount > 0 ? (
           <Link
             href={jobsHref}
-            className="inline-flex items-center gap-1 text-sm font-medium text-[var(--keel-accent-blue)] hover:text-[#5eead4]"
+            className="inline-flex items-center gap-1 text-sm font-medium text-[var(--keel-accent-blue)] hover:text-[var(--ozer-accent-muted)]"
           >
             View projects
             <ArrowRight className="h-3.5 w-3.5" />
@@ -191,7 +191,7 @@ export function ClientOverviewCard({
               />
             ))}
             {client.teamMemberCount > client.teamMembers.length ? (
-              <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-[var(--workspace-shell-panel)] bg-zinc-700 text-xs font-medium text-zinc-200">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-[var(--workspace-shell-panel)] bg-[var(--workspace-shell-panel-hover)] text-xs font-medium text-[var(--workspace-shell-text)]">
                 +{client.teamMemberCount - client.teamMembers.length}
               </span>
             ) : null}

@@ -43,7 +43,7 @@ export function LinkToSelect({
       onValueChange={(v) => onChange(decodeLink(v))}
       disabled={disabled}
     >
-      <SelectTrigger className="border-white/10 bg-[var(--workspace-shell-panel)] text-white">
+      <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>

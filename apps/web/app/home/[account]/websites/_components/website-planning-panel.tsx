@@ -46,19 +46,19 @@ export function WebsitePlanningPanel({
   }, [accountSlug, planning.jobId]);
 
   return (
-    <section className="rounded-[20px] border border-white/6 bg-[var(--workspace-shell-panel)]">
-      <div className="border-b border-white/10 px-4 py-4 md:px-6">
+    <section className="rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+      <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-4 md:px-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold text-white">Website planning</h2>
-            <p className="mt-1 text-sm text-white/60">
+            <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">Website planning</h2>
+            <p className="mt-1 text-sm text-[var(--workspace-shell-text)]/60">
               Sitemap, wireframes, and content docs for this build.
             </p>
           </div>
           {jobHref ? (
             <Link
               href={jobHref}
-              className="text-sm text-[var(--keel-teal)] hover:underline"
+              className="text-sm text-[var(--ozer-accent)] hover:underline"
             >
               Open project{linkedJobTitle ? `: ${linkedJobTitle}` : ''}
             </Link>
@@ -74,8 +74,8 @@ export function WebsitePlanningPanel({
               className={cn(
                 'rounded-full px-3 py-1.5 text-sm transition-colors',
                 tab === item.id
-                  ? 'bg-[var(--keel-teal)] text-white'
-                  : 'border border-white/10 text-zinc-400 hover:bg-white/5 hover:text-white',
+                  ? 'bg-[var(--ozer-accent)] text-[var(--ozer-white)]'
+                  : 'border border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
               )}
             >
               {item.label}
@@ -86,13 +86,13 @@ export function WebsitePlanningPanel({
 
       <div className="px-4 py-5 md:px-6">
         {tab === 'overview' ? (
-          <div className="space-y-4 text-sm text-white/75">
+          <div className="space-y-4 text-sm text-[var(--workspace-shell-text)]/75">
             <p>
-              Follow the <strong className="text-white">Website design</strong>{' '}
+              Follow the <strong className="text-[var(--workspace-shell-text)]">Website design</strong>{' '}
               project template in Jobs: business context → sitemap → wireframes →
               client content → design → typography → build.
             </p>
-            <ol className="list-decimal space-y-2 pl-5 text-white/70">
+            <ol className="list-decimal space-y-2 pl-5 text-[var(--workspace-shell-text)]/70">
               <li>Set visual references before any AI tool.</li>
               <li>Map pages and sections in the sitemap.</li>
               <li>Add layout intent in wireframes.</li>

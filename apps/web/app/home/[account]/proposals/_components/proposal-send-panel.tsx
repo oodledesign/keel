@@ -112,9 +112,9 @@ export function ProposalSendPanel({
   };
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-6">
+    <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6">
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-white">Send {proposalTitle}</h2>
+        <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">Send {proposalTitle}</h2>
         <Button variant="ghost" size="sm" onClick={onClose}>
           Close
         </Button>
@@ -151,8 +151,8 @@ export function ProposalSendPanel({
               </Button>
             ))}
           </div>
-          <div className="rounded-xl border border-white/8 bg-white/3 p-4 text-sm">
-            <p className="font-medium text-white">Preview summary</p>
+          <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-white/3 p-4 text-sm">
+            <p className="font-medium text-[var(--workspace-shell-text)]">Preview summary</p>
             <p className="mt-2 text-muted-foreground">
               {proposalTitle}
               {totalPence != null ? ` · ${formatPence(totalPence, currency ?? 'GBP')}` : ''}
@@ -160,7 +160,7 @@ export function ProposalSendPanel({
           </div>
           <div className="flex flex-wrap gap-2">
             <Button
-              className="bg-[var(--keel-teal)] text-[#09111F]"
+              className="bg-[var(--ozer-accent)] text-[#09111F]"
               disabled={loading != null}
               onClick={() => void handleSend(false)}
             >

@@ -132,7 +132,7 @@ export function WebsiteContentDocsPanel({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-white/70">
+        <p className="text-sm text-[var(--workspace-shell-text)]/70">
           Client copy, references, and specs — stored as Markdown.
         </p>
         {canEdit ? (
@@ -140,7 +140,7 @@ export function WebsiteContentDocsPanel({
             type="button"
             size="sm"
             variant="outline"
-            className="border-white/10 text-white hover:bg-white/5"
+            className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
             onClick={addDoc}
           >
             <Plus className="mr-2 h-4 w-4" />
@@ -150,7 +150,7 @@ export function WebsiteContentDocsPanel({
       </div>
 
       {docs.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/10 px-4 py-8 text-center text-sm text-zinc-500">
+        <div className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center text-sm text-[var(--workspace-shell-text-muted)]">
           Add a doc per page or topic — hero copy, team bios, references…
         </div>
       ) : (
@@ -164,8 +164,8 @@ export function WebsiteContentDocsPanel({
                   className={cn(
                     'flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-colors',
                     activeDocId === doc.id
-                      ? 'border-[var(--keel-teal)] bg-[var(--keel-teal)]/10 text-white'
-                      : 'border-white/10 text-zinc-400 hover:bg-white/5 hover:text-white',
+                      ? 'border-[var(--ozer-accent)] bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-text)]'
+                      : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
                   )}
                 >
                   <span className="truncate">{doc.title}</span>
@@ -173,7 +173,7 @@ export function WebsiteContentDocsPanel({
                     <span
                       role="button"
                       tabIndex={0}
-                      className="ml-2 text-zinc-500 hover:text-red-400"
+                      className="ml-2 text-[var(--workspace-shell-text-muted)] hover:text-red-400"
                       onClick={(event) => {
                         event.stopPropagation();
                         removeDoc(doc.id);
@@ -194,14 +194,14 @@ export function WebsiteContentDocsPanel({
           </ul>
 
           {activeDoc ? (
-            <div className="space-y-3 rounded-xl border border-white/10 bg-[#0B132B]/40 p-4">
+            <div className="space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/40 p-4">
               <Input
                 value={activeDoc.title}
                 readOnly={!canEdit}
                 onChange={(event) =>
                   persistDoc(activeDoc.id, { title: event.target.value })
                 }
-                className="h-9 border-white/10 bg-[#0B132B] text-white"
+                className="h-9 border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]"
               />
               <SimpleMarkdownEditor
                 value={activeDoc.contentMd}

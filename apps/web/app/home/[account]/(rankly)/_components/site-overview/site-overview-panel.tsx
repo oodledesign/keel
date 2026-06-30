@@ -36,7 +36,7 @@ function MetricCard(props: {
   sub?: string;
 }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+    <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
       <p className="text-muted-foreground text-xs uppercase tracking-wide">
         {props.label}
       </p>
@@ -49,7 +49,7 @@ function MetricCard(props: {
           className={
             props.delta.startsWith('-')
               ? 'mt-1 text-xs text-red-400'
-              : 'mt-1 text-xs text-[var(--keel-teal)]'
+              : 'mt-1 text-xs text-[var(--ozer-accent)]'
           }
         >
           {props.delta} {props.hint ?? ''}
@@ -108,7 +108,7 @@ export function SiteOverviewPanel(props: {
   const data = props.overview;
 
   return (
-    <section className="space-y-6 rounded-lg border border-white/10 bg-black/10 p-5">
+    <section className="space-y-6 rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-lg font-semibold">Site Explorer</h2>
@@ -138,7 +138,7 @@ export function SiteOverviewPanel(props: {
       </div>
 
       {!data ? (
-        <p className="text-muted-foreground rounded-lg border border-dashed border-white/10 px-4 py-8 text-center text-sm">
+        <p className="text-muted-foreground rounded-lg border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center text-sm">
           Pull authority, traffic, backlink, and AI visibility metrics for this domain.
         </p>
       ) : (
@@ -178,7 +178,7 @@ export function SiteOverviewPanel(props: {
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+            <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
               <p className="text-muted-foreground text-xs uppercase tracking-wide">
                 Organic search
               </p>
@@ -210,7 +210,7 @@ export function SiteOverviewPanel(props: {
               </p>
             </div>
 
-            <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+            <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
               <p className="text-muted-foreground text-xs uppercase tracking-wide">
                 Paid search
               </p>
@@ -222,7 +222,7 @@ export function SiteOverviewPanel(props: {
             </div>
           </div>
 
-          <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+          <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-muted-foreground text-xs uppercase tracking-wide">
                 Brand visibility

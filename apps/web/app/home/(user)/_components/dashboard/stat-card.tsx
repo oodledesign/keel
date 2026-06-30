@@ -11,7 +11,7 @@ export type StatCardProps = {
 };
 
 const panelClass =
-  'rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)] shadow-[0_12px_36px_rgba(4,10,24,0.18)]';
+  'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_12px_36px_rgba(4,10,24,0.18)]';
 
 export function StatCard({
   label,
@@ -34,7 +34,7 @@ export function StatCard({
             {label}
           </span>
         </div>
-        <p className="text-2xl font-semibold tracking-tight text-white">
+        <p className="text-2xl font-semibold tracking-tight text-[var(--workspace-shell-text)]">
           {value}
         </p>
         {subtitle && (

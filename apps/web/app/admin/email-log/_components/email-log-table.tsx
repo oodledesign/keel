@@ -99,14 +99,14 @@ export function EmailLogTable({
 
   return (
     <div className="space-y-4">
-      <div className="flex w-fit rounded-xl border border-white/10 bg-[var(--workspace-shell-panel)] p-1">
+      <div className="flex w-fit rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-1">
         <button
           type="button"
           onClick={() => updateView('grouped')}
           className={`rounded-lg px-3 py-1.5 text-sm ${
             view === 'grouped'
               ? 'bg-[#57C87F] text-[#09111F]'
-              : 'text-zinc-300 hover:bg-white/5'
+              : 'text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)]'
           }`}
         >
           Grouped view
@@ -117,7 +117,7 @@ export function EmailLogTable({
           className={`rounded-lg px-3 py-1.5 text-sm ${
             view === 'individual'
               ? 'bg-[#57C87F] text-[#09111F]'
-              : 'text-zinc-300 hover:bg-white/5'
+              : 'text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)]'
           }`}
         >
           Individual view
@@ -135,7 +135,7 @@ export function EmailLogTable({
               })
             }
           >
-            <SelectTrigger className="w-full border-white/10 bg-black/20 text-white sm:w-[200px]">
+            <SelectTrigger className="w-full border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] sm:w-[200px]">
               <SelectValue placeholder="Email type" />
             </SelectTrigger>
             <SelectContent>
@@ -157,7 +157,7 @@ export function EmailLogTable({
               })
             }
           >
-            <SelectTrigger className="w-full border-white/10 bg-black/20 text-white sm:w-[240px]">
+            <SelectTrigger className="w-full border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] sm:w-[240px]">
               <SelectValue placeholder="Business" />
             </SelectTrigger>
             <SelectContent>
@@ -174,7 +174,7 @@ export function EmailLogTable({
         <Input
           placeholder="Search recipient or subject…"
           defaultValue={currentQuery}
-          className="w-full border-white/10 bg-black/20 text-white lg:max-w-sm"
+          className="w-full border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] lg:max-w-sm"
           onChange={(event) => {
             const value = event.target.value.trim();
             pushFilters({
@@ -191,48 +191,48 @@ export function EmailLogTable({
           transactionalRows={transactionalRows}
         />
       ) : (
-      <div className="rounded-xl border border-white/10 bg-[var(--workspace-shell-panel)]">
+      <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
         <Table>
           <TableHeader>
-            <TableRow className="border-white/10 hover:bg-transparent">
-              <TableHead className="text-zinc-400">Sent</TableHead>
-              <TableHead className="text-zinc-400">Type</TableHead>
-              <TableHead className="text-zinc-400">Business</TableHead>
-              <TableHead className="text-zinc-400">Recipient</TableHead>
-              <TableHead className="text-zinc-400">Subject</TableHead>
-              <TableHead className="text-zinc-400">Status</TableHead>
+            <TableRow className="border-[color:var(--workspace-shell-border)] hover:bg-transparent">
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">Sent</TableHead>
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">Type</TableHead>
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">Business</TableHead>
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">Recipient</TableHead>
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">Subject</TableHead>
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.length === 0 ? (
-              <TableRow className="border-white/10">
-                <TableCell colSpan={6} className="py-10 text-center text-zinc-500">
+              <TableRow className="border-[color:var(--workspace-shell-border)]">
+                <TableCell colSpan={6} className="py-10 text-center text-[var(--workspace-shell-text-muted)]">
                   No emails logged yet.
                 </TableCell>
               </TableRow>
             ) : (
               rows.map((row) => (
-                <TableRow key={row.id} className="border-white/10">
-                  <TableCell className="whitespace-nowrap text-zinc-300">
+                <TableRow key={row.id} className="border-[color:var(--workspace-shell-border)]">
+                  <TableCell className="whitespace-nowrap text-[var(--workspace-shell-text-muted)]">
                     {formatUkDateTimeMedium(row.created_at)}
                   </TableCell>
-                  <TableCell className="capitalize text-zinc-300">
+                  <TableCell className="capitalize text-[var(--workspace-shell-text-muted)]">
                     {formatEmailType(row.email_type)}
                   </TableCell>
-                  <TableCell className="text-zinc-300">
+                  <TableCell className="text-[var(--workspace-shell-text-muted)]">
                     {row.account_name ? (
                       <div>
                         <p>{row.account_name}</p>
                         {row.account_slug ? (
-                          <p className="text-xs text-zinc-500">/{row.account_slug}</p>
+                          <p className="text-xs text-[var(--workspace-shell-text-muted)]">/{row.account_slug}</p>
                         ) : null}
                       </div>
                     ) : (
                       '—'
                     )}
                   </TableCell>
-                  <TableCell className="text-zinc-300">{row.recipient_email}</TableCell>
-                  <TableCell className="max-w-xs truncate text-zinc-300" title={row.subject}>
+                  <TableCell className="text-[var(--workspace-shell-text-muted)]">{row.recipient_email}</TableCell>
+                  <TableCell className="max-w-xs truncate text-[var(--workspace-shell-text-muted)]" title={row.subject}>
                     {row.subject}
                   </TableCell>
                   <TableCell>
@@ -261,7 +261,7 @@ export function EmailLogTable({
       )}
 
       {view === 'individual' && pageCount > 1 ? (
-        <div className="flex items-center justify-between text-sm text-zinc-400">
+        <div className="flex items-center justify-between text-sm text-[var(--workspace-shell-text-muted)]">
           <span>
             Page {currentPage} of {pageCount} · {total} total
           </span>
@@ -269,7 +269,7 @@ export function EmailLogTable({
             <button
               type="button"
               disabled={currentPage <= 1}
-              className="rounded-md border border-white/10 px-3 py-1 disabled:opacity-40"
+              className="rounded-md border border-[color:var(--workspace-shell-border)] px-3 py-1 disabled:opacity-40"
               onClick={() => pushFilters({ page: String(currentPage - 1) })}
             >
               Previous
@@ -277,7 +277,7 @@ export function EmailLogTable({
             <button
               type="button"
               disabled={currentPage >= pageCount}
-              className="rounded-md border border-white/10 px-3 py-1 disabled:opacity-40"
+              className="rounded-md border border-[color:var(--workspace-shell-border)] px-3 py-1 disabled:opacity-40"
               onClick={() => pushFilters({ page: String(currentPage + 1) })}
             >
               Next
@@ -297,22 +297,22 @@ function GroupedEmailLogTable({
   transactionalRows: PlatformEmailLogRow[];
 }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-[var(--workspace-shell-panel)]">
+    <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
       <Table>
         <TableHeader>
-          <TableRow className="border-white/10 hover:bg-transparent">
-            <TableHead className="text-zinc-400">Date sent</TableHead>
-            <TableHead className="text-zinc-400">Type</TableHead>
-            <TableHead className="text-zinc-400">Campaign / Subject</TableHead>
-            <TableHead className="text-zinc-400">Recipient list</TableHead>
-            <TableHead className="text-zinc-400">Total sent</TableHead>
-            <TableHead className="text-zinc-400">Actions</TableHead>
+          <TableRow className="border-[color:var(--workspace-shell-border)] hover:bg-transparent">
+            <TableHead className="text-[var(--workspace-shell-text-muted)]">Date sent</TableHead>
+            <TableHead className="text-[var(--workspace-shell-text-muted)]">Type</TableHead>
+            <TableHead className="text-[var(--workspace-shell-text-muted)]">Campaign / Subject</TableHead>
+            <TableHead className="text-[var(--workspace-shell-text-muted)]">Recipient list</TableHead>
+            <TableHead className="text-[var(--workspace-shell-text-muted)]">Total sent</TableHead>
+            <TableHead className="text-[var(--workspace-shell-text-muted)]">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {campaigns.map((campaign) => (
-            <TableRow key={`campaign-${campaign.id}`} className="border-white/10">
-              <TableCell className="whitespace-nowrap text-zinc-300">
+            <TableRow key={`campaign-${campaign.id}`} className="border-[color:var(--workspace-shell-border)]">
+              <TableCell className="whitespace-nowrap text-[var(--workspace-shell-text-muted)]">
                 {campaign.sent_at ? formatUkDateTimeMedium(campaign.sent_at) : '—'}
               </TableCell>
               <TableCell>
@@ -320,11 +320,11 @@ function GroupedEmailLogTable({
                   Campaign
                 </Badge>
               </TableCell>
-              <TableCell className="font-medium text-white">{campaign.title}</TableCell>
-              <TableCell className="text-zinc-300">
+              <TableCell className="font-medium text-[var(--workspace-shell-text)]">{campaign.title}</TableCell>
+              <TableCell className="text-[var(--workspace-shell-text-muted)]">
                 {campaign.recipient_list.replace(/_/g, ' ')}
               </TableCell>
-              <TableCell className="text-zinc-300">{campaign.total_sent}</TableCell>
+              <TableCell className="text-[var(--workspace-shell-text-muted)]">{campaign.total_sent}</TableCell>
               <TableCell>
                 <Link
                   href={`/admin/email-marketing/${campaign.id}`}
@@ -337,25 +337,25 @@ function GroupedEmailLogTable({
           ))}
 
           {transactionalRows.map((row) => (
-            <TableRow key={`transactional-${row.id}`} className="border-white/10">
-              <TableCell className="whitespace-nowrap text-zinc-300">
+            <TableRow key={`transactional-${row.id}`} className="border-[color:var(--workspace-shell-border)]">
+              <TableCell className="whitespace-nowrap text-[var(--workspace-shell-text-muted)]">
                 {formatUkDateTimeMedium(row.created_at)}
               </TableCell>
-              <TableCell className="capitalize text-zinc-300">
+              <TableCell className="capitalize text-[var(--workspace-shell-text-muted)]">
                 {formatEmailType(row.email_type)}
               </TableCell>
-              <TableCell className="max-w-xs truncate text-zinc-300" title={row.subject}>
+              <TableCell className="max-w-xs truncate text-[var(--workspace-shell-text-muted)]" title={row.subject}>
                 {row.subject}
               </TableCell>
-              <TableCell className="text-zinc-500">—</TableCell>
-              <TableCell className="text-zinc-300">1</TableCell>
-              <TableCell className="text-zinc-500">—</TableCell>
+              <TableCell className="text-[var(--workspace-shell-text-muted)]">—</TableCell>
+              <TableCell className="text-[var(--workspace-shell-text-muted)]">1</TableCell>
+              <TableCell className="text-[var(--workspace-shell-text-muted)]">—</TableCell>
             </TableRow>
           ))}
 
           {campaigns.length === 0 && transactionalRows.length === 0 ? (
-            <TableRow className="border-white/10">
-              <TableCell colSpan={6} className="py-10 text-center text-zinc-500">
+            <TableRow className="border-[color:var(--workspace-shell-border)]">
+              <TableCell colSpan={6} className="py-10 text-center text-[var(--workspace-shell-text-muted)]">
                 No emails logged yet.
               </TableCell>
             </TableRow>

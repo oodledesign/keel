@@ -87,8 +87,8 @@ export default async function PortalSharedPage({
     <div
       className={
         isEmbed
-          ? 'min-h-0 bg-[#09111F] p-4 text-white'
-          : 'mx-auto min-h-screen max-w-3xl bg-[#09111F] px-4 py-8 text-white sm:px-6 lg:px-8'
+          ? 'min-h-0 bg-[var(--ozer-plum-950)] p-4 text-[var(--workspace-shell-text)]'
+          : 'mx-auto min-h-screen max-w-3xl bg-[var(--ozer-plum-950)] px-4 py-8 text-[var(--workspace-shell-text)] sm:px-6 lg:px-8'
       }
     >
       <PortalSharedItemView item={item} embed={isEmbed} token={token} />

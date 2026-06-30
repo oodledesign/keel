@@ -127,21 +127,21 @@ export function SupportTicketDetailContent({
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <div className="space-y-4">
-        <Link href={listHref} className="text-sm text-white/50 hover:text-white">
+        <Link href={listHref} className="text-sm text-[var(--workspace-shell-text)]/50 hover:text-[var(--workspace-shell-text)]">
           ← Back to support
         </Link>
 
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono text-sm text-white/60">
+              <span className="font-mono text-sm text-[var(--workspace-shell-text)]/60">
                 {formatTicketNumber(ticket.ticketNumber)}
               </span>
               <TicketStatusBadge status={ticket.status} />
               <TicketPriorityBadge priority={ticket.priority} />
             </div>
-            <h1 className="text-2xl font-semibold text-white">{ticket.title}</h1>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-white/60">
+            <h1 className="text-2xl font-semibold text-[var(--workspace-shell-text)]">{ticket.title}</h1>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[var(--workspace-shell-text)]/60">
               {ticket.clientOrgName ? (
                 <span>Client: {ticket.clientOrgName}</span>
               ) : null}
@@ -192,7 +192,7 @@ export function SupportTicketDetailContent({
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2 rounded-[16px] border border-white/6 bg-[var(--workspace-shell-panel)] p-4">
+        <div className="space-y-2 rounded-[16px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
           <Label>Status</Label>
           <Select
             value={ticket.status}
@@ -217,7 +217,7 @@ export function SupportTicketDetailContent({
           </Select>
         </div>
 
-        <div className="space-y-2 rounded-[16px] border border-white/6 bg-[var(--workspace-shell-panel)] p-4">
+        <div className="space-y-2 rounded-[16px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
           <Label>Assign to</Label>
           <Select
             value={ticket.assignedTo ?? '__none__'}
@@ -244,10 +244,10 @@ export function SupportTicketDetailContent({
         </div>
       </div>
 
-      <div className="rounded-[20px] border border-white/6 bg-[var(--workspace-shell-panel)]">
-        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-          <h2 className="text-sm font-semibold text-white">Conversation</h2>
-          <label className="flex items-center gap-2 text-sm text-white/60">
+      <div className="rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+        <div className="flex items-center justify-between border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
+          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Conversation</h2>
+          <label className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text)]/60">
             <Checkbox
               checked={showInternal}
               onCheckedChange={(checked) => setShowInternal(checked === true)}
@@ -258,7 +258,7 @@ export function SupportTicketDetailContent({
 
         <div className="max-h-[480px] space-y-3 overflow-y-auto px-4 py-4">
           {visibleMessages.length === 0 ? (
-            <p className="text-sm text-white/50">No messages yet.</p>
+            <p className="text-sm text-[var(--workspace-shell-text)]/50">No messages yet.</p>
           ) : (
             visibleMessages.map((message) => (
               <div
@@ -266,11 +266,11 @@ export function SupportTicketDetailContent({
                 className={`rounded-xl border px-4 py-3 ${
                   message.isInternal
                     ? 'border-amber-500/20 bg-amber-500/10'
-                    : 'border-white/8 bg-white/[0.03]'
+                    : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]'
                 }`}
               >
-                <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-white/50">
-                  <span className="font-medium text-white/80">
+                <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-[var(--workspace-shell-text)]/50">
+                  <span className="font-medium text-[var(--workspace-shell-text)]/80">
                     {message.authorName ?? 'Team member'}
                   </span>
                   <span>{formatTicketDate(message.createdAt)}</span>
@@ -280,7 +280,7 @@ export function SupportTicketDetailContent({
                     </span>
                   ) : null}
                 </div>
-                <p className="whitespace-pre-wrap text-sm text-white/80">
+                <p className="whitespace-pre-wrap text-sm text-[var(--workspace-shell-text)]/80">
                   {message.message}
                 </p>
               </div>
@@ -290,7 +290,7 @@ export function SupportTicketDetailContent({
 
         <form
           onSubmit={handleReply}
-          className="space-y-3 border-t border-white/10 px-4 py-4"
+          className="space-y-3 border-t border-[color:var(--workspace-shell-border)] px-4 py-4"
         >
           <Textarea
             value={reply}
@@ -299,7 +299,7 @@ export function SupportTicketDetailContent({
             placeholder="Write a reply…"
           />
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <label className="flex items-center gap-2 text-sm text-white/70">
+            <label className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text)]/70">
               <Checkbox
                 checked={isInternal}
                 onCheckedChange={(checked) => setIsInternal(checked === true)}

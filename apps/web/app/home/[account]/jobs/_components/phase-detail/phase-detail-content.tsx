@@ -62,7 +62,7 @@ export function PhaseDetailContent({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href={jobPath}
-          className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-white"
+          className="inline-flex items-center gap-1 text-sm text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to {jobTitle}
@@ -70,7 +70,7 @@ export function PhaseDetailContent({
         <AskBrainLink
           accountSlug={accountSlug}
           label="Ask about this phase"
-          className="border-zinc-600 text-zinc-300"
+          className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]"
           params={{
             jobId,
             jobTitle,

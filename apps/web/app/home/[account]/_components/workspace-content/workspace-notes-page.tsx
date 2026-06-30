@@ -42,6 +42,7 @@ import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import { ACCOUNT_DOCS_BUCKET } from '../../_lib/workspace-content/docs-constants';
+import { workspaceBtnPrimaryMd, workspaceCardHover, workspaceFilterActive, workspaceSuccessBadgeBorder } from '~/lib/workspace-ui';
 import {
   getWorkspaceDocDownloadUrlAction,
   registerUploadedWorkspaceDocAction,
@@ -65,7 +66,7 @@ import { PublicSharingSection } from './public-sharing-section';
 import { TagsInput } from './tags-input';
 
 const panelClass =
-  'rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)]';
+  'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
 
 type ListFilter = 'all' | 'pinned' | 'notes' | 'files';
 
@@ -205,7 +206,7 @@ export function WorkspaceNotesPage({
 
   if (!tableAvailable && !docsTableAvailable) {
     return (
-      <p className="text-sm text-zinc-400">
+      <p className="text-sm text-[var(--workspace-shell-text-muted)]">
         Notes and files are not available yet. Apply the latest database
         migrations and refresh.
       </p>
@@ -214,10 +215,8 @@ export function WorkspaceNotesPage({
 
   const filterBtn = (active: boolean) =>
     cn(
-      'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
-      active
-        ? 'bg-[#2A9D8F]/20 text-[#5eead4]'
-        : 'text-zinc-400 hover:bg-white/5 hover:text-white',
+      'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]',
+      active ? workspaceFilterActive : 'text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
     );
 
   return (
@@ -249,8 +248,8 @@ export function WorkspaceNotesPage({
                   size="sm"
                   variant="outline"
                   className={cn(
-                    'border-white/10 text-zinc-300 hover:bg-white/5 hover:text-white',
-                    !showProjectLinked && 'border-[#2A9D8F]/30 text-[#5eead4]',
+                    'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
+                    !showProjectLinked && 'border-[var(--ozer-accent)]/30 text-[var(--ozer-accent-muted)]',
                   )}
                 >
                   <ListFilter className="mr-1.5 h-4 w-4" />
@@ -260,16 +259,16 @@ export function WorkspaceNotesPage({
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="start"
-                className="w-52 border-white/10 bg-[var(--workspace-shell-panel)] text-white"
+                className="w-52 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
               >
-                <DropdownMenuLabel className="text-xs text-zinc-400">
+                <DropdownMenuLabel className="text-xs text-[var(--workspace-shell-text-muted)]">
                   Include in list
                 </DropdownMenuLabel>
-                <DropdownMenuSeparator className="bg-white/10" />
+                <DropdownMenuSeparator className="bg-[var(--workspace-shell-sidebar-accent)]" />
                 <DropdownMenuCheckboxItem
                   checked={showProjectLinked}
                   onCheckedChange={setShowProjectLinked}
-                  className="text-white focus:bg-white/5 focus:text-white"
+                  className="text-[var(--workspace-shell-text)] focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
                 >
                   Project notes
                 </DropdownMenuCheckboxItem>
@@ -285,7 +284,7 @@ export function WorkspaceNotesPage({
               <Button
                 type="button"
                 size="sm"
-                className="bg-[#2A9D8F] text-white hover:bg-[#238b7f]"
+                className={workspaceBtnPrimaryMd}
               >
                 <Plus className="mr-1.5 h-4 w-4" />
                 New
@@ -294,7 +293,7 @@ export function WorkspaceNotesPage({
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="border-white/10 bg-[var(--workspace-shell-panel)] text-white"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
             >
               <DropdownMenuItem onClick={openNewNote}>
                 <Plus className="mr-2 h-4 w-4" />
@@ -312,7 +311,7 @@ export function WorkspaceNotesPage({
       </div>
 
       {unified.length === 0 ? (
-        <p className="text-sm text-zinc-400">Nothing matches this filter.</p>
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">Nothing matches this filter.</p>
       ) : (
         <ul className="space-y-3">
           {unified.map((item) =>
@@ -321,10 +320,7 @@ export function WorkspaceNotesPage({
                 <button
                   type="button"
                   onClick={() => openEditNote(item.data)}
-                  className={cn(
-                    panelClass,
-                    'w-full p-4 text-left transition hover:border-[#2A9D8F]/30 hover:bg-white/[0.02]',
-                  )}
+                  className={cn(panelClass, 'w-full p-4 text-left', workspaceCardHover)}
                 >
                   <NoteListRow
                     note={item.data}
@@ -416,21 +412,21 @@ function NoteListRow({
           {showPin && note.isPinned ? (
             <Pin className="h-3.5 w-3.5 shrink-0 text-amber-400" />
           ) : null}
-          <Badge className="bg-white/5 text-[10px] text-zinc-400">Note</Badge>
+          <Badge className="bg-[var(--workspace-shell-sidebar-accent)] text-[10px] text-[var(--workspace-shell-text-muted)]">Note</Badge>
           <CategoryBadge category={note.category} customCategories={customCategories} />
           {note.isPublic ? (
-            <Globe className="h-3.5 w-3.5 text-[#5eead4]" aria-label="Public" />
+            <Globe className="h-3.5 w-3.5 text-[var(--ozer-accent-muted)]" aria-label="Public" />
           ) : null}
-          <h3 className="truncate font-medium text-white">{note.title}</h3>
+          <h3 className="truncate font-medium text-[var(--workspace-shell-text)]">{note.title}</h3>
         </div>
-        <p className="mt-1 line-clamp-2 text-sm text-zinc-400">
+        <p className="mt-1 line-clamp-2 text-sm text-[var(--workspace-shell-text-muted)]">
           {previewContent(note.content, 100) || 'No content yet'}
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {note.context ? (
             <Badge
               variant="outline"
-              className="border-[#2A9D8F]/30 text-xs text-[#5eead4]"
+              className={cn('text-xs', workspaceSuccessBadgeBorder)}
             >
               {note.context.label}
             </Badge>
@@ -439,14 +435,14 @@ function NoteListRow({
             <Badge
               key={tag}
               variant="outline"
-              className="border-white/10 text-[10px] text-zinc-400"
+              className="border-[color:var(--workspace-shell-border)] text-[10px] text-[var(--workspace-shell-text-muted)]"
             >
               {tag}
             </Badge>
           ))}
         </div>
       </div>
-      <span className="shrink-0 text-xs text-zinc-500">
+      <span className="shrink-0 text-xs text-[var(--workspace-shell-text-muted)]">
         {formatDate(note.updatedAt)}
       </span>
     </div>
@@ -485,7 +481,8 @@ function FileListRow({
     <div
       className={cn(
         panelClass,
-        'flex cursor-pointer flex-wrap items-center justify-between gap-3 p-4 transition hover:border-[#2A9D8F]/30 hover:bg-white/[0.02]',
+        'flex cursor-pointer flex-wrap items-center justify-between gap-3 p-4',
+        workspaceCardHover,
       )}
       onClick={onEdit}
       onKeyDown={(e) => e.key === 'Enter' && onEdit()}
@@ -493,17 +490,17 @@ function FileListRow({
       tabIndex={0}
     >
       <div className="flex min-w-0 flex-1 items-start gap-3">
-        <Icon className="mt-0.5 h-5 w-5 shrink-0 text-zinc-400" />
+        <Icon className="mt-0.5 h-5 w-5 shrink-0 text-[var(--workspace-shell-text-muted)]" />
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge className="bg-white/5 text-[10px] text-zinc-400">File</Badge>
+            <Badge className="bg-[var(--workspace-shell-sidebar-accent)] text-[10px] text-[var(--workspace-shell-text-muted)]">File</Badge>
             <CategoryBadge category={doc.category} />
             {doc.isPublic ? (
-              <Globe className="h-3.5 w-3.5 text-[#5eead4]" aria-label="Public" />
+              <Globe className="h-3.5 w-3.5 text-[var(--ozer-accent-muted)]" aria-label="Public" />
             ) : null}
-            <span className="font-medium text-white">{doc.title}</span>
+            <span className="font-medium text-[var(--workspace-shell-text)]">{doc.title}</span>
           </div>
-          <p className="mt-0.5 text-xs text-zinc-500">
+          <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
             {doc.kind === 'uploaded'
               ? `${doc.mimeType ?? 'file'} · ${formatBytes(doc.fileSizeBytes)}`
               : docContentPreview(doc.content) || 'Written document'}
@@ -511,7 +508,7 @@ function FileListRow({
           {doc.context ? (
             <Badge
               variant="outline"
-              className="mt-2 border-[#2A9D8F]/30 text-[10px] text-[#5eead4]"
+              className="mt-2 border-[var(--ozer-accent)]/30 text-[10px] text-[var(--ozer-accent-muted)]"
             >
               {doc.context.label}
             </Badge>
@@ -519,13 +516,13 @@ function FileListRow({
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <span className="text-xs text-zinc-500">{formatDate(doc.updatedAt)}</span>
+        <span className="text-xs text-[var(--workspace-shell-text-muted)]">{formatDate(doc.updatedAt)}</span>
         {doc.kind === 'uploaded' ? (
           <Button
             type="button"
             size="sm"
             variant="outline"
-            className="border-white/10"
+            className="border-[color:var(--workspace-shell-border)]"
             disabled={pending}
             onClick={download}
           >
@@ -636,17 +633,17 @@ function NoteFormSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto border-white/10 bg-[var(--workspace-shell-canvas)] text-white sm:max-w-lg">
+      <SheetContent className="w-full overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] text-[var(--workspace-shell-text)] sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle className="text-white">{title}</SheetTitle>
+          <SheetTitle className="text-[var(--workspace-shell-text)]">{title}</SheetTitle>
         </SheetHeader>
         <div className="mt-6 space-y-4">
           <div className="space-y-2">
-            <Label className="text-zinc-300">Title (optional)</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">Title (optional)</Label>
             <Input
               value={noteTitle}
               onChange={(e) => setNoteTitle(e.target.value)}
-              className="border-white/10 bg-[var(--workspace-shell-panel)] text-white"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
             />
           </div>
           <CategorySelect
@@ -656,17 +653,17 @@ function NoteFormSheet({
             customCategories={customCategories}
           />
           <div className="space-y-2">
-            <Label className="text-zinc-300">Content</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">Content</Label>
             <Textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={12}
-              className="min-h-[200px] border-white/10 bg-[var(--workspace-shell-panel)] font-mono text-sm text-white"
+              className="min-h-[200px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] font-mono text-sm text-[var(--workspace-shell-text)]"
             />
           </div>
           {linkOptions.length > 0 ? (
             <div className="space-y-2">
-              <Label className="text-zinc-300">Link to</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">Link to</Label>
               <LinkToSelect
                 options={linkOptions}
                 value={link}
@@ -675,15 +672,15 @@ function NoteFormSheet({
             </div>
           ) : null}
           <div className="space-y-2">
-            <Label className="text-zinc-300">Tags</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">Tags</Label>
             <TagsInput tags={tags} onChange={setTags} disabled={pending} />
           </div>
-          <label className="flex items-center gap-2 text-sm text-zinc-300">
+          <label className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text-muted)]">
             <input
               type="checkbox"
               checked={isPinned}
               onChange={(e) => setIsPinned(e.target.checked)}
-              className="rounded border-white/20"
+              className="rounded border-[color:var(--workspace-shell-border)]"
             />
             Pin note
           </label>
@@ -697,7 +694,7 @@ function NoteFormSheet({
               disabled={pending}
             />
           ) : (
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
               Save once to enable a public sharing link.
             </p>
           )}
@@ -706,7 +703,7 @@ function NoteFormSheet({
               type="button"
               onClick={save}
               disabled={pending}
-              className="bg-[#2A9D8F] text-white hover:bg-[#238b7f]"
+              className={workspaceBtnPrimaryMd}
             >
               Save
             </Button>
@@ -799,13 +796,13 @@ function UploadFileSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full border-white/10 bg-[var(--workspace-shell-canvas)] text-white sm:max-w-lg">
+      <SheetContent className="w-full border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] text-[var(--workspace-shell-text)] sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle className="text-white">Upload file</SheetTitle>
+          <SheetTitle className="text-[var(--workspace-shell-text)]">Upload file</SheetTitle>
         </SheetHeader>
         <div className="mt-6 space-y-4">
           <div className="space-y-2">
-            <Label className="text-zinc-300">File</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">File</Label>
             <input
               ref={fileRef}
               type="file"
@@ -822,7 +819,7 @@ function UploadFileSheet({
             <Button
               type="button"
               variant="outline"
-              className="w-full border-white/10"
+              className="w-full border-[color:var(--workspace-shell-border)]"
               onClick={() => fileRef.current?.click()}
             >
               <Upload className="mr-2 h-4 w-4" />
@@ -830,11 +827,11 @@ function UploadFileSheet({
             </Button>
           </div>
           <div className="space-y-2">
-            <Label className="text-zinc-300">Title</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">Title</Label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="border-white/10 bg-[var(--workspace-shell-panel)] text-white"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
             />
           </div>
           <CategorySelect
@@ -844,7 +841,7 @@ function UploadFileSheet({
           />
           {linkOptions.length > 0 ? (
             <div className="space-y-2">
-              <Label className="text-zinc-300">Link to</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">Link to</Label>
               <LinkToSelect
                 options={linkOptions}
                 value={link}
@@ -853,13 +850,13 @@ function UploadFileSheet({
             </div>
           ) : null}
           <div className="space-y-2">
-            <Label className="text-zinc-300">Tags</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">Tags</Label>
             <TagsInput tags={tags} onChange={setTags} disabled={pending} />
           </div>
           <Button
             type="button"
             disabled={pending}
-            className="bg-[#2A9D8F] text-white hover:bg-[#238b7f]"
+            className={workspaceBtnPrimaryMd}
             onClick={submit}
           >
             Upload
@@ -902,9 +899,9 @@ function FileDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto border-white/10 bg-[var(--workspace-shell-canvas)] text-white sm:max-w-lg">
+      <SheetContent className="w-full overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] text-[var(--workspace-shell-text)] sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle className="text-white">{doc.title}</SheetTitle>
+          <SheetTitle className="text-[var(--workspace-shell-text)]">{doc.title}</SheetTitle>
         </SheetHeader>
         <div className="mt-6 space-y-4">
           <div className="flex flex-wrap gap-2">
@@ -912,7 +909,7 @@ function FileDetailSheet({
             {doc.context ? (
               <Badge
                 variant="outline"
-                className="border-[#2A9D8F]/30 text-xs text-[#5eead4]"
+                className="border-[var(--ozer-accent)]/30 text-xs text-[var(--ozer-accent-muted)]"
               >
                 {doc.context.label}
               </Badge>
@@ -920,13 +917,13 @@ function FileDetailSheet({
           </div>
           {doc.kind === 'uploaded' ? (
             <>
-              <p className="text-sm text-zinc-400">
+              <p className="text-sm text-[var(--workspace-shell-text-muted)]">
                 {doc.mimeType ?? 'file'} · {formatBytes(doc.fileSizeBytes)}
               </p>
               <Button
                 type="button"
                 variant="outline"
-                className="border-white/10"
+                className="border-[color:var(--workspace-shell-border)]"
                 disabled={pending}
                 onClick={download}
               >
@@ -935,7 +932,7 @@ function FileDetailSheet({
               </Button>
             </>
           ) : (
-            <p className="whitespace-pre-wrap text-sm text-zinc-300">
+            <p className="whitespace-pre-wrap text-sm text-[var(--workspace-shell-text-muted)]">
               {doc.content || 'No content'}
             </p>
           )}

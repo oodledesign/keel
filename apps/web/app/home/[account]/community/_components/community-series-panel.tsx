@@ -24,7 +24,7 @@ import { createCommunityMeetupSeries } from '../_lib/server/community-schedule.a
 import type { MeetupSeriesOption } from '../_lib/community-schedule.types';
 
 const panelClass =
-  'rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)]';
+  'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
 
 type Props = {
   accountSlug: string;
@@ -70,12 +70,12 @@ export function CommunitySeriesPanel({
 
   return (
     <section className={panelClass}>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/6 px-5 py-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] px-5 py-4">
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-amber-200/80">
             Meetup series
           </h3>
-          <p className="mt-1 text-xs text-white/50">
+          <p className="mt-1 text-xs text-[var(--workspace-shell-text)]/50">
             Named tracks for recurring home groups (e.g. &quot;Acts study&quot;, &quot;Summer
             term&quot;).
           </p>
@@ -93,7 +93,7 @@ export function CommunitySeriesPanel({
       </div>
 
       {series.length === 0 ? (
-        <p className="px-5 py-6 text-sm text-white/50">
+        <p className="px-5 py-6 text-sm text-[var(--workspace-shell-text)]/50">
           No series yet. Create one to tag meetups as part of a longer journey.
         </p>
       ) : (
@@ -101,7 +101,7 @@ export function CommunitySeriesPanel({
           {series.map((s) => (
             <li
               key={s.id}
-              className="flex items-center gap-3 px-5 py-3 text-sm text-white/80"
+              className="flex items-center gap-3 px-5 py-3 text-sm text-[var(--workspace-shell-text)]/80"
             >
               <Layers className="h-4 w-4 shrink-0 text-amber-400/80" />
               {s.name}
@@ -111,7 +111,7 @@ export function CommunitySeriesPanel({
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="border-white/10 bg-[var(--workspace-shell-panel)] text-white sm:max-w-md">
+        <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Create a series</DialogTitle>
           </DialogHeader>
@@ -123,7 +123,7 @@ export function CommunitySeriesPanel({
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Acts study 2026"
                 required
-                className="border-white/10 bg-white/5"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]"
               />
             </div>
             <div className="space-y-2">
@@ -132,14 +132,14 @@ export function CommunitySeriesPanel({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={2}
-                className="border-white/10 bg-white/5"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]"
               />
             </div>
             <DialogFooter>
               <Button
                 type="button"
                 variant="outline"
-                className="border-white/10"
+                className="border-[color:var(--workspace-shell-border)]"
                 onClick={() => setOpen(false)}
               >
                 Cancel

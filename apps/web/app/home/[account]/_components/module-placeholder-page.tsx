@@ -27,7 +27,7 @@ export function ModulePlaceholderPage(props: ModulePlaceholderPageProps) {
           <Link
             key={link.href}
             href={link.href}
-            className="rounded-lg border border-white/10 bg-black/10 p-4 text-sm transition hover:border-white/20 hover:bg-black/20"
+            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-4 text-sm transition hover:border-[color:var(--workspace-shell-border)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
           >
             {link.label}
           </Link>

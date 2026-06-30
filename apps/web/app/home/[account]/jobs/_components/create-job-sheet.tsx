@@ -101,25 +101,25 @@ export function CreateJobSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="border-zinc-700 bg-[var(--workspace-shell-panel)] text-white">
+      <SheetContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
         <SheetHeader>
-          <SheetTitle className="text-white">Create job</SheetTitle>
+          <SheetTitle className="text-[var(--workspace-shell-text)]">Create job</SheetTitle>
         </SheetHeader>
         <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
           <div>
-            <Label htmlFor="title" className="text-zinc-300">
+            <Label htmlFor="title" className="text-[var(--workspace-shell-text-muted)]">
               Title *
             </Label>
             <Input
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="mt-1 border-zinc-600 bg-zinc-800 text-white"
+              className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
               placeholder="Job title"
             />
           </div>
           <div>
-            <Label className="text-zinc-300">Client</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">Client</Label>
             <div className="mt-1">
               <ClientCombobox
                 clients={clients}
@@ -132,7 +132,7 @@ export function CreateJobSheet({
             </div>
           </div>
           <div>
-            <Label htmlFor="description" className="text-zinc-300">
+            <Label htmlFor="description" className="text-[var(--workspace-shell-text-muted)]">
               Description
             </Label>
             <textarea
@@ -140,15 +140,15 @@ export function CreateJobSheet({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="mt-1 w-full rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-white placeholder:text-zinc-500"
+              className="mt-1 w-full rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] px-3 py-2 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
               placeholder="Optional description"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label className="text-zinc-300">Status</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">Status</Label>
               <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger className="mt-1 border-zinc-600 bg-zinc-800 text-white">
+                <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -161,9 +161,9 @@ export function CreateJobSheet({
               </Select>
             </div>
             <div>
-              <Label className="text-zinc-300">Priority</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">Priority</Label>
               <Select value={priority} onValueChange={setPriority}>
-                <SelectTrigger className="mt-1 border-zinc-600 bg-zinc-800 text-white">
+                <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -176,7 +176,7 @@ export function CreateJobSheet({
             </div>
           </div>
           <div>
-            <Label htmlFor="due_date" className="text-zinc-300">
+            <Label htmlFor="due_date" className="text-[var(--workspace-shell-text-muted)]">
               Due date
             </Label>
             <Input
@@ -184,11 +184,11 @@ export function CreateJobSheet({
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="mt-1 border-zinc-600 bg-zinc-800 text-white"
+              className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
             />
           </div>
           <div>
-            <Label htmlFor="value" className="text-zinc-300">
+            <Label htmlFor="value" className="text-[var(--workspace-shell-text-muted)]">
               Value (£)
             </Label>
             <Input
@@ -198,7 +198,7 @@ export function CreateJobSheet({
               min="0"
               value={valuePence}
               onChange={(e) => setValuePence(e.target.value)}
-              className="mt-1 border-zinc-600 bg-zinc-800 text-white"
+              className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
               placeholder="0.00"
             />
           </div>
@@ -206,14 +206,14 @@ export function CreateJobSheet({
             <Button
               type="submit"
               disabled={submitting}
-              className="bg-[var(--keel-teal)] hover:bg-[#238b7f]"
+              className="bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]"
             >
               {submitting ? 'Creating...' : 'Create job'}
             </Button>
             <Button
               type="button"
               variant="outline"
-              className="border-zinc-600 text-zinc-300"
+              className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]"
               onClick={() => onOpenChange(false)}
             >
               Cancel

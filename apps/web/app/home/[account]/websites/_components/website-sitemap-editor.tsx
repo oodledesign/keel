@@ -113,11 +113,11 @@ export function WebsiteSitemapEditor({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm text-white/70">
+          <p className="text-sm text-[var(--workspace-shell-text)]/70">
             Map pages and sections before design. ~5 minutes with the client.
           </p>
           {canEdit ? (
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
               {saveState === 'saving'
                 ? 'Saving…'
                 : saveState === 'saved'
@@ -131,7 +131,7 @@ export function WebsiteSitemapEditor({
             type="button"
             size="sm"
             variant="outline"
-            className="border-white/10 text-white hover:bg-white/5"
+            className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
             onClick={addPage}
           >
             <Plus className="mr-2 h-4 w-4" />
@@ -141,7 +141,7 @@ export function WebsiteSitemapEditor({
       </div>
 
       {pages.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/10 px-4 py-8 text-center text-sm text-zinc-500">
+        <div className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center text-sm text-[var(--workspace-shell-text-muted)]">
           No pages yet. Add Home, About, Services, Contact…
         </div>
       ) : (
@@ -151,12 +151,12 @@ export function WebsiteSitemapEditor({
             return (
               <li
                 key={page.id}
-                className="rounded-xl border border-white/10 bg-[#0B132B]/40"
+                className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/40"
               >
                 <div className="flex items-start gap-2 p-3">
                   <button
                     type="button"
-                    className="mt-1 text-zinc-500 hover:text-white"
+                    className="mt-1 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
                     onClick={() =>
                       setExpandedPageIds((current) => {
                         const next = new Set(current);
@@ -180,17 +180,17 @@ export function WebsiteSitemapEditor({
                         onChange={(event) =>
                           updatePage(page.id, { title: event.target.value })
                         }
-                        className="h-9 max-w-xs border-white/10 bg-[#0B132B] text-white"
+                        className="h-9 max-w-xs border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]"
                         placeholder="Page title"
                       />
-                      <span className="text-xs text-zinc-500">/{page.slug}</span>
+                      <span className="text-xs text-[var(--workspace-shell-text-muted)]">/{page.slug}</span>
                     </div>
                     {expanded ? (
                       <div className="space-y-2 pl-1">
                         {page.sections.map((section) => (
                           <div
                             key={section.id}
-                            className="rounded-lg border border-white/5 bg-black/20 p-3"
+                            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3"
                           >
                             <div className="flex items-start gap-2">
                               <div className="min-w-0 flex-1 space-y-2">
@@ -217,7 +217,7 @@ export function WebsiteSitemapEditor({
                                       ),
                                     )
                                   }
-                                  className="h-8 border-white/10 bg-[#0B132B] text-sm text-white"
+                                  className="h-8 border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-sm text-[var(--workspace-shell-text)]"
                                   placeholder="Section title"
                                 />
                                 <Textarea
@@ -246,13 +246,13 @@ export function WebsiteSitemapEditor({
                                     )
                                   }
                                   placeholder="What this section communicates…"
-                                  className="border-white/10 bg-[#0B132B] text-sm text-white"
+                                  className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-sm text-[var(--workspace-shell-text)]"
                                 />
                               </div>
                               {canEdit ? (
                                 <button
                                   type="button"
-                                  className="text-zinc-500 hover:text-red-400"
+                                  className="text-[var(--workspace-shell-text-muted)] hover:text-red-400"
                                   onClick={() =>
                                     setPages((current) =>
                                       current.map((item) =>
@@ -279,7 +279,7 @@ export function WebsiteSitemapEditor({
                             type="button"
                             size="sm"
                             variant="ghost"
-                            className="text-zinc-400 hover:text-white"
+                            className="text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
                             onClick={() => addSection(page.id)}
                           >
                             <Plus className="mr-1 h-3.5 w-3.5" />
@@ -288,7 +288,7 @@ export function WebsiteSitemapEditor({
                         ) : null}
                       </div>
                     ) : (
-                      <p className="text-xs text-zinc-500">
+                      <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                         {page.sections.length} section
                         {page.sections.length === 1 ? '' : 's'}
                       </p>
@@ -297,7 +297,7 @@ export function WebsiteSitemapEditor({
                   {canEdit ? (
                     <button
                       type="button"
-                      className={cn('text-zinc-500 hover:text-red-400')}
+                      className={cn('text-[var(--workspace-shell-text-muted)] hover:text-red-400')}
                       onClick={() => removePage(page.id)}
                     >
                       <Trash2 className="h-4 w-4" />

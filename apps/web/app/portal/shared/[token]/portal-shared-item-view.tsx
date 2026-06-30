@@ -52,22 +52,22 @@ export function PortalSharedItemView({
   return (
     <article className="space-y-4">
       {!embed ? (
-        <p className="text-xs text-zinc-500">Shared {item.type === 'note' ? 'note' : 'file'}</p>
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">Shared {item.type === 'note' ? 'note' : 'file'}</p>
       ) : null}
-      <header className="space-y-2 border-b border-white/10 pb-4">
+      <header className="space-y-2 border-b border-[color:var(--workspace-shell-border)] pb-4">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-md bg-white/10 px-2 py-0.5 text-xs text-zinc-300">
+          <span className="rounded-md bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
             {categoryLabel(item.category)}
           </span>
           {item.updatedAt ? (
-            <span className="text-xs text-zinc-500">{formatDate(item.updatedAt)}</span>
+            <span className="text-xs text-[var(--workspace-shell-text-muted)]">{formatDate(item.updatedAt)}</span>
           ) : null}
         </div>
-        <h1 className="text-2xl font-semibold text-white">{item.title}</h1>
+        <h1 className="text-2xl font-semibold text-[var(--workspace-shell-text)]">{item.title}</h1>
       </header>
 
       {item.type === 'note' ? (
-        <div className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-200">
+        <div className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--workspace-shell-text)]">
           {item.content || 'No content.'}
         </div>
       ) : item.kind === 'uploaded' ? (
@@ -77,18 +77,18 @@ export function PortalSharedItemView({
             <img
               src={item.fileUrl ?? ''}
               alt={item.title}
-              className="max-h-[70vh] w-full rounded-lg border border-white/10 object-contain"
+              className="max-h-[70vh] w-full rounded-lg border border-[color:var(--workspace-shell-border)] object-contain"
             />
           ) : null}
           {item.fileUrl ? (
-            <Button asChild className="bg-[#2A9D8F] text-white hover:bg-[#238b7f]">
+            <Button asChild className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]">
               <a href={item.fileUrl} download target="_blank" rel="noopener noreferrer">
                 <Download className="mr-2 h-4 w-4" />
                 Download {item.mimeType ?? 'file'}
               </a>
             </Button>
           ) : (
-            <p className="text-sm text-zinc-400">Download link unavailable.</p>
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">Download link unavailable.</p>
           )}
         </div>
       ) : (
@@ -99,7 +99,7 @@ export function PortalSharedItemView({
       )}
 
       {!embed ? (
-        <p className="pt-6 text-xs text-zinc-600">
+        <p className="pt-6 text-xs text-[var(--workspace-shell-text-muted)]">
           Shared via Ozer · token {token.slice(0, 8)}…
         </p>
       ) : null}

@@ -236,7 +236,7 @@ Record in content docs:
     },
     {
       name: 'Build',
-      colour: '#2A9D8F',
+      colour: '#FF5C34',
       is_milestone: true,
       planning_tab: 'overview',
       description: 'Implement with AI — visual references, not text-only prompts.',

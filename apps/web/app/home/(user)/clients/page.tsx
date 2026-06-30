@@ -35,18 +35,18 @@ async function PersonalClientsPage({ searchParams }: Props) {
   if (!Array.isArray(accounts) || accounts.length === 0) {
     return (
       <PageBody className="flex min-h-[60vh] items-center justify-center bg-[var(--workspace-shell-canvas)] px-0">
-        <div className="max-w-md rounded-2xl border border-zinc-700 bg-[var(--workspace-shell-panel)] p-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-[var(--keel-teal)]/15 text-[#5eead4]">
+        <div className="max-w-md rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-8 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]">
             <Users className="h-7 w-7" />
           </div>
-          <h1 className="text-xl font-semibold text-white">
+          <h1 className="text-xl font-semibold text-[var(--workspace-shell-text)]">
             <Trans i18nKey="common:routes.clients" />
           </h1>
-          <p className="mt-2 text-sm text-zinc-400">
+          <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
             <Trans i18nKey="account:clientsNeedTeam" />
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-            <Button asChild className="bg-[var(--keel-teal)] hover:bg-[#238b7f]">
+            <Button asChild className="bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]">
               <Link href={pathsConfig.app.home}>
                 <Trans i18nKey="account:goToHome" />
               </Link>
@@ -54,7 +54,7 @@ async function PersonalClientsPage({ searchParams }: Props) {
             {canCreateTeamAccount?.allowed && (
               <HomeAddAccountButton
                 canCreateTeamAccount={canCreateTeamAccount}
-                className="border border-zinc-600 bg-transparent text-zinc-300 hover:bg-zinc-800"
+                className="border border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-control-surface)]"
               />
             )}
           </div>
@@ -101,15 +101,15 @@ async function PersonalClientsPage({ searchParams }: Props) {
 
   return (
     <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
-      <div className="mb-6 flex flex-col gap-4 border-b border-white/10 pb-6">
+      <div className="mb-6 flex flex-col gap-4 border-b border-[color:var(--workspace-shell-border)] pb-6">
         <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-semibold text-white">
+            <h1 className="text-2xl font-semibold text-[var(--workspace-shell-text)]">
               <Trans i18nKey="common:routes.clients" />
             </h1>
-            <p className="mt-2 max-w-2xl text-sm text-zinc-400">
+            <p className="mt-2 max-w-2xl text-sm text-[var(--workspace-shell-text-muted)]">
               Pick the workspace (team) these people belong to, then use{' '}
-              <span className="text-zinc-300">Add Client</span>. Each client is
+              <span className="text-[var(--workspace-shell-text-muted)]">Add Client</span>. Each client is
               stored under that workspace—the same one you use for jobs and
               billing.
             </p>

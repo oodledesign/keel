@@ -72,8 +72,8 @@ export function SearchableMultiSelect({
           aria-expanded={open}
           disabled={disabled || options.length === 0}
           className={cn(
-            'min-h-10 w-full justify-between border-white/12 bg-black/30 px-3 py-2 text-left font-normal text-zinc-100 hover:bg-black/40 hover:text-zinc-100',
-            !summary && 'text-zinc-300',
+            'min-h-10 w-full justify-between border-[color:var(--workspace-shell-border)] bg-black/30 px-3 py-2 text-left font-normal text-[var(--workspace-shell-text)] hover:bg-black/40 hover:text-[var(--workspace-shell-text)]',
+            !summary && 'text-[var(--workspace-shell-text-muted)]',
           )}
         >
           <span className="line-clamp-2 flex-1 pr-2">
@@ -83,16 +83,16 @@ export function SearchableMultiSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-[var(--radix-popover-trigger-width)] border-white/12 bg-[#1f2c34] p-0"
+        className="w-[var(--radix-popover-trigger-width)] border-[color:var(--workspace-shell-border)] bg-[#1f2c34] p-0"
         align="start"
       >
         <Command className="bg-[#1f2c34]">
           <CommandInput
             placeholder={searchPlaceholder}
-            className="border-white/10 bg-black/30 text-zinc-100 placeholder:text-zinc-500"
+            className="border-[color:var(--workspace-shell-border)] bg-black/30 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
           />
           <CommandList className="max-h-56">
-            <CommandEmpty className="py-3 text-center text-xs text-zinc-300">
+            <CommandEmpty className="py-3 text-center text-xs text-[var(--workspace-shell-text-muted)]">
               {emptyMessage}
             </CommandEmpty>
             <CommandGroup>
@@ -110,7 +110,7 @@ export function SearchableMultiSelect({
                           : [...values, opt.value],
                       );
                     }}
-                    className="text-zinc-200 aria-selected:bg-white/10"
+                    className="text-[var(--workspace-shell-text)] aria-selected:bg-[var(--workspace-shell-sidebar-accent)]"
                   >
                     <Check
                       className={cn(

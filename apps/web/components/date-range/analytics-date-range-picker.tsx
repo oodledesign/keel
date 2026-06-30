@@ -171,14 +171,14 @@ export function AnalyticsDateRangePicker({
           variant="outline"
           disabled={pickerBusy}
           className={cn(
-            'border-white/10 bg-[var(--workspace-shell-panel)] text-white hover:bg-white/5',
+            'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]',
             pickerBusy && 'opacity-90',
             className,
           )}
           onClick={openPicker}
         >
           {pickerBusy ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin text-[#5eead4]" />
+            <Loader2 className="mr-2 h-4 w-4 animate-spin text-[var(--ozer-accent-muted)]" />
           ) : null}
           {appliedLabel}
           {!pickerBusy ? (
@@ -188,14 +188,14 @@ export function AnalyticsDateRangePicker({
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        className="w-auto max-w-[calc(100vw-2rem)] border-white/10 bg-[var(--workspace-shell-panel)] p-0 text-white shadow-xl"
+        className="w-auto max-w-[calc(100vw-2rem)] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text)] shadow-xl"
       >
         <div className="flex flex-col md:flex-row">
-          <aside className="w-full border-b border-white/6 md:w-52 md:border-b-0 md:border-r">
+          <aside className="w-full border-b border-[color:var(--workspace-shell-border)] md:w-52 md:border-b-0 md:border-r">
             {view !== 'main' ? (
               <button
                 type="button"
-                className="flex w-full items-center gap-2 border-b border-white/6 px-4 py-3 text-sm text-white/80 hover:bg-white/5"
+                className="flex w-full items-center gap-2 border-b border-[color:var(--workspace-shell-border)] px-4 py-3 text-sm text-[var(--workspace-shell-text)]/80 hover:bg-[var(--workspace-shell-sidebar-accent)]"
                 onClick={() => setView('main')}
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -277,12 +277,12 @@ export function AnalyticsDateRangePicker({
 
           <div className="flex min-w-0 flex-1 flex-col">
             {(showLastControls || draft.preset === 'last') && draft.preset === 'last' ? (
-              <div className="flex flex-wrap items-center gap-2 border-b border-white/6 px-4 py-3">
-                <span className="text-sm text-white/70">Last</span>
+              <div className="flex flex-wrap items-center gap-2 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
+                <span className="text-sm text-[var(--workspace-shell-text)]/70">Last</span>
                 <Input
                   type="number"
                   min={1}
-                  className="h-8 w-16 border-white/10 bg-transparent text-white"
+                  className="h-8 w-16 border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)]"
                   value={draft.lastCount ?? 30}
                   onChange={(e) =>
                     setDraft({
@@ -304,7 +304,7 @@ export function AnalyticsDateRangePicker({
                     })
                   }
                 >
-                  <SelectTrigger className="h-8 w-28 border-white/10 bg-transparent text-white">
+                  <SelectTrigger className="h-8 w-28 border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -314,7 +314,7 @@ export function AnalyticsDateRangePicker({
                     <SelectItem value="years">Years</SelectItem>
                   </SelectContent>
                 </Select>
-                <label className="ml-auto flex items-center gap-2 text-xs text-white/70">
+                <label className="ml-auto flex items-center gap-2 text-xs text-[var(--workspace-shell-text)]/70">
                   <Checkbox
                     checked={draft.includeToday !== false}
                     onCheckedChange={(checked) =>
@@ -345,18 +345,18 @@ export function AnalyticsDateRangePicker({
                   }
                 }}
                 defaultMonth={calendarRange.from}
-                className="rounded-lg border border-white/6 bg-[var(--workspace-shell-canvas)] text-white"
+                className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] text-[var(--workspace-shell-text)]"
               />
             </div>
 
-            <div className="flex items-center justify-between gap-3 border-t border-white/6 px-4 py-3">
-              <p className="text-xs text-white/60">{footerLabel}</p>
+            <div className="flex items-center justify-between gap-3 border-t border-[color:var(--workspace-shell-border)] px-4 py-3">
+              <p className="text-xs text-[var(--workspace-shell-text)]/60">{footerLabel}</p>
               <div className="flex gap-2">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="border-white/10"
+                  className="border-[color:var(--workspace-shell-border)]"
                   onClick={() => setOpen(false)}
                 >
                   Cancel
@@ -364,7 +364,7 @@ export function AnalyticsDateRangePicker({
                 <Button
                   type="button"
                   size="sm"
-                  className="bg-[#2A9D8F] text-white hover:bg-[#238b7f]"
+                  className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
                   disabled={pickerBusy}
                   onClick={apply}
                 >
@@ -404,8 +404,8 @@ function SidebarItem({
       className={cn(
         'flex w-full items-center justify-between px-4 py-2.5 text-left text-sm transition',
         active
-          ? 'bg-white/8 font-medium text-white'
-          : 'text-white/75 hover:bg-white/5 hover:text-white',
+          ? 'bg-white/8 font-medium text-[var(--workspace-shell-text)]'
+          : 'text-[var(--workspace-shell-text)]/75 hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
       )}
     >
       <span>{children}</span>

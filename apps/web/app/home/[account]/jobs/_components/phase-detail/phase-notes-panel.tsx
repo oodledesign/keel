@@ -108,30 +108,30 @@ export function PhaseNotesPanel({
   };
 
   return (
-    <section className="rounded-xl border border-zinc-700 bg-[var(--workspace-shell-panel)] p-4">
-      <h2 className="text-sm font-semibold text-white">Notes</h2>
-      <p className="mt-0.5 text-xs text-zinc-500">Pinned notes appear first</p>
+    <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
+      <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Notes</h2>
+      <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">Pinned notes appear first</p>
 
       {canEdit && (
-        <form onSubmit={addNote} className="mt-3 space-y-2 border-b border-zinc-700 pb-4">
+        <form onSubmit={addNote} className="mt-3 space-y-2 border-b border-[color:var(--workspace-shell-border)] pb-4">
           <Input
             value={draftTitle}
             onChange={(e) => setDraftTitle(e.target.value)}
             placeholder="Title (optional)"
-            className="h-8 border-zinc-600 bg-zinc-800 text-sm text-white"
+            className="h-8 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-sm text-[var(--workspace-shell-text)]"
           />
           <Textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             rows={3}
             placeholder="Quick note for this phase…"
-            className="border-zinc-600 bg-zinc-800 text-sm text-white"
+            className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-sm text-[var(--workspace-shell-text)]"
           />
           <Button
             type="submit"
             size="sm"
             disabled={!draft.trim()}
-            className="bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+            className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
           >
             Add note
           </Button>
@@ -140,7 +140,7 @@ export function PhaseNotesPanel({
 
       <ul className="mt-3 space-y-3">
         {sortedNotes.length === 0 && (
-          <li className="text-sm text-zinc-500">No notes yet.</li>
+          <li className="text-sm text-[var(--workspace-shell-text-muted)]">No notes yet.</li>
         )}
         {sortedNotes.map((note) => (
           <li
@@ -149,12 +149,12 @@ export function PhaseNotesPanel({
               'rounded-lg border px-3 py-2.5',
               note.is_pinned
                 ? 'border-amber-500/30 bg-amber-500/5'
-                : 'border-zinc-700/80 bg-zinc-900/30',
+                : 'border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/30',
             )}
           >
             <div className="flex items-start justify-between gap-2">
               {note.title ? (
-                <p className="text-sm font-medium text-white">{note.title}</p>
+                <p className="text-sm font-medium text-[var(--workspace-shell-text)]">{note.title}</p>
               ) : null}
               {canEdit && (
                 <button
@@ -164,7 +164,7 @@ export function PhaseNotesPanel({
                     'shrink-0 rounded p-1',
                     note.is_pinned
                       ? 'text-amber-400'
-                      : 'text-zinc-500 hover:text-zinc-300',
+                      : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text-muted)]',
                   )}
                   aria-label={note.is_pinned ? 'Unpin note' : 'Pin note'}
                 >
@@ -172,10 +172,10 @@ export function PhaseNotesPanel({
                 </button>
               )}
             </div>
-            <p className="mt-1 whitespace-pre-wrap text-sm text-zinc-300">
+            <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--workspace-shell-text-muted)]">
               {note.content}
             </p>
-            <p className="mt-2 text-[10px] text-zinc-600">
+            <p className="mt-2 text-[10px] text-[var(--workspace-shell-text-muted)]">
               {formatNoteDate(note.created_at)}
             </p>
           </li>

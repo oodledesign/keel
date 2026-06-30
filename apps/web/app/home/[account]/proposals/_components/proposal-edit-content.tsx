@@ -195,20 +195,20 @@ export function ProposalEditContent({
   ]);
 
   const canvasClassName =
-    'relative rounded-xl border border-zinc-200 bg-white p-8 text-[#1E293B] shadow-sm';
+    'relative rounded-xl border border-[color:var(--ozer-border-on-light)] bg-white p-8 text-[var(--ozer-text-on-light)] shadow-sm';
 
   const inputClassName =
-    'border-zinc-200 bg-white text-[#1E293B] placeholder:text-zinc-400';
+    'border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-white)] text-[var(--ozer-text-on-light)] placeholder:text-[var(--workspace-shell-text-muted)]';
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-4 border-b border-white/10 pb-4">
+      <header className="flex flex-col gap-4 border-b border-[color:var(--workspace-shell-border)] pb-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Button
             variant="ghost"
             size="sm"
             asChild
-            className="text-zinc-400 hover:text-white"
+            className="text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
           >
             <Link href={proposalsPath}>
               <ArrowLeft className="mr-1 h-4 w-4" />
@@ -217,9 +217,9 @@ export function ProposalEditContent({
           </Button>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5">
-              <Eye className="h-4 w-4 text-zinc-400" />
-              <Label htmlFor="preview-mode" className="text-sm text-zinc-300">
+            <div className="flex items-center gap-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-1.5">
+              <Eye className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
+              <Label htmlFor="preview-mode" className="text-sm text-[var(--workspace-shell-text-muted)]">
                 Preview
               </Label>
               <Switch
@@ -235,7 +235,7 @@ export function ProposalEditContent({
                   size="sm"
                   onClick={() => void handleSave()}
                   disabled={saving || !canModify}
-                  className="bg-[var(--keel-teal)] hover:bg-[#238b7f]"
+                  className="bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]"
                 >
                   {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   Save
@@ -245,7 +245,7 @@ export function ProposalEditContent({
                   <Button
                     size="sm"
                     variant="outline"
-                    className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-zinc-200 hover:bg-[var(--workspace-shell-panel-hover)]"
+                    className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel-hover)]"
                     onClick={() => setShowSendPanel(true)}
                   >
                     <Send className="mr-2 h-4 w-4" />
@@ -266,14 +266,14 @@ export function ProposalEditContent({
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-white">
+            <h1 className="text-xl font-semibold text-[var(--workspace-shell-text)]">
               {title.trim() || 'Untitled proposal'}
               {proposal.total_pence != null
                 ? ` · ${formatPence(proposal.total_pence, proposal.currency ?? 'GBP')}`
                 : ''}
             </h1>
             {defaultRecipientName ? (
-              <p className="mt-1 text-sm text-zinc-400">For {defaultRecipientName}</p>
+              <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">For {defaultRecipientName}</p>
             ) : null}
           </div>
 
@@ -289,16 +289,16 @@ export function ProposalEditContent({
                       declined
                         ? 'bg-[#E85D75]/20 text-[#F6A7B5]'
                         : active
-                          ? 'bg-[var(--keel-teal)]/20 text-[#5eead4]'
+                          ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]'
                           : complete
-                            ? 'bg-white/10 text-zinc-300'
-                            : 'bg-white/5 text-zinc-500'
+                            ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]'
+                            : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]'
                     }`}
                   >
                     {declined ? 'Declined' : step.label}
                   </span>
                   {index < STATUS_STEPS.length - 1 ? (
-                    <span className="hidden text-zinc-600 sm:inline">→</span>
+                    <span className="hidden text-[var(--workspace-shell-text-muted)] sm:inline">→</span>
                   ) : null}
                 </li>
               );
@@ -351,7 +351,7 @@ export function ProposalEditContent({
             <div className="space-y-6 pr-0 sm:pr-32">
               <div>
                 {readOnly ? (
-                  <h2 className="text-2xl font-bold text-[#1E293B]">
+                  <h2 className="text-2xl font-bold text-[var(--ozer-text-on-light)]">
                     {title.trim() || 'Untitled proposal'}
                   </h2>
                 ) : (
@@ -366,7 +366,7 @@ export function ProposalEditContent({
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label className="text-zinc-600">Recipient name</Label>
+                  <Label className="text-[var(--workspace-shell-text-muted)]">Recipient name</Label>
                   <Input
                     value={recipientName}
                     onChange={(e) => setRecipientName(e.target.value)}
@@ -376,7 +376,7 @@ export function ProposalEditContent({
                   />
                 </div>
                 <div>
-                  <Label className="text-zinc-600">Recipient email</Label>
+                  <Label className="text-[var(--workspace-shell-text-muted)]">Recipient email</Label>
                   <Input
                     type="email"
                     value={recipientEmail}
@@ -389,7 +389,7 @@ export function ProposalEditContent({
               </div>
 
               <div className="max-w-xs">
-                <Label className="text-zinc-600">Expires</Label>
+                <Label className="text-[var(--workspace-shell-text-muted)]">Expires</Label>
                 <Input
                   type="date"
                   value={expiresAt}
@@ -400,7 +400,7 @@ export function ProposalEditContent({
               </div>
 
               <div>
-                <Label className="mb-2 block text-zinc-600">Proposal content</Label>
+                <Label className="mb-2 block text-[var(--workspace-shell-text-muted)]">Proposal content</Label>
                 <DocumentRichTextEditor
                   value={contentHtml}
                   onChange={setContentHtml}
@@ -414,11 +414,11 @@ export function ProposalEditContent({
 
           <aside className="space-y-4">
             {(proposal.context_refs?.length ?? 0) > 0 ? (
-              <section className="rounded-xl border border-white/10 bg-[var(--workspace-shell-panel)] p-4">
-                <h2 className="text-sm font-semibold text-white">
+              <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
+                <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
                   Referenced notes and files
                 </h2>
-                <p className="mt-1 text-xs text-zinc-400">
+                <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
                   Context used when building this proposal.
                 </p>
                 <ul className="mt-3 space-y-2">
@@ -429,7 +429,7 @@ export function ProposalEditContent({
                           '[account]',
                           accountSlug,
                         )}
-                        className="text-sm text-[#5eead4] hover:underline"
+                        className="text-sm text-[var(--ozer-accent-muted)] hover:underline"
                       >
                         {ref.type === 'file' ? 'File' : 'Note'}: {ref.title}
                       </Link>
@@ -439,9 +439,9 @@ export function ProposalEditContent({
               </section>
             ) : null}
 
-            <section className="rounded-xl border border-white/10 bg-[var(--workspace-shell-panel)] p-4">
-              <h2 className="text-sm font-semibold text-white">Private note</h2>
-              <p className="mt-1 text-xs text-zinc-400">
+            <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
+              <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Private note</h2>
+              <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
                 Only visible to your team — not shown to clients.
               </p>
               <Textarea
@@ -450,17 +450,17 @@ export function ProposalEditContent({
                 disabled={readOnly}
                 rows={5}
                 placeholder="Internal notes about this proposal"
-                className="mt-3 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-white"
+                className="mt-3 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
               />
             </section>
 
-            <section className="rounded-xl border border-white/10 bg-[var(--workspace-shell-panel)] p-4">
-              <h2 className="text-sm font-semibold text-white">Total (optional)</h2>
-              <p className="mt-1 text-xs text-zinc-400">
+            <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
+              <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Total (optional)</h2>
+              <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
                 Shown in emails and on the client portal.
               </p>
               <div className="relative mt-3">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">£</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]">£</span>
                 <Input
                   type="number"
                   min={0}
@@ -469,43 +469,43 @@ export function ProposalEditContent({
                   onChange={(e) => setTotalPenceInput(e.target.value)}
                   disabled={readOnly}
                   placeholder="0.00"
-                  className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] pl-7 text-white"
+                  className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] pl-7 text-[var(--workspace-shell-text)]"
                 />
               </div>
             </section>
 
             {canManageProposalStatus ? (
-              <section className="rounded-xl border border-white/10 bg-[var(--workspace-shell-panel)] p-4">
-                <h2 className="text-sm font-semibold text-white">Email templates</h2>
-                <p className="mt-1 text-xs text-zinc-400">Used when sending this proposal.</p>
+              <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
+                <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Email templates</h2>
+                <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">Used when sending this proposal.</p>
                 <div className="mt-4 space-y-3">
                   <div>
-                    <Label className="text-zinc-300">Subject</Label>
+                    <Label className="text-[var(--workspace-shell-text-muted)]">Subject</Label>
                     <Input
                       value={emailSubject}
                       onChange={(e) => setEmailSubject(e.target.value)}
                       disabled={readOnly}
-                      className="mt-1 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-white"
+                      className="mt-1 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
                     />
                   </div>
                   <div>
-                    <Label className="text-zinc-300">Body</Label>
+                    <Label className="text-[var(--workspace-shell-text-muted)]">Body</Label>
                     <Textarea
                       value={emailBody}
                       onChange={(e) => setEmailBody(e.target.value)}
                       disabled={readOnly}
                       rows={3}
-                      className="mt-1 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-white"
+                      className="mt-1 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
                     />
                   </div>
                   <div>
-                    <Label className="text-zinc-300">Signature</Label>
+                    <Label className="text-[var(--workspace-shell-text-muted)]">Signature</Label>
                     <Textarea
                       value={emailSignature}
                       onChange={(e) => setEmailSignature(e.target.value)}
                       disabled={readOnly}
                       rows={2}
-                      className="mt-1 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-white"
+                      className="mt-1 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
                     />
                   </div>
                 </div>

@@ -108,32 +108,32 @@ export function JobProjectHeader({
   const membersNotAssigned = members.filter((m) => !assignedIds.has(m.user_id));
 
   return (
-    <div className="space-y-5 border-b border-zinc-700 pb-5">
+    <div className="space-y-5 border-b border-[color:var(--workspace-shell-border)] pb-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span
               className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
                 job.status === 'completed'
-                  ? 'bg-[var(--keel-teal)]/20 text-[#5eead4]'
+                  ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]'
                   : job.status === 'cancelled'
-                    ? 'bg-zinc-600 text-zinc-400'
+                    ? 'bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text-muted)]'
                     : 'bg-amber-500/20 text-amber-400'
               }`}
             >
               {JOB_STATUS_LABELS[job.status] ?? job.status}
             </span>
-            <span className="rounded-full bg-zinc-600 px-2.5 py-0.5 text-xs font-medium text-zinc-300">
+            <span className="rounded-full bg-[var(--workspace-shell-panel-hover)] px-2.5 py-0.5 text-xs font-medium text-[var(--workspace-shell-text-muted)]">
               {PRIORITY_LABELS[job.priority] ?? job.priority}
             </span>
           </div>
-          <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm text-zinc-400">
+          <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm text-[var(--workspace-shell-text-muted)]">
             {client && (
               <span>
                 Client{' '}
                 <Link
                   href={`${clientsPath}/${client.id}`}
-                  className="text-zinc-200 underline hover:text-white"
+                  className="text-[var(--workspace-shell-text)] underline hover:text-[var(--workspace-shell-text)]"
                 >
                   {client.display_name ?? 'Client'}
                 </Link>
@@ -154,7 +154,7 @@ export function JobProjectHeader({
           <AskBrainLink
             accountSlug={accountSlug}
             label="Ask AI"
-            className="border-zinc-600 text-zinc-300"
+            className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]"
             params={{
               jobId,
               jobTitle: job.title,
@@ -167,7 +167,7 @@ export function JobProjectHeader({
             type="button"
             variant="outline"
             size="sm"
-            className="border-zinc-600 text-zinc-300"
+            className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]"
             disabled={!canEditJobs}
             onClick={() => {
               if (canEditJobs && onOpenAi) onOpenAi();
@@ -181,7 +181,7 @@ export function JobProjectHeader({
             <Button
               type="button"
               size="sm"
-              className="bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+              className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
               disabled={addingPhase}
               onClick={onAddPhase}
             >
@@ -193,13 +193,13 @@ export function JobProjectHeader({
       </div>
 
       <div>
-        <div className="mb-1.5 flex items-center justify-between text-xs text-zinc-500">
+        <div className="mb-1.5 flex items-center justify-between text-xs text-[var(--workspace-shell-text-muted)]">
           <span>Progress</span>
-          <span className="tabular-nums text-zinc-300">{progressPct}%</span>
+          <span className="tabular-nums text-[var(--workspace-shell-text-muted)]">{progressPct}%</span>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-zinc-800">
+        <div className="h-2 overflow-hidden rounded-full bg-[var(--workspace-control-surface)]">
           <div
-            className="h-full rounded-full bg-[var(--keel-teal)] transition-all duration-300"
+            className="h-full rounded-full bg-[var(--ozer-accent)] transition-all duration-300"
             style={{ width: `${Math.min(100, Math.max(0, progressPct))}%` }}
           />
         </div>
@@ -208,12 +208,12 @@ export function JobProjectHeader({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           {assignees.length === 0 ? (
-            <span className="text-sm text-zinc-500">No team assigned</span>
+            <span className="text-sm text-[var(--workspace-shell-text-muted)]">No team assigned</span>
           ) : (
             assignees.map((a) => (
               <div
                 key={a.user_id}
-                className="group flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-800/60 py-0.5 pl-0.5 pr-2"
+                className="group flex items-center gap-1.5 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/60 py-0.5 pl-0.5 pr-2"
                 title={a.name ?? a.email ?? a.user_id}
               >
                 <ProfileAvatar
@@ -221,13 +221,13 @@ export function JobProjectHeader({
                   pictureUrl={a.picture_url}
                   className="h-7 w-7"
                 />
-                <span className="max-w-[120px] truncate text-xs text-zinc-300">
+                <span className="max-w-[120px] truncate text-xs text-[var(--workspace-shell-text-muted)]">
                   {a.name ?? a.email ?? a.user_id.slice(0, 8)}
                 </span>
                 {canEditJobs && (
                   <button
                     type="button"
-                    className="ml-0.5 hidden text-zinc-500 hover:text-red-400 group-hover:inline"
+                    className="ml-0.5 hidden text-[var(--workspace-shell-text-muted)] hover:text-red-400 group-hover:inline"
                     onClick={() => onRemoveAssignee(a.user_id)}
                     aria-label="Remove assignee"
                   >
@@ -242,7 +242,7 @@ export function JobProjectHeader({
         {canEditJobs && members.length > 0 && membersNotAssigned.length > 0 && (
           <div className="flex flex-wrap items-end gap-2">
             <div className="min-w-[160px]">
-              <Label className="flex items-center gap-1 text-xs text-zinc-500">
+              <Label className="flex items-center gap-1 text-xs text-[var(--workspace-shell-text-muted)]">
                 <UserPlus className="h-3.5 w-3.5" />
                 Assign
               </Label>
@@ -252,7 +252,7 @@ export function JobProjectHeader({
                   onSelectedMemberChange(v === 'none' ? '' : v)
                 }
               >
-                <SelectTrigger className="mt-1 h-8 border-zinc-600 bg-zinc-800 text-white">
+                <SelectTrigger className="mt-1 h-8 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
                   <SelectValue placeholder="Member" />
                 </SelectTrigger>
                 <SelectContent>
@@ -269,12 +269,12 @@ export function JobProjectHeader({
               placeholder="Role"
               value={assignRole}
               onChange={(e) => onAssignRoleChange(e.target.value)}
-              className="h-8 w-24 border-zinc-600 bg-zinc-800 text-white"
+              className="h-8 w-24 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
             />
             <Button
               type="button"
               size="sm"
-              className="h-8 bg-zinc-700 text-zinc-200 hover:bg-zinc-600"
+              className="h-8 bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel-hover)]"
               disabled={!selectedMemberId || assigning}
               onClick={onAssignMember}
             >

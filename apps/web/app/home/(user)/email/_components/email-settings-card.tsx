@@ -22,7 +22,7 @@ import {
 } from './email-signature-field';
 
 const panelClass =
-  'rounded-2xl border border-white/[0.08] bg-[var(--workspace-shell-panel)] p-4 md:p-5';
+  'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 md:p-5';
 
 type Props = {
   connectedEmail: string | null;
@@ -64,12 +64,12 @@ function SettingToggle({
   disabled?: boolean;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 rounded-xl border border-white/10 bg-[#0B132B]/60 p-4">
+    <div className="flex items-start justify-between gap-4 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/60 p-4">
       <div className="space-y-1">
-        <Label htmlFor={id} className="text-sm font-medium text-white">
+        <Label htmlFor={id} className="text-sm font-medium text-[var(--workspace-shell-text)]">
           {label}
         </Label>
-        <p className="text-xs text-zinc-500">{description}</p>
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">{description}</p>
       </div>
       <Switch
         id={id}
@@ -168,30 +168,30 @@ export function EmailSettingsCard({
     <section className={panelClass}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold text-white">Settings</h2>
-          <p className="mt-1 text-sm text-zinc-400">
+          <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">Settings</h2>
+          <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
             Connect Gmail and tune how drafts are written.
           </p>
         </div>
-        <p className="text-xs text-zinc-500">Last sync: {formatSyncedAt(lastSyncedAt)}</p>
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">Last sync: {formatSyncedAt(lastSyncedAt)}</p>
       </div>
 
-      <div className="mt-4 rounded-xl border border-white/10 bg-[#0B132B]/60 p-4">
+      <div className="mt-4 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/60 p-4">
         {connectedEmail ? (
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--keel-teal)]/15 text-[var(--keel-teal)]">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]">
                 <Mail className="h-4 w-4" />
               </div>
               <div>
-                <p className="text-sm font-medium text-white">Gmail connected</p>
-                <p className="text-sm text-zinc-400">{connectedEmail}</p>
+                <p className="text-sm font-medium text-[var(--workspace-shell-text)]">Gmail connected</p>
+                <p className="text-sm text-[var(--workspace-shell-text-muted)]">{connectedEmail}</p>
               </div>
             </div>
             <Button
               type="button"
               variant="outline"
-              className="border-white/10 bg-transparent text-white hover:bg-white/5"
+              className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
               onClick={disconnect}
               disabled={disconnecting || pending}
             >
@@ -211,14 +211,14 @@ export function EmailSettingsCard({
         ) : (
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm font-medium text-white">Connect Gmail</p>
-              <p className="text-sm text-zinc-400">
+              <p className="text-sm font-medium text-[var(--workspace-shell-text)]">Connect Gmail</p>
+              <p className="text-sm text-[var(--workspace-shell-text-muted)]">
                 Sync your inbox and save drafts back to Gmail.
               </p>
             </div>
             <Button
               type="button"
-              className="keel-gradient-btn text-white"
+              className="keel-gradient-btn text-[var(--ozer-white)]"
               onClick={() => {
                 window.location.href = connectHref;
               }}
@@ -258,7 +258,7 @@ export function EmailSettingsCard({
 
       <div className="mt-5 space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="email-style-notes" className="text-zinc-300">
+          <Label htmlFor="email-style-notes" className="text-[var(--workspace-shell-text-muted)]">
             Writing style notes
           </Label>
           <Textarea
@@ -267,7 +267,7 @@ export function EmailSettingsCard({
             onChange={(event) => setStyleNotes(event.target.value)}
             placeholder="Warm and concise. Use first names. Always write and sign off as me, never as a recipient."
             rows={4}
-            className="border-white/10 bg-[#0B132B] text-white placeholder:text-zinc-500"
+            className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
           />
         </div>
 
@@ -281,7 +281,7 @@ export function EmailSettingsCard({
 
         <Button
           type="button"
-          className="keel-gradient-btn text-white"
+          className="keel-gradient-btn text-[var(--ozer-white)]"
           onClick={saveSettings}
           disabled={pending}
         >

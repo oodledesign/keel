@@ -22,7 +22,7 @@ import { PAGESPEED_METRIC_LABELS } from '~/lib/pagespeed/types';
 
 function scoreTone(score: number | null | undefined): string {
   if (score == null) return 'text-muted-foreground';
-  if (score >= 90) return 'text-[var(--keel-teal)]';
+  if (score >= 90) return 'text-[var(--ozer-accent)]';
   if (score >= 50) return 'text-amber-400';
   return 'text-red-400';
 }
@@ -156,9 +156,9 @@ function HistoryTable(props: {
   if (rows.length === 0) return null;
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-white/10">
+    <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
       <table className="w-full min-w-[24rem] text-left text-sm">
-        <thead className="border-b border-white/10 text-xs uppercase tracking-wide text-muted-foreground">
+        <thead className="border-b border-[color:var(--workspace-shell-border)] text-xs uppercase tracking-wide text-muted-foreground">
           <tr>
             <th className="px-3 py-2">Run</th>
             <th className="px-3 py-2 text-right">Mobile</th>
@@ -167,7 +167,7 @@ function HistoryTable(props: {
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.fetchedAt} className="border-b border-white/5 last:border-0">
+            <tr key={row.fetchedAt} className="border-b border-[color:var(--workspace-shell-border)] last:border-0">
               <td className="px-3 py-2 text-muted-foreground">
                 {formatRunDate(row.fetchedAt)}
               </td>
@@ -210,7 +210,7 @@ export function PagespeedHistoryChart(props: {
 
   if (runCount < 2) {
     return (
-      <div className="border-t border-white/10 px-4 py-4">
+      <div className="border-t border-[color:var(--workspace-shell-border)] px-4 py-4">
         <p className="text-muted-foreground text-sm">
           Score history appears after at least two PageSpeed runs.
         </p>
@@ -219,7 +219,7 @@ export function PagespeedHistoryChart(props: {
   }
 
   return (
-    <div className="border-t border-white/10 px-4 py-4">
+    <div className="border-t border-[color:var(--workspace-shell-border)] px-4 py-4">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h4 className="text-sm font-medium">Score history</h4>
@@ -233,7 +233,7 @@ export function PagespeedHistoryChart(props: {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex rounded-lg border border-white/10 p-0.5">
+          <div className="flex rounded-lg border border-[color:var(--workspace-shell-border)] p-0.5">
             {(
               Object.keys(PAGESPEED_METRIC_LABELS) as PagespeedMetricKey[]
             ).map((key) => (
@@ -242,8 +242,8 @@ export function PagespeedHistoryChart(props: {
                 type="button"
                 className={`rounded-md px-2 py-1 text-xs transition ${
                   metric === key
-                    ? 'keel-gradient-active text-white'
-                    : 'text-muted-foreground hover:text-white'
+                    ? 'keel-gradient-active text-[var(--ozer-white)]'
+                    : 'text-muted-foreground hover:text-[var(--workspace-shell-text)]'
                 }`}
                 onClick={() => setMetric(key)}
               >
@@ -253,7 +253,7 @@ export function PagespeedHistoryChart(props: {
           </div>
           <button
             type="button"
-            className="text-muted-foreground text-xs hover:text-white"
+            className="text-muted-foreground text-xs hover:text-[var(--workspace-shell-text)]"
             onClick={() => setShowTable((value) => !value)}
           >
             {showTable ? 'Hide runs' : 'View runs'}
@@ -295,7 +295,7 @@ export function PagespeedHistoryChart(props: {
               type="monotone"
               dataKey="mobile"
               name="Mobile"
-              stroke="var(--keel-teal)"
+              stroke="var(--ozer-accent)"
               strokeWidth={2}
               dot={{ r: 3 }}
               connectNulls

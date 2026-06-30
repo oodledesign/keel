@@ -95,7 +95,7 @@ export function RanklyProjectForm(props: {
   return (
     <form
       onSubmit={submit}
-      className="max-w-lg space-y-4 rounded-lg border border-white/10 bg-black/10 p-4"
+      className="max-w-lg space-y-4 rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-4"
     >
       <div className="flex flex-wrap gap-2">
         <button
@@ -131,7 +131,7 @@ export function RanklyProjectForm(props: {
                 id="rankly-import-client"
                 value={selectedClientId}
                 onChange={(e) => setSelectedClientId(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-white/10 bg-black/20 px-3 text-sm"
+                className="flex h-10 w-full rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 text-sm"
               >
                 <option value="">Select a client…</option>
                 {props.clientImportOptions.map((option) => (
@@ -160,7 +160,7 @@ export function RanklyProjectForm(props: {
               ) : null}
             </>
           ) : (
-            <div className="rounded-md border border-white/10 bg-black/20 px-3 py-3 text-sm text-muted-foreground">
+            <div className="rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-3 text-sm text-muted-foreground">
               No clients found in this workspace.
               {props.clientsHref ? (
                 <>

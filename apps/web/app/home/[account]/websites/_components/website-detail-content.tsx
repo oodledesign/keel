@@ -34,7 +34,7 @@ function DetailField({
 
   return (
     <div className="space-y-1">
-      <p className="text-xs uppercase tracking-wide text-white/40">{label}</p>
+      <p className="text-xs uppercase tracking-wide text-[var(--workspace-shell-text)]/40">{label}</p>
       {href ? (
         <a
           href={href}
@@ -46,7 +46,7 @@ function DetailField({
           <ExternalLink className="h-3.5 w-3.5" />
         </a>
       ) : (
-        <p className="text-sm text-white/80">{display}</p>
+        <p className="text-sm text-[var(--workspace-shell-text)]/80">{display}</p>
       )}
     </div>
   );
@@ -87,17 +87,17 @@ export function WebsiteDetailContent({
         <div className="space-y-3">
           <Link
             href={listHref}
-            className="text-sm text-white/50 hover:text-white"
+            className="text-sm text-[var(--workspace-shell-text)]/50 hover:text-[var(--workspace-shell-text)]"
           >
             ← Back to websites
           </Link>
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-semibold text-white">{website.name}</h1>
+            <h1 className="text-2xl font-semibold text-[var(--workspace-shell-text)]">{website.name}</h1>
             <WebsiteStatusBadge status={website.status} />
             <WebsiteStackBadge stack={website.stack} />
           </div>
           {website.domain ? (
-            <p className="text-sm text-white/60">{website.domain}</p>
+            <p className="text-sm text-[var(--workspace-shell-text)]/60">{website.domain}</p>
           ) : null}
         </div>
 
@@ -137,9 +137,9 @@ export function WebsiteDetailContent({
         initialTab={planningTab ?? 'overview'}
       />
 
-      <Card className="rounded-[20px] border border-white/6 bg-[var(--workspace-shell-panel)]">
+      <Card className="rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
         <CardHeader>
-          <CardTitle className="text-base text-white">Overview</CardTitle>
+          <CardTitle className="text-base text-[var(--workspace-shell-text)]">Overview</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <DetailField label="Domain" value={website.domain} href={liveHref} />
@@ -161,9 +161,9 @@ export function WebsiteDetailContent({
         </CardContent>
       </Card>
 
-      <Card className="rounded-[20px] border border-white/6 bg-[var(--workspace-shell-panel)]">
+      <Card className="rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
         <CardHeader>
-          <CardTitle className="text-base text-white">Technical details</CardTitle>
+          <CardTitle className="text-base text-[var(--workspace-shell-text)]">Technical details</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <DetailField label="Stack" value={website.stack.replace('-', ' + ')} />
@@ -180,27 +180,27 @@ export function WebsiteDetailContent({
       </Card>
 
       {(website.notes || website.hostingNotes) && (
-        <Card className="rounded-[20px] border border-white/6 bg-[var(--workspace-shell-panel)]">
+        <Card className="rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
           <CardHeader>
-            <CardTitle className="text-base text-white">Notes</CardTitle>
+            <CardTitle className="text-base text-[var(--workspace-shell-text)]">Notes</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {website.notes ? (
               <div>
-                <p className="mb-2 text-xs uppercase tracking-wide text-white/40">
+                <p className="mb-2 text-xs uppercase tracking-wide text-[var(--workspace-shell-text)]/40">
                   Notes
                 </p>
-                <p className="whitespace-pre-wrap text-sm text-white/80">
+                <p className="whitespace-pre-wrap text-sm text-[var(--workspace-shell-text)]/80">
                   {website.notes}
                 </p>
               </div>
             ) : null}
             {website.hostingNotes ? (
               <div>
-                <p className="mb-2 text-xs uppercase tracking-wide text-white/40">
+                <p className="mb-2 text-xs uppercase tracking-wide text-[var(--workspace-shell-text)]/40">
                   Hosting notes
                 </p>
-                <p className="whitespace-pre-wrap text-sm text-white/80">
+                <p className="whitespace-pre-wrap text-sm text-[var(--workspace-shell-text)]/80">
                   {website.hostingNotes}
                 </p>
               </div>
@@ -209,9 +209,9 @@ export function WebsiteDetailContent({
         </Card>
       )}
 
-      <Card className="rounded-[20px] border border-white/6 bg-[var(--workspace-shell-panel)]">
+      <Card className="rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
         <CardHeader>
-          <CardTitle className="text-base text-white">Timestamps</CardTitle>
+          <CardTitle className="text-base text-[var(--workspace-shell-text)]">Timestamps</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <DetailField

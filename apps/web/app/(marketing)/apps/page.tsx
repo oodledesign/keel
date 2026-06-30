@@ -28,17 +28,17 @@ function AppsMarketingPage() {
   const apps = listAppLandingSummaries();
 
   return (
-    <main className="relative overflow-hidden bg-[radial-gradient(circle_at_15%_10%,rgba(42,157,143,0.18),transparent_45%),radial-gradient(circle_at_85%_0%,rgba(37,99,235,0.22),transparent_42%),linear-gradient(180deg,#05050b_0%,#080711_45%,#070612_100%)] text-white">
+    <main className="relative overflow-hidden marketing-shell">
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_22%)]" />
 
       <section className="relative mx-auto w-full max-w-7xl px-6 pb-20 pt-24 md:pt-28">
         <div className="max-w-3xl space-y-6">
-          <span className="inline-flex items-center rounded-full border border-[#2A9D8F]/30 bg-[#2A9D8F]/10 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.14em] text-[#7ee8d8]">
+          <span className="inline-flex items-center rounded-full border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-4 py-1.5 text-xs font-medium uppercase tracking-[0.14em] text-[var(--ozer-accent-muted)]">
             Ozer apps
           </span>
-          <h1 className="font-heading text-4xl font-bold leading-tight text-white md:text-5xl lg:text-6xl">
+          <h1 className="font-heading text-4xl font-bold leading-tight text-[var(--workspace-shell-text)] md:text-5xl lg:text-6xl">
             Add the tools you need to any{' '}
-            <span className="bg-gradient-to-r from-[#2A9D8F] via-teal-200 to-[#2563EB] bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-[var(--ozer-accent)] via-[var(--ozer-coral-100)] to-[var(--ozer-info)] bg-clip-text text-transparent">
               business workspace
             </span>
             .
@@ -49,7 +49,7 @@ function AppsMarketingPage() {
           <Button
             asChild
             size="lg"
-            className="h-11 rounded-full bg-gradient-to-r from-[#2A9D8F] to-[#2563EB] px-6 text-white hover:opacity-95"
+            className="h-11 rounded-full bg-gradient-to-r from-[var(--ozer-accent)] to-[var(--ozer-info)] px-6 text-[var(--workspace-shell-text)] hover:opacity-95"
           >
             <Link href={BUSINESS_LITE_SIGNUP}>
               Start with free Business Lite
@@ -66,15 +66,15 @@ function AppsMarketingPage() {
               <Link
                 key={app.slug}
                 href={`/apps/${app.slug}`}
-                className="group rounded-2xl border border-white/10 bg-[linear-gradient(145deg,rgba(15,27,53,0.95),rgba(11,19,43,0.95))] p-6 transition hover:border-[#2A9D8F]/40"
+                className="group rounded-2xl border border-[color:var(--workspace-shell-border)] marketing-feature-card p-6 transition hover:border-[var(--ozer-accent)]/40"
               >
                 <div className="flex items-start gap-4">
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-[#2A9D8F] transition group-hover:border-[#2A9D8F]/30">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--ozer-accent)] transition group-hover:border-[var(--ozer-accent)]/30">
                     <Icon className="h-6 w-6" aria-hidden />
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <h2 className="font-heading text-xl font-semibold text-white">
+                      <h2 className="font-heading text-xl font-semibold text-[var(--workspace-shell-text)]">
                         {app.name}
                       </h2>
                       <span className="text-xs font-medium text-violet-200/70">
@@ -84,7 +84,7 @@ function AppsMarketingPage() {
                     <p className="mt-2 text-sm leading-relaxed text-violet-100/80">
                       {app.description}
                     </p>
-                    <span className="mt-4 inline-flex items-center text-sm font-medium text-[#7ee8d8]">
+                    <span className="mt-4 inline-flex items-center text-sm font-medium text-[var(--ozer-accent-muted)]">
                       Learn more
                       <ArrowRight className="ml-1 h-4 w-4 transition group-hover:translate-x-0.5" />
                     </span>
@@ -97,15 +97,15 @@ function AppsMarketingPage() {
 
         <p className="mt-12 text-center text-sm text-violet-200/70">
           Need a full CRM too?{' '}
-          <Link href="/work" className="underline underline-offset-2 hover:text-white">
+          <Link href="/work" className="underline underline-offset-2 hover:text-[var(--workspace-shell-text)]">
             Explore business workspaces
           </Link>
           {' · '}
-          <Link href="/pricing" className="underline underline-offset-2 hover:text-white">
+          <Link href="/pricing" className="underline underline-offset-2 hover:text-[var(--workspace-shell-text)]">
             Compare all pricing
           </Link>
           {' · '}
-          <Link href={pathsConfig.auth.signIn} className="underline underline-offset-2 hover:text-white">
+          <Link href={pathsConfig.auth.signIn} className="underline underline-offset-2 hover:text-[var(--workspace-shell-text)]">
             Sign in
           </Link>
         </p>

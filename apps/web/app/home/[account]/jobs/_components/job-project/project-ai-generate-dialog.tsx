@@ -54,24 +54,24 @@ function SourceGroup({
 
   return (
     <div className="space-y-2">
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+      <p className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
         {label}
       </p>
-      <ul className="max-h-40 space-y-2 overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-900/40 p-2">
+      <ul className="max-h-40 space-y-2 overflow-y-auto rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40 p-2">
         {items.map((item) => {
           const key = sourceKey(item);
           return (
             <li key={key}>
-              <label className="flex cursor-pointer gap-2 rounded-md p-1.5 hover:bg-zinc-800/60">
+              <label className="flex cursor-pointer gap-2 rounded-md p-1.5 hover:bg-[var(--workspace-control-surface)]/60">
                 <Checkbox
                   checked={selected.has(key)}
                   onCheckedChange={(v) => onToggle(key, v === true)}
                 />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm text-white">
+                  <span className="block truncate text-sm text-[var(--workspace-shell-text)]">
                     {item.title}
                   </span>
-                  <span className="block text-[11px] text-zinc-500">
+                  <span className="block text-[11px] text-[var(--workspace-shell-text-muted)]">
                     {item.subtitle}
                     {item.preview ? ` · ${item.preview.slice(0, 80)}` : ''}
                   </span>
@@ -282,17 +282,17 @@ export function ProjectAiGenerateDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto border-zinc-700 bg-[var(--workspace-shell-panel)] text-white sm:max-w-lg">
+      <DialogContent className="max-h-[90vh] overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-[var(--keel-teal)]" />
+            <Sparkles className="h-5 w-5 text-[var(--ozer-accent)]" />
             Generate with AI
           </DialogTitle>
         </DialogHeader>
 
         {planReview ? (
           <div className="space-y-4">
-            <p className="text-sm text-zinc-400">
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
               Review the proposed phases and tasks before adding them to the
               project. Nothing is saved until you confirm.
             </p>
@@ -300,20 +300,20 @@ export function ProjectAiGenerateDialog({
               {planReview.plan.phases.map((phase, i) => (
                 <li
                   key={`${phase.name}-${i}`}
-                  className="rounded-lg border border-zinc-700 bg-zinc-900/40 p-3"
+                  className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40 p-3"
                 >
-                  <p className="font-medium text-white">{phase.name}</p>
+                  <p className="font-medium text-[var(--workspace-shell-text)]">{phase.name}</p>
                   {phase.description ? (
-                    <p className="mt-1 text-xs text-zinc-400">
+                    <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
                       {phase.description}
                     </p>
                   ) : null}
-                  <p className="mt-1 text-[11px] text-zinc-500">
+                  <p className="mt-1 text-[11px] text-[var(--workspace-shell-text-muted)]">
                     {phase.start_date ?? '—'} → {phase.due_date ?? '—'}
                     {phase.is_milestone ? ' · milestone' : ''}
                   </p>
                   {phase.tasks.length > 0 && (
-                    <ul className="mt-2 list-disc pl-4 text-xs text-zinc-300">
+                    <ul className="mt-2 list-disc pl-4 text-xs text-[var(--workspace-shell-text-muted)]">
                       {phase.tasks.map((t, j) => (
                         <li key={`${t.title}-${j}`}>{t.title}</li>
                       ))}
@@ -326,14 +326,14 @@ export function ProjectAiGenerateDialog({
               <Button
                 type="button"
                 variant="outline"
-                className="border-zinc-600"
+                className="border-[color:var(--workspace-shell-border)]"
                 onClick={() => setPlanReview(null)}
               >
                 Back
               </Button>
               <Button
                 type="button"
-                className="bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+                className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
                 disabled={applying}
                 onClick={handleApplyPlan}
               >
@@ -344,19 +344,19 @@ export function ProjectAiGenerateDialog({
         ) : (
           <>
             <div className="space-y-3">
-              <Label className="text-xs text-zinc-500">Generation mode</Label>
+              <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Generation mode</Label>
               <div className="flex flex-col gap-2">
                 {modes.map((m) => (
                   <label
                     key={m}
-                    className="flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-700 px-3 py-2 hover:bg-zinc-800/50"
+                    className="flex cursor-pointer items-center gap-2 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2 hover:bg-[var(--workspace-control-surface)]/50"
                   >
                     <input
                       type="radio"
                       name="ai-mode"
                       checked={mode === m}
                       onChange={() => setMode(m)}
-                      className="accent-[var(--keel-teal)]"
+                      className="accent-[var(--ozer-accent)]"
                     />
                     <span className="text-sm">{modeLabels[m]}</span>
                   </label>
@@ -365,7 +365,7 @@ export function ProjectAiGenerateDialog({
             </div>
 
             {loadingSources ? (
-              <div className="flex items-center gap-2 py-8 text-sm text-zinc-500">
+              <div className="flex items-center gap-2 py-8 text-sm text-[var(--workspace-shell-text-muted)]">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Loading sources…
               </div>
@@ -396,7 +396,7 @@ export function ProjectAiGenerateDialog({
                   onToggle={toggleSource}
                 />
                 {allItems.length === 0 && (
-                  <p className="text-sm text-zinc-500">
+                  <p className="text-sm text-[var(--workspace-shell-text-muted)]">
                     No sources found for this job yet. Add notes, docs,
                     transcripts, or proposals linked to the client or job.
                   </p>
@@ -406,14 +406,14 @@ export function ProjectAiGenerateDialog({
 
             {rawDraft && (
               <div className="space-y-2">
-                <Label className="text-xs text-zinc-500">
+                <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
                   Raw AI output (parse failed)
                 </Label>
                 <Textarea
                   readOnly
                   value={rawDraft}
                   rows={8}
-                  className="border-zinc-600 bg-zinc-900 text-xs text-zinc-300"
+                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-xs text-[var(--workspace-shell-text-muted)]"
                 />
               </div>
             )}
@@ -422,14 +422,14 @@ export function ProjectAiGenerateDialog({
               <Button
                 type="button"
                 variant="outline"
-                className="border-zinc-600"
+                className="border-[color:var(--workspace-shell-border)]"
                 onClick={() => onOpenChange(false)}
               >
                 Cancel
               </Button>
               <Button
                 type="button"
-                className="bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+                className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
                 disabled={generating || loadingSources || selectedRefs.length === 0}
                 onClick={handleGenerate}
               >

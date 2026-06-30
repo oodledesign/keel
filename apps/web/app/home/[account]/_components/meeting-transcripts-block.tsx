@@ -151,33 +151,33 @@ export function MeetingTranscriptsBlock({
   };
 
   const meetingList = loading ? (
-    <p className="text-sm text-zinc-500">Loading…</p>
+    <p className="text-sm text-[var(--workspace-shell-text-muted)]">Loading…</p>
   ) : rows.length === 0 ? (
-    <p className="text-sm text-zinc-500">No meetings yet.</p>
+    <p className="text-sm text-[var(--workspace-shell-text-muted)]">No meetings yet.</p>
   ) : (
     <ul className="space-y-2">
       {rows.map((row) => (
         <li
           key={row.id}
           className={cn(
-            'flex items-start justify-between gap-3 rounded-lg border border-white/[0.08]',
+            'flex items-start justify-between gap-3 rounded-lg border border-[color:var(--workspace-shell-border)]',
             variant === 'list'
-              ? 'bg-[var(--workspace-shell-panel)] px-4 py-3 transition-colors hover:border-[var(--keel-teal)]/30'
-              : 'border-white/6 bg-white/3 px-3 py-2',
+              ? 'bg-[var(--workspace-shell-panel)] px-4 py-3 transition-colors hover:border-[var(--ozer-accent)]/30'
+              : 'border-[color:var(--workspace-shell-border)] bg-white/3 px-3 py-2',
           )}
         >
           <div className="min-w-0">
             {accountSlug ? (
               <Link
                 href={meetingDetailPath(row.id)}
-                className="truncate text-sm font-medium text-white hover:text-[#5eead4]"
+                className="truncate text-sm font-medium text-[var(--workspace-shell-text)] hover:text-[var(--ozer-accent-muted)]"
               >
                 {row.title}
               </Link>
             ) : (
-              <p className="truncate text-sm font-medium text-white">{row.title}</p>
+              <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">{row.title}</p>
             )}
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
               {meetingDisplayDate(row.meetingDate, row.createdAt)}
               {' · '}
               {row.content.length.toLocaleString()} chars
@@ -206,7 +206,7 @@ export function MeetingTranscriptsBlock({
           {canEdit ? (
             <Button
               size="sm"
-              className="bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+              className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
               asChild
             >
               <Link href={newMeetingHref}>
@@ -222,16 +222,16 @@ export function MeetingTranscriptsBlock({
   }
 
   return (
-    <div className="rounded-xl border border-white/10 bg-[var(--workspace-shell-panel)] p-4">
+    <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Mic className="h-4 w-4 text-[var(--keel-teal)]" />
+          <Mic className="h-4 w-4 text-[var(--ozer-accent)]" />
           <h3 className="text-sm font-semibold">Meeting transcripts</h3>
         </div>
         {accountSlug ? (
           <Link
             href={meetingsPath}
-            className="text-xs font-medium text-[#5eead4] hover:underline"
+            className="text-xs font-medium text-[var(--ozer-accent-muted)] hover:underline"
           >
             All meetings
           </Link>
@@ -243,7 +243,7 @@ export function MeetingTranscriptsBlock({
       </p>
 
       {canEdit ? (
-        <div className="mb-4 space-y-3 rounded-lg border border-white/8 bg-white/3 p-3">
+        <div className="mb-4 space-y-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-white/3 p-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <Label htmlFor="transcript-title">Title</Label>

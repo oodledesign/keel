@@ -39,12 +39,12 @@ async function AccessibilitySettingsPage() {
   return (
     <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-[var(--workspace-shell-text)] lg:px-6">
       <div className="flex w-full flex-1 flex-col lg:max-w-2xl">
-        <div className="rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+        <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
           <div className="mb-6">
             <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
               <Trans i18nKey="account:accessibilitySettings" />
             </h2>
-            <p className="mt-1 text-sm text-zinc-400">
+            <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
               <Trans i18nKey="account:accessibilitySettingsDescription" />
             </p>
           </div>

@@ -345,7 +345,7 @@ export async function sendAdminUserInviteEmail(params: {
       <p>${params.inviterName} invited you to ${productName}.</p>
       <p><strong>Your access:</strong> ${params.accessSummary}</p>
       <p>
-        <a href="${acceptUrl}" style="display:inline-block;padding:12px 20px;background:#2a9d8f;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">
+        <a href="${acceptUrl}" style="display:inline-block;padding:12px 20px;background:#FF5C34;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">
           Accept invitation
         </a>
       </p>

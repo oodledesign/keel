@@ -109,7 +109,7 @@ export function ContractSendPanel({
   };
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-6">
+    <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6">
       <div className="mb-4 flex items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">Send {contractTitle || 'contract'}</h2>
         {onClose ? (
@@ -150,7 +150,7 @@ export function ContractSendPanel({
               </Button>
             ))}
           </div>
-          <div className="rounded-xl border border-white/8 bg-white/3 p-4 text-sm">
+          <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-white/3 p-4 text-sm">
             <p className="font-medium">Preview summary</p>
             <p className="mt-2 text-muted-foreground">
               {contractTitle} · {formatPence(totalPence, currency?.toUpperCase() ?? 'GBP')}
@@ -158,7 +158,7 @@ export function ContractSendPanel({
           </div>
           <div className="flex flex-wrap gap-2">
             <Button
-              className="bg-[var(--keel-teal)] text-[#09111F]"
+              className="bg-[var(--ozer-accent)] text-[#09111F]"
               disabled={loading != null}
               onClick={() => void handleSend(false)}
             >

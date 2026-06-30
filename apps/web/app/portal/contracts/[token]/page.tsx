@@ -76,7 +76,7 @@ export default async function PortalContractPage({ params }: PortalContractPageP
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6">
-        <Link href="/" className="text-sm text-zinc-400 hover:text-white">
+        <Link href="/" className="text-sm text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]">
           ← Back to home
         </Link>
       </div>
@@ -86,7 +86,7 @@ export default async function PortalContractPage({ params }: PortalContractPageP
         </div>
       ) : null}
       {isSigned ? (
-        <div className="mb-6 rounded-lg border border-[var(--keel-teal)]/30 bg-[var(--keel-teal)]/10 px-4 py-3 text-[#97D9AA]">
+        <div className="mb-6 rounded-lg border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-4 py-3 text-[#97D9AA]">
           This agreement has been fully signed. Thank you.
         </div>
       ) : null}

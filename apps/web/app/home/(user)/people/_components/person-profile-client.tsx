@@ -59,7 +59,7 @@ import { PersonFormDialog } from './person-form-dialog';
 import { PersonImageUploader } from './person-image-uploader';
 
 const panelClass =
-  'rounded-2xl border border-white/[0.08] bg-[var(--workspace-shell-panel)]';
+  'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
 
 type Props = {
   person: PersonProfile;
@@ -111,13 +111,13 @@ export function PersonProfileClient({ person }: Props) {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 px-4 pb-12 pt-2 text-white md:px-0">
+    <div className="flex min-h-0 flex-1 flex-col gap-6 px-4 pb-12 pt-2 text-[var(--workspace-shell-text)] md:px-0">
       <div className="flex items-center gap-3">
         <Button
           asChild
           variant="ghost"
           size="sm"
-          className="text-zinc-400 hover:bg-white/10 hover:text-white"
+          className="text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
         >
           <Link href={pathsConfig.app.personalPeople}>
             <ArrowLeft className="mr-1 h-4 w-4" />
@@ -140,12 +140,12 @@ export function PersonProfileClient({ person }: Props) {
             <div>
               <h1 className="text-2xl font-semibold">{name}</h1>
               {person.nickname && person.full_name !== person.nickname && (
-                <p className="text-sm text-zinc-400">{person.full_name}</p>
+                <p className="text-sm text-[var(--workspace-shell-text-muted)]">{person.full_name}</p>
               )}
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-zinc-400">
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-[var(--workspace-shell-text-muted)]">
                 <CircleTierBadge tier={person.circle_tier} showFullLabel />
                 {person.relationship_label && (
-                  <span className="rounded-full bg-white/5 px-2.5 py-0.5">
+                  <span className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-0.5">
                     {person.relationship_label}
                   </span>
                 )}
@@ -158,7 +158,7 @@ export function PersonProfileClient({ person }: Props) {
             <Button
               variant="outline"
               size="sm"
-              className="border-white/10 bg-transparent text-zinc-300 hover:bg-white/10"
+              className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
               onClick={() => setEditOpen(true)}
             >
               <Pencil className="mr-1.5 h-3.5 w-3.5" />
@@ -211,7 +211,7 @@ export function PersonProfileClient({ person }: Props) {
         </div>
 
         {person.general_notes && (
-          <p className="mt-4 rounded-xl bg-white/[0.03] px-4 py-3 text-sm text-zinc-300">
+          <p className="mt-4 rounded-xl bg-[var(--workspace-shell-sidebar-accent)] px-4 py-3 text-sm text-[var(--workspace-shell-text-muted)]">
             {person.general_notes}
           </p>
         )}
@@ -223,7 +223,7 @@ export function PersonProfileClient({ person }: Props) {
         action={
           <Button
             size="sm"
-            className="bg-[var(--keel-teal)] hover:bg-[#238b7f]"
+            className="bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]"
             onClick={() => setCatchupOpen(true)}
           >
             <Plus className="mr-1 h-3.5 w-3.5" />
@@ -239,17 +239,17 @@ export function PersonProfileClient({ person }: Props) {
               <div key={c.id} className={cn(panelClass, 'p-4')}>
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="font-medium text-white">
+                    <p className="font-medium text-[var(--workspace-shell-text)]">
                       {formatDateYmd(c.met_on)}
                     </p>
                     {c.location && (
-                      <p className="mt-1 flex items-center gap-1 text-xs text-zinc-400">
+                      <p className="mt-1 flex items-center gap-1 text-xs text-[var(--workspace-shell-text-muted)]">
                         <MapPin className="h-3 w-3" />
                         {c.location}
                       </p>
                     )}
                     {c.conversation_notes && (
-                      <p className="mt-2 whitespace-pre-wrap text-sm text-zinc-300">
+                      <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--workspace-shell-text-muted)]">
                         {c.conversation_notes}
                       </p>
                     )}
@@ -257,7 +257,7 @@ export function PersonProfileClient({ person }: Props) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="shrink-0 text-zinc-500 hover:text-rose-400"
+                    className="shrink-0 text-[var(--workspace-shell-text-muted)] hover:text-rose-400"
                     onClick={() =>
                       startTransition(async () => {
                         await deleteCatchupAction({
@@ -283,7 +283,7 @@ export function PersonProfileClient({ person }: Props) {
           <Button
             size="sm"
             variant="outline"
-            className="border-white/10 bg-transparent text-zinc-300"
+            className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text-muted)]"
             onClick={() => setNoteOpen(true)}
           >
             <Plus className="mr-1 h-3.5 w-3.5" />
@@ -301,17 +301,17 @@ export function PersonProfileClient({ person }: Props) {
                 className={cn(panelClass, 'flex items-start justify-between gap-3 p-4')}
               >
                 <div>
-                  <p className="whitespace-pre-wrap text-sm text-zinc-200">
+                  <p className="whitespace-pre-wrap text-sm text-[var(--workspace-shell-text)]">
                     {n.body}
                   </p>
-                  <p className="mt-2 text-[11px] text-zinc-500">
+                  <p className="mt-2 text-[11px] text-[var(--workspace-shell-text-muted)]">
                     {new Date(n.created_at).toLocaleDateString('en-GB')}
                   </p>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="shrink-0 text-zinc-500 hover:text-rose-400"
+                  className="shrink-0 text-[var(--workspace-shell-text-muted)] hover:text-rose-400"
                   onClick={() =>
                     startTransition(async () => {
                       await deletePersonNoteAction({
@@ -336,7 +336,7 @@ export function PersonProfileClient({ person }: Props) {
           <Button
             size="sm"
             variant="outline"
-            className="border-white/10 bg-transparent text-zinc-300"
+            className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text-muted)]"
             onClick={() => setDateOpen(true)}
           >
             <Plus className="mr-1 h-3.5 w-3.5" />
@@ -354,21 +354,21 @@ export function PersonProfileClient({ person }: Props) {
                 className={cn(panelClass, 'flex items-center justify-between p-4')}
               >
                 <div>
-                  <p className="font-medium capitalize text-white">
+                  <p className="font-medium capitalize text-[var(--workspace-shell-text)]">
                     {d.kind === 'custom' ? d.label || 'Custom' : d.kind}
                   </p>
-                  <p className="text-sm text-zinc-400">
+                  <p className="text-sm text-[var(--workspace-shell-text-muted)]">
                     {formatMonthDay(d.month, d.day)}
                     {d.year_optional ? ` (${d.year_optional})` : ''}
                   </p>
                   {d.notes && (
-                    <p className="mt-1 text-xs text-zinc-500">{d.notes}</p>
+                    <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">{d.notes}</p>
                   )}
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-zinc-500 hover:text-rose-400"
+                  className="text-[var(--workspace-shell-text-muted)] hover:text-rose-400"
                   onClick={() =>
                     startTransition(async () => {
                       await deletePersonDateAction({
@@ -393,7 +393,7 @@ export function PersonProfileClient({ person }: Props) {
           <Button
             size="sm"
             variant="outline"
-            className="border-white/10 bg-transparent text-zinc-300"
+            className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text-muted)]"
             onClick={() => setGiftOpen(true)}
           >
             <Plus className="mr-1 h-3.5 w-3.5" />
@@ -421,29 +421,29 @@ export function PersonProfileClient({ person }: Props) {
                       });
                     })
                   }
-                  className="mt-0.5 border-white/20 data-[state=checked]:bg-[var(--keel-teal)]"
+                  className="mt-0.5 border-[color:var(--workspace-shell-border)] data-[state=checked]:bg-[var(--ozer-accent)]"
                 />
                 <div className="min-w-0 flex-1">
                   <p
                     className={cn(
-                      'font-medium text-white',
-                      g.purchased && 'text-zinc-500 line-through',
+                      'font-medium text-[var(--workspace-shell-text)]',
+                      g.purchased && 'text-[var(--workspace-shell-text-muted)] line-through',
                     )}
                   >
                     {g.title}
                   </p>
                   {g.occasion && (
-                    <p className="text-xs text-zinc-500">{g.occasion}</p>
+                    <p className="text-xs text-[var(--workspace-shell-text-muted)]">{g.occasion}</p>
                   )}
                   {g.notes && (
-                    <p className="mt-1 text-sm text-zinc-400">{g.notes}</p>
+                    <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">{g.notes}</p>
                   )}
                   {g.url && (
                     <a
                       href={g.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="mt-1 inline-block text-xs text-[#5eead4] hover:underline"
+                      className="mt-1 inline-block text-xs text-[var(--ozer-accent-muted)] hover:underline"
                     >
                       View link
                     </a>
@@ -452,7 +452,7 @@ export function PersonProfileClient({ person }: Props) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="shrink-0 text-zinc-500 hover:text-rose-400"
+                  className="shrink-0 text-[var(--workspace-shell-text-muted)] hover:text-rose-400"
                   onClick={() =>
                     startTransition(async () => {
                       await deleteGiftIdeaAction({
@@ -499,11 +499,11 @@ export function PersonProfileClient({ person }: Props) {
       />
 
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <DialogContent className="border-white/10 bg-[#0F1B35] text-white">
+        <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] text-[var(--workspace-shell-text)]">
           <DialogHeader>
             <DialogTitle>Delete {name}?</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-zinc-400">
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
             This removes all notes, dates, gift ideas, and catchup history for
             this person. This cannot be undone.
           </p>
@@ -534,14 +534,14 @@ function SummaryTile({
   highlight?: boolean;
 }) {
   return (
-    <div className="rounded-xl bg-white/[0.03] px-4 py-3">
-      <p className="text-[11px] uppercase tracking-wide text-zinc-500">
+    <div className="rounded-xl bg-[var(--workspace-shell-sidebar-accent)] px-4 py-3">
+      <p className="text-[11px] uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
         {label}
       </p>
       <p
         className={cn(
           'mt-1 text-sm font-medium',
-          highlight ? 'text-amber-300' : 'text-white',
+          highlight ? 'text-amber-300' : 'text-[var(--workspace-shell-text)]',
         )}
       >
         {value}
@@ -563,8 +563,8 @@ function Section({
   return (
     <section>
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="flex items-center gap-2 text-base font-semibold text-white">
-          <Icon className="h-4 w-4 text-[#5eead4]" />
+        <h2 className="flex items-center gap-2 text-base font-semibold text-[var(--workspace-shell-text)]">
+          <Icon className="h-4 w-4 text-[var(--ozer-accent-muted)]" />
           {title}
         </h2>
         {action}
@@ -579,7 +579,7 @@ function EmptySection({ message }: { message: string }) {
     <div
       className={cn(
         panelClass,
-        'px-4 py-8 text-center text-sm text-zinc-500',
+        'px-4 py-8 text-center text-sm text-[var(--workspace-shell-text-muted)]',
       )}
     >
       {message}
@@ -635,7 +635,7 @@ function LogCatchupDialog({
         <Label>Date</Label>
         <Input
           type="date"
-          className="border-white/10 bg-[var(--workspace-shell-panel)] text-white"
+          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
           value={metOn}
           onChange={(e) => setMetOn(e.target.value)}
         />
@@ -643,7 +643,7 @@ function LogCatchupDialog({
       <div className="grid gap-2">
         <Label>Location</Label>
         <Input
-          className="border-white/10 bg-[var(--workspace-shell-panel)] text-white"
+          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
           value={location}
           onChange={(e) => setLocation(e.target.value)}
           placeholder="Coffee shop, video call…"
@@ -652,7 +652,7 @@ function LogCatchupDialog({
       <div className="grid gap-2">
         <Label>What did you talk about?</Label>
         <Textarea
-          className="min-h-[100px] border-white/10 bg-[var(--workspace-shell-panel)] text-white"
+          className="min-h-[100px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
         />
@@ -709,10 +709,10 @@ function AddDateDialog({
       <div className="grid gap-2">
         <Label>Type</Label>
         <Select value={kind} onValueChange={(v) => setKind(v as typeof kind)}>
-          <SelectTrigger className="border-white/10 bg-[var(--workspace-shell-panel)] text-white">
+          <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent className="border-white/10 bg-[#0F1B35] text-white">
+          <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] text-[var(--workspace-shell-text)]">
             {DATE_KINDS.map((k) => (
               <SelectItem key={k} value={k} className="capitalize">
                 {k}
@@ -725,7 +725,7 @@ function AddDateDialog({
         <div className="grid gap-2">
           <Label>Label</Label>
           <Input
-            className="border-white/10 bg-[var(--workspace-shell-panel)] text-white"
+            className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
           />
@@ -735,10 +735,10 @@ function AddDateDialog({
         <div className="grid gap-2">
           <Label>Month</Label>
           <Select value={month} onValueChange={setMonth}>
-            <SelectTrigger className="border-white/10 bg-[var(--workspace-shell-panel)] text-white">
+            <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="border-white/10 bg-[#0F1B35] text-white">
+            <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] text-[var(--workspace-shell-text)]">
               {Array.from({ length: 12 }, (_, i) => (
                 <SelectItem key={i + 1} value={String(i + 1)}>
                   {new Date(2000, i, 1).toLocaleString('en-GB', {
@@ -752,10 +752,10 @@ function AddDateDialog({
         <div className="grid gap-2">
           <Label>Day</Label>
           <Select value={day} onValueChange={setDay}>
-            <SelectTrigger className="border-white/10 bg-[var(--workspace-shell-panel)] text-white">
+            <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="border-white/10 bg-[#0F1B35] text-white">
+            <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] text-[var(--workspace-shell-text)]">
               {Array.from({ length: 31 }, (_, i) => (
                 <SelectItem key={i + 1} value={String(i + 1)}>
                   {i + 1}
@@ -768,7 +768,7 @@ function AddDateDialog({
       <div className="grid gap-2">
         <Label>Notes</Label>
         <Input
-          className="border-white/10 bg-[var(--workspace-shell-panel)] text-white"
+          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
         />
@@ -828,7 +828,7 @@ function AddGiftDialog({
       <div className="grid gap-2">
         <Label>Title</Label>
         <Input
-          className="border-white/10 bg-[var(--workspace-shell-panel)] text-white"
+          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
@@ -836,7 +836,7 @@ function AddGiftDialog({
       <div className="grid gap-2">
         <Label>Occasion</Label>
         <Input
-          className="border-white/10 bg-[var(--workspace-shell-panel)] text-white"
+          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
           value={occasion}
           onChange={(e) => setOccasion(e.target.value)}
           placeholder="Birthday, Christmas…"
@@ -845,7 +845,7 @@ function AddGiftDialog({
       <div className="grid gap-2">
         <Label>Link</Label>
         <Input
-          className="border-white/10 bg-[var(--workspace-shell-panel)] text-white"
+          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           placeholder="https://"
@@ -854,7 +854,7 @@ function AddGiftDialog({
       <div className="grid gap-2">
         <Label>Notes</Label>
         <Textarea
-          className="border-white/10 bg-[var(--workspace-shell-panel)] text-white"
+          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
         />
@@ -900,7 +900,7 @@ function AddNoteDialog({
       disabled={!body.trim()}
     >
       <Textarea
-        className="min-h-[120px] border-white/10 bg-[var(--workspace-shell-panel)] text-white"
+        className="min-h-[120px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
         value={body}
         onChange={(e) => setBody(e.target.value)}
         placeholder="Something worth remembering…"
@@ -929,7 +929,7 @@ function QuickDialog({
 }>) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-white/10 bg-[#0F1B35] text-white sm:max-w-md">
+      <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] text-[var(--workspace-shell-text)] sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
@@ -940,7 +940,7 @@ function QuickDialog({
             Cancel
           </Button>
           <Button
-            className="bg-[var(--keel-teal)] hover:bg-[#238b7f]"
+            className="bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]"
             disabled={pending || disabled}
             onClick={onSubmit}
           >

@@ -14,7 +14,7 @@ import type { CalendarEventClickPayload, CalendarItemNormalized, KeelCalendarVie
 
 const KeelCalendar = dynamic(
   () => import('~/components/calendar/KeelCalendar').then((m) => m.KeelCalendar),
-  { ssr: false, loading: () => <div className="flex h-[480px] items-center justify-center rounded-lg border border-zinc-700 bg-[var(--workspace-shell-panel)] text-zinc-500">Loading calendar…</div> },
+  { ssr: false, loading: () => <div className="flex h-[480px] items-center justify-center rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text-muted)]">Loading calendar…</div> },
 );
 
 import pathsConfig from '~/config/paths.config';
@@ -159,7 +159,7 @@ export function OrgSchedulePageContent({
             type="button"
             variant={view === 'month' ? 'default' : 'outline'}
             size="sm"
-            className={view === 'month' ? 'bg-zinc-700 hover:bg-zinc-600' : 'border-zinc-600 text-zinc-300'}
+            className={view === 'month' ? 'bg-[var(--workspace-shell-panel-hover)] hover:bg-[var(--workspace-shell-panel-hover)]' : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]'}
             onClick={() => setView('month')}
           >
             <CalendarIcon className="mr-1.5 h-4 w-4" />
@@ -169,7 +169,7 @@ export function OrgSchedulePageContent({
             type="button"
             variant={view === 'week' ? 'default' : 'outline'}
             size="sm"
-            className={view === 'week' ? 'bg-zinc-700 hover:bg-zinc-600' : 'border-zinc-600 text-zinc-300'}
+            className={view === 'week' ? 'bg-[var(--workspace-shell-panel-hover)] hover:bg-[var(--workspace-shell-panel-hover)]' : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]'}
             onClick={() => setView('week')}
           >
             Week
@@ -178,14 +178,14 @@ export function OrgSchedulePageContent({
             type="button"
             variant={view === 'agenda' ? 'default' : 'outline'}
             size="sm"
-            className={view === 'agenda' ? 'bg-zinc-700 hover:bg-zinc-600' : 'border-zinc-600 text-zinc-300'}
+            className={view === 'agenda' ? 'bg-[var(--workspace-shell-panel-hover)] hover:bg-[var(--workspace-shell-panel-hover)]' : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]'}
             onClick={() => setView('agenda')}
           >
             Upcoming
           </Button>
         </div>
         {loading && events.length === 0 && (
-          <p className="mb-2 text-sm text-zinc-500">Loading calendar…</p>
+          <p className="mb-2 text-sm text-[var(--workspace-shell-text-muted)]">Loading calendar…</p>
         )}
         <KeelCalendar
           key={view}
@@ -197,12 +197,12 @@ export function OrgSchedulePageContent({
         />
       </div>
 
-      <aside className="w-full shrink-0 rounded-lg border border-zinc-700 bg-[var(--workspace-shell-panel)] p-4 lg:w-[30%] lg:min-w-[260px]">
-        <h4 className="text-sm font-medium text-zinc-400">Details</h4>
+      <aside className="w-full shrink-0 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 lg:w-[30%] lg:min-w-[260px]">
+        <h4 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">Details</h4>
         {detailsLoading ? (
-          <p className="mt-2 text-sm text-zinc-500">Loading…</p>
+          <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">Loading…</p>
         ) : !selectedEvent || !details ? (
-          <p className="mt-2 text-sm text-zinc-500">Select an item to view details.</p>
+          <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">Select an item to view details.</p>
         ) : (
           <div className="mt-3 space-y-3 text-sm">
             <div className="flex flex-wrap items-center gap-2">
@@ -222,30 +222,30 @@ export function OrgSchedulePageContent({
                 </span>
               )}
               {details.status && (
-                <span className="rounded bg-zinc-700 px-2 py-0.5 text-zinc-300">
+                <span className="rounded bg-[var(--workspace-shell-panel-hover)] px-2 py-0.5 text-[var(--workspace-shell-text-muted)]">
                   {(details.status as string).replace('_', ' ')}
                 </span>
               )}
               {details.priority && (
-                <span className="rounded bg-zinc-700 px-2 py-0.5 text-zinc-300 capitalize">
+                <span className="rounded bg-[var(--workspace-shell-panel-hover)] px-2 py-0.5 text-[var(--workspace-shell-text-muted)] capitalize">
                   {details.priority as string}
                 </span>
               )}
             </div>
-            <p className="font-medium text-white">{selectedEvent.title}</p>
-            <p className="text-zinc-400">
+            <p className="font-medium text-[var(--workspace-shell-text)]">{selectedEvent.title}</p>
+            <p className="text-[var(--workspace-shell-text-muted)]">
               {selectedEvent.all_day
                 ? formatDate(selectedEvent.start_at)
                 : formatDateTime(selectedEvent.start_at)}
             </p>
             {selectedEvent.source_type === 'job_event' && (details.location || selectedEvent.location) && (
-              <p className="flex items-center gap-1.5 text-zinc-400">
+              <p className="flex items-center gap-1.5 text-[var(--workspace-shell-text-muted)]">
                 <MapPin className="h-3.5 w-3.5 shrink-0" />
                 {(details.location as string) || selectedEvent.location || ''}
               </p>
             )}
             {selectedEvent.job_id && (
-              <p className="text-zinc-400">
+              <p className="text-[var(--workspace-shell-text-muted)]">
                 Job:{' '}
                 <Link
                   href={`${jobDetailBase}${selectedEvent.job_id}`}
@@ -257,21 +257,21 @@ export function OrgSchedulePageContent({
             )}
             {selectedEvent.source_type === 'job_event' && (
               <div className="mt-2 space-y-1">
-                <div className="flex items-center gap-1 text-xs font-medium text-zinc-400">
+                <div className="flex items-center gap-1 text-xs font-medium text-[var(--workspace-shell-text-muted)]">
                   <Users className="h-3.5 w-3.5" />
                   <span>Assigned team</span>
                 </div>
                 {assigneesLoading ? (
-                  <p className="text-xs text-zinc-500">Loading team…</p>
+                  <p className="text-xs text-[var(--workspace-shell-text-muted)]">Loading team…</p>
                 ) : assignees.length === 0 ? (
-                  <p className="text-xs text-zinc-500">No one assigned yet.</p>
+                  <p className="text-xs text-[var(--workspace-shell-text-muted)]">No one assigned yet.</p>
                 ) : (
-                  <ul className="space-y-0.5 text-xs text-zinc-300">
+                  <ul className="space-y-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
                     {assignees.map((m) => (
                       <li key={m.user_id} className="flex items-center gap-1.5">
                         <Avatar className="h-5 w-5">
                           <AvatarImage src={m.picture_url ?? undefined} />
-                          <AvatarFallback className="bg-zinc-700 text-[10px] text-zinc-200">
+                          <AvatarFallback className="bg-[var(--workspace-shell-panel-hover)] text-[10px] text-[var(--workspace-shell-text)]">
                             {(m.name || m.email || m.user_id.slice(0, 2)).slice(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>

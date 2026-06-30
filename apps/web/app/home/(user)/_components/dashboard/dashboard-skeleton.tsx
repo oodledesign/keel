@@ -1,6 +1,6 @@
 'use client';
 
-const pulse = 'animate-pulse rounded-xl bg-white/[0.04]';
+const pulse = 'animate-pulse rounded-xl bg-[var(--workspace-shell-sidebar-accent)]';
 
 export function DashboardSkeleton() {
   return (

@@ -262,12 +262,12 @@ export function BrainChatContent({
         }`}
       >
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold text-white">Chats</h2>
+          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Chats</h2>
           <Button
             type="button"
             size="sm"
             variant="outline"
-            className="border-zinc-600"
+            className="border-[color:var(--workspace-shell-border)]"
             onClick={handleNewThread}
           >
             <MessageSquarePlus className="mr-1 h-4 w-4" />
@@ -278,16 +278,16 @@ export function BrainChatContent({
           value={threadSearch}
           onChange={(e) => setThreadSearch(e.target.value)}
           placeholder="Search chats…"
-          className="border-zinc-600 bg-zinc-900 text-white"
+          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
         />
-        <ul className="max-h-80 space-y-1 overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-900/40 p-2 lg:max-h-[60vh]">
+        <ul className="max-h-80 space-y-1 overflow-y-auto rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40 p-2 lg:max-h-[60vh]">
           {loadingThreads ? (
-            <li className="flex items-center gap-2 px-2 py-3 text-sm text-zinc-500">
+            <li className="flex items-center gap-2 px-2 py-3 text-sm text-[var(--workspace-shell-text-muted)]">
               <Loader2 className="h-4 w-4 animate-spin" />
               Loading…
             </li>
           ) : filteredThreads.length === 0 ? (
-            <li className="px-2 py-3 text-sm text-zinc-500">No chats yet</li>
+            <li className="px-2 py-3 text-sm text-[var(--workspace-shell-text-muted)]">No chats yet</li>
           ) : (
             filteredThreads.map((thread) => (
               <li key={thread.id}>
@@ -299,8 +299,8 @@ export function BrainChatContent({
                   }}
                   className={`w-full rounded-md px-2 py-2 text-left text-sm ${
                     threadId === thread.id
-                      ? 'bg-white/10 text-white'
-                      : 'text-zinc-300 hover:bg-zinc-800'
+                      ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                      : 'text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-control-surface)]'
                   }`}
                 >
                   {thread.title?.trim() || 'New chat'}
@@ -310,28 +310,28 @@ export function BrainChatContent({
           )}
         </ul>
         {scope?.jobTitle && (
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
             Scoped to job: {scope.jobTitle}
           </p>
         )}
         {scope?.clientName && (
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
             Scoped to client: {scope.clientName}
           </p>
         )}
       </aside>
 
       <section
-        className={`flex min-h-[60vh] flex-1 flex-col rounded-xl border border-zinc-700 bg-[var(--workspace-shell-panel)] ${
+        className={`flex min-h-[60vh] flex-1 flex-col rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] ${
           mobileShowChat ? 'flex' : 'hidden lg:flex'
         }`}
       >
-        <div className="flex items-center gap-2 border-b border-zinc-700 px-4 py-2 lg:hidden">
+        <div className="flex items-center gap-2 border-b border-[color:var(--workspace-shell-border)] px-4 py-2 lg:hidden">
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="text-zinc-300"
+            className="text-[var(--workspace-shell-text-muted)]"
             onClick={() => setMobileShowChat(false)}
           >
             ← Chats
@@ -339,11 +339,11 @@ export function BrainChatContent({
         </div>
         <div className="flex-1 space-y-4 overflow-y-auto p-4">
           {loadingMessages ? (
-            <p className="text-sm text-zinc-500">Loading messages…</p>
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">Loading messages…</p>
           ) : messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 py-16 text-center">
-              <Sparkles className="h-8 w-8 text-[var(--keel-teal)]" />
-              <p className="max-w-md text-sm text-zinc-400">
+              <Sparkles className="h-8 w-8 text-[var(--ozer-accent)]" />
+              <p className="max-w-md text-sm text-[var(--workspace-shell-text-muted)]">
                 Ask anything about your notes, docs, jobs, transcripts, and
                 proposals. Answers include citations back to your Ozer records.
               </p>
@@ -354,8 +354,8 @@ export function BrainChatContent({
                 key={message.id}
                 className={`rounded-lg px-3 py-2 text-sm ${
                   message.role === 'user'
-                    ? 'ml-8 bg-[var(--keel-teal)]/15 text-white'
-                    : 'mr-8 bg-zinc-900/70 text-zinc-100'
+                    ? 'ml-8 bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-text)]'
+                    : 'mr-8 bg-[var(--workspace-shell-panel)]/70 text-[var(--workspace-shell-text)]'
                 }`}
               >
                 <p className="whitespace-pre-wrap">{message.content}</p>
@@ -375,7 +375,7 @@ export function BrainChatContent({
                             chunkText: ref.chunk_text,
                           })
                         }
-                        className="rounded-full border border-zinc-600 px-2 py-0.5 text-[11px] text-zinc-300 hover:bg-zinc-800"
+                        className="rounded-full border border-[color:var(--workspace-shell-border)] px-2 py-0.5 text-[11px] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-control-surface)]"
                       >
                         {ref.title}
                       </button>
@@ -386,20 +386,20 @@ export function BrainChatContent({
             ))
           )}
           {(searching || streaming) && (
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
               {searching ? 'Searching knowledge base…' : 'Generating reply…'}
             </p>
           )}
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="border-t border-zinc-700 p-4">
+        <div className="border-t border-[color:var(--workspace-shell-border)] p-4">
           <Textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             rows={3}
             placeholder="Ask your second brain… (Cmd/Ctrl+Enter to send)"
-            className="border-zinc-600 bg-zinc-900 text-white"
+            className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
             onKeyDown={(e) => {
               if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
                 e.preventDefault();
@@ -408,13 +408,13 @@ export function BrainChatContent({
             }}
           />
           <div className="mt-2 flex items-center justify-between gap-2">
-            <span className="text-[11px] text-zinc-500">
+            <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">
               ~{Math.ceil(draft.trim().split(/\s+/).filter(Boolean).length * 1.3)} tokens
             </span>
             <Button
               type="button"
               disabled={streaming || !draft.trim()}
-              className="bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+              className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
               onClick={() => void sendMessage()}
             >
               Send

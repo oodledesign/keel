@@ -77,11 +77,11 @@ export function RecipeDetailPage({ recipe, basePath, accountSlug }: Props) {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 pb-12 pt-6 text-white md:px-2">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 pb-12 pt-6 text-[var(--workspace-shell-text)] md:px-2">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href={backHref}
-          className="inline-flex items-center gap-1.5 text-sm text-zinc-400 transition-colors hover:text-white"
+          className="inline-flex items-center gap-1.5 text-sm text-[var(--workspace-shell-text-muted)] transition-colors hover:text-[var(--workspace-shell-text)]"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to recipes
@@ -99,7 +99,7 @@ export function RecipeDetailPage({ recipe, basePath, accountSlug }: Props) {
                 'mr-1.5 h-3.5 w-3.5',
                 recipe.is_favorite
                   ? 'fill-amber-400 text-amber-400'
-                  : 'text-zinc-400',
+                  : 'text-[var(--workspace-shell-text-muted)]',
               )}
             />
             {recipe.is_favorite ? 'Favourited' : 'Favourite'}
@@ -117,7 +117,7 @@ export function RecipeDetailPage({ recipe, basePath, accountSlug }: Props) {
             variant="ghost"
             size="sm"
             onClick={handleDelete}
-            className="h-8 text-zinc-400 hover:text-rose-300"
+            className="h-8 text-[var(--workspace-shell-text-muted)] hover:text-rose-300"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
@@ -127,12 +127,12 @@ export function RecipeDetailPage({ recipe, basePath, accountSlug }: Props) {
       <header className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           {recipe.source === 'ai' ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-[#5eead4]/10 px-2.5 py-1 text-[11px] font-medium text-[#5eead4]">
+            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--ozer-accent-subtle)] px-2.5 py-1 text-[11px] font-medium text-[var(--ozer-accent-muted)]">
               <Sparkles className="h-3 w-3" />
               AI generated
             </span>
           ) : null}
-          <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] capitalize text-zinc-300">
+          <span className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-1 text-[11px] capitalize text-[var(--workspace-shell-text-muted)]">
             {mealTypeLabels[recipe.meal_type]}
           </span>
         </div>
@@ -140,16 +140,16 @@ export function RecipeDetailPage({ recipe, basePath, accountSlug }: Props) {
         <h1 className="text-3xl font-bold tracking-tight">{recipe.name}</h1>
 
         {recipe.description ? (
-          <p className="text-base text-zinc-400">{recipe.description}</p>
+          <p className="text-base text-[var(--workspace-shell-text-muted)]">{recipe.description}</p>
         ) : null}
 
-        <div className="flex flex-wrap items-center gap-4 text-sm text-zinc-400">
+        <div className="flex flex-wrap items-center gap-4 text-sm text-[var(--workspace-shell-text-muted)]">
           {time ? (
             <span className="flex items-center gap-1.5">
               <Clock className="h-4 w-4" />
               {time}
               {recipe.prep_minutes || recipe.cook_minutes ? (
-                <span className="text-zinc-500">
+                <span className="text-[var(--workspace-shell-text-muted)]">
                   {recipe.prep_minutes ? `${recipe.prep_minutes}m prep` : null}
                   {recipe.prep_minutes && recipe.cook_minutes ? ' · ' : null}
                   {recipe.cook_minutes ? `${recipe.cook_minutes}m cook` : null}
@@ -170,7 +170,7 @@ export function RecipeDetailPage({ recipe, basePath, accountSlug }: Props) {
             {recipe.tags.map((tag) => (
               <span
                 key={tag}
-                className="rounded-full bg-white/[0.06] px-2.5 py-1 text-xs capitalize text-zinc-300"
+                className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-1 text-xs capitalize text-[var(--workspace-shell-text-muted)]"
               >
                 {titleCase(tag)}
               </span>
@@ -181,29 +181,29 @@ export function RecipeDetailPage({ recipe, basePath, accountSlug }: Props) {
 
       <div className="grid gap-4 md:grid-cols-2">
         <section className={cn(panelClass, 'p-5')}>
-          <h2 className="text-sm font-semibold text-white">Ingredients</h2>
+          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Ingredients</h2>
           {recipe.ingredients.length > 0 ? (
-            <ul className="mt-3 space-y-2 text-sm text-zinc-300">
+            <ul className="mt-3 space-y-2 text-sm text-[var(--workspace-shell-text-muted)]">
               {recipe.ingredients.map((item) => (
                 <li key={item} className="flex gap-2">
-                  <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[#5eead4]" />
+                  <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[#FFE3DA]" />
                   <span>{item}</span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="mt-3 text-sm text-zinc-500">No ingredients listed.</p>
+            <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">No ingredients listed.</p>
           )}
         </section>
 
         <section className={cn(panelClass, 'p-5 md:col-span-2')}>
-          <h2 className="text-sm font-semibold text-white">Method</h2>
+          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Method</h2>
           {recipe.instructions?.trim() ? (
-            <div className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-zinc-300">
+            <div className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-[var(--workspace-shell-text-muted)]">
               {recipe.instructions}
             </div>
           ) : (
-            <p className="mt-3 text-sm text-zinc-500">No instructions yet.</p>
+            <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">No instructions yet.</p>
           )}
         </section>
       </div>

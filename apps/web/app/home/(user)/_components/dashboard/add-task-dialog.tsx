@@ -187,17 +187,17 @@ export function AddTaskDialog({
         <DialogTrigger asChild>
           <button
             type="button"
-            className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-[var(--keel-teal)] px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#238b7f]"
+            className="inline-flex h-10 items-center gap-2 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-accent)] px-4 text-sm font-medium text-[var(--workspace-shell-text)] shadow-sm transition-colors hover:bg-[var(--ozer-accent-hover)]"
           >
             <Plus className="h-4 w-4" />
             Add Task
           </button>
         </DialogTrigger>
       )}
-      <DialogContent className="border-white/8 bg-[#0F1923] text-white sm:max-w-md">
+      <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[#0F1923] text-[var(--workspace-shell-text)] sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add a new task</DialogTitle>
-          <DialogDescription className="text-zinc-400">
+          <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
             {isWorkspaceMode
               ? 'Link to a project or client, or leave unassigned — the task still belongs to this workspace.'
               : 'Assign to a team workspace project or a personal life area. Projects are grouped by workspace.'}
@@ -206,7 +206,7 @@ export function AddTaskDialog({
 
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="title" className="text-zinc-300">
+            <Label htmlFor="title" className="text-[var(--workspace-shell-text-muted)]">
               Task title *
             </Label>
             <Input
@@ -215,18 +215,18 @@ export function AddTaskDialog({
               placeholder="What needs to be done?"
               required
               autoFocus
-              className="border-white/10 bg-white/5 text-white placeholder:text-zinc-600"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-zinc-300">Priority</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">Priority</Label>
               <Select value={priority} onValueChange={setPriority}>
-                <SelectTrigger className="border-white/10 bg-white/5 text-white">
+                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="border-white/10 bg-[#1A2535] text-white">
+                <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
                   {PRIORITIES.map((p) => (
                     <SelectItem key={p.key} value={p.key}>
                       {p.label}
@@ -236,24 +236,24 @@ export function AddTaskDialog({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="dueDate" className="text-zinc-300">
+              <Label htmlFor="dueDate" className="text-[var(--workspace-shell-text-muted)]">
                 Due date
               </Label>
               <Input
                 id="dueDate"
                 name="dueDate"
                 type="date"
-                className="border-white/10 bg-white/5 text-white placeholder:text-zinc-600"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label className="text-zinc-300">
+            <Label className="text-[var(--workspace-shell-text-muted)]">
               {isWorkspaceMode ? 'Link to project or client' : 'Assign to'}
             </Label>
             {optionsLoading ? (
-              <div className="flex h-9 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-zinc-500">
+              <div className="flex h-9 items-center gap-2 rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 text-sm text-[var(--workspace-shell-text-muted)]">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 Loading...
               </div>
@@ -274,26 +274,26 @@ export function AddTaskDialog({
             !optionsLoading &&
             projects.length === 0 &&
             clients.length === 0 ? (
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                 Create a project or client in this workspace first, then link a
                 task here.
               </p>
             ) : null}
             {allowInlineClientCreate && isWorkspaceMode ? (
-              <div className="space-y-2 rounded-lg border border-white/10 bg-white/[0.03] p-3">
+              <div className="space-y-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
                 {showNewClient ? (
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <Input
                       value={newClientName}
                       onChange={(e) => setNewClientName(e.target.value)}
                       placeholder="Client or company name"
-                      className="border-white/10 bg-white/5 text-white"
+                      className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
                     />
                     <button
                       type="button"
                       disabled={creatingClient || !newClientName.trim()}
                       onClick={() => void handleCreateClient()}
-                      className="h-9 shrink-0 rounded-lg bg-[var(--keel-teal)] px-3 text-sm font-medium text-white disabled:opacity-50"
+                      className="h-9 shrink-0 rounded-lg bg-[var(--ozer-accent)] px-3 text-sm font-medium text-[var(--workspace-shell-text)] disabled:opacity-50"
                     >
                       {creatingClient ? 'Adding…' : 'Add client'}
                     </button>
@@ -302,7 +302,7 @@ export function AddTaskDialog({
                   <button
                     type="button"
                     onClick={() => setShowNewClient(true)}
-                    className="text-xs font-medium text-[var(--keel-teal)] hover:underline"
+                    className="text-xs font-medium text-[var(--ozer-accent)] hover:underline"
                   >
                     + Create new client
                   </button>
@@ -316,13 +316,13 @@ export function AddTaskDialog({
           )}
 
           {isWorkspaceMode && workspaceAccountSlug ? (
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
               <Link
                 href={pathsConfig.app.accountTasksExtract.replace(
                   '[account]',
                   workspaceAccountSlug,
                 )}
-                className="font-medium text-[var(--keel-teal)] hover:underline"
+                className="font-medium text-[var(--ozer-accent)] hover:underline"
               >
                 <Sparkles className="mr-1 inline h-3 w-3" />
                 Extract tasks from email or transcript (AI)
@@ -334,14 +334,14 @@ export function AddTaskDialog({
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="h-9 rounded-xl border border-white/10 px-4 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/5"
+              className="h-9 rounded-xl border border-[color:var(--workspace-shell-border)] px-4 text-sm font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isPending}
-              className="inline-flex h-9 items-center gap-2 rounded-xl bg-[var(--keel-teal)] px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#238b7f] disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-2 rounded-xl bg-[var(--ozer-accent)] px-4 text-sm font-medium text-[var(--workspace-shell-text)] shadow-sm transition-colors hover:bg-[var(--ozer-accent-hover)] disabled:opacity-50"
             >
               {isPending ? (
                 <>

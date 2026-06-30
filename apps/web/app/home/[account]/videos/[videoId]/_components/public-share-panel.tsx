@@ -106,13 +106,13 @@ export function PublicSharePanel(props: {
       </div>
 
       {!props.videoReady ? (
-        <p className="text-muted-foreground rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-xs">
+        <p className="text-muted-foreground rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-2 text-xs">
           Public sharing unlocks once the video finishes processing.
         </p>
       ) : null}
 
       {enabled && publicUrl ? (
-        <div className="space-y-3 rounded-lg border border-white/10 bg-black/20 p-3">
+        <div className="space-y-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
           <div className="flex flex-wrap gap-2">
             <Input
               readOnly
@@ -127,7 +127,7 @@ export function PublicSharePanel(props: {
               onClick={() => void copyLink()}
             >
               {copied ? (
-                <Check className="h-3.5 w-3.5 text-[var(--keel-teal)]" />
+                <Check className="h-3.5 w-3.5 text-[var(--ozer-accent)]" />
               ) : (
                 <Copy className="h-3.5 w-3.5" />
               )}

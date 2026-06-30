@@ -277,13 +277,13 @@ export function EditTaskDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="border-white/8 bg-[#0F1923] text-white sm:max-w-xl">
+        <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[#0F1923] text-[var(--workspace-shell-text)] sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>Edit task</DialogTitle>
-            <DialogDescription className="text-zinc-400">
-              <strong className="font-medium text-zinc-300">Work</strong> means
+            <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
+              <strong className="font-medium text-[var(--workspace-shell-text-muted)]">Work</strong> means
               linked to a team workspace project or CRM client (your business
-              workspace). <strong className="font-medium text-zinc-300">
+              workspace). <strong className="font-medium text-[var(--workspace-shell-text-muted)]">
                 Life
               </strong>{' '}
               is a personal area or no link — separate from team workspaces.
@@ -292,7 +292,7 @@ export function EditTaskDialog({
 
           <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-title" className="text-zinc-300">
+              <Label htmlFor="edit-title" className="text-[var(--workspace-shell-text-muted)]">
                 Title *
               </Label>
               <Input
@@ -300,12 +300,12 @@ export function EditTaskDialog({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
-                className="border-white/10 bg-white/5 text-white placeholder:text-zinc-600"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-notes" className="text-zinc-300">
+              <Label htmlFor="edit-notes" className="text-[var(--workspace-shell-text-muted)]">
                 Description
               </Label>
               <Textarea
@@ -313,22 +313,22 @@ export function EditTaskDialog({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Add context, checklist items, links, or meeting notes…"
-                className="min-h-[180px] border-white/10 bg-white/5 text-sm text-white placeholder:text-zinc-600"
+                className="min-h-[180px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
               />
             </div>
 
             {isRootTask ? (
-              <div className="space-y-2 rounded-lg border border-white/8 bg-white/[0.03] p-3">
-                <Label htmlFor="new-subtask" className="text-zinc-300">
+              <div className="space-y-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
+                <Label htmlFor="new-subtask" className="text-[var(--workspace-shell-text-muted)]">
                   Subtasks
                 </Label>
                 {(task.subtasks?.length ?? 0) > 0 ? (
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                     {(task.subtasks ?? []).filter((s) => s.status === 'completed').length}
                     /{(task.subtasks ?? []).length} complete
                   </p>
                 ) : (
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                     Break this task into smaller steps.
                   </p>
                 )}
@@ -344,12 +344,12 @@ export function EditTaskDialog({
                       }
                     }}
                     placeholder="New subtask title"
-                    className="border-white/10 bg-white/5 text-white placeholder:text-zinc-600 sm:flex-1"
+                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] sm:flex-1"
                   />
                   <Button
                     type="button"
                     variant="outline"
-                    className="shrink-0 border-white/15 bg-white/5 text-zinc-200 hover:bg-white/10 hover:text-white"
+                    className="shrink-0 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
                     disabled={
                       subtaskAdding || !newSubtaskTitle.trim() || isDeleting
                     }
@@ -370,17 +370,17 @@ export function EditTaskDialog({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-zinc-300">Priority</Label>
+                <Label className="text-[var(--workspace-shell-text-muted)]">Priority</Label>
                 <Select
                   value={priority}
                   onValueChange={(v) =>
                     setPriority(v as TasksPageTask['priority'])
                   }
                 >
-                  <SelectTrigger className="border-white/10 bg-white/5 text-white">
+                  <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="border-white/10 bg-[#1A2535] text-white">
+                  <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
                     {PRIORITIES.map((p) => (
                       <SelectItem key={p.key} value={p.key}>
                         {p.label}
@@ -390,17 +390,17 @@ export function EditTaskDialog({
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-zinc-300">Status</Label>
+                <Label className="text-[var(--workspace-shell-text-muted)]">Status</Label>
                 <Select
                   value={status}
                   onValueChange={(v) =>
                     setStatus(v as TasksPageTask['status'])
                   }
                 >
-                  <SelectTrigger className="border-white/10 bg-white/5 text-white">
+                  <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="border-white/10 bg-[#1A2535] text-white">
+                  <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
                     {STATUSES.map((s) => (
                       <SelectItem key={s.key} value={s.key}>
                         {s.label}
@@ -412,19 +412,19 @@ export function EditTaskDialog({
             </div>
 
             <div className="space-y-2">
-              <Label className="text-zinc-300">
+              <Label className="text-[var(--workspace-shell-text-muted)]">
                 {isWorkspaceMode
                   ? 'Link to project or client *'
                   : 'Assign to (team project, client, or life area)'}
               </Label>
               {optionsLoading ? (
-                <div className="flex h-9 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-zinc-500">
+                <div className="flex h-9 items-center gap-2 rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 text-sm text-[var(--workspace-shell-text-muted)]">
                   <Loader2 className="h-3 w-3 animate-spin" />
                   Loading…
                 </div>
               ) : (
                 <Select value={assignTo} onValueChange={setAssignTo}>
-                  <SelectTrigger className="border-white/10 bg-white/5 text-white">
+                  <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                     <SelectValue
                       placeholder={
                         isWorkspaceMode
@@ -433,14 +433,14 @@ export function EditTaskDialog({
                       }
                     />
                   </SelectTrigger>
-                  <SelectContent className="border-white/10 bg-[#1A2535] text-white">
+                  <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
                     {!isWorkspaceMode ? (
                       <SelectItem value="none">No assignment (life)</SelectItem>
                     ) : null}
                     {projectGroups.length > 0
                       ? projectGroups.map((group) => (
                           <SelectGroup key={group.key}>
-                            <SelectLabel className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                            <SelectLabel className="text-[11px] font-semibold uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
                               {isWorkspaceMode ? 'Projects' : group.label}
                             </SelectLabel>
                             {group.projects.map((p) => (
@@ -462,10 +462,10 @@ export function EditTaskDialog({
                     {isWorkspaceMode && clients.length > 0 ? (
                       <>
                         {projectGroups.length > 0 ? (
-                          <SelectSeparator className="my-1 bg-white/10" />
+                          <SelectSeparator className="my-1 bg-[var(--workspace-shell-sidebar-accent)]" />
                         ) : null}
                         <SelectGroup>
-                          <SelectLabel className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                          <SelectLabel className="text-[11px] font-semibold uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
                             Clients
                           </SelectLabel>
                           {clients.map((c) => (
@@ -479,10 +479,10 @@ export function EditTaskDialog({
                     {!isWorkspaceMode && clients.length > 0 ? (
                       <>
                         {projectGroups.length > 0 ? (
-                          <SelectSeparator className="my-1 bg-white/10" />
+                          <SelectSeparator className="my-1 bg-[var(--workspace-shell-sidebar-accent)]" />
                         ) : null}
                         <SelectGroup>
-                          <SelectLabel className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                          <SelectLabel className="text-[11px] font-semibold uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
                             Clients (workspaces)
                           </SelectLabel>
                           {clients.map((c) => (
@@ -496,10 +496,10 @@ export function EditTaskDialog({
                     {!isWorkspaceMode && areas.length > 0 ? (
                       <>
                         {projectGroups.length > 0 || clients.length > 0 ? (
-                          <SelectSeparator className="my-1 bg-white/10" />
+                          <SelectSeparator className="my-1 bg-[var(--workspace-shell-sidebar-accent)]" />
                         ) : null}
                         <SelectGroup>
-                          <SelectLabel className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                          <SelectLabel className="text-[11px] font-semibold uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
                             Life areas
                           </SelectLabel>
                           {areas.map((a) => (
@@ -525,14 +525,14 @@ export function EditTaskDialog({
               !optionsLoading &&
               projects.length === 0 &&
               clients.length === 0 ? (
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                   Create a project or client in this workspace first.
                 </p>
               ) : null}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-due" className="text-zinc-300">
+              <Label htmlFor="edit-due" className="text-[var(--workspace-shell-text-muted)]">
                 Due date
               </Label>
               <Input
@@ -540,7 +540,7 @@ export function EditTaskDialog({
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="border-white/10 bg-white/5 text-white placeholder:text-zinc-600"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
               />
             </div>
 
@@ -551,14 +551,14 @@ export function EditTaskDialog({
                 <button
                   type="button"
                   onClick={() => onOpenChange(false)}
-                  className="h-9 rounded-xl border border-white/10 px-4 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/5"
+                  className="h-9 rounded-xl border border-[color:var(--workspace-shell-border)] px-4 text-sm font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isPending || isDeleting}
-                  className="inline-flex h-9 items-center gap-2 rounded-xl bg-[var(--keel-teal)] px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#238b7f] disabled:opacity-50"
+                  className="inline-flex h-9 items-center gap-2 rounded-xl bg-[var(--ozer-accent)] px-4 text-sm font-medium text-[var(--workspace-shell-text)] shadow-sm transition-colors hover:bg-[var(--ozer-accent-hover)] disabled:opacity-50"
                 >
                   {isPending ? (
                     <>
@@ -570,7 +570,7 @@ export function EditTaskDialog({
                   )}
                 </button>
               </div>
-              <div className="flex w-full justify-end border-t border-white/8 pt-3">
+              <div className="flex w-full justify-end border-t border-[color:var(--workspace-shell-border)] pt-3">
                 <button
                   type="button"
                   onClick={() => setDeleteDialogOpen(true)}
@@ -586,22 +586,22 @@ export function EditTaskDialog({
       </Dialog>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="border-white/10 bg-[#0F1923] text-white sm:max-w-md">
+        <AlertDialogContent className="border-[color:var(--workspace-shell-border)] bg-[#0F1923] text-[var(--workspace-shell-text)] sm:max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this task?</AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
+            <AlertDialogDescription className="text-[var(--workspace-shell-text-muted)]">
               This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-white/10 bg-transparent text-zinc-300 hover:bg-white/5">
+            <AlertDialogCancel className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)]">
               Cancel
             </AlertDialogCancel>
             <button
               type="button"
               onClick={handleDeleteConfirm}
               disabled={isDeleting}
-              className="inline-flex h-10 items-center justify-center rounded-md bg-[#E85D75] px-4 text-sm font-medium text-white transition-colors hover:bg-[#d64d65] disabled:opacity-50"
+              className="inline-flex h-10 items-center justify-center rounded-md bg-[#E85D75] px-4 text-sm font-medium text-[var(--workspace-shell-text)] transition-colors hover:bg-[#d64d65] disabled:opacity-50"
             >
               {isDeleting ? (
                 <>

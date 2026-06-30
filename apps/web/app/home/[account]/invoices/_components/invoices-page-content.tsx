@@ -255,7 +255,7 @@ export function InvoicesPageContent({
   if (!canViewInvoices) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center p-8">
-        <p className="text-zinc-400">You don&apos;t have access to invoices in this account.</p>
+        <p className="text-[var(--workspace-shell-text-muted)]">You don&apos;t have access to invoices in this account.</p>
       </div>
     );
   }
@@ -268,9 +268,9 @@ export function InvoicesPageContent({
         onPeriodChange={setSummaryPeriod}
       />
 
-      <div className="rounded-2xl border border-white/8 bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/8 p-4">
-          <div className="inline-flex flex-wrap gap-1 rounded-full border border-white/8 bg-[var(--workspace-control-surface)]/80 p-1 text-xs">
+      <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] p-4">
+          <div className="inline-flex flex-wrap gap-1 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/80 p-1 text-xs">
             {tabs.map((item) => (
               <button
                 key={item.key}
@@ -281,8 +281,8 @@ export function InvoicesPageContent({
                 }}
                 className={`rounded-full px-3 py-1.5 font-medium transition-colors ${
                   tab === item.key
-                    ? 'bg-[var(--keel-teal)] text-[#09111F]'
-                    : 'text-zinc-300 hover:text-white'
+                    ? 'bg-[var(--ozer-accent)] text-[#09111F]'
+                    : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'
                 }`}
               >
                 {item.label}
@@ -298,7 +298,7 @@ export function InvoicesPageContent({
             <If condition={canEditInvoices}>
               <Button
                 size="sm"
-                className="bg-[var(--keel-teal)] text-[#09111F] hover:bg-[#6BD48F]"
+                className="bg-[var(--ozer-accent)] text-[#09111F] hover:bg-[#6BD48F]"
                 onClick={openCreateSheet}
               >
                 <PlusCircle className="mr-2 h-4 w-4" />
@@ -309,9 +309,9 @@ export function InvoicesPageContent({
         </div>
 
         {tab !== 'recurring' ? (
-          <div className="flex flex-wrap items-end gap-3 border-b border-white/8 px-4 py-3">
+          <div className="flex flex-wrap items-end gap-3 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
             <div className="relative min-w-[220px] flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
               <Input
                 placeholder="Search invoice number..."
                 value={search}
@@ -347,17 +347,17 @@ export function InvoicesPageContent({
 
         <div className="overflow-auto p-4">
           {loading ? (
-            <p className="text-zinc-400">Loading…</p>
+            <p className="text-[var(--workspace-shell-text-muted)]">Loading…</p>
           ) : tab === 'recurring' ? (
             recurring.length === 0 ? (
-              <div className="py-12 text-center text-zinc-400">
+              <div className="py-12 text-center text-[var(--workspace-shell-text-muted)]">
                 <Repeat className="mx-auto mb-3 h-10 w-10 opacity-50" />
                 No recurring series yet. Create one from an invoice via Make recurring.
               </div>
             ) : (
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="text-zinc-400">
+                  <tr className="text-[var(--workspace-shell-text-muted)]">
                     <th className="pb-2 pr-4">Title</th>
                     <th className="pb-2 pr-4">Client</th>
                     <th className="pb-2 pr-4">Frequency</th>
@@ -368,14 +368,14 @@ export function InvoicesPageContent({
                 </thead>
                 <tbody>
                   {recurring.map((series) => (
-                    <tr key={String(series.id)} className="border-t border-white/6">
-                      <td className="py-3 pr-4 text-white">{String(series.title ?? '—')}</td>
-                      <td className="py-3 pr-4 text-zinc-300">
+                    <tr key={String(series.id)} className="border-t border-[color:var(--workspace-shell-border)]">
+                      <td className="py-3 pr-4 text-[var(--workspace-shell-text)]">{String(series.title ?? '—')}</td>
+                      <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">
                         {(series.clients as { display_name?: string | null } | null)?.display_name ?? '—'}
                       </td>
-                      <td className="py-3 pr-4 capitalize text-zinc-300">{String(series.frequency ?? '')}</td>
-                      <td className="py-3 pr-4 text-zinc-300">{formatDate(String(series.next_issue_at ?? ''))}</td>
-                      <td className="py-3 pr-4 capitalize text-zinc-300">{String(series.status ?? '')}</td>
+                      <td className="py-3 pr-4 capitalize text-[var(--workspace-shell-text-muted)]">{String(series.frequency ?? '')}</td>
+                      <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">{formatDate(String(series.next_issue_at ?? ''))}</td>
+                      <td className="py-3 pr-4 capitalize text-[var(--workspace-shell-text-muted)]">{String(series.status ?? '')}</td>
                       <td className="py-3">
                         {canEditInvoices && series.status === 'active' ? (
                           <Button
@@ -426,14 +426,14 @@ export function InvoicesPageContent({
               </table>
             )
           ) : invoices.length === 0 ? (
-            <div className="flex flex-col items-center py-12 text-zinc-400">
+            <div className="flex flex-col items-center py-12 text-[var(--workspace-shell-text-muted)]">
               <FileText className="mb-3 h-10 w-10 opacity-50" />
               No invoices in this tab.
             </div>
           ) : (
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="text-zinc-400">
+                <tr className="text-[var(--workspace-shell-text-muted)]">
                   <th className="pb-2 pr-4 w-8" />
                   <th className="pb-2 pr-4">Recipient</th>
                   <th className="pb-2 pr-4">Invoice no</th>
@@ -446,22 +446,22 @@ export function InvoicesPageContent({
               </thead>
               <tbody>
                 {invoices.map((inv) => (
-                  <tr key={inv.id} className="border-t border-white/6 hover:bg-white/3">
+                  <tr key={inv.id} className="border-t border-[color:var(--workspace-shell-border)] hover:bg-white/3">
                     <td className="py-3 pr-2">
-                      <input type="checkbox" className="rounded border-zinc-600" aria-label="Select invoice" />
+                      <input type="checkbox" className="rounded border-[color:var(--workspace-shell-border)]" aria-label="Select invoice" />
                     </td>
-                    <td className="py-3 pr-4 text-zinc-300">{inv.clients?.display_name ?? '—'}</td>
+                    <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">{inv.clients?.display_name ?? '—'}</td>
                     <td className="py-3 pr-4">
-                      <Link href={editPathBase.replace('[id]', inv.id)} className="font-medium text-white hover:underline">
+                      <Link href={editPathBase.replace('[id]', inv.id)} className="font-medium text-[var(--workspace-shell-text)] hover:underline">
                         {inv.invoice_number}
                         {inv.recurring_series_id ? (
-                          <Repeat className="ml-1 inline h-3.5 w-3.5 text-zinc-400" />
+                          <Repeat className="ml-1 inline h-3.5 w-3.5 text-[var(--workspace-shell-text-muted)]" />
                         ) : null}
                       </Link>
                     </td>
-                    <td className="py-3 pr-4 text-zinc-400">{formatDate(inv.issued_at)}</td>
-                    <td className="py-3 pr-4 text-zinc-400">{formatDate(inv.due_at)}</td>
-                    <td className="py-3 pr-4 text-zinc-300">{formatPence(inv.total_pence)}</td>
+                    <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">{formatDate(inv.issued_at)}</td>
+                    <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">{formatDate(inv.due_at)}</td>
+                    <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">{formatPence(inv.total_pence)}</td>
                     <td className="py-3 pr-4">
                       <InvoiceStatusBadge
                         status={inv.status}
@@ -487,7 +487,7 @@ export function InvoicesPageContent({
           )}
 
           {tab !== 'recurring' && !loading && total > 0 ? (
-            <div className="mt-4 flex items-center justify-between text-sm text-zinc-500">
+            <div className="mt-4 flex items-center justify-between text-sm text-[var(--workspace-shell-text-muted)]">
               <span>
                 Page {page} of {totalPages} ({total} invoices)
               </span>
@@ -523,7 +523,7 @@ export function InvoicesPageContent({
               />
             </div>
             <Button
-              className="w-full bg-[var(--keel-teal)] text-[#09111F]"
+              className="w-full bg-[var(--ozer-accent)] text-[#09111F]"
               onClick={handleCreateInvoice}
               disabled={creating || !selectedClientId}
             >

@@ -36,7 +36,7 @@ export default function FeaturesIndexPage() {
   const features = listFeaturePageConfigs();
 
   return (
-    <main className="relative overflow-hidden bg-[radial-gradient(circle_at_15%_10%,rgba(42,157,143,0.18),transparent_45%),radial-gradient(circle_at_85%_0%,rgba(37,99,235,0.22),transparent_42%),linear-gradient(180deg,#05050b_0%,#080711_45%,#070612_100%)] text-white">
+    <main className="relative overflow-hidden marketing-shell">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -48,10 +48,10 @@ export default function FeaturesIndexPage() {
 
       <section className="relative mx-auto w-full max-w-7xl px-6 pb-20 pt-24 md:pt-28">
         <div className="max-w-3xl space-y-5">
-          <span className="inline-flex items-center rounded-full border border-[#2A9D8F]/30 bg-[#2A9D8F]/10 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.14em] text-[#7ee8d8]">
+          <span className="inline-flex items-center rounded-full border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-4 py-1.5 text-xs font-medium uppercase tracking-[0.14em] text-[var(--ozer-accent-muted)]">
             Ozer Features
           </span>
-          <h1 className="font-heading text-4xl font-bold leading-tight text-white md:text-5xl lg:text-6xl">
+          <h1 className="font-heading text-4xl font-bold leading-tight text-[var(--workspace-shell-text)] md:text-5xl lg:text-6xl">
             Everything You Need. All in One Place.
           </h1>
           <p className="text-base leading-relaxed text-violet-100/85 md:text-lg">
@@ -65,15 +65,15 @@ export default function FeaturesIndexPage() {
             <Link
               key={feature.slug}
               href={`/features/${feature.slug}`}
-              className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] transition hover:border-[#2A9D8F]/30 hover:bg-white/[0.05]"
+              className="group overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] transition hover:border-[var(--ozer-accent)]/30 hover:bg-[var(--workspace-shell-sidebar-accent)]"
             >
               <FeatureCoverPreview
                 slug={feature.slug}
                 variant="card"
-                className="rounded-none border-0 border-b border-white/10 shadow-none"
+                className="rounded-none border-0 border-b border-[color:var(--workspace-shell-border)] shadow-none"
               />
               <div className="p-6">
-                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-[#2A9D8F]/10 text-[#7ee8d8] transition group-hover:bg-[#2A9D8F]/15">
+                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)] transition group-hover:bg-[var(--ozer-accent-subtle)]">
                   <FeatureLandingIcon
                     name={feature.indexIcon}
                     className="h-5 w-5"
@@ -90,7 +90,7 @@ export default function FeaturesIndexPage() {
                 <p className="mt-2 text-sm leading-relaxed text-violet-100/75">
                   {feature.shortDescription}
                 </p>
-                <span className="mt-4 inline-flex items-center text-sm font-medium text-[#7ee8d8]">
+                <span className="mt-4 inline-flex items-center text-sm font-medium text-[var(--ozer-accent-muted)]">
                   Learn more
                   <ArrowRight className="ml-1.5 h-4 w-4 transition group-hover:translate-x-0.5" />
                 </span>

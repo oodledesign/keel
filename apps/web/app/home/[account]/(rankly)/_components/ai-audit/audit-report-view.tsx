@@ -53,7 +53,7 @@ function DimensionScoreCard({
 
   return (
     <div
-      className={`rounded-xl border border-white/10 bg-black/30 p-4 ring-1 ${scoreRing(score)}`}
+      className={`rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/30 p-4 ring-1 ${scoreRing(score)}`}
     >
       <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
         <span>{icons[dimension]}</span>
@@ -77,7 +77,7 @@ const CATEGORY_COLOURS: Record<AuditDimension, string> = {
 const PRIORITY_COLOURS: Record<AuditPriority, string> = {
   high: 'bg-red-500/20 text-red-200',
   medium: 'bg-amber-500/20 text-amber-200',
-  low: 'bg-white/10 text-muted-foreground',
+  low: 'bg-[var(--workspace-shell-sidebar-accent)] text-muted-foreground',
 };
 
 function RecommendationCard({ rec }: { rec: AuditRecommendationRow }) {
@@ -106,7 +106,7 @@ function RecommendationCard({ rec }: { rec: AuditRecommendationRow }) {
   };
 
   return (
-    <div className="rounded-lg border border-white/10 bg-black/20">
+    <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
       <button
         type="button"
         className="flex w-full items-center gap-3 p-4 text-left"
@@ -132,7 +132,7 @@ function RecommendationCard({ rec }: { rec: AuditRecommendationRow }) {
       </button>
 
       {expanded ? (
-        <div className="space-y-4 border-t border-white/10 px-4 pb-4 pt-4">
+        <div className="space-y-4 border-t border-[color:var(--workspace-shell-border)] px-4 pb-4 pt-4">
           <p className="text-sm text-muted-foreground">{rec.description}</p>
 
           {!snippet ? (
@@ -226,7 +226,7 @@ function AiCitationStatus({ report }: { report: AuditReportRow }) {
   );
 
   const domainMetrics = (
-    <div className="space-y-2 rounded-lg border border-white/10 p-4">
+    <div className="space-y-2 rounded-lg border border-[color:var(--workspace-shell-border)] p-4">
       <BacklinkSourceNote />
       <div className="flex flex-wrap items-center gap-4 text-sm">
         {report.opr_score != null ? (
@@ -258,7 +258,7 @@ function AiCitationStatus({ report }: { report: AuditReportRow }) {
 
   const competingBrandsPanel =
     competingBrandsOpr.length > 0 ? (
-      <div className="rounded-lg border border-white/10 p-4 space-y-2">
+      <div className="rounded-lg border border-[color:var(--workspace-shell-border)] p-4 space-y-2">
         <p className="text-sm font-medium">Competing brands cited instead</p>
         <ul className="space-y-3 text-sm">
           {competingBrandsOpr.map((brand) => {
@@ -311,7 +311,7 @@ function AiCitationStatus({ report }: { report: AuditReportRow }) {
         {competingBrandsPanel}
 
         {report.referring_domains != null && report.referring_domains > 0 ? (
-          <div className="rounded-lg border border-white/10 p-4 space-y-2">
+          <div className="rounded-lg border border-[color:var(--workspace-shell-border)] p-4 space-y-2">
             <p className="text-sm font-medium">Top referring domains</p>
             <ul className="space-y-1 text-sm text-muted-foreground">
               {(report.top_referring_domains ?? []).slice(0, 10).map((row) => (
@@ -489,7 +489,7 @@ export function AuditReportList({
   return (
     <section className="space-y-3">
       <h3 className="text-sm font-semibold">Previous audits</h3>
-      <ul className="divide-y divide-white/10 rounded-lg border border-white/10">
+      <ul className="divide-y divide-white/10 rounded-lg border border-[color:var(--workspace-shell-border)]">
         {reports.map((report) => (
           <li
             key={report.id}

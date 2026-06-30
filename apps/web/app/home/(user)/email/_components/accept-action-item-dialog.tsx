@@ -173,27 +173,27 @@ export function AcceptActionItemDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-white/10 bg-[var(--workspace-shell-panel)] text-white sm:max-w-md">
+      <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add to tasks</DialogTitle>
-          <DialogDescription className="text-zinc-400">
+          <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
             {actionItem?.title ?? 'Choose where this to-do should live.'}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
           <div className="space-y-2">
-            <Label className="text-zinc-300">Destination</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">Destination</Label>
             <Select
               value={destination}
               onValueChange={(value) =>
                 setDestination(value as Destination)
               }
             >
-              <SelectTrigger className="border-white/10 bg-[#0B132B] text-white">
+              <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="border-white/10 bg-[#0F1B35] text-white">
+              <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] text-[var(--workspace-shell-text)]">
                 <SelectItem value="personal">Personal tasks</SelectItem>
                 <SelectItem value="workspace">Workspace</SelectItem>
               </SelectContent>
@@ -202,12 +202,12 @@ export function AcceptActionItemDialog({
 
           {destination === 'workspace' ? (
             <div className="space-y-2">
-              <Label className="text-zinc-300">Workspace</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">Workspace</Label>
               <Select value={workspaceId || 'none'} onValueChange={setWorkspaceId}>
-                <SelectTrigger className="border-white/10 bg-[#0B132B] text-white">
+                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]">
                   <SelectValue placeholder="Choose workspace" />
                 </SelectTrigger>
-                <SelectContent className="border-white/10 bg-[#0F1B35] text-white">
+                <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] text-[var(--workspace-shell-text)]">
                   {workspaces.map((workspace) => (
                     <SelectItem key={workspace.id} value={workspace.id}>
                       {workspace.label}
@@ -219,7 +219,7 @@ export function AcceptActionItemDialog({
           ) : null}
 
           <div className="space-y-2">
-            <Label className="text-zinc-300">
+            <Label className="text-[var(--workspace-shell-text-muted)]">
               {destination === 'workspace'
                 ? 'Project or client'
                 : 'Optional link (project, client, or area)'}
@@ -240,7 +240,7 @@ export function AcceptActionItemDialog({
           <Button
             type="button"
             variant="outline"
-            className="border-white/10 bg-transparent text-white hover:bg-white/5"
+            className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
             onClick={() => onOpenChange(false)}
             disabled={pending}
           >
@@ -248,7 +248,7 @@ export function AcceptActionItemDialog({
           </Button>
           <Button
             type="button"
-            className="keel-gradient-btn text-white"
+            className="keel-gradient-btn text-[var(--ozer-white)]"
             onClick={handleAccept}
             disabled={pending || !actionItem}
           >

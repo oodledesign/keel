@@ -99,20 +99,20 @@ export function CalendarEventsSection({
   }
 
   return (
-    <section className="rounded-xl border border-white/8 bg-white/[0.03] p-4">
+    <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-[var(--workspace-shell-text)]">
             <span className="flex h-5 w-5 items-center justify-center rounded bg-white text-xs font-bold text-[#4285F4]">
               G
             </span>
             Your calendar
           </h2>
-          <p className="mt-1 text-xs text-white/45">
+          <p className="mt-1 text-xs text-[var(--workspace-shell-text)]/45">
             Events are treated as fixed blocks.
           </p>
         </div>
-        {loading ? <Loader2 className="h-4 w-4 animate-spin text-white/45" /> : null}
+        {loading ? <Loader2 className="h-4 w-4 animate-spin text-[var(--workspace-shell-text)]/45" /> : null}
       </div>
 
       {!configured ? (
@@ -126,11 +126,11 @@ export function CalendarEventsSection({
       ) : loading ? (
         <div className="space-y-2">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-12 animate-pulse rounded-lg bg-white/5" />
+            <div key={i} className="h-12 animate-pulse rounded-lg bg-[var(--workspace-shell-sidebar-accent)]" />
           ))}
         </div>
       ) : events.length === 0 ? (
-        <p className="rounded-lg border border-white/8 bg-white/5 p-3 text-sm text-white/55">
+        <p className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3 text-sm text-[var(--workspace-shell-text)]/55">
           No calendar events found for this {mode === 'day' ? 'day' : 'week'}.
         </p>
       ) : (
@@ -138,19 +138,19 @@ export function CalendarEventsSection({
           {events.map((event) => (
             <label
               key={event.id}
-              className="flex cursor-pointer items-start gap-3 rounded-lg border border-white/8 bg-white/5 p-3 text-sm"
+              className="flex cursor-pointer items-start gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3 text-sm"
             >
               <Checkbox
                 checked={selectedEventIds.has(event.id)}
                 onCheckedChange={() => toggleEvent(event.id)}
-                className="mt-0.5 border-white/30"
+                className="mt-0.5 border-[color:var(--workspace-shell-border)]"
               />
               <span className="min-w-0">
                 <span className="block font-mono text-xs text-sky-300/90">
                   {timeRange(event)}
                 </span>
-                <span className="block truncate text-white">{event.title}</span>
-                <span className="block truncate text-xs text-white/40">
+                <span className="block truncate text-[var(--workspace-shell-text)]">{event.title}</span>
+                <span className="block truncate text-xs text-[var(--workspace-shell-text)]/40">
                   {event.calendar}
                 </span>
               </span>
@@ -168,10 +168,10 @@ function ConnectPrompt({ message }: { message: string }) {
       href={`/api/integrations/google-calendar/start?returnPath=${encodeURIComponent(
         pathsConfig.app.personalPlanner,
       )}`}
-      className="flex items-center justify-between gap-3 rounded-lg border border-white/8 bg-white/5 p-3 text-sm text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+      className="flex items-center justify-between gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3 text-sm text-[var(--workspace-shell-text)]/70 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
     >
       <span className="flex items-center gap-2">
-        <Calendar className="h-4 w-4 text-[#5eead4]" />
+        <Calendar className="h-4 w-4 text-[var(--ozer-accent-muted)]" />
         {message}
       </span>
       <ExternalLink className="h-4 w-4" />

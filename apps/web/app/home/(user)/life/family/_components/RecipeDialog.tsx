@@ -60,7 +60,7 @@ export function RecipeDialog({
 }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto border-white/10 bg-[var(--workspace-shell-panel)] text-white sm:max-w-lg">
+      <DialogContent className="max-h-[90vh] overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-lg">
         {open ? (
           <RecipeForm
             key={recipe?.id ?? 'new'}
@@ -153,7 +153,7 @@ function RecipeForm({
     <>
       <DialogHeader>
         <DialogTitle>{recipe ? 'Edit recipe' : 'Add recipe'}</DialogTitle>
-        <DialogDescription className="text-zinc-400">
+        <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
           Build your library so the planner can reuse meals you love.
         </DialogDescription>
       </DialogHeader>
@@ -227,10 +227,10 @@ function RecipeForm({
                   meal_type: e.target.value as RecipeMealType,
                 }))
               }
-              className="h-9 w-full rounded-md border border-white/10 bg-white/[0.04] px-2 text-sm text-white outline-none focus:border-white/25"
+              className="h-9 w-full rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 text-sm text-[var(--workspace-shell-text)] outline-none focus:border-[color:var(--workspace-shell-border)]"
             >
               {RECIPE_MEAL_TYPES.map((mt) => (
-                <option key={mt} value={mt} className="bg-[#0F1B35]">
+                <option key={mt} value={mt} className="bg-[var(--ozer-surface-panel)]">
                   {mealTypeLabels[mt]}
                 </option>
               ))}
@@ -277,8 +277,8 @@ function RecipeForm({
                   className={cn(
                     'rounded-full border px-2.5 py-1 text-xs font-medium capitalize transition-colors',
                     active
-                      ? 'border-transparent text-white'
-                      : 'border-white/10 text-zinc-400 hover:text-white',
+                      ? 'border-transparent text-[var(--workspace-shell-text)]'
+                      : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
                   )}
                   style={active ? { backgroundColor: ACCENT } : undefined}
                 >
@@ -311,7 +311,7 @@ function RecipeForm({
           </div>
         </div>
 
-        <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--workspace-shell-text-muted)]">
           <input
             type="checkbox"
             checked={form.is_favorite}
@@ -332,7 +332,7 @@ function RecipeForm({
           onClick={handleSave}
           disabled={isPending}
           style={{ backgroundColor: ACCENT }}
-          className="text-white hover:opacity-90"
+          className="text-[var(--workspace-shell-text)] hover:opacity-90"
         >
           {isPending ? 'Saving…' : recipe ? 'Save changes' : 'Add recipe'}
         </Button>

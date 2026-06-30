@@ -35,18 +35,18 @@ export function PhasePlanningLinks({
       : baseHref;
 
   return (
-    <section className="rounded-xl border border-[var(--keel-teal)]/25 bg-[var(--keel-teal)]/5 px-4 py-3">
+    <section className="rounded-xl border border-[var(--ozer-accent)]/25 bg-[var(--ozer-accent)]/5 px-4 py-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-white">Website planning</p>
-          <p className="mt-0.5 text-xs text-zinc-400">
+          <p className="text-sm font-medium text-[var(--workspace-shell-text)]">Website planning</p>
+          <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
             Linked to {websiteName}
             {planningTab ? ` · open ${TAB_LABELS[planningTab].toLowerCase()}` : ''}
           </p>
         </div>
         <Link
           href={toolHref}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-[#0B132B]/50 px-3 py-1.5 text-sm text-[var(--keel-teal)] hover:bg-white/5"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/50 px-3 py-1.5 text-sm text-[var(--ozer-accent)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
         >
           {planningTab ? TAB_LABELS[planningTab] : 'Open planning'}
           <ExternalLink className="h-3.5 w-3.5" />

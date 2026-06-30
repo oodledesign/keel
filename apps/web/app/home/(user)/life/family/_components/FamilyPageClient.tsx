@@ -63,14 +63,14 @@ export function FamilyPageClient({
   const recipeCount = initialData.recipes.length;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 bg-transparent px-4 pb-12 pt-6 text-white md:px-6 lg:px-8">
+    <div className="flex min-h-0 flex-1 flex-col gap-6 bg-transparent px-4 pb-12 pt-6 text-[var(--workspace-shell-text)] md:px-6 lg:px-8">
       {!compactHeader ? (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
               Family
             </h1>
-            <p className="mt-1 text-sm text-zinc-400">
+            <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
               Plan meals by the week or month, keep your recipes, and share
               household tasks
             </p>
@@ -78,7 +78,7 @@ export function FamilyPageClient({
         </div>
       ) : null}
 
-      <div className="flex w-full max-w-md rounded-xl border border-white/8 bg-[var(--workspace-shell-panel)] p-1 text-sm">
+      <div className="flex w-full max-w-md rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-1 text-sm">
         {TABS.map(({ id, label, Icon }) => (
           <button
             key={id}
@@ -87,14 +87,14 @@ export function FamilyPageClient({
             className={cn(
               'flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 font-medium transition-colors',
               tab === id
-                ? 'bg-white/10 text-white'
-                : 'text-zinc-400 hover:text-white',
+                ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
             )}
           >
             <Icon className="h-4 w-4" />
             {label}
             {id === 'recipes' && recipeCount > 0 ? (
-              <span className="rounded-full bg-white/10 px-1.5 text-[11px]">
+              <span className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-1.5 text-[11px]">
                 {recipeCount}
               </span>
             ) : null}
@@ -125,20 +125,20 @@ export function FamilyPageClient({
 
           {showHouseholdTasks ? (
           <section>
-            <h2 className="mb-3 text-sm font-semibold text-zinc-300">
+            <h2 className="mb-3 text-sm font-semibold text-[var(--workspace-shell-text-muted)]">
               Household tasks
             </h2>
             <div className="space-y-2">
               {PLACEHOLDER_TASKS.map((task) => (
                 <div
                   key={task.id}
-                  className="flex items-start gap-3 rounded-xl border border-white/6 bg-[var(--workspace-shell-panel)] px-4 py-3"
+                  className="flex items-start gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-3"
                 >
                   <span className="mt-0.5 shrink-0">
                     {task.done ? (
-                      <CheckCircle2 className="h-4 w-4 text-[#5eead4]" />
+                      <CheckCircle2 className="h-4 w-4 text-[var(--ozer-accent-muted)]" />
                     ) : (
-                      <Circle className="h-4 w-4 text-zinc-500" />
+                      <Circle className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
                     )}
                   </span>
                   <div className="min-w-0 flex-1">
@@ -146,13 +146,13 @@ export function FamilyPageClient({
                       className={cn(
                         'text-sm font-medium',
                         task.done
-                          ? 'text-zinc-500 line-through'
-                          : 'text-white',
+                          ? 'text-[var(--workspace-shell-text-muted)] line-through'
+                          : 'text-[var(--workspace-shell-text)]',
                       )}
                     >
                       {task.title}
                     </p>
-                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
                       <span className="flex items-center gap-1.5">
                         <span
                           className="inline-block h-2 w-2 rounded-full"

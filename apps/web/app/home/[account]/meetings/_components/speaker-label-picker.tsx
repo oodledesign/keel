@@ -79,8 +79,8 @@ function SearchableSelect({
           aria-expanded={open}
           disabled={disabled}
           className={cn(
-            'w-full justify-between border-white/10 bg-white/5 text-white hover:bg-white/10 hover:text-white',
-            !selected && 'text-zinc-500',
+            'w-full justify-between border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
+            !selected && 'text-[var(--workspace-shell-text-muted)]',
           )}
         >
           {selected ? selected.label : placeholder}
@@ -88,13 +88,13 @@ function SearchableSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-[var(--radix-popover-trigger-width)] border-white/10 bg-[#1A2535] p-0"
+        className="w-[var(--radix-popover-trigger-width)] border-[color:var(--workspace-shell-border)] bg-[#1A2535] p-0"
         align="start"
       >
         <Command className="bg-[#1A2535]">
           <CommandInput
             placeholder="Search…"
-            className="border-white/10 bg-white/5 text-white placeholder:text-zinc-500"
+            className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
           />
           <CommandList>
             <CommandEmpty>{emptyMessage}</CommandEmpty>
@@ -107,7 +107,7 @@ function SearchableSelect({
                     onValueChange(option.id);
                     setOpen(false);
                   }}
-                  className="text-zinc-200 aria-selected:bg-white/10"
+                  className="text-[var(--workspace-shell-text)] aria-selected:bg-[var(--workspace-shell-sidebar-accent)]"
                 >
                   <Check
                     className={cn(
@@ -117,7 +117,7 @@ function SearchableSelect({
                   />
                   <span>{option.label}</span>
                   {option.hint ? (
-                    <span className="ml-2 truncate text-xs text-zinc-500">{option.hint}</span>
+                    <span className="ml-2 truncate text-xs text-[var(--workspace-shell-text-muted)]">{option.hint}</span>
                   ) : null}
                 </CommandItem>
               ))}
@@ -239,9 +239,9 @@ export function SpeakerLabelPicker({
   if (isLinkedRecord && linkedLabel) {
     return (
       <div className="flex items-center gap-2">
-        <div className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
-          <p className="truncate text-sm font-medium text-white">{linkedLabel}</p>
-          <p className="text-xs text-zinc-500">
+        <div className="min-w-0 flex-1 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-2">
+          <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">{linkedLabel}</p>
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
             {binding?.type === 'client' ? 'Client' : 'Contact'} · updates automatically
           </p>
         </div>
@@ -250,7 +250,7 @@ export function SpeakerLabelPicker({
             type="button"
             variant="ghost"
             size="icon"
-            className="shrink-0 text-zinc-400 hover:text-white"
+            className="shrink-0 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
             onClick={clearBinding}
             aria-label="Change assignment"
           >
@@ -263,7 +263,7 @@ export function SpeakerLabelPicker({
 
   return (
     <div className="space-y-3">
-      <div className="flex rounded-md border border-white/10 p-0.5 text-xs">
+      <div className="flex rounded-md border border-[color:var(--workspace-shell-border)] p-0.5 text-xs">
         {(['custom', 'client', 'contact'] as AssignMode[]).map((option) => (
           <button
             key={option}
@@ -273,8 +273,8 @@ export function SpeakerLabelPicker({
             className={cn(
               'flex-1 rounded px-2 py-1.5 capitalize transition',
               mode === option
-                ? 'bg-white/10 text-white'
-                : 'text-zinc-400 hover:text-white',
+                ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
             )}
           >
             {option}
@@ -292,7 +292,7 @@ export function SpeakerLabelPicker({
             applyCustom(next);
           }}
           placeholder="Type a name"
-          className="border-white/10 bg-white/5 text-white"
+          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
         />
       ) : null}
 
@@ -332,7 +332,7 @@ export function SpeakerLabelPicker({
               type="button"
               variant="outline"
               size="sm"
-              className="w-full border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white"
+              className="w-full border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
               onClick={() => setShowCreateContact(true)}
             >
               <Plus className="mr-2 h-4 w-4" />
@@ -340,23 +340,23 @@ export function SpeakerLabelPicker({
             </Button>
           ) : null}
           {showCreateContact ? (
-            <div className="space-y-2 rounded-lg border border-white/10 bg-black/20 p-3">
+            <div className="space-y-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
               <div>
-                <Label className="text-xs text-zinc-500">Name</Label>
+                <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Name</Label>
                 <Input
                   value={newContactName}
                   onChange={(event) => setNewContactName(event.target.value)}
-                  className="mt-1 border-white/10 bg-white/5 text-white"
+                  className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
                   placeholder="Contact name"
                 />
               </div>
               <div>
-                <Label className="text-xs text-zinc-500">Email</Label>
+                <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Email</Label>
                 <Input
                   type="email"
                   value={newContactEmail}
                   onChange={(event) => setNewContactEmail(event.target.value)}
-                  className="mt-1 border-white/10 bg-white/5 text-white"
+                  className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
                   placeholder="Optional"
                 />
               </div>
@@ -365,7 +365,7 @@ export function SpeakerLabelPicker({
                   type="button"
                   size="sm"
                   disabled={creatingContact}
-                  className="bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+                  className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
                   onClick={() => void handleCreateContact()}
                 >
                   {creatingContact ? 'Creating…' : 'Create'}
@@ -374,7 +374,7 @@ export function SpeakerLabelPicker({
                   type="button"
                   size="sm"
                   variant="outline"
-                  className="border-white/10 text-zinc-300"
+                  className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]"
                   onClick={() => setShowCreateContact(false)}
                 >
                   Cancel

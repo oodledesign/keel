@@ -208,7 +208,7 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
         >
           <Loader2
             className={cn(
-              'h-5 w-5 text-zinc-400',
+              'h-5 w-5 text-[var(--workspace-shell-text-muted)]',
               refreshing ? 'animate-spin' : '',
             )}
             style={

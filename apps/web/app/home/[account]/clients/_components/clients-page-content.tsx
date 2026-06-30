@@ -38,7 +38,7 @@ type ViewMode = 'cards' | 'list';
 type SortKey = 'name-asc' | 'name-desc' | 'recent' | 'projects';
 
 const panelToolbarClass =
-  'border border-white/[0.08] bg-[var(--workspace-shell-panel)]';
+  'border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
 
 function favoritesStorageKey(accountId: string) {
   return `keel-client-favorites:${accountId}`;
@@ -376,8 +376,8 @@ export function ClientsPageContent({
 
   if (!canViewClients) {
     return (
-      <div className="flex min-h-[60vh] w-full items-center justify-center rounded-lg border border-zinc-700 bg-[var(--workspace-shell-panel)] p-8">
-        <p className="text-center text-zinc-400">
+      <div className="flex min-h-[60vh] w-full items-center justify-center rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-8">
+        <p className="text-center text-[var(--workspace-shell-text-muted)]">
           You don&apos;t have access to clients in this account.
         </p>
       </div>
@@ -385,13 +385,13 @@ export function ClientsPageContent({
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden rounded-xl border border-white/8 bg-[var(--workspace-shell-panel)]/40">
+    <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40">
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-5">
-        <h1 className="text-lg font-bold text-white">{pageTitle}</h1>
+        <h1 className="text-lg font-bold text-[var(--workspace-shell-text)]">{pageTitle}</h1>
         {canEditClients ? (
           <Button
             size="sm"
-            className="h-8 bg-[var(--keel-teal)] text-xs hover:bg-[#238b7f]"
+            className="h-8 bg-[var(--ozer-accent)] text-xs hover:bg-[var(--ozer-accent-hover)]"
             onClick={openCreate}
             data-test="add-client-button"
           >
@@ -403,21 +403,21 @@ export function ClientsPageContent({
 
       <div className="flex flex-wrap items-center gap-2 px-4 pb-3 md:px-5">
           <div className="relative min-w-[220px] flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
             <Input
               placeholder="Search clients or projects..."
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
               }}
-              className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] pl-9 text-white placeholder:text-zinc-500 focus-visible:ring-[var(--keel-teal)]"
+              className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] pl-9 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus-visible:ring-[var(--ozer-accent)]"
             />
           </div>
 
           <Button
             variant="outline"
             size="sm"
-            className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-zinc-300 hover:bg-[var(--workspace-shell-panel-hover)]"
+            className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-panel-hover)]"
           >
             <Filter className="mr-1 h-4 w-4" />
             Filter
@@ -426,13 +426,13 @@ export function ClientsPageContent({
           <Select value={sort} onValueChange={(value) => setSort(value as SortKey)}>
             <SelectTrigger
               className={cn(
-                'w-full border-white/10 text-white sm:w-[160px]',
+                'w-full border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)] sm:w-[160px]',
                 panelToolbarClass,
               )}
             >
               <SelectValue placeholder="Sort" />
             </SelectTrigger>
-            <SelectContent className="border-white/10 bg-[#0F1B35] text-white">
+            <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] text-[var(--workspace-shell-text)]">
               <SelectItem value="name-asc">Sort: A–Z</SelectItem>
               <SelectItem value="name-desc">Sort: Z–A</SelectItem>
               <SelectItem value="recent">Recently updated</SelectItem>
@@ -452,8 +452,8 @@ export function ClientsPageContent({
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition',
                 viewMode === 'cards'
-                  ? 'bg-[var(--keel-accent-blue)] text-white'
-                  : 'text-zinc-400 hover:text-white',
+                  ? 'bg-[var(--keel-accent-blue)] text-[var(--workspace-shell-text)]'
+                  : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
               )}
               aria-pressed={viewMode === 'cards'}
               aria-label="Card view"
@@ -466,8 +466,8 @@ export function ClientsPageContent({
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition',
                 viewMode === 'list'
-                  ? 'bg-[var(--keel-accent-blue)] text-white'
-                  : 'text-zinc-400 hover:text-white',
+                  ? 'bg-[var(--keel-accent-blue)] text-[var(--workspace-shell-text)]'
+                  : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
               )}
               aria-pressed={viewMode === 'list'}
               aria-label="List view"
@@ -479,11 +479,11 @@ export function ClientsPageContent({
 
         <div className="flex-1 overflow-y-auto px-4 pb-4 md:px-5 md:pb-5">
           {loadingPage && displayedClients.length === 0 ? (
-            <div className="py-12 text-center text-sm text-zinc-500">
+            <div className="py-12 text-center text-sm text-[var(--workspace-shell-text-muted)]">
               <Trans i18nKey="common:loading" />
             </div>
           ) : displayedClients.length === 0 ? (
-            <div className="py-12 text-center text-sm text-zinc-500">
+            <div className="py-12 text-center text-sm text-[var(--workspace-shell-text-muted)]">
               {isSearching
                 ? 'No clients match your search.'
                 : 'No clients yet. Add your first client to get started.'}
@@ -501,7 +501,7 @@ export function ClientsPageContent({
               ))}
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-white/8 bg-[var(--workspace-shell-panel)]/40">
+            <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40">
               <table className="w-full min-w-[640px] border-collapse text-sm">
                 <ClientListTableHeader />
                 <tbody>
@@ -539,13 +539,13 @@ export function ClientsPageContent({
           )}
 
           {isSearching && enrichingSearch ? (
-            <p className="mt-4 text-center text-xs text-zinc-500">
+            <p className="mt-4 text-center text-xs text-[var(--workspace-shell-text-muted)]">
               Finding more matches…
             </p>
           ) : null}
 
           {!isSearching && totalPages > 1 && (
-            <div className="mt-6 flex items-center justify-between text-sm text-zinc-500">
+            <div className="mt-6 flex items-center justify-between text-sm text-[var(--workspace-shell-text-muted)]">
               <span>
                 Page {page} of {totalPages} ({total} clients)
               </span>
@@ -553,7 +553,7 @@ export function ClientsPageContent({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="border-zinc-600 text-zinc-400"
+                  className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]"
                   disabled={page <= 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                 >
@@ -562,7 +562,7 @@ export function ClientsPageContent({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="border-zinc-600 text-zinc-400"
+                  className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]"
                   disabled={page >= totalPages}
                   onClick={() => setPage((p) => p + 1)}
                 >

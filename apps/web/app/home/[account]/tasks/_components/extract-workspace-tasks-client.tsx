@@ -205,20 +205,20 @@ export function ExtractWorkspaceTasksClient({
       className={
         embedded
           ? 'space-y-6'
-          : 'mx-auto max-w-4xl space-y-8 px-4 pb-16 pt-6 text-white md:px-6'
+          : 'mx-auto max-w-4xl space-y-8 px-4 pb-16 pt-6 text-[var(--workspace-shell-text)] md:px-6'
       }
     >
       {!embedded ? (
         <div>
           <Link
             href={tasksPath}
-            className="mb-4 inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-white"
+            className="mb-4 inline-flex items-center gap-1 text-sm text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
           >
             <ChevronLeft className="h-4 w-4" />
             Back to tasks
           </Link>
           <h1 className="text-2xl font-bold tracking-tight">Extract tasks with AI</h1>
-          <p className="mt-2 max-w-2xl text-sm text-zinc-400">
+          <p className="mt-2 max-w-2xl text-sm text-[var(--workspace-shell-text-muted)]">
             Paste an email thread or meeting transcript. We use Anthropic to suggest tasks,
             subtasks, due dates, and project or client links. Review everything before they
             are added to this workspace.
@@ -227,7 +227,7 @@ export function ExtractWorkspaceTasksClient({
       ) : null}
 
       {!rows ? (
-        <div className="space-y-4 rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-6">
+        <div className="space-y-4 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6">
           {!embedded ? (
             <div className="space-y-2">
               <Label htmlFor="raw">Email or transcript</Label>
@@ -236,15 +236,15 @@ export function ExtractWorkspaceTasksClient({
                 value={rawText}
                 onChange={(e) => setRawText(e.target.value)}
                 placeholder="Paste the full text here…"
-                className="min-h-[220px] border-white/10 bg-white/5 text-sm text-white placeholder:text-zinc-600"
+                className="min-h-[220px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
               />
-              <p className="text-xs text-zinc-500">
-                Requires <code className="text-zinc-400">ANTHROPIC_API_KEY</code> on the server.
-                Optional: <code className="text-zinc-400">ANTHROPIC_TASK_EXTRACT_MODEL</code>.
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                Requires <code className="text-[var(--workspace-shell-text-muted)]">ANTHROPIC_API_KEY</code> on the server.
+                Optional: <code className="text-[var(--workspace-shell-text-muted)]">ANTHROPIC_TASK_EXTRACT_MODEL</code>.
               </p>
             </div>
           ) : (
-            <p className="text-sm text-zinc-400">
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
               We&apos;ll analyse the transcript above and suggest actionable tasks for this
               workspace.
             </p>
@@ -253,7 +253,7 @@ export function ExtractWorkspaceTasksClient({
             type="button"
             onClick={extract}
             disabled={extracting || rawText.trim().length < 20}
-            className="bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+            className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
           >
             {extracting ? (
               <>
@@ -271,7 +271,7 @@ export function ExtractWorkspaceTasksClient({
       ) : (
         <div className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="max-w-xl text-xs text-zinc-500">
+            <p className="max-w-xl text-xs text-[var(--workspace-shell-text-muted)]">
               {defaultClientId
                 ? 'Tasks default to the client linked to this meeting. You can still change any row before adding.'
                 : 'If only the first group got a client or project from AI, we copy that link to the other groups—you can still change any row before adding.'}
@@ -284,7 +284,7 @@ export function ExtractWorkspaceTasksClient({
               type="button"
               onClick={commit}
               disabled={committing}
-              className="bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+              className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
             >
               {committing ? (
                 <>
@@ -302,9 +302,9 @@ export function ExtractWorkspaceTasksClient({
             {rows.map((row) => (
               <div
                 key={row.id}
-                className="rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-5"
+                className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5"
               >
-                <div className="flex flex-wrap items-start gap-3 border-b border-white/10 pb-4">
+                <div className="flex flex-wrap items-start gap-3 border-b border-[color:var(--workspace-shell-border)] pb-4">
                   <Checkbox
                     checked={row.included}
                     onCheckedChange={(v) => {
@@ -319,7 +319,7 @@ export function ExtractWorkspaceTasksClient({
                   />
                   <div className="min-w-0 flex-1 space-y-3">
                     <div>
-                      <Label className="text-xs text-zinc-500">Parent task</Label>
+                      <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Parent task</Label>
                       <Input
                         value={row.title}
                         onChange={(e) =>
@@ -329,11 +329,11 @@ export function ExtractWorkspaceTasksClient({
                             ) ?? null,
                           )
                         }
-                        className="mt-1 border-white/10 bg-white/5 text-white"
+                        className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
                       />
                     </div>
                     <div>
-                      <Label className="text-xs text-zinc-500">Notes</Label>
+                      <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Notes</Label>
                       <Textarea
                         value={row.notes ?? ''}
                         onChange={(e) =>
@@ -343,12 +343,12 @@ export function ExtractWorkspaceTasksClient({
                             ) ?? null,
                           )
                         }
-                        className="mt-1 min-h-[72px] border-white/10 bg-white/5 text-sm text-white"
+                        className="mt-1 min-h-[72px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-sm text-[var(--workspace-shell-text)]"
                       />
                     </div>
                     <div className="grid gap-3 sm:grid-cols-3">
                       <div>
-                        <Label className="text-xs text-zinc-500">Link to</Label>
+                        <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Link to</Label>
                         <Select
                           value={assignValue(row.projectId, row.clientId)}
                           onValueChange={(v) => {
@@ -360,10 +360,10 @@ export function ExtractWorkspaceTasksClient({
                             );
                           }}
                         >
-                          <SelectTrigger className="mt-1 border-white/10 bg-white/5 text-white">
+                          <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                             <SelectValue placeholder="Project or client" />
                           </SelectTrigger>
-                          <SelectContent className="border-white/10 bg-[#1A2535] text-white">
+                          <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
                             <SelectItem value="__none__">Choose…</SelectItem>
                             {projects.map((p) => (
                               <SelectItem key={p.id} value={`p:${p.id}`}>
@@ -379,7 +379,7 @@ export function ExtractWorkspaceTasksClient({
                         </Select>
                       </div>
                       <div>
-                        <Label className="text-xs text-zinc-500">Due date</Label>
+                        <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Due date</Label>
                         <Input
                           type="date"
                           value={row.dueDate ?? ''}
@@ -392,11 +392,11 @@ export function ExtractWorkspaceTasksClient({
                               ) ?? null,
                             )
                           }
-                          className="mt-1 border-white/10 bg-white/5 text-white"
+                          className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
                         />
                       </div>
                       <div>
-                        <Label className="text-xs text-zinc-500">Priority</Label>
+                        <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Priority</Label>
                         <Select
                           value={row.priority}
                           onValueChange={(v) =>
@@ -412,10 +412,10 @@ export function ExtractWorkspaceTasksClient({
                             )
                           }
                         >
-                          <SelectTrigger className="mt-1 border-white/10 bg-white/5 text-white">
+                          <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="border-white/10 bg-[#1A2535] text-white">
+                          <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
                             {(['low', 'medium', 'high', 'urgent'] as const).map((p) => (
                               <SelectItem key={p} value={p}>
                                 {p}
@@ -430,13 +430,13 @@ export function ExtractWorkspaceTasksClient({
 
                 {row.subtasks.length > 0 ? (
                   <div className="mt-4 space-y-3 pl-8">
-                    <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                    <p className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
                       Subtasks
                     </p>
                     {row.subtasks.map((st) => (
                       <div
                         key={st.id}
-                        className="flex gap-3 rounded-xl border border-white/6 bg-black/15 p-3"
+                        className="flex gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/15 p-3"
                       >
                         <Checkbox
                           checked={st.included}
@@ -476,7 +476,7 @@ export function ExtractWorkspaceTasksClient({
                                 ) ?? null,
                               )
                             }
-                            className="border-white/10 bg-white/5 text-sm text-white"
+                            className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-sm text-[var(--workspace-shell-text)]"
                           />
                           <Textarea
                             value={st.notes ?? ''}
@@ -500,7 +500,7 @@ export function ExtractWorkspaceTasksClient({
                               )
                             }
                             placeholder="Subtask notes"
-                            className="min-h-[56px] border-white/10 bg-white/5 text-xs text-white"
+                            className="min-h-[56px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs text-[var(--workspace-shell-text)]"
                           />
                           <div className="flex flex-wrap gap-2">
                             <Input
@@ -525,7 +525,7 @@ export function ExtractWorkspaceTasksClient({
                                   ) ?? null,
                                 )
                               }
-                              className="w-40 border-white/10 bg-white/5 text-xs text-white"
+                              className="w-40 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs text-[var(--workspace-shell-text)]"
                             />
                             <Select
                               value={st.priority}
@@ -550,10 +550,10 @@ export function ExtractWorkspaceTasksClient({
                                 )
                               }
                             >
-                              <SelectTrigger className="w-32 border-white/10 bg-white/5 text-xs text-white">
+                              <SelectTrigger className="w-32 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs text-[var(--workspace-shell-text)]">
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent className="border-white/10 bg-[#1A2535] text-white">
+                              <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
                                 {(['low', 'medium', 'high', 'urgent'] as const).map(
                                   (p) => (
                                     <SelectItem key={p} value={p}>
@@ -576,11 +576,11 @@ export function ExtractWorkspaceTasksClient({
       )}
 
       {!embedded ? (
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
           Future: connect Gmail to scan new messages and surface suggested tasks for review
           in Ozer — see{' '}
-          <code className="text-zinc-400">TASK_GMAIL_INGEST_ENABLED</code> placeholder in{' '}
-          <code className="text-zinc-400">lib/integrations/gmail-tasks-ingest.placeholder.ts</code>.
+          <code className="text-[var(--workspace-shell-text-muted)]">TASK_GMAIL_INGEST_ENABLED</code> placeholder in{' '}
+          <code className="text-[var(--workspace-shell-text-muted)]">lib/integrations/gmail-tasks-ingest.placeholder.ts</code>.
         </p>
       ) : null}
     </div>

@@ -113,20 +113,20 @@ export function PhaseTasksPanel({
   };
 
   return (
-    <section className="rounded-xl border border-zinc-700 bg-[var(--workspace-shell-panel)] p-4">
-      <h2 className="text-sm font-semibold text-white">Tasks</h2>
-      <p className="mt-0.5 text-xs text-zinc-500">
+    <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
+      <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Tasks</h2>
+      <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
         {tasks.length} in this phase
       </p>
 
       <div className="mt-3 space-y-2">
         {tasks.length === 0 && (
-          <p className="text-sm text-zinc-500">No tasks yet.</p>
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">No tasks yet.</p>
         )}
         {tasks.map((task) => (
           <div
             key={task.id}
-            className="rounded-lg border border-zinc-700/80 bg-zinc-900/40 p-2.5"
+            className="rounded-lg border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/40 p-2.5"
           >
             <div className="flex items-start gap-2">
               <span
@@ -135,14 +135,14 @@ export function PhaseTasksPanel({
               {canEdit ? (
                 <Input
                   defaultValue={task.title}
-                  className="h-8 flex-1 border-zinc-600 bg-zinc-800 text-sm text-white"
+                  className="h-8 flex-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-sm text-[var(--workspace-shell-text)]"
                   onBlur={(e) => {
                     const title = e.target.value.trim();
                     if (title && title !== task.title) patchTask(task, { title });
                   }}
                 />
               ) : (
-                <span className="flex-1 text-sm text-white">{task.title}</span>
+                <span className="flex-1 text-sm text-[var(--workspace-shell-text)]">{task.title}</span>
               )}
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
@@ -152,7 +152,7 @@ export function PhaseTasksPanel({
                     value={task.status}
                     onValueChange={(status) => patchTask(task, { status })}
                   >
-                    <SelectTrigger className="h-7 w-[130px] border-zinc-600 bg-zinc-800 text-xs text-white">
+                    <SelectTrigger className="h-7 w-[130px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-xs text-[var(--workspace-shell-text)]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -166,7 +166,7 @@ export function PhaseTasksPanel({
                   <Input
                     type="date"
                     defaultValue={toDateInputValue(task.due_date)}
-                    className="h-7 w-[130px] border-zinc-600 bg-zinc-800 text-xs text-white"
+                    className="h-7 w-[130px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-xs text-[var(--workspace-shell-text)]"
                     onBlur={(e) => {
                       const val = e.target.value || null;
                       if (val !== toDateInputValue(task.due_date)) {
@@ -176,7 +176,7 @@ export function PhaseTasksPanel({
                   />
                 </>
               ) : (
-                <span className="text-xs text-zinc-400">
+                <span className="text-xs text-[var(--workspace-shell-text-muted)]">
                   {TASK_STATUS_LABELS[task.status] ?? task.status} ·{' '}
                   {formatShortDate(task.due_date)}
                 </span>
@@ -192,13 +192,13 @@ export function PhaseTasksPanel({
             value={draftTitle}
             onChange={(e) => setDraftTitle(e.target.value)}
             placeholder="Add task…"
-            className="h-8 border-zinc-600 bg-zinc-800 text-sm text-white"
+            className="h-8 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-sm text-[var(--workspace-shell-text)]"
           />
           <Button
             type="submit"
             size="sm"
             variant="ghost"
-            className="h-8 px-2 text-zinc-400 hover:text-white"
+            className="h-8 px-2 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
             disabled={!draftTitle.trim()}
           >
             <Plus className="h-4 w-4" />

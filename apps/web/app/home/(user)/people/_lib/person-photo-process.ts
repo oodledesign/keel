@@ -56,7 +56,7 @@ export async function exportSquareCrop(
   const y = (viewportSize - drawHeight) / 2 + transform.offsetY;
   const ratio = OUTPUT_SIZE / viewportSize;
 
-  ctx.fillStyle = '#0B132B';
+  ctx.fillStyle = 'var(--ozer-plum-900)';
   ctx.fillRect(0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
   ctx.drawImage(
     image,

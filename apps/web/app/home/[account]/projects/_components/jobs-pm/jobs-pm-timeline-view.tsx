@@ -23,7 +23,7 @@ export function JobsPmTimelineView({
 
   return (
     <div className="min-h-0 flex-1 overflow-auto p-4 md:p-5">
-      <p className="mb-4 text-sm text-zinc-400">
+      <p className="mb-4 text-sm text-[var(--workspace-shell-text-muted)]">
         Timeline view of all projects by schedule. Open a project for the full
         phase board and Gantt.
       </p>
@@ -35,15 +35,15 @@ export function JobsPmTimelineView({
             <Link
               key={job.id}
               href={jobDetailPath.replace('[id]', job.id)}
-              className="flex flex-wrap items-center gap-3 rounded-lg border border-white/8 bg-[var(--workspace-shell-panel)]/60 px-4 py-3 transition-colors hover:bg-[var(--workspace-shell-panel-hover)]"
+              className="flex flex-wrap items-center gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/60 px-4 py-3 transition-colors hover:bg-[var(--workspace-shell-panel-hover)]"
             >
               <span
                 className="h-10 w-1 shrink-0 rounded-full"
                 style={{ backgroundColor: phase.bg }}
               />
               <div className="min-w-0 flex-1">
-                <p className="font-medium text-white">{job.title}</p>
-                <p className="text-xs text-zinc-500">
+                <p className="font-medium text-[var(--workspace-shell-text)]">{job.title}</p>
+                <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                   {job.clients?.display_name ?? 'No client'}
                 </p>
               </div>
@@ -53,7 +53,7 @@ export function JobsPmTimelineView({
               >
                 {phase.label}
               </span>
-              <span className="rounded-md bg-zinc-800/80 px-3 py-1.5 text-xs text-zinc-300">
+              <span className="rounded-md bg-[var(--workspace-control-surface)]/80 px-3 py-1.5 text-xs text-[var(--workspace-shell-text-muted)]">
                 {formatTimelineRange(job.start_date, job.due_date)}
               </span>
             </Link>
@@ -62,7 +62,7 @@ export function JobsPmTimelineView({
 
         {undated.length > 0 && (
           <div className="pt-4">
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
               No dates set
             </p>
             <div className="space-y-2">
@@ -70,7 +70,7 @@ export function JobsPmTimelineView({
                 <Link
                   key={job.id}
                   href={jobDetailPath.replace('[id]', job.id)}
-                  className="block rounded-lg border border-dashed border-white/10 px-4 py-2.5 text-sm text-zinc-400 hover:border-white/20 hover:text-white"
+                  className="block rounded-lg border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-2.5 text-sm text-[var(--workspace-shell-text-muted)] hover:border-[color:var(--workspace-shell-border)] hover:text-[var(--workspace-shell-text)]"
                 >
                   {job.title}
                 </Link>

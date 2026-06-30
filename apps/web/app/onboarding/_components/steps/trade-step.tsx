@@ -121,10 +121,10 @@ export function TradeStep({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-white">
+        <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
           {stepDef.title}
         </h2>
-        <p className="mt-1 text-sm text-zinc-400">
+        <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
           Choose the option that best describes you.
         </p>
       </div>
@@ -146,7 +146,7 @@ export function TradeStep({
             type="button"
             onClick={handleSkip}
             disabled={loading}
-            className="text-sm text-zinc-400 hover:text-zinc-300"
+            className="text-sm text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text-muted)]"
           >
             Skip for now
           </button>
@@ -154,7 +154,7 @@ export function TradeStep({
         <PrimaryButton
           onClick={handleContinue}
           disabled={!selected || loading}
-          className="gap-1.5 bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+          className="gap-1.5 bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
         >
           {loading ? 'Saving…' : 'Continue'}
           <span className="ml-0.5">→</span>

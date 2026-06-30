@@ -33,7 +33,7 @@ import type { TasksPageTask } from '~/home/(user)/_lib/server/tasks.loader';
 import { EditTaskDialog } from '~/home/(user)/tasks/_components/edit-task-dialog';
 
 const priorityConfig: Record<string, string> = {
-  low: 'text-zinc-400',
+  low: 'text-[var(--workspace-shell-text-muted)]',
   medium: 'text-blue-400',
   high: 'text-amber-400',
   urgent: 'text-rose-400',
@@ -91,14 +91,14 @@ export function ClientTasksBlock({
   }, [fetchTasks]);
 
   return (
-    <div className="space-y-3 border-t border-zinc-700 pt-4">
+    <div className="space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-white">Tasks</h3>
+        <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Tasks</h3>
         {canEditClients && (
           <Button
             variant="ghost"
             size="sm"
-            className="text-[#5eead4] hover:bg-[var(--keel-teal)]/10 hover:text-[#5eead4]"
+            className="text-[var(--ozer-accent-muted)] hover:bg-[var(--ozer-accent-subtle)] hover:text-[var(--ozer-accent-muted)]"
             onClick={() => setAddOpen(true)}
           >
             <Plus className="mr-1 h-4 w-4" />
@@ -107,9 +107,9 @@ export function ClientTasksBlock({
         )}
       </div>
       {loading ? (
-        <p className="text-sm text-zinc-500">Loading…</p>
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">Loading…</p>
       ) : tasks.length === 0 ? (
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           No tasks linked to this client yet.
           {canEditClients && ' Use "Add task" to create one.'}
         </p>
@@ -119,27 +119,27 @@ export function ClientTasksBlock({
             const StatusIcon = statusIcons[task.status];
             return (
               <li key={task.id}>
-                <div className="flex items-center gap-2 rounded-md border border-zinc-700 bg-[var(--workspace-shell-panel)] px-3 py-2 text-sm transition hover:border-zinc-600">
+                <div className="flex items-center gap-2 rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 py-2 text-sm transition hover:border-[color:var(--workspace-shell-border)]">
                   <StatusIcon
                     className={`h-4 w-4 shrink-0 ${
                       task.status === 'completed'
-                        ? 'text-[#5eead4]'
-                        : 'text-zinc-400'
+                        ? 'text-[var(--ozer-accent-muted)]'
+                        : 'text-[var(--workspace-shell-text-muted)]'
                     }`}
                   />
                   <Link
                     href={tasksHref}
-                    className={`min-w-0 flex-1 truncate hover:underline ${task.status === 'completed' ? 'text-zinc-400 line-through' : 'text-white'}`}
+                    className={`min-w-0 flex-1 truncate hover:underline ${task.status === 'completed' ? 'text-[var(--workspace-shell-text-muted)] line-through' : 'text-[var(--workspace-shell-text)]'}`}
                   >
                     {task.title}
                   </Link>
                   <span
-                    className={`hidden shrink-0 text-xs sm:inline ${priorityConfig[task.priority] ?? 'text-zinc-400'}`}
+                    className={`hidden shrink-0 text-xs sm:inline ${priorityConfig[task.priority] ?? 'text-[var(--workspace-shell-text-muted)]'}`}
                   >
                     {task.priority}
                   </span>
                   {task.dueDateLabel && (
-                    <span className="hidden shrink-0 text-xs text-zinc-500 sm:inline">
+                    <span className="hidden shrink-0 text-xs text-[var(--workspace-shell-text-muted)] sm:inline">
                       {task.dueDateLabel}
                     </span>
                   )}
@@ -150,7 +150,7 @@ export function ClientTasksBlock({
                         setEditTask(task);
                         setEditOpen(true);
                       }}
-                      className="shrink-0 rounded p-1 text-zinc-400 transition hover:bg-white/5 hover:text-white"
+                      className="shrink-0 rounded p-1 text-[var(--workspace-shell-text-muted)] transition hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
                       aria-label="Edit task"
                     >
                       <Pencil className="h-4 w-4" />
@@ -163,8 +163,8 @@ export function ClientTasksBlock({
         </ul>
       )}
       {tasks.length > 0 && (
-        <p className="text-xs text-zinc-500">
-          <Link href={tasksHref} className="underline hover:text-zinc-400">
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+          <Link href={tasksHref} className="underline hover:text-[var(--workspace-shell-text-muted)]">
             View all tasks →
           </Link>
         </p>
@@ -257,13 +257,13 @@ function AddTaskForClientDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-zinc-700 bg-[var(--workspace-shell-panel)] text-white sm:max-w-md">
+      <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add task for {clientName || 'client'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="task-title" className="text-zinc-300">
+            <Label htmlFor="task-title" className="text-[var(--workspace-shell-text-muted)]">
               Title *
             </Label>
             <Input
@@ -271,17 +271,17 @@ function AddTaskForClientDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Task title"
-              className="border-zinc-600 bg-white/5 text-white"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-zinc-300">Priority</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">Priority</Label>
               <Select value={priority} onValueChange={setPriority}>
-                <SelectTrigger className="border-zinc-600 bg-white/5 text-white">
+                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="border-zinc-600 bg-[#1A2535] text-white">
+                <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
                   {PRIORITIES.map((p) => (
                     <SelectItem key={p.key} value={p.key}>
                       {p.label}
@@ -291,7 +291,7 @@ function AddTaskForClientDialog({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="task-due" className="text-zinc-300">
+              <Label htmlFor="task-due" className="text-[var(--workspace-shell-text-muted)]">
                 Due date
               </Label>
               <Input
@@ -299,7 +299,7 @@ function AddTaskForClientDialog({
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="border-zinc-600 bg-white/5 text-white"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
               />
             </div>
           </div>
@@ -311,14 +311,14 @@ function AddTaskForClientDialog({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="border-zinc-600 text-zinc-300"
+              className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={isPending}
-              className="bg-[var(--keel-teal)] hover:bg-[#238b7f]"
+              className="bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]"
             >
               {isPending ? (
                 <>

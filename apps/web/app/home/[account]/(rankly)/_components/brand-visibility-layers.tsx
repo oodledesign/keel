@@ -18,7 +18,7 @@ function SentimentIcon({ pct }: { pct: number | null }) {
 
   const tone =
     pct >= 75
-      ? 'text-[var(--keel-teal)]'
+      ? 'text-[var(--ozer-accent)]'
       : pct >= 60
         ? 'text-amber-400'
         : 'text-red-400';
@@ -32,7 +32,7 @@ function BrandVisibilityTable({ rows }: { rows: BrandVisibilityRow[] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[32rem] text-left text-sm">
-        <thead className="border-b border-white/10 text-xs uppercase tracking-wide text-muted-foreground">
+        <thead className="border-b border-[color:var(--workspace-shell-border)] text-xs uppercase tracking-wide text-muted-foreground">
           <tr>
             <th className="px-3 py-2">Platform</th>
             <th className="px-3 py-2">Sampled presence</th>
@@ -43,7 +43,7 @@ function BrandVisibilityTable({ rows }: { rows: BrandVisibilityRow[] }) {
           {rows.map((row) => (
             <tr
               key={`${row.platform}-${row.promptLayer ?? 'generic'}`}
-              className="border-b border-white/5 last:border-0"
+              className="border-b border-[color:var(--workspace-shell-border)] last:border-0"
             >
               <td className="px-3 py-3">{row.label}</td>
               <td className="px-3 py-3 text-muted-foreground">
@@ -65,10 +65,10 @@ function BrandVisibilityTable({ rows }: { rows: BrandVisibilityRow[] }) {
 
 function AuditCitationTable({ platforms }: { platforms: PlatformCitationResult[] }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-white/10">
+    <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-white/10 text-left text-xs uppercase text-muted-foreground">
+          <tr className="border-b border-[color:var(--workspace-shell-border)] text-left text-xs uppercase text-muted-foreground">
             <th className="px-4 py-2 font-medium">Platform</th>
             <th className="px-4 py-2 font-medium">Presence</th>
             <th className="px-4 py-2 font-medium">Prompts</th>
@@ -78,7 +78,7 @@ function AuditCitationTable({ platforms }: { platforms: PlatformCitationResult[]
           {platforms.map((platform) => (
             <tr
               key={`${platform.platform}-${platform.promptLayer ?? 'generic'}`}
-              className="border-b border-white/5 last:border-0 align-top"
+              className="border-b border-[color:var(--workspace-shell-border)] last:border-0 align-top"
             >
               <td className="px-4 py-2 font-medium">{platform.label}</td>
               <td className="px-4 py-2">

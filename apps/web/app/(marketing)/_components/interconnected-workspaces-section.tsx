@@ -33,14 +33,14 @@ export function InterconnectedWorkspacesSection({
     variant === 'personal'
       ? `${m.subtitle} Your personal home stays free — workspaces connect around it.`
       : variant === 'work'
-        ? `${m.subtitle} Your business CRM sits inside the same Life CRM — not a separate product you will abandon for personal stuff.`
+        ? `${m.subtitle} Your business workspace sits inside the same Ozer account — not a separate product you will abandon for personal stuff.`
         : m.subtitle;
 
   return (
     <section
       id="connected-workspaces"
       className={cn(
-        'relative overflow-hidden border-y border-[#2A9D8F]/20 bg-[#0d0b1e] py-20 md:py-28',
+        'relative overflow-hidden border-y border-[var(--ozer-accent)]/20 bg-[var(--ozer-plum-950)] py-20 md:py-28',
         className,
       )}
       style={{
@@ -50,21 +50,21 @@ export function InterconnectedWorkspacesSection({
       }}
       aria-labelledby="connected-workspaces-heading"
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(42,157,143,0.1),transparent_50%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,var(--ozer-coral-alpha-15),transparent_50%)]" />
 
       <div className="relative mx-auto w-full max-w-7xl px-6">
         <div className="grid gap-10 lg:grid-cols-[minmax(0,38fr)_minmax(0,62fr)] lg:items-center lg:gap-8">
           <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-[#2A9D8F]/35 bg-[#2A9D8F]/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[#7ee8d8]">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--ozer-accent)]/35 bg-[var(--ozer-accent-subtle)] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ozer-accent-muted)]">
               <Link2 className="h-3.5 w-3.5" aria-hidden />
               {m.eyebrow}
             </span>
             <h2
               id="connected-workspaces-heading"
-              className="mt-6 font-heading text-3xl font-bold leading-tight text-white md:text-5xl lg:text-[3.25rem]"
+              className="mt-6 font-heading text-3xl font-bold leading-tight text-[var(--workspace-shell-text)] md:text-5xl lg:text-[3.25rem]"
             >
               {m.title}
-              <span className="mt-1 block bg-gradient-to-r from-[#2A9D8F] via-teal-200 to-[#2563EB] bg-clip-text text-transparent">
+              <span className="mt-1 block bg-gradient-to-r from-[var(--ozer-accent)] via-[var(--ozer-coral-100)] to-[var(--ozer-info)] bg-clip-text text-transparent">
                 {m.titleAccent}
               </span>
             </h2>
@@ -88,7 +88,7 @@ export function InterconnectedWorkspacesSection({
             <Button
               asChild
               variant="outline"
-              className="h-11 rounded-full border-violet-300/25 bg-white/[0.03] px-6 text-violet-100 hover:bg-white/[0.06]"
+              className="h-11 rounded-full border-violet-300/25 bg-[var(--workspace-shell-sidebar-accent)] px-6 text-violet-100 hover:bg-[var(--workspace-shell-sidebar-accent)]"
             >
               <Link href="/features">
                 All features
@@ -98,8 +98,8 @@ export function InterconnectedWorkspacesSection({
           </div>
         </div>
 
-        <div className="mt-16 rounded-3xl border border-white/10 bg-[#0B132B]/90 p-6 md:p-10">
-          <h3 className="text-center font-heading text-2xl font-semibold text-white md:text-3xl">
+        <div className="mt-16 rounded-3xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/90 p-6 md:p-10">
+          <h3 className="text-center font-heading text-2xl font-semibold text-[var(--workspace-shell-text)] md:text-3xl">
             {m.comparison.heading}
           </h3>
           <div className="mt-8 grid gap-6 md:grid-cols-2">
@@ -109,12 +109,12 @@ export function InterconnectedWorkspacesSection({
               tone="muted"
             />
             <ComparisonColumn
-              label={m.comparison.keelLabel}
-              items={m.comparison.keel}
-              tone="keel"
+              label={m.comparison.ozerLabel}
+              items={m.comparison.ozer}
+              tone="ozer"
             />
           </div>
-          <p className="mt-8 text-center text-sm font-medium text-[#7ee8d8] md:text-base">
+          <p className="mt-8 text-center text-sm font-medium text-[var(--ozer-accent-muted)] md:text-base">
             {m.ctaLine}
           </p>
         </div>
@@ -126,9 +126,9 @@ export function InterconnectedWorkspacesSection({
 function BenefitCard({ benefit }: { benefit: InterconnectedBenefit }) {
   const Icon = benefit.icon;
   return (
-    <article className="flex h-full flex-col rounded-2xl border border-white/10 bg-[#0F1B35]/50 p-4 backdrop-blur-sm md:p-5">
-      <Icon className="h-5 w-5 shrink-0 text-[#2A9D8F]" aria-hidden />
-      <h3 className="mt-3 font-heading text-base font-semibold leading-snug text-white md:text-lg">
+    <article className="flex h-full flex-col rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)]/50 p-4 backdrop-blur-sm md:p-5">
+      <Icon className="h-5 w-5 shrink-0 text-[var(--ozer-accent)]" aria-hidden />
+      <h3 className="mt-3 font-heading text-base font-semibold leading-snug text-[var(--workspace-shell-text)] md:text-lg">
         {benefit.title}
       </h3>
       <p className="mt-2 flex-1 text-sm leading-relaxed text-violet-100/70">
@@ -145,22 +145,22 @@ function ComparisonColumn({
 }: {
   label: string;
   items: readonly string[];
-  tone: 'muted' | 'keel';
+  tone: 'muted' | 'ozer';
 }) {
-  const isKeel = tone === 'keel';
+  const isOzer = tone === 'ozer';
   return (
     <div
       className={cn(
         'rounded-2xl border p-5 md:p-6',
-        isKeel
-          ? 'border-[#2A9D8F]/35 bg-[#2A9D8F]/[0.07]'
-          : 'border-white/8 bg-white/[0.02]',
+        isOzer
+          ? 'border-[var(--ozer-accent)]/35 bg-[var(--ozer-accent-subtle)]'
+          : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]',
       )}
     >
       <p
         className={cn(
           'text-sm font-semibold uppercase tracking-wide',
-          isKeel ? 'text-[#7ee8d8]' : 'text-violet-200/50',
+          isOzer ? 'text-[var(--ozer-accent-muted)]' : 'text-[var(--workspace-shell-text-muted)]',
         )}
       >
         {label}
@@ -168,12 +168,12 @@ function ComparisonColumn({
       <ul className="mt-4 space-y-3">
         {items.map((item) => (
           <li key={item} className="flex gap-2.5 text-sm leading-relaxed">
-            {isKeel ? (
-              <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#2A9D8F]" aria-hidden />
+            {isOzer ? (
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]" aria-hidden />
             ) : (
-              <X className="mt-0.5 h-4 w-4 shrink-0 text-violet-300/40" aria-hidden />
+              <X className="mt-0.5 h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]" aria-hidden />
             )}
-            <span className={isKeel ? 'text-violet-50/95' : 'text-violet-100/55'}>
+            <span className={isOzer ? 'text-[var(--workspace-shell-text)]' : 'text-[var(--workspace-shell-text-muted)]'}>
               {item}
             </span>
           </li>

@@ -51,8 +51,8 @@ export function InlineAddTaskRow({
   return (
     <div
       className={cn(
-        'border-t border-dashed border-white/10 bg-white/[0.03] px-4 py-3 transition-colors sm:px-5',
-        active && 'bg-white/[0.05]',
+        'border-t border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-3 transition-colors sm:px-5',
+        active && 'bg-[var(--workspace-shell-sidebar-accent)]',
       )}
     >
       {!active ? (
@@ -62,7 +62,7 @@ export function InlineAddTaskRow({
             setError(null);
             setActive(true);
           }}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 bg-gradient-to-r from-[var(--keel-teal)]/6 to-[var(--keel-teal)]/3 px-4 py-3 text-sm font-semibold text-white/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors hover:border-white/25 hover:from-[var(--keel-teal)]/10 hover:to-[var(--keel-teal)]/5 hover:text-white"
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] bg-gradient-to-r from-[var(--ozer-accent)]/6 to-[var(--ozer-accent)]/3 px-4 py-3 text-sm font-semibold text-[var(--workspace-shell-text)]/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors hover:border-[color:var(--workspace-shell-border)] hover:from-[var(--ozer-accent)]/10 hover:to-[var(--ozer-accent)]/5 hover:text-[var(--workspace-shell-text)]"
         >
           <Plus className="h-4 w-4 shrink-0" strokeWidth={2.5} />
           Add task
@@ -90,13 +90,13 @@ export function InlineAddTaskRow({
               }
             }}
             placeholder="Task name, press Enter to save"
-            className="h-11 w-full rounded-xl border border-white/15 bg-[var(--workspace-shell-canvas)] px-3 text-sm text-white placeholder:text-zinc-500 focus:border-[#2A9D8F]/50 focus:outline-none focus:ring-1 focus:ring-[#2A9D8F]/30"
+            className="h-11 w-full rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] px-3 text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus:border-[var(--ozer-accent)]/50 focus:outline-none focus:ring-1 focus:ring-[var(--ozer-accent)]/30"
             aria-label="New task title"
           />
           {error ? (
             <p className="text-xs text-rose-300/90">{error}</p>
           ) : needsAssignment ? (
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
               Link this task to a client or project with the Add Task button
               above, or filter by client first.
             </p>

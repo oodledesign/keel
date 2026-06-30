@@ -219,7 +219,7 @@ export function VideoLibraryClient(props: {
         <div className="text-muted-foreground flex flex-wrap items-center gap-1 text-sm">
             <button
               type="button"
-              className="hover:text-white"
+              className="hover:text-[var(--workspace-shell-text)]"
               onClick={() => setSelectedFolderId(null)}
             >
               All videos
@@ -229,7 +229,7 @@ export function VideoLibraryClient(props: {
                 <span>/</span>
                 <button
                   type="button"
-                  className="hover:text-white"
+                  className="hover:text-[var(--workspace-shell-text)]"
                   onClick={() => setSelectedFolderId(folder.id)}
                 >
                   {folder.name}
@@ -267,7 +267,7 @@ export function VideoLibraryClient(props: {
           />
         </div>
 
-        <div className="flex items-center gap-1 rounded-lg border border-white/10 p-1">
+        <div className="flex items-center gap-1 rounded-lg border border-[color:var(--workspace-shell-border)] p-1">
           <Button
             type="button"
             size="icon"
@@ -332,7 +332,7 @@ export function VideoLibraryClient(props: {
 
         <div className="min-w-0 flex-1">
           {filteredVideos.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-white/10 bg-black/10 px-6 py-16 text-center">
+            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] bg-black/10 px-6 py-16 text-center">
               <p className="text-lg font-medium">No videos yet</p>
               <p className="text-muted-foreground mt-2 max-w-md text-sm">
                 Upload your first video to start building your hosted library.
@@ -363,7 +363,7 @@ export function VideoLibraryClient(props: {
               ))}
             </div>
           ) : (
-            <div className="overflow-hidden rounded-xl border border-white/10 bg-black/20">
+            <div className="overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
               {filteredVideos.map((video) => (
                 <VideoListRow
                   key={video.id}

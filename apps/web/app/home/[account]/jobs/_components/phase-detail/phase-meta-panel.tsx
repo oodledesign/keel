@@ -104,7 +104,7 @@ export function PhaseMetaPanel({
   };
 
   return (
-    <section className="rounded-xl border border-zinc-700 bg-[var(--workspace-shell-panel)] p-4">
+    <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1 space-y-3">
           {canEdit ? (
@@ -119,10 +119,10 @@ export function PhaseMetaPanel({
                   setName(phase.name);
                 }
               }}
-              className="border-zinc-600 bg-zinc-900 text-lg font-semibold text-white"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-lg font-semibold text-[var(--workspace-shell-text)]"
             />
           ) : (
-            <h1 className="text-xl font-semibold text-white">{phase.name}</h1>
+            <h1 className="text-xl font-semibold text-[var(--workspace-shell-text)]">{phase.name}</h1>
           )}
 
           <span
@@ -134,7 +134,7 @@ export function PhaseMetaPanel({
           </span>
 
           {phase.completed_at && (
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
               Completed {formatShortDate(phase.completed_at.slice(0, 10))}
             </p>
           )}
@@ -144,7 +144,7 @@ export function PhaseMetaPanel({
           <Button
             type="button"
             size="sm"
-            className="bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+            className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
             onClick={() => patch({ status: 'complete' })}
           >
             <CheckCircle2 className="mr-1.5 h-4 w-4" />
@@ -155,13 +155,13 @@ export function PhaseMetaPanel({
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <Label className="text-xs text-zinc-500">Status</Label>
+          <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Status</Label>
           {canEdit ? (
             <Select
               value={phase.status}
               onValueChange={(v) => patch({ status: v as PhaseStatus })}
             >
-              <SelectTrigger className="mt-1 h-9 border-zinc-600 bg-zinc-900 text-white">
+              <SelectTrigger className="mt-1 h-9 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -173,36 +173,36 @@ export function PhaseMetaPanel({
               </SelectContent>
             </Select>
           ) : (
-            <p className="mt-1 text-sm text-zinc-300">
+            <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
               {PHASE_STATUS_LABELS[phase.status]}
             </p>
           )}
         </div>
 
         <div>
-          <Label className="text-xs text-zinc-500">Colour</Label>
+          <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Colour</Label>
           {canEdit ? (
             <Input
               type="color"
-              value={phase.colour ?? '#2A9D8F'}
+              value={phase.colour ?? '#FF5C34'}
               onChange={(e) => patch({ colour: e.target.value })}
-              className="mt-1 h-9 w-full cursor-pointer border-zinc-600 bg-zinc-900 p-1"
+              className="mt-1 h-9 w-full cursor-pointer border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-1"
             />
           ) : (
             <div
               className="mt-2 h-4 w-4 rounded"
-              style={{ backgroundColor: phase.colour ?? '#2A9D8F' }}
+              style={{ backgroundColor: phase.colour ?? '#FF5C34' }}
             />
           )}
         </div>
 
         <div>
-          <Label className="text-xs text-zinc-500">Start</Label>
+          <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Start</Label>
           {canEdit ? (
             <Input
               type="date"
               defaultValue={toDateInputValue(phase.start_date)}
-              className="mt-1 h-9 border-zinc-600 bg-zinc-900 text-white"
+              className="mt-1 h-9 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
               onBlur={(e) => {
                 const val = e.target.value || null;
                 if (val !== toDateInputValue(phase.start_date)) {
@@ -211,19 +211,19 @@ export function PhaseMetaPanel({
               }}
             />
           ) : (
-            <p className="mt-1 text-sm text-zinc-300">
+            <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
               {formatShortDate(phase.start_date)}
             </p>
           )}
         </div>
 
         <div>
-          <Label className="text-xs text-zinc-500">Due</Label>
+          <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Due</Label>
           {canEdit ? (
             <Input
               type="date"
               defaultValue={toDateInputValue(phase.due_date)}
-              className="mt-1 h-9 border-zinc-600 bg-zinc-900 text-white"
+              className="mt-1 h-9 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
               onBlur={(e) => {
                 const val = e.target.value || null;
                 if (val !== toDateInputValue(phase.due_date)) {
@@ -232,20 +232,20 @@ export function PhaseMetaPanel({
               }}
             />
           ) : (
-            <p className="mt-1 text-sm text-zinc-300">
+            <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
               {formatShortDate(phase.due_date)}
             </p>
           )}
         </div>
       </div>
 
-      <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
+      <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm text-[var(--workspace-shell-text-muted)]">
         <input
           type="checkbox"
           checked={phase.is_milestone}
           disabled={!canEdit}
           onChange={(e) => patch({ is_milestone: e.target.checked })}
-          className="rounded border-zinc-600"
+          className="rounded border-[color:var(--workspace-shell-border)]"
         />
         Milestone phase
       </label>

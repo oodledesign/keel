@@ -257,7 +257,7 @@ export async function sendProposalCommentOwnerNotification(params: {
   const innerHtml = `
     <h2 style="margin:0 0 16px">New proposal comment</h2>
     <p><strong>${params.authorName.trim()}</strong> commented on <strong>${title}</strong>:</p>
-    <blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #2A9D8F;background:#f9fafb">${params.body.trim().replace(/\n/g, '<br />')}</blockquote>
+    <blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #FF5C34;background:#f9fafb">${params.body.trim().replace(/\n/g, '<br />')}</blockquote>
   `;
 
   for (const email of ownerAdminEmails) {

@@ -65,7 +65,7 @@ async function FinancesPage({ params }: FinancesPageProps) {
         title="Finances"
         description="Income, expenses, forecasts, and bank imports — with optional FreeAgent sync."
       />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-white">
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-[var(--workspace-shell-text)]">
         <Suspense fallback={<FinancesDashboardSkeleton />}>
           <FinancesPageContent accountId={accountId} accountSlug={accountSlug} />
         </Suspense>

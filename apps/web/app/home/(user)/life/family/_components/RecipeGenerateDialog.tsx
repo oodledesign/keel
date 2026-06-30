@@ -197,13 +197,13 @@ export function RecipeGenerateDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto border-white/10 bg-[var(--workspace-shell-panel)] text-white sm:max-w-2xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-[#5eead4]" />
+            <Sparkles className="h-5 w-5 text-[var(--ozer-accent-muted)]" />
             Generate recipes with AI
           </DialogTitle>
-          <DialogDescription className="text-zinc-400">
+          <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
             {step === 'configure'
               ? 'Inspired by popular home cooking and trends — tailored to your preferences.'
               : 'Uncheck anything you do not want, then add the rest to your library.'}
@@ -230,12 +230,12 @@ export function RecipeGenerateDialog({
                       className={cn(
                         'rounded-xl border px-3 py-3 text-left transition-colors',
                         active
-                          ? 'border-[#5eead4]/40 bg-[#5eead4]/10'
-                          : 'border-white/10 hover:border-white/20',
+                          ? 'border-[#FFE3DA]/40 bg-[var(--ozer-accent-subtle)]'
+                          : 'border-[color:var(--workspace-shell-border)] hover:border-[color:var(--workspace-shell-border)]',
                       )}
                     >
-                      <p className="text-sm font-semibold text-white">{option.label}</p>
-                      <p className="mt-0.5 text-xs text-zinc-400">{option.hint}</p>
+                      <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">{option.label}</p>
+                      <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">{option.hint}</p>
                     </button>
                   );
                 })}
@@ -248,10 +248,10 @@ export function RecipeGenerateDialog({
                 id="gen-meal-type"
                 value={mealType}
                 onChange={(e) => setMealType(e.target.value as RecipeMealType)}
-                className="h-9 w-full rounded-md border border-white/10 bg-white/[0.04] px-2 text-sm text-white outline-none focus:border-white/25"
+                className="h-9 w-full rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 text-sm text-[var(--workspace-shell-text)] outline-none focus:border-[color:var(--workspace-shell-border)]"
               >
                 {RECIPE_MEAL_TYPES.map((type) => (
-                  <option key={type} value={type} className="bg-[#0F1B35]">
+                  <option key={type} value={type} className="bg-[var(--ozer-surface-panel)]">
                     {mealTypeLabels[type]}
                   </option>
                 ))}
@@ -259,15 +259,15 @@ export function RecipeGenerateDialog({
             </div>
 
             {preferenceSummary.length > 0 ? (
-              <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3">
-                <p className="text-xs font-medium text-zinc-400">
+              <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
+                <p className="text-xs font-medium text-[var(--workspace-shell-text-muted)]">
                   Using saved preferences
                 </p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {preferenceSummary.map((item) => (
                     <span
                       key={item}
-                      className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[11px] capitalize text-zinc-300"
+                      className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[11px] capitalize text-[var(--workspace-shell-text-muted)]"
                     >
                       {item}
                     </span>
@@ -275,7 +275,7 @@ export function RecipeGenerateDialog({
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                 Tip: set dietary requirements in Preferences for better results.
               </p>
             )}
@@ -291,7 +291,7 @@ export function RecipeGenerateDialog({
               />
             </div>
 
-            <label className="flex cursor-pointer items-start gap-2 text-sm text-zinc-300">
+            <label className="flex cursor-pointer items-start gap-2 text-sm text-[var(--workspace-shell-text-muted)]">
               <Checkbox
                 checked={useSavedFavorites}
                 onCheckedChange={(value) => setUseSavedFavorites(value === true)}
@@ -316,7 +316,7 @@ export function RecipeGenerateDialog({
         ) : (
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm text-zinc-400">
+              <p className="text-sm text-[var(--workspace-shell-text-muted)]">
                 {selectedCount} of {generated.length} selected
               </p>
               <div className="flex gap-2">
@@ -324,7 +324,7 @@ export function RecipeGenerateDialog({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-8 text-zinc-400"
+                  className="h-8 text-[var(--workspace-shell-text-muted)]"
                   onClick={() => toggleAll(true)}
                 >
                   Select all
@@ -333,7 +333,7 @@ export function RecipeGenerateDialog({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-8 text-zinc-400"
+                  className="h-8 text-[var(--workspace-shell-text-muted)]"
                   onClick={() => toggleAll(false)}
                 >
                   Clear
@@ -355,8 +355,8 @@ export function RecipeGenerateDialog({
                     className={cn(
                       'flex cursor-pointer gap-3 rounded-xl border p-3 transition-colors',
                       checked
-                        ? 'border-[#5eead4]/30 bg-[#5eead4]/5'
-                        : 'border-white/8 bg-white/[0.02] opacity-80',
+                        ? 'border-[#FFE3DA]/30 bg-[#FFE3DA]/5'
+                        : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] opacity-80',
                     )}
                   >
                     <Checkbox
@@ -367,16 +367,16 @@ export function RecipeGenerateDialog({
                       className="mt-1"
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-white">{recipe.name}</p>
+                      <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">{recipe.name}</p>
                       {recipe.description ? (
-                        <p className="mt-0.5 text-xs text-zinc-400">{recipe.description}</p>
+                        <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">{recipe.description}</p>
                       ) : null}
                       {recipe.inspiration ? (
-                        <p className="mt-1 text-[11px] text-[#5eead4]/80">
+                        <p className="mt-1 text-[11px] text-[var(--ozer-accent-muted)]/80">
                           {recipe.inspiration}
                         </p>
                       ) : null}
-                      <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-zinc-500">
+                      <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-[var(--workspace-shell-text-muted)]">
                         {time ? <span>{time}</span> : null}
                         {recipe.servings ? <span>Serves {recipe.servings}</span> : null}
                         <span>{recipe.ingredients.length} ingredients</span>
@@ -386,7 +386,7 @@ export function RecipeGenerateDialog({
                           {recipe.tags.slice(0, 4).map((tag) => (
                             <span
                               key={tag}
-                              className="rounded-full bg-white/[0.06] px-1.5 py-0.5 capitalize text-zinc-400"
+                              className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-1.5 py-0.5 capitalize text-[var(--workspace-shell-text-muted)]"
                             >
                               {tag}
                             </span>
@@ -427,7 +427,7 @@ export function RecipeGenerateDialog({
               onClick={() => void handleGenerate()}
               disabled={isGenerating}
               style={{ backgroundColor: ACCENT }}
-              className="text-white hover:opacity-90"
+              className="text-[var(--workspace-shell-text)] hover:opacity-90"
             >
               {isGenerating ? (
                 <>
@@ -446,7 +446,7 @@ export function RecipeGenerateDialog({
               onClick={handleAddSelected}
               disabled={isPending || selectedCount === 0}
               style={{ backgroundColor: ACCENT }}
-              className="text-white hover:opacity-90"
+              className="text-[var(--workspace-shell-text)] hover:opacity-90"
             >
               {isPending
                 ? 'Adding…'

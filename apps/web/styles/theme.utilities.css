@@ -5,5 +5,13 @@
 }
 
 @utility workspace-btn-primary {
-  @apply inline-flex items-center justify-center rounded-xl bg-[var(--ozer-accent)] text-white transition-colors hover:bg-[var(--ozer-accent-hover)] disabled:opacity-50;
+  @apply inline-flex items-center justify-center rounded-xl bg-[var(--ozer-accent)] text-[var(--ozer-white)] transition-[transform,background-color] duration-[160ms] ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-[var(--ozer-accent-hover)] active:scale-[0.97] disabled:opacity-50;
+}
+
+@utility workspace-filter-active {
+  @apply bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)];
+}
+
+@utility workspace-card-hover {
+  @apply transition-[border-color,background-color] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:border-[var(--ozer-accent)]/30 hover:bg-[var(--workspace-shell-panel-hover)];
 }

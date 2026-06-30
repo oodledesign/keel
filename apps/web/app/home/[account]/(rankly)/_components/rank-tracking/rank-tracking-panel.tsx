@@ -91,7 +91,7 @@ const INTENT_LABELS: Record<KeywordIntent, string> = {
 const INTENT_STYLES: Record<KeywordIntent, string> = {
   informational: 'bg-blue-500/15 text-blue-200',
   commercial: 'bg-amber-500/15 text-amber-200',
-  transactional: 'bg-[var(--keel-teal)]/15 text-[var(--keel-teal)]',
+  transactional: 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]',
   navigational: 'bg-violet-500/15 text-violet-200',
 };
 
@@ -102,7 +102,7 @@ function IntentBadge({ intent }: { intent: string | null | undefined }) {
 
   const key = intent as KeywordIntent;
   const label = INTENT_LABELS[key] ?? intent;
-  const style = INTENT_STYLES[key] ?? 'bg-white/10 text-muted-foreground';
+  const style = INTENT_STYLES[key] ?? 'bg-[var(--workspace-shell-sidebar-accent)] text-muted-foreground';
 
   return (
     <span
@@ -181,7 +181,7 @@ function SortableHeader(props: {
       <button
         type="button"
         onClick={() => props.onSort(props.column)}
-        className={`inline-flex w-full items-center gap-1 font-medium uppercase tracking-wide transition-colors hover:text-white ${alignClass} ${active ? 'text-white' : ''}`}
+        className={`inline-flex w-full items-center gap-1 font-medium uppercase tracking-wide transition-colors hover:text-[var(--workspace-shell-text)] ${alignClass} ${active ? 'text-[var(--workspace-shell-text)]' : ''}`}
       >
         {props.label}
         <span className="text-[10px] tabular-nums opacity-80">
@@ -600,16 +600,16 @@ export function RankTrackingPanel(props: {
             <DialogTrigger asChild>
               <Button type="button">Add keywords</Button>
             </DialogTrigger>
-            <DialogContent className="border-white/8 bg-[#0F1923] text-white sm:max-w-lg">
+            <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[#0F1923] text-[var(--workspace-shell-text)] sm:max-w-lg">
               <DialogHeader>
                 <DialogTitle>Add keywords</DialogTitle>
-                <DialogDescription className="text-zinc-400">
+                <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
                   Enter one keyword per line — up to 500 at a time.
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={addKeywords} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="new-keywords" className="text-zinc-300">
+                  <Label htmlFor="new-keywords" className="text-[var(--workspace-shell-text-muted)]">
                     Keywords
                   </Label>
                   <Textarea
@@ -620,7 +620,7 @@ export function RankTrackingPanel(props: {
                     placeholder={
                       'best crm software\nproject management tools\ncustomer support platform'
                     }
-                    className="border-white/10 bg-white/5 font-mono text-sm text-white placeholder:text-zinc-600"
+                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] font-mono text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
                     autoComplete="off"
                   />
                   <p className="text-muted-foreground text-xs">
@@ -678,10 +678,10 @@ export function RankTrackingPanel(props: {
         </div>
       </div>
 
-      <div className="rounded-lg border border-white/10 bg-black/20 px-4 py-3 text-sm">
+      <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-3 text-sm">
         <p className="text-muted-foreground">
           Manual refresh est.{' '}
-          <strong className="text-white">{formatUsdCost(props.estimatedCostUsd)}</strong>{' '}
+          <strong className="text-[var(--workspace-shell-text)]">{formatUsdCost(props.estimatedCostUsd)}</strong>{' '}
           DataForSEO API spend for {props.keywordCount} keyword
           {props.keywordCount === 1 ? '' : 's'}
           {deviceCostLabel}.
@@ -708,13 +708,13 @@ export function RankTrackingPanel(props: {
       ) : null}
 
       {displayRows.length === 0 ? (
-        <p className="text-muted-foreground rounded-lg border border-white/10 bg-black/10 px-4 py-6 text-sm">
+        <p className="text-muted-foreground rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-6 text-sm">
           No keywords yet. Click Add keywords, then refresh ranks to pull positions from Google.
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-white/10">
+        <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
           <table className="w-full min-w-[62rem] text-left text-sm">
-            <thead className="border-b border-white/10 bg-black/20 text-xs uppercase tracking-wide text-muted-foreground">
+            <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
                 <SortableHeader
                   label="Keyword"
@@ -789,7 +789,7 @@ export function RankTrackingPanel(props: {
                 return (
                   <tr
                     key={`${keyword.id}-${device}`}
-                    className="border-b border-white/5 last:border-0"
+                    className="border-b border-[color:var(--workspace-shell-border)] last:border-0"
                   >
                     <td className="px-4 py-3">{keyword.keyword}</td>
                     <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
@@ -810,7 +810,7 @@ export function RankTrackingPanel(props: {
                     <td
                       className={
                         change?.startsWith('▲')
-                          ? 'px-4 py-3 text-right text-[var(--keel-teal)] tabular-nums'
+                          ? 'px-4 py-3 text-right text-[var(--ozer-accent)] tabular-nums'
                           : change?.startsWith('▼')
                             ? 'px-4 py-3 text-right text-red-400 tabular-nums'
                             : 'px-4 py-3 text-right text-muted-foreground'

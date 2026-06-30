@@ -80,9 +80,9 @@ export function TaskAssignmentCombobox({
           role="combobox"
           aria-expanded={open}
           className={cn(
-            'h-9 w-full justify-between border-white/10 bg-white/5 font-normal text-white hover:bg-white/10 hover:text-white',
-            !selected && !isWorkspaceMode && value === 'none' && 'text-zinc-400',
-            !selected && isWorkspaceMode && 'text-zinc-500',
+            'h-9 w-full justify-between border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] font-normal text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
+            !selected && !isWorkspaceMode && value === 'none' && 'text-[var(--workspace-shell-text-muted)]',
+            !selected && isWorkspaceMode && 'text-[var(--workspace-shell-text-muted)]',
           )}
         >
           <span className="truncate">{displayLabel}</span>
@@ -90,13 +90,13 @@ export function TaskAssignmentCombobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-[var(--radix-popover-trigger-width)] border-white/10 bg-[#1A2535] p-0"
+        className="w-[var(--radix-popover-trigger-width)] border-[color:var(--workspace-shell-border)] bg-[#1A2535] p-0"
         align="start"
       >
-        <Command className="bg-[#1A2535] text-white">
+        <Command className="bg-[#1A2535] text-[var(--workspace-shell-text)]">
           <CommandInput
             placeholder="Search projects and clients…"
-            className="border-white/10 text-white placeholder:text-zinc-500"
+            className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
           />
           <CommandList className="max-h-[min(50dvh,16rem)]">
             <CommandEmpty>No matches found.</CommandEmpty>
@@ -109,7 +109,7 @@ export function TaskAssignmentCombobox({
                     onValueChange('none');
                     setOpen(false);
                   }}
-                  className="text-zinc-200 aria-selected:bg-white/10"
+                  className="text-[var(--workspace-shell-text)] aria-selected:bg-[var(--workspace-shell-sidebar-accent)]"
                 >
                   <Check
                     className={cn(
@@ -137,7 +137,7 @@ export function TaskAssignmentCombobox({
                       onValueChange(project.id);
                       setOpen(false);
                     }}
-                    className="text-zinc-200 aria-selected:bg-white/10"
+                    className="text-[var(--workspace-shell-text)] aria-selected:bg-[var(--workspace-shell-sidebar-accent)]"
                   >
                     <Check
                       className={cn(
@@ -162,7 +162,7 @@ export function TaskAssignmentCombobox({
             {isWorkspaceMode && clients.length > 0 ? (
               <>
                 {projectGroups.length > 0 ? (
-                  <CommandSeparator className="bg-white/10" />
+                  <CommandSeparator className="bg-[var(--workspace-shell-sidebar-accent)]" />
                 ) : null}
                 <CommandGroup heading="Clients">
                   {clients.map((client) => (
@@ -173,7 +173,7 @@ export function TaskAssignmentCombobox({
                         onValueChange(client.id);
                         setOpen(false);
                       }}
-                      className="text-zinc-200 aria-selected:bg-white/10"
+                      className="text-[var(--workspace-shell-text)] aria-selected:bg-[var(--workspace-shell-sidebar-accent)]"
                     >
                       <Check
                         className={cn(
@@ -191,7 +191,7 @@ export function TaskAssignmentCombobox({
             {!isWorkspaceMode && areas.length > 0 ? (
               <>
                 {projectGroups.length > 0 ? (
-                  <CommandSeparator className="bg-white/10" />
+                  <CommandSeparator className="bg-[var(--workspace-shell-sidebar-accent)]" />
                 ) : null}
                 <CommandGroup heading="Life areas">
                   {areas.map((area) => (
@@ -202,7 +202,7 @@ export function TaskAssignmentCombobox({
                         onValueChange(area.id);
                         setOpen(false);
                       }}
-                      className="text-zinc-200 aria-selected:bg-white/10"
+                      className="text-[var(--workspace-shell-text)] aria-selected:bg-[var(--workspace-shell-sidebar-accent)]"
                     >
                       <Check
                         className={cn(

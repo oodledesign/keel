@@ -29,8 +29,8 @@ export function PlanningModeToggle({
 }: Props) {
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-white/55">
-        <CalendarDays className="h-4 w-4 text-[#5eead4]" />
+      <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-[var(--workspace-shell-text)]/55">
+        <CalendarDays className="h-4 w-4 text-[var(--ozer-accent-muted)]" />
         Planning mode
       </div>
       <div className="grid grid-cols-2 gap-2">
@@ -40,9 +40,9 @@ export function PlanningModeToggle({
             type="button"
             variant="outline"
             className={cn(
-              'border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white',
+              'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/70 hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
               mode === value &&
-                'border-[var(--keel-teal)]/50 bg-[var(--keel-teal)]/15 text-[#5eead4]',
+                'border-[var(--ozer-accent)]/50 bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]',
             )}
             onClick={() => onModeChange(value)}
           >
@@ -56,7 +56,7 @@ export function PlanningModeToggle({
         onChange={(e) =>
           onDateChange(new Date(`${e.target.value}T12:00:00`).toISOString())
         }
-        className="border-white/10 bg-white/5 text-white"
+        className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
       />
     </div>
   );

@@ -71,7 +71,7 @@ export default async function FeedflowWidgetsPage({
 
         <Link
           href={workAccountPath(workPaths.accountFeedflowReviews, account)}
-          className="inline-block rounded-lg border border-white/10 bg-black/10 px-4 py-2 text-sm transition hover:border-white/20"
+          className="inline-block rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-2 text-sm transition hover:border-[color:var(--workspace-shell-border)]"
         >
           Back to reviews overview
         </Link>

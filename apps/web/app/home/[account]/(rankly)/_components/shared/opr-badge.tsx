@@ -16,7 +16,7 @@ export function OprBadge({
       ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
       : score >= 4
         ? 'border-amber-500/40 bg-amber-500/10 text-amber-200'
-        : 'border-white/10 bg-white/5 text-muted-foreground';
+        : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-muted-foreground';
 
   return (
     <span

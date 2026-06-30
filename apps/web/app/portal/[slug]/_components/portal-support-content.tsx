@@ -82,40 +82,40 @@ export function PortalSupportDetailContent({
 
   return (
     <div className="space-y-6">
-      <Link href={listHref} className="text-sm text-slate-500 hover:text-slate-900">
+      <Link href={listHref} className="text-sm text-[var(--ozer-text-on-light-muted)] hover:text-[var(--ozer-text-on-light)]">
         ← Back to support
       </Link>
 
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-sm text-slate-500">
+          <span className="font-mono text-sm text-[var(--ozer-text-on-light-muted)]">
             {formatPortalTicketNumber(ticket.ticketNumber)}
           </span>
           <PortalTicketStatusBadge status={ticket.status} />
           <PortalTicketPriorityBadge priority={ticket.priority} />
         </div>
-        <h1 className="text-2xl font-semibold text-slate-900">{ticket.title}</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="text-2xl font-semibold text-[var(--ozer-text-on-light)]">{ticket.title}</h1>
+        <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
           Opened {formatPortalDate(ticket.createdAt)}
         </p>
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white">
         <div className="border-b border-slate-200 px-4 py-3">
-          <h2 className="text-sm font-semibold text-slate-900">Conversation</h2>
+          <h2 className="text-sm font-semibold text-[var(--ozer-text-on-light)]">Conversation</h2>
         </div>
 
         <div className="max-h-[480px] space-y-3 overflow-y-auto px-4 py-4">
           {messages.length === 0 ? (
-            <p className="text-sm text-slate-500">No messages yet.</p>
+            <p className="text-sm text-[var(--ozer-text-on-light-muted)]">No messages yet.</p>
           ) : (
             messages.map((message) => (
               <div
                 key={message.id}
                 className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3"
               >
-                <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                  <span className="font-medium text-slate-700">
+                <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-[var(--ozer-text-on-light-muted)]">
+                  <span className="font-medium text-[var(--ozer-text-on-light-muted)]">
                     {message.authorName ?? 'Team member'}
                   </span>
                   <span>{formatPortalDate(message.createdAt)}</span>
@@ -148,7 +148,7 @@ export function PortalSupportDetailContent({
             </div>
           </form>
         ) : (
-          <div className="border-t border-slate-200 px-4 py-4 text-sm text-slate-500">
+          <div className="border-t border-slate-200 px-4 py-4 text-sm text-[var(--ozer-text-on-light-muted)]">
             This ticket is closed. Open a new ticket if you need further help.
           </div>
         )}

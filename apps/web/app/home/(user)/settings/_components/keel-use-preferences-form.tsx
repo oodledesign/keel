@@ -92,16 +92,16 @@ export function KeelUsePreferencesForm(props: {
               onClick={() => setters[key](!on)}
               className={cn(
                 'flex w-full items-start gap-4 rounded-2xl border px-4 py-3 text-left transition-colors',
-                'border-white/[0.08] bg-[var(--workspace-shell-panel)]',
+                'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]',
                 on
-                  ? 'border-[var(--keel-teal)]/40 ring-1 ring-[var(--keel-teal)]/25'
-                  : 'hover:border-white/[0.12]',
+                  ? 'border-[var(--ozer-accent)]/40 ring-1 ring-[var(--ozer-accent)]/25'
+                  : 'hover:border-[color:var(--workspace-shell-border)]',
               )}
             >
               <span
                 className={cn(
                   'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
-                  on ? 'bg-[var(--keel-teal)]/20 text-[var(--keel-teal)]' : 'bg-white/[0.06]',
+                  on ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]' : 'bg-[var(--workspace-shell-sidebar-accent)]',
                 )}
               >
                 <Icon className="h-5 w-5" aria-hidden />
@@ -124,7 +124,7 @@ export function KeelUsePreferencesForm(props: {
           type="button"
           disabled={pending}
           onClick={handleSave}
-          className="bg-[var(--keel-teal)] text-[#060C18] hover:bg-[var(--keel-teal)]/90"
+          className="bg-[var(--ozer-accent)] text-[#060C18] hover:bg-[var(--ozer-accent)]/90"
         >
           {pending ? 'Saving…' : 'Save preferences'}
         </Button>
@@ -132,7 +132,7 @@ export function KeelUsePreferencesForm(props: {
           <span
             className={
               message === 'Saved.'
-                ? 'text-sm text-[var(--keel-teal)]'
+                ? 'text-sm text-[var(--ozer-accent)]'
                 : 'text-sm text-amber-400'
             }
           >

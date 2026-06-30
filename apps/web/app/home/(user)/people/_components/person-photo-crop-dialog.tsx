@@ -155,7 +155,7 @@ export function PersonPhotoCropDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-white/10 bg-[#0F1B35] text-white sm:max-w-md">
+      <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] text-[var(--workspace-shell-text)] sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Adjust photo</DialogTitle>
         </DialogHeader>
@@ -164,7 +164,7 @@ export function PersonPhotoCropDialog({
           <div
             className={cn(
               'relative mx-auto touch-none overflow-hidden rounded-xl',
-              'border border-white/10 bg-[#0B132B]',
+              'border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]',
             )}
             style={{ width: VIEWPORT_SIZE, height: VIEWPORT_SIZE }}
             onPointerDown={onPointerDown}
@@ -187,7 +187,7 @@ export function PersonPhotoCropDialog({
                 }}
               />
             ) : (
-              <div className="flex h-full items-center justify-center text-sm text-zinc-500">
+              <div className="flex h-full items-center justify-center text-sm text-[var(--workspace-shell-text-muted)]">
                 Loading…
               </div>
             )}
@@ -201,7 +201,7 @@ export function PersonPhotoCropDialog({
           <div className="space-y-2">
             <Label
               htmlFor="photo-zoom"
-              className="flex items-center gap-2 text-xs text-zinc-400"
+              className="flex items-center gap-2 text-xs text-[var(--workspace-shell-text-muted)]"
             >
               <ZoomIn className="h-3.5 w-3.5" />
               Drag to reposition · use zoom to crop
@@ -214,11 +214,11 @@ export function PersonPhotoCropDialog({
               step={0.01}
               value={zoom}
               onChange={(event) => setZoom(Number(event.target.value))}
-              className="w-full accent-[var(--keel-teal)]"
+              className="w-full accent-[var(--ozer-accent)]"
             />
           </div>
 
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
             Saved as a square 512×512 JPEG with light compression.
           </p>
         </div>
@@ -227,14 +227,14 @@ export function PersonPhotoCropDialog({
           <Button
             type="button"
             variant="ghost"
-            className="text-zinc-300 hover:bg-white/10 hover:text-white"
+            className="text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
             onClick={() => onOpenChange(false)}
           >
             Cancel
           </Button>
           <Button
             type="button"
-            className="bg-[var(--keel-teal)] hover:bg-[#238b7f]"
+            className="bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]"
             disabled={!image || saving}
             onClick={() => void handleSave()}
           >

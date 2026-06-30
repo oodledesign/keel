@@ -20,7 +20,7 @@ export function PostHeader({ post }: { post: Cms.ContentItem }) {
 
           <h1
             className={
-              'font-heading text-2xl font-medium tracking-tighter xl:text-4xl dark:text-white'
+              'font-heading text-2xl font-medium tracking-tighter xl:text-4xl dark:text-[var(--workspace-shell-text)]'
             }
           >
             {title}

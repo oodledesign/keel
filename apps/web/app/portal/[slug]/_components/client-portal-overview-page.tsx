@@ -46,10 +46,10 @@ export default async function ClientPortalOverviewPage({
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900">
+        <h2 className="text-2xl font-semibold text-[var(--ozer-text-on-light)]">
           Welcome back, {ctx.displayName}
         </h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-[var(--ozer-text-on-light-muted)]">
           Here&apos;s what&apos;s happening with your account.
         </p>
       </div>
@@ -58,13 +58,13 @@ export default async function ClientPortalOverviewPage({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-base font-medium">Website</CardTitle>
-            <Globe className="h-4 w-4 text-slate-400" />
+            <Globe className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
           </CardHeader>
           <CardContent className="space-y-3">
             {overview.website ? (
               <>
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-medium text-slate-900">
+                  <p className="font-medium text-[var(--ozer-text-on-light)]">
                     {overview.website.domain ?? overview.website.name}
                   </p>
                   <WebsiteStatusBadge
@@ -86,7 +86,7 @@ export default async function ClientPortalOverviewPage({
                 </div>
               </>
             ) : (
-              <p className="text-sm text-slate-500">No website linked yet.</p>
+              <p className="text-sm text-[var(--ozer-text-on-light-muted)]">No website linked yet.</p>
             )}
           </CardContent>
         </Card>
@@ -94,13 +94,13 @@ export default async function ClientPortalOverviewPage({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-base font-medium">Support</CardTitle>
-            <LifeBuoy className="h-4 w-4 text-slate-400" />
+            <LifeBuoy className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-3xl font-semibold text-slate-900">
+            <p className="text-3xl font-semibold text-[var(--ozer-text-on-light)]">
               {overview.openTicketCount}
             </p>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
               {overview.openTicketCount === 1 ? 'open ticket' : 'open tickets'}
             </p>
             <Button asChild size="sm" variant="outline">
@@ -112,12 +112,12 @@ export default async function ClientPortalOverviewPage({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-base font-medium">Current plan</CardTitle>
-            <CreditCard className="h-4 w-4 text-slate-400" />
+            <CreditCard className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
           </CardHeader>
           <CardContent className="space-y-2">
             {overview.subscription ? (
               <>
-                <p className="font-medium text-slate-900">
+                <p className="font-medium text-[var(--ozer-text-on-light)]">
                   {overview.subscription.planName}
                 </p>
                 <p className="text-sm text-slate-600">
@@ -127,7 +127,7 @@ export default async function ClientPortalOverviewPage({
                   )}
                   /month
                 </p>
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
                   Next billing:{' '}
                   {formatPortalDate(overview.subscription.nextBillingDate)}
                 </p>
@@ -136,7 +136,7 @@ export default async function ClientPortalOverviewPage({
                 </Button>
               </>
             ) : (
-              <p className="text-sm text-slate-500">No active subscription.</p>
+              <p className="text-sm text-[var(--ozer-text-on-light-muted)]">No active subscription.</p>
             )}
           </CardContent>
         </Card>
@@ -145,15 +145,15 @@ export default async function ClientPortalOverviewPage({
       {overview.notices.length > 0 ? (
         <section className="space-y-4">
           <div className="flex items-center gap-2">
-            <Megaphone className="h-4 w-4 text-slate-400" />
-            <h3 className="text-lg font-semibold text-slate-900">Noticeboard</h3>
+            <Megaphone className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
+            <h3 className="text-lg font-semibold text-[var(--ozer-text-on-light)]">Noticeboard</h3>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             {overview.notices.map((notice) => (
               <Card key={notice.id}>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">{notice.title}</CardTitle>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-[var(--ozer-text-on-light-muted)]">
                     {formatPortalDate(notice.createdAt)}
                   </p>
                 </CardHeader>

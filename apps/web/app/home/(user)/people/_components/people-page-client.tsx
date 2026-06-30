@@ -41,7 +41,7 @@ import { PersonAvatar } from './person-avatar';
 import { PersonFormDialog } from './person-form-dialog';
 
 const panelClass =
-  'rounded-2xl border border-white/[0.08] bg-[var(--workspace-shell-panel)]';
+  'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
 
 type SortKey = 'recent' | 'name' | 'catchup' | 'circle';
 
@@ -139,19 +139,19 @@ export function PeoplePageClient({ people, viewer }: Props) {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 px-4 pb-12 pt-2 text-white md:px-0">
-      <div className="flex flex-col gap-4 border-b border-white/10 pb-6 sm:flex-row sm:items-end sm:justify-between">
+    <div className="flex min-h-0 flex-1 flex-col gap-6 px-4 pb-12 pt-2 text-[var(--workspace-shell-text)] md:px-0">
+      <div className="flex flex-col gap-4 border-b border-[color:var(--workspace-shell-border)] pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
             People
           </h1>
-          <p className="mt-1 max-w-xl text-sm text-zinc-400">
+          <p className="mt-1 max-w-xl text-sm text-[var(--workspace-shell-text-muted)]">
             Stay close to the people who matter — organise your circle of trust,
             track dates, gift ideas, and catchups.
           </p>
         </div>
         <Button
-          className="bg-[var(--keel-teal)] hover:bg-[#238b7f]"
+          className="bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]"
           onClick={() => setShowCreate(true)}
         >
           <Plus className="mr-2 h-4 w-4" />
@@ -161,19 +161,19 @@ export function PeoplePageClient({ people, viewer }: Props) {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
           <Input
-            className="border-white/10 bg-[var(--workspace-shell-panel)] pl-9 text-white placeholder:text-zinc-500"
+            className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] pl-9 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
             placeholder="Search by name or relationship…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         <Select value={circleFilter} onValueChange={(v) => setCircleFilter(v as CircleFilter)}>
-          <SelectTrigger className="w-full border-white/10 bg-[var(--workspace-shell-panel)] text-white sm:w-[170px]">
+          <SelectTrigger className="w-full border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:w-[170px]">
             <SelectValue placeholder="Circle" />
           </SelectTrigger>
-          <SelectContent className="border-white/10 bg-[#0F1B35] text-white">
+          <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] text-[var(--workspace-shell-text)]">
             <SelectItem value="all">All circles</SelectItem>
             {CIRCLE_TIER_OPTIONS.map((option) => (
               <SelectItem key={option.value} value={option.value}>
@@ -184,10 +184,10 @@ export function PeoplePageClient({ people, viewer }: Props) {
         </Select>
         {viewMode === 'list' ? (
           <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
-            <SelectTrigger className="w-full border-white/10 bg-[var(--workspace-shell-panel)] text-white sm:w-[180px]">
+            <SelectTrigger className="w-full border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:w-[180px]">
               <SelectValue placeholder="Sort" />
             </SelectTrigger>
-            <SelectContent className="border-white/10 bg-[#0F1B35] text-white">
+            <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] text-[var(--workspace-shell-text)]">
               <SelectItem value="circle">By circle</SelectItem>
               <SelectItem value="recent">Recently updated</SelectItem>
               <SelectItem value="name">Name A–Z</SelectItem>
@@ -195,15 +195,15 @@ export function PeoplePageClient({ people, viewer }: Props) {
             </SelectContent>
           </Select>
         ) : null}
-        <div className="inline-flex rounded-lg border border-white/10 bg-[var(--workspace-shell-panel)] p-1">
+        <div className="inline-flex rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-1">
           <button
             type="button"
             onClick={() => setViewMode('orbit')}
             className={cn(
               'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition',
               viewMode === 'orbit'
-                ? 'bg-[var(--keel-teal)] text-[#0B132B]'
-                : 'text-zinc-400 hover:text-white',
+                ? 'bg-[var(--ozer-accent)] text-[var(--ozer-plum-950)]'
+                : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
             )}
             aria-pressed={viewMode === 'orbit'}
           >
@@ -216,8 +216,8 @@ export function PeoplePageClient({ people, viewer }: Props) {
             className={cn(
               'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition',
               viewMode === 'list'
-                ? 'bg-[var(--keel-teal)] text-[#0B132B]'
-                : 'text-zinc-400 hover:text-white',
+                ? 'bg-[var(--ozer-accent)] text-[var(--ozer-plum-950)]'
+                : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
             )}
             aria-pressed={viewMode === 'list'}
           >
@@ -234,22 +234,22 @@ export function PeoplePageClient({ people, viewer }: Props) {
             'flex flex-col items-center justify-center px-6 py-16 text-center',
           )}
         >
-          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-[var(--keel-teal)]/15 text-[#5eead4]">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]">
             <UserRound className="h-7 w-7" />
           </div>
-          <h2 className="text-lg font-medium text-white">
+          <h2 className="text-lg font-medium text-[var(--workspace-shell-text)]">
             {people.length === 0
               ? 'Add someone you want to stay close to'
               : 'No matches'}
           </h2>
-          <p className="mt-2 max-w-sm text-sm text-zinc-400">
+          <p className="mt-2 max-w-sm text-sm text-[var(--workspace-shell-text-muted)]">
             {people.length === 0
               ? 'Track birthdays, gift ideas, and what you talked about last time you met.'
               : 'Try a different search term.'}
           </p>
           {people.length === 0 && (
             <Button
-              className="mt-6 bg-[var(--keel-teal)] hover:bg-[#238b7f]"
+              className="mt-6 bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]"
               onClick={() => setShowCreate(true)}
             >
               <Plus className="mr-2 h-4 w-4" />
@@ -265,10 +265,10 @@ export function PeoplePageClient({ people, viewer }: Props) {
             <section key={group.tier}>
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <CircleTierBadge tier={group.tier} showFullLabel />
-                <span className="text-sm text-zinc-500">
+                <span className="text-sm text-[var(--workspace-shell-text-muted)]">
                   {group.meta.description}
                 </span>
-                <span className="text-xs text-zinc-600">
+                <span className="text-xs text-[var(--workspace-shell-text-muted)]">
                   ({group.people.length})
                 </span>
               </div>
@@ -306,7 +306,7 @@ function PersonCard({ person }: { person: PersonListItem }) {
       href={href}
       className={cn(
         panelClass,
-        'group block p-5 transition-colors hover:border-white/15 hover:bg-white/[0.02]',
+        'group block p-5 transition-colors hover:border-[color:var(--workspace-shell-border)] hover:bg-[var(--workspace-shell-sidebar-accent)]',
       )}
     >
       <div className="flex items-start gap-3">
@@ -317,17 +317,17 @@ function PersonCard({ person }: { person: PersonListItem }) {
         />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="truncate text-base font-semibold text-white group-hover:text-[#5eead4]">
+            <h3 className="truncate text-base font-semibold text-[var(--workspace-shell-text)] group-hover:text-[var(--ozer-accent-muted)]">
               {name}
             </h3>
             <CircleTierBadge tier={person.circle_tier} />
             {person.relationship_label && (
-              <span className="rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-zinc-400">
+              <span className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[11px] text-[var(--workspace-shell-text-muted)]">
                 {person.relationship_label}
               </span>
             )}
           </div>
-          <p className="mt-1 text-xs text-zinc-500">
+          <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
             Last met {formatLastMet(person.last_catchup_on)}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -362,7 +362,7 @@ function Badge({
   const cls =
     tone === 'amber'
       ? 'bg-amber-500/10 text-amber-300'
-      : 'bg-[var(--keel-teal)]/10 text-[#5eead4]';
+      : 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]';
 
   return (
     <span

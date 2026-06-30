@@ -48,7 +48,7 @@ export function MealDayEditDialog({
 }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-white/10 bg-[var(--workspace-shell-panel)] text-white sm:max-w-md">
+      <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-md">
         {open && date ? (
           <MealDayEditForm
             key={`${date}-${entry?.updated_at ?? 'new'}`}
@@ -142,7 +142,7 @@ function MealDayEditForm({
     <>
       <DialogHeader>
         <DialogTitle>{formatDateLabel(date)}</DialogTitle>
-        <p className="text-xs text-zinc-400">{weekdayLabel(date)} · Dinner</p>
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">{weekdayLabel(date)} · Dinner</p>
       </DialogHeader>
 
       <div className="space-y-3">
@@ -150,16 +150,16 @@ function MealDayEditForm({
           <select
             value={recipeId ?? ''}
             onChange={(e) => handleRecipeSelect(e.target.value)}
-            className="h-9 w-full rounded-md border border-white/10 bg-white/[0.04] px-2 text-sm text-white outline-none focus:border-white/25"
+            className="h-9 w-full rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 text-sm text-[var(--workspace-shell-text)] outline-none focus:border-[color:var(--workspace-shell-border)]"
           >
-            <option value="" className="bg-[#0F1B35]">
+            <option value="" className="bg-[var(--ozer-surface-panel)]">
               Pick from library or type below
             </option>
             {recipes.map((recipe) => (
               <option
                 key={recipe.id}
                 value={recipe.id}
-                className="bg-[#0F1B35]"
+                className="bg-[var(--ozer-surface-panel)]"
               >
                 {recipe.name}
               </option>
@@ -184,7 +184,7 @@ function MealDayEditForm({
             variant="ghost"
             onClick={handleClear}
             disabled={isPending}
-            className="mr-auto text-zinc-400 hover:text-rose-300"
+            className="mr-auto text-[var(--workspace-shell-text-muted)] hover:text-rose-300"
           >
             Clear
           </Button>
@@ -202,7 +202,7 @@ function MealDayEditForm({
           onClick={handleSave}
           disabled={isPending}
           style={{ backgroundColor: ACCENT }}
-          className="text-white hover:opacity-90"
+          className="text-[var(--workspace-shell-text)] hover:opacity-90"
         >
           {isPending ? 'Saving…' : 'Save'}
         </Button>

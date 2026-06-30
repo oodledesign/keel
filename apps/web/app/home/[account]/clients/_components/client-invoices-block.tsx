@@ -48,7 +48,7 @@ function getDisplayStatus(invoice: InvoiceRow) {
 
 function getStatusClasses(status: string) {
   if (status === 'paid') {
-    return 'bg-[var(--keel-teal)]/15 text-[#5eead4]';
+    return 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]';
   }
 
   if (status === 'overdue') {
@@ -59,7 +59,7 @@ function getStatusClasses(status: string) {
     return 'bg-sky-500/15 text-sky-300';
   }
 
-  return 'bg-zinc-700/70 text-zinc-200';
+  return 'bg-[var(--workspace-shell-panel-hover)]/70 text-[var(--workspace-shell-text)]';
 }
 
 export function ClientInvoicesBlock({
@@ -96,13 +96,13 @@ export function ClientInvoicesBlock({
   ).replace('/[id]/edit', '');
 
   return (
-    <div className="space-y-3 border-t border-zinc-700 pt-4">
-      <h3 className="text-sm font-semibold text-white">Invoices</h3>
+    <div className="space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-4">
+      <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Invoices</h3>
 
       {loading ? (
-        <p className="text-sm text-zinc-500">Loading…</p>
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">Loading…</p>
       ) : invoices.length === 0 ? (
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           No invoices linked to this client yet.
         </p>
       ) : (
@@ -114,15 +114,15 @@ export function ClientInvoicesBlock({
               <li key={invoice.id}>
                 <Link
                   href={`${invoiceEditBase}/${invoice.id}/edit`}
-                  className="flex items-center gap-3 rounded-md border border-zinc-700 bg-[var(--workspace-shell-panel)] px-3 py-2 text-sm transition hover:border-zinc-600 hover:bg-[var(--workspace-shell-panel-hover)]"
+                  className="flex items-center gap-3 rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 py-2 text-sm transition hover:border-[color:var(--workspace-shell-border)] hover:bg-[var(--workspace-shell-panel-hover)]"
                 >
-                  <ReceiptText className="h-4 w-4 shrink-0 text-zinc-400" />
+                  <ReceiptText className="h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]" />
 
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-white">
+                    <p className="truncate font-medium text-[var(--workspace-shell-text)]">
                       {invoice.invoice_number ?? 'Draft invoice'}
                     </p>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                       {displayStatus === 'paid'
                         ? `Paid ${formatDate(invoice.paid_at)}`
                         : `Due ${formatDate(invoice.due_at)}`}
@@ -135,7 +135,7 @@ export function ClientInvoicesBlock({
                     {displayStatus}
                   </span>
 
-                  <span className="shrink-0 font-medium text-white">
+                  <span className="shrink-0 font-medium text-[var(--workspace-shell-text)]">
                     {formatPence(invoice.total_pence)}
                   </span>
                 </Link>

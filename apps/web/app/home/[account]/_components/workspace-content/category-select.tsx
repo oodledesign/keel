@@ -77,13 +77,13 @@ export function CategorySelect({
   return (
     <div className="space-y-3">
       <div className="space-y-2">
-        <Label className="text-zinc-300">Category</Label>
+        <Label className="text-[var(--workspace-shell-text-muted)]">Category</Label>
         <Select
           value={value}
           onValueChange={(v) => onChange(v as NoteFileCategory)}
           disabled={disabled || pending}
         >
-          <SelectTrigger className="border-white/10 bg-[var(--workspace-shell-panel)] text-white">
+          <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -107,15 +107,15 @@ export function CategorySelect({
       </div>
 
       {canAddCustom ? (
-        <div className="space-y-2 border-t border-white/8 pt-3">
-          <Label className="text-zinc-400">Custom category</Label>
+        <div className="space-y-2 border-t border-[color:var(--workspace-shell-border)] pt-3">
+          <Label className="text-[var(--workspace-shell-text-muted)]">Custom category</Label>
           <div className="flex gap-2">
             <Input
               value={newLabel}
               onChange={(e) => setNewLabel(e.target.value)}
               placeholder="e.g. Research"
               disabled={disabled || pending}
-              className="border-white/10 bg-[var(--workspace-shell-panel)] text-white"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
               onKeyDown={(event) => {
                 if (event.key === 'Enter') {
                   event.preventDefault();
@@ -127,7 +127,7 @@ export function CategorySelect({
               type="button"
               size="icon"
               variant="outline"
-              className="shrink-0 border-white/10"
+              className="shrink-0 border-[color:var(--workspace-shell-border)]"
               disabled={disabled || pending || !newLabel.trim()}
               onClick={addCustom}
               aria-label="Add category"
@@ -149,7 +149,7 @@ export function CategoryBadge({
   customCategories?: CustomNoteCategory[];
 }) {
   return (
-    <span className="rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-medium capitalize text-zinc-300">
+    <span className="rounded-md bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[10px] font-medium capitalize text-[var(--workspace-shell-text-muted)]">
       {getNoteCategoryLabel(category, customCategories)}
     </span>
   );

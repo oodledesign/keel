@@ -1,6 +1,8 @@
 import { SitePageHeader } from '~/(marketing)/_components/site-page-header';
 import PricingSection from '~/(marketing)/_components/pricing-section';
-import { KeelPricingPage } from '~/(marketing)/pricing/_components/keel-pricing-page';
+import { cn } from '@kit/ui/utils';
+import { marketingShellClass } from '~/lib/marketing/marketing-ui';
+import { OzerPricingPage } from '~/(marketing)/pricing/_components/ozer-pricing-page';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
@@ -18,7 +20,7 @@ async function PricingPage() {
   const { t } = await createI18nServerInstance();
 
   return (
-    <div className="relative overflow-hidden bg-[radial-gradient(circle_at_15%_10%,rgba(42,157,143,0.18),transparent_45%),radial-gradient(circle_at_85%_0%,rgba(37,99,235,0.22),transparent_42%),linear-gradient(180deg,#05050b_0%,#080711_45%,#070612_100%)] text-white">
+    <div className={cn('relative overflow-hidden', marketingShellClass)}>
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_22%)]" />
       <div className="relative flex flex-col space-y-8">
         <SitePageHeader
@@ -29,8 +31,8 @@ async function PricingPage() {
         <div className="container mx-auto px-4 pb-8 xl:pb-16">
           <PricingSection />
 
-          <div className="mt-16 border-t border-white/10 pt-16">
-            <KeelPricingPage />
+          <div className="mt-16 border-t border-[color:var(--workspace-shell-border)] pt-16">
+            <OzerPricingPage />
           </div>
         </div>
       </div>

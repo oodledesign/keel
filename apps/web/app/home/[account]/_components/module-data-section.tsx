@@ -22,7 +22,7 @@ export function ModuleDataSection(props: ModuleDataSectionProps) {
 
 export function ModuleEmptyState(props: { message: string }) {
   return (
-    <p className="text-muted-foreground rounded-lg border border-white/10 bg-black/10 px-4 py-6 text-sm">
+    <p className="text-muted-foreground rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-6 text-sm">
       {props.message}
     </p>
   );

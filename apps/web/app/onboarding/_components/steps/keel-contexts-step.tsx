@@ -86,10 +86,10 @@ export function KeelContextsStep({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-white">
+        <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
           How do you want to use Ozer?
         </h2>
-        <p className="mt-1 text-sm text-zinc-400">
+        <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
           Not everyone is here for work — pick anything that fits. You can change
           this anytime in Settings.
         </p>
@@ -105,18 +105,18 @@ export function KeelContextsStep({
               onClick={() => setters[key](!on)}
               className={cn(
                 'flex w-full items-start gap-4 rounded-2xl border px-4 py-4 text-left transition-colors',
-                'border-white/[0.08] bg-[#122033] shadow-[0_18px_50px_rgba(4,10,24,0.24)]',
+                'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]',
                 on
-                  ? 'border-[var(--keel-teal)]/40 ring-1 ring-[var(--keel-teal)]/30'
-                  : 'hover:border-white/[0.12] hover:bg-[#122033]/90',
+                  ? 'border-[var(--ozer-accent)]/40 ring-1 ring-[var(--ozer-accent)]/30'
+                  : 'hover:border-[color:var(--workspace-shell-border)] hover:bg-[var(--workspace-shell-panel)]/90',
               )}
             >
               <span
                 className={cn(
                   'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl',
                   on
-                    ? 'bg-[var(--keel-teal)]/20 text-[var(--keel-teal)]'
-                    : 'bg-white/[0.06] text-[var(--workspace-shell-text-muted)]',
+                    ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]'
+                    : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]',
                 )}
               >
                 <Icon className="h-5 w-5" aria-hidden />
@@ -133,8 +133,8 @@ export function KeelContextsStep({
                 className={cn(
                   'mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs font-bold',
                   on
-                    ? 'border-[var(--keel-teal)] bg-[var(--keel-teal)] text-[#060C18]'
-                    : 'border-white/20 text-transparent',
+                    ? 'border-[var(--ozer-accent)] bg-[var(--ozer-accent)] text-[#060C18]'
+                    : 'border-[color:var(--workspace-shell-border)] text-transparent',
                 )}
                 aria-hidden
               >
@@ -150,7 +150,7 @@ export function KeelContextsStep({
           type="button"
           disabled={loading}
           onClick={() => goNext(false)}
-          className="text-sm font-medium text-zinc-400 underline-offset-4 hover:text-zinc-300 hover:underline disabled:opacity-50"
+          className="text-sm font-medium text-[var(--workspace-shell-text-muted)] underline-offset-4 hover:text-[var(--workspace-shell-text-muted)] hover:underline disabled:opacity-50"
         >
           Skip for now
         </button>

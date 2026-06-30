@@ -10,7 +10,7 @@ import pathsConfig from '~/config/paths.config';
 import type { PersonalDashboardTask } from '../../_lib/server/keel-dashboard.loader';
 
 const priorityStyles = {
-  low: 'border-zinc-500/30 bg-zinc-500/10 text-zinc-300',
+  low: 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]',
   medium: 'border-blue-500/30 bg-blue-500/10 text-blue-200',
   high: 'border-amber-500/30 bg-amber-500/10 text-amber-200',
   urgent: 'border-rose-500/30 bg-rose-500/10 text-rose-200',
@@ -31,13 +31,13 @@ export function PersonalDashboardTaskRow(props: {
   return (
     <DashboardTaskDetailTrigger
       taskId={task.id}
-      className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-[var(--workspace-shell-panel)] px-3 py-2.5"
+      className="flex items-center gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 py-2.5"
     >
       <div className="min-w-0 flex-1">
         <p
           className={cn(
             'truncate text-sm font-medium',
-            task.isOverdue ? 'text-rose-200' : 'text-white',
+            task.isOverdue ? 'text-rose-200' : 'text-[var(--workspace-shell-text)]',
           )}
         >
           {task.title}
@@ -52,7 +52,7 @@ export function PersonalDashboardTaskRow(props: {
             <span
               className={cn(
                 'text-xs',
-                task.isOverdue ? 'text-rose-300/90' : 'text-white/50',
+                task.isOverdue ? 'text-rose-300/90' : 'text-[var(--workspace-shell-text)]/50',
               )}
             >
               {task.isOverdue ? `Overdue · ${task.dueLabel}` : task.dueLabel}
@@ -84,7 +84,7 @@ function WorkspaceChip(props: { name: string; color: string; slug: string | null
   );
 
   const className =
-    'inline-flex max-w-[140px] items-center gap-1.5 rounded-md border border-white/10 px-1.5 py-0.5 text-[11px] font-medium text-white/90';
+    'inline-flex max-w-[140px] items-center gap-1.5 rounded-md border border-[color:var(--workspace-shell-border)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-text)]/90';
 
   if (props.slug) {
     const href = pathsConfig.app.accountHome.replace('[account]', props.slug);
@@ -92,7 +92,7 @@ function WorkspaceChip(props: { name: string; color: string; slug: string | null
       <Link
         href={href}
         onClick={(event) => event.stopPropagation()}
-        className={cn(className, 'transition-colors hover:bg-white/[0.04]')}
+        className={cn(className, 'transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]')}
       >
         {inner}
       </Link>

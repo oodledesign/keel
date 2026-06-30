@@ -60,7 +60,7 @@ export function SiteWorkspacesNavMenu() {
                   itemActive && 'bg-violet-500/10',
                 )}
               >
-                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-[#2A9D8F]">
+                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--ozer-accent)]">
                   <Icon className="h-4 w-4" aria-hidden />
                 </span>
                 <span className="min-w-0">

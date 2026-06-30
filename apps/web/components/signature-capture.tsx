@@ -85,7 +85,7 @@ export function SignatureCapture({
   );
 
   return (
-    <div className="rounded-xl border border-white/10 bg-[var(--workspace-shell-panel)] p-4">
+    <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
       <Tabs defaultValue="typed">
         <TabsList>
           <TabsTrigger value="typed">
@@ -108,7 +108,7 @@ export function SignatureCapture({
             <Input value={typedName} onChange={(e) => setTypedName(e.target.value)} />
           </div>
           {typedName.trim() ? (
-            <div className="rounded-lg border border-zinc-200 bg-white px-4 py-6 text-center">
+            <div className="rounded-lg border border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-white)] px-4 py-6 text-center">
               <p className="font-serif text-3xl text-[#0f172a]" style={{ fontFamily: 'Georgia, serif' }}>
                 {typedName}
               </p>
@@ -116,7 +116,7 @@ export function SignatureCapture({
           ) : null}
           <Button
             disabled={!typedName.trim() || loading}
-            className="bg-[var(--keel-teal)] text-[#09111F]"
+            className="bg-[var(--ozer-accent)] text-[#09111F]"
             onClick={() =>
               onConfirm({ signature_type: 'typed', signature_data: typedName.trim() })
             }
@@ -131,7 +131,7 @@ export function SignatureCapture({
             ref={canvasRef}
             width={480}
             height={160}
-            className="w-full rounded-lg border border-zinc-300 bg-white touch-none"
+            className="w-full rounded-lg border border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-white)] touch-none"
             onPointerDown={startDraw}
             onPointerMove={draw}
             onPointerUp={endDraw}
@@ -143,7 +143,7 @@ export function SignatureCapture({
             </Button>
             <Button
               disabled={loading}
-              className="bg-[var(--keel-teal)] text-[#09111F]"
+              className="bg-[var(--ozer-accent)] text-[#09111F]"
               onClick={() => {
                 const data = getDrawnDataUrl();
                 if (data) onConfirm({ signature_type: 'drawn', signature_data: data });
@@ -189,7 +189,7 @@ export function SignatureDisplay({
 }) {
   if (!data) {
     return (
-      <div className="rounded border border-dashed border-zinc-300 px-4 py-8 text-center text-sm text-zinc-500">
+      <div className="rounded border border-dashed border-[color:var(--ozer-border-on-light)] px-4 py-8 text-center text-sm text-[var(--workspace-shell-text-muted)]">
         Not signed yet
       </div>
     );
@@ -205,9 +205,9 @@ export function SignatureDisplay({
         // eslint-disable-next-line @next/next/no-img-element
         <img src={data} alt="Signature" className="max-h-20 object-contain" />
       )}
-      <div className="border-t border-zinc-400 pt-1">
+      <div className="border-t border-[color:var(--workspace-shell-border)] pt-1">
         <p className="text-sm font-medium">{name ?? '—'}</p>
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
           {signedAt
             ? `Signed ${new Date(signedAt).toLocaleDateString('en-GB')}`
             : 'Date: (not signed yet)'}

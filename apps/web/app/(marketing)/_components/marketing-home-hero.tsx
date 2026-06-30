@@ -8,6 +8,11 @@ import { ArrowRight } from 'lucide-react';
 import { Button } from '@kit/ui/button';
 
 import pathsConfig from '~/config/paths.config';
+import {
+  marketingBtnGradient,
+  marketingBtnOutline,
+  marketingEyebrow,
+} from '~/lib/marketing/marketing-ui';
 
 import { MarketingHeroShowcaseCarousel } from './marketing-hero-showcase-carousel';
 
@@ -44,7 +49,7 @@ export function MarketingHomeHero() {
     <>
       <div className="mx-auto max-w-4xl text-center">
         <motion.span
-          className="inline-flex items-center rounded-full border border-violet-300/20 bg-violet-500/10 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.14em] text-violet-200"
+          className={marketingEyebrow}
           {...fadeUpProps(0, 0.45)}
         >
           Built for people who do it all
@@ -52,14 +57,14 @@ export function MarketingHomeHero() {
 
         <div className="mt-6 space-y-5">
           <motion.h1
-            className="font-heading text-4xl font-bold leading-[1.08] tracking-tight text-white md:text-6xl lg:text-[4.25rem]"
+            className="font-heading text-4xl font-bold leading-[1.08] tracking-tight text-[var(--workspace-shell-text)] md:text-6xl lg:text-[4.25rem]"
             {...fadeUpProps(0.05, 0.5)}
           >
             The one system built for every part of your life.
           </motion.h1>
 
           <motion.p
-            className="mx-auto max-w-2xl text-base leading-relaxed text-violet-100/85 md:text-lg"
+            className="mx-auto max-w-2xl text-base leading-relaxed text-[var(--workspace-shell-text-muted)] md:text-lg"
             {...fadeUpProps(0.12, 0.5)}
           >
             Your agency, your family, your personal life — each in its own workspace.
@@ -80,7 +85,7 @@ export function MarketingHomeHero() {
             {FEATURE_CHIPS.map((chip, index) => (
               <motion.span
                 key={chip}
-                className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-wide text-slate-300"
+                className="rounded-full border border-[color:var(--workspace-shell-border)] px-3 py-1 text-xs uppercase tracking-wide text-[var(--workspace-shell-text-muted)]"
                 {...(reducedMotion
                   ? {}
                   : {
@@ -102,7 +107,7 @@ export function MarketingHomeHero() {
           <Button
             asChild
             size="lg"
-            className="h-11 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 text-white hover:from-violet-400 hover:to-fuchsia-400"
+            className={marketingBtnGradient}
           >
             <Link href={pathsConfig.auth.signUp}>
               Start free
@@ -113,14 +118,14 @@ export function MarketingHomeHero() {
             asChild
             variant="outline"
             size="lg"
-            className="h-11 rounded-full border-violet-300/25 bg-[#100d1f]/70 px-6 text-violet-100 hover:bg-[#17122e]"
+            className={marketingBtnOutline}
           >
             <Link href="/pricing">View pricing</Link>
           </Button>
         </motion.div>
 
         <motion.p
-          className="mt-6 text-sm text-slate-400"
+          className="mt-6 text-sm text-[var(--workspace-shell-text-muted)]"
           {...fadeUpProps(0.36, 0.5)}
         >
           Designed by a freelancer, for freelancers and small agencies.

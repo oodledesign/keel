@@ -90,7 +90,7 @@ type Props = {
 };
 
 const panelClassName =
-  'rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.24)]';
+  'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.24)]';
 
 export function MeetingTranscriptDetailClient({
   accountId,
@@ -241,7 +241,7 @@ export function MeetingTranscriptDetailClient({
     >
       <Link
         href={meetingsPath}
-        className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-white"
+        className="inline-flex items-center gap-1 text-sm text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
       >
         <ChevronLeft className="h-4 w-4" />
         All meetings
@@ -253,17 +253,17 @@ export function MeetingTranscriptDetailClient({
             <section className={panelClassName}>
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-[var(--keel-teal)]" />
-                  <h2 className="text-sm font-semibold text-white">Summary</h2>
+                  <Sparkles className="h-4 w-4 text-[var(--ozer-accent)]" />
+                  <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Summary</h2>
                 </div>
                 {summary.attendeeEmails.length > 0 ? (
-                  <p className="text-xs text-zinc-400">
+                  <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                     {summary.attendeeEmails.length} attendee
                     {summary.attendeeEmails.length === 1 ? '' : 's'} from calendar
                   </p>
                 ) : null}
               </div>
-              <div className="space-y-4 rounded-xl border border-white/6 bg-black/20 p-4 text-sm leading-relaxed text-zinc-200">
+              <div className="space-y-4 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4 text-sm leading-relaxed text-[var(--workspace-shell-text)]">
                 {summary.summaryText.split('\n\n').map((paragraph) => (
                   <p key={paragraph.slice(0, 40)}>{paragraph}</p>
                 ))}
@@ -274,14 +274,14 @@ export function MeetingTranscriptDetailClient({
           <section className={panelClassName}>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <Mic className="h-4 w-4 text-[var(--keel-teal)]" />
-              <h2 className="text-sm font-semibold text-white">Transcript</h2>
+              <Mic className="h-4 w-4 text-[var(--ozer-accent)]" />
+              <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Transcript</h2>
             </div>
             <Button
               type="button"
               variant="outline"
               size="sm"
-              className="border-white/10 bg-white/5 text-white hover:bg-white/10"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
               onClick={() => void copyTranscript()}
             >
               {copied ? (
@@ -292,7 +292,7 @@ export function MeetingTranscriptDetailClient({
               {copied ? 'Copied' : 'Copy transcript'}
             </Button>
           </div>
-          <div className="max-h-[min(70vh,720px)] overflow-auto rounded-xl border border-white/6 bg-black/20 p-4 text-sm leading-relaxed text-zinc-200">
+          <div className="max-h-[min(70vh,720px)] overflow-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4 text-sm leading-relaxed text-[var(--workspace-shell-text)]">
             {transcript.speakerSegments.length > 0 ? (
               <MeetingTranscriptSegments
                 accountId={accountId}
@@ -317,13 +317,13 @@ export function MeetingTranscriptDetailClient({
 
         <aside className="space-y-6">
           <section className={panelClassName}>
-            <h2 className="text-sm font-semibold text-white">Meeting details</h2>
+            <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Meeting details</h2>
 
             <div className="mt-4 space-y-4">
               {canEdit ? (
                 <>
                   <div>
-                    <Label htmlFor="detail-title" className="text-xs text-zinc-500">
+                    <Label htmlFor="detail-title" className="text-xs text-[var(--workspace-shell-text-muted)]">
                       Title
                     </Label>
                     <Input
@@ -331,11 +331,11 @@ export function MeetingTranscriptDetailClient({
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       onBlur={saveMeta}
-                      className="mt-1 border-white/10 bg-white/5 text-white"
+                      className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="detail-date" className="text-xs text-zinc-500">
+                    <Label htmlFor="detail-date" className="text-xs text-[var(--workspace-shell-text-muted)]">
                       Meeting date
                     </Label>
                     <Input
@@ -344,11 +344,11 @@ export function MeetingTranscriptDetailClient({
                       value={meetingDate}
                       onChange={(e) => setMeetingDate(e.target.value)}
                       onBlur={saveMeta}
-                      className="mt-1 border-white/10 bg-white/5 text-white"
+                      className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="detail-client" className="text-xs text-zinc-500">
+                    <Label htmlFor="detail-client" className="text-xs text-[var(--workspace-shell-text-muted)]">
                       Client
                     </Label>
                     <Select
@@ -358,11 +358,11 @@ export function MeetingTranscriptDetailClient({
                     >
                       <SelectTrigger
                         id="detail-client"
-                        className="mt-1 border-white/10 bg-white/5 text-white"
+                        className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
                       >
                         <SelectValue placeholder="Select client" />
                       </SelectTrigger>
-                      <SelectContent className="border-white/10 bg-[#1A2535] text-white">
+                      <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
                         {clients.map((client) => (
                           <SelectItem key={client.id} value={client.id}>
                             {client.name}
@@ -375,12 +375,12 @@ export function MeetingTranscriptDetailClient({
               ) : (
                 <>
                   <div>
-                    <p className="text-xs text-zinc-500">Title</p>
-                    <p className="mt-1 font-medium text-white">{transcript.title}</p>
+                    <p className="text-xs text-[var(--workspace-shell-text-muted)]">Title</p>
+                    <p className="mt-1 font-medium text-[var(--workspace-shell-text)]">{transcript.title}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-zinc-500">Meeting date</p>
-                    <p className="mt-1 text-sm text-zinc-300">
+                    <p className="text-xs text-[var(--workspace-shell-text-muted)]">Meeting date</p>
+                    <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
                       {meetingDisplayDate(
                         transcript.meetingDate,
                         transcript.createdAt,
@@ -391,13 +391,13 @@ export function MeetingTranscriptDetailClient({
               )}
 
               {contextLabel ? (
-                <p className="text-sm text-zinc-400">
+                <p className="text-sm text-[var(--workspace-shell-text-muted)]">
                   {clientPath && resolvedClientName ? (
                     <>
                       Client:{' '}
                       <Link
                         href={clientPath}
-                        className="text-[#5eead4] hover:underline"
+                        className="text-[var(--ozer-accent-muted)] hover:underline"
                       >
                         {resolvedClientName}
                       </Link>
@@ -409,7 +409,7 @@ export function MeetingTranscriptDetailClient({
                   )}
                 </p>
               ) : canEdit ? (
-                <p className="text-sm text-zinc-500">No client linked yet.</p>
+                <p className="text-sm text-[var(--workspace-shell-text-muted)]">No client linked yet.</p>
               ) : null}
             </div>
 
@@ -434,16 +434,16 @@ export function MeetingTranscriptDetailClient({
 
           <section className={panelClassName}>
             <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-[var(--keel-teal)]" />
-              <h2 className="text-sm font-semibold text-white">Extract tasks</h2>
+              <Sparkles className="h-4 w-4 text-[var(--ozer-accent)]" />
+              <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Extract tasks</h2>
             </div>
-            <p className="mt-2 text-sm text-zinc-400">
+            <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
               Review AI-suggested tasks from this transcript before adding them to
               the workspace.
             </p>
             <Button
               type="button"
-              className="mt-4 w-full bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+              className="mt-4 w-full bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
               onClick={() => setExtractOpen(true)}
             >
               <Sparkles className="mr-2 h-4 w-4" />
@@ -469,10 +469,10 @@ export function MeetingTranscriptDetailClient({
       </div>
 
       <Dialog open={extractOpen} onOpenChange={setExtractOpen}>
-        <DialogContent className="max-h-[min(90vh,900px)] max-w-4xl gap-0 overflow-hidden border-white/10 bg-[var(--workspace-shell-panel)] p-0 text-white">
-          <DialogHeader className="border-b border-white/10 px-6 py-4">
+        <DialogContent className="max-h-[min(90vh,900px)] max-w-4xl gap-0 overflow-hidden border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text)]">
+          <DialogHeader className="border-b border-[color:var(--workspace-shell-border)] px-6 py-4">
             <DialogTitle>Extract tasks</DialogTitle>
-            <DialogDescription className="text-zinc-400">
+            <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
               AI will analyse this meeting transcript and suggest actionable tasks.
               Review and edit before adding them to the workspace.
             </DialogDescription>

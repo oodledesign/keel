@@ -66,7 +66,7 @@ export function PlatformSupportTicketDialog({
         onOpenChange(next);
       }}
     >
-      <DialogContent className="max-h-[85vh] overflow-y-auto border-white/10 bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-lg">
+      <DialogContent className="max-h-[85vh] overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Help &amp; feedback</DialogTitle>
           <DialogDescription className="text-[var(--workspace-shell-text-muted)]">

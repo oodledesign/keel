@@ -26,7 +26,7 @@ const SIZE_CLASS = {
 } as const;
 
 const TIER_RING_CLASS: Record<PersonCircleTier, string> = {
-  core: 'ring-[var(--keel-teal)]/40',
+  core: 'ring-[var(--ozer-accent)]/40',
   close: 'ring-[#2563EB]/35',
   friends: 'ring-violet-400/30',
   community: 'ring-white/20',
@@ -82,7 +82,7 @@ export function PersonAvatar({
         'inline-flex shrink-0 items-center justify-center font-semibold ring-2 ring-inset ring-white/10',
         shapeClass,
         sizeClass,
-        tier ? circleTierBadgeClass(tier) : 'bg-[var(--keel-teal)]/15 text-[#5eead4]',
+        tier ? circleTierBadgeClass(tier) : 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]',
         className,
       )}
       aria-hidden

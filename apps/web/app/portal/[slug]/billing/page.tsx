@@ -37,8 +37,8 @@ export default async function PortalBillingPage({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900">Billing</h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <h2 className="text-2xl font-semibold text-[var(--ozer-text-on-light)]">Billing</h2>
+        <p className="mt-1 text-sm text-[var(--ozer-text-on-light-muted)]">
           Your subscription and invoice history.
         </p>
       </div>
@@ -50,7 +50,7 @@ export default async function PortalBillingPage({
         <CardContent className="space-y-3">
           {subscription ? (
             <>
-              <p className="text-lg font-medium text-slate-900">
+              <p className="text-lg font-medium text-[var(--ozer-text-on-light)]">
                 {subscription.planName}
               </p>
               <p className="text-sm text-slate-600">
@@ -61,7 +61,7 @@ export default async function PortalBillingPage({
                 /month
                 {subscription.status ? ` · ${subscription.status}` : ''}
               </p>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
                 Next billing date:{' '}
                 {formatPortalDate(subscription.nextBillingDate)}
               </p>
@@ -75,7 +75,7 @@ export default async function PortalBillingPage({
               ) : null}
             </>
           ) : (
-            <p className="text-sm text-slate-500">No active subscription.</p>
+            <p className="text-sm text-[var(--ozer-text-on-light-muted)]">No active subscription.</p>
           )}
         </CardContent>
       </Card>
@@ -86,11 +86,11 @@ export default async function PortalBillingPage({
         </CardHeader>
         <CardContent>
           {invoices.length === 0 ? (
-            <p className="text-sm text-slate-500">No invoices yet.</p>
+            <p className="text-sm text-[var(--ozer-text-on-light-muted)]">No invoices yet.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+                <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-[var(--ozer-text-on-light-muted)]">
                   <tr>
                     <th className="px-2 py-2 font-medium">Invoice</th>
                     <th className="px-2 py-2 font-medium">Status</th>
@@ -110,7 +110,7 @@ export default async function PortalBillingPage({
                         key={invoice.id}
                         className="border-b border-slate-100 last:border-0"
                       >
-                        <td className="px-2 py-3 text-slate-900">
+                        <td className="px-2 py-3 text-[var(--ozer-text-on-light)]">
                           {invoice.invoiceNumber ?? '—'}
                         </td>
                         <td className="px-2 py-3 capitalize text-slate-600">

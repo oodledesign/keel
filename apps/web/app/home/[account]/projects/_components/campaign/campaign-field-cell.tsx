@@ -66,10 +66,10 @@ export function CampaignFieldCell({
           value={typeof value === 'string' ? value : ''}
           onValueChange={(next) => onChange(next || null)}
         >
-          <SelectTrigger className="h-8 border-white/10 bg-transparent text-xs text-white">
+          <SelectTrigger className="h-8 border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]">
             <SelectValue placeholder="—" />
           </SelectTrigger>
-          <SelectContent className="border-white/10 bg-[#1A2535] text-white">
+          <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
             {(field.options.choices ?? []).map((choice) => (
               <SelectItem key={choice} value={choice}>
                 {choice}
@@ -84,10 +84,10 @@ export function CampaignFieldCell({
           value={typeof value === 'string' ? value : ''}
           onValueChange={(next) => onChange(next || null)}
         >
-          <SelectTrigger className="h-8 border-white/10 bg-transparent text-xs text-white">
+          <SelectTrigger className="h-8 border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]">
             <SelectValue placeholder="Select client" />
           </SelectTrigger>
-          <SelectContent className="border-white/10 bg-[#1A2535] text-white">
+          <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
             {linkOptions.clients.map((client) => (
               <SelectItem key={client.id} value={client.id}>
                 {client.name}
@@ -102,10 +102,10 @@ export function CampaignFieldCell({
           value={typeof value === 'string' ? value : ''}
           onValueChange={(next) => onChange(next || null)}
         >
-          <SelectTrigger className="h-8 border-white/10 bg-transparent text-xs text-white">
+          <SelectTrigger className="h-8 border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]">
             <SelectValue placeholder="Select project" />
           </SelectTrigger>
-          <SelectContent className="border-white/10 bg-[#1A2535] text-white">
+          <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
             {linkOptions.projects.map((project) => (
               <SelectItem key={project.id} value={project.id}>
                 {project.name}
@@ -124,7 +124,7 @@ export function CampaignFieldCell({
             const raw = event.target.value.trim();
             onChange(raw ? Number(raw) : null);
           }}
-          className="h-8 border-white/10 bg-transparent text-xs text-white"
+          className="h-8 border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]"
         />
       );
     case 'date':
@@ -133,7 +133,7 @@ export function CampaignFieldCell({
           type="date"
           defaultValue={typeof value === 'string' ? value : ''}
           onBlur={(event) => onChange(event.target.value || null)}
-          className="h-8 border-white/10 bg-transparent text-xs text-white"
+          className="h-8 border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]"
         />
       );
     case 'url':
@@ -143,7 +143,7 @@ export function CampaignFieldCell({
           defaultValue={typeof value === 'string' ? value : ''}
           onBlur={(event) => onChange(event.target.value.trim() || null)}
           placeholder="https://"
-          className="h-8 border-white/10 bg-transparent text-xs text-white"
+          className="h-8 border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]"
         />
       );
     case 'email':
@@ -152,7 +152,7 @@ export function CampaignFieldCell({
           type="email"
           defaultValue={typeof value === 'string' ? value : ''}
           onBlur={(event) => onChange(event.target.value.trim() || null)}
-          className="h-8 border-white/10 bg-transparent text-xs text-white"
+          className="h-8 border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]"
         />
       );
     default:
@@ -160,7 +160,7 @@ export function CampaignFieldCell({
         <Input
           defaultValue={typeof value === 'string' ? value : ''}
           onBlur={(event) => onChange(event.target.value.trim() || null)}
-          className="h-8 border-white/10 bg-transparent text-xs text-white"
+          className="h-8 border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]"
         />
       );
   }
@@ -178,7 +178,7 @@ export function CampaignFieldDisplay({
   linkOptions: LinkOptions;
 }) {
   if (value === null || value === undefined || value === '') {
-    return <span className="text-zinc-500">—</span>;
+    return <span className="text-[var(--workspace-shell-text-muted)]">—</span>;
   }
 
   switch (field.fieldType) {
@@ -194,7 +194,7 @@ export function CampaignFieldDisplay({
           href={String(value)}
           target="_blank"
           rel="noreferrer"
-          className="text-[#5eead4] hover:underline"
+          className="text-[var(--ozer-accent-muted)] hover:underline"
         >
           {String(value).replace(/^https?:\/\//, '')}
         </a>
@@ -204,7 +204,7 @@ export function CampaignFieldDisplay({
       if (!client) return <span>{String(value)}</span>;
       const href = `${pathsConfig.app.accountClients.replace('[account]', accountSlug)}/${client.id}`;
       return (
-        <Link href={href} className="text-[#5eead4] hover:underline">
+        <Link href={href} className="text-[var(--ozer-accent-muted)] hover:underline">
           {client.name}
         </Link>
       );
@@ -216,7 +216,7 @@ export function CampaignFieldDisplay({
         .replace('[account]', accountSlug)
         .replace('[id]', project.id);
       return (
-        <Link href={href} className="text-[#5eead4] hover:underline">
+        <Link href={href} className="text-[var(--ozer-accent-muted)] hover:underline">
           {project.name}
         </Link>
       );

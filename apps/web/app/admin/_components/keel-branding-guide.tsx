@@ -11,8 +11,9 @@ const swatches = [
 ];
 
 const logos = [
-  { label: 'Wordmark', path: '/brand/ozer-wordmark.png' },
-  { label: 'Icon (flower mark)', path: '/brand/ozer-icon.png' },
+  { label: 'Wordmark (light)', path: '/brand/ozer-wordmark-on-light.svg' },
+  { label: 'Wordmark (dark)', path: '/brand/ozer-wordmark-on-dark.svg' },
+  { label: 'Icon (flower mark)', path: '/brand/ozer-icon.svg' },
   { label: 'Brand guide (HTML)', path: '/brand/ozer-brand-guide.html' },
 ];
 
@@ -89,7 +90,8 @@ export function KeelBrandingGuide() {
         <h2 className="text-lg font-semibold">Components</h2>
         <div className="rounded-xl border p-6">
           <p className="text-sm text-muted-foreground">
-            Primary actions use <code className="text-xs">keel-gradient-btn</code> or{' '}
+            Primary actions use <code className="text-xs">ozer-gradient-btn</code> (alias{' '}
+            <code className="text-xs">keel-gradient-btn</code>) or{' '}
             <code className="text-xs">workspace-btn-primary</code> (coral via{' '}
             <code className="text-xs">--ozer-accent</code>).
           </p>

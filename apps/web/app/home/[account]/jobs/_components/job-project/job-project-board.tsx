@@ -77,8 +77,8 @@ function TaskCard({
 
   return (
     <div
-      className={`rounded-lg border border-zinc-600/80 bg-zinc-900/80 p-3 shadow-sm ${
-        isOverlay ? 'ring-2 ring-[var(--keel-teal)]/40' : ''
+      className={`rounded-lg border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/80 p-3 shadow-sm ${
+        isOverlay ? 'ring-2 ring-[var(--ozer-accent)]/40' : ''
       }`}
     >
       <div className="flex items-start gap-2">
@@ -87,7 +87,7 @@ function TaskCard({
           title={task.priority}
         />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium leading-snug text-white">{task.title}</p>
+          <p className="text-sm font-medium leading-snug text-[var(--workspace-shell-text)]">{task.title}</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <span
               className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${
@@ -97,12 +97,12 @@ function TaskCard({
               {task.status.replace('_', ' ')}
             </span>
             {task.due_date && (
-              <span className="text-[11px] text-zinc-500">
+              <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">
                 {formatShortDate(task.due_date)}
               </span>
             )}
             {assignee && (
-              <span className="truncate text-[11px] text-zinc-500">
+              <span className="truncate text-[11px] text-[var(--workspace-shell-text-muted)]">
                 {assignee.name ?? assignee.email ?? 'Assigned'}
               </span>
             )}
@@ -139,7 +139,7 @@ function SortableTaskCard({
         {!disabled && (
           <button
             type="button"
-            className="mt-3 shrink-0 cursor-grab text-zinc-600 hover:text-zinc-400 active:cursor-grabbing"
+            className="mt-3 shrink-0 cursor-grab text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text-muted)] active:cursor-grabbing"
             {...attributes}
             {...listeners}
             aria-label="Drag task"
@@ -187,18 +187,18 @@ function PhaseColumn({
     <div
       ref={setNodeRef}
       className={`flex w-[min(100%,280px)] shrink-0 flex-col rounded-xl border bg-[var(--workspace-shell-panel)]/80 ${
-        isOver ? 'border-[var(--keel-teal)]/50' : 'border-zinc-700/80'
+        isOver ? 'border-[var(--ozer-accent)]/50' : 'border-[color:var(--workspace-shell-border)]/80'
       }`}
       style={{ borderTopWidth: 3, borderTopColor: colour }}
     >
-      <div className="border-b border-zinc-700/80 p-3">
+      <div className="border-b border-[color:var(--workspace-shell-border)]/80 p-3">
         {phase ? (
           <Link
             href={phasePath(accountSlug, jobId, phase.id)}
             className="group block"
           >
             <div className="flex items-start justify-between gap-2">
-              <h3 className="text-sm font-semibold text-white group-hover:underline">
+              <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)] group-hover:underline">
                 {phase.name}
               </h3>
               <span
@@ -209,12 +209,12 @@ function PhaseColumn({
                 {PHASE_STATUS_LABELS[phase.status]}
               </span>
             </div>
-            <p className="mt-1 text-[11px] text-zinc-500">
+            <p className="mt-1 text-[11px] text-[var(--workspace-shell-text-muted)]">
               Due {formatShortDate(phase.due_date)} · {phase.progressPct}% done
             </p>
           </Link>
         ) : (
-          <h3 className="text-sm font-semibold text-zinc-400">Unassigned</h3>
+          <h3 className="text-sm font-semibold text-[var(--workspace-shell-text-muted)]">Unassigned</h3>
         )}
       </div>
 
@@ -233,7 +233,7 @@ function PhaseColumn({
 
       {canEditJobs && (
         <form
-          className="border-t border-zinc-700/80 p-2"
+          className="border-t border-[color:var(--workspace-shell-border)]/80 p-2"
           onSubmit={(e) => {
             e.preventDefault();
             const title = draftTitle.trim();
@@ -247,14 +247,14 @@ function PhaseColumn({
               value={draftTitle}
               onChange={(e) => setDraftTitle(e.target.value)}
               placeholder="Add task…"
-              className="h-8 border-zinc-600 bg-zinc-800 text-sm text-white"
+              className="h-8 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-sm text-[var(--workspace-shell-text)]"
               disabled={addingTask}
             />
             <Button
               type="submit"
               size="sm"
               variant="ghost"
-              className="h-8 shrink-0 px-2 text-zinc-400 hover:text-white"
+              className="h-8 shrink-0 px-2 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
               disabled={!draftTitle.trim() || addingTask}
             >
               <Plus className="h-4 w-4" />
@@ -292,7 +292,7 @@ function SortablePhaseColumn(props: {
       {props.canEditJobs && (
         <button
           type="button"
-          className="mt-4 cursor-grab text-zinc-600 hover:text-zinc-400 active:cursor-grabbing"
+          className="mt-4 cursor-grab text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text-muted)] active:cursor-grabbing"
           {...attributes}
           {...listeners}
           aria-label="Drag to reorder phase"
@@ -520,8 +520,8 @@ export function JobProjectBoard({
     );
 
     return (
-      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-700 bg-zinc-900/30 px-6 py-16 text-center">
-        <p className="text-sm text-zinc-400">
+      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/30 px-6 py-16 text-center">
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           No delivery phases yet. Apply a template or add phases one at a time.
         </p>
         {canEditJobs && (
@@ -529,7 +529,7 @@ export function JobProjectBoard({
             <Button
               type="button"
               size="sm"
-              className="bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+              className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
               disabled={seedingPhases || !primaryTemplate}
               onClick={onSeedDefaultPhases}
             >
@@ -543,7 +543,7 @@ export function JobProjectBoard({
                 type="button"
                 size="sm"
                 variant="outline"
-                className="border-zinc-600"
+                className="border-[color:var(--workspace-shell-border)]"
                 disabled={seedingPhases}
                 onClick={() => onApplyTemplate(template.id)}
               >

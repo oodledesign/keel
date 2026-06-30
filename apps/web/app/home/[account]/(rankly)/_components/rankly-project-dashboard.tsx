@@ -10,8 +10,8 @@ function SectionIcon(props: { icon: LucideIcon }) {
   const Icon = props.icon;
 
   return (
-    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-white/10 bg-black/20">
-      <Icon className="h-4 w-4 text-[var(--keel-teal)]" aria-hidden />
+    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
+      <Icon className="h-4 w-4 text-[var(--ozer-accent)]" aria-hidden />
     </span>
   );
 }
@@ -28,7 +28,7 @@ function StatCard(props: {
   return (
     <Link
       href={props.href}
-      className="rounded-lg border border-white/10 bg-black/20 p-4 transition-colors hover:border-white/20 hover:bg-black/30"
+      className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4 transition-colors hover:border-[color:var(--workspace-shell-border)] hover:bg-black/30"
     >
       <div className="flex items-start justify-between gap-3">
         <p className="text-muted-foreground text-xs uppercase tracking-wide">
@@ -114,7 +114,7 @@ export function RanklyProjectDashboard(props: {
             <Link
               key={section.id}
               href={paths[section.pathKey]}
-              className="rounded-lg border border-white/10 bg-black/10 px-4 py-5 transition-colors hover:border-white/20 hover:bg-black/20"
+              className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-5 transition-colors hover:border-[color:var(--workspace-shell-border)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
             >
               <div className="flex items-start gap-3">
                 <SectionIcon icon={Icon} />

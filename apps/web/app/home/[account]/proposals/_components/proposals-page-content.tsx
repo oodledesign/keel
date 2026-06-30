@@ -509,16 +509,16 @@ export function ProposalsPageContent({
   if (!canViewProposals) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center p-8">
-        <p className="text-zinc-400">You don&apos;t have access to proposals in this account.</p>
+        <p className="text-[var(--workspace-shell-text-muted)]">You don&apos;t have access to proposals in this account.</p>
       </div>
     );
   }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 px-4 md:px-6">
-      <div className="rounded-2xl border border-white/8 bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/8 p-4">
-          <div className="inline-flex flex-wrap gap-1 rounded-full border border-white/8 bg-[var(--workspace-control-surface)]/80 p-1 text-xs">
+      <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] p-4">
+          <div className="inline-flex flex-wrap gap-1 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/80 p-1 text-xs">
             {tabs.map((item) => (
               <button
                 key={item.key}
@@ -529,8 +529,8 @@ export function ProposalsPageContent({
                 }}
                 className={`rounded-full px-3 py-1.5 font-medium transition-colors ${
                   tab === item.key
-                    ? 'bg-[var(--keel-teal)] text-[#09111F]'
-                    : 'text-zinc-300 hover:text-white'
+                    ? 'bg-[var(--ozer-accent)] text-[#09111F]'
+                    : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'
                 }`}
               >
                 {item.label}
@@ -550,7 +550,7 @@ export function ProposalsPageContent({
               </Button>
               <Button
                 size="sm"
-                className="bg-[var(--keel-teal)] text-[#09111F] hover:bg-[#6BD48F]"
+                className="bg-[var(--ozer-accent)] text-[#09111F] hover:bg-[#6BD48F]"
                 onClick={() => void openCreateSheet()}
               >
                 <PlusCircle className="mr-2 h-4 w-4" />
@@ -560,9 +560,9 @@ export function ProposalsPageContent({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-end gap-3 border-b border-white/8 px-4 py-3">
+        <div className="flex flex-wrap items-end gap-3 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
           <div className="relative min-w-[220px] flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
             <Input
               placeholder="Search title or recipient..."
               value={search}
@@ -579,16 +579,16 @@ export function ProposalsPageContent({
 
         <div className="overflow-auto p-4">
           {loading ? (
-            <p className="text-zinc-400">Loading…</p>
+            <p className="text-[var(--workspace-shell-text-muted)]">Loading…</p>
           ) : proposals.length === 0 ? (
-            <div className="flex flex-col items-center py-12 text-zinc-400">
+            <div className="flex flex-col items-center py-12 text-[var(--workspace-shell-text-muted)]">
               <FileText className="mb-3 h-10 w-10 opacity-50" />
               No proposals in this tab.
             </div>
           ) : (
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="text-zinc-400">
+                <tr className="text-[var(--workspace-shell-text-muted)]">
                   <th className="pb-2 pr-4">Title</th>
                   <th className="pb-2 pr-4">Recipient</th>
                   <th className="pb-2 pr-4">Sent</th>
@@ -600,19 +600,19 @@ export function ProposalsPageContent({
               </thead>
               <tbody>
                 {proposals.map((row) => (
-                  <tr key={row.id} className="border-t border-white/6 hover:bg-white/3">
+                  <tr key={row.id} className="border-t border-[color:var(--workspace-shell-border)] hover:bg-white/3">
                     <td className="py-3 pr-4">
                       <Link
                         href={editPathBase.replace('[id]', row.id)}
-                        className="font-medium text-white hover:underline"
+                        className="font-medium text-[var(--workspace-shell-text)] hover:underline"
                       >
                         {row.title?.trim() || 'Untitled proposal'}
                       </Link>
                     </td>
-                    <td className="py-3 pr-4 text-zinc-300">{recipientLabel(row)}</td>
-                    <td className="py-3 pr-4 text-zinc-400">{formatDate(row.sent_at)}</td>
-                    <td className="py-3 pr-4 text-zinc-400">{formatDate(row.expires_at)}</td>
-                    <td className="py-3 pr-4 text-zinc-300">
+                    <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">{recipientLabel(row)}</td>
+                    <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">{formatDate(row.sent_at)}</td>
+                    <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">{formatDate(row.expires_at)}</td>
+                    <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">
                       {row.total_pence != null
                         ? formatPence(row.total_pence, row.currency ?? 'GBP')
                         : '—'}
@@ -636,7 +636,7 @@ export function ProposalsPageContent({
           )}
 
           {!loading && total > 0 ? (
-            <div className="mt-4 flex items-center justify-between text-sm text-zinc-500">
+            <div className="mt-4 flex items-center justify-between text-sm text-[var(--workspace-shell-text-muted)]">
               <span>
                 Page {page} of {totalPages} ({total} proposals)
               </span>
@@ -664,12 +664,12 @@ export function ProposalsPageContent({
             <SheetTitle>Create proposal</SheetTitle>
           </SheetHeader>
           <div className="mt-6 space-y-4">
-            <div className="inline-flex gap-1 rounded-full border border-white/10 bg-white/5 p-1 text-xs">
+            <div className="inline-flex gap-1 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-1 text-xs">
               <button
                 type="button"
                 onClick={() => setCreateMode('client')}
                 className={`rounded-full px-3 py-1.5 font-medium ${
-                  createMode === 'client' ? 'bg-[var(--keel-teal)] text-[#09111F]' : 'text-zinc-300'
+                  createMode === 'client' ? 'bg-[var(--ozer-accent)] text-[#09111F]' : 'text-[var(--workspace-shell-text-muted)]'
                 }`}
               >
                 Client
@@ -678,7 +678,7 @@ export function ProposalsPageContent({
                 type="button"
                 onClick={() => setCreateMode('deal')}
                 className={`rounded-full px-3 py-1.5 font-medium ${
-                  createMode === 'deal' ? 'bg-[var(--keel-teal)] text-[#09111F]' : 'text-zinc-300'
+                  createMode === 'deal' ? 'bg-[var(--ozer-accent)] text-[#09111F]' : 'text-[var(--workspace-shell-text-muted)]'
                 }`}
               >
                 Lead
@@ -704,7 +704,7 @@ export function ProposalsPageContent({
                 <select
                   value={selectedDealId}
                   onChange={(e) => setSelectedDealId(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-3 py-2 text-sm text-white"
+                  className="mt-1 w-full rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-3 py-2 text-sm text-[var(--workspace-shell-text)]"
                 >
                   <option value="">Select lead</option>
                   {deals.map((deal) => (
@@ -717,7 +717,7 @@ export function ProposalsPageContent({
             )}
 
             <Button
-              className="w-full bg-[var(--keel-teal)] text-[#09111F]"
+              className="w-full bg-[var(--ozer-accent)] text-[#09111F]"
               onClick={() => void handleCreateProposal()}
               disabled={
                 creating ||
@@ -869,7 +869,7 @@ export function ProposalsPageContent({
               </div>
 
               <Button
-                className="w-full bg-[var(--keel-teal)] text-[#09111F]"
+                className="w-full bg-[var(--ozer-accent)] text-[#09111F]"
                 disabled={aiGenerating}
                 onClick={() => void handleAiGenerate()}
               >

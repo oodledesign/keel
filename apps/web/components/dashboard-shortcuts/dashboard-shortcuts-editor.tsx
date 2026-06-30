@@ -105,14 +105,14 @@ export function DashboardShortcutsEditor({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-zinc-400">
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           {helperText ?? `Pin up to ${maxShortcuts} quick links on your dashboard.`}
         </p>
         <Button
           type="button"
           size="sm"
           variant="outline"
-          className="border-white/10 bg-transparent text-zinc-200"
+          className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)]"
           onClick={openPicker}
           disabled={shortcuts.length >= maxShortcuts}
         >
@@ -122,7 +122,7 @@ export function DashboardShortcutsEditor({
       </div>
 
       {shortcuts.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/10 px-4 py-8 text-center text-sm text-zinc-500">
+        <div className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center text-sm text-[var(--workspace-shell-text-muted)]">
           {emptyText}
         </div>
       ) : (
@@ -130,12 +130,12 @@ export function DashboardShortcutsEditor({
           {shortcuts.map((shortcut, index) => (
             <li
               key={shortcut.id}
-              className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2"
+              className="flex items-center gap-2 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-2"
             >
               <div className="flex flex-col gap-0.5">
                 <button
                   type="button"
-                  className="text-zinc-500 hover:text-zinc-300 disabled:opacity-30"
+                  className="text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text-muted)] disabled:opacity-30"
                   disabled={index === 0}
                   onClick={() => move(index, -1)}
                   aria-label="Move up"
@@ -144,10 +144,10 @@ export function DashboardShortcutsEditor({
                 </button>
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-white">
+                <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
                   {shortcut.label || shortcut.catalogId}
                 </p>
-                <p className="truncate text-xs text-zinc-500">
+                <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">
                   {shortcut.catalogId}
                 </p>
               </div>
@@ -155,7 +155,7 @@ export function DashboardShortcutsEditor({
                 type="button"
                 size="icon"
                 variant="ghost"
-                className="text-zinc-500 hover:text-rose-400"
+                className="text-[var(--workspace-shell-text-muted)] hover:text-rose-400"
                 onClick={() => removeAt(index)}
               >
                 <Trash2 className="h-4 w-4" />
@@ -166,27 +166,27 @@ export function DashboardShortcutsEditor({
       )}
 
       <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
-        <DialogContent className="max-h-[85vh] border-white/10 bg-[#0F1B35] text-white sm:max-w-lg">
+        <DialogContent className="max-h-[85vh] border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] text-[var(--workspace-shell-text)] sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Add a shortcut</DialogTitle>
           </DialogHeader>
 
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
             <Input
               autoFocus
               value={query}
               onChange={(e) => runSearch(e.target.value)}
               placeholder="Search pages, workspaces, Rankly projects…"
-              className="border-white/10 bg-[var(--workspace-shell-panel)] pl-9 text-white"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] pl-9 text-[var(--workspace-shell-text)]"
             />
           </div>
 
-          <div className="max-h-[50vh] overflow-y-auto rounded-xl border border-white/10">
+          <div className="max-h-[50vh] overflow-y-auto rounded-xl border border-[color:var(--workspace-shell-border)]">
             {pending && results.length === 0 ? (
-              <p className="px-4 py-6 text-sm text-zinc-500">Searching…</p>
+              <p className="px-4 py-6 text-sm text-[var(--workspace-shell-text-muted)]">Searching…</p>
             ) : results.length === 0 ? (
-              <p className="px-4 py-6 text-sm text-zinc-500">No matches.</p>
+              <p className="px-4 py-6 text-sm text-[var(--workspace-shell-text-muted)]">No matches.</p>
             ) : (
               <ul className="divide-y divide-white/[0.06]">
                 {results.map((item) => {
@@ -199,14 +199,14 @@ export function DashboardShortcutsEditor({
                         disabled={disabled}
                         onClick={() => addItem(item)}
                         className={cn(
-                          'flex w-full flex-col items-start px-4 py-3 text-left transition-colors hover:bg-white/[0.03]',
+                          'flex w-full flex-col items-start px-4 py-3 text-left transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]',
                           disabled && 'cursor-not-allowed opacity-50',
                         )}
                       >
-                        <span className="text-sm font-medium text-white">
+                        <span className="text-sm font-medium text-[var(--workspace-shell-text)]">
                           {item.label}
                         </span>
-                        <span className="text-xs text-zinc-500">
+                        <span className="text-xs text-[var(--workspace-shell-text-muted)]">
                           {item.category}
                           {item.description ? ` · ${item.description}` : ''}
                         </span>

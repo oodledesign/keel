@@ -56,13 +56,13 @@ type NewMenuItem = {
 };
 
 const MOBILE_NEW_MENU_ROW_CLASS =
-  'flex min-h-[3.25rem] w-full items-center gap-4 rounded-xl px-4 py-3 text-[1.05rem] font-medium text-zinc-200 transition-colors hover:bg-white/6';
+  'flex min-h-[3.25rem] w-full items-center gap-4 rounded-xl px-4 py-3 text-[1.05rem] font-medium text-[var(--workspace-shell-text)] transition-colors hover:bg-white/6';
 
 const DESKTOP_NEW_MENU_CONTENT_CLASS =
   'w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-[1.25rem] border border-[var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text-on-dark)] shadow-[0_16px_48px_rgba(0,0,0,0.45)] outline-none ring-0 focus:outline-none focus-visible:outline-none';
 
 const DESKTOP_NEW_MENU_ITEM_CLASS =
-  'rounded-xl p-0 outline-none ring-0 focus:bg-white/6 focus:text-zinc-200 data-[highlighted]:bg-white/6 data-[highlighted]:text-zinc-200';
+  'rounded-xl p-0 outline-none ring-0 focus:bg-white/6 focus:text-[var(--workspace-shell-text)] data-[highlighted]:bg-white/6 data-[highlighted]:text-[var(--workspace-shell-text)]';
 
 function getNewMenuItems(props: WorkspaceNewMenuProps) {
   const items =
@@ -100,7 +100,7 @@ function NewMenuItemRow({
     const className =
       variant === 'mobile' || variant === 'panel'
         ? MOBILE_NEW_MENU_ROW_CLASS
-        : 'flex w-full cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm outline-hidden hover:bg-white/10';
+        : 'flex w-full cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm outline-hidden hover:bg-[var(--workspace-shell-sidebar-accent)]';
 
     return (
       <button
@@ -185,8 +185,8 @@ export function WorkspaceNewMenu(props: WorkspaceNewMenuProps) {
         onCloseAutoFocus={(event) => event.preventDefault()}
         className={DESKTOP_NEW_MENU_CONTENT_CLASS}
       >
-        <div className="border-b border-white/10 px-4 py-3">
-          <p className="text-base font-semibold text-white">Create</p>
+        <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
+          <p className="text-base font-semibold text-[var(--workspace-shell-text)]">Create</p>
         </div>
 
         <nav className="max-h-[min(52vh,22rem)] overflow-y-auto px-2 py-2">
@@ -241,7 +241,7 @@ export function WorkspaceMobileNewMenu(props: WorkspaceNewMenuProps) {
         type="button"
         aria-label="Create new"
         aria-expanded={open}
-        className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--ozer-accent)] text-white shadow-sm hover:bg-[var(--ozer-accent-hover)]"
+        className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--ozer-accent)] text-[var(--ozer-white)] shadow-sm hover:bg-[var(--ozer-accent-hover)]"
         onClick={() => setOpen(true)}
       >
         <Plus className="h-[21px] w-[21px]" />
@@ -272,12 +272,12 @@ export function WorkspaceMobileNewMenu(props: WorkspaceNewMenuProps) {
             aria-hidden={!open}
           >
             <div className="overflow-hidden rounded-[1.25rem] border border-[var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_16px_48px_rgba(0,0,0,0.45)]">
-              <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-                <p className="text-base font-semibold text-white">Create</p>
+              <div className="flex items-center justify-between border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
+                <p className="text-base font-semibold text-[var(--workspace-shell-text)]">Create</p>
                 <HapticButton
                   type="button"
                   aria-label="Close create menu"
-                  className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-300 hover:bg-white/8 hover:text-white"
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--workspace-shell-text-muted)] hover:bg-white/8 hover:text-[var(--workspace-shell-text)]"
                   onClick={close}
                 >
                   <X className="h-5 w-5" />

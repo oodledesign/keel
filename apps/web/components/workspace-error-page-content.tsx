@@ -20,11 +20,11 @@ export function WorkspaceErrorPageContent({
   backLink?: string;
 }) {
   return (
-    <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 text-white lg:px-6">
+    <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 text-[var(--workspace-shell-text)] lg:px-6">
       <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
         <Alert
           variant="destructive"
-          className="border-white/10 bg-[var(--workspace-shell-panel)] text-white [&>svg]:text-red-400"
+          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] [&>svg]:text-red-400"
         >
           <ExclamationTriangleIcon className="h-4 w-4" />
 
@@ -32,7 +32,7 @@ export function WorkspaceErrorPageContent({
             <Trans i18nKey="common:genericError" />
           </AlertTitle>
 
-          <AlertDescription className="text-zinc-300">
+          <AlertDescription className="text-[var(--workspace-shell-text-muted)]">
             <Trans i18nKey="common:genericErrorSubHeading" />
           </AlertDescription>
         </Alert>

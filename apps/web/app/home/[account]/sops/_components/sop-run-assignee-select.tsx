@@ -32,7 +32,7 @@ export function SopRunAssigneeSelect({
 }) {
   return (
     <div className="space-y-1">
-      <Label htmlFor={id} className="text-xs text-zinc-500">
+      <Label htmlFor={id} className="text-xs text-[var(--workspace-shell-text-muted)]">
         {label}
       </Label>
       <Select
@@ -44,11 +44,11 @@ export function SopRunAssigneeSelect({
       >
         <SelectTrigger
           id={id}
-          className="border-white/10 bg-black/20 text-white"
+          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
         >
           <SelectValue placeholder="Unassigned" />
         </SelectTrigger>
-        <SelectContent className="border-white/10 bg-[#1A2535] text-white">
+        <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
           <SelectItem value="__unassigned__">Unassigned</SelectItem>
           {members.map((member) => (
             <SelectItem key={member.user_id} value={member.user_id}>

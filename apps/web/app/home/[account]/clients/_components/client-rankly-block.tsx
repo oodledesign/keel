@@ -32,25 +32,25 @@ export function ClientRanklyBlock(props: {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="mt-4 rounded-lg border border-zinc-700 bg-[var(--workspace-shell-panel)] p-3 text-left">
+    <div className="mt-4 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-3 text-left">
       <div className="flex items-start gap-2">
-        <Search className="mt-0.5 h-4 w-4 shrink-0 text-[var(--keel-teal)]" />
+        <Search className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-white">Rankly SEO</p>
+          <p className="text-sm font-medium text-[var(--workspace-shell-text)]">Rankly SEO</p>
           {props.project ? (
             <>
-              <p className="mt-1 text-sm text-zinc-300">{props.project.name}</p>
-              <p className="text-xs text-zinc-500">{props.project.domain}</p>
+              <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">{props.project.name}</p>
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">{props.project.domain}</p>
               <Link
                 href={`${projectHref(props.accountSlug, props.project.id)}#keyword-tracking`}
-                className="mt-2 inline-block text-sm text-[#5eead4] underline-offset-4 hover:underline"
+                className="mt-2 inline-block text-sm text-[var(--ozer-accent-muted)] underline-offset-4 hover:underline"
               >
                 Track keywords →
               </Link>
             </>
           ) : (
             <>
-              <p className="mt-1 text-xs text-zinc-500">
+              <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
                 No SEO project linked to this client yet.
               </p>
               {!open ? (

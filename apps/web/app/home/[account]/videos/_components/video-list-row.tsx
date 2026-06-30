@@ -35,7 +35,7 @@ export function VideoListRow(props: {
     .replace('[videoId]', video.id);
 
   return (
-    <div className="flex items-center gap-4 border-b border-white/5 px-4 py-3 last:border-0">
+    <div className="flex items-center gap-4 border-b border-[color:var(--workspace-shell-border)] px-4 py-3 last:border-0">
       <button
         type="button"
         className="relative h-14 w-24 shrink-0 overflow-hidden rounded-md bg-black/40"
@@ -68,7 +68,7 @@ export function VideoListRow(props: {
           <span className="text-xs text-red-400">Failed</span>
         ) : null}
         {video.status === 'ready' ? (
-          <span className="text-xs text-[var(--keel-teal)]">Ready</span>
+          <span className="text-xs text-[var(--ozer-accent)]">Ready</span>
         ) : null}
 
         <DropdownMenu>

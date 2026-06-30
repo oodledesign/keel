@@ -226,15 +226,15 @@ export function MealPlanPanel({
     <div className="space-y-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex rounded-lg border border-white/8 bg-white/[0.03] p-0.5 text-xs">
+          <div className="flex rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-0.5 text-xs">
             <button
               type="button"
               onClick={() => setView('week')}
               className={cn(
                 'rounded-md px-3 py-1.5 font-medium transition-colors',
                 view === 'week'
-                  ? 'bg-white/10 text-white'
-                  : 'text-zinc-400 hover:text-white',
+                  ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                  : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
               )}
             >
               Week
@@ -245,8 +245,8 @@ export function MealPlanPanel({
               className={cn(
                 'rounded-md px-3 py-1.5 font-medium transition-colors',
                 view === 'month'
-                  ? 'bg-white/10 text-white'
-                  : 'text-zinc-400 hover:text-white',
+                  ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                  : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
               )}
             >
               Month
@@ -264,8 +264,8 @@ export function MealPlanPanel({
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <div className="min-w-[140px] text-center">
-              <p className="text-sm font-semibold text-white">{periodTitle}</p>
-              <p className="text-xs text-zinc-400">
+              <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">{periodTitle}</p>
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                 {filledCount}/{planDates.length} planned
               </p>
             </div>
@@ -293,7 +293,7 @@ export function MealPlanPanel({
           <Button
             onClick={() => openGenerator('generate')}
             style={{ backgroundColor: ACCENT }}
-            className="text-white hover:opacity-90"
+            className="text-[var(--workspace-shell-text)] hover:opacity-90"
           >
             <Sparkles className="mr-1.5 h-4 w-4" />
             Generate plan
@@ -303,7 +303,7 @@ export function MealPlanPanel({
 
       {hasDietary || hasPriorities ? (
         <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          <span className="text-zinc-500">Planning for:</span>
+          <span className="text-[var(--workspace-shell-text-muted)]">Planning for:</span>
           {preferences.dietary_requirements.map((d) => (
             <span
               key={`d-${d}`}
@@ -315,14 +315,14 @@ export function MealPlanPanel({
           {preferences.priorities.map((p) => (
             <span
               key={`p-${p}`}
-              className="rounded-full bg-white/[0.06] px-2 py-0.5 text-zinc-300"
+              className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[var(--workspace-shell-text-muted)]"
             >
               {titleCase(p)}
             </span>
           ))}
         </div>
       ) : (
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
           Tip: set dietary requirements and preferences in the Preferences tab to
           tailor the generator.
         </p>
@@ -334,7 +334,7 @@ export function MealPlanPanel({
             {WEEKDAY_HEADERS.map((label) => (
               <div
                 key={label}
-                className="py-1 text-center text-[11px] font-medium uppercase text-zinc-500"
+                className="py-1 text-center text-[11px] font-medium uppercase text-[var(--workspace-shell-text-muted)]"
               >
                 {label}
               </div>
@@ -353,25 +353,25 @@ export function MealPlanPanel({
                   className={cn(
                     'flex min-h-[72px] flex-col rounded-lg border p-1.5 text-left transition-colors sm:min-h-[88px] sm:p-2',
                     cell.inMonth
-                      ? 'border-white/8 bg-white/[0.03] hover:border-white/15 hover:bg-white/[0.05]'
+                      ? 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] hover:border-[color:var(--workspace-shell-border)] hover:bg-[var(--workspace-shell-sidebar-accent)]'
                       : 'border-transparent bg-transparent opacity-30',
-                    isToday && cell.inMonth && 'border-[#5eead4]/30 bg-[#5eead4]/5',
+                    isToday && cell.inMonth && 'border-[#FFE3DA]/30 bg-[#FFE3DA]/5',
                   )}
                 >
                   <span
                     className={cn(
                       'text-[11px] font-semibold sm:text-xs',
-                      isToday ? 'text-[#5eead4]' : 'text-zinc-400',
+                      isToday ? 'text-[var(--ozer-accent-muted)]' : 'text-[var(--workspace-shell-text-muted)]',
                     )}
                   >
                     {Number(cell.date.slice(8, 10))}
                   </span>
                   {cell.inMonth && entry?.title ? (
-                    <span className="mt-1 line-clamp-2 text-[10px] font-medium leading-tight text-white sm:text-xs">
+                    <span className="mt-1 line-clamp-2 text-[10px] font-medium leading-tight text-[var(--workspace-shell-text)] sm:text-xs">
                       {entry.title}
                     </span>
                   ) : cell.inMonth ? (
-                    <span className="mt-1 text-[10px] text-zinc-600">+</span>
+                    <span className="mt-1 text-[10px] text-[var(--workspace-shell-text-muted)]">+</span>
                   ) : null}
                 </button>
               );
@@ -395,12 +395,12 @@ export function MealPlanPanel({
                     <p
                       className={cn(
                         'text-xs font-semibold uppercase',
-                        isToday ? 'text-[#5eead4]' : 'text-zinc-400',
+                        isToday ? 'text-[var(--ozer-accent-muted)]' : 'text-[var(--workspace-shell-text-muted)]',
                       )}
                     >
                       {weekdayLabel(date).slice(0, 3)}
                     </p>
-                    <p className="text-[11px] text-zinc-500">
+                    <p className="text-[11px] text-[var(--workspace-shell-text-muted)]">
                       {Number(date.slice(8, 10))}
                     </p>
                   </div>
@@ -421,16 +421,16 @@ export function MealPlanPanel({
                               setDraftRecipeId(value);
                               if (r) setDraftTitle(r.name);
                             }}
-                            className="h-9 w-full rounded-md border border-white/10 bg-white/[0.04] px-2 text-sm text-white outline-none focus:border-white/25"
+                            className="h-9 w-full rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 text-sm text-[var(--workspace-shell-text)] outline-none focus:border-[color:var(--workspace-shell-border)]"
                           >
-                            <option value="" className="bg-[#0F1B35]">
+                            <option value="" className="bg-[var(--ozer-surface-panel)]">
                               Free text / no recipe
                             </option>
                             {recipes.map((r) => (
                               <option
                                 key={r.id}
                                 value={r.id}
-                                className="bg-[#0F1B35]"
+                                className="bg-[var(--ozer-surface-panel)]"
                               >
                                 {r.name}
                               </option>
@@ -454,7 +454,7 @@ export function MealPlanPanel({
                             onClick={() => void saveInlineEdit(date)}
                             disabled={isSaving}
                             style={{ backgroundColor: ACCENT }}
-                            className="h-8 text-white hover:opacity-90"
+                            className="h-8 text-[var(--workspace-shell-text)] hover:opacity-90"
                           >
                             Save
                           </Button>
@@ -463,7 +463,7 @@ export function MealPlanPanel({
                             variant="ghost"
                             onClick={() => setInlineEditDate(null)}
                             disabled={isSaving}
-                            className="h-8 text-zinc-400"
+                            className="h-8 text-[var(--workspace-shell-text-muted)]"
                           >
                             Cancel
                           </Button>
@@ -473,7 +473,7 @@ export function MealPlanPanel({
                               variant="ghost"
                               onClick={() => void handleClear(date)}
                               disabled={isSaving}
-                              className="ml-auto h-8 text-zinc-400 hover:text-rose-300"
+                              className="ml-auto h-8 text-[var(--workspace-shell-text-muted)] hover:text-rose-300"
                             >
                               Clear
                             </Button>
@@ -489,11 +489,11 @@ export function MealPlanPanel({
                         <div className="min-w-0">
                           {entry?.title ? (
                             <>
-                              <p className="truncate text-sm font-medium text-white">
+                              <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
                                 {entry.title}
                               </p>
                               {entry.notes ? (
-                                <p className="mt-0.5 line-clamp-1 text-xs text-zinc-400">
+                                <p className="mt-0.5 line-clamp-1 text-xs text-[var(--workspace-shell-text-muted)]">
                                   {entry.notes}
                                 </p>
                               ) : null}
@@ -502,7 +502,7 @@ export function MealPlanPanel({
                                   {recipe.tags.slice(0, 3).map((tag) => (
                                     <span
                                       key={tag}
-                                      className="rounded-full bg-white/[0.06] px-1.5 py-0.5 text-[10px] capitalize text-zinc-400"
+                                      className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-1.5 py-0.5 text-[10px] capitalize text-[var(--workspace-shell-text-muted)]"
                                     >
                                       {tag}
                                     </span>
@@ -511,7 +511,7 @@ export function MealPlanPanel({
                               ) : null}
                             </>
                           ) : (
-                            <span className="text-sm text-zinc-500 group-hover:text-zinc-300">
+                            <span className="text-sm text-[var(--workspace-shell-text-muted)] group-hover:text-[var(--workspace-shell-text-muted)]">
                               + Add a meal
                             </span>
                           )}
@@ -526,7 +526,7 @@ export function MealPlanPanel({
                       onClick={() => void handleClear(date)}
                       disabled={isSaving}
                       aria-label="Clear meal"
-                      className="shrink-0 text-zinc-600 hover:text-rose-300"
+                      className="shrink-0 text-[var(--workspace-shell-text-muted)] hover:text-rose-300"
                     >
                       <X className="h-4 w-4" />
                     </button>

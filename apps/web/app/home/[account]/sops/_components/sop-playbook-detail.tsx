@@ -23,7 +23,7 @@ import { startSopRunAction } from '../_lib/server/sops-actions';
 import { SopRunAssigneeSelect } from './sop-run-assignee-select';
 
 const panelClass =
-  'rounded-[24px] border border-white/6 bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]';
+  'rounded-[24px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]';
 
 type SopPlaybookDetailProps = {
   accountId: string;
@@ -74,12 +74,12 @@ export function SopPlaybookDetail({
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-6 lg:px-0">
-      <Link href={libraryPath} className="text-sm text-[var(--keel-teal)] hover:underline">
+      <Link href={libraryPath} className="text-sm text-[var(--ozer-accent)] hover:underline">
         ← All SOPs
       </Link>
 
       <div className={`${panelClass} p-6`}>
-        <h1 className="text-xl font-bold text-white">{playbook.title}</h1>
+        <h1 className="text-xl font-bold text-[var(--workspace-shell-text)]">{playbook.title}</h1>
         {playbook.description ? (
           <p className="text-muted-foreground mt-2 text-sm">{playbook.description}</p>
         ) : null}
@@ -89,7 +89,7 @@ export function SopPlaybookDetail({
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="min-w-0 flex-1 space-y-1">
-            <label className="text-xs text-zinc-500" htmlFor="run-title">
+            <label className="text-xs text-[var(--workspace-shell-text-muted)]" htmlFor="run-title">
               Run title (optional)
             </label>
             <Input
@@ -97,7 +97,7 @@ export function SopPlaybookDetail({
               value={runTitle}
               onChange={(e) => setRunTitle(e.target.value)}
               placeholder="e.g. March 2026 — Acme Co"
-              className="border-white/10 bg-black/20 text-white"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
             />
           </div>
           {teamMembers.length > 0 ? (
@@ -129,11 +129,11 @@ export function SopPlaybookDetail({
 
       <div className={`${panelClass} divide-y divide-white/6`}>
         <div className="px-5 py-3">
-          <h2 className="text-sm font-semibold text-white">Process steps</h2>
+          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Process steps</h2>
         </div>
         {steps.map((step, index) => (
           <div key={step.id} className="px-5 py-4">
-            <p className="font-medium text-white">
+            <p className="font-medium text-[var(--workspace-shell-text)]">
               {index + 1}. {step.title}
             </p>
             {step.body_md ? (
@@ -148,7 +148,7 @@ export function SopPlaybookDetail({
       {runs.length > 0 ? (
         <div className={`${panelClass} divide-y divide-white/6`}>
           <div className="px-5 py-3">
-            <h2 className="text-sm font-semibold text-white">Past runs</h2>
+            <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Past runs</h2>
           </div>
           {runs.map((run) => (
             <Link
@@ -156,9 +156,9 @@ export function SopPlaybookDetail({
               href={pathsConfig.app.accountSopsRun
                 .replace('[account]', accountSlug)
                 .replace('[runId]', run.id)}
-              className="block px-5 py-4 transition-colors hover:bg-white/[0.02]"
+              className="block px-5 py-4 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
             >
-              <p className="font-medium text-white">{run.title}</p>
+              <p className="font-medium text-[var(--workspace-shell-text)]">{run.title}</p>
               <p className="text-muted-foreground text-xs capitalize">
                 {run.status}
                 {run.period_label ? ` · ${run.period_label}` : ''}

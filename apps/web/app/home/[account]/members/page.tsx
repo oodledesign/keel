@@ -81,7 +81,7 @@ async function TeamAccountMembersPage({ params }: TeamAccountMembersPageProps) {
 
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-[var(--workspace-shell-text)] lg:px-6">
         <div className="flex w-full max-w-4xl flex-col space-y-4 pb-32">
-          <Card className="border-white/6 bg-[var(--workspace-shell-panel)]">
+          <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
             <CardHeader className={'flex flex-row justify-between'}>
               <div className={'flex flex-col space-y-1.5'}>
                 <CardTitle>
@@ -121,7 +121,7 @@ async function TeamAccountMembersPage({ params }: TeamAccountMembersPageProps) {
             </CardContent>
           </Card>
 
-          <Card className="border-white/6 bg-[var(--workspace-shell-panel)]">
+          <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
             <CardHeader className={'flex flex-row justify-between'}>
               <div className={'flex flex-col space-y-1.5'}>
                 <CardTitle>

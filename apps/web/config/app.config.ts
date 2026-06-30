@@ -73,12 +73,12 @@ const appConfig = AppConfigSchema.parse({
     'Ozer is the workspace OS for freelancers and small agencies — personal, business, property, and community in one account. One home for tasks, planner, and every workspace.',
   url: process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000',
   locale: process.env.NEXT_PUBLIC_DEFAULT_LOCALE,
-  theme: (process.env.NEXT_PUBLIC_DEFAULT_THEME_MODE ?? 'light') as
+  theme: (process.env.NEXT_PUBLIC_DEFAULT_THEME_MODE ?? 'dark') as
     | 'light'
     | 'dark'
     | 'system',
-  themeColor: process.env.NEXT_PUBLIC_THEME_COLOR ?? '#ffffff',
-  themeColorDark: process.env.NEXT_PUBLIC_THEME_COLOR_DARK ?? '#0a0a0a',
+  themeColor: process.env.NEXT_PUBLIC_THEME_COLOR ?? '#FBF6EC',
+  themeColorDark: process.env.NEXT_PUBLIC_THEME_COLOR_DARK ?? 'var(--ozer-plum-900)',
   production,
 });
 

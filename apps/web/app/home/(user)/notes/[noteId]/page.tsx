@@ -18,7 +18,7 @@ async function PersonalNoteDetailPage({ params }: PersonalNoteDetailPageProps) {
   const data = await loadPersonalNoteDetailData(noteId);
 
   return (
-    <div className="w-full bg-[var(--workspace-shell-canvas)] px-4 text-white sm:px-6 lg:px-10 xl:px-14">
+    <div className="w-full bg-[var(--workspace-shell-canvas)] px-4 text-[var(--workspace-shell-text)] sm:px-6 lg:px-10 xl:px-14">
       <NoteEditor
         accountId={data.accountId}
         accountSlug={data.accountSlug}

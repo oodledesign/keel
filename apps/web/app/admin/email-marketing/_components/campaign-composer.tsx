@@ -327,20 +327,20 @@ export function CampaignComposer({
         <div>
           <Button
             variant="ghost"
-            className="mb-2 text-zinc-400 hover:text-white"
+            className="mb-2 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
             onClick={() => router.push('/admin/email-marketing')}
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
-          <h1 className="text-2xl font-bold text-white">Campaign composer</h1>
-          <p className="text-zinc-400">Create branded HTML campaigns and send them via SES.</p>
+          <h1 className="text-2xl font-bold text-[var(--workspace-shell-text)]">Campaign composer</h1>
+          <p className="text-[var(--workspace-shell-text-muted)]">Create branded HTML campaigns and send them via SES.</p>
         </div>
         <div className="flex flex-wrap items-end gap-2">
           <Button
             variant="outline"
             disabled={isPending}
-            className="border-white/10"
+            className="border-[color:var(--workspace-shell-border)]"
             onClick={() =>
               startTransition(async () => {
                 await save();
@@ -351,18 +351,18 @@ export function CampaignComposer({
             Save draft
           </Button>
           <div className="min-w-[220px] space-y-2">
-            <Label className="text-zinc-400">Send a copy to</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">Send a copy to</Label>
             <Input
               value={testEmail}
               onChange={(event) => setTestEmail(event.target.value)}
               placeholder="you@example.com"
-              className="border-white/10 bg-black/20 text-white"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
             />
           </div>
           <Button
             variant="outline"
             disabled={isPending || !testEmail.trim()}
-            className="border-white/10"
+            className="border-[color:var(--workspace-shell-border)]"
             onClick={() => handleTest('Test')}
           >
             Send test
@@ -370,7 +370,7 @@ export function CampaignComposer({
           <Button
             variant="outline"
             disabled={isPending || !testEmail.trim()}
-            className="border-white/10"
+            className="border-[color:var(--workspace-shell-border)]"
             onClick={() => handleTest('Copy')}
           >
             Send a copy
@@ -383,23 +383,23 @@ export function CampaignComposer({
       </div>
 
       {progress ? (
-        <Card className="border-white/10 bg-[var(--workspace-shell-panel)]">
+        <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
           <CardContent className="space-y-3 p-4">
-            <div className="flex justify-between text-sm text-zinc-300">
+            <div className="flex justify-between text-sm text-[var(--workspace-shell-text-muted)]">
               <span>Status: {progress.status}</span>
               <span>
                 {progress.sent_count}/{progress.total_recipients} sent
               </span>
             </div>
-            <Progress value={progressValue} className="bg-white/10" />
+            <Progress value={progressValue} className="bg-[var(--workspace-shell-sidebar-accent)]" />
           </CardContent>
         </Card>
       ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(420px,0.9fr)]">
-        <Card className="border-white/10 bg-[var(--workspace-shell-panel)]">
+        <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
           <CardHeader>
-            <CardTitle className="text-white">Campaign settings</CardTitle>
+            <CardTitle className="text-[var(--workspace-shell-text)]">Campaign settings</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
             <InputField label="Title (internal)" value={title} onChange={setTitle} />
@@ -407,7 +407,7 @@ export function CampaignComposer({
             <InputField label="Preview text" value={previewText} onChange={setPreviewText} />
 
             <div className="space-y-2">
-              <Label className="text-white">Recipient list</Label>
+              <Label className="text-[var(--workspace-shell-text)]">Recipient list</Label>
               <Select
                 value={recipientList}
                 onValueChange={(value) => {
@@ -419,7 +419,7 @@ export function CampaignComposer({
                   }
                 }}
               >
-                <SelectTrigger className="border-white/10 bg-black/20 text-white">
+                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -437,7 +437,7 @@ export function CampaignComposer({
                     setContactListId(value === '__none__' ? '' : value)
                   }
                 >
-                  <SelectTrigger className="border-white/10 bg-black/20 text-white">
+                  <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                     <SelectValue placeholder="Choose a list" />
                   </SelectTrigger>
                   <SelectContent>
@@ -455,18 +455,18 @@ export function CampaignComposer({
                   </SelectContent>
                 </Select>
               ) : null}
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm text-[var(--workspace-shell-text-muted)]">
                 Estimated recipients: {estimate === null ? 'Calculating…' : estimate}
               </p>
             </div>
 
             {recipientList === 'manual' ? (
               <div className="space-y-2">
-                <Label className="text-white">Manual addresses</Label>
+                <Label className="text-[var(--workspace-shell-text)]">Manual addresses</Label>
                 <Textarea
                   value={manualEmails}
                   onChange={(event) => setManualEmails(event.target.value)}
-                  className="min-h-32 border-white/10 bg-black/20 text-white"
+                  className="min-h-32 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
                   placeholder="name@example.com, another@example.com"
                 />
               </div>
@@ -474,10 +474,10 @@ export function CampaignComposer({
 
             {recipientList === 'custom' ? (
               <div className="space-y-2">
-                <Label className="text-white">Custom users</Label>
-                <div className="max-h-48 space-y-2 overflow-auto rounded-xl border border-white/10 p-3">
+                <Label className="text-[var(--workspace-shell-text)]">Custom users</Label>
+                <div className="max-h-48 space-y-2 overflow-auto rounded-xl border border-[color:var(--workspace-shell-border)] p-3">
                   {customUsers.map((user) => (
-                    <label key={user.id} className="flex items-center gap-2 text-sm text-zinc-300">
+                    <label key={user.id} className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text-muted)]">
                       <input
                         type="checkbox"
                         checked={customRecipientIds.includes(user.id)}
@@ -497,7 +497,7 @@ export function CampaignComposer({
             ) : null}
 
             <div className="space-y-2">
-              <Label className="text-white">Template</Label>
+              <Label className="text-[var(--workspace-shell-text)]">Template</Label>
               <Select
                 value={templateId}
                 onValueChange={(value) => {
@@ -505,7 +505,7 @@ export function CampaignComposer({
                   setHtmlTemplateSeed(null);
                 }}
               >
-                <SelectTrigger className="border-white/10 bg-black/20 text-white">
+                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -524,13 +524,13 @@ export function CampaignComposer({
             {templateId === 'blank' || isEditableHtmlTemplate(templateId) ? (
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <Label className="text-white">HTML body</Label>
+                  <Label className="text-[var(--workspace-shell-text)]">HTML body</Label>
                   {isEditableHtmlTemplate(templateId) ? (
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="border-white/10"
+                      className="border-[color:var(--workspace-shell-border)]"
                       onClick={() => {
                         const template = getMarketingCampaignTemplate(templateId);
                         if (!template) return;
@@ -542,19 +542,19 @@ export function CampaignComposer({
                     </Button>
                   ) : null}
                 </div>
-                <p className="text-xs text-zinc-400">
+                <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                   Spark-safe table layout with inline styles. Copy-ready files also live in{' '}
                   <code className="rounded bg-black/30 px-1 py-0.5">public/email-previews/</code>.
                 </p>
                 {isEditableHtmlTemplate(templateId) ? (
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                     {getMarketingCampaignTemplate(templateId)?.description}
                   </p>
                 ) : null}
                 <Textarea
                   value={blankHtml}
                   onChange={(event) => setBlankHtml(event.target.value)}
-                  className="min-h-64 border-white/10 bg-black/20 font-mono text-white"
+                  className="min-h-64 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] font-mono text-[var(--workspace-shell-text)]"
                 />
               </div>
             ) : (
@@ -578,25 +578,25 @@ export function CampaignComposer({
             )}
 
             <div className="space-y-2">
-              <Label className="text-white">Plain text fallback (optional)</Label>
+              <Label className="text-[var(--workspace-shell-text)]">Plain text fallback (optional)</Label>
               <Textarea
                 value={plainTextBody}
                 onChange={(event) => setPlainTextBody(event.target.value)}
-                className="min-h-28 border-white/10 bg-black/20 text-white"
+                className="min-h-28 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
               />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-white/10 bg-[var(--workspace-shell-panel)]">
+        <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
           <CardHeader>
-            <CardTitle className="text-white">Live preview</CardTitle>
+            <CardTitle className="text-[var(--workspace-shell-text)]">Live preview</CardTitle>
           </CardHeader>
           <CardContent>
             <iframe
               title="Campaign preview"
               srcDoc={html}
-              className="h-[720px] w-full rounded-2xl border border-white/10 bg-white"
+              className="h-[720px] w-full rounded-2xl border border-[color:var(--workspace-shell-border)] bg-white"
             />
           </CardContent>
         </Card>
@@ -616,11 +616,11 @@ function InputField({
 }) {
   return (
     <div className="space-y-2">
-      <Label className="text-white">{label}</Label>
+      <Label className="text-[var(--workspace-shell-text)]">{label}</Label>
       <Input
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="border-white/10 bg-black/20 text-white"
+        className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
       />
     </div>
   );
@@ -651,24 +651,24 @@ function TemplateFields(props: {
         <InputField label="Hero image URL (optional)" value={props.heroImageUrl} onChange={props.setHeroImageUrl} />
       ) : null}
       <div className="space-y-2">
-        <Label className="text-white">Body</Label>
-        <Textarea value={props.body} onChange={(event) => props.setBody(event.target.value)} className="min-h-40 border-white/10 bg-black/20 text-white" />
+        <Label className="text-[var(--workspace-shell-text)]">Body</Label>
+        <Textarea value={props.body} onChange={(event) => props.setBody(event.target.value)} className="min-h-40 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]" />
       </div>
       {props.templateId === 'newsletter' ? (
         <div className="space-y-3">
-          <Label className="text-white">Feature/news blocks</Label>
+          <Label className="text-[var(--workspace-shell-text)]">Feature/news blocks</Label>
           {props.features.map((feature, index) => (
-            <div key={index} className="space-y-2 rounded-xl border border-white/10 p-3">
+            <div key={index} className="space-y-2 rounded-xl border border-[color:var(--workspace-shell-border)] p-3">
               <Input value={feature.heading} onChange={(event) => {
                 const next = [...props.features];
                 next[index] = { ...feature, heading: event.target.value };
                 props.setFeatures(next);
-              }} className="border-white/10 bg-black/20 text-white" placeholder={`Feature ${index + 1} heading`} />
+              }} className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]" placeholder={`Feature ${index + 1} heading`} />
               <Textarea value={feature.body} onChange={(event) => {
                 const next = [...props.features];
                 next[index] = { ...feature, body: event.target.value };
                 props.setFeatures(next);
-              }} className="border-white/10 bg-black/20 text-white" placeholder="Short paragraph" />
+              }} className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]" placeholder="Short paragraph" />
             </div>
           ))}
         </div>

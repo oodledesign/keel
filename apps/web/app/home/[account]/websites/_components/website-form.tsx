@@ -157,8 +157,8 @@ export function WebsiteForm({
 
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-3xl space-y-8">
-      <section className="space-y-4 rounded-[20px] border border-white/6 bg-[var(--workspace-shell-panel)] p-5 md:p-6">
-        <h2 className="text-base font-semibold text-white">Basics</h2>
+      <section className="space-y-4 rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 md:p-6">
+        <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">Basics</h2>
 
         <div className="space-y-2">
           <Label htmlFor="name">Name</Label>
@@ -292,8 +292,8 @@ export function WebsiteForm({
         </div>
       </section>
 
-      <section className="space-y-4 rounded-[20px] border border-white/6 bg-[var(--workspace-shell-panel)] p-5 md:p-6">
-        <h2 className="text-base font-semibold text-white">Technical</h2>
+      <section className="space-y-4 rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 md:p-6">
+        <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">Technical</h2>
 
         <div className="space-y-2">
           <Label htmlFor="cms_admin_url">CMS admin URL</Label>
@@ -355,8 +355,8 @@ export function WebsiteForm({
         </div>
       </section>
 
-      <section className="space-y-4 rounded-[20px] border border-white/6 bg-[var(--workspace-shell-panel)] p-5 md:p-6">
-        <h2 className="text-base font-semibold text-white">Notes</h2>
+      <section className="space-y-4 rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 md:p-6">
+        <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">Notes</h2>
 
         <div className="space-y-2">
           <Label htmlFor="notes">Notes</Label>

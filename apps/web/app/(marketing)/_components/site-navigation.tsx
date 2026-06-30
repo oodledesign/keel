@@ -10,7 +10,7 @@ export function SiteNavigation() {
   return (
     <div className="hidden items-center justify-center md:flex">
       <NavigationMenu>
-        <NavigationMenuList className="gap-x-1 rounded-full border border-violet-200/10 bg-white/[0.03] p-1 xl:gap-x-2">
+        <NavigationMenuList className="gap-x-1 rounded-full border border-violet-200/10 bg-[var(--workspace-shell-sidebar-accent)] p-1 xl:gap-x-2">
           <SiteWorkspacesNavMenu />
           <SiteFeaturesNavMenu />
           <SiteAppsNavMenu />

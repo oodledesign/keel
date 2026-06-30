@@ -61,7 +61,7 @@ import {
 import { FinancesDashboardSkeleton } from './finances-dashboard-skeleton';
 
 const panelClass =
-  'rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)]';
+  'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
 
 type DashboardData = Awaited<ReturnType<typeof loadFinancesDashboardAction>>;
 
@@ -441,7 +441,7 @@ export function FinancesPageContent({
           <Button
             type="button"
             variant="outline"
-            className="border-white/10"
+            className="border-[color:var(--workspace-shell-border)]"
             disabled={showSkeleton}
             onClick={() => setImportOpen(true)}
           >
@@ -450,7 +450,7 @@ export function FinancesPageContent({
           </Button>
           <Button
             type="button"
-            className="bg-[#2A9D8F] text-white hover:bg-[#238b7f]"
+            className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
             disabled={showSkeleton}
             onClick={() => setManualOpen(true)}
           >
@@ -463,11 +463,11 @@ export function FinancesPageContent({
         <FinancesDashboardSkeleton />
       ) : loadFailed ? (
         <div className={cn(panelClass, 'p-6 text-center')}>
-          <p className="text-sm text-zinc-400">Could not load finance data.</p>
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">Could not load finance data.</p>
           <Button
             type="button"
             variant="outline"
-            className="mt-4 border-white/10"
+            className="mt-4 border-[color:var(--workspace-shell-border)]"
             onClick={() => void refresh()}
           >
             Try again
@@ -502,7 +502,7 @@ export function FinancesPageContent({
           </div>
 
           {data.summary.transferPence > 0 ? (
-            <p className="text-sm text-zinc-400">
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
               {formatPence(data.summary.transferPence)} in internal transfers excluded
               from income and expenses.
             </p>
@@ -511,13 +511,13 @@ export function FinancesPageContent({
           {chartData.length > 0 ? (
             <div className="grid gap-4 lg:grid-cols-2">
               <div className={cn(panelClass, 'p-4')}>
-                <h3 className="text-sm font-medium text-white">Income vs expenses</h3>
-                <p className="mb-4 text-xs text-zinc-400">By month in selected range</p>
+                <h3 className="text-sm font-medium text-[var(--workspace-shell-text)]">Income vs expenses</h3>
+                <p className="mb-4 text-xs text-[var(--workspace-shell-text-muted)]">By month in selected range</p>
                 <FinanceTrendBarChart data={chartData} variant="grouped" />
               </div>
               <div className={cn(panelClass, 'p-4')}>
-                <h3 className="text-sm font-medium text-white">Net trend</h3>
-                <p className="mb-4 text-xs text-zinc-400">Monthly net after expenses</p>
+                <h3 className="text-sm font-medium text-[var(--workspace-shell-text)]">Net trend</h3>
+                <p className="mb-4 text-xs text-[var(--workspace-shell-text-muted)]">Monthly net after expenses</p>
                 <FinanceNetLineChart data={chartData} />
               </div>
             </div>
@@ -525,11 +525,11 @@ export function FinancesPageContent({
 
           {forecast ? (
             <div className={cn(panelClass, 'p-4')}>
-              <h3 className="text-sm font-medium text-white">Forecast (monthly average)</h3>
-              <p className="mt-2 text-sm text-zinc-400">
+              <h3 className="text-sm font-medium text-[var(--workspace-shell-text)]">Forecast (monthly average)</h3>
+              <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
                 Based on selected range: ~{formatPence(forecast.avgIncomePence)} income,{' '}
                 ~{formatPence(forecast.avgExpensePence)} expenses → projected net{' '}
-                <span className="text-[#5eead4]">
+                <span className="text-[var(--ozer-accent-muted)]">
                   {formatPence(forecast.projectedNetPence)}
                 </span>{' '}
                 / month
@@ -604,8 +604,8 @@ function FreeAgentPanel({
     <div className={cn(panelClass, 'p-4')}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="font-medium text-white">FreeAgent</h3>
-          <p className="text-sm text-zinc-400">
+          <h3 className="font-medium text-[var(--workspace-shell-text)]">FreeAgent</h3>
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
             {data?.connection
               ? `Connected to ${data.connection.freeagent_company_name ?? 'FreeAgent'}. Ozer is your UI; FreeAgent stays the ledger. Categories sync from FreeAgent on each sync. When you categorise here, Ozer writes a bank transaction explanation in FreeAgent (fully explained, not a draft). New transactions sync automatically each morning; use Sync now for a full refresh.`
               : 'Connect FreeAgent to import bank transactions and categories. Categorise in Ozer and sync explanations back to FreeAgent.'}
@@ -617,7 +617,7 @@ function FreeAgentPanel({
               <Button
                 type="button"
                 variant="outline"
-                className="border-white/10"
+                className="border-[color:var(--workspace-shell-border)]"
                 disabled={pending}
                 onClick={onSync}
               >
@@ -629,7 +629,7 @@ function FreeAgentPanel({
               <Button
                 type="button"
                 variant="ghost"
-                className="text-zinc-400"
+                className="text-[var(--workspace-shell-text-muted)]"
                 disabled={pending}
                 onClick={onDisconnect}
               >
@@ -637,14 +637,14 @@ function FreeAgentPanel({
               </Button>
             </>
           ) : data?.freeAgentConfigured ? (
-            <Button type="button" asChild className="bg-[#2A9D8F] text-white">
+            <Button type="button" asChild className="bg-[var(--ozer-accent)] text-[var(--ozer-white)]">
               <a href={connectUrl}>
                 <Link2 className="mr-2 h-4 w-4" />
                 Connect FreeAgent
               </a>
             </Button>
           ) : (
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
               Set FREEAGENT_CLIENT_ID and FREEAGENT_CLIENT_SECRET to enable.
             </p>
           )}
@@ -685,8 +685,8 @@ function TransactionsPanel({
 }) {
   return (
     <div className={cn(panelClass, 'overflow-hidden')}>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/6 px-4 py-3">
-        <h3 className="font-medium text-white">Transactions</h3>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
+        <h3 className="font-medium text-[var(--workspace-shell-text)]">Transactions</h3>
         <div className="flex flex-wrap gap-2">
           {uncategorizedCount > 0 ? (
             <>
@@ -694,7 +694,7 @@ function TransactionsPanel({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="border-white/10"
+                className="border-[color:var(--workspace-shell-border)]"
                 disabled={pending || loading}
                 onClick={onSuggestCategories}
               >
@@ -705,7 +705,7 @@ function TransactionsPanel({
                 <Button
                   type="button"
                   size="sm"
-                  className="bg-[#2A9D8F] text-white hover:bg-[#238b7f]"
+                  className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
                   disabled={pending || loading}
                   onClick={onApplySuggestions}
                 >
@@ -717,7 +717,7 @@ function TransactionsPanel({
         </div>
       </div>
       {!data?.transactions.length ? (
-        <p className="p-4 text-sm text-zinc-400">
+        <p className="p-4 text-sm text-[var(--workspace-shell-text-muted)]">
           No transactions in this range. Import a CSV, connect FreeAgent, or add
           manually.
         </p>
@@ -725,7 +725,7 @@ function TransactionsPanel({
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/6 text-left text-zinc-400">
+              <tr className="border-b border-[color:var(--workspace-shell-border)] text-left text-[var(--workspace-shell-text-muted)]">
                 <th className="px-4 py-2 font-medium">Date</th>
                 <th className="px-4 py-2 font-medium">Description</th>
                 <th className="px-4 py-2 font-medium">Amount</th>
@@ -755,17 +755,17 @@ function TransactionsPanel({
                   <tr
                     key={tx.id as string}
                     className={cn(
-                      'border-b border-white/4',
-                      isTransfer && 'bg-white/[0.02]',
+                      'border-b border-[color:var(--workspace-shell-border)]',
+                      isTransfer && 'bg-[var(--workspace-shell-sidebar-accent)]',
                     )}
                   >
-                    <td className="whitespace-nowrap px-4 py-2 text-zinc-300">
+                    <td className="whitespace-nowrap px-4 py-2 text-[var(--workspace-shell-text-muted)]">
                       {String(tx.transaction_date)}
                     </td>
-                    <td className="max-w-xs truncate px-4 py-2 text-white">
+                    <td className="max-w-xs truncate px-4 py-2 text-[var(--workspace-shell-text)]">
                       {String(tx.description)}
                       {suggestedCat && !tx.category_id && !isTransfer ? (
-                        <span className="mt-1 block text-xs text-[#5eead4]">
+                        <span className="mt-1 block text-xs text-[var(--ozer-accent-muted)]">
                           AI suggests: {String(suggestedCat.name)}
                           {suggestion?.confidence ? ` (${suggestion.confidence})` : ''}
                         </span>
@@ -775,7 +775,7 @@ function TransactionsPanel({
                       className={cn(
                         'whitespace-nowrap px-4 py-2 font-medium',
                         isTransfer
-                          ? 'text-zinc-400'
+                          ? 'text-[var(--workspace-shell-text-muted)]'
                           : pence >= 0
                             ? 'text-emerald-400'
                             : 'text-red-300',
@@ -792,7 +792,7 @@ function TransactionsPanel({
                         }
                         disabled={pending}
                       >
-                        <SelectTrigger className="h-8 w-32 border-white/10 bg-transparent text-xs text-white">
+                        <SelectTrigger className="h-8 w-32 border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -809,7 +809,7 @@ function TransactionsPanel({
                         }
                         disabled={pending || isTransfer}
                       >
-                        <SelectTrigger className="h-8 w-44 border-white/10 bg-transparent text-xs text-white">
+                        <SelectTrigger className="h-8 w-44 border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]">
                           <SelectValue placeholder="Category" />
                         </SelectTrigger>
                         <SelectContent>
@@ -842,7 +842,7 @@ function TransactionsPanel({
                         }}
                         disabled={pending}
                       >
-                        <SelectTrigger className="h-8 w-36 border-white/10 bg-transparent text-xs text-white">
+                        <SelectTrigger className="h-8 w-36 border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]">
                           <SelectValue placeholder="Client" />
                         </SelectTrigger>
                         <SelectContent>
@@ -875,7 +875,7 @@ function TransactionsPanel({
                         }}
                         disabled={pending}
                       >
-                        <SelectTrigger className="h-8 w-40 border-white/10 bg-transparent text-xs text-white">
+                        <SelectTrigger className="h-8 w-40 border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]">
                           <SelectValue placeholder="Project" />
                         </SelectTrigger>
                         <SelectContent>
@@ -888,7 +888,7 @@ function TransactionsPanel({
                         </SelectContent>
                       </Select>
                     </td>
-                    <td className="px-4 py-2 text-xs capitalize text-zinc-500">
+                    <td className="px-4 py-2 text-xs capitalize text-[var(--workspace-shell-text-muted)]">
                       {String(tx.source)}
                       {tx.sync_status === 'push_failed' ? ' · sync failed' : ''}
                     </td>
@@ -916,7 +916,7 @@ function SummaryCard({
 }) {
   return (
     <div className={cn(panelClass, 'p-4')}>
-      <div className="flex items-center gap-2 text-zinc-400">
+      <div className="flex items-center gap-2 text-[var(--workspace-shell-text-muted)]">
         <Icon className="h-4 w-4" />
         <span className="text-sm">{label}</span>
       </div>
@@ -993,7 +993,7 @@ function CsvImportSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="border-white/10 bg-[var(--workspace-shell-canvas)] text-white sm:max-w-lg">
+      <SheetContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] text-[var(--workspace-shell-text)] sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>Import bank CSV</SheetTitle>
         </SheetHeader>
@@ -1001,13 +1001,13 @@ function CsvImportSheet({
           <Input
             type="file"
             accept=".csv,text/csv"
-            className="border-white/10"
+            className="border-[color:var(--workspace-shell-border)]"
             onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
           />
           {mappingPreview ? (
             <div>
-              <Label className="text-zinc-400">AI column mapping</Label>
-              <pre className="mt-2 max-h-40 overflow-auto rounded-lg border border-white/10 bg-black/20 p-3 text-xs text-zinc-300">
+              <Label className="text-[var(--workspace-shell-text-muted)]">AI column mapping</Label>
+              <pre className="mt-2 max-h-40 overflow-auto rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3 text-xs text-[var(--workspace-shell-text-muted)]">
                 {mappingPreview}
               </pre>
             </div>
@@ -1015,7 +1015,7 @@ function CsvImportSheet({
           <Button
             type="button"
             disabled={!file || pending}
-            className="bg-[#2A9D8F] text-white"
+            className="bg-[var(--ozer-accent)] text-[var(--ozer-white)]"
             onClick={importFile}
           >
             Import
@@ -1078,7 +1078,7 @@ function ManualTransactionSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="border-white/10 bg-[var(--workspace-shell-canvas)] text-white sm:max-w-lg">
+      <SheetContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] text-[var(--workspace-shell-text)] sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>Add transaction</SheetTitle>
         </SheetHeader>
@@ -1086,7 +1086,7 @@ function ManualTransactionSheet({
           <div>
             <Label>Type</Label>
             <Select value={kind} onValueChange={(v) => setKind(v as typeof kind)}>
-              <SelectTrigger className="mt-1 border-white/10">
+              <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1101,7 +1101,7 @@ function ManualTransactionSheet({
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="mt-1 border-white/10"
+              className="mt-1 border-[color:var(--workspace-shell-border)]"
             />
           </div>
           <div>
@@ -1109,7 +1109,7 @@ function ManualTransactionSheet({
             <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="mt-1 border-white/10"
+              className="mt-1 border-[color:var(--workspace-shell-border)]"
             />
           </div>
           <div>
@@ -1119,13 +1119,13 @@ function ManualTransactionSheet({
               step="0.01"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="mt-1 border-white/10"
+              className="mt-1 border-[color:var(--workspace-shell-border)]"
             />
           </div>
           <div>
             <Label>Category</Label>
             <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger className="mt-1 border-white/10">
+              <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1143,7 +1143,7 @@ function ManualTransactionSheet({
           <Button
             type="button"
             disabled={pending}
-            className="bg-[#2A9D8F] text-white"
+            className="bg-[var(--ozer-accent)] text-[var(--ozer-white)]"
             onClick={save}
           >
             Save

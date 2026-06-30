@@ -101,12 +101,12 @@ export default async function PortalInvoicePage({
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6">
-        <Link href="/" className="text-sm text-zinc-400 hover:text-white">
+        <Link href="/" className="text-sm text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]">
           ← Back to home
         </Link>
       </div>
       {paid === '1' && isPaid ? (
-        <div className="mb-6 rounded-lg border border-emerald-700 bg-[var(--keel-teal)]/10 px-4 py-3 text-[#5eead4]">
+        <div className="mb-6 rounded-lg border border-emerald-700 bg-[var(--ozer-accent-subtle)] px-4 py-3 text-[var(--ozer-accent-muted)]">
           Payment successful. Thank you.
         </div>
       ) : null}
@@ -118,7 +118,7 @@ export default async function PortalInvoicePage({
         </div>
       ) : null}
       {cancelled === '1' ? (
-        <div className="mb-6 rounded-lg border border-zinc-600 bg-zinc-800/50 px-4 py-3 text-zinc-400">
+        <div className="mb-6 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/50 px-4 py-3 text-[var(--workspace-shell-text-muted)]">
           Payment was cancelled.
         </div>
       ) : null}

@@ -40,7 +40,7 @@ export default async function RanklyProjectSiteCrawlerPage({
         title="Site Crawler"
         description="Internal technical SEO crawl — find broken pages, missing metadata, and duplicate titles across your site."
       />
-      <div className="rounded-lg border border-white/10 bg-black/10 p-5">
+      <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-5">
         <SiteCrawlerPanel
           accountId={accountId}
           projectId={projectId}

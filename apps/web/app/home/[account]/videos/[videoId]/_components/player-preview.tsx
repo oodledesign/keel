@@ -48,7 +48,7 @@ export function PlayerPreview(props: {
       </div>
 
       <div
-        className="mx-auto w-full overflow-hidden rounded-xl border border-white/10 bg-black/40"
+        className="mx-auto w-full overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/40"
         style={{ maxWidth }}
       >
         <div

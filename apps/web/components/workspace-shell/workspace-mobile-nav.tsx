@@ -89,19 +89,19 @@ export function WorkspaceMobileMenu({
         aria-label="Navigation menu"
         aria-hidden={!open}
       >
-        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-          <p className="text-base font-semibold text-white">Menu</p>
+        <div className="flex items-center justify-between border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
+          <p className="text-base font-semibold text-[var(--workspace-shell-text)]">Menu</p>
           <HapticButton
             type="button"
             aria-label="Close menu"
-            className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-300 hover:bg-white/8 hover:text-white"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--workspace-shell-text-muted)] hover:bg-white/8 hover:text-[var(--workspace-shell-text)]"
             onClick={close}
           >
             <X className="h-5 w-5" />
           </HapticButton>
         </div>
 
-        <div className="border-b border-white/10 px-4 py-3">
+        <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
           <WorkspaceAccountsSelector
             selectedAccount={account}
             userId={userId}
@@ -136,8 +136,8 @@ export function WorkspaceMobileMenu({
                     className={cn(
                       'flex min-h-[3.25rem] items-center gap-4 rounded-xl px-4 py-3 text-[1.05rem] font-medium transition-colors',
                       active
-                        ? 'bg-white/10 text-white'
-                        : 'text-zinc-200 hover:bg-white/6',
+                        ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                        : 'text-[var(--workspace-shell-text)] hover:bg-white/6',
                     )}
                   >
                     <span className="flex h-6 w-6 shrink-0 items-center justify-center [&>svg]:h-5 [&>svg]:w-5">
@@ -152,8 +152,8 @@ export function WorkspaceMobileMenu({
         </nav>
 
         {variant === 'personal' ? (
-          <div className="border-t border-white/10 px-3 py-4 lg:hidden">
-            <p className="px-4 text-xs text-zinc-500">
+          <div className="border-t border-[color:var(--workspace-shell-border)] px-3 py-4 lg:hidden">
+            <p className="px-4 text-xs text-[var(--workspace-shell-text-muted)]">
               Personal settings are in the bottom bar while the menu is open.
             </p>
           </div>
@@ -209,7 +209,7 @@ export function WorkspaceMobileBottomNav({
             title={settingsLabel}
             className={cn(
               MOBILE_NAV_BTN_CLASS,
-              'text-zinc-300 hover:bg-white/8 hover:text-white',
+              'text-[var(--workspace-shell-text-muted)] hover:bg-white/8 hover:text-[var(--workspace-shell-text)]',
             )}
           >
             <Settings className={MOBILE_NAV_ICON_CLASS} />
@@ -221,7 +221,7 @@ export function WorkspaceMobileBottomNav({
             title="Close menu"
             className={cn(
               MOBILE_NAV_BTN_CLASS,
-              'text-zinc-300 hover:bg-white/8 hover:text-white',
+              'text-[var(--workspace-shell-text-muted)] hover:bg-white/8 hover:text-[var(--workspace-shell-text)]',
             )}
             onClick={() => onMenuOpenChange(false)}
           >
@@ -290,7 +290,7 @@ export function WorkspaceMobileBottomNav({
           aria-label="Open menu"
           className={cn(
             MOBILE_NAV_BTN_CLASS,
-            'text-zinc-400 hover:bg-white/[0.08] hover:text-zinc-200',
+            'text-[var(--workspace-shell-text-muted)] hover:bg-white/[0.08] hover:text-[var(--workspace-shell-text)]',
           )}
           onClick={() => onMenuOpenChange(true)}
         >
@@ -321,7 +321,7 @@ export function WorkspaceMobileHeaderBar({
   return (
     <header
       className={cn(
-        'z-30 flex h-12 shrink-0 items-center gap-2 border-b border-white/8 bg-[var(--workspace-shell-canvas)] px-3 lg:hidden',
+        'z-30 flex h-12 shrink-0 items-center gap-2 border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] px-3 lg:hidden',
         className,
       )}
     >

@@ -25,12 +25,12 @@ export const metadata = {
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <Card className="border-white/10 bg-[var(--workspace-shell-panel)]">
+    <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-zinc-400">{label}</CardTitle>
+        <CardTitle className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">{label}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold text-white">{value}</div>
+        <div className="text-2xl font-bold text-[var(--workspace-shell-text)]">{value}</div>
       </CardContent>
     </Card>
   );
@@ -56,16 +56,16 @@ export default async function CampaignMetricsPage({
       <div>
         <Link
           href="/admin/email-marketing"
-          className="text-sm text-zinc-400 hover:text-white"
+          className="text-sm text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
         >
           Back to campaigns
         </Link>
         <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-white">{campaign.title}</h1>
-            <p className="text-zinc-400">{campaign.subject}</p>
+            <h1 className="text-2xl font-bold text-[var(--workspace-shell-text)]">{campaign.title}</h1>
+            <p className="text-[var(--workspace-shell-text-muted)]">{campaign.subject}</p>
           </div>
-          <Badge variant="outline" className="border-white/10 text-zinc-200">
+          <Badge variant="outline" className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)]">
             {campaign.status}
           </Badge>
         </div>
@@ -91,42 +91,42 @@ export default async function CampaignMetricsPage({
         <StatCard label="Unsubscribes" value={summary.unsubscribes} />
       </div>
 
-      <Card className="border-white/10 bg-[var(--workspace-shell-panel)]">
+      <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
         <CardHeader>
-          <CardTitle className="text-white">Recipients</CardTitle>
+          <CardTitle className="text-[var(--workspace-shell-text)]">Recipients</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow className="border-white/10 hover:bg-transparent">
-                <TableHead className="text-zinc-400">Email</TableHead>
-                <TableHead className="text-zinc-400">Sent</TableHead>
-                <TableHead className="text-zinc-400">Opened</TableHead>
-                <TableHead className="text-zinc-400">Clicked</TableHead>
-                <TableHead className="text-zinc-400">Counts</TableHead>
+              <TableRow className="border-[color:var(--workspace-shell-border)] hover:bg-transparent">
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">Email</TableHead>
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">Sent</TableHead>
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">Opened</TableHead>
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">Clicked</TableHead>
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">Counts</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.length === 0 ? (
-                <TableRow className="border-white/10">
-                  <TableCell colSpan={5} className="py-10 text-center text-zinc-500">
+                <TableRow className="border-[color:var(--workspace-shell-border)]">
+                  <TableCell colSpan={5} className="py-10 text-center text-[var(--workspace-shell-text-muted)]">
                     No recipient metrics yet.
                   </TableCell>
                 </TableRow>
               ) : (
                 rows.map((row) => (
-                  <TableRow key={row.id} className="border-white/10">
-                    <TableCell className="text-white">{row.email}</TableCell>
-                    <TableCell className="text-zinc-300">
+                  <TableRow key={row.id} className="border-[color:var(--workspace-shell-border)]">
+                    <TableCell className="text-[var(--workspace-shell-text)]">{row.email}</TableCell>
+                    <TableCell className="text-[var(--workspace-shell-text-muted)]">
                       {row.sent_at ? formatUkDateTimeShort(row.sent_at) : '—'}
                     </TableCell>
-                    <TableCell className="text-zinc-300">
+                    <TableCell className="text-[var(--workspace-shell-text-muted)]">
                       {row.opened_at ? formatUkDateTimeShort(row.opened_at) : 'No'}
                     </TableCell>
-                    <TableCell className="text-zinc-300">
+                    <TableCell className="text-[var(--workspace-shell-text-muted)]">
                       {row.clicked_at ? formatUkDateTimeShort(row.clicked_at) : 'No'}
                     </TableCell>
-                    <TableCell className="text-zinc-300">
+                    <TableCell className="text-[var(--workspace-shell-text-muted)]">
                       {row.open_count ?? 0} opens / {row.click_count ?? 0} clicks
                     </TableCell>
                   </TableRow>

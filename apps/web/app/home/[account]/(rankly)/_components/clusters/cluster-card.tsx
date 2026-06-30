@@ -40,7 +40,7 @@ export function ClusterCard({
   country?: string;
 }) {
   return (
-    <article className="rounded-lg border border-white/10 bg-black/10 p-5 space-y-4">
+    <article className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-5 space-y-4">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -72,7 +72,7 @@ export function ClusterCard({
       </header>
 
       {cluster.pillar_h1 ? (
-        <div className="rounded-md border border-white/5 bg-black/20 px-4 py-3 text-sm">
+        <div className="rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-3 text-sm">
           <p className="font-medium">{cluster.pillar_h1}</p>
           {cluster.pillar_h2s?.length ? (
             <ul className="mt-2 list-inside list-disc text-muted-foreground">
@@ -97,7 +97,7 @@ export function ClusterCard({
             {cluster.spokes.map((spoke) => (
               <li
                 key={spoke.id}
-                className="rounded-md border border-white/5 bg-black/20 px-4 py-3 text-sm"
+                className="rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-3 text-sm"
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>

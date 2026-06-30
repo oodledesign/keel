@@ -46,7 +46,7 @@ import type {
 } from '../_lib/community-schedule.types';
 
 const panelClass =
-  'rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)] shadow-[0_12px_36px_rgba(4,10,24,0.18)]';
+  'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_12px_36px_rgba(4,10,24,0.18)]';
 
 type Props = {
   accountSlug: string;
@@ -145,11 +145,11 @@ export function CommunitySchedulePageContent({
   }
 
   return (
-    <div className="space-y-8 text-white">
+    <div className="space-y-8 text-[var(--workspace-shell-text)]">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold">Upcoming meetups</h2>
-          <p className="text-sm text-white/50">
+          <p className="text-sm text-[var(--workspace-shell-text)]/50">
             Plan sessions, attach content, and record what happened afterwards.
           </p>
         </div>
@@ -170,7 +170,7 @@ export function CommunitySchedulePageContent({
       ) : null}
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto border-white/10 bg-[var(--workspace-shell-panel)] text-white sm:max-w-lg">
+        <DialogContent className="max-h-[90vh] overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Schedule a meetup</DialogTitle>
           </DialogHeader>
@@ -181,7 +181,7 @@ export function CommunitySchedulePageContent({
                 name="title"
                 placeholder="Home group — Acts study"
                 required
-                className="border-white/10 bg-white/5"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]"
               />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -192,7 +192,7 @@ export function CommunitySchedulePageContent({
                   type="datetime-local"
                   defaultValue={defaultStarts}
                   required
-                  className="border-white/10 bg-white/5"
+                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]"
                 />
               </div>
               <div className="space-y-2">
@@ -200,7 +200,7 @@ export function CommunitySchedulePageContent({
                 <Input
                   name="location"
                   placeholder="42 Oak Street"
-                  className="border-white/10 bg-white/5"
+                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]"
                 />
               </div>
             </div>
@@ -208,7 +208,7 @@ export function CommunitySchedulePageContent({
               <div className="space-y-2">
                 <Label>Template (optional)</Label>
                 <Select value={templateId} onValueChange={setTemplateId}>
-                  <SelectTrigger className="border-white/10 bg-white/5">
+                  <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
                     <SelectValue placeholder="No template" />
                   </SelectTrigger>
                   <SelectContent>
@@ -226,7 +226,7 @@ export function CommunitySchedulePageContent({
               <div className="space-y-2">
                 <Label>Series</Label>
                 <Select value={seriesId} onValueChange={setSeriesId}>
-                  <SelectTrigger className="border-white/10 bg-white/5">
+                  <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
                     <SelectValue placeholder={series.length ? 'Choose series' : 'No series yet'} />
                   </SelectTrigger>
                   <SelectContent>
@@ -244,7 +244,7 @@ export function CommunitySchedulePageContent({
                 <Input
                   name="seriesLabel"
                   placeholder="Week 3 · Chapter 5"
-                  className="border-white/10 bg-white/5"
+                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]"
                 />
               </div>
             </div>
@@ -260,7 +260,7 @@ export function CommunitySchedulePageContent({
             {members.length > 0 ? (
               <div className="space-y-2">
                 <Label>Who&apos;s attending?</Label>
-                <div className="max-h-40 space-y-2 overflow-y-auto rounded-xl border border-white/10 p-3">
+                <div className="max-h-40 space-y-2 overflow-y-auto rounded-xl border border-[color:var(--workspace-shell-border)] p-3">
                   {members.map((m) => (
                     <label
                       key={m.userId}
@@ -269,7 +269,7 @@ export function CommunitySchedulePageContent({
                       <input
                         type="checkbox"
                         name={`att_${m.userId}`}
-                        className="rounded border-white/20"
+                        className="rounded border-[color:var(--workspace-shell-border)]"
                       />
                       {m.displayName}
                     </label>
@@ -281,7 +281,7 @@ export function CommunitySchedulePageContent({
               <Button
                 type="button"
                 variant="outline"
-                className="border-white/10"
+                className="border-[color:var(--workspace-shell-border)]"
                 onClick={() => setCreateOpen(false)}
               >
                 Cancel
@@ -312,24 +312,24 @@ function MeetupSection({
 }) {
   return (
     <section className={panelClass}>
-      <div className="border-b border-white/6 px-5 py-4">
+      <div className="border-b border-[color:var(--workspace-shell-border)] px-5 py-4">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-amber-200/80">
           {title}
         </h3>
       </div>
       {rows.length === 0 ? (
-        <p className="px-5 py-8 text-sm text-white/50">{emptyMessage}</p>
+        <p className="px-5 py-8 text-sm text-[var(--workspace-shell-text)]/50">{emptyMessage}</p>
       ) : (
         <ul className="divide-y divide-white/6">
           {rows.map((row) => (
             <li key={row.id}>
               <Link
                 href={meetupPath(accountSlug, row.id)}
-                className={`flex items-center gap-4 px-5 py-4 transition-colors hover:bg-white/[0.03] ${muted ? 'opacity-80' : ''}`}
+                className={`flex items-center gap-4 px-5 py-4 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] ${muted ? 'opacity-80' : ''}`}
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium text-white">{row.title}</p>
+                    <p className="font-medium text-[var(--workspace-shell-text)]">{row.title}</p>
                     {row.seriesName ? (
                       <Badge
                         variant="outline"
@@ -348,12 +348,12 @@ function MeetupSection({
                       </Badge>
                     ) : null}
                     {row.status === 'completed' ? (
-                      <Badge className="bg-[var(--keel-teal)]/15 text-[#5eead4]">
+                      <Badge className="bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]">
                         Completed
                       </Badge>
                     ) : null}
                   </div>
-                  <p className="mt-1 text-sm text-white/60">
+                  <p className="mt-1 text-sm text-[var(--workspace-shell-text)]/60">
                     {row.dateLabel} · {row.timeLabel}
                     {row.location ? (
                       <>
@@ -364,7 +364,7 @@ function MeetupSection({
                     ) : null}
                   </p>
                 </div>
-                <div className="flex shrink-0 items-center gap-3 text-xs text-white/50">
+                <div className="flex shrink-0 items-center gap-3 text-xs text-[var(--workspace-shell-text)]/50">
                   <span className="inline-flex items-center gap-1">
                     <Users className="h-3.5 w-3.5" />
                     {row.attendeeCount}

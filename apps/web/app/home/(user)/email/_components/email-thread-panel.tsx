@@ -35,7 +35,7 @@ import { AcceptActionItemDialog } from './accept-action-item-dialog';
 import { EmailThreadLinkSection } from './email-thread-link-section';
 
 const panelClass =
-  'rounded-2xl border border-white/[0.08] bg-[var(--workspace-shell-panel)]';
+  'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
 
 function formatMessageDate(value: string | null) {
   if (!value) {
@@ -245,8 +245,8 @@ export function EmailThreadPanel({
         )}
       >
         <div>
-          <p className="text-sm font-medium text-white">Select a thread</p>
-          <p className="mt-1 text-sm text-zinc-500">
+          <p className="text-sm font-medium text-[var(--workspace-shell-text)]">Select a thread</p>
+          <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
             Choose a conversation from your inbox to review messages, suggested
             to-dos, and draft a reply.
           </p>
@@ -260,7 +260,7 @@ export function EmailThreadPanel({
       <section
         className={cn(
           panelClass,
-          'flex min-h-[320px] items-center justify-center gap-2 text-sm text-zinc-400',
+          'flex min-h-[320px] items-center justify-center gap-2 text-sm text-[var(--workspace-shell-text-muted)]',
         )}
       >
         <Loader2 className="h-4 w-4 animate-spin" />
@@ -272,24 +272,24 @@ export function EmailThreadPanel({
   return (
     <>
       <section className={cn(panelClass, 'flex min-h-0 flex-col overflow-hidden')}>
-        <div className="border-b border-white/10 px-4 py-3">
+        <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
           <div className="flex items-start gap-3">
             {showBackButton && onBack ? (
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="mt-0.5 shrink-0 text-zinc-300 hover:bg-white/5 hover:text-white lg:hidden"
+                className="mt-0.5 shrink-0 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)] lg:hidden"
                 onClick={onBack}
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             ) : null}
             <div className="min-w-0 flex-1">
-              <h2 className="truncate text-base font-semibold text-white">
+              <h2 className="truncate text-base font-semibold text-[var(--workspace-shell-text)]">
                 {detail.thread.subject?.trim() || '(no subject)'}
               </h2>
-              <p className="mt-1 text-xs text-zinc-500">
+              <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
                 {detail.messages.length} message
                 {detail.messages.length === 1 ? '' : 's'}
               </p>
@@ -297,7 +297,7 @@ export function EmailThreadPanel({
           </div>
         </div>
 
-        <div className="border-b border-white/10 px-4 py-3">
+        <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
           <EmailThreadLinkSection
             threadId={threadId}
             link={detail.thread.link}
@@ -311,14 +311,14 @@ export function EmailThreadPanel({
 
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold text-white">
+              <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
                 Suggested to-dos
               </h3>
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
-                className="border-white/10 bg-transparent text-white hover:bg-white/5"
+                className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
                 onClick={runExtract}
                 disabled={pending || !connected}
               >
@@ -332,7 +332,7 @@ export function EmailThreadPanel({
             </div>
 
             {suggestedItems.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-white/10 px-4 py-5 text-sm text-zinc-500">
+              <p className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-5 text-sm text-[var(--workspace-shell-text-muted)]">
                 No open suggestions yet. Extract action items from this thread
                 with AI.
               </p>
@@ -341,20 +341,20 @@ export function EmailThreadPanel({
                 {suggestedItems.map((item) => (
                   <li
                     key={item.id}
-                    className="rounded-xl border border-white/10 bg-[#0B132B]/50 p-3"
+                    className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/50 p-3"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-white">
+                        <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
                           {item.title}
                         </p>
                         {item.detail ? (
-                          <p className="mt-1 text-sm text-zinc-400">
+                          <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
                             {item.detail}
                           </p>
                         ) : null}
                         {item.suggested_due_date || item.linkLabel ? (
-                          <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500">
+                          <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--workspace-shell-text-muted)]">
                             {item.suggested_due_date ? (
                               <span>
                                 Suggested due{' '}
@@ -362,10 +362,10 @@ export function EmailThreadPanel({
                               </span>
                             ) : null}
                             {item.suggested_due_date && item.linkLabel ? (
-                              <span className="text-zinc-600">·</span>
+                              <span className="text-[var(--workspace-shell-text-muted)]">·</span>
                             ) : null}
                             {item.linkLabel ? (
-                              <span className="text-[var(--keel-teal)]">
+                              <span className="text-[var(--ozer-accent)]">
                                 {item.linkLabel}
                               </span>
                             ) : null}
@@ -376,7 +376,7 @@ export function EmailThreadPanel({
                         <Button
                           type="button"
                           size="sm"
-                          className="keel-gradient-btn h-8 px-3 text-white"
+                          className="keel-gradient-btn h-8 px-3 text-[var(--workspace-shell-text)]"
                           onClick={() => {
                             setAcceptItem(item);
                             setAcceptOpen(true);
@@ -390,7 +390,7 @@ export function EmailThreadPanel({
                           type="button"
                           size="sm"
                           variant="outline"
-                          className="h-8 border-white/10 bg-transparent px-3 text-white hover:bg-white/5"
+                          className="h-8 border-[color:var(--workspace-shell-border)] bg-transparent px-3 text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
                           onClick={() => runDismiss(item.id)}
                           disabled={pending}
                         >
@@ -406,17 +406,17 @@ export function EmailThreadPanel({
 
             {resolvedItems.length > 0 ? (
               <div className="space-y-2 pt-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                <p className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
                   Resolved
                 </p>
                 <ul className="space-y-2">
                   {resolvedItems.map((item) => (
                     <li
                       key={item.id}
-                      className="rounded-xl border border-white/5 px-3 py-2 text-sm text-zinc-400"
+                      className="rounded-xl border border-[color:var(--workspace-shell-border)] px-3 py-2 text-sm text-[var(--workspace-shell-text-muted)]"
                     >
-                      <span className="text-zinc-300">{item.title}</span>
-                      <span className="ml-2 text-xs uppercase tracking-wide text-zinc-500">
+                      <span className="text-[var(--workspace-shell-text-muted)]">{item.title}</span>
+                      <span className="ml-2 text-xs uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
                         {item.status}
                       </span>
                     </li>
@@ -426,14 +426,14 @@ export function EmailThreadPanel({
             ) : null}
           </div>
 
-          <div className="space-y-3 border-t border-white/10 pt-4">
+          <div className="space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-4">
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold text-white">Draft reply</h3>
+              <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Draft reply</h3>
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
-                className="border-white/10 bg-transparent text-white hover:bg-white/5"
+                className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
                 onClick={runGenerateDraft}
                 disabled={pending || !connected}
               >
@@ -451,20 +451,20 @@ export function EmailThreadPanel({
               onChange={(event) => setDraftBody(event.target.value)}
               placeholder="Generate a reply, edit it here, then save to Gmail."
               rows={10}
-              className="border-white/10 bg-[#0B132B] text-white placeholder:text-zinc-500"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
             />
 
             <div className="flex flex-wrap items-center gap-3">
               <Button
                 type="button"
-                className="keel-gradient-btn text-white"
+                className="keel-gradient-btn text-[var(--ozer-white)]"
                 onClick={runSaveDraft}
                 disabled={pending || !connected || !detail.draft}
               >
                 Save to Gmail
               </Button>
               {detail.draft?.status === 'saved_to_gmail' ? (
-                <span className="text-xs text-[var(--keel-teal)]">
+                <span className="text-xs text-[var(--ozer-accent)]">
                   Saved to Gmail
                 </span>
               ) : null}
@@ -534,7 +534,7 @@ function ThreadMessages({ messages }: { messages: EmailMessageRow[] }) {
 
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-white">Messages</h3>
+      <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Messages</h3>
       <ul className="space-y-2">
         {messages.map((message) => {
           const isLatest = message.id === latestMessageId;
@@ -554,20 +554,20 @@ function ThreadMessages({ messages }: { messages: EmailMessageRow[] }) {
                 <button
                   type="button"
                   onClick={() => toggleOlderMessage(message.id)}
-                  className="flex w-full items-start gap-3 rounded-xl border border-white/10 bg-[#0B132B]/25 px-3 py-2.5 text-left transition-colors hover:bg-[#0B132B]/40"
+                  className="flex w-full items-start gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/25 px-3 py-2.5 text-left transition-colors hover:bg-[var(--ozer-surface-canvas)]/40"
                 >
-                  <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" />
+                  <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]" />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="truncate text-sm font-medium text-zinc-300">
+                      <p className="truncate text-sm font-medium text-[var(--workspace-shell-text-muted)]">
                         {message.from_address ?? 'Unknown sender'}
                       </p>
-                      <p className="shrink-0 text-xs text-zinc-500">
+                      <p className="shrink-0 text-xs text-[var(--workspace-shell-text-muted)]">
                         {formatMessageDate(message.internal_date)}
                       </p>
                     </div>
                     {preview ? (
-                      <p className="mt-1 line-clamp-2 text-sm text-zinc-500">
+                      <p className="mt-1 line-clamp-2 text-sm text-[var(--workspace-shell-text-muted)]">
                         {preview}
                       </p>
                     ) : null}
@@ -580,14 +580,14 @@ function ThreadMessages({ messages }: { messages: EmailMessageRow[] }) {
           return (
             <li
               key={message.id}
-              className="rounded-xl border border-white/10 bg-[#0B132B]/40 p-3"
+              className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/40 p-3"
             >
               <div className="flex items-start gap-2">
                 {!isLatest ? (
                   <button
                     type="button"
                     onClick={() => toggleOlderMessage(message.id)}
-                    className="mt-0.5 shrink-0 rounded-md p-0.5 text-zinc-500 hover:bg-white/5 hover:text-zinc-300"
+                    className="mt-0.5 shrink-0 rounded-md p-0.5 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text-muted)]"
                     aria-label="Collapse message"
                   >
                     <ChevronUp className="h-4 w-4" />
@@ -595,14 +595,14 @@ function ThreadMessages({ messages }: { messages: EmailMessageRow[] }) {
                 ) : null}
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-white">
+                    <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
                       {message.from_address ?? 'Unknown sender'}
                     </p>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                       {formatMessageDate(message.internal_date)}
                     </p>
                   </div>
-                  <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-zinc-300">
+                  <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-[var(--workspace-shell-text-muted)]">
                     {body}
                   </p>
                   {quoted ? (
@@ -610,12 +610,12 @@ function ThreadMessages({ messages }: { messages: EmailMessageRow[] }) {
                       <button
                         type="button"
                         onClick={() => toggleQuotedHistory(message.id)}
-                        className="text-xs font-medium text-[var(--keel-teal)] hover:underline"
+                        className="text-xs font-medium text-[var(--ozer-accent)] hover:underline"
                       >
                         {showQuoted ? 'Hide quoted history' : 'Show quoted history'}
                       </button>
                       {showQuoted ? (
-                        <p className="mt-2 whitespace-pre-wrap border-l border-white/10 pl-3 text-sm leading-relaxed text-zinc-500">
+                        <p className="mt-2 whitespace-pre-wrap border-l border-[color:var(--workspace-shell-border)] pl-3 text-sm leading-relaxed text-[var(--workspace-shell-text-muted)]">
                           {quoted}
                         </p>
                       ) : null}

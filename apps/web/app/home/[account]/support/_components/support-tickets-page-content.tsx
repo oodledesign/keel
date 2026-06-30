@@ -78,8 +78,8 @@ export function SupportTicketsPageContent({
     <div className="space-y-6 px-4 lg:px-0">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-lg font-bold text-white">Support</h1>
-          <p className="text-sm text-white/50">
+          <h1 className="text-lg font-bold text-[var(--workspace-shell-text)]">Support</h1>
+          <p className="text-sm text-[var(--workspace-shell-text)]/50">
             {filteredTickets.length}{' '}
             {filteredTickets.length === 1 ? 'ticket' : 'tickets'}
           </p>
@@ -94,7 +94,7 @@ export function SupportTicketsPageContent({
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-2 border-b border-white/10 pb-3 sm:border-0 sm:pb-0">
+        <div className="flex flex-wrap gap-2 border-b border-[color:var(--workspace-shell-border)] pb-3 sm:border-0 sm:pb-0">
           {statusTabs.map((tab) => {
             const active = statusFilter === tab.value;
             return (
@@ -104,8 +104,8 @@ export function SupportTicketsPageContent({
                 onClick={() => setStatusFilter(tab.value)}
                 className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
                   active
-                    ? 'bg-[var(--keel-teal)]/15 text-[#5eead4]'
-                    : 'text-white/50 hover:bg-white/5 hover:text-white'
+                    ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]'
+                    : 'text-[var(--workspace-shell-text)]/50 hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]'
                 }`}
               >
                 {tab.label}
@@ -134,11 +134,11 @@ export function SupportTicketsPageContent({
       </div>
 
       {filteredTickets.length === 0 ? (
-        <Card className="rounded-[24px] border border-white/6 bg-[var(--workspace-shell-panel)]">
+        <Card className="rounded-[24px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <LifeBuoy className="mb-4 h-12 w-12 text-white/20" />
-            <p className="font-medium text-white">No support tickets yet</p>
-            <p className="mt-1 max-w-md text-sm text-white/50">
+            <LifeBuoy className="mb-4 h-12 w-12 text-[var(--workspace-shell-text)]/20" />
+            <p className="font-medium text-[var(--workspace-shell-text)]">No support tickets yet</p>
+            <p className="mt-1 max-w-md text-sm text-[var(--workspace-shell-text)]/50">
               Track client issues, assign team members, and keep conversations in one place.
             </p>
             <Button asChild className={`mt-4 ${workspaceBtnPrimaryMd}`}>
@@ -150,10 +150,10 @@ export function SupportTicketsPageContent({
           </CardContent>
         </Card>
       ) : (
-        <div className="overflow-hidden rounded-[20px] border border-white/6 bg-[var(--workspace-shell-panel)]">
+        <div className="overflow-hidden rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-white/10 bg-white/[0.02] text-xs uppercase tracking-wide text-white/40">
+              <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs uppercase tracking-wide text-[var(--workspace-shell-text)]/40">
                 <tr>
                   <th className="px-4 py-3 font-medium">Ticket</th>
                   <th className="px-4 py-3 font-medium">Title</th>
@@ -173,12 +173,12 @@ export function SupportTicketsPageContent({
                   return (
                     <tr
                       key={ticket.id}
-                      className="border-b border-white/6 last:border-0 hover:bg-white/[0.02]"
+                      className="border-b border-[color:var(--workspace-shell-border)] last:border-0 hover:bg-[var(--workspace-shell-sidebar-accent)]"
                     >
-                      <td className="px-4 py-3 font-mono text-xs text-white/70">
+                      <td className="px-4 py-3 font-mono text-xs text-[var(--workspace-shell-text)]/70">
                         <Link
                           href={detailHref}
-                          className="hover:text-[#5eead4]"
+                          className="hover:text-[var(--ozer-accent-muted)]"
                         >
                           {formatTicketNumber(ticket.ticketNumber)}
                         </Link>
@@ -186,12 +186,12 @@ export function SupportTicketsPageContent({
                       <td className="px-4 py-3">
                         <Link
                           href={detailHref}
-                          className="font-medium text-white hover:text-[#5eead4]"
+                          className="font-medium text-[var(--workspace-shell-text)] hover:text-[var(--ozer-accent-muted)]"
                         >
                           {ticket.title}
                         </Link>
                       </td>
-                      <td className="px-4 py-3 text-white/70">
+                      <td className="px-4 py-3 text-[var(--workspace-shell-text)]/70">
                         {ticket.clientOrgName ?? '—'}
                       </td>
                       <td className="px-4 py-3">
@@ -200,10 +200,10 @@ export function SupportTicketsPageContent({
                       <td className="px-4 py-3">
                         <TicketPriorityBadge priority={ticket.priority} />
                       </td>
-                      <td className="px-4 py-3 text-white/70">
+                      <td className="px-4 py-3 text-[var(--workspace-shell-text)]/70">
                         {ticket.assignedToName ?? 'Unassigned'}
                       </td>
-                      <td className="px-4 py-3 text-white/70">
+                      <td className="px-4 py-3 text-[var(--workspace-shell-text)]/70">
                         {formatTicketDate(ticket.createdAt)}
                       </td>
                     </tr>

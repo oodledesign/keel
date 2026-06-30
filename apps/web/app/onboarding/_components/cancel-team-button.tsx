@@ -53,7 +53,7 @@ export function CancelTeamButton({
           type="button"
           variant="ghost"
           size="sm"
-          className="text-zinc-400 hover:text-red-400 hover:bg-red-950/30"
+          className="text-[var(--workspace-shell-text-muted)] hover:text-red-400 hover:bg-red-950/30"
         >
           <Trash2 className="mr-1.5 h-4 w-4" />
           Cancel this team

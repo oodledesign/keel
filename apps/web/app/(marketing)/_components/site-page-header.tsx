@@ -28,7 +28,7 @@ export function SitePageHeader({
       >
         <h1
           className={
-            'font-heading text-3xl tracking-tighter xl:text-5xl dark:text-white'
+            'font-heading text-3xl tracking-tighter xl:text-5xl dark:text-[var(--workspace-shell-text)]'
           }
         >
           {title}

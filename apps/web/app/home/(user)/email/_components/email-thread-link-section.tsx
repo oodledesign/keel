@@ -26,7 +26,7 @@ import { emailApiFetch } from '../_lib/email-api';
 import type { EmailThreadLink, EmailWorkspaceOption } from '../_lib/types';
 
 const panelClass =
-  'rounded-xl border border-white/10 bg-[#0B132B]/60';
+  'rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/60';
 
 type Props = {
   threadId: string;
@@ -142,17 +142,17 @@ export function EmailThreadLinkSection({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <Link2 className="h-4 w-4 shrink-0 text-[var(--keel-teal)]" />
-            <p className="text-sm font-medium text-white">Client / project</p>
+            <Link2 className="h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
+            <p className="text-sm font-medium text-[var(--workspace-shell-text)]">Client / project</p>
           </div>
           {link.linked && currentLabel ? (
-            <p className="mt-1 truncate text-xs text-zinc-400">
+            <p className="mt-1 truncate text-xs text-[var(--workspace-shell-text-muted)]">
               {currentLabel}
               {link.accountName ? ` · ${link.accountName}` : ''}
               {link.linkSource === 'auto' ? ' · auto-linked' : ''}
             </p>
           ) : (
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
               Link this thread to a workspace client or project.
             </p>
           )}
@@ -163,7 +163,7 @@ export function EmailThreadLinkSection({
             type="button"
             variant="ghost"
             size="icon"
-            className="shrink-0 text-zinc-400 hover:bg-white/5 hover:text-white"
+            className="shrink-0 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
             disabled={pending}
             onClick={() => saveLink(true)}
             aria-label="Remove link"
@@ -175,7 +175,7 @@ export function EmailThreadLinkSection({
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label className="text-xs text-zinc-400">Workspace</Label>
+          <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Workspace</Label>
           <Select
             value={workspaceId || 'none'}
             onValueChange={(value) => {
@@ -183,7 +183,7 @@ export function EmailThreadLinkSection({
               setAssignTo('none');
             }}
           >
-            <SelectTrigger className="border-white/10 bg-[#0B132B] text-white">
+            <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]">
               <SelectValue placeholder="Select workspace" />
             </SelectTrigger>
             <SelectContent>
@@ -198,7 +198,7 @@ export function EmailThreadLinkSection({
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-xs text-zinc-400">Client or project</Label>
+          <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Client or project</Label>
           <TaskAssignmentCombobox
             value={assignTo}
             onValueChange={setAssignTo}
@@ -215,7 +215,7 @@ export function EmailThreadLinkSection({
         <Button
           type="button"
           size="sm"
-          className="bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+          className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
           disabled={
             pending ||
             !workspaceId ||

@@ -93,7 +93,7 @@ export function ClusterPlanView({
       {links.length > 0 ? (
         <section className="space-y-3">
           <h3 className="text-sm font-medium">Internal linking</h3>
-          <ul className="rounded-lg border border-white/10 divide-y divide-white/5 text-sm">
+          <ul className="rounded-lg border border-[color:var(--workspace-shell-border)] divide-y divide-white/5 text-sm">
             {links.map((link) => (
               <li key={link.id} className="px-4 py-2 text-muted-foreground">
                 {link.from_cluster_id

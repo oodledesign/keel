@@ -36,7 +36,7 @@ export function SignaturesStaffFilters({
   };
 
   return (
-    <div className="grid gap-3 rounded-2xl border border-white/10 bg-black/10 p-4 md:grid-cols-3">
+    <div className="grid gap-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-black/10 p-4 md:grid-cols-3">
       <div className="flex items-center gap-2 text-sm font-medium">
         <Filter className="h-4 w-4 text-[#39AEB3]" />
         Filter staff

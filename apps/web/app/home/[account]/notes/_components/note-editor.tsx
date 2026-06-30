@@ -314,8 +314,8 @@ export function NoteEditor({
     cn(
       'flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
       active
-        ? 'bg-[#2A9D8F]/20 text-[#5eead4]'
-        : 'text-zinc-400 hover:bg-white/6 hover:text-white',
+        ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]'
+        : 'text-[var(--workspace-shell-text-muted)] hover:bg-white/6 hover:text-[var(--workspace-shell-text)]',
     );
 
   const saveLabel =
@@ -335,13 +335,13 @@ export function NoteEditor({
 
   return (
     <div className="flex flex-col">
-      <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-white/8 bg-[var(--workspace-shell-canvas)] px-4 py-2 sm:px-6 lg:px-10 xl:px-14">
+      <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] px-4 py-2 sm:px-6 lg:px-10 xl:px-14">
         <div className="flex min-w-0 items-center gap-1">
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="h-9 w-9 shrink-0 p-0 text-zinc-300 hover:bg-white/6 hover:text-white"
+            className="h-9 w-9 shrink-0 p-0 text-[var(--workspace-shell-text-muted)] hover:bg-white/6 hover:text-[var(--workspace-shell-text)]"
             aria-label="Back to notes"
             onClick={() => void goBackToList()}
           >
@@ -350,7 +350,7 @@ export function NoteEditor({
           <span
             className={cn(
               'min-w-[4.5rem] truncate text-xs',
-              saveState === 'error' ? 'text-red-400' : 'text-zinc-500',
+              saveState === 'error' ? 'text-red-400' : 'text-[var(--workspace-shell-text-muted)]',
             )}
             aria-live="polite"
           >
@@ -367,7 +367,7 @@ export function NoteEditor({
             </PopoverTrigger>
             <PopoverContent
               align="end"
-              className="w-72 border-white/10 bg-[var(--workspace-shell-panel)] text-white"
+              className="w-72 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
             >
               <CategorySelect
                 value={category}
@@ -401,7 +401,7 @@ export function NoteEditor({
               </PopoverTrigger>
               <PopoverContent
                 align="end"
-                className="w-80 border-white/10 bg-[var(--workspace-shell-panel)] text-white"
+                className="w-80 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
               >
                 <LinkToSelect
                   options={linkOptions}
@@ -424,7 +424,7 @@ export function NoteEditor({
             </PopoverTrigger>
             <PopoverContent
               align="end"
-              className="w-80 border-white/10 bg-[var(--workspace-shell-panel)] text-white"
+              className="w-80 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
             >
               <TagsInput
                 tags={tags}
@@ -450,7 +450,7 @@ export function NoteEditor({
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="w-72 border-white/10 bg-[var(--workspace-shell-panel)] text-white"
+              className="w-72 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
             >
               <div className="p-2">
                 <PublicSharingSection
@@ -462,7 +462,7 @@ export function NoteEditor({
                 />
               </div>
               {note.clientName ? (
-                <DropdownMenuItem disabled className="text-zinc-400">
+                <DropdownMenuItem disabled className="text-[var(--workspace-shell-text-muted)]">
                   <Users className="mr-2 h-4 w-4" />
                   Client: {note.clientName}
                 </DropdownMenuItem>
@@ -478,7 +478,7 @@ export function NoteEditor({
                 Copy link
               </DropdownMenuItem>
               {note.isPublic ? (
-                <DropdownMenuItem disabled className="text-[#5eead4]">
+                <DropdownMenuItem disabled className="text-[var(--ozer-accent-muted)]">
                   <Globe className="mr-2 h-4 w-4" />
                   Live link enabled
                 </DropdownMenuItem>
@@ -489,7 +489,7 @@ export function NoteEditor({
       </div>
 
       {(note.projectName || note.clientName) && (
-        <p className="px-4 pt-2 text-xs text-zinc-500 sm:px-6 lg:px-10 xl:px-14">
+        <p className="px-4 pt-2 text-xs text-[var(--workspace-shell-text-muted)] sm:px-6 lg:px-10 xl:px-14">
           {[note.projectName, note.clientName].filter(Boolean).join(' · ')}
         </p>
       )}
@@ -502,7 +502,7 @@ export function NoteEditor({
         placeholder="Untitled"
         rows={1}
         aria-label="Note title"
-        className="w-full resize-none overflow-hidden rounded-none border-0 bg-transparent px-4 pb-2 pt-4 font-heading text-[1.75rem] font-bold leading-tight tracking-tight text-white shadow-none focus-visible:ring-0 touch-pan-y sm:px-6 lg:px-10 lg:text-3xl xl:px-14"
+        className="w-full resize-none overflow-hidden rounded-none border-0 bg-transparent px-4 pb-2 pt-4 font-heading text-[1.75rem] font-bold leading-tight tracking-tight text-[var(--workspace-shell-text)] shadow-none focus-visible:ring-0 touch-pan-y sm:px-6 lg:px-10 lg:text-3xl xl:px-14"
         spellCheck
       />
 
@@ -519,7 +519,7 @@ export function NoteEditor({
         placeholder="Start writing…"
         rows={12}
         aria-label="Note content"
-        className="min-h-[50vh] w-full resize-none overflow-hidden rounded-none border-0 bg-transparent px-4 pb-4 pt-1 text-base leading-relaxed text-white shadow-none focus-visible:ring-0 touch-pan-y sm:px-6 lg:px-10 lg:text-[15px] xl:px-14"
+        className="min-h-[50vh] w-full resize-none overflow-hidden rounded-none border-0 bg-transparent px-4 pb-4 pt-1 text-base leading-relaxed text-[var(--workspace-shell-text)] shadow-none focus-visible:ring-0 touch-pan-y sm:px-6 lg:px-10 lg:text-[15px] xl:px-14"
         spellCheck
       />
     </div>

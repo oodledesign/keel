@@ -30,7 +30,7 @@ import {
 import { SopRunAssigneeSelect } from './sop-run-assignee-select';
 
 const panelClass =
-  'rounded-[24px] border border-white/6 bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]';
+  'rounded-[24px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]';
 
 type SopRunChecklistProps = {
   accountId: string;
@@ -145,13 +145,13 @@ export function SopRunChecklist({
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-6 lg:px-0">
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <Link href={playbookPath} className="text-[var(--keel-teal)] hover:underline">
+        <Link href={playbookPath} className="text-[var(--ozer-accent)] hover:underline">
           {playbook?.title ?? 'Playbook'}
         </Link>
-        <span className="text-zinc-600">/</span>
-        <span className="text-zinc-400">{run.period_label ?? 'Run'}</span>
+        <span className="text-[var(--workspace-shell-text-muted)]">/</span>
+        <span className="text-[var(--workspace-shell-text-muted)]">{run.period_label ?? 'Run'}</span>
         {run.status === 'completed' ? (
-          <span className="rounded-full bg-[var(--keel-teal)]/15 px-2 py-0.5 text-xs text-[var(--keel-teal)]">
+          <span className="rounded-full bg-[var(--ozer-accent-subtle)] px-2 py-0.5 text-xs text-[var(--ozer-accent)]">
             Completed
           </span>
         ) : null}
@@ -160,7 +160,7 @@ export function SopRunChecklist({
       <div className={`${panelClass} p-6`}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-xl font-bold text-white">{run.title}</h1>
+            <h1 className="text-xl font-bold text-[var(--workspace-shell-text)]">{run.title}</h1>
             <p className="text-muted-foreground mt-1 text-sm">
               {completed} of {total} steps complete ({pct}%)
             </p>
@@ -180,9 +180,9 @@ export function SopRunChecklist({
             Duplicate for new period
           </Button>
         </div>
-        <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
+        <div className="mt-4 h-2 overflow-hidden rounded-full bg-[var(--workspace-shell-sidebar-accent)]">
           <div
-            className="h-full rounded-full bg-[var(--keel-teal)] transition-all"
+            className="h-full rounded-full bg-[var(--ozer-accent)] transition-all"
             style={{ width: `${pct}%` }}
           />
         </div>
@@ -205,20 +205,20 @@ export function SopRunChecklist({
             key={step.id}
             className={cn(
               'flex gap-4 px-5 py-4',
-              step.is_complete && 'bg-[var(--keel-teal)]/[0.04]',
+              step.is_complete && 'bg-[var(--ozer-accent)]/[0.04]',
             )}
           >
             <Checkbox
               checked={step.is_complete}
               disabled={stepPending}
               onCheckedChange={(v) => toggleStep(step, v === true)}
-              className="mt-1 border-white/20 data-[state=checked]:border-[var(--keel-teal)] data-[state=checked]:bg-[var(--keel-teal)]"
+              className="mt-1 border-[color:var(--workspace-shell-border)] data-[state=checked]:border-[var(--ozer-accent)] data-[state=checked]:bg-[var(--ozer-accent)]"
             />
             <div className="min-w-0 flex-1">
               <p
                 className={cn(
-                  'font-medium text-white',
-                  step.is_complete && 'text-zinc-400 line-through',
+                  'font-medium text-[var(--workspace-shell-text)]',
+                  step.is_complete && 'text-[var(--workspace-shell-text-muted)] line-through',
                 )}
               >
                 {index + 1}. {step.title}
@@ -230,7 +230,7 @@ export function SopRunChecklist({
               ) : null}
               {step.is_complete ? (
                 <p className="text-muted-foreground mt-2 flex items-center gap-1 text-xs">
-                  <Check className="h-3 w-3 text-[var(--keel-teal)]" />
+                  <Check className="h-3 w-3 text-[var(--ozer-accent)]" />
                   Done
                 </p>
               ) : null}
@@ -240,7 +240,7 @@ export function SopRunChecklist({
       </div>
 
       <div className={`${panelClass} space-y-3 p-6`}>
-        <h2 className="text-sm font-semibold text-white">Run notes</h2>
+        <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Run notes</h2>
         <p className="text-muted-foreground text-xs">
           Client context, links, or anything specific to this month or project.
         </p>
@@ -248,7 +248,7 @@ export function SopRunChecklist({
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={5}
-          className="border-white/10 bg-black/20 text-white"
+          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
           placeholder="Notes for this run…"
         />
         <Button

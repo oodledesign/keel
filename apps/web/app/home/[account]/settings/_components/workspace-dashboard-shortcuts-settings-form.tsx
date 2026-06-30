@@ -49,10 +49,10 @@ export function WorkspaceDashboardShortcutsSettingsForm({
     <div className="space-y-8">
       <section className="space-y-4">
         <div>
-          <h2 className="text-base font-semibold text-white">
+          <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">
             Dashboard shortcuts
           </h2>
-          <p className="mt-1 text-sm text-zinc-400">
+          <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
             Quick links at the top of this workspace&apos;s dashboard — only pages
             within this workspace.
           </p>
@@ -65,12 +65,12 @@ export function WorkspaceDashboardShortcutsSettingsForm({
         />
       </section>
 
-      <section className="space-y-4 border-t border-white/10 pt-8">
+      <section className="space-y-4 border-t border-[color:var(--workspace-shell-border)] pt-8">
         <div>
-          <h2 className="text-base font-semibold text-white">
+          <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">
             Mobile bottom navigation
           </h2>
-          <p className="mt-1 text-sm text-zinc-400">
+          <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
             Choose up to three icon shortcuts beside Home and Menu on your phone
             for this workspace.
           </p>
@@ -87,7 +87,7 @@ export function WorkspaceDashboardShortcutsSettingsForm({
       </section>
 
       <Button
-        className="bg-[var(--keel-teal)] hover:bg-[#238b7f]"
+        className="bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]"
         disabled={pending}
         onClick={save}
       >

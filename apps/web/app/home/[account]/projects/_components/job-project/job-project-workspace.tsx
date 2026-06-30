@@ -262,7 +262,7 @@ export function JobProjectWorkspace({
         assigning={assigning}
       />
 
-      <div className="flex items-center gap-1 border-b border-white/8 px-4 pb-3 md:px-5">
+      <div className="flex items-center gap-1 border-b border-[color:var(--workspace-shell-border)] px-4 pb-3 md:px-5">
         {viewButtons.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -271,7 +271,7 @@ export function JobProjectWorkspace({
             className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
               view === key
                 ? 'bg-[#0073ea]/15 text-[#579bfc]'
-                : 'text-zinc-400 hover:bg-white/5 hover:text-white'
+                : 'text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]'
             }`}
           >
             <Icon className="h-3.5 w-3.5" />
@@ -282,8 +282,8 @@ export function JobProjectWorkspace({
 
       {boardLoading ? (
         <div className="space-y-3">
-          <div className="h-32 animate-pulse rounded-xl bg-zinc-800/50" />
-          <div className="h-48 animate-pulse rounded-xl bg-zinc-800/40" />
+          <div className="h-32 animate-pulse rounded-xl bg-[var(--workspace-control-surface)]/50" />
+          <div className="h-48 animate-pulse rounded-xl bg-[var(--workspace-control-surface)]/40" />
         </div>
       ) : board ? (
         <>
@@ -324,7 +324,7 @@ export function JobProjectWorkspace({
           )}
         </>
       ) : (
-        <p className="text-sm text-zinc-500">Could not load project board.</p>
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">Could not load project board.</p>
       )}
 
       {canEditJobs && (

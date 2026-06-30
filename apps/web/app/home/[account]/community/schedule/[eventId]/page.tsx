@@ -47,7 +47,7 @@ async function CommunityMeetupDetailPage({ params }: MeetupDetailPageProps) {
         title="Meetup"
         description="Plan content, attendance, and post-meetup notes."
       />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-8 text-white lg:px-6">
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
         <div className="mx-auto max-w-3xl">
           <CommunityMeetupDetailClient
             accountSlug={slug}

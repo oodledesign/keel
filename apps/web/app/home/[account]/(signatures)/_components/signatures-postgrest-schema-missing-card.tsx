@@ -16,7 +16,7 @@ export function SignaturesPostgrestSchemaMissingCard({
 }: SignaturesPostgrestSchemaMissingCardProps) {
   return (
     <div className="flex min-h-[calc(100vh-12rem)] items-center justify-center py-12">
-      <Card className="max-w-lg border-white/10 bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+      <Card className="max-w-lg border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
         <CardHeader>
           <CardTitle className="text-xl">{title}</CardTitle>
         </CardHeader>

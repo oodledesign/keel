@@ -54,7 +54,7 @@ export function PresetEditorClient(props: {
     <div className="space-y-6 px-4 lg:px-0">
       <Link
         href={presetsPath}
-        className="text-muted-foreground inline-flex items-center gap-1.5 text-sm hover:text-white"
+        className="text-muted-foreground inline-flex items-center gap-1.5 text-sm hover:text-[var(--workspace-shell-text)]"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to presets

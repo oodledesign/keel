@@ -173,14 +173,14 @@ export function MeetingsPageContent({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-2xl text-sm text-zinc-400">
+        <p className="max-w-2xl text-sm text-[var(--workspace-shell-text-muted)]">
           All meeting transcripts across clients. Open a meeting to read the full
           transcript and extract tasks with AI.
         </p>
         {canEdit ? (
           <Button
             size="sm"
-            className="bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+            className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
             onClick={() => setShowForm((open) => !open)}
           >
             <PlusCircle className="mr-2 h-4 w-4" />
@@ -190,10 +190,10 @@ export function MeetingsPageContent({
       </div>
 
       {canEdit && showForm ? (
-        <div className="space-y-3 rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-4">
+        <div className="space-y-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
           <div className="flex items-center gap-2">
-            <Mic className="h-4 w-4 text-[var(--keel-teal)]" />
-            <h3 className="text-sm font-semibold text-white">New meeting</h3>
+            <Mic className="h-4 w-4 text-[var(--ozer-accent)]" />
+            <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">New meeting</h3>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
@@ -201,11 +201,11 @@ export function MeetingsPageContent({
               <Select value={clientId} onValueChange={setClientId}>
                 <SelectTrigger
                   id="meeting-client"
-                  className="border-white/10 bg-white/5 text-white"
+                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
                 >
                   <SelectValue placeholder="Select client" />
                 </SelectTrigger>
-                <SelectContent className="border-white/10 bg-[#1A2535] text-white">
+                <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
                   {clients.map((client) => (
                     <SelectItem key={client.id} value={client.id}>
                       {client.name}
@@ -221,7 +221,7 @@ export function MeetingsPageContent({
                 type="date"
                 value={meetingDate}
                 onChange={(e) => setMeetingDate(e.target.value)}
-                className="border-white/10 bg-white/5 text-white"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
               />
             </div>
           </div>
@@ -232,7 +232,7 @@ export function MeetingsPageContent({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Discovery call"
-              className="border-white/10 bg-white/5 text-white"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
             />
           </div>
           <div>
@@ -243,7 +243,7 @@ export function MeetingsPageContent({
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="Paste transcript text…"
-              className="border-white/10 bg-white/5 text-white"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
             />
           </div>
           <div className="flex flex-wrap gap-2">
@@ -277,11 +277,11 @@ export function MeetingsPageContent({
       ) : null}
 
       {rows.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-white/10 px-6 py-12 text-center">
-          <Mic className="mx-auto mb-3 h-8 w-8 text-zinc-600" />
-          <p className="text-sm text-zinc-400">No meetings yet.</p>
+        <div className="rounded-2xl border border-dashed border-[color:var(--workspace-shell-border)] px-6 py-12 text-center">
+          <Mic className="mx-auto mb-3 h-8 w-8 text-[var(--workspace-shell-text-muted)]" />
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">No meetings yet.</p>
           {canEdit ? (
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
               Add a meeting or save transcripts from a client page.
             </p>
           ) : null}
@@ -292,24 +292,24 @@ export function MeetingsPageContent({
             <li
               key={row.id}
               className={cn(
-                'flex items-start justify-between gap-3 rounded-xl border border-white/8',
-                'bg-[var(--workspace-shell-panel)] px-4 py-3 transition-colors hover:border-[var(--keel-teal)]/30',
+                'flex items-start justify-between gap-3 rounded-xl border border-[color:var(--workspace-shell-border)]',
+                'bg-[var(--workspace-shell-panel)] px-4 py-3 transition-colors hover:border-[var(--ozer-accent)]/30',
               )}
             >
               <div className="min-w-0 flex-1">
                 <Link
                   href={meetingDetailPath(row.id)}
-                  className="truncate text-sm font-medium text-white hover:text-[#5eead4]"
+                  className="truncate text-sm font-medium text-[var(--workspace-shell-text)] hover:text-[var(--ozer-accent-muted)]"
                 >
                   {row.title}
                 </Link>
-                <p className="mt-1 text-xs text-zinc-500">
+                <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
                   {meetingDisplayDate(row.meetingDate, row.createdAt)}
                   {' · '}
                   {row.clientId ? (
                     <Link
                       href={clientPath(row.clientId)}
-                      className="text-[#5eead4] hover:underline"
+                      className="text-[var(--ozer-accent-muted)] hover:underline"
                     >
                       {contextLabel(row)}
                     </Link>
@@ -339,7 +339,7 @@ export function MeetingsPageContent({
         </ul>
       )}
 
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-[var(--workspace-shell-text-muted)]">
         Tip: you can also add meetings from a client&apos;s Meetings tab — they appear
         here automatically.
       </p>

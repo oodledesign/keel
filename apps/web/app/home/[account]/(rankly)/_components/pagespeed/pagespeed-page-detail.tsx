@@ -12,7 +12,7 @@ import { PagespeedRecommendations } from './pagespeed-recommendations';
 
 function scoreTone(score: number | null | undefined): string {
   if (score == null) return 'text-muted-foreground';
-  if (score >= 90) return 'text-[var(--keel-teal)]';
+  if (score >= 90) return 'text-[var(--ozer-accent)]';
   if (score >= 50) return 'text-amber-400';
   return 'text-red-400';
 }
@@ -41,7 +41,7 @@ function ScoreCard(props: {
 }) {
   if (!props.metrics) {
     return (
-      <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+      <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
         <p className="text-muted-foreground text-xs uppercase tracking-wide">
           {props.label}
         </p>
@@ -52,7 +52,7 @@ function ScoreCard(props: {
 
   if (props.metrics.errorMsg) {
     return (
-      <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+      <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
         <p className="text-muted-foreground text-xs uppercase tracking-wide">
           {props.label}
         </p>
@@ -62,7 +62,7 @@ function ScoreCard(props: {
   }
 
   return (
-    <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+    <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
       <p className="text-muted-foreground text-xs uppercase tracking-wide">
         {props.label}
       </p>
@@ -148,7 +148,7 @@ export function PagespeedPageDetail(props: {
         </div>
         <Link
           href={props.backHref}
-          className="text-muted-foreground text-sm hover:text-white"
+          className="text-muted-foreground text-sm hover:text-[var(--workspace-shell-text)]"
         >
           ← Back to PageSpeed
         </Link>
@@ -159,11 +159,11 @@ export function PagespeedPageDetail(props: {
         <ScoreCard label="Desktop" metrics={props.snapshot.desktop} />
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-white/10 bg-black/10">
+      <div className="overflow-hidden rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10">
         <PagespeedHistoryChart history={props.history} />
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-white/10 bg-black/10">
+      <div className="overflow-hidden rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10">
         <PagespeedRecommendations
           mobile={props.snapshot.mobile}
           desktop={props.snapshot.desktop}

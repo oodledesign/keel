@@ -1,9 +1,9 @@
 import { cookies, headers } from 'next/headers';
 
-import { Toaster } from '@kit/ui/sonner';
 import { CookieBanner } from '@kit/ui/cookie-banner';
 import { cn } from '@kit/ui/utils';
 
+import { AppToaster } from '~/components/app-toaster';
 import { PwaRegister } from '~/components/pwa-register';
 import { GoogleAnalytics } from '~/components/google-analytics';
 import { RootProviders } from '~/components/root-providers';
@@ -12,7 +12,6 @@ import { getFontsClassName } from '~/lib/fonts';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { generateRootMetadata, generateRootViewport } from '~/lib/root-metadata';
 import { getRootTheme } from '~/lib/root-theme';
-import { APP_THEME } from '~/lib/app-theme';
 
 import '../styles/globals.css';
 
@@ -46,7 +45,7 @@ export default async function RootLayout({
         <CookieBanner />
         <GoogleAnalytics />
 
-        <Toaster richColors={true} theme={APP_THEME} position="top-center" />
+        <AppToaster />
       </body>
     </html>
   );

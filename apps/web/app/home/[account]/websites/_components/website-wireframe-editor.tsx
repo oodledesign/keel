@@ -57,7 +57,7 @@ function WireframePreview({ section }: { section: WebsiteWireframeSection }) {
   return (
     <div
       className={cn(
-        'rounded-md border border-dashed border-white/15 bg-white/[0.03] p-2',
+        'rounded-md border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-2',
         layoutPreviewClass(section.layout),
       )}
     >
@@ -65,7 +65,7 @@ function WireframePreview({ section }: { section: WebsiteWireframeSection }) {
         <div
           key={index}
           className={cn(
-            'rounded bg-white/10',
+            'rounded bg-[var(--workspace-shell-sidebar-accent)]',
             section.layout === 'cta' ? 'h-6 w-full' : 'h-8',
           )}
         />
@@ -203,11 +203,11 @@ export function WebsiteWireframeEditor({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm text-white/70">
+          <p className="text-sm text-[var(--workspace-shell-text)]/70">
             Layout intent per section — sync from sitemap, then refine.
           </p>
           {canEdit ? (
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
               {saveState === 'saving'
                 ? 'Saving…'
                 : saveState === 'saved'
@@ -221,7 +221,7 @@ export function WebsiteWireframeEditor({
             type="button"
             size="sm"
             variant="outline"
-            className="border-white/10 text-white hover:bg-white/5"
+            className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
             onClick={syncFromSitemap}
             disabled={sitemap.length === 0}
           >
@@ -232,11 +232,11 @@ export function WebsiteWireframeEditor({
       </div>
 
       {sitemap.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/10 px-4 py-8 text-center text-sm text-zinc-500">
+        <div className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center text-sm text-[var(--workspace-shell-text-muted)]">
           Build your sitemap first, then sync wireframes here.
         </div>
       ) : wireframes.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/10 px-4 py-8 text-center text-sm text-zinc-500">
+        <div className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center text-sm text-[var(--workspace-shell-text-muted)]">
           No wireframes yet. Click sync from sitemap to generate structure.
         </div>
       ) : (
@@ -250,8 +250,8 @@ export function WebsiteWireframeEditor({
                 className={cn(
                   'rounded-lg border px-3 py-2 text-left text-sm transition-colors',
                   activePageId === page.pageId
-                    ? 'border-[var(--keel-teal)] bg-[var(--keel-teal)]/10 text-white'
-                    : 'border-white/10 text-zinc-400 hover:bg-white/5 hover:text-white',
+                    ? 'border-[var(--ozer-accent)] bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-text)]'
+                    : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
                 )}
               >
                 {page.title}
@@ -264,7 +264,7 @@ export function WebsiteWireframeEditor({
               {activePage.sections.map((section) => (
                 <div
                   key={section.id}
-                  className="rounded-xl border border-white/10 bg-[#0B132B]/40 p-4"
+                  className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/40 p-4"
                 >
                   <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_180px]">
                     <div className="space-y-3">
@@ -276,7 +276,7 @@ export function WebsiteWireframeEditor({
                             title: event.target.value,
                           })
                         }
-                        className="h-9 border-white/10 bg-[#0B132B] text-white"
+                        className="h-9 border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]"
                       />
                       <Select
                         value={section.layout}
@@ -287,7 +287,7 @@ export function WebsiteWireframeEditor({
                         }
                         disabled={!canEdit}
                       >
-                        <SelectTrigger className="border-white/10 bg-[#0B132B] text-white">
+                        <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -308,7 +308,7 @@ export function WebsiteWireframeEditor({
                           })
                         }
                         placeholder="Layout notes, content blocks, CTA labels…"
-                        className="border-white/10 bg-[#0B132B] text-sm text-white"
+                        className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-sm text-[var(--workspace-shell-text)]"
                       />
                     </div>
                     <WireframePreview section={section} />

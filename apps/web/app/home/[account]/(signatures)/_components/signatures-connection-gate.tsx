@@ -42,9 +42,9 @@ export function SignaturesConnectionGate({
     }).toString()}`;
 
     return (
-      <Card className="border-white/10 bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] shadow-2xl">
+      <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] shadow-2xl">
         <CardHeader className="items-center text-center">
-          <div className="mb-3 rounded-2xl border border-[var(--keel-teal)]/20 bg-[var(--keel-teal)]/10 p-3 text-[var(--keel-teal)]">
+          <div className="mb-3 rounded-2xl border border-[var(--ozer-accent)]/20 bg-[var(--ozer-accent-subtle)] p-3 text-[var(--ozer-accent)]">
             <PlugZap className="h-7 w-7" />
           </div>
           <CardTitle className="text-2xl">Connect your mail provider</CardTitle>
@@ -79,7 +79,7 @@ export function SignaturesConnectionGate({
             No mail provider is connected — you can browse screens and empty
             states. Sync, push, and directory actions stay unavailable until you
             connect (or turn off{' '}
-            <code className="rounded bg-black/20 px-1 font-mono text-xs">
+            <code className="rounded bg-[var(--workspace-shell-sidebar-accent)] px-1 font-mono text-xs">
               SIGNATURES_UX_PREVIEW
             </code>
             ).

@@ -36,7 +36,7 @@ export function TagsInput({
           <Badge
             key={tag}
             variant="outline"
-            className="cursor-pointer border-white/10 text-xs text-zinc-300"
+            className="cursor-pointer border-[color:var(--workspace-shell-border)] text-xs text-[var(--workspace-shell-text-muted)]"
             onClick={() => !disabled && onChange(tags.filter((x) => x !== tag))}
           >
             {tag} ×
@@ -55,20 +55,20 @@ export function TagsInput({
           }}
           placeholder="Add tag"
           disabled={disabled}
-          className="border-white/10 bg-[var(--workspace-shell-panel)] text-base text-white md:text-sm"
+          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-base text-[var(--workspace-shell-text)] md:text-sm"
         />
         <Button
           type="button"
           size="sm"
           variant="outline"
-          className="shrink-0 border-white/10 text-white md:hidden"
+          className="shrink-0 border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)] md:hidden"
           disabled={disabled || !draft.trim()}
           onClick={addTag}
         >
           Add
         </Button>
       </div>
-      <p className="hidden text-xs text-zinc-500 md:block">Press Enter to add a tag</p>
+      <p className="hidden text-xs text-[var(--workspace-shell-text-muted)] md:block">Press Enter to add a tag</p>
     </div>
   );
 }

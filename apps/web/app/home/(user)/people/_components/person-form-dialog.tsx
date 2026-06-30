@@ -113,14 +113,14 @@ export function PersonFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-white/10 bg-[#0F1B35] text-white sm:max-w-lg">
+      <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] text-[var(--workspace-shell-text)] sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Edit person' : 'Add person'}</DialogTitle>
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
           {isEdit && person ? (
-            <div className="flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.02] p-4">
+            <div className="flex items-center gap-4 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
               <PersonImageUploader
                 personId={person.id}
                 personName={person.nickname?.trim() || person.full_name}
@@ -128,7 +128,7 @@ export function PersonFormDialog({
                 size="md"
                 onUpdated={() => onPhotoUpdated?.()}
               />
-              <p className="text-xs leading-relaxed text-zinc-500">
+              <p className="text-xs leading-relaxed text-[var(--workspace-shell-text-muted)]">
                 Click to add or change their photo. Shown in list and orbit
                 views.
               </p>
@@ -139,7 +139,7 @@ export function PersonFormDialog({
             <Label htmlFor="fullName">Name</Label>
             <Input
               id="fullName"
-              className="border-white/10 bg-[var(--workspace-shell-panel)] text-white"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Full name"
@@ -151,7 +151,7 @@ export function PersonFormDialog({
               <Label htmlFor="nickname">Nickname</Label>
               <Input
                 id="nickname"
-                className="border-white/10 bg-[var(--workspace-shell-panel)] text-white"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
               />
@@ -159,10 +159,10 @@ export function PersonFormDialog({
             <div className="grid gap-2">
               <Label>Relationship</Label>
               <Select value={relationship || 'none'} onValueChange={(v) => setRelationship(v === 'none' ? '' : v)}>
-                <SelectTrigger className="border-white/10 bg-[var(--workspace-shell-panel)] text-white">
+                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
                   <SelectValue placeholder="Choose…" />
                 </SelectTrigger>
-                <SelectContent className="border-white/10 bg-[#0F1B35] text-white">
+                <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] text-[var(--workspace-shell-text)]">
                   <SelectItem value="none">—</SelectItem>
                   {RELATIONSHIP_PRESETS.map((r) => (
                     <SelectItem key={r} value={r}>
@@ -182,10 +182,10 @@ export function PersonFormDialog({
                 setCircleTier(value as typeof circleTier)
               }
             >
-              <SelectTrigger className="border-white/10 bg-[var(--workspace-shell-panel)] text-white">
+              <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="border-white/10 bg-[#0F1B35] text-white">
+              <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] text-[var(--workspace-shell-text)]">
                 {CIRCLE_TIER_OPTIONS.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
@@ -193,7 +193,7 @@ export function PersonFormDialog({
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
               {CIRCLE_TIER_OPTIONS.find((option) => option.value === circleTier)
                 ?.description}
             </p>
@@ -205,7 +205,7 @@ export function PersonFormDialog({
               <Input
                 id="email"
                 type="email"
-                className="border-white/10 bg-[var(--workspace-shell-panel)] text-white"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -214,7 +214,7 @@ export function PersonFormDialog({
               <Label htmlFor="phone">Phone</Label>
               <Input
                 id="phone"
-                className="border-white/10 bg-[var(--workspace-shell-panel)] text-white"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
               />
@@ -224,10 +224,10 @@ export function PersonFormDialog({
           <div className="grid gap-2">
             <Label>Catch-up reminder</Label>
             <Select value={cadence} onValueChange={setCadence}>
-              <SelectTrigger className="border-white/10 bg-[var(--workspace-shell-panel)] text-white">
+              <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="border-white/10 bg-[#0F1B35] text-white">
+              <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] text-[var(--workspace-shell-text)]">
                 {CATCHUP_CADENCE_OPTIONS.map((opt) => (
                   <SelectItem
                     key={opt.label}
@@ -244,7 +244,7 @@ export function PersonFormDialog({
             <Label htmlFor="notes">Notes</Label>
             <Textarea
               id="notes"
-              className="min-h-[80px] border-white/10 bg-[var(--workspace-shell-panel)] text-white"
+              className="min-h-[80px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
               value={generalNotes}
               onChange={(e) => setGeneralNotes(e.target.value)}
               placeholder="Anything worth remembering…"
@@ -257,13 +257,13 @@ export function PersonFormDialog({
         <DialogFooter>
           <Button
             variant="ghost"
-            className="text-zinc-300 hover:bg-white/10 hover:text-white"
+            className="text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
             onClick={() => onOpenChange(false)}
           >
             Cancel
           </Button>
           <Button
-            className="bg-[var(--keel-teal)] hover:bg-[#238b7f]"
+            className="bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]"
             disabled={pending || !fullName.trim()}
             onClick={handleSubmit}
           >

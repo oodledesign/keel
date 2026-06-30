@@ -19,7 +19,7 @@ export function FeatureLandingFaqs({ faqs }: { faqs: FAQItem[] }) {
         <AccordionItem
           key={faq.question}
           value={`faq-${index}`}
-          className="rounded-xl border border-white/10 bg-white/[0.03] px-4"
+          className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4"
         >
           <AccordionTrigger className="text-left text-base font-medium text-violet-50 hover:no-underline">
             {faq.question}

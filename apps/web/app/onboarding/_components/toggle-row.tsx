@@ -16,11 +16,11 @@ export function ToggleRow({
   onCheckedChange,
 }: ToggleRowProps) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-lg border border-zinc-700 bg-zinc-800/50 p-3">
+    <div className="flex items-center justify-between gap-4 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/50 p-3">
       <div>
-        <p className="font-medium text-zinc-200">{label}</p>
+        <p className="font-medium text-[var(--workspace-shell-text)]">{label}</p>
         {description && (
-          <p className="text-xs text-zinc-500">{description}</p>
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">{description}</p>
         )}
       </div>
       <Switch

@@ -143,12 +143,12 @@ export function HolidayModeSection({
   }
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-5">
+    <section className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5">
       <div className="space-y-1">
-        <h2 className="text-base font-semibold text-white">
+        <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">
           Holiday & away mode
         </h2>
-        <p className="text-sm text-zinc-400">
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           Let teammates and contacts know you&apos;re away.
         </p>
       </div>
@@ -158,8 +158,8 @@ export function HolidayModeSection({
           control={form.control}
           name="holiday_mode_enabled"
           render={({ field }) => (
-            <FormItem className="flex items-center justify-between gap-4 rounded-xl border border-zinc-700/80 bg-zinc-900/30 p-4">
-              <FormLabel className="text-sm font-medium text-white">
+            <FormItem className="flex items-center justify-between gap-4 rounded-xl border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/30 p-4">
+              <FormLabel className="text-sm font-medium text-[var(--workspace-shell-text)]">
                 I&apos;m currently away
               </FormLabel>
               <FormControl>
@@ -185,11 +185,11 @@ export function HolidayModeSection({
                 name="holiday_mode_label"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-zinc-300">Label</FormLabel>
+                    <FormLabel className="text-[var(--workspace-shell-text-muted)]">Label</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        className="border-zinc-600 bg-zinc-900/40 text-white"
+                        className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40 text-[var(--workspace-shell-text)]"
                       />
                     </FormControl>
                     <div className="flex flex-wrap gap-2 pt-1">
@@ -197,7 +197,7 @@ export function HolidayModeSection({
                         <button
                           key={preset}
                           type="button"
-                          className="rounded-full border border-zinc-600 px-3 py-1 text-xs text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white"
+                          className="rounded-full border border-[color:var(--workspace-shell-border)] px-3 py-1 text-xs text-[var(--workspace-shell-text-muted)] transition-colors hover:border-[color:var(--workspace-shell-border)] hover:text-[var(--workspace-shell-text)]"
                           onClick={() => field.onChange(preset)}
                         >
                           {preset}
@@ -217,7 +217,7 @@ export function HolidayModeSection({
 
                   return (
                     <FormItem className="flex flex-col">
-                      <FormLabel className="text-zinc-300">
+                      <FormLabel className="text-[var(--workspace-shell-text-muted)]">
                         Back on (optional)
                       </FormLabel>
                       <Popover>
@@ -227,8 +227,8 @@ export function HolidayModeSection({
                               type="button"
                               variant="outline"
                               className={cn(
-                                'w-full justify-start border-zinc-600 bg-zinc-900/40 text-left font-normal text-white hover:bg-zinc-800 hover:text-white',
-                                !selectedDate && 'text-zinc-500',
+                                'w-full justify-start border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40 text-left font-normal text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-control-surface)] hover:text-[var(--workspace-shell-text)]',
+                                !selectedDate && 'text-[var(--workspace-shell-text-muted)]',
                               )}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
@@ -239,7 +239,7 @@ export function HolidayModeSection({
                           </FormControl>
                         </PopoverTrigger>
                         <PopoverContent
-                          className="w-auto border-zinc-700 bg-[var(--workspace-shell-panel)] p-0"
+                          className="w-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0"
                           align="start"
                         >
                           <Calendar
@@ -256,11 +256,11 @@ export function HolidayModeSection({
                             initialFocus
                           />
                           {selectedDate ? (
-                            <div className="border-t border-zinc-700 p-2">
+                            <div className="border-t border-[color:var(--workspace-shell-border)] p-2">
                               <Button
                                 type="button"
                                 variant="ghost"
-                                className="w-full text-zinc-300 hover:text-white"
+                                className="w-full text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
                                 onClick={() => field.onChange(null)}
                               >
                                 Clear date
@@ -269,7 +269,7 @@ export function HolidayModeSection({
                           ) : null}
                         </PopoverContent>
                       </Popover>
-                      <FormDescription className="text-zinc-400">
+                      <FormDescription className="text-[var(--workspace-shell-text-muted)]">
                         {field.value
                           ? 'Holiday mode will automatically turn off on this date'
                           : 'Leave blank to keep holiday mode on indefinitely'}
@@ -280,7 +280,7 @@ export function HolidayModeSection({
                 }}
               />
 
-              <div className="flex flex-wrap items-center gap-2 rounded-xl border border-zinc-700/80 bg-zinc-900/20 px-3 py-2 text-sm text-zinc-300">
+              <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/20 px-3 py-2 text-sm text-[var(--workspace-shell-text-muted)]">
                 <span>Your status will show as:</span>
                 <FocusStatusBadge
                   settings={previewSettings}

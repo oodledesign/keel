@@ -113,10 +113,10 @@ export function PersonImageUploader({
           disabled={uploading}
           onClick={openPicker}
           className={cn(
-            'group relative overflow-hidden rounded-xl border border-white/10',
-            'bg-[var(--keel-teal)]/10 ring-2 ring-white/10 transition',
-            'hover:border-[var(--keel-teal)]/40 hover:ring-[var(--keel-teal)]/30',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--keel-teal)]',
+            'group relative overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)]',
+            'bg-[var(--ozer-accent-subtle)] ring-2 ring-white/10 transition',
+            'hover:border-[var(--ozer-accent)]/40 hover:ring-[var(--ozer-accent)]/30',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)]',
             'disabled:cursor-not-allowed disabled:opacity-60',
             dimension,
           )}
@@ -130,7 +130,7 @@ export function PersonImageUploader({
               className="h-full w-full object-cover"
             />
           ) : (
-            <span className="flex h-full w-full flex-col items-center justify-center gap-1 text-[#5eead4]">
+            <span className="flex h-full w-full flex-col items-center justify-center gap-1 text-[var(--ozer-accent-muted)]">
               <span className="text-lg font-semibold">
                 {getInitials(personName || '?')}
               </span>
@@ -140,7 +140,7 @@ export function PersonImageUploader({
 
           <span
             className={cn(
-              'absolute inset-0 flex items-center justify-center bg-black/45 text-xs font-medium text-white',
+              'absolute inset-0 flex items-center justify-center bg-black/45 text-xs font-medium text-[var(--workspace-shell-text)]',
               'opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100',
             )}
           >
@@ -163,7 +163,7 @@ export function PersonImageUploader({
             variant="ghost"
             size="sm"
             disabled={uploading}
-            className="h-8 px-2 text-xs text-zinc-400 hover:bg-white/10 hover:text-white"
+            className="h-8 px-2 text-xs text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
             onClick={() => void onRemovePhoto()}
           >
             <Trash2 className="mr-1 h-3.5 w-3.5" />

@@ -39,7 +39,7 @@ const tooltipStyle = {
   boxShadow: '0 12px 30px rgba(2, 8, 23, 0.35)',
 };
 
-const GROUPED_INCOME_COLOR = '#2A9D8F';
+const GROUPED_INCOME_COLOR = '#FF5C34';
 const GROUPED_EXPENSES_COLOR = '#94A3B8';
 
 function FinanceGroupedTooltip({
@@ -61,36 +61,36 @@ function FinanceGroupedTooltip({
   }
 
   return (
-    <div className="rounded-xl border border-white/10 bg-[#0B1524] px-3 py-2.5 text-xs shadow-lg">
-      <p className="mb-2 font-medium text-white">{label}</p>
+    <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[#0B1524] px-3 py-2.5 text-xs shadow-lg">
+      <p className="mb-2 font-medium text-[var(--workspace-shell-text)]">{label}</p>
       <div className="space-y-1.5">
         <div className="flex items-center justify-between gap-6">
-          <span className="flex items-center gap-2 text-zinc-400">
+          <span className="flex items-center gap-2 text-[var(--workspace-shell-text-muted)]">
             <span
               className="h-2 w-2 rounded-full"
               style={{ backgroundColor: GROUPED_INCOME_COLOR }}
             />
             Income
           </span>
-          <span className="font-medium text-white">
+          <span className="font-medium text-[var(--workspace-shell-text)]">
             {formatCurrency(point.income)}
           </span>
         </div>
         <div className="flex items-center justify-between gap-6">
-          <span className="flex items-center gap-2 text-zinc-400">
+          <span className="flex items-center gap-2 text-[var(--workspace-shell-text-muted)]">
             <span
               className="h-2 w-2 rounded-full"
               style={{ backgroundColor: GROUPED_EXPENSES_COLOR }}
             />
             Expenses
           </span>
-          <span className="font-medium text-white">
+          <span className="font-medium text-[var(--workspace-shell-text)]">
             {formatCurrency(point.expenses)}
           </span>
         </div>
-        <div className="flex items-center justify-between gap-6 border-t border-white/10 pt-1.5">
-          <span className="text-zinc-400">Net</span>
-          <span className="font-medium text-[#5eead4]">
+        <div className="flex items-center justify-between gap-6 border-t border-[color:var(--workspace-shell-border)] pt-1.5">
+          <span className="text-[var(--workspace-shell-text-muted)]">Net</span>
+          <span className="font-medium text-[var(--ozer-accent-muted)]">
             {formatCurrency(point.net)}
           </span>
         </div>
@@ -231,9 +231,9 @@ export function FinanceNetLineChart({ data }: { data: MonthlyFinancePoint[] }) {
           <Line
             type="monotone"
             dataKey="net"
-            stroke="#5eead4"
+            stroke="#FFE3DA"
             strokeWidth={2}
-            dot={{ fill: '#5eead4', r: 3 }}
+            dot={{ fill: '#FFE3DA', r: 3 }}
           />
         </LineChart>
       </ResponsiveContainer>
@@ -256,11 +256,11 @@ export function FinanceMonthRail({
           className={`rounded-2xl border px-4 py-4 ${
             month.isCurrent || index === 0
               ? 'border-violet-400/60 bg-[var(--workspace-shell-panel)] shadow-[0_0_0_1px_rgba(167,139,250,0.16)]'
-              : 'border-white/6 bg-[var(--workspace-shell-panel)]'
+              : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]'
           }`}
         >
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-semibold text-white">{month.month}</p>
+            <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">{month.month}</p>
             <span className="text-sm font-semibold text-violet-300">
               {formatCurrency(month.net)}
             </span>

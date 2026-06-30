@@ -74,20 +74,20 @@ export function BrandSettingsForm({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       {!canEdit ? (
-        <p className="rounded-xl border border-white/10 bg-black/10 px-4 py-3 text-sm text-muted-foreground">
+        <p className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-3 text-sm text-muted-foreground">
           Only workspace owners and admins can edit brand colours.
         </p>
       ) : null}
 
-      <p className="rounded-xl border border-white/10 bg-black/10 px-4 py-3 text-sm text-muted-foreground">
+      <p className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-3 text-sm text-muted-foreground">
         Upload your business logo under{' '}
-        <Link href={settingsHref} className="text-[var(--keel-teal)] hover:underline">
+        <Link href={settingsHref} className="text-[var(--ozer-accent)] hover:underline">
           General settings
         </Link>
         . It appears in the sidebar workspace switcher, emails, and signature templates.
       </p>
 
-      <div className="grid gap-5 rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-6">
+      <div className="grid gap-5 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6">
         <ColorField
           label="Primary"
           description="Main header colour for emails and signature panels."
@@ -177,7 +177,7 @@ function ColorField({
       <div className="flex flex-wrap items-center gap-3">
         <input
           type="color"
-          className="h-10 w-14 cursor-pointer rounded border border-white/10 bg-transparent disabled:opacity-50"
+          className="h-10 w-14 cursor-pointer rounded border border-[color:var(--workspace-shell-border)] bg-transparent disabled:opacity-50"
           value={value.startsWith('#') ? value.slice(0, 7) : `#${value}`}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}

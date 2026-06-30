@@ -11,11 +11,11 @@ import type { MeetupContentItem } from '../_lib/community-schedule.types';
 export function MeetupContentItemView({ item }: { item: MeetupContentItem }) {
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 text-sm font-medium text-white">
+      <div className="flex items-center gap-2 text-sm font-medium text-[var(--workspace-shell-text)]">
         {item.kind === 'youtube' ? (
           <Youtube className="h-4 w-4 text-red-400" />
         ) : item.kind === 'link' || item.kind === 'video' ? (
-          <Link2 className="h-4 w-4 text-[#5eead4]" />
+          <Link2 className="h-4 w-4 text-[var(--ozer-accent-muted)]" />
         ) : (
           <FileText className="h-4 w-4" />
         )}
@@ -29,10 +29,10 @@ export function MeetupContentItemView({ item }: { item: MeetupContentItem }) {
       {item.kind === 'video' && item.url ? (
         <video
           controls
-          className="max-h-80 w-full rounded-xl border border-white/10"
+          className="max-h-80 w-full rounded-xl border border-[color:var(--workspace-shell-border)]"
           src={item.url}
         >
-          <a href={item.url} className="text-[#5eead4] underline">
+          <a href={item.url} className="text-[var(--ozer-accent-muted)] underline">
             {item.url}
           </a>
         </video>
@@ -43,7 +43,7 @@ export function MeetupContentItemView({ item }: { item: MeetupContentItem }) {
           href={item.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm text-[#5eead4] underline break-all"
+          className="text-sm text-[var(--ozer-accent-muted)] underline break-all"
         >
           {item.url}
         </a>
@@ -53,7 +53,7 @@ export function MeetupContentItemView({ item }: { item: MeetupContentItem }) {
         isHtmlContent(item.body) ? (
           <WorkspaceRichTextHtml html={item.body} />
         ) : (
-          <p className="whitespace-pre-wrap text-sm text-white/70">{item.body}</p>
+          <p className="whitespace-pre-wrap text-sm text-[var(--workspace-shell-text)]/70">{item.body}</p>
         )
       ) : null}
     </div>

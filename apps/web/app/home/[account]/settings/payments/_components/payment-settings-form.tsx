@@ -91,7 +91,7 @@ export function PaymentSettingsForm({
   return (
     <div className="flex w-full flex-col gap-6">
       {stripeConnectedFlash ? (
-        <div className="rounded-xl border border-[var(--keel-teal)]/30 bg-[var(--keel-teal)]/10 px-4 py-3 text-sm text-[#97D9AA]">
+        <div className="rounded-xl border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-4 py-3 text-sm text-[#97D9AA]">
           Stripe connected successfully. Card payments are now enabled on invoices.
         </div>
       ) : null}
@@ -101,7 +101,7 @@ export function PaymentSettingsForm({
         </div>
       ) : null}
 
-      <div className="rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+      <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-base font-semibold">Stripe Connect</h2>
@@ -111,7 +111,7 @@ export function PaymentSettingsForm({
             </p>
           </div>
           {stripeConnected ? (
-            <span className="rounded-full border border-[var(--keel-teal)]/30 bg-[var(--keel-teal)]/10 px-2.5 py-1 text-xs font-medium text-[#97D9AA]">
+            <span className="rounded-full border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-2.5 py-1 text-xs font-medium text-[#97D9AA]">
               Connected
             </span>
           ) : null}
@@ -119,7 +119,7 @@ export function PaymentSettingsForm({
 
         <div className="mt-4 flex flex-wrap gap-2">
           {canEdit && !stripeConnected ? (
-            <Button asChild className="bg-[var(--keel-teal)] text-[#09111F] hover:bg-[#6BD48F]">
+            <Button asChild className="bg-[var(--ozer-accent)] text-[#09111F] hover:bg-[#6BD48F]">
               <a
                 href={`/api/stripe-connect/account-authorize?accountId=${encodeURIComponent(accountId)}`}
               >
@@ -135,7 +135,7 @@ export function PaymentSettingsForm({
           ) : null}
         </div>
 
-        <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-white/8 bg-white/3 p-4">
+        <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-[color:var(--workspace-shell-border)] bg-white/3 p-4">
           <div>
             <p className="text-sm font-medium">Pay by card on portal</p>
             <p className="text-xs text-muted-foreground">
@@ -152,7 +152,7 @@ export function PaymentSettingsForm({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+      <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
         <h2 className="text-base font-semibold">Invoice numbering</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           New invoices are numbered INV-0001, INV-0002, and so on. Set a custom
@@ -189,7 +189,7 @@ export function PaymentSettingsForm({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+      <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
         <div className="flex items-center justify-between gap-4">
           <div>
             <h2 className="text-base font-semibold">Bank transfer</h2>
@@ -290,14 +290,14 @@ export function PaymentSettingsForm({
       </div>
 
       <div className="flex items-center justify-between gap-4">
-        <Link href={settingsPath.replace('/payments', '')} className="text-sm text-muted-foreground hover:text-white">
+        <Link href={settingsPath.replace('/payments', '')} className="text-sm text-muted-foreground hover:text-[var(--workspace-shell-text)]">
           ← Back to settings
         </Link>
         {canEdit ? (
           <Button
             disabled={pending}
             onClick={handleSave}
-            className="bg-[var(--keel-teal)] text-[#09111F] hover:bg-[#6BD48F]"
+            className="bg-[var(--ozer-accent)] text-[#09111F] hover:bg-[#6BD48F]"
           >
             {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Save payment settings

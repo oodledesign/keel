@@ -80,12 +80,12 @@ export function PlannerRemindersToggle({ className }: Props) {
         size="sm"
         onClick={handleToggle}
         disabled={loading || isPending}
-        className="h-9 border-white/10 bg-white/[0.03] text-white/80 hover:bg-white/[0.06]"
+        className="h-9 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/80 hover:bg-[var(--workspace-shell-sidebar-accent)]"
       >
         {loading || isPending ? (
           <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
         ) : subscribed ? (
-          <Bell className="mr-1.5 h-4 w-4 text-[#5eead4]" />
+          <Bell className="mr-1.5 h-4 w-4 text-[var(--ozer-accent-muted)]" />
         ) : (
           <BellOff className="mr-1.5 h-4 w-4" />
         )}
@@ -93,7 +93,7 @@ export function PlannerRemindersToggle({ className }: Props) {
       </Button>
 
       {subscribed ? (
-        <label className="flex items-center gap-1.5 text-xs text-white/45">
+        <label className="flex items-center gap-1.5 text-xs text-[var(--workspace-shell-text)]/45">
           <span>Lead time</span>
           <select
             value={leadMinutes}
@@ -114,10 +114,10 @@ export function PlannerRemindersToggle({ className }: Props) {
                 }
               });
             }}
-            className="h-8 rounded-md border border-white/10 bg-white/[0.04] px-2 text-xs text-white outline-none"
+            className="h-8 rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 text-xs text-[var(--workspace-shell-text)] outline-none"
           >
             {[5, 10, 15, 30].map((value) => (
-              <option key={value} value={value} className="bg-[#0F1B35]">
+              <option key={value} value={value} className="bg-[var(--ozer-surface-panel)]">
                 {value} min
               </option>
             ))}

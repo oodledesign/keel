@@ -59,12 +59,12 @@ export function OOOSection({ form, accountId, persisted }: OOOSectionProps) {
   });
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-5">
+    <section className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5">
       <div className="space-y-1">
-        <h2 className="text-base font-semibold text-white">
+        <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">
           Out of office replies
         </h2>
-        <p className="text-sm text-zinc-400">
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           Automatically reply to incoming messages when you&apos;re not
           available.
         </p>
@@ -75,8 +75,8 @@ export function OOOSection({ form, accountId, persisted }: OOOSectionProps) {
           control={form.control}
           name="ooo_enabled"
           render={({ field }) => (
-            <FormItem className="flex items-center justify-between gap-4 rounded-xl border border-zinc-700/80 bg-zinc-900/30 p-4">
-              <FormLabel className="text-sm font-medium text-white">
+            <FormItem className="flex items-center justify-between gap-4 rounded-xl border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/30 p-4">
+              <FormLabel className="text-sm font-medium text-[var(--workspace-shell-text)]">
                 Enable out of office replies
               </FormLabel>
               <FormControl>
@@ -98,7 +98,7 @@ export function OOOSection({ form, accountId, persisted }: OOOSectionProps) {
           <div className="overflow-hidden">
             <div className="space-y-6 pt-1">
               <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
                   When to send
                 </p>
                 <FormField
@@ -115,17 +115,17 @@ export function OOOSection({ form, accountId, persisted }: OOOSectionProps) {
                           {OOO_TRIGGER_OPTIONS.map((option) => (
                             <label
                               key={option.value}
-                              className="flex cursor-pointer gap-3 rounded-xl border border-zinc-700/80 bg-zinc-900/20 p-3 transition-colors hover:border-zinc-600"
+                              className="flex cursor-pointer gap-3 rounded-xl border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/20 p-3 transition-colors hover:border-[color:var(--workspace-shell-border)]"
                             >
                               <RadioGroupItem
                                 value={option.value}
-                                className="mt-0.5 border-zinc-500"
+                                className="mt-0.5 border-[color:var(--workspace-shell-border)]"
                               />
                               <span className="space-y-1">
-                                <span className="block text-sm font-medium text-white">
+                                <span className="block text-sm font-medium text-[var(--workspace-shell-text)]">
                                   {option.label}
                                 </span>
-                                <span className="block text-sm text-zinc-400">
+                                <span className="block text-sm text-[var(--workspace-shell-text-muted)]">
                                   {option.description}
                                 </span>
                               </span>
@@ -144,7 +144,7 @@ export function OOOSection({ form, accountId, persisted }: OOOSectionProps) {
                 name="ooo_message"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-zinc-300">
+                    <FormLabel className="text-[var(--workspace-shell-text-muted)]">
                       Your OOO message
                     </FormLabel>
                     <FormControl>
@@ -153,10 +153,10 @@ export function OOOSection({ form, accountId, persisted }: OOOSectionProps) {
                         maxLength={2000}
                         rows={5}
                         placeholder="Thanks for your message. I'm currently outside my working hours and will get back to you as soon as I can."
-                        className="border-zinc-600 bg-zinc-900/40 text-white placeholder:text-zinc-500"
+                        className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
                       />
                     </FormControl>
-                    <FormDescription className="text-right text-zinc-500">
+                    <FormDescription className="text-right text-[var(--workspace-shell-text-muted)]">
                       {field.value.length}/2000
                     </FormDescription>
                     <FormMessage />
@@ -164,9 +164,9 @@ export function OOOSection({ form, accountId, persisted }: OOOSectionProps) {
                 )}
               />
 
-              <div className="space-y-3 rounded-xl border border-zinc-700/80 bg-zinc-900/20 p-4">
+              <div className="space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/20 p-4">
                 <div className="flex items-center justify-between gap-4">
-                  <Label className="text-sm text-white">
+                  <Label className="text-sm text-[var(--workspace-shell-text)]">
                     Use a different message when on holiday
                   </Label>
                   <Switch
@@ -188,7 +188,7 @@ export function OOOSection({ form, accountId, persisted }: OOOSectionProps) {
                     name="ooo_holiday_message"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-zinc-300">
+                        <FormLabel className="text-[var(--workspace-shell-text-muted)]">
                           Holiday message
                         </FormLabel>
                         <FormControl>
@@ -198,13 +198,13 @@ export function OOOSection({ form, accountId, persisted }: OOOSectionProps) {
                             maxLength={2000}
                             rows={4}
                             placeholder="Thanks for getting in touch. I'm currently on holiday and will be back in the office on [date]. I'll reply when I return."
-                            className="border-zinc-600 bg-zinc-900/40 text-white placeholder:text-zinc-500"
+                            className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
                             onChange={(event) =>
                               field.onChange(event.target.value || null)
                             }
                           />
                         </FormControl>
-                        <FormDescription className="text-zinc-400">
+                        <FormDescription className="text-[var(--workspace-shell-text-muted)]">
                           If left blank, your standard message will be used
                           instead
                         </FormDescription>
@@ -216,9 +216,9 @@ export function OOOSection({ form, accountId, persisted }: OOOSectionProps) {
               </div>
 
               <Collapsible open={moreOpen} onOpenChange={setMoreOpen}>
-                <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl border border-zinc-700/80 bg-zinc-900/20 px-4 py-3 text-sm font-medium text-zinc-200 hover:text-white">
+                <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/20 px-4 py-3 text-sm font-medium text-[var(--workspace-shell-text)] hover:text-[var(--workspace-shell-text)]">
                   More options
-                  <span className="text-zinc-500">{moreOpen ? '▴' : '▾'}</span>
+                  <span className="text-[var(--workspace-shell-text-muted)]">{moreOpen ? '▴' : '▾'}</span>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="space-y-4 pt-4">
                   <FormField
@@ -226,7 +226,7 @@ export function OOOSection({ form, accountId, persisted }: OOOSectionProps) {
                     name="ooo_sender_name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-zinc-300">
+                        <FormLabel className="text-[var(--workspace-shell-text-muted)]">
                           Reply from name
                         </FormLabel>
                         <FormControl>
@@ -234,13 +234,13 @@ export function OOOSection({ form, accountId, persisted }: OOOSectionProps) {
                             {...field}
                             value={field.value ?? ''}
                             placeholder="e.g. Dan at Oodle Design"
-                            className="border-zinc-600 bg-zinc-900/40 text-white"
+                            className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40 text-[var(--workspace-shell-text)]"
                             onChange={(event) =>
                               field.onChange(event.target.value || null)
                             }
                           />
                         </FormControl>
-                        <FormDescription className="text-zinc-400">
+                        <FormDescription className="text-[var(--workspace-shell-text-muted)]">
                           Overrides your display name on OOO replies only
                         </FormDescription>
                         <FormMessage />
@@ -253,7 +253,7 @@ export function OOOSection({ form, accountId, persisted }: OOOSectionProps) {
                     name="ooo_cc_email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-zinc-300">
+                        <FormLabel className="text-[var(--workspace-shell-text-muted)]">
                           CC on every reply
                         </FormLabel>
                         <FormControl>
@@ -261,13 +261,13 @@ export function OOOSection({ form, accountId, persisted }: OOOSectionProps) {
                             type="email"
                             value={field.value ?? ''}
                             placeholder="e.g. a colleague's address"
-                            className="border-zinc-600 bg-zinc-900/40 text-white"
+                            className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40 text-[var(--workspace-shell-text)]"
                             onChange={(event) =>
                               field.onChange(event.target.value || null)
                             }
                           />
                         </FormControl>
-                        <FormDescription className="text-zinc-400">
+                        <FormDescription className="text-[var(--workspace-shell-text-muted)]">
                           Useful if someone is covering while you&apos;re away
                         </FormDescription>
                         <FormMessage />
@@ -281,7 +281,7 @@ export function OOOSection({ form, accountId, persisted }: OOOSectionProps) {
                     render={({ field }) => (
                       <FormItem className="space-y-2">
                         <div className="flex items-center justify-between gap-4">
-                          <FormLabel className="text-sm text-white">
+                          <FormLabel className="text-sm text-[var(--workspace-shell-text)]">
                             Append my return date to the message
                           </FormLabel>
                           <FormControl>
@@ -291,7 +291,7 @@ export function OOOSection({ form, accountId, persisted }: OOOSectionProps) {
                             />
                           </FormControl>
                         </div>
-                        <FormDescription className="text-zinc-400">
+                        <FormDescription className="text-[var(--workspace-shell-text-muted)]">
                           Only applies when a return date is set in holiday mode
                         </FormDescription>
                         {field.value && !values.holiday_mode_until ? (
@@ -311,15 +311,15 @@ export function OOOSection({ form, accountId, persisted }: OOOSectionProps) {
                   'rounded-xl border p-4',
                   focusState.isOOOActive
                     ? 'border-sky-500/30 bg-sky-500/5'
-                    : 'border-zinc-700/80 bg-zinc-900/20',
+                    : 'border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/20',
                 )}
               >
-                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
                   Preview — message that would send right now
                 </p>
                 {focusState.isOOOActive ? (
                   <div className="mt-3 space-y-3">
-                    <div className="relative rounded-2xl rounded-tl-sm border border-zinc-600 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-100">
+                    <div className="relative rounded-2xl rounded-tl-sm border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/60 px-4 py-3 text-sm text-[var(--workspace-shell-text)]">
                       <p className="whitespace-pre-wrap">
                         {focusState.effectiveOOOMessage}
                       </p>
@@ -332,7 +332,7 @@ export function OOOSection({ form, accountId, persisted }: OOOSectionProps) {
                     </Badge>
                   </div>
                 ) : (
-                  <p className="mt-3 text-sm text-zinc-500">
+                  <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">
                     OOO replies are currently off
                   </p>
                 )}

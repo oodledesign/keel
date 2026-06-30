@@ -6,6 +6,13 @@ import { Button } from '@kit/ui/button';
 
 import pathsConfig from '~/config/paths.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
+import {
+  marketingBtnGradient,
+  marketingFeatureCard,
+  marketingSectionMuted,
+  marketingShellClass,
+} from '~/lib/marketing/marketing-ui';
+import { cn } from '@kit/ui/utils';
 
 import { MarketingHomeHero } from './_components/marketing-home-hero';
 import { InterconnectedWorkspacesSection } from './_components/interconnected-workspaces-section';
@@ -50,7 +57,7 @@ const features = [
 
 function Home() {
   return (
-    <main className="relative overflow-hidden bg-[radial-gradient(circle_at_15%_10%,rgba(168,85,247,0.35),transparent_45%),radial-gradient(circle_at_85%_0%,rgba(124,58,237,0.4),transparent_42%),linear-gradient(180deg,#05050b_0%,#080711_45%,#070612_100%)] text-white">
+    <main className={cn('relative overflow-hidden', marketingShellClass)}>
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_22%)]" />
 
       <section className="relative mx-auto flex w-full max-w-7xl flex-col px-6 pb-12 pt-24 md:pb-16 md:pt-28">
@@ -65,10 +72,10 @@ function Home() {
 
       <section className="relative mx-auto w-full max-w-7xl px-6 pb-24">
         <div className="mb-8">
-          <h2 className="font-heading text-3xl font-semibold text-white md:text-4xl">
+          <h2 className="font-heading text-3xl font-semibold text-[var(--workspace-shell-text)] md:text-4xl">
             Everything connects through your personal home.
           </h2>
-          <p className="mt-3 max-w-2xl text-violet-100/80">
+          <p className="mt-3 max-w-2xl text-[var(--workspace-shell-text-muted)]">
             Ozer keeps priorities visible across workspaces — what needs action now, what can wait, and what is drifting — without switching apps or losing context.
           </p>
         </div>
@@ -76,13 +83,13 @@ function Home() {
           {features.map((feature) => (
             <article
               key={feature.title}
-              className="rounded-2xl border border-violet-300/10 bg-[linear-gradient(145deg,rgba(23,18,44,0.95),rgba(13,10,24,0.95))] p-6"
+              className={cn(marketingFeatureCard, 'p-6')}
             >
-              <feature.icon className="h-5 w-5 text-violet-300" />
-              <h3 className="mt-4 font-heading text-xl font-semibold text-white">
+              <feature.icon className="h-5 w-5 text-[var(--ozer-accent-muted)]" />
+              <h3 className="mt-4 font-heading text-xl font-semibold text-[var(--workspace-shell-text)]">
                 {feature.title}
               </h3>
-              <p className="mt-2 text-sm leading-relaxed text-violet-100/80">
+              <p className="mt-2 text-sm leading-relaxed text-[var(--workspace-shell-text-muted)]">
                 {feature.description}
               </p>
             </article>
@@ -115,28 +122,28 @@ function Home() {
             <Link
               key={item.href}
               href={item.href}
-              className="rounded-2xl border border-violet-300/10 bg-white/[0.03] p-5 transition hover:border-violet-300/25 hover:bg-white/[0.05]"
+              className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-5 transition-[border-color,background-color] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:border-[var(--ozer-accent)]/25 hover:bg-[var(--workspace-shell-sidebar-accent)]"
             >
-              <h3 className="font-heading text-lg font-semibold text-white">{item.title}</h3>
-              <p className="mt-2 text-sm text-violet-100/75">{item.copy}</p>
+              <h3 className="font-heading text-lg font-semibold text-[var(--workspace-shell-text)]">{item.title}</h3>
+              <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">{item.copy}</p>
             </Link>
           ))}
         </div>
       </section>
 
-      <section className="border-t border-violet-200/10 bg-[#070610]/80 py-20">
+      <section className={cn('py-20', marketingSectionMuted)}>
         <div className="mx-auto flex w-full max-w-7xl flex-col items-center gap-4 px-6 text-center">
-          <h2 className="font-heading text-3xl font-semibold text-white md:text-4xl">
+          <h2 className="font-heading text-3xl font-semibold text-[var(--workspace-shell-text)] md:text-4xl">
             Build a calmer, more intentional life with Ozer.
           </h2>
-          <p className="max-w-2xl text-violet-100/80">
+          <p className="max-w-2xl text-[var(--workspace-shell-text-muted)]">
             If your current setup feels fragmented, Ozer gives you one source of truth
             for projects, people, plans, and priorities.
           </p>
           <Button
             asChild
             size="lg"
-            className="mt-2 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 px-7 text-white hover:from-violet-400 hover:to-fuchsia-400"
+            className={cn('mt-2', marketingBtnGradient)}
           >
             <Link href={pathsConfig.auth.signUp}>Create your workspace</Link>
           </Button>

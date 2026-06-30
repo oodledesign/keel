@@ -10,6 +10,8 @@ import { Trans } from '@kit/ui/trans';
 
 import pathsConfig from '~/config/paths.config';
 
+import { ThemeModeToggle } from '~/components/theme-mode-toggle';
+
 import { SiteMobileMarketingMenu } from './site-mobile-marketing-menu';
 
 const paths = {
@@ -31,13 +33,16 @@ export function SiteHeaderAccountSection({
 
   if (user) {
     return (
-      <PersonalAccountDropdown
-        showProfileName={false}
-        paths={paths}
-        features={features}
-        user={user}
-        signOutRequested={() => signOut.mutateAsync()}
-      />
+      <div className="flex items-center gap-x-1">
+        <ThemeModeToggle />
+        <PersonalAccountDropdown
+          showProfileName={false}
+          paths={paths}
+          features={features}
+          user={user}
+          signOutRequested={() => signOut.mutateAsync()}
+        />
+      </div>
     );
   }
 
@@ -47,6 +52,7 @@ export function SiteHeaderAccountSection({
 function AuthButtons() {
   return (
     <div className="animate-in fade-in flex items-center gap-x-2 duration-500">
+      <ThemeModeToggle className="hidden md:inline-flex" />
       <div className="hidden items-center gap-x-2 md:flex">
         <Button asChild className="md:text-sm" variant="outline" size="sm">
           <Link href={pathsConfig.auth.signIn}>

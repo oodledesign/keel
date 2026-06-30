@@ -88,7 +88,7 @@ function PartyTypeToggle({
   disabled?: boolean;
 }) {
   return (
-    <div className="inline-flex rounded-lg border border-white/10 bg-[var(--workspace-control-surface)]/60 p-1">
+    <div className="inline-flex rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/60 p-1">
       {(['individual', 'company'] as const).map((option) => (
         <button
           key={option}
@@ -97,8 +97,8 @@ function PartyTypeToggle({
           onClick={() => onChange(option)}
           className={`rounded-md px-3 py-1.5 text-sm capitalize transition-colors ${
             value === option
-              ? 'bg-[var(--keel-teal)] text-[#09111F]'
-              : 'text-zinc-300 hover:text-white'
+              ? 'bg-[var(--ozer-accent)] text-[#09111F]'
+              : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'
           }`}
         >
           {option}
@@ -329,7 +329,7 @@ export function ContractEditContent({
           {showSendPanel && !sendPanelOpen ? (
             <Button
               size="sm"
-              className="bg-[var(--keel-teal)] text-[#09111F]"
+              className="bg-[var(--ozer-accent)] text-[#09111F]"
               onClick={() => setSendPanelOpen(true)}
             >
               Send contract
@@ -340,7 +340,7 @@ export function ContractEditContent({
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <div className="space-y-4">
-          <div className="rounded-2xl border border-white/8 bg-[var(--workspace-shell-panel)] p-4 md:p-6">
+          <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 md:p-6">
             <div className="mb-4 space-y-3">
               <div>
                 <Label>Agreement title</Label>
@@ -365,7 +365,7 @@ export function ContractEditContent({
             </div>
 
             <Label className="mb-2 block">Document</Label>
-            <div className="overflow-hidden rounded-xl border border-white/10 shadow-inner">
+            <div className="overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] shadow-inner">
               {canEditBody ? (
                 <DocumentRichTextEditor
                   value={contentHtml}
@@ -379,11 +379,11 @@ export function ContractEditContent({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-white/8 bg-[var(--workspace-shell-panel)] p-4 md:p-6">
+          <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 md:p-6">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
-                <h3 className="font-medium text-white">Payment plan</h3>
-                <p className="text-sm text-zinc-400">Optional instalments after signing</p>
+                <h3 className="font-medium text-[var(--workspace-shell-text)]">Payment plan</h3>
+                <p className="text-sm text-[var(--workspace-shell-text-muted)]">Optional instalments after signing</p>
               </div>
               {canEditBody ? (
                 <Button type="button" size="sm" variant="outline" onClick={addPaymentRow}>
@@ -394,7 +394,7 @@ export function ContractEditContent({
             </div>
 
             {paymentPlan.length === 0 ? (
-              <p className="text-sm text-zinc-500">No instalments configured.</p>
+              <p className="text-sm text-[var(--workspace-shell-text-muted)]">No instalments configured.</p>
             ) : (
               <div className="space-y-2">
                 {paymentPlan.map((row, index) => (
@@ -429,7 +429,7 @@ export function ContractEditContent({
                         onClick={() => removePaymentRow(index)}
                         aria-label="Remove row"
                       >
-                        <Trash2 className="h-4 w-4 text-zinc-400" />
+                        <Trash2 className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
                       </Button>
                     ) : null}
                   </div>
@@ -437,7 +437,7 @@ export function ContractEditContent({
                 <p
                   className={`text-sm ${
                     paymentPlanTotal === 100 || paymentPlan.length === 0
-                      ? 'text-zinc-400'
+                      ? 'text-[var(--workspace-shell-text-muted)]'
                       : 'text-amber-300'
                   }`}
                 >
@@ -449,10 +449,10 @@ export function ContractEditContent({
           </div>
 
           {canEditBody ? (
-            <div className="flex items-center justify-between rounded-2xl border border-white/8 bg-[var(--workspace-shell-panel)] px-4 py-3">
+            <div className="flex items-center justify-between rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-3">
               <div>
-                <p className="font-medium text-white">Auto-send on approval</p>
-                <p className="text-sm text-zinc-400">
+                <p className="font-medium text-[var(--workspace-shell-text)]">Auto-send on approval</p>
+                <p className="text-sm text-[var(--workspace-shell-text-muted)]">
                   Email the recipient automatically when you sign
                 </p>
               </div>
@@ -462,7 +462,7 @@ export function ContractEditContent({
         </div>
 
         <div className="space-y-4">
-          <div className="rounded-2xl border border-white/8 bg-[var(--workspace-shell-panel)] p-4 md:p-6">
+          <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 md:p-6">
             <div className="mb-4 flex gap-2">
               {WIZARD_STEPS.map((step) => (
                 <button
@@ -471,8 +471,8 @@ export function ContractEditContent({
                   onClick={() => setWizardStep(step.key)}
                   className={`flex-1 rounded-lg border px-2 py-2 text-center text-xs font-medium transition-colors ${
                     wizardStep === step.key
-                      ? 'border-[var(--keel-teal)]/40 bg-[var(--keel-teal)]/10 text-[#97D9AA]'
-                      : 'border-white/8 text-zinc-400 hover:text-white'
+                      ? 'border-[var(--ozer-accent)]/40 bg-[var(--ozer-accent-subtle)] text-[#97D9AA]'
+                      : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'
                   }`}
                 >
                   {step.label}
@@ -512,7 +512,7 @@ export function ContractEditContent({
                 ) : null}
                 {!authorSigned ? (
                   <Button
-                    className="w-full bg-[var(--keel-teal)] text-[#09111F]"
+                    className="w-full bg-[var(--ozer-accent)] text-[#09111F]"
                     onClick={() => {
                       if (validateWizard(1)) setWizardStep(2);
                     }}
@@ -572,7 +572,7 @@ export function ContractEditContent({
                     Back
                   </Button>
                   <Button
-                    className="flex-1 bg-[var(--keel-teal)] text-[#09111F]"
+                    className="flex-1 bg-[var(--ozer-accent)] text-[#09111F]"
                     onClick={() => {
                       if (validateWizard(2)) setWizardStep(3);
                     }}
@@ -585,28 +585,28 @@ export function ContractEditContent({
 
             {wizardStep === 3 ? (
               <div className="space-y-4">
-                <div className="rounded-xl border border-white/8 bg-white/3 p-3 text-sm text-zinc-300">
+                <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-white/3 p-3 text-sm text-[var(--workspace-shell-text-muted)]">
                   <p>
-                    <span className="text-zinc-500">Author:</span> {authorName || '—'}
+                    <span className="text-[var(--workspace-shell-text-muted)]">Author:</span> {authorName || '—'}
                     {authorType === 'company' && authorCompany ? ` · ${authorCompany}` : ''}
                   </p>
                   <p className="mt-1">
-                    <span className="text-zinc-500">Recipient:</span> {recipientName || '—'}
+                    <span className="text-[var(--workspace-shell-text-muted)]">Recipient:</span> {recipientName || '—'}
                     {recipientType === 'company' && recipientCompany ? ` · ${recipientCompany}` : ''}
                   </p>
                   <p className="mt-1">
-                    <span className="text-zinc-500">Value:</span>{' '}
+                    <span className="text-[var(--workspace-shell-text-muted)]">Value:</span>{' '}
                     {formatPence(parsedTotalPence, contract.currency?.toUpperCase() ?? 'GBP')}
                   </p>
                 </div>
 
-                <div className="max-h-48 overflow-y-auto rounded-xl border border-white/8">
+                <div className="max-h-48 overflow-y-auto rounded-xl border border-[color:var(--workspace-shell-border)]">
                   <DocumentHtmlPreview html={contentHtml} className="border-0" />
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <p className="mb-2 text-sm font-medium text-zinc-300">Your signature</p>
+                    <p className="mb-2 text-sm font-medium text-[var(--workspace-shell-text-muted)]">Your signature</p>
                     {authorSigned ? (
                       <SignatureDisplay
                         type={contract.author_signature_type}
@@ -621,11 +621,11 @@ export function ContractEditContent({
                         onConfirm={(result) => void handleSignAuthor(result)}
                       />
                     ) : (
-                      <p className="text-sm text-zinc-500">Awaiting author signature</p>
+                      <p className="text-sm text-[var(--workspace-shell-text-muted)]">Awaiting author signature</p>
                     )}
                   </div>
                   <div>
-                    <p className="mb-2 text-sm font-medium text-zinc-300">Recipient signature</p>
+                    <p className="mb-2 text-sm font-medium text-[var(--workspace-shell-text-muted)]">Recipient signature</p>
                     <SignatureDisplay
                       type={contract.recipient_signature_type}
                       data={contract.recipient_signature_data}
@@ -642,7 +642,7 @@ export function ContractEditContent({
                 ) : null}
 
                 {contract.status === 'signed' ? (
-                  <div className="flex items-center gap-2 rounded-lg border border-[var(--keel-teal)]/30 bg-[var(--keel-teal)]/10 px-3 py-2 text-sm text-[#97D9AA]">
+                  <div className="flex items-center gap-2 rounded-lg border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-3 py-2 text-sm text-[#97D9AA]">
                     <Check className="h-4 w-4" />
                     Fully signed by both parties
                   </div>

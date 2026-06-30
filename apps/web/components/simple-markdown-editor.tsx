@@ -140,12 +140,12 @@ export function SimpleMarkdownEditor({
   }, [readOnly]);
 
   const toolbarButtonClass =
-    'inline-flex h-7 w-7 items-center justify-center rounded-md text-zinc-300 hover:bg-white/10 hover:text-white';
+    'inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]';
 
   return (
     <div className={cn('relative', className)}>
       {!readOnly ? (
-        <div className="mb-2 flex flex-wrap items-center gap-1 rounded-lg border border-white/10 bg-[#0B132B]/60 p-1">
+        <div className="mb-2 flex flex-wrap items-center gap-1 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/60 p-1">
           <button
             type="button"
             className={toolbarButtonClass}
@@ -186,7 +186,7 @@ export function SimpleMarkdownEditor({
           >
             <Link2 className="h-3.5 w-3.5" />
           </button>
-          <span className="ml-2 text-[11px] text-zinc-500">
+          <span className="ml-2 text-[11px] text-[var(--workspace-shell-text-muted)]">
             Stored as Markdown
           </span>
         </div>
@@ -194,7 +194,7 @@ export function SimpleMarkdownEditor({
 
       {selectionToolbar.visible && !readOnly ? (
         <div
-          className="fixed z-50 flex items-center gap-0.5 rounded-lg border border-white/10 bg-[#1A2535] p-1 shadow-lg"
+          className="fixed z-50 flex items-center gap-0.5 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[#1A2535] p-1 shadow-lg"
           style={{ top: selectionToolbar.top, left: selectionToolbar.left }}
         >
           <button
@@ -235,7 +235,7 @@ export function SimpleMarkdownEditor({
             150,
           )
         }
-        className="w-full resize-y rounded-xl border border-white/10 bg-[#0B132B]/60 px-3 py-2.5 text-sm leading-relaxed text-white placeholder:text-zinc-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--keel-teal)]"
+        className="w-full resize-y rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/60 px-3 py-2.5 text-sm leading-relaxed text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)]"
       />
     </div>
   );

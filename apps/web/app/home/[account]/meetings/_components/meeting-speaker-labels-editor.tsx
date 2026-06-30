@@ -116,12 +116,12 @@ export function MeetingSpeakerLabelsEditor({
   };
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+    <section className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
       <div className="mb-4 flex items-center gap-2">
-        <Users className="h-4 w-4 text-[var(--keel-teal)]" />
-        <h2 className="text-sm font-semibold text-white">Speaker labels</h2>
+        <Users className="h-4 w-4 text-[var(--ozer-accent)]" />
+        <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Speaker labels</h2>
       </div>
-      <p className="mb-4 text-sm text-zinc-400">
+      <p className="mb-4 text-sm text-[var(--workspace-shell-text-muted)]">
         Assign speakers to clients, contacts, or a custom name. Linked records update
         automatically when their name changes.
       </p>
@@ -129,7 +129,7 @@ export function MeetingSpeakerLabelsEditor({
       <div className="space-y-4">
         {speakers.map((speakerKey) => (
           <div key={speakerKey} className="space-y-2">
-            <Label className="text-xs text-zinc-500">Was: {speakerKey}</Label>
+            <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Was: {speakerKey}</Label>
             <SpeakerLabelPicker
               accountId={accountId}
               binding={mappings[speakerKey] ?? null}
@@ -149,7 +149,7 @@ export function MeetingSpeakerLabelsEditor({
           type="button"
           size="sm"
           disabled={pending}
-          className="mt-5 w-full bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+          className="mt-5 w-full bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
           onClick={save}
         >
           {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

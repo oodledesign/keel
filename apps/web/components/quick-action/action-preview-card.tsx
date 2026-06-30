@@ -35,41 +35,41 @@ export function ActionPreviewCard(props: Props) {
 
   if (preview.type === 'create_task') {
     return (
-      <div className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
-        <div className="mb-3 flex items-center gap-2 text-sm font-medium text-white">
-          <ListTodo className="h-4 w-4 text-[var(--keel-teal)]" />
+      <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
+        <div className="mb-3 flex items-center gap-2 text-sm font-medium text-[var(--workspace-shell-text)]">
+          <ListTodo className="h-4 w-4 text-[var(--ozer-accent)]" />
           Create task
         </div>
 
         <dl className="space-y-2 text-sm">
           <div>
-            <dt className="text-white/50">Workspace</dt>
-            <dd className="text-white">{preview.workspaceName}</dd>
+            <dt className="text-[var(--workspace-shell-text)]/50">Workspace</dt>
+            <dd className="text-[var(--workspace-shell-text)]">{preview.workspaceName}</dd>
           </div>
           <div>
-            <dt className="text-white/50">Title</dt>
-            <dd className="font-medium text-white">{preview.title}</dd>
+            <dt className="text-[var(--workspace-shell-text)]/50">Title</dt>
+            <dd className="font-medium text-[var(--workspace-shell-text)]">{preview.title}</dd>
           </div>
           {preview.notes ? (
             <div>
-              <dt className="text-white/50">Notes</dt>
-              <dd className="whitespace-pre-wrap text-white/90">{preview.notes}</dd>
+              <dt className="text-[var(--workspace-shell-text)]/50">Notes</dt>
+              <dd className="whitespace-pre-wrap text-[var(--workspace-shell-text)]/90">{preview.notes}</dd>
             </div>
           ) : null}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <dt className="text-white/50">Due</dt>
-              <dd className="text-white">{formatDueDate(preview.dueDate)}</dd>
+              <dt className="text-[var(--workspace-shell-text)]/50">Due</dt>
+              <dd className="text-[var(--workspace-shell-text)]">{formatDueDate(preview.dueDate)}</dd>
             </div>
             <div>
-              <dt className="text-white/50">Priority</dt>
-              <dd className="capitalize text-white">{preview.priority}</dd>
+              <dt className="text-[var(--workspace-shell-text)]/50">Priority</dt>
+              <dd className="capitalize text-[var(--workspace-shell-text)]">{preview.priority}</dd>
             </div>
           </div>
           {preview.projectName || preview.clientName ? (
             <div>
-              <dt className="text-white/50">Linked to</dt>
-              <dd className="text-white">
+              <dt className="text-[var(--workspace-shell-text)]/50">Linked to</dt>
+              <dd className="text-[var(--workspace-shell-text)]">
                 {preview.projectName ?? preview.clientName}
               </dd>
             </div>
@@ -84,7 +84,7 @@ export function ActionPreviewCard(props: Props) {
             type="button"
             onClick={onConfirm}
             disabled={confirming}
-            className="bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+            className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
           >
             {confirming ? 'Creating…' : 'Confirm'}
           </Button>
@@ -94,24 +94,24 @@ export function ActionPreviewCard(props: Props) {
   }
 
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
-      <div className="mb-3 flex items-center gap-2 text-sm font-medium text-white">
-        <Gauge className="h-4 w-4 text-[var(--keel-teal)]" />
+    <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
+      <div className="mb-3 flex items-center gap-2 text-sm font-medium text-[var(--workspace-shell-text)]">
+        <Gauge className="h-4 w-4 text-[var(--ozer-accent)]" />
         Run PageSpeed scan
       </div>
 
       <dl className="space-y-2 text-sm">
         <div>
-          <dt className="text-white/50">Workspace</dt>
-          <dd className="text-white">{preview.workspaceName}</dd>
+          <dt className="text-[var(--workspace-shell-text)]/50">Workspace</dt>
+          <dd className="text-[var(--workspace-shell-text)]">{preview.workspaceName}</dd>
         </div>
         <div>
-          <dt className="text-white/50">Project</dt>
-          <dd className="font-medium text-white">{preview.projectName}</dd>
+          <dt className="text-[var(--workspace-shell-text)]/50">Project</dt>
+          <dd className="font-medium text-[var(--workspace-shell-text)]">{preview.projectName}</dd>
         </div>
         <div>
-          <dt className="text-white/50">Domain</dt>
-          <dd className="text-white/90">{preview.domain}</dd>
+          <dt className="text-[var(--workspace-shell-text)]/50">Domain</dt>
+          <dd className="text-[var(--workspace-shell-text)]/90">{preview.domain}</dd>
         </div>
       </dl>
 
@@ -123,7 +123,7 @@ export function ActionPreviewCard(props: Props) {
           type="button"
           onClick={onConfirm}
           disabled={confirming}
-          className="bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+          className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
         >
           {confirming ? 'Starting…' : 'Confirm'}
         </Button>
@@ -136,7 +136,7 @@ export function QuickActionResultLink(props: { href: string; label: string }) {
   return (
     <Link
       href={props.href}
-      className="text-sm font-medium text-[var(--keel-teal)] underline-offset-2 hover:underline"
+      className="text-sm font-medium text-[var(--ozer-accent)] underline-offset-2 hover:underline"
     >
       {props.label}
     </Link>

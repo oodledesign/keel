@@ -59,19 +59,19 @@ export default async function RanklyDashboardPage({
       />
       <PageBody className="space-y-10 bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
         <div className="grid gap-4 px-4 sm:grid-cols-3 lg:px-0">
-          <div className="rounded-lg border border-white/10 bg-black/10 p-4">
+          <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-4">
             <p className="text-muted-foreground text-xs uppercase tracking-wide">
               Projects
             </p>
             <p className="mt-1 text-3xl font-semibold">{projects.length}</p>
           </div>
-          <div className="rounded-lg border border-white/10 bg-black/10 p-4">
+          <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-4">
             <p className="text-muted-foreground text-xs uppercase tracking-wide">
               Keywords
             </p>
             <p className="mt-1 text-3xl font-semibold">{keywordTotal}</p>
           </div>
-          <div className="rounded-lg border border-white/10 bg-black/10 p-4">
+          <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-4">
             <p className="text-muted-foreground text-xs uppercase tracking-wide">
               Active alerts
             </p>
@@ -100,19 +100,19 @@ export default async function RanklyDashboardPage({
         <div className="flex flex-wrap gap-3 px-4 text-sm lg:px-0">
           <Link
             href={workAccountPath(workPaths.accountRanklyProjects, account)}
-            className="rounded-lg border border-white/10 bg-black/10 px-4 py-2 transition hover:border-white/20"
+            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
           >
             All projects
           </Link>
           <Link
             href={workAccountPath(workPaths.accountRanklyAlerts, account)}
-            className="rounded-lg border border-white/10 bg-black/10 px-4 py-2 transition hover:border-white/20"
+            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
           >
             Alerts
           </Link>
           <Link
             href={workAccountPath(workPaths.accountRanklyResearch, account)}
-            className="rounded-lg border border-white/10 bg-black/10 px-4 py-2 transition hover:border-white/20"
+            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
           >
             Keyword research cache
           </Link>

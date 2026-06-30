@@ -50,7 +50,7 @@ async function MessagesPage({ params }: MessagesPageProps) {
           description="Team and client messaging"
           account={accountSlug}
         />
-        <div className="px-4 py-8 text-sm text-zinc-400">
+        <div className="px-4 py-8 text-sm text-[var(--workspace-shell-text-muted)]">
           Messaging tables are not available yet. Apply the latest Supabase
           migrations (including{' '}
           <code className="text-xs">20260627120000_messages_module.sql</code>).

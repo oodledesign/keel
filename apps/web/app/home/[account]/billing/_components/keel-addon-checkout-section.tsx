@@ -147,8 +147,8 @@ export function KeelAddonCheckoutSection({
                 onClick={() => setSelectedKey(addon.key)}
                 className={`rounded-xl border p-4 text-left transition ${
                   selected
-                    ? 'border-[var(--keel-teal)]/40 bg-[var(--keel-teal)]/5'
-                    : 'border-white/10 bg-black/10 hover:border-white/20'
+                    ? 'border-[var(--ozer-accent)]/40 bg-[var(--ozer-accent)]/5'
+                    : 'border-[color:var(--workspace-shell-border)] bg-black/10 hover:border-[color:var(--workspace-shell-border)]'
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -178,7 +178,7 @@ export function KeelAddonCheckoutSection({
             change or cancel.
           </p>
         ) : (
-          <div className="rounded-xl border border-white/10 p-4">
+          <div className="rounded-xl border border-[color:var(--workspace-shell-border)] p-4">
             <p className="mb-4 text-sm font-medium">
               Choose a plan for{' '}
               {KEEL_ADDON_CATALOG.find((a) => a.key === selectedKey)?.name}

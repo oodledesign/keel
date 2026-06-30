@@ -27,25 +27,25 @@ type PreviewRef = {
 
 function highlightContent(content: string, chunk?: string) {
   const needle = chunk?.trim();
-  if (!needle) return <p className="whitespace-pre-wrap text-sm text-zinc-200">{content}</p>;
+  if (!needle) return <p className="whitespace-pre-wrap text-sm text-[var(--workspace-shell-text)]">{content}</p>;
 
   const index = content.indexOf(needle);
   if (index < 0) {
     return (
       <div className="space-y-3">
-        <p className="whitespace-pre-wrap text-sm text-zinc-200">{content}</p>
+        <p className="whitespace-pre-wrap text-sm text-[var(--workspace-shell-text)]">{content}</p>
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
           <p className="mb-1 text-xs font-medium text-amber-200">Matched excerpt</p>
-          <p className="whitespace-pre-wrap text-sm text-zinc-100">{needle}</p>
+          <p className="whitespace-pre-wrap text-sm text-[var(--workspace-shell-text)]">{needle}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <p className="whitespace-pre-wrap text-sm text-zinc-200">
+    <p className="whitespace-pre-wrap text-sm text-[var(--workspace-shell-text)]">
       {content.slice(0, index)}
-      <mark className="rounded bg-amber-500/30 px-0.5 text-zinc-50">
+      <mark className="rounded bg-[var(--ozer-accent-subtle)] px-0.5 text-[var(--workspace-shell-text)]">
         {content.slice(index, index + needle.length)}
       </mark>
       {content.slice(index + needle.length)}
@@ -104,13 +104,13 @@ export function BrainSourcePreviewDrawer({
     <Sheet open={Boolean(previewRef)} onOpenChange={(open) => !open && onClose()}>
       <SheetContent
         side="right"
-        className="w-full border-zinc-700 bg-[var(--workspace-shell-panel)] text-white sm:max-w-lg"
+        className="w-full border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-lg"
       >
         <SheetHeader>
-          <SheetTitle className="text-white">
+          <SheetTitle className="text-[var(--workspace-shell-text)]">
             {preview?.title ?? previewRef?.title ?? 'Source'}
           </SheetTitle>
-          <SheetDescription className="text-zinc-400">
+          <SheetDescription className="text-[var(--workspace-shell-text-muted)]">
             {preview?.sourceType?.replace('_', ' ') ?? previewRef?.source_type}
             {preview?.updatedAt
               ? ` · Updated ${new Date(preview.updatedAt).toLocaleDateString('en-GB')}`
@@ -118,23 +118,23 @@ export function BrainSourcePreviewDrawer({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="mt-4 max-h-[60vh] overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-900/50 p-4">
+        <div className="mt-4 max-h-[60vh] overflow-y-auto rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/50 p-4">
           {loading ? (
-            <div className="flex items-center gap-2 text-sm text-zinc-500">
+            <div className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text-muted)]">
               <Loader2 className="h-4 w-4 animate-spin" />
               Loading source…
             </div>
           ) : preview ? (
             highlightContent(preview.content, previewRef?.chunkText)
           ) : (
-            <p className="text-sm text-zinc-500">Could not load this source.</p>
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">Could not load this source.</p>
           )}
         </div>
 
         {(preview?.sourceUrl ?? previewRef?.url) && (
           <Button
             asChild
-            className="mt-4 w-full bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+            className="mt-4 w-full bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
           >
             <Link href={preview?.sourceUrl ?? previewRef?.url ?? '#'}>
               <ExternalLink className="mr-2 h-4 w-4" />

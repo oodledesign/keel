@@ -9,15 +9,15 @@ export function AgencyPortalShell({
   branding: AgencyBranding;
   children: React.ReactNode;
 }) {
-  const primaryColour = branding.primary_colour?.trim() || '#2A9D8F';
+  const primaryColour = branding.primary_colour?.trim() || '#FF5C34';
   const brandLabel = branding.brand_name?.trim() || 'Portal';
 
   return (
     <div
-      className="min-h-screen bg-zinc-950 text-zinc-100"
+      className="min-h-screen bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
       style={{ ['--primary-colour' as string]: primaryColour }}
     >
-      <header className="border-b border-white/10 bg-zinc-950/90">
+      <header className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/90">
         <div className="mx-auto flex max-w-5xl items-center gap-4 px-4 py-4 sm:px-6 lg:px-8">
           {branding.logo_url ? (
             <Image
@@ -29,7 +29,7 @@ export function AgencyPortalShell({
               unoptimized
             />
           ) : (
-            <span className="text-lg font-semibold text-white">{brandLabel}</span>
+            <span className="text-lg font-semibold text-[var(--workspace-shell-text)]">{brandLabel}</span>
           )}
         </div>
       </header>

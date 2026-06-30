@@ -105,7 +105,7 @@ export function MobileNavTabIcon({
     return (
       <span
         className={cn(
-          'flex h-[21px] w-[21px] items-center justify-center rounded-full text-[10px] font-semibold text-white',
+          'flex h-[21px] w-[21px] items-center justify-center rounded-full text-[10px] font-semibold text-[var(--workspace-shell-text)]',
           className,
         )}
         style={{ backgroundColor: avatarColor ?? '#334155' }}

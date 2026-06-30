@@ -57,8 +57,8 @@ export function ClientCombobox({
             aria-expanded={open}
             disabled={disabled || loading}
             className={cn(
-              'w-full justify-between border-zinc-600 bg-[var(--workspace-shell-panel)] text-white hover:bg-[var(--workspace-shell-panel-hover)] hover:text-white',
-              !displayValue && 'text-zinc-500',
+              'w-full justify-between border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel-hover)] hover:text-[var(--workspace-shell-text)]',
+              !displayValue && 'text-[var(--workspace-shell-text-muted)]',
             )}
           >
             {loading ? 'Loading…' : displayValue ?? placeholder}
@@ -66,13 +66,13 @@ export function ClientCombobox({
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className="w-[var(--radix-popover-trigger-width)] border-zinc-700 bg-[var(--workspace-shell-panel)] p-0"
+          className="w-[var(--radix-popover-trigger-width)] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0"
           align="start"
         >
           <Command className="bg-[var(--workspace-shell-panel)]">
             <CommandInput
               placeholder="Search clients…"
-              className="border-zinc-700 bg-zinc-800 text-white placeholder:text-zinc-500"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
             />
             <CommandList>
               <CommandEmpty>{emptyMessage}</CommandEmpty>
@@ -83,7 +83,7 @@ export function ClientCombobox({
                     onValueChange('');
                     setOpen(false);
                   }}
-                  className="text-zinc-300 aria-selected:bg-zinc-800"
+                  className="text-[var(--workspace-shell-text-muted)] aria-selected:bg-[var(--workspace-control-surface)]"
                 >
                   <Check className={cn('mr-2 h-4 w-4', !value ? 'opacity-100' : 'opacity-0')} />
                   None
@@ -98,7 +98,7 @@ export function ClientCombobox({
                         onValueChange(c.id);
                         setOpen(false);
                       }}
-                      className="text-zinc-300 aria-selected:bg-zinc-800"
+                      className="text-[var(--workspace-shell-text-muted)] aria-selected:bg-[var(--workspace-control-surface)]"
                     >
                       <Check className={cn('mr-2 h-4 w-4', value === c.id ? 'opacity-100' : 'opacity-0')} />
                       {label}
@@ -111,9 +111,9 @@ export function ClientCombobox({
         </PopoverContent>
       </Popover>
       {!loading && clients.length === 0 && addClientHref && (
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           No clients in this account yet.{' '}
-          <a href={addClientHref} className="text-zinc-400 underline hover:text-white">
+          <a href={addClientHref} className="text-[var(--workspace-shell-text-muted)] underline hover:text-[var(--workspace-shell-text)]">
             Add a client
           </a>
         </p>

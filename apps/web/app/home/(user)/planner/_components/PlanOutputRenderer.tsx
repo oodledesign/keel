@@ -42,7 +42,7 @@ export function PlanOutputRenderer({ markdown }: Props) {
         remarkPlugins={[remarkGfm]}
         components={{
           h2: ({ children }) => (
-            <h2 className="text-xl font-bold tracking-tight text-white">
+            <h2 className="text-xl font-bold tracking-tight text-[var(--workspace-shell-text)]">
               {children}
             </h2>
           ),
@@ -53,8 +53,8 @@ export function PlanOutputRenderer({ markdown }: Props) {
             return (
               <h3
                 className={cn(
-                  'pt-3 text-sm font-semibold uppercase tracking-wide text-[#5eead4]',
-                  muted && 'text-white/45',
+                  'pt-3 text-sm font-semibold uppercase tracking-wide text-[var(--ozer-accent-muted)]',
+                  muted && 'text-[var(--workspace-shell-text)]/45',
                 )}
               >
                 {children}
@@ -66,7 +66,7 @@ export function PlanOutputRenderer({ markdown }: Props) {
             return <PlanParagraph text={text}>{children}</PlanParagraph>;
           },
           li: ({ children }) => (
-            <li className="ml-4 list-disc text-sm leading-relaxed text-white/60">
+            <li className="ml-4 list-disc text-sm leading-relaxed text-[var(--workspace-shell-text)]/60">
               {children}
             </li>
           ),
@@ -100,11 +100,11 @@ function PlanParagraph({
 
   if (/notes/i.test(text)) {
     return (
-      <p className="text-sm italic leading-relaxed text-white/55">{children}</p>
+      <p className="text-sm italic leading-relaxed text-[var(--workspace-shell-text)]/55">{children}</p>
     );
   }
 
-  return <p className="text-sm leading-relaxed text-white/70">{children}</p>;
+  return <p className="text-sm leading-relaxed text-[var(--workspace-shell-text)]/70">{children}</p>;
 }
 
 function ScheduleSegmentRow({ segment }: { segment: ScheduleSegment }) {
@@ -113,16 +113,16 @@ function ScheduleSegmentRow({ segment }: { segment: ScheduleSegment }) {
   return (
     <div
       className={cn(
-        'flex items-start gap-3 rounded-xl border border-white/8 bg-white/[0.04] px-3 py-2.5',
+        'flex items-start gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-2.5',
         segment.isCalendarEvent && 'border-sky-400/15 bg-sky-400/10',
-        isBreak && 'border-white/5 bg-white/[0.02]',
+        isBreak && 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]',
       )}
     >
       <span
         className={cn(
-          'mt-0.5 shrink-0 rounded-md border border-white/10 bg-white/[0.05] px-2 py-1 font-mono text-[11px] leading-none tabular-nums',
-          segment.isCalendarEvent ? 'text-sky-200/90' : 'text-[#5eead4]',
-          isBreak && 'text-white/35',
+          'mt-0.5 shrink-0 rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 py-1 font-mono text-[11px] leading-none tabular-nums',
+          segment.isCalendarEvent ? 'text-sky-200/90' : 'text-[var(--ozer-accent-muted)]',
+          isBreak && 'text-[var(--workspace-shell-text)]/35',
         )}
       >
         {segment.timeLabel}
@@ -134,15 +134,15 @@ function ScheduleSegmentRow({ segment }: { segment: ScheduleSegment }) {
             segment.isCalendarEvent
               ? 'text-sky-100/90'
               : isBreak
-                ? 'text-white/45'
-                : 'text-white/90',
+                ? 'text-[var(--workspace-shell-text)]/45'
+                : 'text-[var(--workspace-shell-text)]/90',
           )}
         >
           {segment.isCalendarEvent ? '📅 ' : ''}
           {segment.title}
         </p>
         {segment.meta.length > 0 ? (
-          <p className="mt-0.5 text-xs text-white/35">
+          <p className="mt-0.5 text-xs text-[var(--workspace-shell-text)]/35">
             {segment.meta.join(' · ')}
           </p>
         ) : null}

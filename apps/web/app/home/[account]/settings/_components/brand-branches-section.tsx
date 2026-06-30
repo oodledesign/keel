@@ -120,7 +120,7 @@ export function BrandBranchesSection({
   };
 
   return (
-    <div className="grid gap-5 rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-6">
+    <div className="grid gap-5 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6">
       <div>
         <h2 className="text-lg font-semibold">Branches</h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -134,7 +134,7 @@ export function BrandBranchesSection({
         {branches.map((branch, index) => (
           <div
             key={branch.id ?? `new-${index}`}
-            className="space-y-3 rounded-xl border border-white/10 bg-black/10 p-4"
+            className="space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/10 p-4"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-medium">Branch {index + 1}</p>

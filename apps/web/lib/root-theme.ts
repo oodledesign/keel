@@ -1,9 +1,9 @@
-import { APP_THEME } from './app-theme';
+import appConfig from '~/config/app.config';
 
 /**
- * @name getRootTheme
- * @description Ozer is locked to dark mode for app and PWA.
+ * Server default for ThemeProvider before client hydration.
+ * User choice is persisted in localStorage by next-themes.
  */
 export async function getRootTheme() {
-  return APP_THEME;
+  return appConfig.theme;
 }

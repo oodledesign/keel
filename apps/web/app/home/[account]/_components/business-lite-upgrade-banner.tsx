@@ -28,11 +28,11 @@ export function BusinessLiteUpgradeBanner({
   }
 
   return (
-    <section className="relative overflow-hidden rounded-[24px] border border-[var(--keel-teal)]/25 bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)] md:p-8">
+    <section className="relative overflow-hidden rounded-[24px] border border-[var(--ozer-accent)]/25 bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)] md:p-8">
       <button
         type="button"
         aria-label="Dismiss upgrade notice"
-        className="absolute top-4 right-4 rounded-full p-1.5 text-zinc-500 hover:bg-white/8 hover:text-white"
+        className="absolute top-4 right-4 rounded-full p-1.5 text-[var(--workspace-shell-text-muted)] hover:bg-white/8 hover:text-[var(--workspace-shell-text)]"
         onClick={() => {
           dismissNotice('business-lite-upgrade', 14);
           setDismissed(true);
@@ -52,24 +52,24 @@ export function BusinessLiteUpgradeBanner({
 
       <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
         <div className="max-w-xl space-y-3 pr-8">
-          <div className="inline-flex items-center gap-2 rounded-full border border-[var(--keel-teal)]/30 bg-[var(--keel-teal)]/10 px-3 py-1 text-xs font-medium text-[var(--keel-teal)]">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-3 py-1 text-xs font-medium text-[var(--ozer-accent)]">
             <Sparkles className="h-3.5 w-3.5" aria-hidden />
             Business Lite
           </div>
-          <h2 className="text-xl font-bold tracking-tight text-white md:text-2xl">
+          <h2 className="text-xl font-bold tracking-tight text-[var(--workspace-shell-text)] md:text-2xl">
             Upgrade to full business
           </h2>
-          <p className="text-sm leading-relaxed text-zinc-400 md:text-base">
+          <p className="text-sm leading-relaxed text-[var(--workspace-shell-text-muted)] md:text-base">
             Unlock clients, projects, pipeline, invoicing, finances, and docs.
             Add-ons like Signatures stay available on either plan.
           </p>
-          <ul className="grid gap-2 text-sm text-zinc-300 sm:grid-cols-2">
+          <ul className="grid gap-2 text-sm text-[var(--workspace-shell-text-muted)] sm:grid-cols-2">
             <li className="flex items-center gap-2">
-              <BriefcaseBusiness className="h-4 w-4 shrink-0 text-[var(--keel-teal)]" />
+              <BriefcaseBusiness className="h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
               Clients &amp; projects
             </li>
             <li className="flex items-center gap-2">
-              <PenLine className="h-4 w-4 shrink-0 text-[var(--keel-teal)]" />
+              <PenLine className="h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
               Invoices &amp; proposals
             </li>
           </ul>
@@ -81,7 +81,7 @@ export function BusinessLiteUpgradeBanner({
               <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
             </Link>
           </Button>
-          <p className="text-center text-xs text-zinc-500 md:text-left">
+          <p className="text-center text-xs text-[var(--workspace-shell-text-muted)] md:text-left">
             14-day trial on Business Solo
           </p>
         </div>

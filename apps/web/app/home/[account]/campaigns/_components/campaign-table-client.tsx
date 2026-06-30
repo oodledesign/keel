@@ -140,8 +140,8 @@ export function CampaignTableClient({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-white">{project.name}</h1>
-          <p className="text-sm text-zinc-400">
+          <h1 className="text-xl font-semibold text-[var(--workspace-shell-text)]">{project.name}</h1>
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
             {project.clientCount} client{project.clientCount === 1 ? '' : 's'} ·{' '}
             {project.fields.length} column{project.fields.length === 1 ? '' : 's'}
           </p>
@@ -151,7 +151,7 @@ export function CampaignTableClient({
             type="button"
             variant="outline"
             size="sm"
-            className="border-white/10 bg-white/5 text-white hover:bg-white/10"
+            className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
             onClick={() => setColumnsOpen(true)}
           >
             <Columns3 className="mr-2 h-4 w-4" />
@@ -161,7 +161,7 @@ export function CampaignTableClient({
             <Button
               type="button"
               size="sm"
-              className="bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+              className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
               onClick={() => setAddClientOpen(true)}
             >
               <UserPlus className="mr-2 h-4 w-4" />
@@ -171,18 +171,18 @@ export function CampaignTableClient({
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+      <div className="overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
         <div className="overflow-x-auto">
           <table className="min-w-full border-collapse text-sm">
             <thead>
-              <tr className="border-b border-white/10 bg-black/20">
-                <th className="sticky left-0 z-10 min-w-[180px] bg-[#0f1729] px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-400">
+              <tr className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
+                <th className="sticky left-0 z-10 min-w-[180px] bg-[#0f1729] px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
                   Client
                 </th>
                 {project.fields.map((field) => (
                   <th
                     key={field.id}
-                    className="min-w-[160px] px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-400"
+                    className="min-w-[160px] px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--workspace-shell-text-muted)]"
                   >
                     {field.label}
                   </th>
@@ -197,23 +197,23 @@ export function CampaignTableClient({
                 <tr>
                   <td
                     colSpan={project.fields.length + (canEdit ? 2 : 1)}
-                    className="px-4 py-10 text-center text-zinc-500"
+                    className="px-4 py-10 text-center text-[var(--workspace-shell-text-muted)]"
                   >
                     No clients in this campaign yet. Add clients to start tracking.
                   </td>
                 </tr>
               ) : (
                 project.rows.map((row) => (
-                  <tr key={row.clientId} className="border-b border-white/6 hover:bg-white/[0.02]">
+                  <tr key={row.clientId} className="border-b border-[color:var(--workspace-shell-border)] hover:bg-[var(--workspace-shell-sidebar-accent)]">
                     <td className="sticky left-0 z-10 bg-[var(--workspace-shell-panel)] px-4 py-2">
                       <Link
                         href={clientHref(row.clientId)}
-                        className="font-medium text-[#5eead4] hover:underline"
+                        className="font-medium text-[var(--ozer-accent-muted)] hover:underline"
                       >
                         {row.displayName}
                       </Link>
                       {row.email ? (
-                        <p className="truncate text-xs text-zinc-500">{row.email}</p>
+                        <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">{row.email}</p>
                       ) : null}
                     </td>
                     {project.fields.map((field) => (
@@ -235,7 +235,7 @@ export function CampaignTableClient({
                           size="icon"
                           variant="ghost"
                           disabled={pending}
-                          className="h-8 w-8 text-zinc-500 hover:text-red-400"
+                          className="h-8 w-8 text-[var(--workspace-shell-text-muted)] hover:text-red-400"
                           onClick={() => handleRemoveClient(row.clientId)}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -262,18 +262,18 @@ export function CampaignTableClient({
       />
 
       <Dialog open={addClientOpen} onOpenChange={setAddClientOpen}>
-        <DialogContent className="border-white/10 bg-[var(--workspace-shell-panel)] text-white sm:max-w-md">
+        <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Add client to campaign</DialogTitle>
-            <DialogDescription className="text-zinc-400">
+            <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
               Link an existing workspace client to this campaign tracker.
             </DialogDescription>
           </DialogHeader>
           <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-            <SelectTrigger className="border-white/10 bg-white/5 text-white">
+            <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
               <SelectValue placeholder="Select client" />
             </SelectTrigger>
-            <SelectContent className="border-white/10 bg-[#1A2535] text-white">
+            <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
               {availableClients.map((client) => (
                 <SelectItem key={client.id} value={client.id}>
                   {client.name}
@@ -284,7 +284,7 @@ export function CampaignTableClient({
           <Button
             type="button"
             disabled={pending || !selectedClientId}
-            className="w-full bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+            className="w-full bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
             onClick={handleAddClient}
           >
             <Plus className="mr-2 h-4 w-4" />

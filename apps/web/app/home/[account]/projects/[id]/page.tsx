@@ -75,7 +75,7 @@ async function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 md:px-6">
           <a
             href={listPath}
-            className="mb-4 inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-white"
+            className="mb-4 inline-flex items-center gap-1 text-sm text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
           >
             ← All projects
           </a>

@@ -81,7 +81,7 @@ export function CampaignMetricsActions({
     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
       <div className="flex flex-wrap gap-2">
         {status === 'draft' ? (
-          <Button asChild variant="outline" className="border-white/10">
+          <Button asChild variant="outline" className="border-[color:var(--workspace-shell-border)]">
             <Link href={`/admin/email-marketing/${campaignId}/edit`}>Edit draft</Link>
           </Button>
         ) : null}
@@ -89,7 +89,7 @@ export function CampaignMetricsActions({
           <Button
             variant="outline"
             disabled={isPending}
-            className="border-white/10"
+            className="border-[color:var(--workspace-shell-border)]"
             onClick={() => handleDuplicate(true)}
           >
             <RotateCcw className="mr-2 h-4 w-4" />
@@ -99,7 +99,7 @@ export function CampaignMetricsActions({
         <Button
           variant="outline"
           disabled={isPending}
-          className="border-white/10"
+          className="border-[color:var(--workspace-shell-border)]"
           onClick={() => handleDuplicate(false)}
         >
           <Copy className="mr-2 h-4 w-4" />
@@ -109,18 +109,18 @@ export function CampaignMetricsActions({
 
       <div className="flex w-full max-w-md flex-col gap-2 sm:flex-row sm:items-end">
         <div className="flex-1 space-y-2">
-          <Label className="text-zinc-400">Send a copy to</Label>
+          <Label className="text-[var(--workspace-shell-text-muted)]">Send a copy to</Label>
           <Input
             value={copyTo}
             onChange={(event) => setCopyTo(event.target.value)}
             placeholder="you@example.com"
-            className="border-white/10 bg-black/20 text-white"
+            className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
           />
         </div>
         <Button
           variant="outline"
           disabled={isPending || !copyTo.trim()}
-          className="border-white/10 shrink-0"
+          className="border-[color:var(--workspace-shell-border)] shrink-0"
           onClick={handleSendCopy}
         >
           <Mail className="mr-2 h-4 w-4" />

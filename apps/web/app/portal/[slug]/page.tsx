@@ -16,10 +16,10 @@ export default async function PortalSlugPage({ params }: PortalSlugPageProps) {
 
     return (
       <div className="space-y-3">
-        <h1 className="text-3xl font-semibold text-white">
+        <h1 className="text-3xl font-semibold text-[var(--workspace-shell-text)]">
           Welcome to the {brandName} portal
         </h1>
-        <p className="text-zinc-400">
+        <p className="text-[var(--workspace-shell-text-muted)]">
           Client portal features will appear here soon.
         </p>
       </div>

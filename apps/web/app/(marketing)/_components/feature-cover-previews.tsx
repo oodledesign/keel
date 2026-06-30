@@ -45,7 +45,7 @@ export function FeatureCoverPreview({
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-2xl border border-white/10 bg-[#0f0d1e] shadow-[0_24px_80px_rgba(0,0,0,0.35)]',
+        'relative overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)] shadow-[0_24px_80px_rgba(0,0,0,0.35)]',
         isCard ? 'aspect-[16/10]' : 'min-h-[220px] md:min-h-[280px]',
         className,
       )}
@@ -58,7 +58,7 @@ export function FeatureCoverPreview({
       >
         {renderCover(slug, isCard)}
       </div>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#0a0814] to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[var(--ozer-plum-950)] to-transparent" />
     </div>
   );
 }
@@ -102,7 +102,7 @@ function renderCover(slug: FeatureSlug, compact: boolean) {
 
 function PlannerCover({ compact }: { compact: boolean }) {
   return (
-    <div className="flex h-full flex-col rounded-[1.25rem] bg-[linear-gradient(145deg,#fef3c7,#fde68a)] p-4 text-slate-900">
+    <div className="flex h-full flex-col rounded-[1.25rem] bg-[linear-gradient(145deg,#fef3c7,#fde68a)] p-4 text-[var(--ozer-text-on-light)]">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <CalendarDays className="h-4 w-4 text-amber-700" />
@@ -142,7 +142,7 @@ function PlannerCover({ compact }: { compact: boolean }) {
 
 function EmailCover({ compact }: { compact: boolean }) {
   return (
-    <div className="flex h-full flex-col rounded-[1.25rem] border border-violet-300/15 bg-[linear-gradient(160deg,#1a1630,#2d1f4e)] p-4">
+    <div className="flex h-full flex-col rounded-[1.25rem] border border-[color:var(--workspace-shell-border)] bg-[linear-gradient(160deg,#1a1630,#2d1f4e)] p-4">
       <div className="flex items-center gap-2">
         <Mail className="h-4 w-4 text-violet-300" />
         <p className={cn('font-semibold text-violet-50', compact ? 'text-xs' : 'text-sm')}>
@@ -156,7 +156,7 @@ function EmailCover({ compact }: { compact: boolean }) {
         ].map((row) => (
           <div
             key={row.subject}
-            className="rounded-xl border border-white/8 bg-white/[0.04] px-3 py-2"
+            className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-2"
           >
             <p className="text-[10px] font-semibold text-teal-200/90">{row.client}</p>
             <p className={cn('text-violet-50/90', compact ? 'text-[11px]' : 'text-xs')}>
@@ -178,7 +178,7 @@ function EmailCover({ compact }: { compact: boolean }) {
 
 function DesktopAssistantCover({ compact }: { compact: boolean }) {
   return (
-    <div className="flex h-full flex-col rounded-[1.25rem] border border-violet-300/15 bg-[linear-gradient(160deg,#1a1630,#2d1f4e)] p-4">
+    <div className="flex h-full flex-col rounded-[1.25rem] border border-[color:var(--workspace-shell-border)] bg-[linear-gradient(160deg,#1a1630,#2d1f4e)] p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-500/20">
@@ -206,7 +206,7 @@ function DesktopAssistantCover({ compact }: { compact: boolean }) {
           ].map((line) => (
             <div
               key={line.speaker}
-              className="rounded-lg border border-white/5 bg-white/[0.04] px-2 py-1.5"
+              className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 py-1.5"
             >
               <p className="text-[9px] font-semibold text-violet-300/80">{line.speaker}</p>
               <p className="truncate text-[10px] text-violet-50/85">{line.text}</p>
@@ -238,13 +238,13 @@ function DesktopAssistantCover({ compact }: { compact: boolean }) {
 
 function DictationCover({ compact }: { compact: boolean }) {
   return (
-    <div className="flex h-full flex-col rounded-[1.25rem] border border-sky-400/20 bg-[linear-gradient(155deg,#0c1929,#122a45)] p-4">
+    <div className="flex h-full flex-col rounded-[1.25rem] border border-[color:var(--workspace-shell-border)] bg-[linear-gradient(155deg,#0c1929,#122a45)] p-4">
       <div className="flex items-center gap-2">
         <Keyboard className="h-4 w-4 text-sky-300" />
         <p className={cn('font-semibold text-sky-50', compact ? 'text-xs' : 'text-sm')}>
           Dictation
         </p>
-        <span className="ml-auto rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 font-mono text-[9px] text-white/60">
+        <span className="ml-auto rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-1.5 py-0.5 font-mono text-[9px] text-[var(--workspace-shell-text)]/60">
           fn
         </span>
       </div>
@@ -259,7 +259,7 @@ function DictationCover({ compact }: { compact: boolean }) {
         {['Punctuation', 'Grammar', 'Paste anywhere'].map((tag) => (
           <span
             key={tag}
-            className="rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 text-[9px] text-sky-100/75"
+            className="rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-1.5 py-0.5 text-[9px] text-sky-100/75"
           >
             {tag}
           </span>
@@ -271,7 +271,7 @@ function DictationCover({ compact }: { compact: boolean }) {
 
 function ClientPortalsCover({ compact }: { compact: boolean }) {
   return (
-    <div className="flex h-full flex-col rounded-[1.25rem] bg-[linear-gradient(145deg,#ede9fe,#ddd6fe)] p-4 text-slate-900">
+    <div className="flex h-full flex-col rounded-[1.25rem] bg-[linear-gradient(145deg,#ede9fe,#ddd6fe)] p-4 text-[var(--ozer-text-on-light)]">
       <div className="flex items-center gap-2">
         <LayoutDashboard className="h-4 w-4 text-violet-700" />
         <p className={cn('font-semibold', compact ? 'text-xs' : 'text-sm')}>
@@ -299,7 +299,7 @@ function ClientPortalsCover({ compact }: { compact: boolean }) {
 
 function InvoicingCover({ compact }: { compact: boolean }) {
   return (
-    <div className="flex h-full flex-col rounded-[1.25rem] bg-[linear-gradient(145deg,#ccfbf1,#99f6e4)] p-4 text-slate-900">
+    <div className="flex h-full flex-col rounded-[1.25rem] bg-[linear-gradient(145deg,#ccfbf1,#99f6e4)] p-4 text-[var(--ozer-text-on-light)]">
       <div className="flex items-center gap-2">
         <CreditCard className="h-4 w-4 text-teal-700" />
         <p className={cn('font-semibold', compact ? 'text-xs' : 'text-sm')}>From project</p>
@@ -307,7 +307,7 @@ function InvoicingCover({ compact }: { compact: boolean }) {
       <div className="mt-3 rounded-xl bg-white/80 p-3">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[10px] text-slate-500">Invoice · Acme rebrand</p>
+            <p className="text-[10px] text-[var(--ozer-text-on-light-muted)]">Invoice · Acme rebrand</p>
             <p className={cn('font-bold', compact ? 'text-lg' : 'text-xl')}>£2,400</p>
           </div>
           <FileText className="h-8 w-8 text-teal-600/40" />
@@ -320,14 +320,14 @@ function InvoicingCover({ compact }: { compact: boolean }) {
 
 function SecondBrainCover({ compact }: { compact: boolean }) {
   return (
-    <div className="flex h-full flex-col rounded-[1.25rem] border border-violet-300/20 bg-[linear-gradient(155deg,#0f172a,#1e1b4b)] p-4">
+    <div className="flex h-full flex-col rounded-[1.25rem] border border-[color:var(--workspace-shell-border)] bg-[linear-gradient(155deg,#0f172a,#1e1b4b)] p-4">
       <div className="flex items-center gap-2">
         <Brain className="h-4 w-4 text-violet-300" />
         <p className={cn('font-semibold text-violet-100', compact ? 'text-xs' : 'text-sm')}>
           Ask your second brain
         </p>
       </div>
-      <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
+      <div className="mt-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-2">
         <div className="flex items-center gap-2 text-violet-200/70">
           <Search className="h-3 w-3 shrink-0" />
           <p className="truncate text-[11px]">What did we agree with Acme on launch?</p>
@@ -335,7 +335,7 @@ function SecondBrainCover({ compact }: { compact: boolean }) {
       </div>
       <div className="mt-2 flex-1 rounded-xl border border-violet-400/15 bg-violet-500/[0.07] p-3">
         <p className={cn('leading-relaxed text-violet-50/90', compact ? 'text-[10px]' : 'text-[11px]')}>
-          Launch is <span className="font-semibold text-white">14 March</span> — from kickoff
+          Launch is <span className="font-semibold text-[var(--workspace-shell-text)]">14 March</span> — from kickoff
           transcript and follow-up email.
         </p>
       </div>
@@ -345,7 +345,7 @@ function SecondBrainCover({ compact }: { compact: boolean }) {
 
 function MessagingCover({ compact }: { compact: boolean }) {
   return (
-    <div className="flex h-full flex-col rounded-[1.25rem] border border-white/10 bg-[#12101f] p-4">
+    <div className="flex h-full flex-col rounded-[1.25rem] border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)] p-4">
       <div className="flex items-center gap-2">
         <MessageSquare className="h-4 w-4 text-violet-300" />
         <p className={cn('font-semibold text-violet-50', compact ? 'text-xs' : 'text-sm')}>
@@ -357,7 +357,7 @@ function MessagingCover({ compact }: { compact: boolean }) {
           <p className="text-[10px] text-violet-100/90">Portal looks great — approve v3?</p>
         </div>
         <div className="mr-6 rounded-xl rounded-tl-sm bg-white/8 px-3 py-2">
-          <p className="text-[10px] text-white/80">Approved. Please send the invoice.</p>
+          <p className="text-[10px] text-[var(--workspace-shell-text)]/80">Approved. Please send the invoice.</p>
         </div>
       </div>
       <p className="mt-auto text-[9px] text-violet-200/50">Thread saved to project record</p>
@@ -367,7 +367,7 @@ function MessagingCover({ compact }: { compact: boolean }) {
 
 function NotesCover({ compact }: { compact: boolean }) {
   return (
-    <div className="flex h-full flex-col rounded-[1.25rem] bg-[linear-gradient(145deg,#fff7ed,#ffedd5)] p-4 text-slate-900">
+    <div className="flex h-full flex-col rounded-[1.25rem] bg-[linear-gradient(145deg,#fff7ed,#ffedd5)] p-4 text-[var(--ozer-text-on-light)]">
       <div className="flex items-center gap-2">
         <StickyNote className="h-4 w-4 text-amber-700" />
         <p className={cn('font-semibold', compact ? 'text-xs' : 'text-sm')}>Project notes</p>
@@ -386,7 +386,7 @@ function NotesCover({ compact }: { compact: boolean }) {
 
 function PipelineCover({ compact }: { compact: boolean }) {
   return (
-    <div className="flex h-full flex-col rounded-[1.25rem] bg-[linear-gradient(145deg,#ede9fe,#ddd6fe)] p-4 text-slate-900">
+    <div className="flex h-full flex-col rounded-[1.25rem] bg-[linear-gradient(145deg,#ede9fe,#ddd6fe)] p-4 text-[var(--ozer-text-on-light)]">
       <div className="flex items-center gap-2">
         <Kanban className="h-4 w-4 text-violet-700" />
         <p className={cn('font-semibold', compact ? 'text-xs' : 'text-sm')}>Pipeline</p>
@@ -409,29 +409,29 @@ function PipelineCover({ compact }: { compact: boolean }) {
 
 function ProjectManagementCover({ compact }: { compact: boolean }) {
   return (
-    <div className="flex h-full flex-col rounded-[1.25rem] border border-white/10 bg-[#12101f] p-4">
+    <div className="flex h-full flex-col rounded-[1.25rem] border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)] p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <FolderKanban className="h-4 w-4 text-teal-300" />
-          <p className={cn('font-semibold text-white', compact ? 'text-xs' : 'text-sm')}>
+          <p className={cn('font-semibold text-[var(--workspace-shell-text)]', compact ? 'text-xs' : 'text-sm')}>
             Active projects
           </p>
         </div>
-        <span className="text-[9px] text-zinc-500">Timeline</span>
+        <span className="text-[9px] text-[var(--workspace-shell-text-muted)]">Timeline</span>
       </div>
       <div className="mt-3 space-y-2">
         {[
-          { name: 'Acme rebrand', phase: 'Design', pct: 65, color: '#2563EB' },
-          { name: 'North Lane site', phase: 'Build', pct: 40, color: '#2A9D8F' },
+          { name: 'Acme rebrand', phase: 'Design', pct: 65, color: 'var(--ozer-info)' },
+          { name: 'North Lane site', phase: 'Build', pct: 40, color: 'var(--ozer-accent)' },
         ].map((row) => (
-          <div key={row.name} className="rounded-xl border border-white/8 bg-white/[0.04] p-2.5">
+          <div key={row.name} className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-2.5">
             <div className="flex items-center justify-between gap-2">
-              <p className={cn('truncate font-medium text-white/90', compact ? 'text-[10px]' : 'text-xs')}>
+              <p className={cn('truncate font-medium text-[var(--workspace-shell-text)]/90', compact ? 'text-[10px]' : 'text-xs')}>
                 {row.name}
               </p>
-              <span className="text-[9px] text-zinc-500">{row.phase}</span>
+              <span className="text-[9px] text-[var(--workspace-shell-text-muted)]">{row.phase}</span>
             </div>
-            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/10">
+            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--workspace-shell-sidebar-accent)]">
               <div
                 className="h-full rounded-full"
                 style={{ width: `${row.pct}%`, backgroundColor: row.color }}
@@ -446,10 +446,10 @@ function ProjectManagementCover({ compact }: { compact: boolean }) {
 
 function TasksCover({ compact }: { compact: boolean }) {
   return (
-    <div className="flex h-full flex-col rounded-[1.25rem] border border-white/10 bg-[#12101f] p-4">
+    <div className="flex h-full flex-col rounded-[1.25rem] border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)] p-4">
       <div className="flex items-center gap-2">
         <CheckSquare className="h-4 w-4 text-teal-300" />
-        <p className={cn('font-semibold text-white', compact ? 'text-xs' : 'text-sm')}>
+        <p className={cn('font-semibold text-[var(--workspace-shell-text)]', compact ? 'text-xs' : 'text-sm')}>
           All tasks
         </p>
       </div>
@@ -461,14 +461,14 @@ function TasksCover({ compact }: { compact: boolean }) {
         ].map((row) => (
           <div
             key={row.title}
-            className="flex items-center gap-2 rounded-lg border border-white/8 bg-white/[0.03] px-2 py-1.5"
+            className="flex items-center gap-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 py-1.5"
           >
-            <span className="h-3.5 w-3.5 shrink-0 rounded border border-white/25" />
+            <span className="h-3.5 w-3.5 shrink-0 rounded border border-[color:var(--workspace-shell-border)]" />
             <div className="min-w-0 flex-1">
-              <p className={cn('truncate text-white/85', compact ? 'text-[10px]' : 'text-[11px]')}>
+              <p className={cn('truncate text-[var(--workspace-shell-text)]/85', compact ? 'text-[10px]' : 'text-[11px]')}>
                 {row.title}
               </p>
-              <p className="text-[9px] text-zinc-500">{row.client}</p>
+              <p className="text-[9px] text-[var(--workspace-shell-text-muted)]">{row.client}</p>
             </div>
             {row.urgent ? (
               <span className="text-[9px] text-rose-300">Urgent</span>
@@ -482,7 +482,7 @@ function TasksCover({ compact }: { compact: boolean }) {
 
 function ContractsCover({ compact }: { compact: boolean }) {
   return (
-    <div className="flex h-full flex-col rounded-[1.25rem] bg-[linear-gradient(145deg,#ecfdf5,#d1fae5)] p-4 text-slate-900">
+    <div className="flex h-full flex-col rounded-[1.25rem] bg-[linear-gradient(145deg,#ecfdf5,#d1fae5)] p-4 text-[var(--ozer-text-on-light)]">
       <div className="flex items-center gap-2">
         <FileSignature className="h-4 w-4 text-emerald-700" />
         <p className={cn('font-semibold', compact ? 'text-xs' : 'text-sm')}>Contracts</p>
@@ -511,10 +511,10 @@ function ContractsCover({ compact }: { compact: boolean }) {
 
 function SopsCover({ compact }: { compact: boolean }) {
   return (
-    <div className="flex h-full flex-col rounded-[1.25rem] border border-white/10 bg-[#12101f] p-4">
+    <div className="flex h-full flex-col rounded-[1.25rem] border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)] p-4">
       <div className="flex items-center gap-2">
         <ListChecks className="h-4 w-4 text-violet-300" />
-        <p className={cn('font-semibold text-white', compact ? 'text-xs' : 'text-sm')}>
+        <p className={cn('font-semibold text-[var(--workspace-shell-text)]', compact ? 'text-xs' : 'text-sm')}>
           Monthly close
         </p>
       </div>
@@ -524,17 +524,17 @@ function SopsCover({ compact }: { compact: boolean }) {
           { step: 'Chase outstanding invoices', done: true },
           { step: 'File contractor expenses', done: false },
         ].map((row) => (
-          <div key={row.step} className="flex items-center gap-2 rounded-lg bg-white/[0.04] px-2 py-1.5">
+          <div key={row.step} className="flex items-center gap-2 rounded-lg bg-[var(--workspace-shell-sidebar-accent)] px-2 py-1.5">
             {row.done ? (
               <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-teal-400" />
             ) : (
-              <span className="h-3.5 w-3.5 shrink-0 rounded border border-white/25" />
+              <span className="h-3.5 w-3.5 shrink-0 rounded border border-[color:var(--workspace-shell-border)]" />
             )}
-            <p className={cn('text-white/85', compact ? 'text-[10px]' : 'text-[11px]')}>{row.step}</p>
+            <p className={cn('text-[var(--workspace-shell-text)]/85', compact ? 'text-[10px]' : 'text-[11px]')}>{row.step}</p>
           </div>
         ))}
       </div>
-      <p className="mt-2 text-[9px] text-zinc-500">2 of 3 complete</p>
+      <p className="mt-2 text-[9px] text-[var(--workspace-shell-text-muted)]">2 of 3 complete</p>
     </div>
   );
 }
@@ -570,7 +570,7 @@ export function DashboardImageCover({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-2xl border border-white/10 bg-[#0f0d1e]',
+        'relative overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)]',
         className,
       )}
     >

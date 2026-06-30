@@ -39,9 +39,9 @@ export default async function RanklyAlertsPage({
           {alerts.length === 0 ? (
             <ModuleEmptyState message="No alerts yet. Alerts reference rankly.keywords in your projects—add keywords first, then alert rows." />
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-white/10">
+            <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
               <table className="w-full min-w-[32rem] text-left text-sm">
-                <thead className="border-b border-white/10 bg-black/20 text-xs uppercase tracking-wide text-muted-foreground">
+                <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3">Type</th>
                     <th className="px-4 py-3">Threshold</th>
@@ -54,7 +54,7 @@ export default async function RanklyAlertsPage({
                   {alerts.map((a) => (
                     <tr
                       key={a.id}
-                      className="border-b border-white/5 last:border-0"
+                      className="border-b border-[color:var(--workspace-shell-border)] last:border-0"
                     >
                       <td className="px-4 py-3">{a.alert_type}</td>
                       <td className="px-4 py-3 text-muted-foreground">
@@ -80,13 +80,13 @@ export default async function RanklyAlertsPage({
         <div className="flex flex-wrap gap-3 text-sm">
           <Link
             href={workAccountPath(workPaths.accountRanklyProjects, account)}
-            className="rounded-lg border border-white/10 bg-black/10 px-4 py-2 transition hover:border-white/20"
+            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
           >
             Projects
           </Link>
           <Link
             href={workAccountPath(workPaths.accountRanklyDashboard, account)}
-            className="rounded-lg border border-white/10 bg-black/10 px-4 py-2 transition hover:border-white/20"
+            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
           >
             Dashboard
           </Link>

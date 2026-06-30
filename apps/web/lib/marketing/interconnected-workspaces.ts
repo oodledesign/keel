@@ -77,7 +77,7 @@ export const INTERCONNECTED_WORKSPACES_MARKETING = {
   comparison: {
     heading: 'Not another siloed CRM',
     traditionalLabel: 'Typical CRM',
-    keelLabel: 'Ozer',
+    ozerLabel: 'Ozer',
     traditional: [
       'Work lives in one product; life lives elsewhere',
       'Separate logins, tabs, and mental models',
@@ -85,7 +85,7 @@ export const INTERCONNECTED_WORKSPACES_MARKETING = {
       'No shared “today” across work and home',
       'Add-ons bolted on, never truly unified',
     ],
-    keel: [
+    ozer: [
       'Personal home sees tasks across every workspace',
       'One login — flip between spaces instantly',
       'Unified planner, today view, and task list',
@@ -99,7 +99,7 @@ export const INTERCONNECTED_WORKSPACES_MARKETING = {
     {
       id: 'work',
       label: 'Business',
-      color: '#2563EB',
+      color: 'var(--ozer-info)',
       examples: 'Clients, jobs, invoices',
     },
     {
@@ -111,7 +111,7 @@ export const INTERCONNECTED_WORKSPACES_MARKETING = {
     {
       id: 'community',
       label: 'Community',
-      color: '#2A9D8F',
+      color: 'var(--ozer-accent)',
       examples: 'Events, volunteers',
     },
   ] satisfies InterconnectedWorkspaceNode[],

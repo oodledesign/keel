@@ -39,11 +39,11 @@ export function JobsPmToolbar({
     uiVariant === 'maintenance' ? 'New maintenance job' : 'New project';
 
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b border-white/8 px-4 py-2.5 md:px-5">
+    <div className="flex flex-wrap items-center gap-2 border-b border-[color:var(--workspace-shell-border)] px-4 py-2.5 md:px-5">
       {canEditJobs && (
         <Button
           size="sm"
-          className="h-8 gap-1.5 rounded-md bg-[#0073ea] px-3 text-xs font-semibold text-white hover:bg-[#0060c2]"
+          className="h-8 gap-1.5 rounded-md bg-[#0073ea] px-3 text-xs font-semibold text-[var(--workspace-shell-text)] hover:bg-[#0060c2]"
           onClick={onNewProject}
           data-test="create-project-button"
         >
@@ -53,7 +53,7 @@ export function JobsPmToolbar({
       )}
 
       <div className="relative min-w-[180px] flex-1 max-w-xs">
-        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500" />
+        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
         <Input
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
@@ -62,7 +62,7 @@ export function JobsPmToolbar({
               ? 'Search maintenance jobs…'
               : 'Search projects…'
           }
-          className="h-8 border-white/10 bg-white/5 pl-8 text-xs text-white placeholder:text-zinc-500"
+          className="h-8 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] pl-8 text-xs text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
         />
       </div>
 
@@ -72,8 +72,8 @@ export function JobsPmToolbar({
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className={`inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs text-zinc-400 transition-colors hover:bg-white/5 hover:text-white ${
-                priorityFilter ? 'bg-white/10 text-white' : ''
+              className={`inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)] ${
+                priorityFilter ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]' : ''
               }`}
             >
               <Filter className="h-3.5 w-3.5" />
@@ -115,7 +115,7 @@ function ToolbarIconButton({
     <button
       type="button"
       disabled={disabled}
-      className="inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs text-zinc-400 transition-colors hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+      className="inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)] disabled:cursor-not-allowed disabled:opacity-40"
     >
       <Icon className="h-3.5 w-3.5" />
       <span className="hidden sm:inline">{label}</span>

@@ -86,11 +86,11 @@ export function PublicSharingSection({
   };
 
   return (
-    <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.02] p-4">
+    <div className="space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Globe className="h-4 w-4 text-zinc-400" />
-          <Label className="text-zinc-200">Public link</Label>
+          <Globe className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
+          <Label className="text-[var(--workspace-shell-text)]">Public link</Label>
         </div>
         <Switch
           checked={isPublic}
@@ -98,7 +98,7 @@ export function PublicSharingSection({
           disabled={disabled || pending || !itemId}
         />
       </div>
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-[var(--workspace-shell-text-muted)]">
         Anyone with the link can view{textContent(itemType)}. Use embed URL for
         websites.
       </p>
@@ -108,13 +108,13 @@ export function PublicSharingSection({
             <input
               readOnly
               value={publicUrl}
-              className="min-w-0 flex-1 truncate rounded-md border border-white/10 bg-[var(--workspace-shell-panel)] px-2 py-1.5 text-xs text-zinc-300"
+              className="min-w-0 flex-1 truncate rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-2 py-1.5 text-xs text-[var(--workspace-shell-text-muted)]"
             />
             <Button
               type="button"
               size="sm"
               variant="outline"
-              className="shrink-0 border-white/10"
+              className="shrink-0 border-[color:var(--workspace-shell-border)]"
               onClick={() => copy(publicUrl, 'Public URL')}
             >
               <Copy className="h-3.5 w-3.5" />
@@ -125,7 +125,7 @@ export function PublicSharingSection({
               type="button"
               size="sm"
               variant="ghost"
-              className="h-auto p-0 text-xs text-[#5eead4] hover:bg-transparent"
+              className="h-auto p-0 text-xs text-[var(--ozer-accent-muted)] hover:bg-transparent"
               onClick={() => copy(embedUrl, 'Embed URL')}
             >
               <Link2 className="mr-1 h-3 w-3" />

@@ -53,7 +53,7 @@ export function WorkspaceFocusSidebarDecorations({
       ) : null}
 
       {state.isHolidayModeActive ? (
-        <span className="text-[11px] text-zinc-500">
+        <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">
           {holidayEmoji(settings.holiday_mode_label)}{' '}
           {settings.holiday_mode_label}
         </span>

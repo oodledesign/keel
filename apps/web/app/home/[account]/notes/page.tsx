@@ -78,8 +78,8 @@ async function NotesPage({ params }: NotesPageProps) {
                 : 'Text notes and uploaded files linked to projects and clients.'
         }
       />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-white lg:px-8">
-        <Suspense fallback={<p className="text-sm text-zinc-400">Loading…</p>}>
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-[var(--workspace-shell-text)] lg:px-8">
+        <Suspense fallback={<p className="text-sm text-[var(--workspace-shell-text-muted)]">Loading…</p>}>
           <NotesPageContent
             accountId={data.accountId}
             accountSlug={data.accountSlug}

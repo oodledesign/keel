@@ -190,14 +190,14 @@ export function CreateProjectDialog({
         : 'Create project';
 
   const fieldClass =
-    'mt-1 border-white/10 bg-white/5 text-white placeholder:text-zinc-500';
+    'mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]';
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto border-white/10 bg-[var(--workspace-shell-panel)] text-white sm:max-w-lg">
+      <DialogContent className="max-h-[90vh] overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{dialogTitle}</DialogTitle>
-          <DialogDescription className="text-zinc-400">
+          <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
             {dialogDescription}
           </DialogDescription>
         </DialogHeader>
@@ -205,7 +205,7 @@ export function CreateProjectDialog({
         <form onSubmit={handleSubmit} className="space-y-5">
           {!isMaintenance ? (
             <div className="space-y-2">
-              <Label className="text-xs text-zinc-400">Project type</Label>
+              <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Project type</Label>
               <div className="grid grid-cols-2 gap-2">
                 {(['delivery', 'campaign'] as const).map((type) => {
                   const meta = PROJECT_TYPE_META[type];
@@ -220,22 +220,22 @@ export function CreateProjectDialog({
                       className={cn(
                         'flex flex-col items-start rounded-xl border p-3 text-left transition-colors',
                         selected
-                          ? 'border-[var(--keel-teal)]/50 bg-[var(--keel-teal)]/10'
-                          : 'border-white/10 bg-white/[0.03] hover:border-white/20',
+                          ? 'border-[var(--ozer-accent)]/50 bg-[var(--ozer-accent-subtle)]'
+                          : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] hover:border-[color:var(--workspace-shell-border)]',
                       )}
                     >
                       <div
                         className={cn(
                           'mb-2 flex h-8 w-8 items-center justify-center rounded-lg',
                           selected
-                            ? 'bg-[var(--keel-teal)]/20 text-[#5eead4]'
-                            : 'bg-white/5 text-zinc-400',
+                            ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]'
+                            : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]',
                         )}
                       >
                         <Icon className="h-4 w-4" />
                       </div>
-                      <span className="text-sm font-medium text-white">{meta.label}</span>
-                      <span className="mt-0.5 text-[11px] leading-snug text-zinc-500">
+                      <span className="text-sm font-medium text-[var(--workspace-shell-text)]">{meta.label}</span>
+                      <span className="mt-0.5 text-[11px] leading-snug text-[var(--workspace-shell-text-muted)]">
                         {meta.shortLabel === 'Delivery'
                           ? 'Phases, tasks & timeline'
                           : 'Custom columns per client'}
@@ -244,14 +244,14 @@ export function CreateProjectDialog({
                   );
                 })}
               </div>
-              <p className="text-xs leading-relaxed text-zinc-500">
+              <p className="text-xs leading-relaxed text-[var(--workspace-shell-text-muted)]">
                 {PROJECT_TYPE_META[projectType].description}
               </p>
             </div>
           ) : null}
 
           <div>
-            <Label htmlFor="project-name" className="text-zinc-300">
+            <Label htmlFor="project-name" className="text-[var(--workspace-shell-text-muted)]">
               {projectType === 'campaign' ? 'Campaign name' : 'Project name'} *
             </Label>
             <Input
@@ -271,7 +271,7 @@ export function CreateProjectDialog({
           {projectType === 'delivery' ? (
             <>
               <div>
-                <Label className="text-zinc-300">Client</Label>
+                <Label className="text-[var(--workspace-shell-text-muted)]">Client</Label>
                 <div className="mt-1">
                   <ClientCombobox
                     clients={clients}
@@ -288,7 +288,7 @@ export function CreateProjectDialog({
               </div>
 
               <div>
-                <Label htmlFor="description" className="text-zinc-300">
+                <Label htmlFor="description" className="text-[var(--workspace-shell-text-muted)]">
                   Description
                 </Label>
                 <Textarea
@@ -303,12 +303,12 @@ export function CreateProjectDialog({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-zinc-300">Status</Label>
+                  <Label className="text-[var(--workspace-shell-text-muted)]">Status</Label>
                   <Select value={status} onValueChange={setStatus}>
                     <SelectTrigger className={fieldClass}>
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="border-white/10 bg-[#1A2535] text-white">
+                    <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
                       <SelectItem value="pending">Pending</SelectItem>
                       <SelectItem value="in_progress">In progress</SelectItem>
                       <SelectItem value="on_hold">On hold</SelectItem>
@@ -318,12 +318,12 @@ export function CreateProjectDialog({
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-zinc-300">Priority</Label>
+                  <Label className="text-[var(--workspace-shell-text-muted)]">Priority</Label>
                   <Select value={priority} onValueChange={setPriority}>
                     <SelectTrigger className={fieldClass}>
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="border-white/10 bg-[#1A2535] text-white">
+                    <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
                       <SelectItem value="low">Low</SelectItem>
                       <SelectItem value="medium">Medium</SelectItem>
                       <SelectItem value="high">High</SelectItem>
@@ -335,7 +335,7 @@ export function CreateProjectDialog({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label htmlFor="due_date" className="text-zinc-300">
+                  <Label htmlFor="due_date" className="text-[var(--workspace-shell-text-muted)]">
                     Due date
                   </Label>
                   <Input
@@ -347,7 +347,7 @@ export function CreateProjectDialog({
                   />
                 </div>
                 <div>
-                  <Label htmlFor="value" className="text-zinc-300">
+                  <Label htmlFor="value" className="text-[var(--workspace-shell-text-muted)]">
                     Value (£)
                   </Label>
                   <Input
@@ -366,7 +366,7 @@ export function CreateProjectDialog({
           ) : (
             <>
               <div>
-                <Label className="text-zinc-300">Starting template</Label>
+                <Label className="text-[var(--workspace-shell-text-muted)]">Starting template</Label>
                 <Select
                   value={campaignTemplate}
                   onValueChange={(value) =>
@@ -376,7 +376,7 @@ export function CreateProjectDialog({
                   <SelectTrigger className={fieldClass}>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="border-white/10 bg-[#1A2535] text-white">
+                  <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
                     <SelectItem value="blank">
                       Blank — add your own columns later
                     </SelectItem>
@@ -388,27 +388,27 @@ export function CreateProjectDialog({
               </div>
 
               {campaignTemplate === 'website_revamp' ? (
-                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                  <p className="text-xs font-medium text-zinc-300">
+                <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
+                  <p className="text-xs font-medium text-[var(--workspace-shell-text-muted)]">
                     Included custom columns
                   </p>
                   <ul className="mt-2 flex flex-wrap gap-1.5">
                     {WEBSITE_REVAMP_CAMPAIGN_FIELDS.map((field) => (
                       <li
                         key={field.fieldKey}
-                        className="rounded-md bg-white/5 px-2 py-0.5 text-[11px] text-zinc-400"
+                        className="rounded-md bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[11px] text-[var(--workspace-shell-text-muted)]"
                       >
                         {field.label}
                       </li>
                     ))}
                   </ul>
-                  <p className="mt-2 text-[11px] text-zinc-500">
+                  <p className="mt-2 text-[11px] text-[var(--workspace-shell-text-muted)]">
                     You can add, reorder, or remove columns after creation from the
                     campaign board.
                   </p>
                 </div>
               ) : (
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                   Start with an empty tracker. Add text, status, URL, currency, and
                   other column types from the campaign view.
                 </p>
@@ -420,7 +420,7 @@ export function CreateProjectDialog({
             <Button
               type="button"
               variant="outline"
-              className="border-white/10 text-zinc-300 hover:bg-white/5"
+              className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
               onClick={() => handleOpenChange(false)}
             >
               Cancel
@@ -428,7 +428,7 @@ export function CreateProjectDialog({
             <Button
               type="submit"
               disabled={submitting}
-              className="bg-[var(--keel-teal)] hover:bg-[var(--keel-teal-hover)]"
+              className="bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]"
             >
               {submitting ? 'Creating…' : submitLabel}
             </Button>

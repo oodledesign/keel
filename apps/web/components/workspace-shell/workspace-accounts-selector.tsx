@@ -90,7 +90,7 @@ export function WorkspaceAccountsSelector({
       type="button"
       onClick={variant === 'inline' ? () => setOpen((v) => !v) : undefined}
       className={cn(
-        'group mr-1 w-full min-w-0 px-2 text-white hover:bg-white/[0.06] lg:w-auto lg:max-w-fit',
+        'group mr-1 w-full min-w-0 px-2 text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)] lg:w-auto lg:max-w-fit',
         collapsed && variant === 'popover' ? 'm-auto justify-center px-2' : 'justify-start',
         className,
       )}
@@ -111,14 +111,14 @@ export function WorkspaceAccountsSelector({
               <span className="block truncate text-sm font-medium">
                 {selected.label}
               </span>
-              <span className="block truncate text-[11px] text-zinc-500">
+              <span className="block truncate text-[11px] text-[var(--workspace-shell-text-muted)]">
                 {selected.typeLabel}
               </span>
             </span>
           ) : null}
         </span>
       ) : (
-        <span className="text-sm text-zinc-400">Workspace</span>
+        <span className="text-sm text-[var(--workspace-shell-text-muted)]">Workspace</span>
       )}
       {!collapsed || variant === 'inline' ? (
         <CaretSortIcon className="ml-1 h-4 w-4 shrink-0 opacity-50" />
@@ -130,7 +130,7 @@ export function WorkspaceAccountsSelector({
     <Command className="bg-transparent">
       <CommandInput
         placeholder="Search workspaces…"
-        className="h-9 border-white/10 text-white"
+        className="h-9 border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)]"
       />
       <CommandList className="max-h-[min(50dvh,var(--radix-popover-content-available-height,50dvh))]">
         <CommandGroup heading="Your workspaces">
@@ -146,10 +146,10 @@ export function WorkspaceAccountsSelector({
 
         {enableTeamCreation ? (
           <>
-            <CommandSeparator className="bg-white/10" />
+            <CommandSeparator className="bg-[var(--workspace-shell-sidebar-accent)]" />
             <CommandGroup>
               <CommandItem
-                className="cursor-pointer aria-selected:bg-white/10"
+                className="cursor-pointer aria-selected:bg-[var(--workspace-shell-sidebar-accent)]"
                 onSelect={() => {
                   setOpen(false);
                   setIsCreating(true);
@@ -238,7 +238,7 @@ function WorkspaceAvatar({
 
   return (
     <span
-      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-xs font-bold text-white"
+      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-xs font-bold text-[var(--workspace-shell-text)]"
       style={{ backgroundColor: color }}
       aria-hidden
     >
@@ -277,7 +277,7 @@ function WorkspaceSwitcherAccountRow({
     <CommandItem
       value={`${account.label} ${account.slug} ${account.typeLabel}`}
       className={cn(
-        'my-1 cursor-pointer aria-selected:bg-white/10',
+        'my-1 cursor-pointer aria-selected:bg-[var(--workspace-shell-sidebar-accent)]',
         getWorkspaceFocusMutedClassName(focusSettings),
       )}
       onSelect={onSelect}
@@ -298,12 +298,12 @@ function WorkspaceSwitcherAccountRow({
           {!isPersonal && focusSettings ? (
             <div className="mt-0.5 space-y-0.5">
               {focusState.isHolidayModeActive ? (
-                <p className="truncate text-[11px] text-zinc-500">
+                <p className="truncate text-[11px] text-[var(--workspace-shell-text-muted)]">
                   {holidayEmoji(focusSettings.holiday_mode_label)}{' '}
                   {focusSettings.holiday_mode_label}
                 </p>
               ) : (
-                <p className="truncate text-[11px] text-zinc-500">
+                <p className="truncate text-[11px] text-[var(--workspace-shell-text-muted)]">
                   {account.typeLabel}
                 </p>
               )}
@@ -317,7 +317,7 @@ function WorkspaceSwitcherAccountRow({
               ) : null}
             </div>
           ) : (
-            <p className="truncate text-[11px] text-zinc-500">
+            <p className="truncate text-[11px] text-[var(--workspace-shell-text-muted)]">
               {account.typeLabel}
             </p>
           )}

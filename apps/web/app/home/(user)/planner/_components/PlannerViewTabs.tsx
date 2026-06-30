@@ -15,7 +15,7 @@ export function PlannerViewTabs({ dayHref, planHref, active, className }: Props)
   return (
     <div
       className={cn(
-        'inline-flex rounded-xl border border-white/8 bg-[var(--workspace-shell-panel)] p-1 text-xs',
+        'inline-flex rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-1 text-xs',
         className,
       )}
     >
@@ -24,8 +24,8 @@ export function PlannerViewTabs({ dayHref, planHref, active, className }: Props)
         className={cn(
           'rounded-lg px-3 py-1.5 font-medium transition-colors',
           active === 'day'
-            ? 'bg-white/10 text-white'
-            : 'text-zinc-400 hover:text-white',
+            ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+            : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
         )}
       >
         Today
@@ -35,8 +35,8 @@ export function PlannerViewTabs({ dayHref, planHref, active, className }: Props)
         className={cn(
           'rounded-lg px-3 py-1.5 font-medium transition-colors',
           active === 'plan'
-            ? 'bg-white/10 text-white'
-            : 'text-zinc-400 hover:text-white',
+            ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+            : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
         )}
       >
         Plan

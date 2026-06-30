@@ -83,7 +83,7 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
   return (
     <div className="flex flex-col gap-6">
       {!isClient ? (
-        <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+        <div className="flex flex-col gap-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
           <div>
             <h2 className="text-base font-semibold">Desktop recorder</h2>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -93,7 +93,7 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
           </div>
           <Link
             href={pathsConfig.app.personalAccountSettings}
-            className="inline-flex text-sm font-medium text-[var(--keel-teal)] hover:underline"
+            className="inline-flex text-sm font-medium text-[var(--ozer-accent)] hover:underline"
           >
             Open personal settings →
           </Link>
@@ -101,7 +101,7 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
       ) : null}
 
       {!isClient ? (
-        <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+        <div className="flex flex-col gap-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
           <div>
             <h2 className="text-base font-semibold">Dashboard shortcuts</h2>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -115,7 +115,7 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
         </div>
       ) : null}
 
-      <div className="flex flex-1 flex-col gap-6 rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+      <div className="flex flex-1 flex-col gap-6 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
         {isClient ? (
           <TeamAccountDangerZone
             account={account}

@@ -70,7 +70,7 @@ export function FeedflowWidgetsManager(props: {
     <div className="space-y-8">
       <form
         onSubmit={submit}
-        className="max-w-lg space-y-4 rounded-lg border border-white/10 bg-black/10 p-4"
+        className="max-w-lg space-y-4 rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-4"
       >
         <p className="text-muted-foreground text-sm">
           New widgets get a unique embed key. Use the feed API to load posts for
@@ -112,9 +112,9 @@ export function FeedflowWidgetsManager(props: {
       </form>
 
       {props.widgets.length > 0 ? (
-        <div className="overflow-x-auto rounded-lg border border-white/10">
+        <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
           <table className="w-full min-w-[32rem] text-left text-sm">
-            <thead className="border-b border-white/10 bg-black/20 text-xs uppercase tracking-wide text-muted-foreground">
+            <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">Embed key</th>
@@ -125,7 +125,7 @@ export function FeedflowWidgetsManager(props: {
               {props.widgets.map((w) => (
                 <tr
                   key={w.id}
-                  className="border-b border-white/5 last:border-0"
+                  className="border-b border-[color:var(--workspace-shell-border)] last:border-0"
                 >
                   <td className="px-4 py-3">{w.name}</td>
                   <td className="px-4 py-3 font-mono text-xs">{w.embed_key}</td>

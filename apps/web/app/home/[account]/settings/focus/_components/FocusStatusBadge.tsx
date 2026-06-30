@@ -71,7 +71,7 @@ export function FocusStatusBadge({
         state.currentStatusVariant === 'active' &&
           'border-emerald-500/30 bg-emerald-500/10 text-emerald-100',
         state.currentStatusVariant === 'muted' &&
-          'border-zinc-600 bg-zinc-800/80 text-zinc-300',
+          'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/80 text-[var(--workspace-shell-text-muted)]',
         state.currentStatusVariant === 'holiday' &&
           'border-amber-500/30 bg-amber-500/10 text-amber-100',
         state.currentStatusVariant === 'ooo' &&

@@ -310,18 +310,18 @@ export function ClientDetailSidebar({
 
   const shellClass = fullPage
     ? 'flex min-h-0 flex-1 flex-col overflow-hidden'
-    : 'flex h-full w-full flex-col overflow-hidden border-l border-zinc-700 bg-[var(--workspace-shell-panel)] md:w-[380px]';
+    : 'flex h-full w-full flex-col overflow-hidden border-l border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] md:w-[380px]';
 
   if (loading) {
     return (
       <div className={shellClass}>
-        <div className="rounded-xl border border-white/[0.08] bg-[var(--workspace-shell-panel)] p-6">
+        <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6">
           <div className="flex gap-6">
-            <Skeleton className="h-28 w-28 shrink-0 rounded-xl bg-zinc-800" />
+            <Skeleton className="h-28 w-28 shrink-0 rounded-xl bg-[var(--workspace-control-surface)]" />
             <div className="flex-1 space-y-3">
-              <Skeleton className="h-8 w-48 rounded bg-zinc-800" />
-              <Skeleton className="h-4 w-64 rounded bg-zinc-800" />
-              <Skeleton className="h-20 w-full rounded bg-zinc-800" />
+              <Skeleton className="h-8 w-48 rounded bg-[var(--workspace-control-surface)]" />
+              <Skeleton className="h-4 w-64 rounded bg-[var(--workspace-control-surface)]" />
+              <Skeleton className="h-20 w-full rounded bg-[var(--workspace-control-surface)]" />
             </div>
           </div>
         </div>
@@ -332,7 +332,7 @@ export function ClientDetailSidebar({
   if (!client) {
     return (
       <div className={shellClass}>
-        <p className="rounded-xl border border-white/[0.08] bg-[var(--workspace-shell-panel)] p-6 text-sm text-zinc-400">
+        <p className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 text-sm text-[var(--workspace-shell-text-muted)]">
           Client not found.
         </p>
       </div>
@@ -369,28 +369,28 @@ export function ClientDetailSidebar({
     if (activeTab === 'activity') {
       return (
         <div className="space-y-3">
-          <div className="flex gap-3 rounded-lg border border-white/[0.08] bg-[var(--workspace-shell-panel)] p-4">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--keel-teal)]/20" />
+          <div className="flex gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--ozer-accent-subtle)]" />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-white">New client</p>
-              <p className="text-xs text-zinc-500">
+              <p className="text-sm font-medium text-[var(--workspace-shell-text)]">New client</p>
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                 {displayName} added on {formatCreatedDate(client.created_at)}
               </p>
             </div>
           </div>
 
           {!isContractorView && client.email && portalStatus ? (
-            <div className="rounded-lg border border-white/[0.08] bg-[var(--workspace-shell-panel)] p-4 text-sm">
-              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+            <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 text-sm">
+              <p className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
                 Portal access
               </p>
-              <p className="mt-1 text-white">
+              <p className="mt-1 text-[var(--workspace-shell-text)]">
                 {portalStatus.status === 'active' && 'Active in portal'}
                 {portalStatus.status === 'invited' && 'Invite sent'}
                 {portalStatus.status === 'expired' && 'Invite expired'}
                 {portalStatus.status === 'not_invited' && 'Not invited'}
               </p>
-              <p className="mt-1 text-xs text-zinc-500">
+              <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
                 Last login:{' '}
                 {portalStatus.lastLogin
                   ? new Date(portalStatus.lastLogin).toLocaleString('en-GB')
@@ -399,7 +399,7 @@ export function ClientDetailSidebar({
             </div>
           ) : null}
 
-          <p className="text-xs text-zinc-500">No other activity yet.</p>
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">No other activity yet.</p>
         </div>
       );
     }
@@ -450,7 +450,7 @@ export function ClientDetailSidebar({
       if (workspaceNotes && linkOptions && defaultLink) {
         return (
           <section>
-            <h3 className="mb-3 text-sm font-medium text-zinc-400">Notes and files</h3>
+            <h3 className="mb-3 text-sm font-medium text-[var(--workspace-shell-text-muted)]">Notes and files</h3>
             <ContextWorkspaceNotes
               accountId={accountId}
               accountSlug={accountSlug}
@@ -495,7 +495,7 @@ export function ClientDetailSidebar({
   return (
     <div className={shellClass}>
       {showEditForm ? (
-        <div className="flex-1 overflow-y-auto rounded-xl border border-white/[0.08] bg-[var(--workspace-shell-panel)] p-6">
+        <div className="flex-1 overflow-y-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6">
           <ClientForm
             accountId={accountId}
             mode="edit"
@@ -512,7 +512,7 @@ export function ClientDetailSidebar({
         </div>
       ) : (
         <>
-          <div className="rounded-xl border border-white/[0.08] bg-[var(--workspace-shell-panel)] p-5 md:p-6">
+          <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 md:p-6">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
               {canEditClients ? (
                 <ClientImageUploader
@@ -527,7 +527,7 @@ export function ClientDetailSidebar({
                   displayName={displayName}
                   pictureUrl={client.picture_url}
                   className="h-24 w-24 shrink-0 rounded-xl md:h-28 md:w-28"
-                  fallbackClassName="rounded-xl bg-zinc-700 text-2xl text-zinc-200"
+                  fallbackClassName="rounded-xl bg-[var(--workspace-shell-panel-hover)] text-2xl text-[var(--workspace-shell-text)]"
                 />
               )}
 
@@ -535,11 +535,11 @@ export function ClientDetailSidebar({
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h1 className="text-2xl font-semibold text-white">{displayName}</h1>
+                      <h1 className="text-2xl font-semibold text-[var(--workspace-shell-text)]">{displayName}</h1>
                       {client.phone ? (
                         <a
                           href={`tel:${client.phone}`}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/[0.08] text-zinc-400 transition hover:border-[var(--keel-teal)]/40 hover:text-[#5eead4]"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] transition hover:border-[var(--ozer-accent)]/40 hover:text-[var(--ozer-accent-muted)]"
                           aria-label="Call client"
                         >
                           <Phone className="h-4 w-4" />
@@ -548,7 +548,7 @@ export function ClientDetailSidebar({
                       {client.email ? (
                         <a
                           href={`mailto:${client.email}`}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/[0.08] text-zinc-400 transition hover:border-[var(--keel-teal)]/40 hover:text-[#5eead4]"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] transition hover:border-[var(--ozer-accent)]/40 hover:text-[var(--ozer-accent-muted)]"
                           aria-label="Email client"
                         >
                           <Mail className="h-4 w-4" />
@@ -557,13 +557,13 @@ export function ClientDetailSidebar({
                     </div>
 
                     {subtitle ? (
-                      <p className="mt-1 flex items-center gap-1.5 text-sm text-zinc-400">
+                      <p className="mt-1 flex items-center gap-1.5 text-sm text-[var(--workspace-shell-text-muted)]">
                         <Building2 className="h-4 w-4 shrink-0" />
                         {subtitle}
                       </p>
                     ) : null}
 
-                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-zinc-500">
+                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--workspace-shell-text-muted)]">
                       <span className="inline-flex items-center gap-1.5">
                         <Calendar className="h-4 w-4" />
                         Client since {formatCreatedDate(client.created_at)}
@@ -574,13 +574,13 @@ export function ClientDetailSidebar({
                     </div>
 
                     {client.email ? (
-                      <p className="mt-2 text-sm text-zinc-400">{client.email}</p>
+                      <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">{client.email}</p>
                     ) : null}
                     {client.phone ? (
-                      <p className="mt-1 text-sm text-zinc-400">{client.phone}</p>
+                      <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">{client.phone}</p>
                     ) : null}
                     {address ? (
-                      <p className="mt-2 flex items-start gap-1.5 text-sm text-zinc-400">
+                      <p className="mt-2 flex items-start gap-1.5 text-sm text-[var(--workspace-shell-text-muted)]">
                         <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
                         {address}
                       </p>
@@ -592,7 +592,7 @@ export function ClientDetailSidebar({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="border-white/[0.12] bg-transparent text-white hover:bg-white/[0.04]"
+                        className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
                         onClick={() => setShowEditForm(true)}
                       >
                         <Pencil className="mr-2 h-4 w-4" />
@@ -604,7 +604,7 @@ export function ClientDetailSidebar({
                           <Button
                             variant="outline"
                             size="icon"
-                            className="h-9 w-9 border-white/[0.12] bg-transparent text-white hover:bg-white/[0.04]"
+                            className="h-9 w-9 border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
                             aria-label="Client actions"
                           >
                             <MoreHorizontal className="h-4 w-4" />
@@ -612,17 +612,17 @@ export function ClientDetailSidebar({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
                           align="end"
-                          className="w-48 border-white/10 bg-[#0F1B35] text-white"
+                          className="w-48 border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] text-[var(--workspace-shell-text)]"
                         >
                           <DropdownMenuItem
-                            className="cursor-pointer focus:bg-white/[0.06] focus:text-white"
+                            className="cursor-pointer focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
                             onClick={handleArchive}
                           >
                             <Archive className="mr-2 h-4 w-4" />
                             Archive
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            className="cursor-pointer focus:bg-white/[0.06] focus:text-white"
+                            className="cursor-pointer focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
                             onClick={handleViewAsClient}
                           >
                             <ExternalLink className="mr-2 h-4 w-4" />
@@ -630,9 +630,9 @@ export function ClientDetailSidebar({
                           </DropdownMenuItem>
                           {client.email ? (
                             <>
-                              <DropdownMenuSeparator className="bg-white/10" />
+                              <DropdownMenuSeparator className="bg-[var(--workspace-shell-sidebar-accent)]" />
                               <DropdownMenuItem
-                                className="cursor-pointer focus:bg-white/[0.06] focus:text-white"
+                                className="cursor-pointer focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
                                 onClick={handleInviteToPortal}
                               >
                                 <Mail className="mr-2 h-4 w-4" />
@@ -647,28 +647,28 @@ export function ClientDetailSidebar({
                 </div>
 
                 {!isContractorView ? (
-                  <div className="mt-5 border-t border-white/[0.06] pt-5">
+                  <div className="mt-5 border-t border-[color:var(--workspace-shell-border)] pt-5">
                     <div className="flex items-center justify-between gap-3">
-                      <h2 className="text-sm font-medium text-white">Projects</h2>
-                      <span className="text-xs text-zinc-500">
+                      <h2 className="text-sm font-medium text-[var(--workspace-shell-text)]">Projects</h2>
+                      <span className="text-xs text-[var(--workspace-shell-text-muted)]">
                         {jobsCount} total · {formatPence(totalValuePence)}
                       </span>
                     </div>
 
                     {jobs.length === 0 ? (
-                      <p className="mt-3 text-sm text-zinc-500">No projects yet.</p>
+                      <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">No projects yet.</p>
                     ) : (
                       <ul className="mt-3 divide-y divide-white/[0.06]">
                         {jobs.slice(0, 5).map((job) => (
                           <li key={job.id}>
                             <Link
                               href={`${jobDetailBase}${job.id}`}
-                              className="flex items-center justify-between gap-3 py-3 transition hover:text-[#5eead4]"
+                              className="flex items-center justify-between gap-3 py-3 transition hover:text-[var(--ozer-accent-muted)]"
                             >
-                              <span className="truncate text-sm text-zinc-200">
+                              <span className="truncate text-sm text-[var(--workspace-shell-text)]">
                                 {job.title ?? 'Untitled project'}
                               </span>
-                              <span className="shrink-0 text-xs capitalize text-zinc-500">
+                              <span className="shrink-0 text-xs capitalize text-[var(--workspace-shell-text-muted)]">
                                 {job.status.replace(/_/g, ' ')}
                               </span>
                             </Link>
@@ -695,14 +695,14 @@ export function ClientDetailSidebar({
             </div>
           ) : null}
 
-          <div className="mt-4 flex items-center justify-center gap-2 border-y border-white/[0.08] py-2.5 text-sm text-zinc-500">
+          <div className="mt-4 flex items-center justify-center gap-2 border-y border-[color:var(--workspace-shell-border)] py-2.5 text-sm text-[var(--workspace-shell-text-muted)]">
             <Eye className="h-4 w-4 shrink-0" />
             <span>{formatLastUpdated(client.updated_at)}</span>
           </div>
 
           {!isContractorView ? (
             <>
-              <div className="mt-4 overflow-x-auto border-b border-white/[0.08]">
+              <div className="mt-4 overflow-x-auto border-b border-[color:var(--workspace-shell-border)]">
                 <div className="flex min-w-max gap-1">
                   {tabItems.map(({ key, label, meta }) => (
                     <button
@@ -712,13 +712,13 @@ export function ClientDetailSidebar({
                       className={cn(
                         'border-b-2 px-4 py-3 text-left transition-colors',
                         activeTab === key
-                          ? 'border-white text-white'
-                          : 'border-transparent text-zinc-500 hover:text-zinc-300',
+                          ? 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)]'
+                          : 'border-transparent text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text-muted)]',
                       )}
                     >
                       <span className="block text-sm font-medium">{label}</span>
                       {meta ? (
-                        <span className="mt-0.5 block text-xs text-zinc-500">{meta}</span>
+                        <span className="mt-0.5 block text-xs text-[var(--workspace-shell-text-muted)]">{meta}</span>
                       ) : null}
                     </button>
                   ))}

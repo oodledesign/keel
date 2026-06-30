@@ -12,7 +12,7 @@ async function PersonalPlannerDayPage() {
   const data = await loadPersonalDayViewData();
 
   return (
-    <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 text-white lg:px-6">
+    <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 text-[var(--workspace-shell-text)] lg:px-6">
       <DayViewClient
         initialData={data}
         dayViewHref={pathsConfig.app.personalPlannerDay}

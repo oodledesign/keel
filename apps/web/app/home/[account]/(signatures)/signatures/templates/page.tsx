@@ -45,7 +45,7 @@ export default async function SignaturesTemplatesPage({
       </div>
 
       {templates.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-8 text-sm text-muted-foreground">
+        <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-8 text-sm text-muted-foreground">
           No templates yet. Create a default template to get started.
         </div>
       ) : (
@@ -58,9 +58,9 @@ export default async function SignaturesTemplatesPage({
             return (
               <Card
                 key={template.id}
-                className="overflow-hidden border-white/10 bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
+                className="overflow-hidden border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
               >
-                <div className="flex h-40 items-center justify-center border-b border-white/10 bg-white p-4">
+                <div className="flex h-40 items-center justify-center border-b border-[color:var(--workspace-shell-border)] bg-white p-4">
                   {template.preview_image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -76,7 +76,7 @@ export default async function SignaturesTemplatesPage({
                   <div className="flex items-start justify-between gap-3">
                     <CardTitle className="text-base">{template.name}</CardTitle>
                     {template.is_default ? (
-                      <Badge className="bg-[var(--keel-teal)]/10 text-[var(--keel-teal)]">
+                      <Badge className="bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]">
                         Default
                       </Badge>
                     ) : null}

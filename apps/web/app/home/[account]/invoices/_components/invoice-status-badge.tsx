@@ -3,14 +3,14 @@
 import { displayInvoiceStatus, formatPence } from '../_lib/invoice-totals';
 
 const STATUS_STYLES: Record<string, string> = {
-  draft: 'border-zinc-500/30 bg-zinc-500/10 text-zinc-300',
+  draft: 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]',
   sent: 'border-[#39AEB3]/30 bg-[#39AEB3]/12 text-[#B8D3D7]',
   read: 'border-amber-500/30 bg-amber-500/10 text-amber-200',
   overdue: 'border-[#E85D75]/30 bg-[#E85D75]/12 text-[#F6A7B5]',
-  paid: 'border-[var(--keel-teal)]/30 bg-[var(--keel-teal)]/12 text-[#97D9AA]',
+  paid: 'border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent)]/12 text-[#97D9AA]',
   partial: 'border-violet-500/30 bg-violet-500/10 text-violet-200',
-  void: 'border-zinc-600/30 bg-zinc-700/20 text-zinc-400',
-  cancelled: 'border-zinc-600/30 bg-zinc-700/20 text-zinc-400',
+  void: 'border-[color:var(--workspace-shell-border)]/30 bg-[var(--workspace-shell-panel-hover)]/20 text-[var(--workspace-shell-text-muted)]',
+  cancelled: 'border-[color:var(--workspace-shell-border)]/30 bg-[var(--workspace-shell-panel-hover)]/20 text-[var(--workspace-shell-text-muted)]',
 };
 
 export function InvoiceStatusBadge({

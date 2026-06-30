@@ -1,5 +1,5 @@
 export const marketingNavPanelClass =
-  'border-violet-200/20 bg-[#100d1f]/98 text-violet-100';
+  'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/98 text-[var(--workspace-shell-text)]';
 
 /** Scroll cap for marketing header dropdowns on short viewports. */
 export const marketingNavScrollClass =

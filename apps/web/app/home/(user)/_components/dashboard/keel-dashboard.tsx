@@ -27,7 +27,7 @@ import { PersonalDashboardTaskRow } from './personal-dashboard-task-row';
 import { ConnectedWorkspacesBar } from './connected-workspaces-bar';
 
 const panelClass =
-  'rounded-2xl border border-white/[0.08] bg-[var(--workspace-shell-panel)]';
+  'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
 
 const DASHBOARD_TASK_PREVIEW_LIMIT = 5;
 const personalTasksHref = `${pathsConfig.app.home}/tasks`;
@@ -47,7 +47,7 @@ export function KeelDashboard({ data }: Props) {
   const greeting = useMemo(() => getGreeting(), []);
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-8 overflow-x-hidden px-4 pb-12 pt-6 text-white md:px-6 lg:px-8">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-8 overflow-x-hidden px-4 pb-12 pt-6 text-[var(--workspace-shell-text)] md:px-6 lg:px-8">
       <header className="space-y-4">
         <DashboardShortcutsBar
           shortcuts={data.dashboardShortcuts}
@@ -57,7 +57,7 @@ export function KeelDashboard({ data }: Props) {
           <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
             {greeting}, {data.userName}
           </h1>
-          <p className="mt-1 text-sm font-normal text-white/60">{data.dateLabel}</p>
+          <p className="mt-1 text-sm font-normal text-[var(--workspace-shell-text)]/60">{data.dateLabel}</p>
         </div>
         {data.brainWorkspaceSlug ? (
           <Button
@@ -120,7 +120,7 @@ export function KeelDashboard({ data }: Props) {
               <EmptyPanel message="Add people to track birthdays and catchups.">
                 <Link
                   href={pathsConfig.app.personalPeople}
-                  className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-[#2A9D8F] hover:text-[#34b3a4]"
+                  className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-[var(--ozer-accent)] hover:text-[#34b3a4]"
                 >
                   Open People
                   <ArrowRight className="h-4 w-4" />
@@ -177,11 +177,11 @@ function DashboardSection(
     <section>
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-base font-semibold tracking-tight text-white">
+          <h2 className="text-base font-semibold tracking-tight text-[var(--workspace-shell-text)]">
             {props.title}
           </h2>
           {props.subtitle ? (
-            <p className="mt-0.5 text-xs text-white/45">{props.subtitle}</p>
+            <p className="mt-0.5 text-xs text-[var(--workspace-shell-text)]/45">{props.subtitle}</p>
           ) : null}
         </div>
         {props.action ? <div className="shrink-0">{props.action}</div> : null}
@@ -195,7 +195,7 @@ function ViewAllTasksLink() {
   return (
     <Link
       href={personalTasksHref}
-      className="inline-flex items-center gap-1 text-xs font-medium text-[#2A9D8F] hover:text-[#34b3a4]"
+      className="inline-flex items-center gap-1 text-xs font-medium text-[var(--ozer-accent)] hover:text-[#34b3a4]"
     >
       View all
       <ArrowRight className="h-3.5 w-3.5" />
@@ -240,7 +240,7 @@ function EmptyPanel(
   props: React.PropsWithChildren<{ message: string }>,
 ) {
   return (
-    <div className={`${panelClass} px-4 py-8 text-center text-sm text-white/50`}>
+    <div className={`${panelClass} px-4 py-8 text-center text-sm text-[var(--workspace-shell-text)]/50`}>
       {props.message}
       {props.children}
     </div>
@@ -250,12 +250,12 @@ function EmptyPanel(
 function CalendarEventRow(props: { event: PersonalCalendarEvent }) {
   return (
     <div className="flex min-w-0 items-start gap-3 px-4 py-3">
-      <span className="w-14 shrink-0 text-sm font-medium tabular-nums text-[#2A9D8F]">
+      <span className="w-14 shrink-0 text-sm font-medium tabular-nums text-[var(--ozer-accent)]">
         {props.event.timeLabel || '—'}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-white">{props.event.title}</p>
-        <span className="mt-1 inline-flex items-center gap-1.5 text-[11px] text-white/60">
+        <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">{props.event.title}</p>
+        <span className="mt-1 inline-flex items-center gap-1.5 text-[11px] text-[var(--workspace-shell-text)]/60">
           <span
             className="h-2 w-2 rounded-full"
             style={{ backgroundColor: props.event.workspaceColor }}
@@ -278,18 +278,18 @@ function PeopleUpcomingRow(props: { item: PersonalPeopleUpcomingItem }) {
   return (
     <Link
       href={props.item.href}
-      className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/[0.02]"
+      className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
     >
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--keel-teal)]/10 text-[#5eead4]">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]">
         <Icon className="h-4 w-4" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-white">
+        <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
           {props.item.name}
         </p>
-        <p className="truncate text-xs text-zinc-400">{props.item.label}</p>
+        <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">{props.item.label}</p>
       </div>
-      <ArrowRight className="h-4 w-4 shrink-0 text-zinc-500" />
+      <ArrowRight className="h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]" />
     </Link>
   );
 }
@@ -309,14 +309,14 @@ function WorkspaceOverviewCardView(props: { card: WorkspaceOverviewCard }) {
             return (
               <div
                 key={stat.label}
-                className="rounded-lg border border-white/[0.06] bg-[var(--workspace-shell-canvas)] px-3 py-2"
+                className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] px-3 py-2"
               >
-                <dt className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wide text-white/45">
+                <dt className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wide text-[var(--workspace-shell-text)]/45">
                   {isPipeline ? (
                     <Avatar className="h-5 w-5 rounded-md">
                       <AvatarImage src={card.pictureUrl ?? undefined} alt="" />
                       <AvatarFallback
-                        className="rounded-md text-[9px] font-semibold text-white"
+                        className="rounded-md text-[9px] font-semibold text-[var(--workspace-shell-text)]"
                         style={{ backgroundColor: card.color }}
                       >
                         {initial}
@@ -325,7 +325,7 @@ function WorkspaceOverviewCardView(props: { card: WorkspaceOverviewCard }) {
                   ) : null}
                   <span>{isPipeline ? 'Pipeline' : stat.label}</span>
                 </dt>
-                <dd className="mt-0.5 text-lg font-semibold text-white">
+                <dd className="mt-0.5 text-lg font-semibold text-[var(--workspace-shell-text)]">
                   {stat.value}
                 </dd>
               </div>
@@ -335,7 +335,7 @@ function WorkspaceOverviewCardView(props: { card: WorkspaceOverviewCard }) {
 
         <Link
           href={href}
-          className="inline-flex items-center gap-1 text-sm font-medium text-[#2A9D8F] hover:text-[#34b3a4]"
+          className="inline-flex items-center gap-1 text-sm font-medium text-[var(--ozer-accent)] hover:text-[#34b3a4]"
         >
           Open
           <ArrowRight className="h-4 w-4" />
@@ -358,10 +358,10 @@ function RecentNoteCard(props: { note: PersonalRecentNote }) {
       className={`${panelClass} w-[calc(50%-0.375rem)] shrink-0 snap-start p-3 transition-transform active:scale-[0.98] md:w-auto`}
     >
       <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/8 text-[#5eead4]">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/8 text-[var(--ozer-accent-muted)]">
           <StickyNote className="h-3.5 w-3.5" />
         </div>
-        <span className="inline-flex min-w-0 items-center gap-1.5 truncate text-[10px] text-white/50">
+        <span className="inline-flex min-w-0 items-center gap-1.5 truncate text-[10px] text-[var(--workspace-shell-text)]/50">
           <span
             className="h-1.5 w-1.5 shrink-0 rounded-full"
             style={{ backgroundColor: props.note.workspaceColor }}
@@ -369,10 +369,10 @@ function RecentNoteCard(props: { note: PersonalRecentNote }) {
           {props.note.workspaceName}
         </span>
       </div>
-      <p className="line-clamp-2 text-sm font-medium text-white">
+      <p className="line-clamp-2 text-sm font-medium text-[var(--workspace-shell-text)]">
         {props.note.title}
       </p>
-      <p className="mt-1 line-clamp-2 text-xs text-zinc-400">
+      <p className="mt-1 line-clamp-2 text-xs text-[var(--workspace-shell-text-muted)]">
         {props.note.excerpt}
       </p>
     </Link>

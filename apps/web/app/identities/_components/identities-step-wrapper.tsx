@@ -124,7 +124,7 @@ export function IdentitiesStepWrapper(props: IdentitiesStepWrapperProps) {
         data-test="join-step-two"
       >
         {props.requireMethodSelection ? (
-          <div className="rounded-2xl border border-white/8 bg-[#122033] px-4 py-3 text-sm text-[#D7DEEE] shadow-[0_18px_40px_rgba(2,8,23,0.24)]">
+          <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-3 text-sm text-[#D7DEEE] shadow-[0_18px_40px_rgba(2,8,23,0.24)]">
             Select how invited users should sign in to Ozer before
             continuing.
           </div>

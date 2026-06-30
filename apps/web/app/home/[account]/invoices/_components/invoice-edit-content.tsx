@@ -426,7 +426,7 @@ export function InvoiceEditContent({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <Button variant="ghost" size="sm" asChild className="text-zinc-400 hover:text-white">
+        <Button variant="ghost" size="sm" asChild className="text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]">
           <Link href={invoicesPath}>
             <ArrowLeft className="mr-1 h-4 w-4" />
             Back to invoices
@@ -438,7 +438,7 @@ export function InvoiceEditContent({
               size="sm"
               onClick={handleSave}
               disabled={saving || !canModifyInvoice}
-              className="bg-[var(--keel-teal)] hover:bg-[#238b7f]"
+              className="bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]"
             >
               {saving ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -449,7 +449,7 @@ export function InvoiceEditContent({
               <Button
                 size="sm"
                 variant="outline"
-                className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-zinc-200 hover:bg-[var(--workspace-shell-panel-hover)]"
+                className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel-hover)]"
                 onClick={() => {
                   setSendEmail(
                     (invoice.client as ClientInfo)?.email ?? sendEmail,
@@ -465,7 +465,7 @@ export function InvoiceEditContent({
               size="sm"
               variant="outline"
               asChild
-              className="border border-[var(--keel-teal)]/40 bg-transparent text-[#5eead4] hover:bg-[var(--keel-teal)]/10"
+              className="border border-[var(--ozer-accent)]/40 bg-transparent text-[var(--ozer-accent-muted)] hover:bg-[var(--ozer-accent-subtle)]"
             >
               <a
                 href={`/api/invoices/pdf?invoiceId=${encodeURIComponent(invoice.id)}`}
@@ -480,7 +480,7 @@ export function InvoiceEditContent({
               variant="outline"
               disabled={!canCreatePaymentLink || creatingPaymentLink}
               onClick={handleCreatePaymentLink}
-              className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-zinc-200 hover:bg-[var(--workspace-shell-panel-hover)] disabled:text-zinc-500"
+              className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel-hover)] disabled:text-[var(--workspace-shell-text-muted)]"
             >
               <Link2 className="mr-2 h-4 w-4" />
               {creatingPaymentLink ? 'Creating…' : 'Create payment link'}
@@ -502,7 +502,7 @@ export function InvoiceEditContent({
                 variant="outline"
                 disabled={statusActionLoading !== null}
                 onClick={() => void handleStatusChange('paid', 'bank_transfer')}
-                className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-zinc-200 hover:bg-[var(--workspace-shell-panel-hover)]"
+                className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel-hover)]"
               >
                 {statusActionLoading === 'bank_transfer'
                   ? 'Updating…'
@@ -515,7 +515,7 @@ export function InvoiceEditContent({
                 variant="outline"
                 disabled={statusActionLoading !== null}
                 onClick={() => void handleStatusChange('paid', 'cash')}
-                className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-zinc-200 hover:bg-[var(--workspace-shell-panel-hover)]"
+                className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel-hover)]"
               >
                 {statusActionLoading === 'cash' ? 'Updating…' : 'Paid by cash'}
               </Button>
@@ -534,23 +534,23 @@ export function InvoiceEditContent({
         </div>
       )}
 
-      <div className="rounded-lg border border-zinc-700 bg-[var(--workspace-shell-panel)] p-6">
+      <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6">
         <div className="grid gap-6 md:grid-cols-2">
           <div>
-            <h2 className="text-sm font-medium text-zinc-400">Invoice</h2>
-            <p className="mt-1 text-xl font-semibold text-white">
+            <h2 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">Invoice</h2>
+            <p className="mt-1 text-xl font-semibold text-[var(--workspace-shell-text)]">
               {invoice.invoice_number}
             </p>
             {invoice.status !== 'draft' && (
               <span
                 className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                   invoice.status === 'paid'
-                    ? 'bg-[var(--keel-teal)]/20 text-[#5eead4]'
+                    ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]'
                     : isOverdue
                       ? 'bg-amber-500/20 text-amber-400'
                       : invoice.status === 'sent'
                         ? 'bg-blue-500/20 text-blue-400'
-                        : 'bg-zinc-500/20 text-zinc-400'
+                        : 'bg-[var(--workspace-shell-panel-hover)]/20 text-[var(--workspace-shell-text-muted)]'
                 }`}
               >
                 {isOverdue ? 'overdue' : invoice.status}
@@ -561,7 +561,7 @@ export function InvoiceEditContent({
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <div>
-            <Label className="text-zinc-300">Client</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">Client</Label>
             <div className="mt-1">
               <ClientCombobox
                 clients={clients}
@@ -581,7 +581,7 @@ export function InvoiceEditContent({
             )}
           </div>
           <div>
-            <Label htmlFor="due_at" className="text-zinc-300">
+            <Label htmlFor="due_at" className="text-[var(--workspace-shell-text-muted)]">
               Due date
             </Label>
             <Input
@@ -590,13 +590,13 @@ export function InvoiceEditContent({
               value={dueAt}
               onChange={(e) => setDueAt(e.target.value)}
               disabled={!canModifyInvoice}
-              className="mt-1 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-white"
+              className="mt-1 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
             />
           </div>
         </div>
 
         <div className="mt-4">
-          <Label htmlFor="notes" className="text-zinc-300">
+          <Label htmlFor="notes" className="text-[var(--workspace-shell-text-muted)]">
             Notes (optional)
           </Label>
           <textarea
@@ -605,28 +605,28 @@ export function InvoiceEditContent({
             onChange={(e) => setNotes(e.target.value)}
             disabled={!canModifyInvoice}
             rows={2}
-            className="mt-1 w-full rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-3 py-2 text-white placeholder:text-zinc-500"
+            className="mt-1 w-full rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-3 py-2 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
             placeholder="Internal or customer notes"
           />
         </div>
 
         {/* Bill to (read-only from client) */}
         {invoice.client && (
-          <div className="mt-6 rounded-md border border-zinc-700 bg-[var(--workspace-shell-panel)] p-4">
-            <h3 className="text-sm font-medium text-zinc-400">Bill to</h3>
-            <p className="mt-1 font-medium text-white">
+          <div className="mt-6 rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
+            <h3 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">Bill to</h3>
+            <p className="mt-1 font-medium text-[var(--workspace-shell-text)]">
               {(invoice.client as ClientInfo).display_name ??
                 ([(invoice.client as ClientInfo).first_name, (invoice.client as ClientInfo).last_name]
                   .filter(Boolean)
                   .join(' ') || 'Unnamed')}
             </p>
             {(invoice.client as ClientInfo).company_name && (
-              <p className="text-sm text-zinc-300">
+              <p className="text-sm text-[var(--workspace-shell-text-muted)]">
                 {(invoice.client as ClientInfo).company_name}
               </p>
             )}
             {(invoice.client as ClientInfo).email && (
-              <p className="text-sm text-zinc-400">
+              <p className="text-sm text-[var(--workspace-shell-text-muted)]">
                 {(invoice.client as ClientInfo).email}
               </p>
             )}
@@ -636,14 +636,14 @@ export function InvoiceEditContent({
         {/* Line items */}
         <div className="mt-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium text-zinc-400">Line items</h3>
+            <h3 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">Line items</h3>
             {canModifyInvoice && (
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={addRow}
-                className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-zinc-200 hover:bg-[var(--workspace-shell-panel-hover)]"
+                className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel-hover)]"
               >
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add row
@@ -653,7 +653,7 @@ export function InvoiceEditContent({
           <div className="mt-2 overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-zinc-700 text-zinc-400">
+                <tr className="border-b border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]">
                   <th className="pb-2 pr-2 font-medium">Description</th>
                   <th className="w-40 pb-2 pr-2 font-medium">Job</th>
                   <th className="w-24 pb-2 pr-2 font-medium text-right">
@@ -673,7 +673,7 @@ export function InvoiceEditContent({
                   <tr>
                     <td
                       colSpan={canModifyInvoice ? 6 : 5}
-                      className="py-4 text-center text-zinc-500"
+                      className="py-4 text-center text-[var(--workspace-shell-text-muted)]"
                     >
                       No line items. Add a row to get started.
                     </td>
@@ -682,7 +682,7 @@ export function InvoiceEditContent({
                   items.map((row, index) => (
                     <tr
                       key={index}
-                      className="border-b border-zinc-700/70 hover:bg-[var(--workspace-shell-panel-hover)]/70"
+                      className="border-b border-[color:var(--workspace-shell-border)]/70 hover:bg-[var(--workspace-shell-panel-hover)]/70"
                     >
                       <td className="py-2 pr-2">
                         <Input
@@ -693,7 +693,7 @@ export function InvoiceEditContent({
                             })
                           }
                           disabled={!canModifyInvoice}
-                          className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-white"
+                          className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
                           placeholder="Description"
                         />
                       </td>
@@ -706,7 +706,7 @@ export function InvoiceEditContent({
                             })
                           }
                           disabled={!canModifyInvoice}
-                          className="w-full rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-2 py-1.5 text-sm text-white"
+                          className="w-full rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-2 py-1.5 text-sm text-[var(--workspace-shell-text)]"
                         >
                           <option value="">—</option>
                           {jobsForClient.map((j) => (
@@ -727,7 +727,7 @@ export function InvoiceEditContent({
                             })
                           }
                           disabled={!canModifyInvoice}
-                          className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-right text-white"
+                          className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-right text-[var(--workspace-shell-text)]"
                         />
                       </td>
                       <td className="py-2 pr-2 text-right">
@@ -750,11 +750,11 @@ export function InvoiceEditContent({
                             });
                           }}
                           disabled={!canModifyInvoice}
-                          className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-right text-white"
+                          className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-right text-[var(--workspace-shell-text)]"
                           placeholder="0.00"
                         />
                       </td>
-                      <td className="py-2 pr-2 text-right text-zinc-300">
+                      <td className="py-2 pr-2 text-right text-[var(--workspace-shell-text-muted)]">
                         {formatPence(row.quantity * row.unit_price_pence)}
                       </td>
                       {canModifyInvoice && (
@@ -763,7 +763,7 @@ export function InvoiceEditContent({
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0 text-zinc-400 hover:text-red-400"
+                            className="h-8 w-8 p-0 text-[var(--workspace-shell-text-muted)] hover:text-red-400"
                             onClick={() => removeRow(index)}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -777,9 +777,9 @@ export function InvoiceEditContent({
             </table>
           </div>
           {items.length > 0 && (
-            <div className="mt-4 flex justify-end border-t border-zinc-700 pt-4">
+            <div className="mt-4 flex justify-end border-t border-[color:var(--workspace-shell-border)] pt-4">
               <div className="text-right">
-                <p className="text-lg font-semibold text-white">
+                <p className="text-lg font-semibold text-[var(--workspace-shell-text)]">
                   Total {formatPence(subtotalPence)}
                 </p>
               </div>
@@ -789,19 +789,19 @@ export function InvoiceEditContent({
       </div>
 
       <AlertDialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
-        <AlertDialogContent className="border-zinc-700 bg-[var(--workspace-shell-panel)]">
+        <AlertDialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">
+            <AlertDialogTitle className="text-[var(--workspace-shell-text)]">
               Send invoice
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
+            <AlertDialogDescription className="text-[var(--workspace-shell-text-muted)]">
               The client will receive an email with a link to view and pay the
               invoice. Once sent, the invoice will become locked and can no
               longer be edited.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4">
-            <Label htmlFor="send_email" className="text-zinc-300">
+            <Label htmlFor="send_email" className="text-[var(--workspace-shell-text-muted)]">
               Send to email
             </Label>
             <Input
@@ -810,7 +810,7 @@ export function InvoiceEditContent({
               value={sendEmail}
               onChange={(e) => setSendEmail(e.target.value)}
               placeholder="client@example.com"
-              className="mt-2 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-white"
+              className="mt-2 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
             />
             <div className="mt-3 rounded-md border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
               Warning: sending this invoice will lock its line items, client,
@@ -818,13 +818,13 @@ export function InvoiceEditContent({
             </div>
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-zinc-600 text-zinc-300">
+            <AlertDialogCancel className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]">
               Cancel
             </AlertDialogCancel>
             <Button
               onClick={handleSend}
               disabled={sending}
-              className="bg-[var(--keel-teal)] hover:bg-[#238b7f]"
+              className="bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]"
             >
               {sending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

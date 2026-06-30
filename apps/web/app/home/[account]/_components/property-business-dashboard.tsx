@@ -39,7 +39,7 @@ interface PropertyBusinessDashboardProps {
 }
 
 const panelClass =
-  'rounded-[24px] border border-white/6 bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]';
+  'rounded-[24px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]';
 
 const priorityColour: Record<string, string> = {
   urgent: 'bg-rose-500/15 text-rose-300',
@@ -69,15 +69,15 @@ export function PropertyBusinessDashboard({
       label: 'Total Properties',
       value: propertyCounts.total,
       icon: Building2,
-      colour: 'text-[#5eead4]',
-      bg: 'bg-[#2A9D8F]/15',
+      colour: 'text-[var(--ozer-accent-muted)]',
+      bg: 'bg-[var(--ozer-accent-subtle)]',
     },
     {
       label: 'Active',
       value: propertyCounts.active,
       icon: Building2,
-      colour: 'text-[#5eead4]',
-      bg: 'bg-[var(--keel-teal)]/15',
+      colour: 'text-[var(--ozer-accent-muted)]',
+      bg: 'bg-[var(--ozer-accent-subtle)]',
     },
     {
       label: 'Vacant',
@@ -104,7 +104,7 @@ export function PropertyBusinessDashboard({
       label: 'Team Members',
       value: members.length,
       icon: Users,
-      colour: 'text-zinc-300',
+      colour: 'text-[var(--workspace-shell-text-muted)]',
       bg: 'bg-white/8',
     },
   ];
@@ -120,10 +120,10 @@ export function PropertyBusinessDashboard({
               >
                 <c.icon className={`h-3.5 w-3.5 ${c.colour}`} />
               </div>
-              <p className="text-xl font-bold tracking-tight text-white">
+              <p className="text-xl font-bold tracking-tight text-[var(--workspace-shell-text)]">
                 {c.value}
               </p>
-              <p className="mt-0.5 text-[10px] font-medium uppercase tracking-wide text-white/45">
+              <p className="mt-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--workspace-shell-text)]/45">
                 {c.label}
               </p>
             </CardContent>
@@ -176,17 +176,17 @@ export function PropertyBusinessDashboard({
           value={activeTab}
           onValueChange={(v) => setActiveTab(v as typeof activeTab)}
         >
-          <CardHeader className="border-b border-white/6 pb-0 pt-4">
+          <CardHeader className="border-b border-[color:var(--workspace-shell-border)] pb-0 pt-4">
             <TabsList className="h-10 w-full justify-start rounded-none border-0 bg-transparent p-0 md:w-auto">
               <TabsTrigger
                 value="tasks"
-                className="rounded-t-lg data-[state=active]:border-b-2 data-[state=active]:border-[#2A9D8F] data-[state=active]:bg-transparent data-[state=active]:text-[#5eead4]"
+                className="rounded-t-lg data-[state=active]:border-b-2 data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--ozer-accent-muted)]"
               >
                 Tasks
               </TabsTrigger>
               <TabsTrigger
                 value="members"
-                className="rounded-t-lg data-[state=active]:border-b-2 data-[state=active]:border-[#2A9D8F] data-[state=active]:bg-transparent data-[state=active]:text-[#5eead4]"
+                className="rounded-t-lg data-[state=active]:border-b-2 data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--ozer-accent-muted)]"
               >
                 Members
               </TabsTrigger>
@@ -217,12 +217,12 @@ function FinanceOverviewPanel({
 
   return (
     <Card className={panelClass}>
-      <CardHeader className="flex flex-row items-start justify-between gap-4 border-b border-white/6 pb-4">
+      <CardHeader className="flex flex-row items-start justify-between gap-4 border-b border-[color:var(--workspace-shell-border)] pb-4">
         <div>
-          <CardTitle className="text-base font-semibold text-white">
+          <CardTitle className="text-base font-semibold text-[var(--workspace-shell-text)]">
             Finances this month
           </CardTitle>
-          <p className="mt-1 text-xs text-white/45">
+          <p className="mt-1 text-xs text-[var(--workspace-shell-text)]/45">
             {summary.hasFinanceData
               ? 'Track income and expenses — connect FreeAgent for automatic sync'
               : 'Import transactions or connect FreeAgent to get started'}
@@ -230,7 +230,7 @@ function FinanceOverviewPanel({
         </div>
         <Link
           href={financesPath}
-          className="text-xs font-medium text-[#5eead4] hover:underline"
+          className="text-xs font-medium text-[var(--ozer-accent-muted)] hover:underline"
         >
           Open finances →
         </Link>
@@ -257,16 +257,16 @@ function FinanceOverviewPanel({
           />
         </div>
         {summary.financeTrend.length > 0 ? (
-          <div className="rounded-xl border border-white/6 bg-white/[0.02] p-3">
+          <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
             <FinanceTrendBarChart data={summary.financeTrend} />
           </div>
         ) : (
-          <div className="rounded-xl border border-dashed border-white/10 py-8 text-center">
-            <Wallet className="mx-auto mb-2 h-8 w-8 text-white/20" />
-            <p className="text-sm text-white/40">No transactions yet</p>
+          <div className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] py-8 text-center">
+            <Wallet className="mx-auto mb-2 h-8 w-8 text-[var(--workspace-shell-text)]/20" />
+            <p className="text-sm text-[var(--workspace-shell-text)]/40">No transactions yet</p>
             <Link
               href={financesPath}
-              className="mt-2 inline-block text-xs text-[#5eead4] hover:underline"
+              className="mt-2 inline-block text-xs text-[var(--ozer-accent-muted)] hover:underline"
             >
               Set up finances or connect FreeAgent
             </Link>
@@ -289,24 +289,24 @@ function FinanceStatCard({
   tone: 'teal' | 'amber' | 'rose';
 }) {
   const styles = {
-    teal: { bg: 'bg-[#2A9D8F]/15', text: 'text-[#5eead4]' },
+    teal: { bg: 'bg-[var(--ozer-accent-subtle)]', text: 'text-[var(--ozer-accent-muted)]' },
     amber: { bg: 'bg-amber-500/15', text: 'text-amber-400' },
     rose: { bg: 'bg-rose-500/15', text: 'text-rose-300' },
   }[tone];
 
   return (
-    <div className="rounded-xl border border-white/6 bg-white/[0.02] p-3">
+    <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
       <div className="mb-2 flex items-center gap-2">
         <span
           className={`flex h-7 w-7 items-center justify-center rounded-lg ${styles.bg}`}
         >
           <Icon className={`h-3.5 w-3.5 ${styles.text}`} />
         </span>
-        <p className="text-[10px] font-medium uppercase tracking-wide text-white/45">
+        <p className="text-[10px] font-medium uppercase tracking-wide text-[var(--workspace-shell-text)]/45">
           {label}
         </p>
       </div>
-      <p className="text-lg font-bold tracking-tight text-white">{value}</p>
+      <p className="text-lg font-bold tracking-tight text-[var(--workspace-shell-text)]">{value}</p>
     </div>
   );
 }
@@ -333,14 +333,14 @@ function ShortcutCard({
   accent: 'teal' | 'emerald' | 'orange';
 }) {
   const styles = {
-    teal: { bg: 'bg-[#2A9D8F]/15', text: 'text-[#5eead4]' },
-    emerald: { bg: 'bg-[var(--keel-teal)]/15', text: 'text-[#5eead4]' },
+    teal: { bg: 'bg-[var(--ozer-accent-subtle)]', text: 'text-[var(--ozer-accent-muted)]' },
+    emerald: { bg: 'bg-[var(--ozer-accent-subtle)]', text: 'text-[var(--ozer-accent-muted)]' },
     orange: { bg: 'bg-orange-500/15', text: 'text-orange-400' },
   }[accent];
 
   return (
     <Link href={href}>
-      <Card className={`${panelClass} transition hover:border-[#2A9D8F]/25`}>
+      <Card className={`${panelClass} transition hover:border-[var(--ozer-accent)]/25`}>
         <CardContent className="flex items-center gap-3 p-4">
           <span
             className={`flex h-10 w-10 items-center justify-center rounded-xl ${styles.bg}`}
@@ -348,8 +348,8 @@ function ShortcutCard({
             <Icon className={`h-5 w-5 ${styles.text}`} />
           </span>
           <div>
-            <p className="text-sm font-semibold text-white">{title}</p>
-            <p className="text-xs text-white/50">{description}</p>
+            <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">{title}</p>
+            <p className="text-xs text-[var(--workspace-shell-text)]/50">{description}</p>
           </div>
         </CardContent>
       </Card>
@@ -367,8 +367,8 @@ function TasksPanel({
   if (tasks.length === 0) {
     return (
       <div className="py-8 text-center">
-        <CheckSquare className="mx-auto mb-2 h-8 w-8 text-white/20" />
-        <p className="text-sm text-white/40">No open tasks</p>
+        <CheckSquare className="mx-auto mb-2 h-8 w-8 text-[var(--workspace-shell-text)]/20" />
+        <p className="text-sm text-[var(--workspace-shell-text)]/40">No open tasks</p>
       </div>
     );
   }
@@ -380,20 +380,20 @@ function TasksPanel({
       {tasks.slice(0, 8).map((task) => (
         <div
           key={task.id}
-          className="flex items-center justify-between rounded-xl border border-white/6 bg-white/[0.02] px-3 py-2.5"
+          className="flex items-center justify-between rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-2.5"
         >
           <div className="min-w-0">
-            <p className="truncate text-sm text-white/80">{task.title}</p>
+            <p className="truncate text-sm text-[var(--workspace-shell-text)]/80">{task.title}</p>
             {task.projectName ? (
-              <p className="text-xs text-white/40">{task.projectName}</p>
+              <p className="text-xs text-[var(--workspace-shell-text)]/40">{task.projectName}</p>
             ) : null}
           </div>
           <div className="ml-3 flex flex-shrink-0 items-center gap-2">
             {task.dueDate ? (
-              <span className="text-xs text-white/40">{task.dueDate}</span>
+              <span className="text-xs text-[var(--workspace-shell-text)]/40">{task.dueDate}</span>
             ) : null}
             <Badge
-              className={`text-[10px] ${priorityColour[task.priority] ?? 'bg-white/10 text-white/50'}`}
+              className={`text-[10px] ${priorityColour[task.priority] ?? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/50'}`}
             >
               {task.priority}
             </Badge>
@@ -403,7 +403,7 @@ function TasksPanel({
       {tasks.length > 8 ? (
         <Link
           href={tasksPath}
-          className="block pt-1 text-center text-xs text-white/40 hover:text-[#5eead4]"
+          className="block pt-1 text-center text-xs text-[var(--workspace-shell-text)]/40 hover:text-[var(--ozer-accent-muted)]"
         >
           View all tasks →
         </Link>
@@ -416,8 +416,8 @@ function MembersPanel({ members }: { members: GroupMember[] }) {
   if (members.length === 0) {
     return (
       <div className="py-8 text-center">
-        <Users className="mx-auto mb-2 h-8 w-8 text-white/20" />
-        <p className="text-sm text-white/40">No team members yet</p>
+        <Users className="mx-auto mb-2 h-8 w-8 text-[var(--workspace-shell-text)]/20" />
+        <p className="text-sm text-[var(--workspace-shell-text)]/40">No team members yet</p>
       </div>
     );
   }
@@ -427,18 +427,18 @@ function MembersPanel({ members }: { members: GroupMember[] }) {
       {members.map((m) => (
         <div
           key={m.id}
-          className="flex items-center gap-3 rounded-xl border border-white/6 bg-white/[0.02] px-3 py-2.5"
+          className="flex items-center gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-2.5"
         >
-          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#2A9D8F]/20 text-xs font-semibold text-[#5eead4]">
+          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[var(--ozer-accent-subtle)] text-xs font-semibold text-[var(--ozer-accent-muted)]">
             {m.displayName.slice(0, 2).toUpperCase()}
           </span>
           <div className="min-w-0">
-            <p className="truncate text-sm text-white/80">{m.displayName}</p>
+            <p className="truncate text-sm text-[var(--workspace-shell-text)]/80">{m.displayName}</p>
             {m.email ? (
-              <p className="truncate text-xs text-white/40">{m.email}</p>
+              <p className="truncate text-xs text-[var(--workspace-shell-text)]/40">{m.email}</p>
             ) : null}
           </div>
-          <span className="ml-auto flex-shrink-0 text-xs capitalize text-white/40">
+          <span className="ml-auto flex-shrink-0 text-xs capitalize text-[var(--workspace-shell-text)]/40">
             {m.role}
           </span>
         </div>

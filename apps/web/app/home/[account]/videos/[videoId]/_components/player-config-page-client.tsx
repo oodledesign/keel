@@ -150,7 +150,7 @@ export function PlayerConfigPageClient(props: {
     <div className="space-y-6 px-4 lg:px-0">
       <Link
         href={videosPath}
-        className="text-muted-foreground inline-flex items-center gap-1.5 text-sm hover:text-white"
+        className="text-muted-foreground inline-flex items-center gap-1.5 text-sm hover:text-[var(--workspace-shell-text)]"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to videos
@@ -173,7 +173,7 @@ export function PlayerConfigPageClient(props: {
             uploadingCaption={uploadingCaption}
           />
 
-          <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+          <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
             <PublicSharePanel
               videoId={props.video.id}
               videoTitle={props.video.title}
@@ -184,7 +184,7 @@ export function PlayerConfigPageClient(props: {
             />
           </div>
 
-          <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+          <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
             <EmbedCode
               libraryId={props.video.bunny_library_id}
               bunnyVideoId={props.video.bunny_video_id}
@@ -195,7 +195,7 @@ export function PlayerConfigPageClient(props: {
         </div>
 
         <aside className="xl:sticky xl:top-6 xl:self-start">
-          <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+          <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
             <PlayerPreview
               libraryId={props.video.bunny_library_id}
               bunnyVideoId={props.video.bunny_video_id}

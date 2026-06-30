@@ -74,7 +74,7 @@ function formatDueDate(value: string | null): string {
 
 function confidenceBadgeClass(confidence: number | null): string {
   if (confidence === null) {
-    return 'border-zinc-600/40 bg-zinc-800/60 text-zinc-300';
+    return 'border-[color:var(--workspace-shell-border)]/40 bg-[var(--workspace-control-surface)]/60 text-[var(--workspace-shell-text-muted)]';
   }
 
   if (confidence < LOW_CONFIDENCE_ASSIGNEE_THRESHOLD) {
@@ -82,7 +82,7 @@ function confidenceBadgeClass(confidence: number | null): string {
   }
 
   if (confidence >= 0.75) {
-    return 'border-[var(--keel-teal)]/40 bg-[var(--keel-teal)]/10 text-teal-200';
+    return 'border-[var(--ozer-accent)]/40 bg-[var(--ozer-accent-subtle)] text-teal-200';
   }
 
   return 'border-blue-500/30 bg-blue-500/10 text-blue-200';
@@ -269,17 +269,17 @@ export function MeetingTaskReviewClient({
       <div>
         <Link
           href={tasksPath}
-          className="mb-4 inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-white"
+          className="mb-4 inline-flex items-center gap-1 text-sm text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
         >
           <ChevronLeft className="h-4 w-4" />
           Back to tasks
         </Link>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--workspace-shell-text)]">
               Meeting task review
             </h1>
-            <p className="mt-2 max-w-2xl text-sm text-zinc-400">
+            <p className="mt-2 max-w-2xl text-sm text-[var(--workspace-shell-text-muted)]">
               Approve AI-suggested action items from recorded meetings. Assign an owner
               before publishing anything with unclear ownership.
             </p>
@@ -289,7 +289,7 @@ export function MeetingTaskReviewClient({
               type="button"
               onClick={bulkApprove}
               disabled={bulkPending || pendingId !== null}
-              className="bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+              className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
             >
               {bulkPending ? (
                 <>
@@ -307,21 +307,21 @@ export function MeetingTaskReviewClient({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] px-4 py-3 text-sm text-zinc-300">
-        Meeting tasks: <span className="text-white">{meetingModeLabel}</span>
+      <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-3 text-sm text-[var(--workspace-shell-text-muted)]">
+        Meeting tasks: <span className="text-[var(--workspace-shell-text)]">{meetingModeLabel}</span>
         {automationSettings.autoScheduleOnCalendar ? (
-          <span className="text-zinc-500"> · Calendar auto-scheduling on</span>
+          <span className="text-[var(--workspace-shell-text-muted)]"> · Calendar auto-scheduling on</span>
         ) : null}
         .{' '}
-        <Link href={settingsPath} className="font-medium text-[var(--keel-teal)] hover:underline">
+        <Link href={settingsPath} className="font-medium text-[var(--ozer-accent)] hover:underline">
           Change automation settings
         </Link>
       </div>
 
       {items.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-8 text-center">
-          <p className="text-sm text-zinc-300">No meeting tasks waiting for review.</p>
-          <p className="mt-2 text-xs text-zinc-500">
+        <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-8 text-center">
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">No meeting tasks waiting for review.</p>
+          <p className="mt-2 text-xs text-[var(--workspace-shell-text-muted)]">
             New suggestions appear here after KeelAssistant syncs a meeting transcript.
           </p>
         </div>
@@ -340,7 +340,7 @@ export function MeetingTaskReviewClient({
             return (
               <article
                 key={item.id}
-                className="rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-5"
+                className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="space-y-2">
@@ -363,15 +363,15 @@ export function MeetingTaskReviewClient({
                     </div>
                     {!isEditing ? (
                       <>
-                        <h2 className="text-lg font-semibold text-white">
+                        <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
                           {item.suggestedTitle}
                         </h2>
                         {item.suggestedDescription ? (
-                          <p className="text-sm text-zinc-300">
+                          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
                             {item.suggestedDescription}
                           </p>
                         ) : null}
-                        <p className="inline-flex items-center gap-1 text-xs text-zinc-500">
+                        <p className="inline-flex items-center gap-1 text-xs text-[var(--workspace-shell-text-muted)]">
                           <CalendarDays className="h-3.5 w-3.5" />
                           {formatDueDate(item.suggestedDueDate)}
                         </p>
@@ -379,17 +379,17 @@ export function MeetingTaskReviewClient({
                     ) : (
                       <div className="space-y-3 pt-1">
                         <div className="space-y-2">
-                          <Label className="text-zinc-300">Title</Label>
+                          <Label className="text-[var(--workspace-shell-text-muted)]">Title</Label>
                           <Input
                             value={draft.title}
                             onChange={(event) =>
                               updateDraft(item.id, { title: event.target.value })
                             }
-                            className="border-white/10 bg-[#0B132B] text-white"
+                            className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-zinc-300">Description</Label>
+                          <Label className="text-[var(--workspace-shell-text-muted)]">Description</Label>
                           <Textarea
                             value={draft.description}
                             onChange={(event) =>
@@ -397,18 +397,18 @@ export function MeetingTaskReviewClient({
                                 description: event.target.value,
                               })
                             }
-                            className="min-h-[96px] border-white/10 bg-[#0B132B] text-white"
+                            className="min-h-[96px] border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-zinc-300">Due date</Label>
+                          <Label className="text-[var(--workspace-shell-text-muted)]">Due date</Label>
                           <Input
                             type="date"
                             value={draft.dueDate}
                             onChange={(event) =>
                               updateDraft(item.id, { dueDate: event.target.value })
                             }
-                            className="border-white/10 bg-[#0B132B] text-white"
+                            className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]"
                           />
                         </div>
                       </div>
@@ -417,15 +417,15 @@ export function MeetingTaskReviewClient({
                 </div>
 
                 {item.sourceExcerpt ? (
-                  <blockquote className="mt-4 rounded-xl border border-white/5 bg-[#0B132B]/70 px-4 py-3 text-sm italic text-zinc-300">
+                  <blockquote className="mt-4 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/70 px-4 py-3 text-sm italic text-[var(--workspace-shell-text-muted)]">
                     “{item.sourceExcerpt}”
                   </blockquote>
                 ) : null}
 
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/5 pt-4">
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[color:var(--workspace-shell-border)] pt-4">
                   <Link
                     href={meetingHref}
-                    className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-white"
+                    className="inline-flex items-center gap-1 text-sm text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
                   >
                     From: {item.meetingTitle}
                     {item.meetingDate ? ` · ${formatDueDate(item.meetingDate)}` : ''}
@@ -434,7 +434,7 @@ export function MeetingTaskReviewClient({
 
                   <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
                     <div className="min-w-[220px] space-y-1">
-                      <Label className="text-xs text-zinc-500">Assignee</Label>
+                      <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Assignee</Label>
                       <Select
                         value={draft.assigneeId || '__none__'}
                         onValueChange={(value) =>
@@ -443,10 +443,10 @@ export function MeetingTaskReviewClient({
                           })
                         }
                       >
-                        <SelectTrigger className="border-white/10 bg-[#0B132B] text-white">
+                        <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]">
                           <SelectValue placeholder="Choose assignee" />
                         </SelectTrigger>
-                        <SelectContent className="border-white/10 bg-[#0F1B35] text-white">
+                        <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] text-[var(--workspace-shell-text)]">
                           <SelectItem value="__none__">Unassigned</SelectItem>
                           {members.map((member) => (
                             <SelectItem key={member.userId} value={member.userId}>
@@ -461,7 +461,7 @@ export function MeetingTaskReviewClient({
                       <Button
                         type="button"
                         variant="outline"
-                        className="border-white/10 bg-transparent text-white hover:bg-white/5"
+                        className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
                         disabled={isPending || bulkPending}
                         onClick={() => rejectItem(item)}
                       >
@@ -471,7 +471,7 @@ export function MeetingTaskReviewClient({
                       <Button
                         type="button"
                         variant="outline"
-                        className="border-white/10 bg-transparent text-white hover:bg-white/5"
+                        className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
                         disabled={isPending || bulkPending}
                         onClick={() => toggleEditing(item.id, item)}
                       >
@@ -481,7 +481,7 @@ export function MeetingTaskReviewClient({
                       {isEditing ? (
                         <Button
                           type="button"
-                          className="keel-gradient-btn text-white"
+                          className="keel-gradient-btn text-[var(--ozer-white)]"
                           disabled={isPending || bulkPending}
                           onClick={() => approveItem(item, true)}
                         >
@@ -497,7 +497,7 @@ export function MeetingTaskReviewClient({
                       ) : (
                         <Button
                           type="button"
-                          className="keel-gradient-btn text-white"
+                          className="keel-gradient-btn text-[var(--ozer-white)]"
                           disabled={isPending || bulkPending}
                           onClick={() => approveItem(item, false)}
                         >

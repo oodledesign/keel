@@ -47,7 +47,7 @@ function PersonalWorkspaceNavItem({ ws }: { ws: PersonalNavWorkspace }) {
           <Avatar className={cn('h-6 w-6 rounded-md', 'shrink-0')}>
             <AvatarImage src={ws.pictureUrl ?? undefined} alt="" />
             <AvatarFallback
-              className="rounded-md text-[11px] font-semibold text-white"
+              className="rounded-md text-[11px] font-semibold text-[var(--workspace-shell-text)]"
               style={{ backgroundColor: color }}
             >
               {initial}

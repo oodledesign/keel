@@ -52,10 +52,10 @@ export function PersonalDetailsStep({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-white">
+        <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
           Personal Details
         </h2>
-        <p className="mt-1 text-sm text-zinc-400">
+        <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
           How we can reach you.
         </p>
       </div>
@@ -64,7 +64,7 @@ export function PersonalDetailsStep({
         <div className="space-y-2">
           <label
             htmlFor="first-name"
-            className="text-sm font-medium text-zinc-300"
+            className="text-sm font-medium text-[var(--workspace-shell-text-muted)]"
           >
             First name
           </label>
@@ -73,14 +73,14 @@ export function PersonalDetailsStep({
             type="text"
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-4 py-2.5 text-white placeholder-zinc-500 focus:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+            className="w-full rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/80 px-4 py-2.5 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus:border-[color:var(--workspace-shell-border)] focus:outline-none focus:ring-1 focus:ring-[var(--ozer-accent)]/30"
             placeholder="eg. John"
           />
         </div>
         <div className="space-y-2">
           <label
             htmlFor="last-name"
-            className="text-sm font-medium text-zinc-300"
+            className="text-sm font-medium text-[var(--workspace-shell-text-muted)]"
           >
             Last name
           </label>
@@ -89,7 +89,7 @@ export function PersonalDetailsStep({
             type="text"
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-4 py-2.5 text-white placeholder-zinc-500 focus:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+            className="w-full rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/80 px-4 py-2.5 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus:border-[color:var(--workspace-shell-border)] focus:outline-none focus:ring-1 focus:ring-[var(--ozer-accent)]/30"
             placeholder="eg. Smith"
           />
         </div>
@@ -98,7 +98,7 @@ export function PersonalDetailsStep({
       <div className="space-y-2">
         <label
           htmlFor="mobile"
-          className="text-sm font-medium text-zinc-300"
+          className="text-sm font-medium text-[var(--workspace-shell-text-muted)]"
         >
           Mobile
         </label>
@@ -107,7 +107,7 @@ export function PersonalDetailsStep({
           type="tel"
           value={mobile}
           onChange={(e) => setMobile(e.target.value)}
-          className="w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-4 py-2.5 text-white placeholder-zinc-500 focus:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+          className="w-full rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/80 px-4 py-2.5 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus:border-[color:var(--workspace-shell-border)] focus:outline-none focus:ring-1 focus:ring-[var(--ozer-accent)]/30"
           placeholder="+44 7700 900000"
         />
       </div>

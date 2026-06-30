@@ -239,26 +239,26 @@ export function DayScheduleEditor({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between gap-3 text-xs text-white/45">
+      <div className="flex items-center justify-between gap-3 text-xs text-[var(--workspace-shell-text)]/45">
         <p>Drag task blocks to reschedule. Calendar events stay fixed.</p>
         {isSaving ? (
-          <span className="inline-flex items-center gap-1.5 text-[#5eead4]">
+          <span className="inline-flex items-center gap-1.5 text-[var(--ozer-accent-muted)]">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
             Saving…
           </span>
         ) : null}
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-white/8 bg-[var(--workspace-shell-panel)]">
+      <div className="overflow-x-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
         <div className="flex min-w-[320px]">
           <div
-            className="relative w-14 shrink-0 border-r border-white/8 bg-black/10"
+            className="relative w-14 shrink-0 border-r border-[color:var(--workspace-shell-border)] bg-black/10"
             style={{ height: gridHeight }}
           >
             {hourMarks.map((minute) => (
               <div
                 key={minute}
-                className="absolute right-2 -translate-y-1/2 text-[10px] tabular-nums text-white/35"
+                className="absolute right-2 -translate-y-1/2 text-[10px] tabular-nums text-[var(--workspace-shell-text)]/35"
                 style={{ top: (minute - dayStart) * PX_PER_MINUTE }}
               >
                 {formatClock(minute)}
@@ -274,7 +274,7 @@ export function DayScheduleEditor({
             {hourMarks.map((minute) => (
               <div
                 key={`line-${minute}`}
-                className="pointer-events-none absolute inset-x-0 border-t border-white/6"
+                className="pointer-events-none absolute inset-x-0 border-t border-[color:var(--workspace-shell-border)]"
                 style={{ top: (minute - dayStart) * PX_PER_MINUTE }}
               />
             ))}
@@ -304,12 +304,12 @@ export function DayScheduleEditor({
                   className={cn(
                     'absolute inset-x-2 overflow-hidden rounded-lg border px-2 py-1.5 text-left shadow-sm',
                     block.isCalendarEvent
-                      ? 'border-sky-400/20 bg-sky-400/15'
+                      ? 'border-[color:var(--workspace-shell-border)] bg-sky-400/15'
                       : block.isBreak
-                        ? 'border-dashed border-white/10 bg-white/[0.03]'
-                        : 'border-[#2A9D8F]/25 bg-[#2A9D8F]/10',
+                        ? 'border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]'
+                        : 'border-[var(--ozer-accent)]/25 bg-[var(--ozer-accent-subtle)]',
                     status === 'current' &&
-                      'ring-1 ring-[#2A9D8F]/40',
+                      'ring-1 ring-[#FF5C34]/40',
                     status === 'past' && 'opacity-50',
                     dragState?.blockId === block.id && 'z-20 opacity-90',
                     !block.movable && 'cursor-default',
@@ -321,7 +321,7 @@ export function DayScheduleEditor({
                       {block.movable ? (
                         <button
                           type="button"
-                          className="mt-0.5 shrink-0 cursor-grab text-white/35 hover:text-white/70 active:cursor-grabbing"
+                          className="mt-0.5 shrink-0 cursor-grab text-[var(--workspace-shell-text)]/35 hover:text-[var(--workspace-shell-text)]/70 active:cursor-grabbing"
                           aria-label={`Move ${block.title}`}
                           onPointerDown={(event) => {
                             event.preventDefault();
@@ -348,7 +348,7 @@ export function DayScheduleEditor({
                             'mt-0.5 h-3.5 w-3.5 shrink-0',
                             block.isCalendarEvent
                               ? 'text-sky-300/80'
-                              : 'text-white/30',
+                              : 'text-[var(--workspace-shell-text)]/30',
                           )}
                         />
                       )}
@@ -358,13 +358,13 @@ export function DayScheduleEditor({
                           className={cn(
                             'truncate text-xs font-medium',
                             block.isBreak
-                              ? 'italic text-white/45'
-                              : 'text-white',
+                              ? 'italic text-[var(--workspace-shell-text)]/45'
+                              : 'text-[var(--workspace-shell-text)]',
                           )}
                         >
                           {block.title}
                         </p>
-                        <p className="text-[10px] tabular-nums text-white/40">
+                        <p className="text-[10px] tabular-nums text-[var(--workspace-shell-text)]/40">
                           {formatClock(startMinutes)} – {formatClock(endMinutes)}
                         </p>
                       </div>
@@ -376,7 +376,7 @@ export function DayScheduleEditor({
                             void applyDuration(block.id, Number(value));
                           }}
                         >
-                          <SelectTrigger className="h-6 w-[4.5rem] border-white/10 bg-black/20 px-2 text-[10px] text-white/70">
+                          <SelectTrigger className="h-6 w-[4.5rem] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 text-[10px] text-[var(--workspace-shell-text)]/70">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -394,7 +394,7 @@ export function DayScheduleEditor({
                       <button
                         type="button"
                         aria-label={`Resize ${block.title}`}
-                        className="mt-auto h-1.5 w-full shrink-0 cursor-ns-resize rounded-full bg-white/10 hover:bg-[#2A9D8F]/40"
+                        className="mt-auto h-1.5 w-full shrink-0 cursor-ns-resize rounded-full bg-[var(--workspace-shell-sidebar-accent)] hover:bg-[var(--ozer-accent)]/40"
                         onPointerDown={(event) => {
                           event.preventDefault();
                           event.stopPropagation();

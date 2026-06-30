@@ -75,18 +75,18 @@ function SpeakerAssignPopover({
           type="button"
           disabled={disabled}
           className={cn(
-            'text-left text-xs font-semibold text-[var(--keel-teal)]',
-            'rounded px-1 -mx-1 transition hover:bg-white/5 hover:underline',
+            'text-left text-xs font-semibold text-[var(--ozer-accent)]',
+            'rounded px-1 -mx-1 transition hover:bg-[var(--workspace-shell-sidebar-accent)] hover:underline',
           )}
         >
           {resolveSpeakerLabel(speakerKey, mappings, clients, contacts)}
         </button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-80 border-white/10 bg-[var(--workspace-shell-panel)] p-4"
+        className="w-80 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4"
         align="start"
       >
-        <p className="mb-3 text-xs text-zinc-500">Assign: {speakerKey}</p>
+        <p className="mb-3 text-xs text-[var(--workspace-shell-text-muted)]">Assign: {speakerKey}</p>
         <SpeakerLabelPicker
           accountId={accountId}
           binding={draft}
@@ -107,7 +107,7 @@ function SpeakerAssignPopover({
           <Button
             type="button"
             size="sm"
-            className="flex-1 bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+            className="flex-1 bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
             onClick={() => {
               onSave(draft);
               setOpen(false);
@@ -119,7 +119,7 @@ function SpeakerAssignPopover({
             type="button"
             size="sm"
             variant="outline"
-            className="border-white/10 text-zinc-300"
+            className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]"
             onClick={() => setOpen(false)}
           >
             Cancel
@@ -198,11 +198,11 @@ export function MeetingTranscriptSegments({
                 onContactsChange={onContactsChange}
               />
             ) : (
-              <p className="text-xs font-semibold text-[var(--keel-teal)]">
+              <p className="text-xs font-semibold text-[var(--ozer-accent)]">
                 {displaySpeaker}
               </p>
             )}
-            <p className="mt-1 whitespace-pre-wrap text-sm text-zinc-200">
+            <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--workspace-shell-text)]">
               {segment.text}
             </p>
           </div>

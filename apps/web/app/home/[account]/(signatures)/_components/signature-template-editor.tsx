@@ -108,7 +108,7 @@ export function SignatureTemplateEditor({
 
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(420px,0.9fr)]">
-      <Card className="border-white/10 bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+      <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
         <CardHeader>
           <CardTitle>HTML template</CardTitle>
         </CardHeader>
@@ -143,7 +143,7 @@ export function SignatureTemplateEditor({
             />
           </div>
 
-          <div className="space-y-3 rounded-2xl border border-white/10 bg-black/10 p-4">
+          <div className="space-y-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-black/10 p-4">
             <div>
               <h3 className="text-sm font-medium">Token reference</h3>
               <p className="mt-1 text-xs text-muted-foreground">
@@ -156,7 +156,7 @@ export function SignatureTemplateEditor({
                   key={token}
                   type="button"
                   onClick={() => insertToken(token)}
-                  className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-medium text-[#B8D3D7] transition hover:border-[#39AEB3]/60 hover:text-white"
+                  className="rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-1 text-xs font-medium text-[#B8D3D7] transition hover:border-[#39AEB3]/60 hover:text-[var(--workspace-shell-text)]"
                 >
                   {'{{'}
                   {token}
@@ -173,7 +173,7 @@ export function SignatureTemplateEditor({
         </CardContent>
       </Card>
 
-      <Card className="border-white/10 bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+      <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Live preview</CardTitle>
           {previewStaff ? (
@@ -184,7 +184,7 @@ export function SignatureTemplateEditor({
           <iframe
             title="Template preview"
             srcDoc={renderedPreview}
-            className="h-[680px] w-full rounded-xl border border-white/10 bg-white"
+            className="h-[680px] w-full rounded-xl border border-[color:var(--workspace-shell-border)] bg-white"
           />
         </CardContent>
       </Card>

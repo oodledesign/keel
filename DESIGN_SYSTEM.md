@@ -45,12 +45,20 @@ Full list: `apps/web/styles/ozer-tokens.css`
 
 ## Semantic tokens (prefer these in new code)
 
+| Token | Light mode | Dark mode |
+|-------|------------|-----------|
+| `--ozer-surface-canvas` | `--ozer-cream-50` | `--ozer-plum-900` |
+| `--ozer-surface-panel` | `--ozer-white` | `--ozer-plum-950` |
+| `--ozer-surface-panel-hover` | `--ozer-cream-100` | `--ozer-plum-800` |
+| `--ozer-accent` | Coral CTA (both) | Coral CTA (both) |
+| `--workspace-shell-text` | Plum on cream | Cream on plum |
+
+Semantic surfaces flip in `ozer-tokens.css` via `.dark` on `<html>`. Static tokens (`--ozer-text-on-dark`, `--ozer-border-on-light`, etc.) stay fixed for contrast pairs.
+
 | Token | Maps to |
 |-------|---------|
 | `--ozer-accent` | Primary CTA, focus, success highlights |
 | `--ozer-accent-hover` | Hover state for primary |
-| `--ozer-surface-canvas` | Page background |
-| `--ozer-surface-panel` | Cards, sidebar |
 | `--ozer-text-on-dark` | Primary text on plum surfaces |
 | `--ozer-border-on-dark` | Dividers on dark UI |
 | `--ozer-gradient-active-from` / `--to` | Active sidebar item gradient |
@@ -68,7 +76,7 @@ Workspace shell uses `--workspace-shell-*` variables (defined in `shadcn-ui.css`
 | `--keel-gradient-from` / `--to` | `--ozer-gradient-active-*` |
 | `--keel-accent-blue` | `--ozer-info` |
 
-Utility classes: `keel-gradient-btn`, `keel-gradient-active`, `workspace-btn-primary` — all use CSS variables.
+Utility classes: `ozer-gradient-btn` (alias `keel-gradient-btn`), `ozer-gradient-active` (alias `keel-gradient-active`), `workspace-btn-primary` — all use CSS variables.
 
 ---
 
@@ -77,7 +85,7 @@ Utility classes: `keel-gradient-btn`, `keel-gradient-active`, `workspace-btn-pri
 ### Sidebar (all workspaces)
 
 - Fixed width **240px** (`15rem`, `--sidebar-width`)
-- **Top:** Ozer logo (`/brand/ozer-wordmark.png`), workspace switcher
+- **Top:** Ozer logo (theme-aware SVG wordmark), workspace switcher
 - **Nav:** icon + label, **40px** row height; active item uses coral gradient (`keel-gradient-active`)
 - **Bottom:** collapse control, profile (team) or moved to top bar (personal)
 
@@ -90,9 +98,49 @@ Utility classes: `keel-gradient-btn`, `keel-gradient-active`, `workspace-btn-pri
 
 | Asset | Path |
 |--------|------|
-| Wordmark | `apps/web/public/brand/ozer-wordmark.png` |
-| Icon / favicon | `apps/web/public/brand/ozer-icon.png` |
+| Wordmark (light surfaces) | `apps/web/public/brand/ozer-wordmark-on-light.svg` |
+| Wordmark (dark surfaces) | `apps/web/public/brand/ozer-wordmark-on-dark.svg` |
+| Flower icon | `apps/web/public/brand/ozer-icon.svg` |
+| Favicon | `apps/web/public/favicon.svg` |
 | Brand guide (reference) | `apps/web/public/brand/ozer-brand-guide.html` |
+
+React: `OzerLogoMark`, `OzerSidebarLogo` in `apps/web/components/`.
+
+---
+
+## Light / dark mode (Phase 4)
+
+- **Default:** dark (`NEXT_PUBLIC_DEFAULT_THEME_MODE`, fallback `dark`)
+- **User choice:** Settings → Accessibility → Appearance (Light / Dark / System)
+- **Persistence:** `localStorage` key `ozer-theme` via `next-themes`
+- **Marketing:** `.marketing-shell` uses cream canvas in light mode, plum in `.dark`
+- **Not migrated:** hardcoded `text-white` / `text-zinc-*` in some feature modules — prefer `--workspace-shell-*` tokens in new edits
+
+### Token cleanup (post–Phase 4)
+
+App UI should use semantic shell tokens, not Tailwind zinc/white:
+
+| Instead of | Use |
+|------------|-----|
+| `text-zinc-400` / `text-zinc-300` | `text-[var(--workspace-shell-text-muted)]` |
+| `text-white` on panels | `text-[var(--workspace-shell-text)]` |
+| `text-white` on coral CTAs | `text-[var(--ozer-white)]` |
+| `border-white/6` | `border-[color:var(--workspace-shell-border)]` |
+| `bg-zinc-800` / `bg-zinc-900` | `bg-[var(--workspace-control-surface)]` / `bg-[var(--workspace-shell-panel)]` |
+| `bg-white/5` overlays | `bg-[var(--workspace-shell-sidebar-accent)]` |
+
+Helpers: `apps/web/lib/workspace-ui.ts` (`workspaceText`, `workspaceTextMuted`, `workspaceBorder`, …).
+
+Programmatic colours (charts, PM status cells, emails): `apps/web/lib/ozer/design-tokens.ts` (`ozerColors`, `ozerStatusColors`).
+
+**Intentionally kept as hex:** email HTML templates, admin branding swatches, decorative marketing showcase gradients, agency white-label portals.
+
+| Surface | Light | Dark |
+|---------|-------|------|
+| Canvas | `#FBF6EC` cream | `#351E28` plum |
+| Panel | `#FFFFFF` | `#2A1720` plum-950 |
+| Primary text | `#2A1720` plum | `#FBF6EC` cream |
+| Accent | `#FF5C34` coral | `#FF5C34` coral |
 
 ---
 
@@ -104,10 +152,13 @@ Utility classes: `keel-gradient-btn`, `keel-gradient-active`, `workspace-btn-pri
 | Shadcn + shell mapping | `apps/web/styles/shadcn-ui.css` |
 | Tailwind `@theme` bridge | `apps/web/styles/theme.css` |
 | Button utilities | `apps/web/styles/theme.utilities.css`, `makerkit.css` |
-| TS class helpers | `apps/web/lib/workspace-ui.ts` |
+| TS class helpers | `apps/web/lib/workspace-ui.ts`, `apps/web/lib/marketing/marketing-ui.ts` |
+| Marketing shell utilities | `apps/web/styles/marketing.css` |
 | Shell layout classes | `apps/web/components/workspace-shell/workspace-shell-styles.ts` |
 | Fonts bootstrap | `apps/web/lib/fonts.ts` |
 | Live token preview | `apps/web/app/admin/_components/keel-branding-guide.tsx` |
+| Theme toggle (app) | `apps/web/components/appearance-theme-selector.tsx` |
+| Theme toggle (marketing) | `apps/web/components/theme-mode-toggle.tsx` |
 
 ---
 
@@ -115,8 +166,9 @@ Utility classes: `keel-gradient-btn`, `keel-gradient-active`, `workspace-btn-pri
 
 | Phase | Scope | Status |
 |-------|--------|--------|
-| **1** | Token file + shell (sidebar, top bar, primary buttons via CSS vars) | Current |
-| **2** | Replace hardcoded hex in feature modules (~90 files) | Planned |
-| **3** | Marketing site alignment | Planned |
+| **1** | Token file + shell (sidebar, top bar, primary buttons via CSS vars) | Done |
+| **2** | Replace hardcoded hex in feature modules (~224 files) | Done |
+| **3** | Marketing site alignment (Ozer tokens, copy, interaction defaults) | Done |
+| **4** | Light/dark theme, Ozer logos (SVG), Keel→Ozer naming aliases | Done |
 
 Interactive reference: deploy `ozer-brand-guide.html` or open locally after `npm run dev`.

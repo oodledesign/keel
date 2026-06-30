@@ -78,7 +78,7 @@ const STANDARD_DELIVERY_TEMPLATE = {
     },
     {
       name: 'Build',
-      colour: '#2A9D8F',
+      colour: '#FF5C34',
       description: 'Implementation and content production.',
       is_milestone: false,
     },

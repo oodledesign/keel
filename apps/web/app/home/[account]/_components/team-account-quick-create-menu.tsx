@@ -25,7 +25,7 @@ const items = [
     description: 'Create a new project job',
     icon: BriefcaseBusiness,
     href: pathsConfig.app.accountJobs,
-    tone: 'from-[var(--keel-teal)]/20 to-[var(--keel-teal)]/5 text-[#5eead4]',
+    tone: 'from-[var(--ozer-accent)]/20 to-[var(--ozer-accent)]/5 text-[var(--ozer-accent-muted)]',
   },
   {
     key: 'invoice',
@@ -77,7 +77,7 @@ export function TeamAccountQuickCreateMenu(props: { account: string }) {
       <PopoverTrigger asChild>
         <Button
           size="icon"
-          className="h-11 w-11 rounded-xl border border-[var(--keel-teal)]/40 bg-[var(--keel-teal)] text-white shadow-[0_10px_24px_rgba(5,46,22,0.55)] hover:bg-[#238b7f]"
+          className="h-11 w-11 rounded-xl border border-[var(--ozer-accent)]/40 bg-[var(--ozer-accent)] text-[var(--ozer-white)] shadow-[0_10px_24px_rgba(5,46,22,0.55)] hover:bg-[var(--ozer-accent-hover)]"
         >
           <Plus className="h-5 w-5" />
           <span className="sr-only">Create new item</span>
@@ -87,17 +87,17 @@ export function TeamAccountQuickCreateMenu(props: { account: string }) {
       <PopoverContent
         align="end"
         sideOffset={12}
-        className="w-[22rem] rounded-2xl border border-white/8 bg-[#1b2638]/98 p-3 text-white shadow-[0_18px_60px_rgba(2,8,23,0.55)] backdrop-blur-xl"
+        className="w-[22rem] rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[#1b2638]/98 p-3 text-[var(--workspace-shell-text)] shadow-[0_18px_60px_rgba(2,8,23,0.55)] backdrop-blur-xl"
       >
         <div className="mb-3 px-1">
-          <p className="text-sm font-semibold text-white">New Item</p>
+          <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">New Item</p>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           {items.map((item) => {
             const Icon = item.icon;
             const content = (
-              <div className="flex min-h-[120px] flex-col rounded-2xl border border-white/7 bg-[#202c40]/90 p-4 transition hover:border-white/12 hover:bg-[#26344c]">
+              <div className="flex min-h-[120px] flex-col rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/90 p-4 transition hover:border-[color:var(--workspace-shell-border)] hover:bg-[var(--workspace-shell-panel-hover)]">
                 <div
                   className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${item.tone}`}
                 >
@@ -105,8 +105,8 @@ export function TeamAccountQuickCreateMenu(props: { account: string }) {
                 </div>
 
                 <div className="space-y-1">
-                  <p className="text-sm font-semibold text-white">{item.title}</p>
-                  <p className="text-xs leading-5 text-zinc-400">
+                  <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">{item.title}</p>
+                  <p className="text-xs leading-5 text-[var(--workspace-shell-text-muted)]">
                     {item.description}
                   </p>
                 </div>

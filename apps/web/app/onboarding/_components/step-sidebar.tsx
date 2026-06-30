@@ -79,16 +79,16 @@ export function StepSidebar({
   return (
     <nav className="space-y-1">
       {accountName && (
-        <div className="mb-4 rounded-lg border border-zinc-700 bg-zinc-800/60 px-3 py-2">
-          <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+        <div className="mb-4 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/60 px-3 py-2">
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--workspace-shell-text-muted)]">
             Business
           </p>
-          <p className="mt-0.5 truncate text-sm font-medium text-white">
+          <p className="mt-0.5 truncate text-sm font-medium text-[var(--workspace-shell-text)]">
             {accountName}
           </p>
         </div>
       )}
-      <p className="mb-4 text-xs font-medium uppercase tracking-wider text-zinc-500">
+      <p className="mb-4 text-xs font-medium uppercase tracking-wider text-[var(--workspace-shell-text-muted)]">
         Steps
       </p>
       {steps.map((s, idx) => {
@@ -99,19 +99,19 @@ export function StepSidebar({
             key={s.key}
             className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm ${
               isCurrent
-                ? 'bg-zinc-800 text-white'
+                ? 'bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]'
                 : isCompleted
-                  ? 'text-zinc-400'
-                  : 'text-zinc-500'
+                  ? 'text-[var(--workspace-shell-text-muted)]'
+                  : 'text-[var(--workspace-shell-text-muted)]'
             }`}
           >
             <span
               className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
                 isCompleted
-                  ? 'bg-[var(--keel-teal)]/80 text-white'
+                  ? 'bg-[var(--ozer-accent)]/80 text-[var(--workspace-shell-text)]'
                   : isCurrent
-                    ? 'bg-zinc-700 text-white'
-                    : 'border border-zinc-600 text-zinc-500'
+                    ? 'bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text)]'
+                    : 'border border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]'
               }`}
             >
               {isCompleted ? <Check className="h-3.5 w-3.5" /> : idx + 1}

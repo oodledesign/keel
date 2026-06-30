@@ -47,14 +47,14 @@ export function getCircleTierMeta(tier: PersonCircleTier) {
 export function circleTierBadgeClass(tier: PersonCircleTier): string {
   switch (tier) {
     case 'core':
-      return 'bg-[var(--keel-teal)]/15 text-[#5eead4] ring-[var(--keel-teal)]/25';
+      return 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)] ring-[var(--ozer-accent)]/25';
     case 'close':
       return 'bg-[#2563EB]/15 text-blue-200 ring-[#2563EB]/25';
     case 'friends':
       return 'bg-violet-500/15 text-violet-200 ring-violet-500/25';
     case 'community':
-      return 'bg-white/5 text-zinc-400 ring-white/10';
+      return 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)] ring-white/10';
     default:
-      return 'bg-white/5 text-zinc-400 ring-white/10';
+      return 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)] ring-white/10';
   }
 }

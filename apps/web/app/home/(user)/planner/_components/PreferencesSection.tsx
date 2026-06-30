@@ -28,15 +28,15 @@ export function PreferencesSection({
 }: Props) {
   return (
     <Collapsible>
-      <div className="rounded-xl border border-white/8 bg-white/[0.03]">
+      <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
         <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 text-left">
-          <span className="flex items-center gap-2 text-sm font-semibold text-white">
-            <SlidersHorizontal className="h-4 w-4 text-[#5eead4]" />
+          <span className="flex items-center gap-2 text-sm font-semibold text-[var(--workspace-shell-text)]">
+            <SlidersHorizontal className="h-4 w-4 text-[var(--ozer-accent-muted)]" />
             Preferences
           </span>
-          <ChevronDown className="h-4 w-4 text-white/45" />
+          <ChevronDown className="h-4 w-4 text-[var(--workspace-shell-text)]/45" />
         </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-4 border-t border-white/8 px-4 py-4">
+        <CollapsibleContent className="space-y-4 border-t border-[color:var(--workspace-shell-border)] px-4 py-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label>Start</Label>
@@ -52,7 +52,7 @@ export function PreferencesSection({
                     },
                   })
                 }
-                className="border-white/10 bg-white/5 text-white"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
               />
             </div>
             <div className="space-y-2">
@@ -69,7 +69,7 @@ export function PreferencesSection({
                     },
                   })
                 }
-                className="border-white/10 bg-white/5 text-white"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
               />
             </div>
           </div>
@@ -93,9 +93,9 @@ export function PreferencesSection({
               ] as const).map(([value, label]) => (
                 <label
                   key={value}
-                  className="flex cursor-pointer items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/75"
+                  className="flex cursor-pointer items-center gap-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-2 text-xs text-[var(--workspace-shell-text)]/75"
                 >
-                  <RadioGroupItem value={value} className="border-white/40" />
+                  <RadioGroupItem value={value} className="border-[color:var(--workspace-shell-border)]0" />
                   {label}
                 </label>
               ))}
@@ -114,7 +114,7 @@ export function PreferencesSection({
               }
               rows={3}
               placeholder="Anything Claude should know? e.g. low energy today, deadline pressure, school run at 3pm"
-              className="border-white/10 bg-white/5 text-white"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
             />
           </div>
         </CollapsibleContent>

@@ -20,7 +20,7 @@ import { BacklinkBar, BacklinkSourceNote } from '../shared/backlink-bar';
 function TemplateTypeBadge({ type }: { type: string | null }) {
   if (!type) return null;
   return (
-    <span className="inline-flex rounded-full border border-white/20 bg-black/20 px-2.5 py-0.5 text-xs font-medium capitalize">
+    <span className="inline-flex rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-0.5 text-xs font-medium capitalize">
       {type.replace(/-/g, ' ')}
     </span>
   );
@@ -43,13 +43,13 @@ function CompetitorDomainsTable({
   );
 
   return (
-    <div className="space-y-2 rounded-lg border border-white/10 p-4">
+    <div className="space-y-2 rounded-lg border border-[color:var(--workspace-shell-border)] p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold">Top competitors</h3>
         <BacklinkSourceNote />
       </div>
       {targetReferringDomains !== null ? (
-        <div className="space-y-1 border-b border-white/5 pb-3 text-xs">
+        <div className="space-y-1 border-b border-[color:var(--workspace-shell-border)] pb-3 text-xs">
           <p className="text-muted-foreground">Your domain</p>
           <BacklinkBar
             domain="target"
@@ -70,7 +70,7 @@ function CompetitorDomainsTable({
             </thead>
             <tbody>
               {rows.map((competitor) => (
-                <tr key={competitor.domain} className="border-t border-white/5">
+                <tr key={competitor.domain} className="border-t border-[color:var(--workspace-shell-border)]">
                   <td className="py-2 pr-2">{competitor.domain}</td>
                   <td className="py-2 pr-2">
                     <OprBadge
@@ -104,7 +104,7 @@ function SerpBenchmarkTable({
   if (!pages.length) return null;
 
   return (
-    <div className="rounded-lg border border-white/10 p-4 space-y-2">
+    <div className="rounded-lg border border-[color:var(--workspace-shell-border)] p-4 space-y-2">
       <h3 className="text-sm font-semibold">SERP benchmarks</h3>
       <div className="overflow-x-auto text-xs">
         <table className="w-full text-left">
@@ -118,7 +118,7 @@ function SerpBenchmarkTable({
           </thead>
           <tbody>
             {pages.map((page) => (
-              <tr key={page.url} className="border-t border-white/5">
+              <tr key={page.url} className="border-t border-[color:var(--workspace-shell-border)]">
                 <td className="py-2 pr-2 max-w-[8rem] truncate">{page.title}</td>
                 <td className="py-2 pr-2">{page.wordCount}</td>
                 <td className="py-2 pr-2">{page.h2s.length}</td>
@@ -135,14 +135,14 @@ function SerpBenchmarkTable({
 function AISearchAngle({ brief }: { brief: ContentBriefRow }) {
   if (!brief.ai_cited_brands?.length) {
     return (
-      <div className="rounded-lg border border-white/10 p-4 text-sm text-muted-foreground">
+      <div className="rounded-lg border border-[color:var(--workspace-shell-border)] p-4 text-sm text-muted-foreground">
         AI Overview not triggered for this query — monitor for future changes.
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border border-white/10 p-4 space-y-3">
+    <div className="rounded-lg border border-[color:var(--workspace-shell-border)] p-4 space-y-3">
       <h3 className="text-sm font-semibold">AI Search angle</h3>
       <p className="text-sm text-muted-foreground">
         LLMs currently cite:{' '}
@@ -167,7 +167,7 @@ function InternalLinksTable({ links }: { links: SuggestedLink[] | null }) {
   if (!rows.length) return null;
 
   return (
-    <div className="rounded-lg border border-white/10 p-4 space-y-3">
+    <div className="rounded-lg border border-[color:var(--workspace-shell-border)] p-4 space-y-3">
       <h3 className="text-sm font-semibold">Internal links to include</h3>
       <div className="overflow-x-auto text-sm">
         <table className="w-full text-left">
@@ -180,7 +180,7 @@ function InternalLinksTable({ links }: { links: SuggestedLink[] | null }) {
           </thead>
           <tbody>
             {rows.map((link, index) => (
-              <tr key={index} className="border-t border-white/5">
+              <tr key={index} className="border-t border-[color:var(--workspace-shell-border)]">
                 <td className="py-2 pr-3">{link.from_url}</td>
                 <td className="py-2 pr-3">{link.anchor}</td>
                 <td className="py-2 text-muted-foreground">{link.target_section}</td>
@@ -195,7 +195,7 @@ function InternalLinksTable({ links }: { links: SuggestedLink[] | null }) {
 
 function TrafficPotential({ brief }: { brief: ContentBriefRow }) {
   return (
-    <div className="rounded-lg border border-white/10 p-4 space-y-2 text-sm">
+    <div className="rounded-lg border border-[color:var(--workspace-shell-border)] p-4 space-y-2 text-sm">
       <h3 className="font-semibold">Traffic potential</h3>
       <dl className="space-y-1">
         <div className="flex justify-between">
@@ -213,7 +213,7 @@ function TrafficPotential({ brief }: { brief: ContentBriefRow }) {
 
 function WordCountPanel({ brief }: { brief: ContentBriefRow }) {
   return (
-    <div className="rounded-lg border border-white/10 p-4 space-y-2 text-sm">
+    <div className="rounded-lg border border-[color:var(--workspace-shell-border)] p-4 space-y-2 text-sm">
       <h3 className="font-semibold">Word count</h3>
       <p className="text-2xl font-semibold">{brief.word_count_target ?? '—'}</p>
       <p className="text-muted-foreground">
@@ -376,7 +376,7 @@ export function BriefView({ brief }: { brief: ContentBriefRow }) {
               {outline.map((item, index) => (
                 <li
                   key={`${item.text}-${index}`}
-                  className={`rounded-md border border-white/5 bg-black/10 px-3 py-2 ${item.level === 'h3' ? 'ml-4' : ''}`}
+                  className={`rounded-md border border-[color:var(--workspace-shell-border)] bg-black/10 px-3 py-2 ${item.level === 'h3' ? 'ml-4' : ''}`}
                 >
                   <p className="font-medium">
                     {item.level.toUpperCase()}: {item.text}
@@ -415,7 +415,7 @@ export function BriefView({ brief }: { brief: ContentBriefRow }) {
             ) : null}
           </section>
 
-          <section className="space-y-2 rounded-lg border border-white/10 p-4 text-sm">
+          <section className="space-y-2 rounded-lg border border-[color:var(--workspace-shell-border)] p-4 text-sm">
             <h3 className="font-semibold">Writer notes</h3>
             {brief.tone_notes ? (
               <p>
@@ -450,7 +450,7 @@ export function BriefView({ brief }: { brief: ContentBriefRow }) {
           />
           <SerpBenchmarkTable competitors={competitors} />
           {serp.length > 0 ? (
-            <div className="rounded-lg border border-white/10 p-4 space-y-2 text-xs">
+            <div className="rounded-lg border border-[color:var(--workspace-shell-border)] p-4 space-y-2 text-xs">
               <h3 className="text-sm font-semibold">SERP top 10</h3>
               <ol className="list-inside list-decimal space-y-1 text-muted-foreground">
                 {serp.map((result) => (

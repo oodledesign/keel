@@ -37,8 +37,8 @@ function DataSourceBadge(props: { label: string; active: boolean }) {
     <span
       className={
         props.active
-          ? 'inline-flex rounded-full border border-white/15 bg-white/10 px-2 py-0.5 text-[10px] uppercase text-white/90'
-          : 'inline-flex rounded-full border border-white/5 px-2 py-0.5 text-[10px] uppercase text-muted-foreground/60'
+          ? 'inline-flex rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[10px] uppercase text-[var(--workspace-shell-text)]/90'
+          : 'inline-flex rounded-full border border-[color:var(--workspace-shell-border)] px-2 py-0.5 text-[10px] uppercase text-muted-foreground/60'
       }
     >
       {props.label}
@@ -58,10 +58,10 @@ function PageRow(props: {
   );
 
   return (
-    <tr className="border-t border-white/10 hover:bg-white/[0.02]">
+    <tr className="border-t border-[color:var(--workspace-shell-border)] hover:bg-[var(--workspace-shell-sidebar-accent)]">
       <td className="px-4 py-3">
         <Link href={href} className="group block min-w-0">
-          <p className="font-medium group-hover:text-[var(--keel-teal)]">
+          <p className="font-medium group-hover:text-[var(--ozer-accent)]">
             {props.page.label}
             {props.page.isHomepage ? (
               <span className="text-muted-foreground ml-2 text-[10px] uppercase">
@@ -152,11 +152,11 @@ export function RanklyPagesPanel(props: {
       <div className="space-y-4">
         <p className="text-muted-foreground text-sm">
           No page data yet. Run a{' '}
-          <Link href={props.siteCrawlerHref} className="text-[var(--keel-teal)] underline-offset-4 hover:underline">
+          <Link href={props.siteCrawlerHref} className="text-[var(--ozer-accent)] underline-offset-4 hover:underline">
             site crawl
           </Link>{' '}
           or add URLs in{' '}
-          <Link href={props.pagespeedHref} className="text-[var(--keel-teal)] underline-offset-4 hover:underline">
+          <Link href={props.pagespeedHref} className="text-[var(--ozer-accent)] underline-offset-4 hover:underline">
             PageSpeed
           </Link>{' '}
           to build your page inventory.
@@ -168,7 +168,7 @@ export function RanklyPagesPanel(props: {
   return (
     <div className="space-y-6">
       <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+        <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
           <p className="text-muted-foreground text-xs uppercase tracking-wide">
             Pages with data
           </p>
@@ -176,7 +176,7 @@ export function RanklyPagesPanel(props: {
             {props.meta.pageCount}
           </p>
         </div>
-        <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+        <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
           <p className="text-muted-foreground text-xs uppercase tracking-wide">
             Average score
           </p>
@@ -187,7 +187,7 @@ export function RanklyPagesPanel(props: {
             ) : null}
           </p>
         </div>
-        <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+        <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
           <p className="text-muted-foreground text-xs uppercase tracking-wide">
             Data sources
           </p>
@@ -205,7 +205,7 @@ export function RanklyPagesPanel(props: {
         Lighthouse metrics.
       </p>
 
-      <div className="overflow-x-auto rounded-lg border border-white/10">
+      <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
         <table className="w-full min-w-[720px] text-sm">
           <thead className="bg-black/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
             <tr>

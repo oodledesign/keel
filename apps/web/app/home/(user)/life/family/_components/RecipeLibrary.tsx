@@ -114,7 +114,7 @@ export function RecipeLibrary({
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1 sm:max-w-xs">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -130,7 +130,7 @@ export function RecipeLibrary({
           <Button
             onClick={openNew}
             style={{ backgroundColor: ACCENT }}
-            className="text-white hover:opacity-90"
+            className="text-[var(--workspace-shell-text)] hover:opacity-90"
           >
             <Plus className="mr-1.5 h-4 w-4" />
             Add recipe
@@ -146,8 +146,8 @@ export function RecipeLibrary({
             className={cn(
               'rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
               !activeTag
-                ? 'border-transparent text-white'
-                : 'border-white/10 text-zinc-400 hover:text-white',
+                ? 'border-transparent text-[var(--workspace-shell-text)]'
+                : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
             )}
             style={!activeTag ? { backgroundColor: ACCENT } : undefined}
           >
@@ -163,8 +163,8 @@ export function RecipeLibrary({
                 className={cn(
                   'rounded-full border px-2.5 py-1 text-xs font-medium capitalize transition-colors',
                   active
-                    ? 'border-transparent text-white'
-                    : 'border-white/10 text-zinc-400 hover:text-white',
+                    ? 'border-transparent text-[var(--workspace-shell-text)]'
+                    : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
                 )}
                 style={active ? { backgroundColor: ACCENT } : undefined}
               >
@@ -176,9 +176,9 @@ export function RecipeLibrary({
       ) : null}
 
       {filtered.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-white/8 px-6 py-16 text-center">
-          <UtensilsCrossed className="mx-auto mb-3 h-8 w-8 text-zinc-600" />
-          <p className="text-sm text-zinc-400">
+        <div className="rounded-2xl border border-dashed border-[color:var(--workspace-shell-border)] px-6 py-16 text-center">
+          <UtensilsCrossed className="mx-auto mb-3 h-8 w-8 text-[var(--workspace-shell-text-muted)]" />
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
             {recipes.length === 0
               ? 'No recipes yet. Add your family favourites to get started.'
               : 'No recipes match your search.'}
@@ -201,7 +201,7 @@ export function RecipeLibrary({
                     href={buildRecipeDetailPath(basePath, recipe.id)}
                     className="min-w-0 flex-1 transition-opacity hover:opacity-90"
                   >
-                    <h3 className="text-sm font-semibold text-white">
+                    <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
                       {recipe.name}
                     </h3>
                   </Link>
@@ -216,7 +216,7 @@ export function RecipeLibrary({
                         'h-4 w-4',
                         recipe.is_favorite
                           ? 'fill-amber-400 text-amber-400'
-                          : 'text-zinc-600 hover:text-zinc-400',
+                          : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text-muted)]',
                       )}
                     />
                   </button>
@@ -227,12 +227,12 @@ export function RecipeLibrary({
                   className="mt-1 block min-w-0 flex-1 transition-opacity hover:opacity-90"
                 >
                   {recipe.description ? (
-                    <p className="line-clamp-2 text-xs text-zinc-400">
+                    <p className="line-clamp-2 text-xs text-[var(--workspace-shell-text-muted)]">
                       {recipe.description}
                     </p>
                   ) : null}
 
-                  <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-zinc-400">
+                  <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-[var(--workspace-shell-text-muted)]">
                     {time ? (
                       <span className="flex items-center gap-1">
                         <Clock className="h-3.5 w-3.5" />
@@ -252,7 +252,7 @@ export function RecipeLibrary({
                       {recipe.tags.slice(0, 4).map((tag) => (
                         <span
                           key={tag}
-                          className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[11px] capitalize text-zinc-300"
+                          className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[11px] capitalize text-[var(--workspace-shell-text-muted)]"
                         >
                           {tag}
                         </span>
@@ -261,12 +261,12 @@ export function RecipeLibrary({
                   ) : null}
                 </Link>
 
-                <div className="mt-4 flex items-center gap-2 border-t border-white/6 pt-3">
+                <div className="mt-4 flex items-center gap-2 border-t border-[color:var(--workspace-shell-border)] pt-3">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => openEdit(recipe)}
-                    className="h-8 text-zinc-300 hover:text-white"
+                    className="h-8 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
                   >
                     <Pencil className="mr-1.5 h-3.5 w-3.5" />
                     Edit
@@ -275,7 +275,7 @@ export function RecipeLibrary({
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDelete(recipe)}
-                    className="h-8 text-zinc-400 hover:text-rose-300"
+                    className="h-8 text-[var(--workspace-shell-text-muted)] hover:text-rose-300"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>

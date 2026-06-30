@@ -34,7 +34,7 @@ type ApiResponse<T> =
   | { ok: false; error: { message: string } };
 
 function statusTone(code: number): string {
-  if (code >= 200 && code < 300) return 'text-[var(--keel-teal)]';
+  if (code >= 200 && code < 300) return 'text-[var(--ozer-accent)]';
   if (code >= 300 && code < 400) return 'text-amber-400';
   return 'text-red-400';
 }
@@ -73,7 +73,7 @@ function SchemaDetailDialog(props: {
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto border-white/10 bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+      <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
         <DialogHeader>
           <DialogTitle>Structured data</DialogTitle>
           <DialogDescription className="break-all font-mono text-xs">
@@ -109,7 +109,7 @@ function SchemaDetailDialog(props: {
             {objects.map((object, index) => (
               <pre
                 key={`${props.page?.id}-schema-${index}`}
-                className="overflow-x-auto rounded-lg border border-white/10 bg-black/30 p-3 text-xs leading-relaxed"
+                className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/30 p-3 text-xs leading-relaxed"
               >
                 {JSON.stringify(object, null, 2)}
               </pre>
@@ -127,7 +127,7 @@ function SummaryCard(props: {
   hint?: string;
 }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+    <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
       <p className="text-muted-foreground text-xs uppercase tracking-wide">
         {props.label}
       </p>
@@ -234,7 +234,7 @@ export function SiteCrawlerPanel(props: {
             id="crawl-limit"
             value={urlLimit}
             onChange={(event) => setUrlLimit(Number(event.target.value))}
-            className="rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm"
+            className="rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-2 text-sm"
             disabled={Boolean(activeJobId)}
           >
             {SITE_CRAWL_URL_LIMIT_OPTIONS.map((limit) => (
@@ -309,8 +309,8 @@ export function SiteCrawlerPanel(props: {
                 onClick={() => setIssueFilter('all')}
                 className={
                   issueFilter === 'all'
-                    ? 'rounded-full bg-[var(--keel-teal)]/20 px-3 py-1 text-xs text-[var(--keel-teal)]'
-                    : 'rounded-full bg-white/5 px-3 py-1 text-xs text-muted-foreground hover:bg-white/10'
+                    ? 'rounded-full bg-[var(--ozer-accent-subtle)] px-3 py-1 text-xs text-[var(--ozer-accent)]'
+                    : 'rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-3 py-1 text-xs text-muted-foreground hover:bg-[var(--workspace-shell-sidebar-accent)]'
                 }
               >
                 All pages ({props.pages.length})
@@ -322,8 +322,8 @@ export function SiteCrawlerPanel(props: {
                   onClick={() => setIssueFilter(code)}
                   className={
                     issueFilter === code
-                      ? 'rounded-full bg-[var(--keel-teal)]/20 px-3 py-1 text-xs text-[var(--keel-teal)]'
-                      : 'rounded-full bg-white/5 px-3 py-1 text-xs text-muted-foreground hover:bg-white/10'
+                      ? 'rounded-full bg-[var(--ozer-accent-subtle)] px-3 py-1 text-xs text-[var(--ozer-accent)]'
+                      : 'rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-3 py-1 text-xs text-muted-foreground hover:bg-[var(--workspace-shell-sidebar-accent)]'
                   }
                 >
                   {SITE_CRAWL_ISSUE_LABELS[code]} ({count})
@@ -332,9 +332,9 @@ export function SiteCrawlerPanel(props: {
             </div>
           ) : null}
 
-          <div className="overflow-x-auto rounded-lg border border-white/10">
+          <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
             <table className="w-full min-w-[64rem] text-left text-sm">
-              <thead className="border-b border-white/10 bg-black/20 text-xs uppercase tracking-wide text-muted-foreground">
+              <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3">URL</th>
                   <th className="px-4 py-3">Status</th>
@@ -362,7 +362,7 @@ export function SiteCrawlerPanel(props: {
                     return (
                     <tr
                       key={page.id}
-                      className="border-b border-white/5 align-top last:border-0"
+                      className="border-b border-[color:var(--workspace-shell-border)] align-top last:border-0"
                     >
                       <td className="max-w-xs px-4 py-3">
                         <p className="truncate font-mono text-xs">{page.url}</p>
@@ -471,7 +471,7 @@ export function SiteCrawlerPanel(props: {
           </p>
         </>
       ) : !activeJobId ? (
-        <p className="text-muted-foreground rounded-lg border border-dashed border-white/10 px-4 py-8 text-center text-sm">
+        <p className="text-muted-foreground rounded-lg border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center text-sm">
           Crawl {props.domain} to find broken links, missing titles, duplicate
           meta tags, and other on-page SEO issues — up to {urlLimit.toLocaleString()} internal URLs.
         </p>

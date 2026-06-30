@@ -41,7 +41,7 @@ function formatLastActivity(updatedAt: string): string {
 export function ClientListTableHeader() {
   return (
     <thead>
-      <tr className="border-b border-white/8 text-left text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+      <tr className="border-b border-[color:var(--workspace-shell-border)] text-left text-[11px] font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
         <th className="px-3 py-2 font-medium md:px-4">Client</th>
         <th className="hidden w-[120px] px-2 py-2 font-medium sm:table-cell">
           Last activity
@@ -72,7 +72,7 @@ export function ClientCard({
   const subtitle = [company_name, city].filter(Boolean).join(' · ');
 
   const rowClassName = cn(
-    'group border-b border-white/4 transition-colors hover:bg-white/[0.03]',
+    'group border-b border-[color:var(--workspace-shell-border)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]',
     selected && 'bg-[var(--workspace-shell-panel-hover)]',
   );
 
@@ -82,14 +82,14 @@ export function ClientCard({
         displayName={display_name ?? 'Unnamed client'}
         pictureUrl={picture_url ?? null}
         className="h-7 w-7 shrink-0"
-        fallbackClassName="bg-zinc-700 text-xs text-zinc-200"
+        fallbackClassName="bg-[var(--workspace-shell-panel-hover)] text-xs text-[var(--workspace-shell-text)]"
       />
       <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-white group-hover:text-[#579bfc]">
+        <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)] group-hover:text-[#579bfc]">
           {display_name ?? 'Unnamed client'}
         </p>
         {subtitle ? (
-          <p className="truncate text-xs text-zinc-500">{subtitle}</p>
+          <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">{subtitle}</p>
         ) : null}
       </div>
     </div>
@@ -102,7 +102,7 @@ export function ClientCard({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-7 w-7 text-zinc-400 hover:bg-zinc-700 hover:text-white"
+          className="h-7 w-7 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-panel-hover)] hover:text-[var(--workspace-shell-text)]"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -118,7 +118,7 @@ export function ClientCard({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-7 w-7 text-zinc-400 hover:bg-zinc-700 hover:text-white"
+          className="h-7 w-7 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-panel-hover)] hover:text-[var(--workspace-shell-text)]"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -134,7 +134,7 @@ export function ClientCard({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-7 w-7 text-zinc-400 hover:bg-zinc-700 hover:text-white"
+          className="h-7 w-7 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-panel-hover)] hover:text-[var(--workspace-shell-text)]"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -161,17 +161,17 @@ export function ClientCard({
           </button>
         )}
       </td>
-      <td className="hidden px-2 py-1.5 text-sm text-zinc-400 sm:table-cell">
+      <td className="hidden px-2 py-1.5 text-sm text-[var(--workspace-shell-text-muted)] sm:table-cell">
         {formatLastActivity(updated_at)}
       </td>
-      <td className="px-2 py-1.5 text-right text-sm tabular-nums text-zinc-300">
+      <td className="px-2 py-1.5 text-right text-sm tabular-nums text-[var(--workspace-shell-text-muted)]">
         {projectCount ?? 0}
       </td>
-      <td className="px-2 py-1.5 text-right text-sm tabular-nums text-zinc-300">
+      <td className="px-2 py-1.5 text-right text-sm tabular-nums text-[var(--workspace-shell-text-muted)]">
         {(dueTaskCount ?? 0) > 0 ? (
           <span className="text-amber-300/90">{dueTaskCount}</span>
         ) : (
-          <span className="text-zinc-500">0</span>
+          <span className="text-[var(--workspace-shell-text-muted)]">0</span>
         )}
       </td>
       <td className="px-2 py-1.5 md:pr-4">{actions}</td>

@@ -56,7 +56,7 @@ export function DocEditor({ accountId, accountSlug, doc }: DocEditorProps) {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <p className="text-sm capitalize text-zinc-400">
+      <p className="text-sm capitalize text-[var(--workspace-shell-text-muted)]">
         {doc.kind} document
         {doc.projectName || doc.clientName
           ? ` · ${[doc.projectName, doc.clientName].filter(Boolean).join(' · ')}`
@@ -64,19 +64,19 @@ export function DocEditor({ accountId, accountSlug, doc }: DocEditorProps) {
       </p>
 
       <div className="space-y-2">
-        <Label htmlFor="doc-title" className="text-zinc-300">
+        <Label htmlFor="doc-title" className="text-[var(--workspace-shell-text-muted)]">
           Title
         </Label>
         <Input
           id="doc-title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="border-white/10 bg-[var(--workspace-shell-panel)] text-white"
+          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="doc-type" className="text-zinc-300">
+        <Label htmlFor="doc-type" className="text-[var(--workspace-shell-text-muted)]">
           Document type
         </Label>
         <Input
@@ -84,13 +84,13 @@ export function DocEditor({ accountId, accountSlug, doc }: DocEditorProps) {
           value={docType}
           onChange={(e) => setDocType(e.target.value)}
           placeholder="e.g. proposal, contract"
-          className="border-white/10 bg-[var(--workspace-shell-panel)] text-white"
+          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
         />
       </div>
 
       {doc.kind === 'written' ? (
         <div className="space-y-2">
-          <Label htmlFor="doc-content" className="text-zinc-300">
+          <Label htmlFor="doc-content" className="text-[var(--workspace-shell-text-muted)]">
             Content
           </Label>
           <Textarea
@@ -99,11 +99,11 @@ export function DocEditor({ accountId, accountSlug, doc }: DocEditorProps) {
             onChange={(e) => setContent(e.target.value)}
             rows={16}
             placeholder="Write in Markdown — **bold**, headings, lists…"
-            className="min-h-[320px] border-white/10 bg-[var(--workspace-shell-panel)] text-white"
+            className="min-h-[320px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
           />
         </div>
       ) : (
-        <p className="text-sm text-zinc-400">
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           Uploaded files are stored separately; edit the title and type here.
         </p>
       )}
@@ -112,7 +112,7 @@ export function DocEditor({ accountId, accountSlug, doc }: DocEditorProps) {
         <AskBrainLink
           accountSlug={accountSlug}
           label="Ask about this doc"
-          className="border-white/10 text-zinc-300"
+          className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]"
           params={{
             q: `What does the document "${title || 'Untitled document'}" cover?`,
           }}
@@ -120,7 +120,7 @@ export function DocEditor({ accountId, accountSlug, doc }: DocEditorProps) {
         <Button
           type="button"
           variant="outline"
-          className="border-white/10"
+          className="border-[color:var(--workspace-shell-border)]"
           onClick={() =>
             router.push(
               pathsConfig.app.accountDocs.replace('[account]', accountSlug),

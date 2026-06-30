@@ -30,8 +30,8 @@ type ShowcaseCard = {
 
 const TODAY_PREVIEW = [
   { time: '09:00', text: 'School run prep', tag: 'Personal', color: '#7C3AED' },
-  { time: '10:30', text: 'Review Acme proposal', tag: 'Business', color: '#2563EB' },
-  { time: '15:00', text: 'Community event notes', tag: 'Community', color: '#2A9D8F' },
+  { time: '10:30', text: 'Review Acme proposal', tag: 'Business', color: 'var(--ozer-info)' },
+  { time: '15:00', text: 'Community event notes', tag: 'Community', color: 'var(--ozer-accent)' },
 ] as const;
 
 const SHOWCASE_CARDS: ShowcaseCard[] = [
@@ -40,7 +40,7 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
     width: 300,
     featureLabel: 'Today view',
     render: () => (
-      <div className="flex h-full flex-col rounded-[1.75rem] border border-white/10 bg-[#120f24] p-4">
+      <div className="flex h-full flex-col rounded-[1.75rem] border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)] p-4">
         <div className="mb-3 flex items-center justify-between">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-200/80">
             Today in Ozer
@@ -51,7 +51,7 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
           {TODAY_PREVIEW.map((item) => (
             <div
               key={item.text}
-              className="flex items-start gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-2"
+              className="flex items-start gap-2 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-2"
             >
               <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-300" />
               <div className="min-w-0">
@@ -61,7 +61,7 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
                   </span>{' '}
                   {item.text}
                 </p>
-                <span className="mt-0.5 inline-flex items-center gap-1 rounded-md border border-white/10 px-1 py-0.5 text-[9px] text-white/70">
+                <span className="mt-0.5 inline-flex items-center gap-1 rounded-md border border-[color:var(--workspace-shell-border)] px-1 py-0.5 text-[9px] text-[var(--workspace-shell-text)]/70">
                   <span
                     className="h-1 w-1 rounded-full"
                     style={{ backgroundColor: item.color }}
@@ -80,12 +80,12 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
     width: 260,
     featureLabel: 'Workspaces',
     render: () => (
-      <div className="flex h-full flex-col justify-between rounded-[1.75rem] bg-[linear-gradient(145deg,#dbeafe,#bfdbfe)] p-5 text-slate-900">
+      <div className="flex h-full flex-col justify-between rounded-[1.75rem] bg-[linear-gradient(145deg,#dbeafe,#bfdbfe)] p-5 text-[var(--ozer-text-on-light)]">
         <div className="flex -space-x-2">
-          {['#7C3AED', '#2563EB', '#2A9D8F'].map((color) => (
+          {['#7C3AED', '#2563EB', '#FF5C34'].map((color) => (
             <span
               key={color}
-              className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-white text-[10px] font-bold text-white"
+              className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[color:var(--workspace-shell-border)] text-[10px] font-bold text-[var(--workspace-shell-text)]"
               style={{ backgroundColor: color }}
             >
               K
@@ -94,7 +94,7 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
         </div>
         <div>
           <p className="font-heading text-3xl font-bold">4</p>
-          <p className="text-sm font-medium text-slate-700">Workspaces, one home</p>
+          <p className="text-sm font-medium text-[var(--ozer-text-on-light-muted)]">Workspaces, one home</p>
           <p className="mt-1 text-xs text-slate-600">
             Personal, business, property & community
           </p>
@@ -107,7 +107,7 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
     width: 420,
     featureLabel: 'Home dashboard',
     render: () => (
-      <div className="relative h-full overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#0f0d1e]">
+      <div className="relative h-full overflow-hidden rounded-[1.75rem] border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)]">
         <Image
           src="/images/dashboard.webp"
           alt="Ozer dashboard overview"
@@ -115,7 +115,7 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
           className="object-cover object-top"
           sizes="420px"
         />
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0f0d1e] via-[#0f0d1e]/80 to-transparent p-4">
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[var(--ozer-plum-950)] via-[var(--ozer-plum-950)]/80 to-transparent p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-violet-200/90">
             Your home dashboard
           </p>
@@ -128,7 +128,7 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
     width: 320,
     featureLabel: 'Pipeline',
     render: () => (
-      <div className="flex h-full flex-col rounded-[1.75rem] bg-[linear-gradient(145deg,#ede9fe,#ddd6fe)] p-4 text-slate-900">
+      <div className="flex h-full flex-col rounded-[1.75rem] bg-[linear-gradient(145deg,#ede9fe,#ddd6fe)] p-4 text-[var(--ozer-text-on-light)]">
         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-700/80">
           Pipeline
         </p>
@@ -139,7 +139,7 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
             { label: 'Won', count: 1, tone: 'bg-teal-200/80' },
           ].map((col) => (
             <div key={col.label} className={cn('rounded-xl p-2', col.tone)}>
-              <p className="text-[10px] font-semibold text-slate-700">{col.label}</p>
+              <p className="text-[10px] font-semibold text-[var(--ozer-text-on-light-muted)]">{col.label}</p>
               <p className="mt-2 font-heading text-xl font-bold">{col.count}</p>
             </div>
           ))}
@@ -152,7 +152,7 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
     width: 280,
     featureLabel: 'Planner',
     render: () => (
-      <div className="flex h-full flex-col rounded-[1.75rem] bg-[linear-gradient(145deg,#fef3c7,#fde68a)] p-4 text-slate-900">
+      <div className="flex h-full flex-col rounded-[1.75rem] bg-[linear-gradient(145deg,#fef3c7,#fde68a)] p-4 text-[var(--ozer-text-on-light)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CalendarDays className="h-4 w-4 text-amber-700" />
@@ -168,7 +168,7 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
               key={`${day}-${index}`}
               className={cn(
                 'flex aspect-square items-center justify-center rounded-lg text-[10px] font-medium',
-                index === 2 ? 'bg-amber-600 text-white' : 'bg-white/60 text-amber-900/70',
+                index === 2 ? 'bg-amber-600 text-[var(--workspace-shell-text)]' : 'bg-white/60 text-amber-900/70',
               )}
             >
               {day}
@@ -189,7 +189,7 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
     width: 340,
     featureLabel: 'Desktop Assistant',
     render: () => (
-      <div className="flex h-full flex-col rounded-[1.75rem] border border-violet-300/15 bg-[linear-gradient(160deg,#1a1630,#2d1f4e)] p-4">
+      <div className="flex h-full flex-col rounded-[1.75rem] border border-[color:var(--workspace-shell-border)] bg-[linear-gradient(160deg,#1a1630,#2d1f4e)] p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-500/20">
@@ -211,7 +211,7 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
           ].map((line) => (
             <div
               key={line.speaker}
-              className="rounded-lg border border-white/5 bg-white/[0.04] px-2.5 py-1.5"
+              className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-1.5"
             >
               <p className="text-[9px] font-semibold uppercase tracking-wide text-violet-300/80">
                 {line.speaker}
@@ -224,7 +224,7 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
           <span className="rounded-md border border-teal-400/20 bg-teal-500/10 px-1.5 py-0.5 text-[9px] text-teal-200">
             3 tasks extracted
           </span>
-          <span className="rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 text-[9px] text-violet-100/70">
+          <span className="rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-1.5 py-0.5 text-[9px] text-violet-100/70">
             Follow-up drafted
           </span>
         </div>
@@ -236,9 +236,9 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
     width: 300,
     featureLabel: 'Dictation',
     render: () => (
-      <div className="flex h-full flex-col rounded-[1.75rem] border border-sky-400/20 bg-[linear-gradient(155deg,#0c1929,#122a45)] p-4">
+      <div className="flex h-full flex-col rounded-[1.75rem] border border-[color:var(--workspace-shell-border)] bg-[linear-gradient(155deg,#0c1929,#122a45)] p-4">
         <div className="flex items-center gap-2">
-          <span className="rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 font-mono text-[9px] text-white/60">
+          <span className="rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-1.5 py-0.5 font-mono text-[9px] text-[var(--workspace-shell-text)]/60">
             fn
           </span>
           <p className="text-xs font-semibold text-sky-50">Dictating…</p>
@@ -255,12 +255,12 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
     width: 400,
     featureLabel: 'Second Brain',
     render: () => (
-      <div className="flex h-full flex-col rounded-[1.75rem] border border-violet-300/20 bg-[linear-gradient(155deg,#0f172a,#1e1b4b)] p-4">
+      <div className="flex h-full flex-col rounded-[1.75rem] border border-[color:var(--workspace-shell-border)] bg-[linear-gradient(155deg,#0f172a,#1e1b4b)] p-4">
         <div className="flex items-center gap-2">
           <Brain className="h-4 w-4 text-violet-300" />
           <p className="text-xs font-semibold text-violet-100">Ask your second brain</p>
         </div>
-        <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
+        <div className="mt-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-2">
           <div className="flex items-center gap-2 text-violet-200/70">
             <Search className="h-3 w-3 shrink-0" />
             <p className="truncate text-[11px]">
@@ -270,14 +270,14 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
         </div>
         <div className="mt-2 flex-1 rounded-xl border border-violet-400/15 bg-violet-500/[0.07] p-3">
           <p className="text-[11px] leading-relaxed text-violet-50/90">
-            Launch is set for <span className="font-semibold text-white">14 March</span> —
+            Launch is set for <span className="font-semibold text-[var(--workspace-shell-text)]">14 March</span> —
             confirmed in your kickoff call and the follow-up email to Sarah.
           </p>
           <div className="mt-2 flex flex-wrap gap-1">
             {['Kickoff transcript', 'Email thread', 'Acme project'].map((source) => (
               <span
                 key={source}
-                className="rounded-md border border-violet-300/20 bg-violet-500/10 px-1.5 py-0.5 text-[9px] text-violet-200/90"
+                className="rounded-md border border-[color:var(--workspace-shell-border)] bg-violet-500/10 px-1.5 py-0.5 text-[9px] text-violet-200/90"
               >
                 {source}
               </span>
@@ -295,7 +295,7 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
     id: 'dashboard-header',
     width: 380,
     render: () => (
-      <div className="relative h-full overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#0f0d1e]">
+      <div className="relative h-full overflow-hidden rounded-[1.75rem] border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)]">
         <Image
           src="/images/dashboard-header.webp"
           alt="Ozer workspace header and navigation"
@@ -311,7 +311,7 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
     width: 300,
     featureLabel: 'Invoicing',
     render: () => (
-      <div className="flex h-full flex-col rounded-[1.75rem] bg-[linear-gradient(145deg,#ccfbf1,#99f6e4)] p-4 text-slate-900">
+      <div className="flex h-full flex-col rounded-[1.75rem] bg-[linear-gradient(145deg,#ccfbf1,#99f6e4)] p-4 text-[var(--ozer-text-on-light)]">
         <div className="flex items-center gap-2">
           <CreditCard className="h-4 w-4 text-teal-700" />
           <p className="text-sm font-semibold">Invoices</p>
@@ -338,11 +338,11 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
     width: 260,
     featureLabel: 'Contacts',
     render: () => (
-      <div className="flex h-full flex-col justify-between rounded-[1.75rem] bg-[linear-gradient(145deg,#fce7f3,#fbcfe8)] p-5 text-slate-900">
+      <div className="flex h-full flex-col justify-between rounded-[1.75rem] bg-[linear-gradient(145deg,#fce7f3,#fbcfe8)] p-5 text-[var(--ozer-text-on-light)]">
         <Users className="h-5 w-5 text-pink-700" />
         <div>
           <p className="font-heading text-2xl font-bold">People</p>
-          <p className="mt-1 text-sm text-slate-700">
+          <p className="mt-1 text-sm text-[var(--ozer-text-on-light-muted)]">
             Clients, family & community in one rolodex
           </p>
         </div>
@@ -372,7 +372,7 @@ function ShowcaseCardShell({
     >
       {card.render()}
       {featureBadgeLabel(card) ? (
-        <span className="absolute bottom-3 left-3 z-10 rounded-md border border-white/10 bg-black/50 px-2 py-1 text-xs font-medium text-white/80 backdrop-blur-sm">
+        <span className="absolute bottom-3 left-3 z-10 rounded-md border border-[color:var(--workspace-shell-border)] bg-black/50 px-2 py-1 text-xs font-medium text-[var(--workspace-shell-text)]/80 backdrop-blur-sm">
           {featureBadgeLabel(card)}
         </span>
       ) : null}
@@ -394,8 +394,8 @@ export function MarketingHeroShowcaseCarousel() {
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
     >
-      <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-[#05050b] to-transparent sm:w-28" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-[#080711] to-transparent sm:w-28" />
+      <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-[var(--ozer-plum-950)] to-transparent sm:w-28" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-[var(--ozer-plum-950)] to-transparent sm:w-28" />
 
       {reducedMotion ? (
         <div className="flex gap-4 overflow-x-auto px-6 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

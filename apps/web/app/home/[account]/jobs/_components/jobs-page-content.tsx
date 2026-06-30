@@ -158,8 +158,8 @@ export function JobsPageContent({
 
   if (!canViewJobs) {
     return (
-      <div className="flex min-h-[60vh] w-full items-center justify-center rounded-lg border border-zinc-700 bg-[var(--workspace-shell-panel)] p-8">
-        <p className="text-center text-zinc-400">
+      <div className="flex min-h-[60vh] w-full items-center justify-center rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-8">
+        <p className="text-center text-[var(--workspace-shell-text-muted)]">
           You don&apos;t have access to {copy.accessDenied} in this account.
         </p>
       </div>
@@ -177,18 +177,18 @@ export function JobsPageContent({
   ];
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden rounded-xl border border-white/8 bg-[var(--workspace-shell-panel)]/40">
+    <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40">
       {/* Page header — Monday-style */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/8 px-4 py-3 md:px-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] px-4 py-3 md:px-5">
         <div className="flex items-center gap-2">
-          <h1 className="text-lg font-bold text-white">{copy.title}</h1>
-          <ChevronDown className="h-4 w-4 text-zinc-500" />
+          <h1 className="text-lg font-bold text-[var(--workspace-shell-text)]">{copy.title}</h1>
+          <ChevronDown className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
         </div>
         {canEditJobs && (
           <Button
             size="sm"
             variant="outline"
-            className="h-8 border-white/10 text-xs text-zinc-300"
+            className="h-8 border-[color:var(--workspace-shell-border)] text-xs text-[var(--workspace-shell-text-muted)]"
             onClick={() => setCreateSheetOpen(true)}
           >
             <Plus className="mr-1.5 h-3.5 w-3.5" />
@@ -198,13 +198,13 @@ export function JobsPageContent({
       </div>
 
       {/* View tabs */}
-      <div className="flex items-center gap-0 border-b border-white/8 px-2 md:px-3">
+      <div className="flex items-center gap-0 border-b border-[color:var(--workspace-shell-border)] px-2 md:px-3">
         {viewTabs.map(({ key, label, icon: Icon }) =>
           key === 'schedule' ? (
             <Link
               key={key}
               href={schedulePath}
-              className="inline-flex items-center gap-1.5 border-b-2 border-transparent px-3 py-2.5 text-xs font-medium text-zinc-400 transition-colors hover:text-white"
+              className="inline-flex items-center gap-1.5 border-b-2 border-transparent px-3 py-2.5 text-xs font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:text-[var(--workspace-shell-text)]"
             >
               <Icon className="h-3.5 w-3.5" />
               {label}
@@ -216,8 +216,8 @@ export function JobsPageContent({
               onClick={() => setView(key)}
               className={`inline-flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-xs font-medium transition-colors ${
                 view === key
-                  ? 'border-[#0073ea] text-white'
-                  : 'border-transparent text-zinc-400 hover:text-white'
+                  ? 'border-[#0073ea] text-[var(--workspace-shell-text)]'
+                  : 'border-transparent text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'
               }`}
             >
               <Icon className="h-3.5 w-3.5" />
@@ -227,7 +227,7 @@ export function JobsPageContent({
         )}
         <button
           type="button"
-          className="ml-1 inline-flex h-7 w-7 items-center justify-center rounded text-zinc-500 hover:bg-white/5 hover:text-white"
+          className="ml-1 inline-flex h-7 w-7 items-center justify-center rounded text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
           aria-label="Add view"
         >
           <Plus className="h-3.5 w-3.5" />
@@ -248,7 +248,7 @@ export function JobsPageContent({
 
       {loading ? (
         <div className="flex min-h-[320px] flex-1 items-center justify-center">
-          <p className="text-sm text-zinc-500">Loading projects…</p>
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">Loading projects…</p>
         </div>
       ) : view === 'table' ? (
         <JobsPmMainTable

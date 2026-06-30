@@ -135,9 +135,9 @@ export function PropertyFormModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto bg-[var(--workspace-shell-panel)] text-white border border-white/10">
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] border border-[color:var(--workspace-shell-border)]">
         <DialogHeader>
-          <DialogTitle className="text-white">
+          <DialogTitle className="text-[var(--workspace-shell-text)]">
             {isEdit ? 'Edit Property' : 'Add Property'}
           </DialogTitle>
         </DialogHeader>
@@ -145,36 +145,36 @@ export function PropertyFormModal({
         <form onSubmit={handleSubmit} className="space-y-5 pt-2">
           {/* Name */}
           <div className="space-y-1.5">
-            <Label className="text-white/70">Property Name *</Label>
+            <Label className="text-[var(--workspace-shell-text)]/70">Property Name *</Label>
             <Input
               value={form.name}
               onChange={(e) => field('name', e.target.value)}
               placeholder="e.g. 12 Oak Lane"
               required
-              className="border-white/10 bg-white/5 text-white placeholder:text-white/30"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30"
             />
           </div>
 
           {/* Address */}
           <div className="space-y-1.5">
-            <Label className="text-white/70">Address</Label>
+            <Label className="text-[var(--workspace-shell-text)]/70">Address</Label>
             <Input
               value={form.address}
               onChange={(e) => field('address', e.target.value)}
               placeholder="Full address"
-              className="border-white/10 bg-white/5 text-white placeholder:text-white/30"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30"
             />
           </div>
 
           {/* Type + Status */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label className="text-white/70">Type</Label>
+              <Label className="text-[var(--workspace-shell-text)]/70">Type</Label>
               <Select
                 value={form.propertyType}
                 onValueChange={(v) => field('propertyType', v)}
               >
-                <SelectTrigger className="border-white/10 bg-white/5 text-white">
+                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -186,12 +186,12 @@ export function PropertyFormModal({
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-white/70">Status</Label>
+              <Label className="text-[var(--workspace-shell-text)]/70">Status</Label>
               <Select
                 value={form.status}
                 onValueChange={(v) => field('status', v)}
               >
-                <SelectTrigger className="border-white/10 bg-white/5 text-white">
+                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -208,18 +208,18 @@ export function PropertyFormModal({
           {/* Bedrooms, Bathrooms, SqFt */}
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-1.5">
-              <Label className="text-white/70">Bedrooms</Label>
+              <Label className="text-[var(--workspace-shell-text)]/70">Bedrooms</Label>
               <Input
                 type="number"
                 min={0}
                 value={form.bedrooms}
                 onChange={(e) => field('bedrooms', e.target.value)}
                 placeholder="0"
-                className="border-white/10 bg-white/5 text-white placeholder:text-white/30"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30"
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-white/70">Bathrooms</Label>
+              <Label className="text-[var(--workspace-shell-text)]/70">Bathrooms</Label>
               <Input
                 type="number"
                 min={0}
@@ -227,18 +227,18 @@ export function PropertyFormModal({
                 value={form.bathrooms}
                 onChange={(e) => field('bathrooms', e.target.value)}
                 placeholder="0"
-                className="border-white/10 bg-white/5 text-white placeholder:text-white/30"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30"
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-white/70">Sq ft</Label>
+              <Label className="text-[var(--workspace-shell-text)]/70">Sq ft</Label>
               <Input
                 type="number"
                 min={0}
                 value={form.squareFootage}
                 onChange={(e) => field('squareFootage', e.target.value)}
                 placeholder="0"
-                className="border-white/10 bg-white/5 text-white placeholder:text-white/30"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30"
               />
             </div>
           </div>
@@ -246,16 +246,16 @@ export function PropertyFormModal({
           {/* Purchase date + prices */}
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-1.5">
-              <Label className="text-white/70">Purchase Date</Label>
+              <Label className="text-[var(--workspace-shell-text)]/70">Purchase Date</Label>
               <Input
                 type="date"
                 value={form.purchaseDate}
                 onChange={(e) => field('purchaseDate', e.target.value)}
-                className="border-white/10 bg-white/5 text-white"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-white/70">Purchase Price (£)</Label>
+              <Label className="text-[var(--workspace-shell-text)]/70">Purchase Price (£)</Label>
               <Input
                 type="number"
                 min={0}
@@ -263,11 +263,11 @@ export function PropertyFormModal({
                 value={form.purchasePrice}
                 onChange={(e) => field('purchasePrice', e.target.value)}
                 placeholder="0.00"
-                className="border-white/10 bg-white/5 text-white placeholder:text-white/30"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30"
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-white/70">Current Value (£)</Label>
+              <Label className="text-[var(--workspace-shell-text)]/70">Current Value (£)</Label>
               <Input
                 type="number"
                 min={0}
@@ -275,20 +275,20 @@ export function PropertyFormModal({
                 value={form.currentValue}
                 onChange={(e) => field('currentValue', e.target.value)}
                 placeholder="0.00"
-                className="border-white/10 bg-white/5 text-white placeholder:text-white/30"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30"
               />
             </div>
           </div>
 
           {/* Notes */}
           <div className="space-y-1.5">
-            <Label className="text-white/70">Notes</Label>
+            <Label className="text-[var(--workspace-shell-text)]/70">Notes</Label>
             <Textarea
               value={form.notes}
               onChange={(e) => field('notes', e.target.value)}
               placeholder="Additional notes about the property…"
               rows={3}
-              className="border-white/10 bg-white/5 text-white placeholder:text-white/30"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30"
             />
           </div>
 
@@ -303,14 +303,14 @@ export function PropertyFormModal({
               type="button"
               variant="ghost"
               onClick={onClose}
-              className="text-white/60 hover:text-white"
+              className="text-[var(--workspace-shell-text)]/60 hover:text-[var(--workspace-shell-text)]"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={isPending || !form.name.trim()}
-              className="bg-violet-600 hover:bg-violet-700 text-white"
+              className="bg-violet-600 hover:bg-violet-700 text-[var(--workspace-shell-text)]"
             >
               {isPending ? 'Saving…' : isEdit ? 'Save changes' : 'Add property'}
             </Button>

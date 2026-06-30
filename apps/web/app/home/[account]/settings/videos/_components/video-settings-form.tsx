@@ -75,12 +75,12 @@ export function VideoSettingsForm(props: {
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 lg:px-0">
       <Link
         href={settingsHref}
-        className="text-muted-foreground text-sm hover:text-white"
+        className="text-muted-foreground text-sm hover:text-[var(--workspace-shell-text)]"
       >
         ← Workspace settings
       </Link>
 
-      <div className="rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+      <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
         <div className="mb-6">
           <h2 className="text-base font-semibold">Video hosting</h2>
           <p className="text-muted-foreground mt-1 text-sm">

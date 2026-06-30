@@ -43,11 +43,11 @@ export function WorkspaceProfileBlock(props: {
   return (
     <PersonalAccountDropdown
       className={cn(
-        'w-full gap-2.5 rounded-lg border border-solid border-white/[0.08] bg-white/[0.03] p-2.5 transition-colors hover:bg-white/[0.06]',
-        '[&_[data-test=account-dropdown-display-name]]:text-white',
-        '[&_[data-test=account-dropdown-email]]:text-white/55',
-        '[&_.text-muted-foreground]:text-white/55',
-        props.collapsed && 'justify-center border-0 bg-transparent p-0 hover:bg-white/[0.06]',
+        'w-full gap-2.5 rounded-lg border border-solid border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-2.5 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]',
+        '[&_[data-test=account-dropdown-display-name]]:text-[var(--workspace-shell-text)]',
+        '[&_[data-test=account-dropdown-email]]:text-[var(--workspace-shell-text)]/55',
+        '[&_.text-muted-foreground]:text-[var(--workspace-shell-text)]/55',
+        props.collapsed && 'justify-center border-0 bg-transparent p-0 hover:bg-[var(--workspace-shell-sidebar-accent)]',
       )}
       paths={paths}
       features={features}

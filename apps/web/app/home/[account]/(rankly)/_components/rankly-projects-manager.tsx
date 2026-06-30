@@ -88,15 +88,15 @@ export function RanklyProjectsManager(props: {
       ) : null}
 
       {props.projects.length === 0 && !open ? (
-        <p className="text-muted-foreground rounded-lg border border-white/10 bg-black/10 px-4 py-6 text-sm">
+        <p className="text-muted-foreground rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-6 text-sm">
           No projects yet. Use &quot;New project&quot; to add your first domain.
         </p>
       ) : null}
 
       {props.projects.length > 0 ? (
-        <div className="overflow-x-auto rounded-lg border border-white/10">
+        <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
           <table className="w-full min-w-[40rem] text-left text-sm">
-            <thead className="border-b border-white/10 bg-black/20 text-xs uppercase tracking-wide text-muted-foreground">
+            <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">Domain</th>
@@ -109,7 +109,7 @@ export function RanklyProjectsManager(props: {
               {props.projects.map((project) => (
                 <tr
                   key={project.id}
-                  className="border-b border-white/5 last:border-0"
+                  className="border-b border-[color:var(--workspace-shell-border)] last:border-0"
                 >
                   <td className="px-4 py-3">
                     <Link

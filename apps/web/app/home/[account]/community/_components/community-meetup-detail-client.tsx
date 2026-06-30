@@ -41,7 +41,7 @@ import type {
 } from '../_lib/community-schedule.types';
 
 const panelClass =
-  'rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)] p-5';
+  'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5';
 
 function isoToDatetimeLocal(iso: string) {
   const d = new Date(iso);
@@ -229,11 +229,11 @@ export function CommunityMeetupDetailClient({
   });
 
   return (
-    <div className="space-y-6 text-white">
+    <div className="space-y-6 text-[var(--workspace-shell-text)]">
       <div className="flex flex-wrap items-center gap-3">
         <Link
           href={schedulePath}
-          className="inline-flex items-center gap-1 text-sm text-white/60 hover:text-white"
+          className="inline-flex items-center gap-1 text-sm text-[var(--workspace-shell-text)]/60 hover:text-[var(--workspace-shell-text)]"
         >
           <ArrowLeft className="h-4 w-4" />
           Schedule
@@ -248,7 +248,7 @@ export function CommunityMeetupDetailClient({
 
       <div>
         <h1 className="text-2xl font-bold">{title}</h1>
-        <p className="mt-1 text-sm text-white/60">{startsDisplay}</p>
+        <p className="mt-1 text-sm text-[var(--workspace-shell-text)]/60">{startsDisplay}</p>
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
@@ -266,7 +266,7 @@ export function CommunityMeetupDetailClient({
                 <Input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="border-white/10 bg-white/5"
+                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]"
                 />
               </div>
               <div className="space-y-2">
@@ -275,7 +275,7 @@ export function CommunityMeetupDetailClient({
                   type="datetime-local"
                   value={startsAt}
                   onChange={(e) => setStartsAt(e.target.value)}
-                  className="border-white/10 bg-white/5"
+                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]"
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
@@ -283,13 +283,13 @@ export function CommunityMeetupDetailClient({
                 <Input
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  className="border-white/10 bg-white/5"
+                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]"
                 />
               </div>
               <div className="space-y-2">
                 <Label>Series</Label>
                 <Select value={seriesId} onValueChange={setSeriesId}>
-                  <SelectTrigger className="border-white/10 bg-white/5">
+                  <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
                     <SelectValue placeholder="Standalone meetup" />
                   </SelectTrigger>
                   <SelectContent>
@@ -308,7 +308,7 @@ export function CommunityMeetupDetailClient({
                   value={seriesLabel}
                   onChange={(e) => setSeriesLabel(e.target.value)}
                   placeholder="Week 3 · Chapter 5"
-                  className="border-white/10 bg-white/5"
+                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]"
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
@@ -338,7 +338,7 @@ export function CommunityMeetupDetailClient({
                 type="button"
                 size="sm"
                 variant="outline"
-                className="border-white/10"
+                className="border-[color:var(--workspace-shell-border)]"
                 onClick={() =>
                   setEveningParts((p) => [
                     ...p,
@@ -358,7 +358,7 @@ export function CommunityMeetupDetailClient({
               {eveningParts.map((part, i) => (
                 <div
                   key={part.id}
-                  className="rounded-xl border border-white/8 p-3"
+                  className="rounded-xl border border-[color:var(--workspace-shell-border)] p-3"
                 >
                   <Input
                     value={part.title}
@@ -367,7 +367,7 @@ export function CommunityMeetupDetailClient({
                       next[i] = { ...part, title: e.target.value };
                       setEveningParts(next);
                     }}
-                    className="mb-2 border-white/10 bg-white/5 font-medium"
+                    className="mb-2 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] font-medium"
                   />
                   <WorkspaceRichTextEditor
                     value={part.notes}
@@ -401,8 +401,8 @@ export function CommunityMeetupDetailClient({
                     }}
                     className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                       on
-                        ? 'bg-[var(--keel-teal)]/20 text-[#5eead4] ring-1 ring-[var(--keel-teal)]/40'
-                        : 'bg-white/5 text-white/60 ring-1 ring-white/10'
+                        ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)] ring-1 ring-[var(--ozer-accent)]/40'
+                        : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/60 ring-1 ring-white/10'
                     }`}
                   >
                     {m.displayName}
@@ -424,7 +424,7 @@ export function CommunityMeetupDetailClient({
             <Button
               type="button"
               variant="outline"
-              className="border-white/10"
+              className="border-[color:var(--workspace-shell-border)]"
               onClick={saveAsTemplate}
             >
               Save as template
@@ -432,7 +432,7 @@ export function CommunityMeetupDetailClient({
             <Button
               type="button"
               variant="outline"
-              className="border-white/10"
+              className="border-[color:var(--workspace-shell-border)]"
               onClick={() => {
                 startTransition(async () => {
                   await updateCommunityMeetup({
@@ -454,13 +454,13 @@ export function CommunityMeetupDetailClient({
           <div className={panelClass}>
             <h3 className="mb-4 font-semibold">Session content</h3>
             {detail.contentItems.length === 0 ? (
-              <p className="text-sm text-white/50">No content items yet.</p>
+              <p className="text-sm text-[var(--workspace-shell-text)]/50">No content items yet.</p>
             ) : (
               <ul className="space-y-3">
                 {detail.contentItems.map((item) => (
                   <li
                     key={item.id}
-                    className="flex items-start justify-between gap-3 rounded-xl border border-white/8 p-3"
+                    className="flex items-start justify-between gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] p-3"
                   >
                     <div className="min-w-0 flex-1">
                       <MeetupContentItemView item={item} />
@@ -469,7 +469,7 @@ export function CommunityMeetupDetailClient({
                       type="button"
                       size="icon"
                       variant="ghost"
-                      className="shrink-0 text-white/40 hover:text-rose-400"
+                      className="shrink-0 text-[var(--workspace-shell-text)]/40 hover:text-rose-400"
                       onClick={() => {
                         startTransition(async () => {
                           await deleteMeetupContentItem({
@@ -500,7 +500,7 @@ export function CommunityMeetupDetailClient({
                     setNewContentKind(v as typeof newContentKind)
                   }
                 >
-                  <SelectTrigger className="border-white/10 bg-white/5">
+                  <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -516,7 +516,7 @@ export function CommunityMeetupDetailClient({
                 <Input
                   value={newContentTitle}
                   onChange={(e) => setNewContentTitle(e.target.value)}
-                  className="border-white/10 bg-white/5"
+                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]"
                 />
               </div>
               {(newContentKind === 'link' ||
@@ -528,7 +528,7 @@ export function CommunityMeetupDetailClient({
                     value={newContentUrl}
                     onChange={(e) => setNewContentUrl(e.target.value)}
                     placeholder="https://"
-                    className="border-white/10 bg-white/5"
+                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]"
                   />
                   {newContentKind === 'youtube' && newContentUrl.trim() ? (
                     <YoutubeEmbed
@@ -563,7 +563,7 @@ export function CommunityMeetupDetailClient({
         <TabsContent value="record" className="mt-4 space-y-4">
           <div className={panelClass}>
             <h3 className="mb-2 font-semibold">Transcript / raw notes</h3>
-            <p className="mb-3 text-xs text-white/50">
+            <p className="mb-3 text-xs text-[var(--workspace-shell-text)]/50">
               Paste notes or a transcript after the meetup. Use AI to generate a
               summary for leaders.
             </p>
@@ -576,7 +576,7 @@ export function CommunityMeetupDetailClient({
               <Button
                 type="button"
                 variant="outline"
-                className="border-white/10"
+                className="border-[color:var(--workspace-shell-border)]"
                 disabled={isPending}
                 onClick={saveRecord}
               >
@@ -597,7 +597,7 @@ export function CommunityMeetupDetailClient({
           {aiSummary ? (
             <div className={panelClass}>
               <h3 className="mb-2 font-semibold">AI summary</h3>
-              <div className="prose prose-invert max-w-none whitespace-pre-wrap text-sm text-white/80">
+              <div className="prose prose-invert max-w-none whitespace-pre-wrap text-sm text-[var(--workspace-shell-text)]/80">
                 {aiSummary}
               </div>
             </div>

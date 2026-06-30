@@ -13,25 +13,23 @@ import { VersionUpdater } from '@kit/ui/version-updater';
 import { AnalyticsProvider } from '~/components/analytics-provider';
 import { AuthProvider } from '~/components/auth-provider';
 import { QuickActionProvider } from '~/components/quick-action/quick-action-provider';
+import { ThemeColorSync } from '~/components/theme-color-sync';
 import featuresFlagConfig from '~/config/feature-flags.config';
-import { APP_THEME } from '~/lib/app-theme';
+import { APP_DEFAULT_THEME, APP_THEME_STORAGE_KEY } from '~/lib/app-theme';
 import { i18nResolver } from '~/lib/i18n/i18n.resolver';
 import { getI18nSettings } from '~/lib/i18n/i18n.settings';
 
 import { ReactQueryProvider } from './react-query-provider';
 
 type RootProvidersProps = React.PropsWithChildren<{
-  // The language to use for the app (optional)
   lang?: string;
-  // The theme (light or dark or system) (optional)
   theme?: string;
-  // The CSP nonce to pass to scripts (optional)
   nonce?: string;
 }>;
 
 export function RootProviders({
   lang,
-  theme: _theme = APP_THEME,
+  theme = APP_DEFAULT_THEME,
   nonce,
   children,
 }: RootProvidersProps) {
@@ -47,13 +45,14 @@ export function RootProviders({
                 <QuickActionProvider>
                   <ThemeProvider
                     attribute="class"
-                    enableSystem={false}
+                    defaultTheme={theme}
+                    storageKey={APP_THEME_STORAGE_KEY}
+                    enableSystem
                     disableTransitionOnChange
-                    defaultTheme={APP_THEME}
-                    forcedTheme={APP_THEME}
-                    enableColorScheme={false}
+                    enableColorScheme
                     nonce={nonce}
                   >
+                    <ThemeColorSync />
                     {children}
                   </ThemeProvider>
                 </QuickActionProvider>

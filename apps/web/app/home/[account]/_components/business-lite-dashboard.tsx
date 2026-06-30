@@ -10,7 +10,7 @@ import type { NavChild } from '~/config/work-account-navigation.config';
 import { BusinessLiteUpgradeBanner } from './business-lite-upgrade-banner';
 
 const panelClass =
-  'rounded-[24px] border border-white/6 bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]';
+  'rounded-[24px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]';
 
 type BusinessLiteDashboardProps = {
   accountSlug: string;
@@ -39,7 +39,7 @@ export function BusinessLiteDashboard({
       <section className={`${panelClass} p-6`}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-white">
+            <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
               Hi {greeting}
             </h2>
             <p className="text-muted-foreground mt-1 text-sm">
@@ -61,14 +61,14 @@ export function BusinessLiteDashboard({
               <Link
                 key={app.path}
                 href={app.path}
-                className="rounded-xl border border-white/10 bg-black/10 px-4 py-4 transition-colors hover:border-white/20 hover:bg-black/20"
+                className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-4 transition-colors hover:border-[color:var(--workspace-shell-border)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
               >
                 <div className="flex items-start gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-white/10 bg-black/20 text-[var(--keel-teal)]">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--ozer-accent)]">
                     {app.Icon}
                   </span>
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-white">{app.label}</h3>
+                    <h3 className="font-semibold text-[var(--workspace-shell-text)]">{app.label}</h3>
                     {app.description ? (
                       <p className="text-muted-foreground mt-1 text-sm">
                         {app.description}
@@ -80,9 +80,9 @@ export function BusinessLiteDashboard({
             ))}
           </div>
         ) : (
-          <p className="text-muted-foreground mt-6 rounded-xl border border-dashed border-white/10 px-4 py-8 text-center text-sm">
+          <p className="text-muted-foreground mt-6 rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center text-sm">
             No apps installed yet.{' '}
-            <Link href={appsPath} className="text-[var(--keel-teal)] hover:underline">
+            <Link href={appsPath} className="text-[var(--ozer-accent)] hover:underline">
               Open the apps marketplace
             </Link>{' '}
             to get started.

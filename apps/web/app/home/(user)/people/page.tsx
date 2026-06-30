@@ -19,7 +19,7 @@ function PeoplePage() {
     <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
       <Suspense
         fallback={
-          <div className="px-4 text-sm text-zinc-500 md:px-0">Loading…</div>
+          <div className="px-4 text-sm text-[var(--workspace-shell-text-muted)] md:px-0">Loading…</div>
         }
       >
         <PeoplePageContent />

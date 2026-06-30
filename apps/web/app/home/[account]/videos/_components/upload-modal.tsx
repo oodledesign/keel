@@ -144,16 +144,16 @@ function UploadProgressPanel(props: {
         : 'Creating upload session';
 
   return (
-    <div className="space-y-3 rounded-xl border border-white/10 bg-black/20 p-4">
+    <div className="space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-medium">{label}</p>
           <p className="text-muted-foreground mt-0.5 text-xs">{detail}</p>
         </div>
         {props.phase === 'processing' ? (
-          <Loader2 className="text-[var(--keel-teal)] h-4 w-4 shrink-0 animate-spin" />
+          <Loader2 className="text-[var(--ozer-accent)] h-4 w-4 shrink-0 animate-spin" />
         ) : (
-          <span className="text-sm font-medium tabular-nums text-[var(--keel-teal)]">
+          <span className="text-sm font-medium tabular-nums text-[var(--ozer-accent)]">
             {props.progress}%
           </span>
         )}
@@ -161,12 +161,12 @@ function UploadProgressPanel(props: {
 
       {props.phase === 'processing' ? (
         <div className="h-2 overflow-hidden rounded-full bg-black/30">
-          <div className="h-full w-2/3 animate-pulse rounded-full bg-[var(--keel-teal)]" />
+          <div className="h-full w-2/3 animate-pulse rounded-full bg-[var(--ozer-accent)]" />
         </div>
       ) : (
         <Progress
           value={props.progress}
-          className="h-2 bg-black/30 [&>div]:bg-[var(--keel-teal)]"
+          className="h-2 bg-black/30 [&>div]:bg-[var(--ozer-accent)]"
         />
       )}
     </div>
@@ -312,7 +312,7 @@ export function UploadModal(props: {
         props.onOpenChange(open);
       }}
     >
-      <DialogContent className="max-w-lg border-white/10 bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+      <DialogContent className="max-w-lg border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
         <DialogHeader>
           <DialogTitle>Upload video</DialogTitle>
           <DialogDescription>
@@ -326,8 +326,8 @@ export function UploadModal(props: {
             {...getRootProps()}
             className={`cursor-pointer rounded-xl border border-dashed px-4 py-8 text-center transition ${
               isDragActive
-                ? 'border-[var(--keel-teal)]/60 bg-[var(--keel-teal)]/10'
-                : 'border-white/15 bg-black/20 hover:border-white/25'
+                ? 'border-[var(--ozer-accent)]/60 bg-[var(--ozer-accent-subtle)]'
+                : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] hover:border-[color:var(--workspace-shell-border)]'
             } ${isBusy ? 'pointer-events-none opacity-60' : ''}`}
           >
             <input {...getInputProps()} />

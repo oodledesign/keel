@@ -58,7 +58,7 @@ export function AuditLauncher(props: {
   };
 
   return (
-    <div className="space-y-4 rounded-lg border border-white/10 bg-black/20 p-5">
+    <div className="space-y-4 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-5">
       <div>
         <h3 className="text-lg font-semibold">AI Search Audit</h3>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -72,7 +72,7 @@ export function AuditLauncher(props: {
       </div>
 
       {props.lastRun ? (
-        <div className="rounded-md border border-white/5 bg-black/20 px-4 py-3 text-sm">
+        <div className="rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-3 text-sm">
           <p>
             Last audit:{' '}
             <span className="font-medium">

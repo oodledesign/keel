@@ -623,20 +623,20 @@ export function InvoiceEditIndyContent({
     '';
 
   const canvasClassName =
-    'rounded-xl border border-zinc-200 bg-white p-8 text-[#1E293B] shadow-sm';
+    'rounded-xl border border-[color:var(--ozer-border-on-light)] bg-white p-8 text-[var(--ozer-text-on-light)] shadow-sm';
 
   const inputClassName =
-    'border-zinc-200 bg-white text-[#1E293B] placeholder:text-zinc-400';
+    'border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-white)] text-[var(--ozer-text-on-light)] placeholder:text-[var(--workspace-shell-text-muted)]';
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-4 border-b border-white/10 pb-4">
+      <header className="flex flex-col gap-4 border-b border-[color:var(--workspace-shell-border)] pb-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Button
             variant="ghost"
             size="sm"
             asChild
-            className="text-zinc-400 hover:text-white"
+            className="text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
           >
             <Link href={invoicesPath}>
               <ArrowLeft className="mr-1 h-4 w-4" />
@@ -645,9 +645,9 @@ export function InvoiceEditIndyContent({
           </Button>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5">
-              <Eye className="h-4 w-4 text-zinc-400" />
-              <Label htmlFor="preview-mode" className="text-sm text-zinc-300">
+            <div className="flex items-center gap-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-1.5">
+              <Eye className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
+              <Label htmlFor="preview-mode" className="text-sm text-[var(--workspace-shell-text-muted)]">
                 Preview
               </Label>
               <Switch
@@ -663,7 +663,7 @@ export function InvoiceEditIndyContent({
                   size="sm"
                   onClick={() => void handleSave()}
                   disabled={saving || !canModifyInvoice}
-                  className="bg-[var(--keel-teal)] hover:bg-[#238b7f]"
+                  className="bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]"
                 >
                   {saving ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -675,7 +675,7 @@ export function InvoiceEditIndyContent({
                   <Button
                     size="sm"
                     variant="outline"
-                    className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-zinc-200 hover:bg-[var(--workspace-shell-panel-hover)]"
+                    className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel-hover)]"
                     onClick={() => setShowSendPanel(true)}
                   >
                     <Send className="mr-2 h-4 w-4" />
@@ -708,12 +708,12 @@ export function InvoiceEditIndyContent({
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-white">
+            <h1 className="text-xl font-semibold text-[var(--workspace-shell-text)]">
               Invoice #{invoice.invoice_number} ·{' '}
               {formatPence(totals.total_pence, invoice.currency ?? 'GBP')}
             </h1>
             {title.trim() ? (
-              <p className="mt-1 text-sm text-zinc-400">{title}</p>
+              <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">{title}</p>
             ) : null}
           </div>
 
@@ -726,16 +726,16 @@ export function InvoiceEditIndyContent({
                   <span
                     className={`rounded-full px-2.5 py-1 font-medium ${
                       active
-                        ? 'bg-[var(--keel-teal)]/20 text-[#5eead4]'
+                        ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]'
                         : complete
-                          ? 'bg-white/10 text-zinc-300'
-                          : 'bg-white/5 text-zinc-500'
+                          ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]'
+                          : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]'
                     }`}
                   >
                     {step.label}
                   </span>
                   {index < STATUS_STEPS.length - 1 ? (
-                    <span className="hidden text-zinc-600 sm:inline">→</span>
+                    <span className="hidden text-[var(--workspace-shell-text-muted)] sm:inline">→</span>
                   ) : null}
                 </li>
               );
@@ -777,7 +777,7 @@ export function InvoiceEditIndyContent({
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="sm:col-span-2">
                   {readOnly ? (
-                    <h2 className="text-2xl font-bold text-[#1E293B]">
+                    <h2 className="text-2xl font-bold text-[var(--ozer-text-on-light)]">
                       {title.trim() || `Invoice ${invoice.invoice_number}`}
                     </h2>
                   ) : (
@@ -791,7 +791,7 @@ export function InvoiceEditIndyContent({
                 </div>
 
                 <div>
-                  <Label className="text-zinc-600">Reference</Label>
+                  <Label className="text-[var(--workspace-shell-text-muted)]">Reference</Label>
                   <Input
                     value={referenceNumber}
                     onChange={(e) => setReferenceNumber(e.target.value)}
@@ -803,7 +803,7 @@ export function InvoiceEditIndyContent({
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-zinc-600">Issued</Label>
+                    <Label className="text-[var(--workspace-shell-text-muted)]">Issued</Label>
                     <Input
                       type="date"
                       value={
@@ -816,13 +816,13 @@ export function InvoiceEditIndyContent({
                       className={`mt-1 ${inputClassName}`}
                     />
                     {!isLocked ? (
-                      <p className="mt-1 text-xs text-zinc-500">
+                      <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
                         Final issue date is set when you send.
                       </p>
                     ) : null}
                   </div>
                   <div>
-                    <Label className="text-zinc-600">Due</Label>
+                    <Label className="text-[var(--workspace-shell-text-muted)]">Due</Label>
                     <Input
                       type="date"
                       value={dueAt}
@@ -835,7 +835,7 @@ export function InvoiceEditIndyContent({
               </div>
 
               <div>
-                <Label className="text-zinc-600">Bill to</Label>
+                <Label className="text-[var(--workspace-shell-text-muted)]">Bill to</Label>
                 <div className="mt-1">
                   <ClientCombobox
                     clients={clients}
@@ -854,8 +854,8 @@ export function InvoiceEditIndyContent({
                   <p className="mt-1.5 text-sm text-amber-600">{clientsError}</p>
                 ) : null}
                 {invoice.client && clientId === invoice.client_id ? (
-                  <div className="mt-3 text-sm text-zinc-600">
-                    <p className="font-medium text-[#1E293B]">
+                  <div className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">
+                    <p className="font-medium text-[var(--ozer-text-on-light)]">
                       {clientDisplayName(invoice.client)}
                     </p>
                     {invoice.client.company_name ? (
@@ -872,7 +872,7 @@ export function InvoiceEditIndyContent({
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead>
-                      <tr className="border-b border-zinc-200 text-zinc-500">
+                      <tr className="border-b border-[color:var(--ozer-border-on-light)] text-[var(--workspace-shell-text-muted)]">
                         <th className="pb-2 pr-2 font-medium">Description</th>
                         <th className="w-20 pb-2 pr-2 font-medium text-right">
                           Qty
@@ -891,7 +891,7 @@ export function InvoiceEditIndyContent({
                         <tr>
                           <td
                             colSpan={readOnly ? 4 : 5}
-                            className="py-6 text-center text-zinc-400"
+                            className="py-6 text-center text-[var(--workspace-shell-text-muted)]"
                           >
                             No line items yet.
                           </td>
@@ -934,7 +934,7 @@ export function InvoiceEditIndyContent({
                                     })
                                   }
                                   disabled={readOnly || jobsLoading}
-                                  className="w-full rounded-md border border-zinc-200 bg-white px-2 py-1.5 text-xs text-[#1E293B]"
+                                  className="w-full rounded-md border border-[color:var(--ozer-border-on-light)] bg-white px-2 py-1.5 text-xs text-[var(--ozer-text-on-light)]"
                                 >
                                   <option value="">Link to job (optional)</option>
                                   {jobsForClient.map((j) => (
@@ -977,7 +977,7 @@ export function InvoiceEditIndyContent({
                                 className={`text-right ${inputClassName}`}
                               />
                             </td>
-                            <td className="py-3 pr-2 text-right font-medium text-[#1E293B]">
+                            <td className="py-3 pr-2 text-right font-medium text-[var(--ozer-text-on-light)]">
                               {formatPence(
                                 row.quantity * row.unit_price_pence,
                                 invoice.currency ?? 'GBP',
@@ -989,7 +989,7 @@ export function InvoiceEditIndyContent({
                                   type="button"
                                   variant="ghost"
                                   size="sm"
-                                  className="h-8 w-8 p-0 text-zinc-400 hover:text-red-500"
+                                  className="h-8 w-8 p-0 text-[var(--workspace-shell-text-muted)] hover:text-red-500"
                                   onClick={() => removeRow(index)}
                                 >
                                   <Trash2 className="h-4 w-4" />
@@ -1010,7 +1010,7 @@ export function InvoiceEditIndyContent({
                       variant="outline"
                       size="sm"
                       onClick={addRow}
-                      className="border-zinc-200 text-[#1E293B] hover:bg-zinc-50"
+                      className="border-[color:var(--ozer-border-on-light)] text-[var(--ozer-text-on-light)] hover:bg-[var(--ozer-cream-50)]"
                     >
                       <PlusCircle className="mr-2 h-4 w-4" />
                       Add line
@@ -1020,7 +1020,7 @@ export function InvoiceEditIndyContent({
                       variant="outline"
                       size="sm"
                       onClick={() => setShowDiscount((v) => !v)}
-                      className="border-zinc-200 text-[#1E293B] hover:bg-zinc-50"
+                      className="border-[color:var(--ozer-border-on-light)] text-[var(--ozer-text-on-light)] hover:bg-[var(--ozer-cream-50)]"
                     >
                       {showDiscount ? 'Hide discount' : 'Add discount'}
                     </Button>
@@ -1029,7 +1029,7 @@ export function InvoiceEditIndyContent({
                       variant="outline"
                       size="sm"
                       onClick={() => setShowTax((v) => !v)}
-                      className="border-zinc-200 text-[#1E293B] hover:bg-zinc-50"
+                      className="border-[color:var(--ozer-border-on-light)] text-[var(--ozer-text-on-light)] hover:bg-[var(--ozer-cream-50)]"
                     >
                       {showTax ? 'Hide tax' : 'Add tax'}
                     </Button>
@@ -1038,7 +1038,7 @@ export function InvoiceEditIndyContent({
                       variant="outline"
                       size="sm"
                       onClick={() => setShowDeposit((v) => !v)}
-                      className="border-zinc-200 text-[#1E293B] hover:bg-zinc-50"
+                      className="border-[color:var(--ozer-border-on-light)] text-[var(--ozer-text-on-light)] hover:bg-[var(--ozer-cream-50)]"
                     >
                       {showDeposit ? 'Hide deposit' : 'Request deposit'}
                     </Button>
@@ -1047,7 +1047,7 @@ export function InvoiceEditIndyContent({
                       variant="outline"
                       size="sm"
                       onClick={() => setShowLateFee((v) => !v)}
-                      className="border-zinc-200 text-[#1E293B] hover:bg-zinc-50"
+                      className="border-[color:var(--ozer-border-on-light)] text-[var(--ozer-text-on-light)] hover:bg-[var(--ozer-cream-50)]"
                     >
                       {showLateFee ? 'Hide late fees' : 'Add late fees'}
                     </Button>
@@ -1057,17 +1057,17 @@ export function InvoiceEditIndyContent({
 
               {(showDiscount || showTax || showDeposit || showLateFee) &&
               !readOnly ? (
-                <div className="grid gap-4 rounded-lg border border-zinc-100 bg-zinc-50 p-4 sm:grid-cols-2">
+                <div className="grid gap-4 rounded-lg border border-zinc-100 bg-[var(--ozer-cream-50)] p-4 sm:grid-cols-2">
                   {showDiscount ? (
                     <div className="space-y-2">
-                      <Label className="text-zinc-600">Discount</Label>
+                      <Label className="text-[var(--workspace-shell-text-muted)]">Discount</Label>
                       <div className="flex gap-2">
                         <select
                           value={discountType}
                           onChange={(e) =>
                             setDiscountType(e.target.value as DiscountType | '')
                           }
-                          className="rounded-md border border-zinc-200 bg-white px-2 py-1.5 text-sm"
+                          className="rounded-md border border-[color:var(--ozer-border-on-light)] bg-white px-2 py-1.5 text-sm"
                         >
                           <option value="">Type</option>
                           <option value="percent">Percent</option>
@@ -1087,7 +1087,7 @@ export function InvoiceEditIndyContent({
 
                   {showTax ? (
                     <div className="space-y-2">
-                      <Label className="text-zinc-600">Tax rate (%)</Label>
+                      <Label className="text-[var(--workspace-shell-text-muted)]">Tax rate (%)</Label>
                       <Input
                         value={taxRatePercent}
                         onChange={(e) => setTaxRatePercent(e.target.value)}
@@ -1099,14 +1099,14 @@ export function InvoiceEditIndyContent({
 
                   {showDeposit ? (
                     <div className="space-y-2">
-                      <Label className="text-zinc-600">Deposit</Label>
+                      <Label className="text-[var(--workspace-shell-text-muted)]">Deposit</Label>
                       <div className="flex gap-2">
                         <select
                           value={depositType}
                           onChange={(e) =>
                             setDepositType(e.target.value as DepositType | '')
                           }
-                          className="rounded-md border border-zinc-200 bg-white px-2 py-1.5 text-sm"
+                          className="rounded-md border border-[color:var(--ozer-border-on-light)] bg-white px-2 py-1.5 text-sm"
                         >
                           <option value="">Type</option>
                           <option value="percent">Percent</option>
@@ -1126,14 +1126,14 @@ export function InvoiceEditIndyContent({
 
                   {showLateFee ? (
                     <div className="space-y-2">
-                      <Label className="text-zinc-600">Late fee</Label>
+                      <Label className="text-[var(--workspace-shell-text-muted)]">Late fee</Label>
                       <div className="flex gap-2">
                         <select
                           value={lateFeeType}
                           onChange={(e) =>
                             setLateFeeType(e.target.value as LateFeeType | '')
                           }
-                          className="rounded-md border border-zinc-200 bg-white px-2 py-1.5 text-sm"
+                          className="rounded-md border border-[color:var(--ozer-border-on-light)] bg-white px-2 py-1.5 text-sm"
                         >
                           <option value="">Type</option>
                           <option value="percent">Percent</option>
@@ -1148,7 +1148,7 @@ export function InvoiceEditIndyContent({
                           className={inputClassName}
                         />
                       </div>
-                      <p className="text-xs text-zinc-500">
+                      <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                         Applied when the invoice is overdue.
                       </p>
                     </div>
@@ -1156,11 +1156,11 @@ export function InvoiceEditIndyContent({
                 </div>
               ) : null}
 
-              <div className="border-t border-zinc-200 pt-4">
+              <div className="border-t border-[color:var(--ozer-border-on-light)] pt-4">
                 <dl className="ml-auto max-w-sm space-y-2 text-sm">
                   <div className="flex justify-between gap-4">
-                    <dt className="text-zinc-600">Subtotal</dt>
-                    <dd className="font-medium text-[#1E293B]">
+                    <dt className="text-[var(--workspace-shell-text-muted)]">Subtotal</dt>
+                    <dd className="font-medium text-[var(--ozer-text-on-light)]">
                       {formatPence(
                         totals.subtotal_pence,
                         invoice.currency ?? 'GBP',
@@ -1181,8 +1181,8 @@ export function InvoiceEditIndyContent({
                   ) : null}
                   {totals.tax_pence > 0 ? (
                     <div className="flex justify-between gap-4">
-                      <dt className="text-zinc-600">Tax</dt>
-                      <dd className="font-medium text-[#1E293B]">
+                      <dt className="text-[var(--workspace-shell-text-muted)]">Tax</dt>
+                      <dd className="font-medium text-[var(--ozer-text-on-light)]">
                         {formatPence(
                           totals.tax_pence,
                           invoice.currency ?? 'GBP',
@@ -1201,9 +1201,9 @@ export function InvoiceEditIndyContent({
                       </dd>
                     </div>
                   ) : null}
-                  <div className="flex justify-between gap-4 border-t border-zinc-200 pt-2 text-base">
-                    <dt className="font-semibold text-[#1E293B]">Total</dt>
-                    <dd className="font-bold text-[#1E293B]">
+                  <div className="flex justify-between gap-4 border-t border-[color:var(--ozer-border-on-light)] pt-2 text-base">
+                    <dt className="font-semibold text-[var(--ozer-text-on-light)]">Total</dt>
+                    <dd className="font-bold text-[var(--ozer-text-on-light)]">
                       {formatPence(
                         totals.total_pence,
                         invoice.currency ?? 'GBP',
@@ -1211,7 +1211,7 @@ export function InvoiceEditIndyContent({
                     </dd>
                   </div>
                   {totals.deposit_due_pence > 0 ? (
-                    <div className="flex justify-between gap-4 text-zinc-600">
+                    <div className="flex justify-between gap-4 text-[var(--workspace-shell-text-muted)]">
                       <dt>Deposit due</dt>
                       <dd>
                         {formatPence(
@@ -1224,9 +1224,9 @@ export function InvoiceEditIndyContent({
                 </dl>
               </div>
 
-              <div className="grid gap-4 border-t border-zinc-200 pt-4">
+              <div className="grid gap-4 border-t border-[color:var(--ozer-border-on-light)] pt-4">
                 <div>
-                  <Label className="text-zinc-600">Notes</Label>
+                  <Label className="text-[var(--workspace-shell-text-muted)]">Notes</Label>
                   <Textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
@@ -1237,7 +1237,7 @@ export function InvoiceEditIndyContent({
                   />
                 </div>
                 <div>
-                  <Label className="text-zinc-600">Footer message</Label>
+                  <Label className="text-[var(--workspace-shell-text-muted)]">Footer message</Label>
                   <Textarea
                     value={footerMessage}
                     onChange={(e) => setFooterMessage(e.target.value)}
@@ -1252,52 +1252,52 @@ export function InvoiceEditIndyContent({
           </div>
 
           <aside className="space-y-4">
-            <section className="rounded-xl border border-white/10 bg-[var(--workspace-shell-panel)] p-4">
-              <h2 className="text-sm font-semibold text-white">Settings</h2>
-              <p className="mt-1 text-xs text-zinc-400">
+            <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
+              <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Settings</h2>
+              <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
                 Email content used when sending this invoice.
               </p>
 
               <div className="mt-4 space-y-3">
                 <div>
-                  <Label className="text-zinc-300">Email subject</Label>
+                  <Label className="text-[var(--workspace-shell-text-muted)]">Email subject</Label>
                   <Input
                     value={emailSubject}
                     onChange={(e) => setEmailSubject(e.target.value)}
                     disabled={readOnly}
-                    className="mt-1 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-white"
+                    className="mt-1 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
                   />
                 </div>
                 <div>
-                  <Label className="text-zinc-300">Email body</Label>
+                  <Label className="text-[var(--workspace-shell-text-muted)]">Email body</Label>
                   <Textarea
                     value={emailBody}
                     onChange={(e) => setEmailBody(e.target.value)}
                     disabled={readOnly}
                     rows={4}
-                    className="mt-1 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-white"
+                    className="mt-1 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
                   />
                 </div>
                 <div>
-                  <Label className="text-zinc-300">Email signature</Label>
+                  <Label className="text-[var(--workspace-shell-text-muted)]">Email signature</Label>
                   <Textarea
                     value={emailSignature}
                     onChange={(e) => setEmailSignature(e.target.value)}
                     disabled={readOnly}
                     rows={3}
-                    className="mt-1 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-white"
+                    className="mt-1 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
                   />
                 </div>
               </div>
 
               {canManageInvoiceStatus &&
               ['sent', 'read'].includes(invoice.status) ? (
-                <div className="mt-4 space-y-2 border-t border-white/10 pt-4">
-                  <p className="text-xs text-zinc-400">Quick status</p>
+                <div className="mt-4 space-y-2 border-t border-[color:var(--workspace-shell-border)] pt-4">
+                  <p className="text-xs text-[var(--workspace-shell-text-muted)]">Quick status</p>
                   <Button
                     size="sm"
                     variant="outline"
-                    className="w-full border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-zinc-200"
+                    className="w-full border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
                     onClick={() =>
                       void setInvoiceStatus({
                         accountId,
@@ -1318,9 +1318,9 @@ export function InvoiceEditIndyContent({
               ) : null}
             </section>
 
-            <section className="rounded-xl border border-white/10 bg-[var(--workspace-shell-panel)] p-4">
-              <h2 className="text-sm font-semibold text-white">Private note</h2>
-              <p className="mt-1 text-xs text-zinc-400">
+            <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
+              <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Private note</h2>
+              <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
                 Only visible to your team — not shown to clients.
               </p>
               <Textarea
@@ -1329,7 +1329,7 @@ export function InvoiceEditIndyContent({
                 disabled={readOnly}
                 rows={5}
                 placeholder="Internal notes about this invoice"
-                className="mt-3 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-white"
+                className="mt-3 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
               />
             </section>
           </aside>

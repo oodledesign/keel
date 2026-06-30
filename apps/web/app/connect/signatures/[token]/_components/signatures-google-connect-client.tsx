@@ -55,25 +55,25 @@ export function SignaturesGoogleConnectClient({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-white/10 bg-[#0F1B35] p-6">
+      <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] p-6">
         <div className="mb-4 flex items-center gap-3">
-          <div className="rounded-xl bg-[var(--keel-teal)]/10 p-2 text-[var(--keel-teal)]">
+          <div className="rounded-xl bg-[var(--ozer-accent-subtle)] p-2 text-[var(--ozer-accent)]">
             <PlugZap className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="font-semibold text-white">Google Workspace setup</h2>
-            <p className="text-sm text-zinc-400">For {workspaceName}</p>
+            <h2 className="font-semibold text-[var(--workspace-shell-text)]">Google Workspace setup</h2>
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">For {workspaceName}</p>
           </div>
         </div>
 
-        <ol className="list-decimal space-y-3 pl-5 text-sm text-zinc-300">
+        <ol className="list-decimal space-y-3 pl-5 text-sm text-[var(--workspace-shell-text-muted)]">
           <li>
             In Google Admin → Security → API controls → Domain-wide delegation,
             add a new client.
           </li>
           <li>
             Client ID:{' '}
-            <code className="rounded bg-black/30 px-1 py-0.5 text-xs text-[#5eead4]">
+            <code className="rounded bg-black/30 px-1 py-0.5 text-xs text-[var(--ozer-accent-muted)]">
               {googleClientId ?? 'Ask Ozer support — service account not configured'}
             </code>
           </li>
@@ -98,7 +98,7 @@ export function SignaturesGoogleConnectClient({
             placeholder="example.com"
             value={primaryDomain}
             onChange={(e) => setPrimaryDomain(e.target.value)}
-            className="border-white/10 bg-white/5 text-white"
+            className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
           />
         </div>
         <div className="space-y-2">
@@ -109,7 +109,7 @@ export function SignaturesGoogleConnectClient({
             placeholder="admin@example.com"
             value={delegatedAdminEmail}
             onChange={(e) => setDelegatedAdminEmail(e.target.value)}
-            className="border-white/10 bg-white/5 text-white"
+            className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
           />
         </div>
       </div>
@@ -120,7 +120,7 @@ export function SignaturesGoogleConnectClient({
         disabled={
           pending || !primaryDomain.trim() || !delegatedAdminEmail.trim()
         }
-        className="bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+        className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
       >
         {pending ? (
           <>

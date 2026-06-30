@@ -25,7 +25,7 @@ import type {
 const DEFAULT_PHASE_COLOURS = [
   '#3B82F6',
   '#8B5CF6',
-  '#2A9D8F',
+  '#FF5C34',
   '#F97316',
   '#64748B',
   '#EAB308',

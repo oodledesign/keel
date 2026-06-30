@@ -73,12 +73,7 @@
     --ozer-accent-muted: var(--ozer-coral-100);
     --ozer-accent-subtle: var(--ozer-coral-alpha-15);
 
-    --ozer-surface-canvas: var(--ozer-plum-900);
-    --ozer-surface-panel: var(--ozer-plum-950);
-    --ozer-surface-panel-hover: var(--ozer-plum-800);
-    --ozer-surface-elevated: var(--ozer-plum-700);
-    --ozer-surface-active: var(--ozer-plum-600);
-
+    /* Static text/border tokens (same in both themes) */
     --ozer-text-on-dark: var(--ozer-cream-50);
     --ozer-text-on-dark-muted: var(--ozer-on-dark-alpha-65);
     --ozer-text-on-light: var(--ozer-plum-950);
@@ -97,7 +92,14 @@
     --ozer-gradient-active-hover-from: var(--ozer-coral-500);
     --ozer-gradient-active-hover-to: var(--ozer-coral-400);
 
-    /* ── Legacy Keel aliases (keep until Phase 2 grep cleanup) ── */
+    /* ── Light mode semantics (html without .dark) ── */
+    --ozer-surface-canvas: var(--ozer-cream-50);
+    --ozer-surface-panel: var(--ozer-white);
+    --ozer-surface-panel-hover: var(--ozer-cream-100);
+    --ozer-surface-elevated: var(--ozer-cream-200);
+    --ozer-surface-active: var(--ozer-cream-200);
+
+    /* ── Legacy Keel aliases ── */
     --keel-teal: var(--ozer-accent);
     --keel-teal-hover: var(--ozer-accent-hover);
     --keel-accent-blue: var(--ozer-info);
@@ -105,5 +107,13 @@
     --keel-gradient-to: var(--ozer-gradient-active-to);
     --keel-gradient-hover-from: var(--ozer-gradient-active-hover-from);
     --keel-gradient-hover-to: var(--ozer-gradient-active-hover-to);
+  }
+
+  .dark {
+    --ozer-surface-canvas: var(--ozer-plum-900);
+    --ozer-surface-panel: var(--ozer-plum-950);
+    --ozer-surface-panel-hover: var(--ozer-plum-800);
+    --ozer-surface-elevated: var(--ozer-plum-700);
+    --ozer-surface-active: var(--ozer-plum-600);
   }
 }

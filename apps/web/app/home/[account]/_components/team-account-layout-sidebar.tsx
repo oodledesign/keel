@@ -49,7 +49,7 @@ export function TeamAccountLayoutSidebar(props: {
 
   return (
     <Sidebar collapsible={config.sidebarCollapsedStyle} className={workspaceSidebarClassName}>
-      <SidebarHeader className="gap-3 border-b border-white/[0.08] px-3 py-3">
+      <SidebarHeader className="gap-3 border-b border-[color:var(--workspace-shell-border)] px-3 py-3">
         <SidebarLogoLink account={props.account} />
         <TeamAccountAccountsSelector
           userId={props.user.id}
@@ -63,9 +63,9 @@ export function TeamAccountLayoutSidebar(props: {
         <TeamAccountLayoutSidebarNavigation config={config} />
       </SidebarContent>
 
-      <SidebarFooter className="gap-2 border-t border-white/[0.08] px-2 py-3">
+      <SidebarFooter className="gap-2 border-t border-[color:var(--workspace-shell-border)] px-2 py-3">
         <div className="flex justify-center">
-          <SidebarTrigger className="h-8 w-8 rounded-md border border-white/12 text-white/80 hover:bg-white/[0.06] hover:text-white" />
+          <SidebarTrigger className="h-8 w-8 rounded-md border border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)]/80 hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]" />
         </div>
       </SidebarFooter>
     </Sidebar>

@@ -17,7 +17,7 @@ export const MARKETING_EMAIL_URLS = {
   marketing: marketingOrigin,
   support: `mailto:${supportEmail}`,
   info: `mailto:${supportEmail}`,
-  logo: `${appOrigin}/brand/ozer-wordmark.png`,
+  logo: `${appOrigin}/brand/ozer-wordmark-on-dark.svg`,
 } as const;
 
 type ShellOptions = {
@@ -93,8 +93,8 @@ ${options.bodyHtml}
 <tr>
 <td align="center" style="background:#1a2e44;padding:24px 40px;text-align:center;">
 <p style="color:rgba(255,255,255,0.5);font-size:12px;line-height:1.6;margin:0;">${footerNote}<br />
-<a href="${MARKETING_EMAIL_URLS.marketing}" style="color:#2A9D8F;text-decoration:none;">${marketingOrigin.replace(/^https?:\/\//, '')}</a> ·
-<a href="${MARKETING_EMAIL_URLS.support}" style="color:#2A9D8F;text-decoration:none;">${supportEmail}</a></p>
+<a href="${MARKETING_EMAIL_URLS.marketing}" style="color:#FF5C34;text-decoration:none;">${marketingOrigin.replace(/^https?:\/\//, '')}</a> ·
+<a href="${MARKETING_EMAIL_URLS.support}" style="color:#FF5C34;text-decoration:none;">${supportEmail}</a></p>
 </td>
 </tr>
 

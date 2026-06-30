@@ -67,7 +67,7 @@ export function DashboardTaskDetailTrigger({
         aria-disabled={isPending}
         className={cn(
           'w-full text-left transition-colors',
-          'hover:border-white/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2A9D8F]/50',
+          'hover:border-[color:var(--workspace-shell-border)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)]/50',
           isPending && 'pointer-events-none opacity-60',
           className,
         )}

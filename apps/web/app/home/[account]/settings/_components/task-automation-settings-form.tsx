@@ -113,28 +113,28 @@ export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-5">
+      <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold text-white">Current review mode</h2>
-            <p className="mt-1 text-sm text-zinc-400">
+            <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">Current review mode</h2>
+            <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
               Meeting tasks: {modeLabel(settings.meetingTasksMode)} · Email tasks:{' '}
               {modeLabel(settings.emailTasksMode)}
             </p>
           </div>
           <Link
             href={reviewPath}
-            className="text-sm font-medium text-[var(--keel-teal)] hover:underline"
+            className="text-sm font-medium text-[var(--ozer-accent)] hover:underline"
           >
             Open review queue
           </Link>
         </div>
       </div>
 
-      <section className="space-y-5 rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-5">
+      <section className="space-y-5 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5">
         <div>
-          <h2 className="text-base font-semibold text-white">Meeting tasks</h2>
-          <p className="mt-1 text-sm text-zinc-400">
+          <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">Meeting tasks</h2>
+          <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
             High-confidence suggestions can auto-publish when enabled. Ambiguous assignees
             always require review.
           </p>
@@ -148,10 +148,10 @@ export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
         />
       </section>
 
-      <section className="space-y-5 rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-5">
+      <section className="space-y-5 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5">
         <div>
-          <h2 className="text-base font-semibold text-white">Email tasks</h2>
-          <p className="mt-1 text-sm text-zinc-400">
+          <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">Email tasks</h2>
+          <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
             Same moderation rules apply to email action item suggestions.
           </p>
         </div>
@@ -164,19 +164,19 @@ export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
         />
       </section>
 
-      <section className="space-y-5 rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-5">
+      <section className="space-y-5 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5">
         <div>
-          <h2 className="text-base font-semibold text-white">Calendar auto-scheduling</h2>
-          <p className="mt-1 text-sm text-zinc-400">
+          <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">Calendar auto-scheduling</h2>
+          <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
             When a task is published with a due date, Keel can block time on the assignee&apos;s
             Google Calendar before the deadline.
           </p>
         </div>
 
-        <div className="flex items-center justify-between gap-4 rounded-xl border border-white/8 bg-white/[0.03] p-4">
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
           <div>
-            <Label className="text-white">Auto-schedule approved tasks on my calendar</Label>
-            <p className="mt-1 text-xs text-zinc-500">
+            <Label className="text-[var(--workspace-shell-text)]">Auto-schedule approved tasks on my calendar</Label>
+            <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
               Uses the assignee&apos;s connected Google Calendar when a task is approved.
             </p>
           </div>
@@ -191,7 +191,7 @@ export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label className="text-zinc-300">Lead time before due date (minutes)</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">Lead time before due date (minutes)</Label>
             <Input
               type="number"
               min={0}
@@ -204,11 +204,11 @@ export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
                   calendarLeadTimeMinutes: Number(event.target.value) || 0,
                 }))
               }
-              className="border-white/10 bg-[#0B132B] text-white"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]"
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-zinc-300">Working hours</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">Working hours</Label>
             <div className="flex items-center gap-2">
               <Input
                 type="time"
@@ -220,9 +220,9 @@ export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
                     workingHoursStart: event.target.value,
                   }))
                 }
-                className="border-white/10 bg-[#0B132B] text-white"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]"
               />
-              <span className="text-zinc-500">to</span>
+              <span className="text-[var(--workspace-shell-text-muted)]">to</span>
               <Input
                 type="time"
                 value={settings.workingHoursEnd}
@@ -233,16 +233,16 @@ export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
                     workingHoursEnd: event.target.value,
                   }))
                 }
-                className="border-white/10 bg-[#0B132B] text-white"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]"
               />
             </div>
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-4 rounded-xl border border-white/8 bg-white/[0.03] p-4">
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
           <div>
-            <Label className="text-white">Include personal calendar when finding free time</Label>
-            <p className="mt-1 text-xs text-zinc-500">
+            <Label className="text-[var(--workspace-shell-text)]">Include personal calendar when finding free time</Label>
+            <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
               When off, events on calendars marked personal below are ignored for busy time.
             </p>
           </div>
@@ -259,11 +259,11 @@ export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
         </div>
       </section>
 
-      <section className="space-y-4 rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-5">
+      <section className="space-y-4 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold text-white">Google Calendar connection</h2>
-            <p className="mt-1 text-sm text-zinc-400">
+            <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">Google Calendar connection</h2>
+            <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
               Connect your Google account and choose which calendars count as busy time for
               auto-scheduling tasks assigned to you.
             </p>
@@ -273,7 +273,7 @@ export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
             className={
               data.calendar.connected
                 ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200'
-                : 'border-white/10 bg-white/5 text-zinc-300'
+                : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]'
             }
           >
             {data.calendar.connected ? 'Connected' : 'Not connected'}
@@ -287,7 +287,7 @@ export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
         ) : !data.calendar.connected ? (
           <Button
             type="button"
-            className="keel-gradient-btn text-white"
+            className="keel-gradient-btn text-[var(--ozer-white)]"
             onClick={() => {
               window.location.href = data.calendar.connectHref;
             }}
@@ -296,13 +296,13 @@ export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
             Connect Google Calendar
           </Button>
         ) : calendarOptions.length === 0 ? (
-          <p className="text-sm text-zinc-400">No calendars returned from Google.</p>
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">No calendars returned from Google.</p>
         ) : (
           <div className="space-y-3">
             {calendarOptions.map((calendar) => (
               <div
                 key={calendar.id}
-                className="rounded-xl border border-white/8 bg-white/[0.03] p-4"
+                className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4"
               >
                 <div className="flex flex-wrap items-center gap-3">
                   <Checkbox
@@ -313,7 +313,7 @@ export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
                       toggleBusyCalendar(calendar.id, checked === true)
                     }
                   />
-                  <Label htmlFor={`busy-${calendar.id}`} className="text-sm text-white">
+                  <Label htmlFor={`busy-${calendar.id}`} className="text-sm text-[var(--workspace-shell-text)]">
                     {calendar.summary}
                     {calendar.primary ? ' (primary)' : ''}
                   </Label>
@@ -328,7 +328,7 @@ export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
                         togglePersonalCalendar(calendar.id, checked === true)
                       }
                     />
-                    <Label htmlFor={`personal-${calendar.id}`} className="text-xs text-zinc-400">
+                    <Label htmlFor={`personal-${calendar.id}`} className="text-xs text-[var(--workspace-shell-text-muted)]">
                       Treat as personal calendar
                     </Label>
                   </div>
@@ -345,7 +345,7 @@ export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
             type="button"
             onClick={saveSettings}
             disabled={pending}
-            className="bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]"
+            className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
           >
             {pending ? (
               <>
@@ -394,12 +394,12 @@ function ModeRadioGroup({
           onClick={() => onChange(option.id)}
           className={`rounded-xl border p-4 text-left transition-colors ${
             value === option.id
-              ? 'border-[var(--keel-teal)]/50 bg-[var(--keel-teal)]/10'
-              : 'border-white/8 bg-white/[0.03] hover:bg-white/[0.05]'
+              ? 'border-[var(--ozer-accent)]/50 bg-[var(--ozer-accent-subtle)]'
+              : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] hover:bg-[var(--workspace-shell-sidebar-accent)]'
           }`}
         >
-          <div className="text-sm font-medium text-white">{option.title}</div>
-          <p className="mt-1 text-xs text-zinc-400">{option.description}</p>
+          <div className="text-sm font-medium text-[var(--workspace-shell-text)]">{option.title}</div>
+          <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">{option.description}</p>
         </button>
       ))}
     </div>

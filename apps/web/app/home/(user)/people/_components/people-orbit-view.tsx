@@ -49,7 +49,7 @@ const RING_AVATAR_SIZE: Record<PersonCircleTier, RingLayout['avatarSize']> = {
 };
 
 const RING_STROKE: Record<PersonCircleTier, string> = {
-  core: 'stroke-[var(--keel-teal)]/35',
+  core: 'stroke-[var(--ozer-accent)]/35',
   close: 'stroke-[#2563EB]/30',
   friends: 'stroke-violet-400/25',
   community: 'stroke-white/15',
@@ -103,8 +103,8 @@ export function PeopleOrbitView({
     <div className={cn('space-y-4', className)}>
       <div
         className={cn(
-          'relative mx-auto aspect-square w-full max-w-xl overflow-hidden rounded-2xl border border-white/[0.08]',
-          'bg-[radial-gradient(circle_at_center,rgba(42,157,143,0.08),transparent_55%),var(--workspace-shell-panel)]',
+          'relative mx-auto aspect-square w-full max-w-xl overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)]',
+          'bg-[radial-gradient(circle_at_center,rgba(255, 92, 52, 0.08),transparent_55%),var(--workspace-shell-panel)]',
         )}
       >
         <svg
@@ -138,10 +138,10 @@ export function PeopleOrbitView({
             size="xl"
             className="mx-auto shadow-[0_0_0_4px_rgba(42,157,143,0.2)]"
           />
-          <p className="mt-2 hidden text-xs font-medium text-white sm:block">
+          <p className="mt-2 hidden text-xs font-medium text-[var(--workspace-shell-text)] sm:block">
             {viewer.name}
           </p>
-          <p className="hidden text-[10px] uppercase tracking-[0.12em] text-zinc-500 sm:block">
+          <p className="hidden text-[10px] uppercase tracking-[0.12em] text-[var(--workspace-shell-text-muted)] sm:block">
             You
           </p>
         </div>
@@ -160,7 +160,7 @@ export function PeopleOrbitView({
               <Link
                 key={person.id}
                 href={href}
-                className="group absolute z-10 -translate-x-1/2 -translate-y-1/2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--keel-teal)]"
+                className="group absolute z-10 -translate-x-1/2 -translate-y-1/2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)]"
                 style={{
                   left: `calc(50% + ${x}%)`,
                   top: `calc(50% + ${y}%)`,
@@ -177,8 +177,8 @@ export function PeopleOrbitView({
                 <span
                   className={cn(
                     'pointer-events-none absolute left-1/2 top-full z-30 mt-2 -translate-x-1/2',
-                    'whitespace-nowrap rounded-lg border border-white/10 bg-[#0B132B]/95 px-2.5 py-1',
-                    'text-xs font-medium text-white shadow-lg backdrop-blur-sm',
+                    'whitespace-nowrap rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/95 px-2.5 py-1',
+                    'text-xs font-medium text-[var(--workspace-shell-text)] shadow-lg backdrop-blur-sm',
                     'opacity-0 transition-opacity duration-150',
                     'group-hover:opacity-100 group-focus-visible:opacity-100',
                   )}
@@ -191,7 +191,7 @@ export function PeopleOrbitView({
         )}
       </div>
 
-      <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-zinc-500">
+      <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-[var(--workspace-shell-text-muted)]">
         {rings.map((ring) => (
           <span key={ring.tier} className="inline-flex items-center gap-1.5">
             <CircleTierBadge tier={ring.tier} />

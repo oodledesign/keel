@@ -35,7 +35,7 @@ export function ChangelogHeader({ entry }: { entry: Cms.ContentItem }) {
             </span>
           </div>
 
-          <h1 className="font-heading text-2xl font-medium tracking-tighter xl:text-4xl dark:text-white">
+          <h1 className="font-heading text-2xl font-medium tracking-tighter xl:text-4xl dark:text-[var(--workspace-shell-text)]">
             {title}
           </h1>
 

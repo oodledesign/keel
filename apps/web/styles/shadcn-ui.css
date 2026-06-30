@@ -54,22 +54,22 @@
     --sidebar-border: var(--border);
     --sidebar-ring: var(--ozer-info);
 
-    /* Workspace shell (Phase 1 — app chrome) */
+    /* Workspace shell — light mode */
     --workspace-shell-header: transparent;
-    --workspace-shell-sidebar: var(--ozer-surface-panel);
+    --workspace-shell-sidebar: var(--ozer-cream-100);
     --workspace-shell-canvas: var(--ozer-surface-canvas);
-    --workspace-shell-panel: var(--ozer-surface-panel);
-    --workspace-shell-panel-hover: var(--ozer-surface-panel-hover);
-    --workspace-shell-sidebar-active: var(--ozer-surface-elevated);
-    --workspace-shell-sidebar-accent: var(--ozer-on-dark-alpha-06);
-    --workspace-shell-border: var(--ozer-border-on-dark);
+    --workspace-shell-panel: var(--ozer-white);
+    --workspace-shell-panel-hover: var(--ozer-cream-100);
+    --workspace-shell-sidebar-active: var(--ozer-cream-200);
+    --workspace-shell-sidebar-accent: var(--ozer-plum-alpha-08);
+    --workspace-shell-border: var(--ozer-border-on-light);
     --workspace-shell-text: var(--ozer-text-on-light);
     --workspace-shell-text-muted: var(--ozer-text-on-light-muted);
     --workspace-shell-text-on-dark: var(--ozer-text-on-dark);
     --workspace-shell-text-on-dark-muted: var(--ozer-text-on-dark-muted);
 
-    --workspace-control-surface: var(--ozer-surface-panel);
-    --workspace-control-border: var(--ozer-border-on-dark);
+    --workspace-control-surface: var(--ozer-white);
+    --workspace-control-border: var(--ozer-border-on-light);
   }
 
   .dark {

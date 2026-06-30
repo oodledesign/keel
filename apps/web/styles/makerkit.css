@@ -50,20 +50,29 @@ Optimize dropdowns for mobile
 }
 
 @layer components {
+  .ozer-gradient-btn,
   .keel-gradient-btn {
     background-color: var(--ozer-accent);
     background-image: none;
     color: var(--ozer-white);
     transition:
+      transform 160ms cubic-bezier(0.23, 1, 0.32, 1),
       background-color 200ms ease,
       opacity 200ms ease;
   }
 
+  .ozer-gradient-btn:hover,
   .keel-gradient-btn:hover {
     background-color: var(--ozer-accent-hover);
     background-image: none;
   }
 
+  .ozer-gradient-btn:active,
+  .keel-gradient-btn:active {
+    transform: scale(0.97);
+  }
+
+  .ozer-gradient-active,
   .keel-gradient-active {
     background-image: linear-gradient(
       to right,

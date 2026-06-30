@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Label } from '@kit/ui/label';
 
 import { ACCESSIBILITY_UPDATED_EVENT } from '~/components/text-size-sync';
+import { AppearanceThemeSelector } from '~/components/appearance-theme-selector';
 import { Switch } from '@kit/ui/switch';
 import { toast } from '@kit/ui/sonner';
 
@@ -72,10 +73,16 @@ export function AccessibilitySettingsForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <Card className="border-white/6 bg-[var(--workspace-shell-panel)]">
+      <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+        <CardHeader>
+          <AppearanceThemeSelector />
+        </CardHeader>
+      </Card>
+
+      <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
         <CardHeader>
           <Label className="text-base font-medium">Text size</Label>
-          <p className="text-sm font-normal text-zinc-400">
+          <p className="text-sm font-normal text-[var(--workspace-shell-text-muted)]">
             Choose the default text size for the app.
           </p>
         </CardHeader>
@@ -89,8 +96,8 @@ export function AccessibilitySettingsForm({
                 size="sm"
                 className={
                   textSize === opt.value
-                    ? 'border-[var(--keel-teal)]/60 bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]'
-                    : 'border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-zinc-300 hover:bg-[var(--workspace-shell-panel-hover)]'
+                    ? 'border-[var(--ozer-accent)]/60 bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]'
+                    : 'border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-panel-hover)]'
                 }
                 onClick={() => setTextSize(opt.value)}
               >
@@ -101,7 +108,7 @@ export function AccessibilitySettingsForm({
         </CardContent>
       </Card>
 
-      <Card className="border-white/6 bg-[var(--workspace-shell-panel)]">
+      <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
         <CardContent className="pt-6">
           <div className="space-y-6">
             <div className="flex items-center justify-between gap-4">

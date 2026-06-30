@@ -36,11 +36,11 @@ export function CampaignRowActions({
   return (
     <div className="flex flex-wrap gap-2">
       {status === 'draft' ? (
-        <Button asChild variant="outline" size="sm" className="border-white/10">
+        <Button asChild variant="outline" size="sm" className="border-[color:var(--workspace-shell-border)]">
           <Link href={`/admin/email-marketing/${campaignId}/edit`}>Edit</Link>
         </Button>
       ) : null}
-      <Button asChild variant="outline" size="sm" className="border-white/10">
+      <Button asChild variant="outline" size="sm" className="border-[color:var(--workspace-shell-border)]">
         <Link href={`/admin/email-marketing/${campaignId}`}>View</Link>
       </Button>
       {status === 'sent' || status === 'cancelled' ? (
@@ -48,7 +48,7 @@ export function CampaignRowActions({
           variant="outline"
           size="sm"
           disabled={isPending}
-          className="border-white/10"
+          className="border-[color:var(--workspace-shell-border)]"
           onClick={() => handleDuplicate(true)}
         >
           <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
@@ -59,7 +59,7 @@ export function CampaignRowActions({
         variant="outline"
         size="sm"
         disabled={isPending}
-        className="border-white/10"
+        className="border-[color:var(--workspace-shell-border)]"
         onClick={() => handleDuplicate(false)}
       >
         <Copy className="mr-1.5 h-3.5 w-3.5" />

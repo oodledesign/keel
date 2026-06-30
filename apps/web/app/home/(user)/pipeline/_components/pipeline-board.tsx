@@ -53,16 +53,16 @@ const STAGE_COLORS: Record<
   { dot: string; bar: string; tint: string }
 > = {
   lead: { dot: '#3B82F6', bar: '#3B82F6', tint: 'rgba(59,130,246,0.08)' },
-  qualified: { dot: '#2A9D8F', bar: '#2A9D8F', tint: 'rgba(42,157,143,0.08)' },
+  qualified: { dot: '#FF5C34', bar: '#FF5C34', tint: 'rgba(255, 92, 52, 0.08)' },
   call_booked: { dot: '#A855F7', bar: '#A855F7', tint: 'rgba(168,85,247,0.08)' },
   proposal_sent: { dot: '#F97316', bar: '#F97316', tint: 'rgba(249,115,22,0.08)' },
   negotiation: { dot: '#EAB308', bar: '#EAB308', tint: 'rgba(234,179,8,0.08)' },
-  won: { dot: '#2A9D8F', bar: '#2A9D8F', tint: 'rgba(42,157,143,0.16)' },
+  won: { dot: '#FF5C34', bar: '#FF5C34', tint: 'rgba(255, 92, 52, 0.16)' },
   lost: { dot: '#64748B', bar: '#64748B', tint: 'rgba(100,116,139,0.10)' },
 };
 
 const panelClass =
-  'rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)] shadow-[0_12px_36px_rgba(4,10,24,0.18)]';
+  'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_12px_36px_rgba(4,10,24,0.18)]';
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('en-GB', {
@@ -222,12 +222,12 @@ export function PipelineBoard({
   );
 
   return (
-    <div className="flex min-h-[calc(100svh-3.5rem)] w-full flex-col gap-6 px-4 pb-12 pt-6 text-white md:px-6 lg:px-8">
+    <div className="flex min-h-[calc(100svh-3.5rem)] w-full flex-col gap-6 px-4 pb-12 pt-6 text-[var(--workspace-shell-text)] md:px-6 lg:px-8">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-lg font-bold text-white">Pipeline</h1>
-          <p className="mt-0.5 text-sm text-zinc-400">
+          <h1 className="text-lg font-bold text-[var(--workspace-shell-text)]">Pipeline</h1>
+          <p className="mt-0.5 text-sm text-[var(--workspace-shell-text-muted)]">
             {activeCount} active leads · {formatCurrency(totalValue)} total
             value
             {isPending && (
@@ -236,11 +236,11 @@ export function PipelineBoard({
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex rounded-xl border border-white/8 bg-[var(--workspace-shell-panel)] p-1 text-xs">
+          <div className="flex rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-1 text-xs">
             <button
               type="button"
               onClick={() => setFilter('all')}
-              className={`rounded-lg px-3 py-1.5 font-medium transition-colors ${filter === 'all' ? 'bg-white/10 text-white' : 'text-zinc-400 hover:text-white'}`}
+              className={`rounded-lg px-3 py-1.5 font-medium transition-colors ${filter === 'all' ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]' : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'}`}
             >
               All
             </button>
@@ -249,7 +249,7 @@ export function PipelineBoard({
                 key={biz.id}
                 type="button"
                 onClick={() => setFilter(biz.id)}
-                className={`rounded-lg px-3 py-1.5 font-medium transition-colors ${filter === biz.id ? 'bg-white/10 text-white' : 'text-zinc-400 hover:text-white'}`}
+                className={`rounded-lg px-3 py-1.5 font-medium transition-colors ${filter === biz.id ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]' : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'}`}
               >
                 {biz.name}
               </button>
@@ -343,18 +343,18 @@ function StageColumn({
     <div
       ref={setNodeRef}
       className={`flex min-w-[260px] flex-1 flex-col transition-colors ${
-        isOver ? 'rounded-2xl bg-white/[0.02]' : ''
+        isOver ? 'rounded-2xl bg-[var(--workspace-shell-sidebar-accent)]' : ''
       }`}
     >
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-zinc-200">{label}</span>
-          <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-xs text-zinc-400">
+          <span className="text-sm font-semibold text-[var(--workspace-shell-text)]">{label}</span>
+          <span className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
             {deals.length}
           </span>
         </div>
         {value > 0 && (
-          <span className="text-xs text-zinc-500">
+          <span className="text-xs text-[var(--workspace-shell-text-muted)]">
             {formatCurrency(value)}
           </span>
         )}
@@ -366,7 +366,7 @@ function StageColumn({
       >
         <div className="flex flex-1 flex-col gap-2">
           {deals.length === 0 ? (
-            <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-white/8 px-4 py-8 text-center text-xs text-zinc-600">
+            <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center text-xs text-[var(--workspace-shell-text-muted)]">
               Drag leads here
             </div>
           ) : (
@@ -430,14 +430,14 @@ function DealCard({
       <div className="mb-2 flex items-start justify-between">
         <div className="flex items-start gap-2">
           <div>
-            <p className="text-sm font-medium text-white">
+            <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
               {deal.contactName || deal.clientName}
             </p>
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
               {deal.companyName || (deal.clientId ? deal.clientName : '')}
             </p>
             {deal.clientId ? (
-              <span className="mt-1 inline-flex items-center rounded-full bg-[#2A9D8F]/15 px-2 py-0.5 text-[10px] font-medium text-[#5eead4]">
+              <span className="mt-1 inline-flex items-center rounded-full bg-[var(--ozer-accent-subtle)] px-2 py-0.5 text-[10px] font-medium text-[var(--ozer-accent-muted)]">
                 Existing client
               </span>
             ) : null}
@@ -449,17 +449,17 @@ function DealCard({
             e.stopPropagation();
             onEdit();
           }}
-          className="text-zinc-500 hover:text-zinc-300"
+          className="text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text-muted)]"
           aria-label="Edit lead"
         >
           <MoreHorizontal className="h-4 w-4" />
         </button>
       </div>
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-[#5eead4]">
+        <span className="text-sm font-semibold text-[var(--ozer-accent-muted)]">
           {formatCurrency(deal.value)}
         </span>
-        <span className="flex items-center gap-1.5 text-xs text-zinc-400">
+        <span className="flex items-center gap-1.5 text-xs text-[var(--workspace-shell-text-muted)]">
           {deal.businessColor && (
             <span
               className="inline-block h-2 w-2 rounded-full"
@@ -476,8 +476,8 @@ function DealCard({
         </span>
       </div>
       {deal.nextAction && (
-        <div className="mt-2 border-t border-white/6 pt-2">
-          <p className="text-xs text-zinc-500">
+        <div className="mt-2 border-t border-[color:var(--workspace-shell-border)] pt-2">
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
             {deal.nextAction}
             {deal.nextActionDate ? ` · ${deal.nextActionDate}` : ''}
           </p>

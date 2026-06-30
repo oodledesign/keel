@@ -357,7 +357,7 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Today</h1>
-          <p className="mt-1 text-sm text-white/55" suppressHydrationWarning>
+          <p className="mt-1 text-sm text-[var(--workspace-shell-text)]/55" suppressHydrationWarning>
             {initialData.scope.kind === 'workspace'
               ? `${initialData.scope.accountName} — ${dateLabel}`
               : dateLabel}
@@ -384,7 +384,7 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
       <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
         <section className="space-y-3">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold text-white/80">Schedule</h2>
+            <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]/80">Schedule</h2>
             <ReplanDialog
               scope={initialData.scope}
               planMarkdown={planMarkdown}
@@ -414,7 +414,7 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
             </div>
           )}
           {hasPlan && displayBlocks.length === 0 ? (
-            <p className="text-xs text-white/40">
+            <p className="text-xs text-[var(--workspace-shell-text)]/40">
               A plan exists for today but no time blocks could be read from it.
             </p>
           ) : null}
@@ -422,8 +422,8 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
 
         <section className="space-y-3">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold text-white/80">Due today</h2>
-            <span className="text-xs text-white/40">
+            <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]/80">Due today</h2>
+            <span className="text-xs text-[var(--workspace-shell-text)]/40">
               {openTasks.length} open
               {doneTasks.length > 0 ? ` · ${doneTasks.length} done` : ''}
             </span>
@@ -434,13 +434,13 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
               value={newTaskTitle}
               onChange={(event) => setNewTaskTitle(event.target.value)}
               placeholder="Add a task for today…"
-              className="h-9 min-w-0 flex-1 rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-white placeholder:text-white/30 focus:border-[#2A9D8F]/60 focus:outline-none"
+              className="h-9 min-w-0 flex-1 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30 focus:border-[var(--ozer-accent)]/60 focus:outline-none"
             />
             <Button
               type="submit"
               size="sm"
               disabled={!newTaskTitle.trim() || isAddingTask}
-              className="h-9 shrink-0 bg-[var(--keel-teal)] hover:bg-[#238b7f]"
+              className="h-9 shrink-0 bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]"
             >
               <Plus className="h-4 w-4" />
               Add
@@ -448,7 +448,7 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
           </form>
 
           {tasks.length === 0 ? (
-            <p className="rounded-xl border border-white/8 bg-white/[0.03] px-4 py-6 text-center text-sm text-white/45">
+            <p className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-6 text-center text-sm text-[var(--workspace-shell-text)]/45">
               Nothing due today.
             </p>
           ) : (
@@ -468,11 +468,11 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
       <SopSuggestionsStrip suggestions={initialData.sopSuggestions} />
 
       {!initialData.includeWorkspaceTasks ? (
-        <p className="text-center text-xs text-white/35">
+        <p className="text-center text-xs text-[var(--workspace-shell-text)]/35">
           Workspace tasks hidden —{' '}
           <Link
             href={initialData.settingsHref}
-            className="text-[#2A9D8F] hover:underline"
+            className="text-[var(--ozer-accent)] hover:underline"
           >
             change in settings
           </Link>
@@ -501,22 +501,22 @@ function NowBar({
   });
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-white/8 bg-[var(--workspace-shell-panel)] px-5 py-4 sm:flex-row sm:items-center sm:gap-5">
+    <div className="flex flex-col gap-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-5 py-4 sm:flex-row sm:items-center sm:gap-5">
       <span
-        className="font-mono text-3xl font-semibold tabular-nums text-white"
+        className="font-mono text-3xl font-semibold tabular-nums text-[var(--workspace-shell-text)]"
         suppressHydrationWarning
       >
         {clock}
       </span>
-      <span className="hidden h-10 w-px bg-white/10 sm:block" />
+      <span className="hidden h-10 w-px bg-[var(--workspace-shell-sidebar-accent)] sm:block" />
       <div className="min-w-0 flex-1 space-y-1" suppressHydrationWarning>
         {hasSchedule ? (
           <>
             <p className="truncate text-sm">
-              <span className="font-semibold uppercase tracking-wide text-[10px] text-[#5eead4]">
+              <span className="font-semibold uppercase tracking-wide text-[10px] text-[var(--ozer-accent-muted)]">
                 Now
               </span>{' '}
-              <span className="font-medium text-white">
+              <span className="font-medium text-[var(--workspace-shell-text)]">
                 {currentBlock
                   ? currentBlock.title
                   : nextBlock
@@ -524,14 +524,14 @@ function NowBar({
                     : 'Done for the day'}
               </span>
               {currentBlock ? (
-                <span className="text-white/40">
+                <span className="text-[var(--workspace-shell-text)]/40">
                   {' '}
                   · until {formatTime(currentBlock.end)}
                 </span>
               ) : null}
             </p>
-            <p className="truncate text-sm text-white/55">
-              <span className="font-semibold uppercase tracking-wide text-[10px] text-white/35">
+            <p className="truncate text-sm text-[var(--workspace-shell-text)]/55">
+              <span className="font-semibold uppercase tracking-wide text-[10px] text-[var(--workspace-shell-text)]/35">
                 Next
               </span>{' '}
               {nextBlock
@@ -540,9 +540,9 @@ function NowBar({
             </p>
           </>
         ) : (
-          <p className="text-sm text-white/55">
+          <p className="text-sm text-[var(--workspace-shell-text)]/55">
             No schedule yet —{' '}
-            <Link href={planHref} className="text-[#2A9D8F] hover:underline">
+            <Link href={planHref} className="text-[var(--ozer-accent)] hover:underline">
               plan your day
             </Link>
           </p>
@@ -568,10 +568,10 @@ function ScheduleRow({
         block.isCalendarEvent
           ? 'border-sky-400/15 bg-sky-400/10'
           : block.isBreak
-            ? 'border-dashed border-white/8 bg-white/[0.015]'
-            : 'border-white/8 bg-[var(--workspace-shell-panel)]',
+            ? 'border-dashed border-[color:var(--workspace-shell-border)] bg-white/[0.015]'
+            : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]',
         status === 'current' &&
-          'border-[#2A9D8F]/50 bg-[#2A9D8F]/10 ring-1 ring-[#2A9D8F]/30',
+          'border-[var(--ozer-accent)]/50 bg-[var(--ozer-accent-subtle)] ring-1 ring-[var(--ozer-accent)]/30',
         status === 'past' && 'opacity-45',
       )}
     >
@@ -581,25 +581,25 @@ function ScheduleRow({
           block.isCalendarEvent
             ? 'text-sky-300/80'
             : block.isBreak
-              ? 'text-white/30'
-              : 'text-[#5eead4]',
+              ? 'text-[var(--workspace-shell-text)]/30'
+              : 'text-[var(--ozer-accent-muted)]',
         )}
       />
       <div className="min-w-0 flex-1">
-        <p className="font-mono text-xs text-white/45">
+        <p className="font-mono text-xs text-[var(--workspace-shell-text)]/45">
           {formatTime(block.start)} – {formatTime(block.end)}
         </p>
         <p
           className={cn(
             'mt-0.5 text-sm font-medium',
-            block.isBreak ? 'italic text-white/45' : 'text-white',
+            block.isBreak ? 'italic text-[var(--workspace-shell-text)]/45' : 'text-[var(--workspace-shell-text)]',
           )}
         >
           {block.title}
         </p>
       </div>
       {status === 'current' ? (
-        <span className="mt-0.5 shrink-0 rounded-full bg-[#2A9D8F]/25 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#5eead4]">
+        <span className="mt-0.5 shrink-0 rounded-full bg-[var(--ozer-accent)]/25 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--ozer-accent-muted)]">
           Now
         </span>
       ) : null}
@@ -619,7 +619,7 @@ function TaskRow({
   return (
     <li
       className={cn(
-        'flex items-start gap-3 rounded-xl border border-white/8 bg-[var(--workspace-shell-panel)] px-4 py-3',
+        'flex items-start gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-3',
         done && 'opacity-55',
       )}
     >
@@ -627,10 +627,10 @@ function TaskRow({
         type="button"
         onClick={() => onToggle(task)}
         aria-label={done ? 'Mark as not done' : 'Mark as done'}
-        className="mt-0.5 shrink-0 text-white/30 transition-colors hover:text-[#5eead4]"
+        className="mt-0.5 shrink-0 text-[var(--workspace-shell-text)]/30 transition-colors hover:text-[var(--ozer-accent-muted)]"
       >
         {done ? (
-          <CheckCircle2 className="h-4 w-4 text-[#2A9D8F]" />
+          <CheckCircle2 className="h-4 w-4 text-[var(--ozer-accent)]" />
         ) : (
           <Circle className="h-4 w-4" />
         )}
@@ -638,13 +638,13 @@ function TaskRow({
       <div className="min-w-0 flex-1">
         <p
           className={cn(
-            'text-sm font-medium text-white',
+            'text-sm font-medium text-[var(--workspace-shell-text)]',
             done && 'line-through decoration-white/40',
           )}
         >
           {task.title}
         </p>
-        <p className="mt-0.5 text-xs text-white/45">
+        <p className="mt-0.5 text-xs text-[var(--workspace-shell-text)]/45">
           {task.workspace}
           {task.project !== 'No project' ? ` · ${task.project}` : ''}
         </p>
@@ -655,7 +655,7 @@ function TaskRow({
 
 const STAGE_DOT_COLORS: Record<string, string> = {
   lead: '#3B82F6',
-  qualified: '#2A9D8F',
+  qualified: '#FF5C34',
   call_booked: '#A855F7',
   proposal_sent: '#F97316',
   negotiation: '#EAB308',
@@ -663,18 +663,18 @@ const STAGE_DOT_COLORS: Record<string, string> = {
 
 function PipelineOverview({ pipeline }: { pipeline: DayViewPipeline }) {
   return (
-    <section className="space-y-3 rounded-2xl border border-white/8 bg-[var(--workspace-shell-panel)] px-5 py-4">
+    <section className="space-y-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-5 py-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-white/80">Pipeline</h2>
-          <p className="mt-0.5 text-xs text-white/45">
+          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]/80">Pipeline</h2>
+          <p className="mt-0.5 text-xs text-[var(--workspace-shell-text)]/45">
             {pipeline.openCount} open deal{pipeline.openCount === 1 ? '' : 's'}{' '}
             · {gbp.format(pipeline.openValue)}
           </p>
         </div>
         <Link
           href={pipeline.href}
-          className="inline-flex items-center gap-1 text-xs font-medium text-[#2A9D8F] hover:underline"
+          className="inline-flex items-center gap-1 text-xs font-medium text-[var(--ozer-accent)] hover:underline"
         >
           Open pipeline
           <ArrowRight className="h-3 w-3" />
@@ -685,7 +685,7 @@ function PipelineOverview({ pipeline }: { pipeline: DayViewPipeline }) {
         {pipeline.stages.map((stage) => (
           <span
             key={stage.key}
-            className="inline-flex items-center gap-2 rounded-lg border border-white/8 bg-white/[0.04] px-2.5 py-1.5 text-xs"
+            className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-1.5 text-xs"
           >
             <span
               className="h-2 w-2 rounded-full"
@@ -693,18 +693,18 @@ function PipelineOverview({ pipeline }: { pipeline: DayViewPipeline }) {
                 backgroundColor: STAGE_DOT_COLORS[stage.key] ?? '#64748B',
               }}
             />
-            <span className="text-white/70">{stage.label}</span>
-            <span className="font-semibold text-white">{stage.count}</span>
+            <span className="text-[var(--workspace-shell-text)]/70">{stage.label}</span>
+            <span className="font-semibold text-[var(--workspace-shell-text)]">{stage.count}</span>
             {stage.value > 0 ? (
-              <span className="text-white/40">{gbp.format(stage.value)}</span>
+              <span className="text-[var(--workspace-shell-text)]/40">{gbp.format(stage.value)}</span>
             ) : null}
           </span>
         ))}
       </div>
 
       {pipeline.needsAction.length > 0 ? (
-        <div className="space-y-1.5 border-t border-white/6 pt-3">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-white/35">
+        <div className="space-y-1.5 border-t border-[color:var(--workspace-shell-border)] pt-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--workspace-shell-text)]/35">
             Next actions due
           </p>
           <ul className="space-y-1.5">
@@ -714,13 +714,13 @@ function PipelineOverview({ pipeline }: { pipeline: DayViewPipeline }) {
                 className="flex items-baseline justify-between gap-3 text-sm"
               >
                 <span className="min-w-0 truncate">
-                  <span className="font-medium text-white">{deal.name}</span>
-                  <span className="text-white/50"> — {deal.nextAction}</span>
+                  <span className="font-medium text-[var(--workspace-shell-text)]">{deal.name}</span>
+                  <span className="text-[var(--workspace-shell-text)]/50"> — {deal.nextAction}</span>
                 </span>
                 <span
                   className={cn(
                     'shrink-0 text-xs',
-                    deal.overdue ? 'text-rose-300' : 'text-white/45',
+                    deal.overdue ? 'text-rose-300' : 'text-[var(--workspace-shell-text)]/45',
                   )}
                 >
                   {deal.overdue ? 'Overdue' : 'Today'} · {deal.stageLabel}
@@ -736,10 +736,10 @@ function PipelineOverview({ pipeline }: { pipeline: DayViewPipeline }) {
 
 function EmptySchedule({ planHref }: { planHref: string }) {
   return (
-    <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-8 text-center">
-      <Sparkles className="mx-auto h-6 w-6 text-[#5eead4]/70" />
-      <p className="mt-3 text-sm text-white/60">No plan for today yet.</p>
-      <Button asChild className="mt-4 bg-[var(--keel-teal)] hover:bg-[#238b7f]">
+    <div className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-8 text-center">
+      <Sparkles className="mx-auto h-6 w-6 text-[var(--ozer-accent-muted)]/70" />
+      <p className="mt-3 text-sm text-[var(--workspace-shell-text)]/60">No plan for today yet.</p>
+      <Button asChild className="mt-4 bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]">
         <Link href={planHref}>Plan my day</Link>
       </Button>
     </div>

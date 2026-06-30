@@ -594,7 +594,7 @@ function BillingToggle({
     <div
       role="radiogroup"
       aria-label="Billing interval"
-      className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#120f24]/80 p-1"
+      className="inline-flex items-center gap-2 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)]/80 p-1"
     >
       {(['monthly', 'annual'] as const).map((option) => {
         const selected = billing === option;
@@ -608,7 +608,7 @@ function BillingToggle({
             onClick={() => onChange(option)}
             className={cn(
               'relative rounded-full px-4 py-2 text-sm font-medium capitalize transition-colors',
-              selected ? 'text-white' : 'text-slate-300 hover:text-white',
+              selected ? 'text-[var(--workspace-shell-text)]' : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
             )}
           >
             {selected && !reducedMotion ? (
@@ -664,7 +664,7 @@ function WorkspaceAssistantBadges({
                     isIncluded
                       ? 'border-[#2dd4bf]/40 bg-[#2dd4bf]/10 text-[#2dd4bf]'
                       : isComingSoon
-                        ? 'border-white/10 bg-white/5 text-slate-500'
+                        ? 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--ozer-text-on-light-muted)]'
                         : 'border-violet-400/30 bg-violet-500/10 text-violet-300',
                   )}
                 >
@@ -673,7 +673,7 @@ function WorkspaceAssistantBadges({
               </TooltipTrigger>
               <TooltipContent
                 side="top"
-                className="max-w-[200px] border border-white/10 bg-[#0d0b1e] text-white"
+                className="max-w-[200px] border border-[color:var(--workspace-shell-border)] bg-[#0d0b1e] text-[var(--workspace-shell-text)]"
               >
                 {badge.tooltip}
               </TooltipContent>
@@ -730,10 +730,10 @@ function WorkspaceCard({
       }
       className={cn(
         'relative flex h-full flex-col rounded-2xl border p-5 text-left transition-shadow duration-150',
-        'bg-[#120f24]/60 backdrop-blur-sm',
+        'bg-[var(--ozer-plum-950)]/60 backdrop-blur-sm',
         selected
           ? 'border-[#2dd4bf]/60 bg-[#2dd4bf]/10 shadow-[0_12px_40px_rgba(45,212,191,0.12)]'
-          : 'border-white/10 shadow-none hover:border-white/20 hover:shadow-[0_12px_40px_rgba(0,0,0,0.35)]',
+          : 'border-[color:var(--workspace-shell-border)] shadow-none hover:border-[color:var(--workspace-shell-border)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.35)]',
         locked ? 'cursor-default' : 'cursor-pointer',
       )}
     >
@@ -752,7 +752,7 @@ function WorkspaceCard({
             'flex h-6 w-6 items-center justify-center rounded-md border',
             selected
               ? 'border-[#2dd4bf]/50 bg-[#2dd4bf]/20 text-[#2dd4bf]'
-              : 'border-white/15 bg-white/5 text-transparent',
+              : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-transparent',
           )}
         >
           <AnimatePresence mode="wait">
@@ -775,14 +775,14 @@ function WorkspaceCard({
         </div>
       </div>
 
-      <h3 className="mt-4 font-heading text-lg font-semibold text-white">{workspace.label}</h3>
-      <p className="mt-1 text-sm leading-relaxed text-slate-300">{workspace.description}</p>
+      <h3 className="mt-4 font-heading text-lg font-semibold text-[var(--workspace-shell-text)]">{workspace.label}</h3>
+      <p className="mt-1 text-sm leading-relaxed text-[var(--workspace-shell-text-muted)]">{workspace.description}</p>
 
       <WorkspaceAssistantBadges assistants={workspace.assistants} />
 
       <ul className="mt-3 space-y-1">
         {workspace.highlights.map((line) => (
-          <li key={line} className="flex gap-2 text-xs leading-relaxed text-slate-400">
+          <li key={line} className="flex gap-2 text-xs leading-relaxed text-[var(--workspace-shell-text-muted)]">
             <Check className="mt-0.5 h-3 w-3 shrink-0 text-[#2dd4bf]/70" aria-hidden />
             <span>{line}</span>
           </li>
@@ -790,11 +790,11 @@ function WorkspaceCard({
       </ul>
 
       <div className="mt-auto pt-4">
-        <p className="font-heading text-2xl font-semibold text-white">{priceLabel}</p>
+        <p className="font-heading text-2xl font-semibold text-[var(--workspace-shell-text)]">{priceLabel}</p>
         {workspace.hasTiers && selected ? (
-          <p className="mt-1 text-xs text-slate-400">Choose your tier below</p>
+          <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">Choose your tier below</p>
         ) : billing === 'annual' && workspace.monthlyPrice > 0 && selected ? (
-          <p className="mt-1 text-xs text-slate-400">Billed annually</p>
+          <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">Billed annually</p>
         ) : null}
       </div>
     </motion.button>
@@ -821,7 +821,7 @@ function TierPicker({
       initial={reducedMotion ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={reducedMotion ? undefined : { opacity: 0, y: 8 }}
-      className="rounded-2xl border border-white/10 bg-[#120f24]/50 p-4 sm:p-5"
+      className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)]/50 p-4 sm:p-5"
     >
       <h4 className="font-heading text-sm font-semibold uppercase tracking-wide text-violet-200/80">
         {title}
@@ -840,19 +840,19 @@ function TierPicker({
                 'rounded-xl border px-4 py-3 text-left transition-colors',
                 selected
                   ? 'border-[#2dd4bf]/60 bg-[#2dd4bf]/10'
-                  : 'border-white/10 bg-white/[0.02] hover:border-white/20',
+                  : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] hover:border-[color:var(--workspace-shell-border)]',
               )}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="font-medium text-white">{tier.label}</span>
+                <span className="font-medium text-[var(--workspace-shell-text)]">{tier.label}</span>
                 {'badge' in tier && tier.badge ? (
                   <span className="rounded-full bg-[#7c3aed]/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-200">
                     {tier.badge}
                   </span>
                 ) : null}
               </div>
-              <p className="mt-1 text-xs text-slate-400">{tier.description}</p>
-              <p className="mt-2 text-sm font-semibold text-white">
+              <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">{tier.description}</p>
+              <p className="mt-2 text-sm font-semibold text-[var(--workspace-shell-text)]">
                 {formatWorkspacePrice(price)}
                 {price > 0 ? '/mo' : ''}
               </p>
@@ -892,10 +892,10 @@ function AddonToggle({
       className={cn(
         'rounded-xl border px-4 py-3 text-left transition-colors',
         disabled
-          ? 'cursor-default border-white/8 bg-white/[0.02] opacity-90'
+          ? 'cursor-default border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] opacity-90'
           : selected
             ? 'border-[#2dd4bf]/60 bg-[#2dd4bf]/10'
-            : 'border-white/10 bg-white/[0.02] hover:border-white/20',
+            : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] hover:border-[color:var(--workspace-shell-border)]',
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -913,14 +913,14 @@ function AddonToggle({
             </span>
           ) : null}
           <div>
-            <p className="font-medium text-white">{label}</p>
-            <p className="mt-1 text-xs leading-relaxed text-slate-400">{description}</p>
+            <p className="font-medium text-[var(--workspace-shell-text)]">{label}</p>
+            <p className="mt-1 text-xs leading-relaxed text-[var(--workspace-shell-text-muted)]">{description}</p>
           </div>
         </div>
         <span
           className={cn(
             'shrink-0 text-sm font-semibold',
-            disabled ? 'text-slate-500' : 'text-[#2dd4bf]',
+            disabled ? 'text-[var(--ozer-text-on-light-muted)]' : 'text-[#2dd4bf]',
           )}
         >
           {priceLabel}
@@ -952,10 +952,10 @@ function AddonsPanel({
     paidWorkspaceCount > 1 ? ` × ${paidWorkspaceCount} workspaces` : '';
 
   return (
-    <div className="space-y-6 rounded-2xl border border-white/10 bg-[#120f24]/40 p-4 sm:p-5">
+    <div className="space-y-6 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)]/40 p-4 sm:p-5">
       <div>
-        <h4 className="font-heading text-lg font-semibold text-white">Add-ons</h4>
-        <p className="mt-1 text-sm text-slate-400">
+        <h4 className="font-heading text-lg font-semibold text-[var(--workspace-shell-text)]">Add-ons</h4>
+        <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
           Optional extras on top of your workspaces. Workspace add-ons are priced per
           workspace.
         </p>
@@ -1007,7 +1007,7 @@ function AddonsPanel({
           <Puzzle className="h-3.5 w-3.5" aria-hidden />
           Workspace apps
           {paidWorkspaceCount === 0 ? (
-            <span className="font-normal normal-case text-slate-500">
+            <span className="font-normal normal-case text-[var(--ozer-text-on-light-muted)]">
               — select a paid workspace first
             </span>
           ) : null}
@@ -1046,12 +1046,12 @@ function AddonsPanel({
               exit={reducedMotion ? undefined : { height: 0, opacity: 0 }}
               className="overflow-hidden"
             >
-              <label className="block text-xs font-medium uppercase tracking-wide text-slate-400">
+              <label className="block text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
                 Videos tier
                 <select
                   value={videoTierId}
                   onChange={(event) => onVideoTierChange(event.target.value)}
-                  className="mt-2 w-full rounded-lg border border-white/10 bg-[#0d0b1e] px-3 py-2 text-sm text-white"
+                  className="mt-2 w-full rounded-lg border border-[color:var(--workspace-shell-border)] bg-[#0d0b1e] px-3 py-2 text-sm text-[var(--workspace-shell-text)]"
                 >
                   {PRICING_CONFIG.videoTiers.map((tier) => (
                     <option key={tier.id} value={tier.id}>
@@ -1067,14 +1067,14 @@ function AddonsPanel({
       </div>
 
       {selected.has('business') ? (
-        <p className="flex items-start gap-2 text-xs text-slate-500">
+        <p className="flex items-start gap-2 text-xs text-[var(--ozer-text-on-light-muted)]">
           <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-300" aria-hidden />
           Business Lite is free and built for the apps marketplace — pick Lite above if you
           only need Signatures, Rankly, or other add-ons without full CRM features.
         </p>
       ) : null}
 
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-[var(--ozer-text-on-light-muted)]">
         Add-ons are monthly only today. See{' '}
         <Link href="/pricing" className="text-[#2dd4bf] underline-offset-4 hover:underline">
           full pricing
@@ -1122,20 +1122,20 @@ function ComparisonTable({ reducedMotion }: { reducedMotion: boolean }) {
   ] as const;
 
   const table = (
-    <div className="overflow-x-auto rounded-2xl border border-white/10">
+    <div className="overflow-x-auto rounded-2xl border border-[color:var(--workspace-shell-border)]">
       <table className="w-full min-w-[520px] text-left text-sm">
         <thead>
-          <tr className="border-b border-white/10 bg-white/[0.03]">
-            <th className="px-4 py-3 font-medium text-slate-300">Feature</th>
-            <th className="px-4 py-3 font-medium text-slate-300">Typical tools</th>
+          <tr className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
+            <th className="px-4 py-3 font-medium text-[var(--workspace-shell-text-muted)]">Feature</th>
+            <th className="px-4 py-3 font-medium text-[var(--workspace-shell-text-muted)]">Typical tools</th>
             <th className="px-4 py-3 font-medium text-[#2dd4bf]">Ozer</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.feature} className="border-b border-white/5 last:border-0">
-              <td className="px-4 py-3 text-white">{row.feature}</td>
-              <td className="px-4 py-3 text-slate-400">
+            <tr key={row.feature} className="border-b border-[color:var(--workspace-shell-border)] last:border-0">
+              <td className="px-4 py-3 text-[var(--workspace-shell-text)]">{row.feature}</td>
+              <td className="px-4 py-3 text-[var(--workspace-shell-text-muted)]">
                 {typeof row.typical === 'boolean' ? (
                   row.typical ? (
                     <Check className="h-4 w-4 text-[#2dd4bf]" aria-label="Yes" />
@@ -1154,7 +1154,7 @@ function ComparisonTable({ reducedMotion }: { reducedMotion: boolean }) {
                     <span aria-label="No">✗</span>
                   )
                 ) : (
-                  <span className="font-medium text-white">{row.ozer}</span>
+                  <span className="font-medium text-[var(--workspace-shell-text)]">{row.ozer}</span>
                 )}
               </td>
             </tr>
@@ -1167,7 +1167,7 @@ function ComparisonTable({ reducedMotion }: { reducedMotion: boolean }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 lg:hidden">
-        <h3 className="font-heading text-xl font-semibold text-white">Compare the stack</h3>
+        <h3 className="font-heading text-xl font-semibold text-[var(--workspace-shell-text)]">Compare the stack</h3>
         <button
           type="button"
           onClick={() => setExpanded((value) => !value)}
@@ -1177,7 +1177,7 @@ function ComparisonTable({ reducedMotion }: { reducedMotion: boolean }) {
         </button>
       </div>
 
-      <h3 className="hidden font-heading text-xl font-semibold text-white lg:block">
+      <h3 className="hidden font-heading text-xl font-semibold text-[var(--workspace-shell-text)] lg:block">
         Compare the stack
       </h3>
 
@@ -1243,12 +1243,12 @@ function PricingFaq({ reducedMotion }: { reducedMotion: boolean }) {
 
   return (
     <div className="space-y-3">
-      <h3 className="font-heading text-xl font-semibold text-white">Pricing FAQ</h3>
+      <h3 className="font-heading text-xl font-semibold text-[var(--workspace-shell-text)]">Pricing FAQ</h3>
       {items.map((item) => {
         const open = openId === item.id;
 
         return (
-          <div key={item.id} className="rounded-2xl border border-white/10 bg-[#120f24]/50">
+          <div key={item.id} className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)]/50">
             <button
               type="button"
               aria-expanded={open}
@@ -1256,12 +1256,12 @@ function PricingFaq({ reducedMotion }: { reducedMotion: boolean }) {
               onClick={() => setOpenId(open ? null : item.id)}
               className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left"
             >
-              <span className="font-medium text-white">{item.question}</span>
+              <span className="font-medium text-[var(--workspace-shell-text)]">{item.question}</span>
               <motion.span
                 animate={{ rotate: open ? 180 : 0 }}
                 transition={{ duration: reducedMotion ? 0 : 0.2 }}
               >
-                <ChevronDown className="h-4 w-4 text-slate-400" aria-hidden />
+                <ChevronDown className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" aria-hidden />
               </motion.span>
             </button>
             <AnimatePresence initial={false}>
@@ -1275,7 +1275,7 @@ function PricingFaq({ reducedMotion }: { reducedMotion: boolean }) {
                   transition={{ duration: 0.2, ease: 'easeOut' }}
                   className="overflow-hidden"
                 >
-                  <p className="px-4 pb-4 text-sm leading-relaxed text-slate-300">
+                  <p className="px-4 pb-4 text-sm leading-relaxed text-[var(--workspace-shell-text-muted)]">
                     {item.answer}
                   </p>
                 </motion.div>
@@ -1358,7 +1358,7 @@ export default function PricingSection() {
 
   return (
     <TooltipProvider delayDuration={200}>
-    <section className="relative overflow-hidden bg-[radial-gradient(circle_at_15%_0%,rgba(124,58,237,0.25),transparent_42%),linear-gradient(180deg,#0d0b1e_0%,#080711_100%)] py-20 text-white">
+    <section className="relative overflow-hidden bg-[radial-gradient(circle_at_15%_0%,rgba(124,58,237,0.25),transparent_42%),linear-gradient(180deg,#0d0b1e_0%,#080711_100%)] py-20 text-[var(--workspace-shell-text)]">
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_22%)]" />
 
       <div className="relative mx-auto w-full max-w-7xl px-6">
@@ -1366,10 +1366,10 @@ export default function PricingSection() {
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-300/80">
             Simple pricing
           </p>
-          <h2 className="mt-3 font-heading text-3xl font-semibold tracking-tight text-white md:text-5xl">
+          <h2 className="mt-3 font-heading text-3xl font-semibold tracking-tight text-[var(--workspace-shell-text)] md:text-5xl">
             Build your Ozer
           </h2>
-          <p className="mt-4 text-base leading-relaxed text-slate-300 md:text-lg">
+          <p className="mt-4 text-base leading-relaxed text-[var(--workspace-shell-text-muted)] md:text-lg">
             Start with your personal home free. Add the workspaces you need.
           </p>
           <div className="mt-8 flex justify-center">
@@ -1444,8 +1444,8 @@ export default function PricingSection() {
             />
           </div>
 
-          <aside className="rounded-3xl border border-white/10 bg-[#120f24]/70 p-6 backdrop-blur-sm lg:sticky lg:top-24">
-            <h3 className="font-heading text-xl font-semibold text-white">Your plan</h3>
+          <aside className="rounded-3xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)]/70 p-6 backdrop-blur-sm lg:sticky lg:top-24">
+            <h3 className="font-heading text-xl font-semibold text-[var(--workspace-shell-text)]">Your plan</h3>
 
             <ul className="mt-5 space-y-3">
               <AnimatePresence initial={false}>
@@ -1463,7 +1463,7 @@ export default function PricingSection() {
                     className="flex items-center justify-between gap-3 text-sm"
                   >
                     <span className="text-slate-200">{item.label}</span>
-                    <span className="font-medium text-white">
+                    <span className="font-medium text-[var(--workspace-shell-text)]">
                       {formatWorkspacePrice(item.price)}
                       {item.price > 0 ? '/mo' : ''}
                     </span>
@@ -1472,36 +1472,36 @@ export default function PricingSection() {
               </AnimatePresence>
             </ul>
 
-            <div className="my-5 border-t border-white/10" />
+            <div className="my-5 border-t border-[color:var(--workspace-shell-border)]" />
 
             <div className="flex items-end justify-between gap-3">
-              <span className="text-sm text-slate-400">Total</span>
+              <span className="text-sm text-[var(--workspace-shell-text-muted)]">Total</span>
               <div className="text-right">
-                <p className="font-heading text-3xl font-semibold text-white">
+                <p className="font-heading text-3xl font-semibold text-[var(--workspace-shell-text)]">
                   <AnimatedTotal value={total} reducedMotion={reducedMotion} />
                   {total > 0 ? (
-                    <span className="text-base font-normal text-slate-400">/mo</span>
+                    <span className="text-base font-normal text-[var(--workspace-shell-text-muted)]">/mo</span>
                   ) : null}
                 </p>
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
                   {billing === 'annual' ? 'Billed annually' : 'Billed monthly'}
                 </p>
               </div>
             </div>
 
-            <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03]">
+            <div className="mt-5 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
               <button
                 type="button"
                 aria-expanded={alwaysIncludedOpen}
                 onClick={() => setAlwaysIncludedOpen((value) => !value)}
-                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm font-medium text-white"
+                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm font-medium text-[var(--workspace-shell-text)]"
               >
                 Always included
                 <motion.span
                   animate={{ rotate: alwaysIncludedOpen ? 180 : 0 }}
                   transition={{ duration: reducedMotion ? 0 : 0.2 }}
                 >
-                  <ChevronDown className="h-4 w-4 text-slate-400" aria-hidden />
+                  <ChevronDown className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" aria-hidden />
                 </motion.span>
               </button>
               <AnimatePresence initial={false}>
@@ -1514,7 +1514,7 @@ export default function PricingSection() {
                     className="space-y-2 overflow-hidden px-4 pb-4"
                   >
                     {PRICING_CONFIG.alwaysIncludedFeatures.map((feature) => (
-                      <li key={feature} className="flex items-start gap-2 text-sm text-slate-300">
+                      <li key={feature} className="flex items-start gap-2 text-sm text-[var(--workspace-shell-text-muted)]">
                         <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#2dd4bf]" aria-hidden />
                         {feature}
                       </li>
@@ -1528,13 +1528,13 @@ export default function PricingSection() {
               asChild
               size="lg"
               className={cn(
-                'mt-6 h-11 w-full rounded-full bg-gradient-to-r from-[#2dd4bf] to-[#2563EB] text-white hover:opacity-95',
+                'mt-6 h-11 w-full rounded-full bg-gradient-to-r from-[#2dd4bf] to-[var(--ozer-info)] text-[var(--workspace-shell-text)] hover:opacity-95',
                 ctaGlow && !reducedMotion && 'animate-[ozer-cta-glow_1.2s_ease-out_1]',
               )}
             >
               <Link href={pathsConfig.auth.signUp}>Start free →</Link>
             </Button>
-            <p className="mt-3 text-center text-xs text-slate-400">
+            <p className="mt-3 text-center text-xs text-[var(--workspace-shell-text-muted)]">
               No credit card required. Cancel anytime.
             </p>
           </aside>

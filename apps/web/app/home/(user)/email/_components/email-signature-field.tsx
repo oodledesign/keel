@@ -67,10 +67,10 @@ export function EmailSignatureField({
   return (
     <div className="space-y-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <Label htmlFor="email-signature" className="text-zinc-300">
+        <Label htmlFor="email-signature" className="text-[var(--workspace-shell-text-muted)]">
           Signature
         </Label>
-        <div className="flex rounded-lg border border-white/10 p-0.5">
+        <div className="flex rounded-lg border border-[color:var(--workspace-shell-border)] p-0.5">
           <button
             type="button"
             disabled={disabled}
@@ -78,8 +78,8 @@ export function EmailSignatureField({
             className={cn(
               'rounded-md px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50',
               format === 'plain'
-                ? 'bg-white/10 text-white'
-                : 'text-zinc-400 hover:text-zinc-200',
+                ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
             )}
           >
             Plain text
@@ -91,8 +91,8 @@ export function EmailSignatureField({
             className={cn(
               'rounded-md px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50',
               format === 'html'
-                ? 'bg-white/10 text-white'
-                : 'text-zinc-400 hover:text-zinc-200',
+                ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
             )}
           >
             HTML
@@ -100,7 +100,7 @@ export function EmailSignatureField({
         </div>
       </div>
 
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-[var(--workspace-shell-text-muted)]">
         Appended when Ozer saves a draft to Gmail. Use HTML for logos and links
         from your Gmail signature. Reconnect Gmail to import Google&apos;s HTML
         signature automatically.
@@ -118,28 +118,28 @@ export function EmailSignatureField({
         }
         rows={format === 'html' ? 6 : 4}
         spellCheck={format === 'plain'}
-        className="border-white/10 bg-[#0B132B] font-mono text-sm text-white placeholder:text-zinc-500"
+        className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] font-mono text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
       />
 
-      <div className="overflow-hidden rounded-xl border border-white/10 bg-[#0B132B]/60">
-        <div className="border-b border-white/10 px-4 py-2">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+      <div className="overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/60">
+        <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-2">
+          <p className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
             Preview
           </p>
         </div>
         <div className="space-y-4 p-4">
           {!signature.trim() ? (
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
               Your signature preview will appear here.
             </p>
           ) : (
             <>
-              <div className="rounded-lg border border-white/[0.06] bg-[#10182f] p-4">
-                <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-200">
+              <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[#10182f] p-4">
+                <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--workspace-shell-text)]">
                   {MOCK_REPLY}
                 </p>
               </div>
-              <div className="rounded-lg border border-white/10 bg-white p-4 text-zinc-900">
+              <div className="rounded-lg border border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-white)] p-4 text-[var(--ozer-text-on-light)]">
                 {format === 'html' ? (
                   <div
                     className="email-signature-preview text-sm leading-relaxed [&_a]:text-blue-600 [&_a]:underline [&_img]:max-h-16 [&_img]:max-w-full"
@@ -151,7 +151,7 @@ export function EmailSignatureField({
                   </p>
                 )}
               </div>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                 {format === 'html'
                   ? 'HTML signatures render with links and images in Gmail and Spark.'
                   : 'Plain signatures are converted to simple HTML when saved to Gmail.'}

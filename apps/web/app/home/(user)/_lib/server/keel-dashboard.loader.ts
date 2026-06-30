@@ -556,7 +556,7 @@ async function loadRecentNotesAcrossWorkspaces(
         : workspace?.name?.trim() || workspace?.slug || 'Workspace',
       workspaceSlug: isPersonal ? '' : (workspace?.slug ?? ''),
       workspaceColor: isPersonal
-        ? '#5eead4'
+        ? '#FFE3DA'
         : workspaceColorForSpaceType(spaceType),
       isPersonal,
     };

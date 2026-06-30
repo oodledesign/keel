@@ -126,7 +126,7 @@ function PhaseBar({
     setIsDragging(false);
   };
 
-  const colour = phase.colour ?? '#2A9D8F';
+  const colour = phase.colour ?? '#FF5C34';
 
   if (phase.is_milestone) {
     return (
@@ -138,7 +138,7 @@ function PhaseBar({
           title={phase.name}
         >
           <span
-            className="block h-4 w-4 rotate-45 border-2 border-white/30"
+            className="block h-4 w-4 rotate-45 border-2 border-[color:var(--workspace-shell-border)]"
             style={{ backgroundColor: colour }}
           />
         </Link>
@@ -149,7 +149,7 @@ function PhaseBar({
   return (
     <div className="relative h-10 py-1" onPointerMove={onPointerMove} onPointerUp={onPointerUp}>
       <div
-        className="absolute top-1/2 h-6 -translate-y-1/2 overflow-hidden rounded-md border border-white/10"
+        className="absolute top-1/2 h-6 -translate-y-1/2 overflow-hidden rounded-md border border-[color:var(--workspace-shell-border)]"
         style={{
           left: `${Math.max(0, leftPct)}%`,
           width: `${Math.min(100 - leftPct, widthPct)}%`,
@@ -182,7 +182,7 @@ function PhaseBar({
       </div>
       <Link
         href={phasePath(accountSlug, jobId, phase.id)}
-        className="absolute top-full mt-1 truncate text-[11px] text-zinc-400 hover:text-white"
+        className="absolute top-full mt-1 truncate text-[11px] text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
         style={{
           left: `${Math.max(0, leftPct)}%`,
           maxWidth: `${Math.min(100 - leftPct, widthPct)}%`,
@@ -272,20 +272,20 @@ export function JobProjectTimeline({
 
   if (board.phases.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-zinc-700 px-6 py-12 text-center text-sm text-zinc-500">
+      <p className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-6 py-12 text-center text-sm text-[var(--workspace-shell-text-muted)]">
         Add phases to see them on the timeline.
       </p>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-zinc-700 bg-zinc-900/20">
+    <div className="overflow-x-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/20">
       <div className="min-w-[640px] p-4">
-        <div className="mb-4 flex border-b border-zinc-700 pb-2">
+        <div className="mb-4 flex border-b border-[color:var(--workspace-shell-border)] pb-2">
           {weeks.map((w) => (
             <div
               key={w.toISOString()}
-              className="flex-1 min-w-[72px] text-[10px] font-medium uppercase tracking-wide text-zinc-500"
+              className="flex-1 min-w-[72px] text-[10px] font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]"
             >
               {formatShortDate(dateToInput(w))}
             </div>
@@ -298,16 +298,16 @@ export function JobProjectTimeline({
               <div className="pt-1">
                 <Link
                   href={phasePath(accountSlug, jobId, phase.id)}
-                  className="text-sm font-medium text-white hover:underline"
+                  className="text-sm font-medium text-[var(--workspace-shell-text)] hover:underline"
                 >
                   {phase.name}
                 </Link>
-                <p className="mt-0.5 text-[11px] text-zinc-500">
+                <p className="mt-0.5 text-[11px] text-[var(--workspace-shell-text-muted)]">
                   {formatShortDate(phase.start_date)} – {formatShortDate(phase.due_date)}
                 </p>
-                <p className="text-[11px] text-zinc-600">{phase.progressPct}% complete</p>
+                <p className="text-[11px] text-[var(--workspace-shell-text-muted)]">{phase.progressPct}% complete</p>
               </div>
-              <div className="relative rounded-lg bg-zinc-800/30 px-1">
+              <div className="relative rounded-lg bg-[var(--workspace-control-surface)]/30 px-1">
                 <PhaseBar
                   phase={phase}
                   rangeStart={rangeStart}
@@ -323,7 +323,7 @@ export function JobProjectTimeline({
         </div>
 
         {!canEditJobs && (
-          <p className="mt-4 text-xs text-zinc-500">
+          <p className="mt-4 text-xs text-[var(--workspace-shell-text-muted)]">
             Timeline dates are read-only — you need jobs edit permission to adjust.
           </p>
         )}

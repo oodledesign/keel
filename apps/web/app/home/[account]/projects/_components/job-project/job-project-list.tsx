@@ -102,7 +102,7 @@ function TaskRow({
   );
 
   return (
-    <div className="grid grid-cols-1 gap-2 border-b border-zinc-800/80 py-3 sm:grid-cols-[1fr_140px_120px_100px] sm:items-center sm:gap-3">
+    <div className="grid grid-cols-1 gap-2 border-b border-[color:var(--workspace-shell-border)]/80 py-3 sm:grid-cols-[1fr_140px_120px_100px] sm:items-center sm:gap-3">
       <div className="flex min-w-0 items-center gap-2">
         <span
           className={`h-2 w-2 shrink-0 rounded-full ${PRIORITY_DOT[task.priority] ?? PRIORITY_DOT.none}`}
@@ -110,14 +110,14 @@ function TaskRow({
         {canEditJobs ? (
           <Input
             defaultValue={task.title}
-            className="h-8 border-zinc-700 bg-zinc-900 text-sm text-white"
+            className="h-8 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-sm text-[var(--workspace-shell-text)]"
             onBlur={(e) => {
               const title = e.target.value.trim();
               if (title && title !== task.title) patch({ title });
             }}
           />
         ) : (
-          <span className="truncate text-sm text-white">{task.title}</span>
+          <span className="truncate text-sm text-[var(--workspace-shell-text)]">{task.title}</span>
         )}
       </div>
 
@@ -127,7 +127,7 @@ function TaskRow({
             value={task.status}
             onValueChange={(status) => patch({ status })}
           >
-            <SelectTrigger className="h-8 border-zinc-700 bg-zinc-900 text-xs text-white">
+            <SelectTrigger className="h-8 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-xs text-[var(--workspace-shell-text)]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -139,7 +139,7 @@ function TaskRow({
             </SelectContent>
           </Select>
         ) : (
-          <span className="text-xs text-zinc-400">
+          <span className="text-xs text-[var(--workspace-shell-text-muted)]">
             {TASK_STATUS_LABELS[task.status] ?? task.status}
           </span>
         )}
@@ -150,7 +150,7 @@ function TaskRow({
           <Input
             type="date"
             defaultValue={toDateInputValue(task.due_date)}
-            className="h-8 border-zinc-700 bg-zinc-900 text-xs text-white"
+            className="h-8 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-xs text-[var(--workspace-shell-text)]"
             onBlur={(e) => {
               const val = e.target.value || null;
               if (val !== toDateInputValue(task.due_date)) {
@@ -159,7 +159,7 @@ function TaskRow({
             }}
           />
         ) : (
-          <span className="text-xs text-zinc-400">
+          <span className="text-xs text-[var(--workspace-shell-text-muted)]">
             {formatShortDate(task.due_date)}
           </span>
         )}
@@ -171,7 +171,7 @@ function TaskRow({
             value={task.priority}
             onValueChange={(priority) => patch({ priority })}
           >
-            <SelectTrigger className="h-8 border-zinc-700 bg-zinc-900 text-xs capitalize text-white">
+            <SelectTrigger className="h-8 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-xs capitalize text-[var(--workspace-shell-text)]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -183,7 +183,7 @@ function TaskRow({
             </SelectContent>
           </Select>
         ) : (
-          <span className="text-xs capitalize text-zinc-400">{task.priority}</span>
+          <span className="text-xs capitalize text-[var(--workspace-shell-text-muted)]">{task.priority}</span>
         )}
       </div>
     </div>
@@ -223,36 +223,36 @@ function PhaseGroup({
   );
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen} className="rounded-xl border border-zinc-700">
-      <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-zinc-800/40">
+    <Collapsible open={open} onOpenChange={setOpen} className="rounded-xl border border-[color:var(--workspace-shell-border)]">
+      <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-[var(--workspace-control-surface)]/40">
         <div className="min-w-0">
           {phase ? (
             <Link
               href={phasePath(accountSlug, jobId, phase.id)}
-              className="text-sm font-semibold text-white hover:underline"
+              className="text-sm font-semibold text-[var(--workspace-shell-text)] hover:underline"
               onClick={(e) => e.stopPropagation()}
             >
               {phase.name}
             </Link>
           ) : (
-            <span className="text-sm font-semibold text-zinc-400">Unassigned</span>
+            <span className="text-sm font-semibold text-[var(--workspace-shell-text-muted)]">Unassigned</span>
           )}
-          <p className="mt-0.5 text-xs text-zinc-500">
+          <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
             {tasks.length} task{tasks.length !== 1 ? 's' : ''}
             {phase ? ` · ${phase.progressPct}% done` : ''}
           </p>
         </div>
-        <span className="text-xs text-zinc-500">{open ? 'Hide' : 'Show'}</span>
+        <span className="text-xs text-[var(--workspace-shell-text-muted)]">{open ? 'Hide' : 'Show'}</span>
       </CollapsibleTrigger>
       <CollapsibleContent className="px-4 pb-2">
-        <div className="hidden border-b border-zinc-800 pb-2 text-[10px] font-medium uppercase tracking-wide text-zinc-600 sm:grid sm:grid-cols-[1fr_140px_120px_100px] sm:gap-3">
+        <div className="hidden border-b border-[color:var(--workspace-shell-border)] pb-2 text-[10px] font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)] sm:grid sm:grid-cols-[1fr_140px_120px_100px] sm:gap-3">
           <span>Task</span>
           <span>Status</span>
           <span>Due</span>
           <span>Priority</span>
         </div>
         {tasks.length === 0 ? (
-          <p className="py-4 text-sm text-zinc-500">No tasks in this phase.</p>
+          <p className="py-4 text-sm text-[var(--workspace-shell-text-muted)]">No tasks in this phase.</p>
         ) : (
           tasks.map((task) => (
             <TaskRow
@@ -298,7 +298,7 @@ export function JobProjectList({
 
   if (board.phases.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-zinc-700 px-6 py-12 text-center text-sm text-zinc-500">
+      <p className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-6 py-12 text-center text-sm text-[var(--workspace-shell-text-muted)]">
         Add phases to group tasks in the list view.
       </p>
     );

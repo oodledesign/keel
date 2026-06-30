@@ -29,7 +29,7 @@ export const ticketStatusStyles: Record<
   },
   closed: {
     bg: 'bg-slate-500/15',
-    text: 'text-slate-400',
+    text: 'text-[var(--workspace-shell-text-muted)]',
     label: 'Closed',
   },
 };
@@ -40,7 +40,7 @@ export const ticketPriorityStyles: Record<
 > = {
   low: {
     bg: 'bg-slate-500/15',
-    text: 'text-slate-300',
+    text: 'text-[var(--workspace-shell-text-muted)]',
     label: 'Low',
   },
   medium: {

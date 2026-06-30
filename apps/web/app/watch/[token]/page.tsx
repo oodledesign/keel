@@ -57,7 +57,7 @@ export default async function PublicWatchPage({ params }: PublicWatchPageProps) 
   const isReady = video.status === 'ready';
 
   return (
-    <main className="min-h-screen bg-[#0a0f14] text-white">
+    <main className="min-h-screen bg-[#0a0f14] text-[var(--workspace-shell-text)]">
       <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-4 py-8 sm:px-6">
         <header className="mb-6 space-y-2">
           <p className="text-muted-foreground text-xs uppercase tracking-wide">
@@ -74,7 +74,7 @@ export default async function PublicWatchPage({ params }: PublicWatchPageProps) 
         </header>
 
         <div
-          className="mx-auto w-full overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl"
+          className="mx-auto w-full overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)] bg-black shadow-2xl"
           style={{ maxWidth: config.max_width_px ?? undefined }}
         >
           {isReady ? (
@@ -100,7 +100,7 @@ export default async function PublicWatchPage({ params }: PublicWatchPageProps) 
                   className="absolute inset-0 h-full w-full object-cover opacity-40"
                 />
               ) : null}
-              <p className="relative z-10 px-6 text-center text-sm text-white/80">
+              <p className="relative z-10 px-6 text-center text-sm text-[var(--workspace-shell-text)]/80">
                 {video.status === 'failed'
                   ? 'This video failed to process.'
                   : 'This video is still processing. Check back soon.'}

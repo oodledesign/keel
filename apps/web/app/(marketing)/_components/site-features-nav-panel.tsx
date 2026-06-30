@@ -42,9 +42,9 @@ export function SiteFeaturesNavPanel() {
         </span>
       </Link>
 
-      <div className="flex min-h-[11rem] border-t border-white/10 pt-2">
+      <div className="flex min-h-[11rem] border-t border-[color:var(--workspace-shell-border)] pt-2">
         <div
-          className="w-[7.25rem] shrink-0 space-y-0.5 border-r border-white/10 pr-1"
+          className="w-[7.25rem] shrink-0 space-y-0.5 border-r border-[color:var(--workspace-shell-border)] pr-1"
           role="tablist"
           aria-label="Feature categories"
         >

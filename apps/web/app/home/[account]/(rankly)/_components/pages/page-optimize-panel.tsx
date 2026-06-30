@@ -54,12 +54,12 @@ function progressPercent(status: string): number {
 const PRIORITY_COLOURS = {
   high: 'bg-red-500/20 text-red-200',
   medium: 'bg-amber-500/20 text-amber-200',
-  low: 'bg-white/10 text-muted-foreground',
+  low: 'bg-[var(--workspace-shell-sidebar-accent)] text-muted-foreground',
 } as const;
 
 function OptimizeReportView({ report }: { report: OptimizeReport }) {
   return (
-    <div className="space-y-4 rounded-lg border border-[var(--keel-teal)]/20 bg-[var(--keel-teal)]/5 p-4">
+    <div className="space-y-4 rounded-lg border border-[var(--ozer-accent)]/20 bg-[var(--ozer-accent)]/5 p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
           <p className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -111,7 +111,7 @@ function OptimizeReportView({ report }: { report: OptimizeReport }) {
           {report.recommendations.map((rec) => (
             <div
               key={`${rec.title}-${rec.category}`}
-              className="rounded-md border border-white/10 bg-black/20 p-3 text-sm"
+              className="rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3 text-sm"
             >
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium">{rec.title}</span>
@@ -123,7 +123,7 @@ function OptimizeReportView({ report }: { report: OptimizeReport }) {
               </div>
               <p className="text-muted-foreground mt-1">{rec.detail}</p>
               {rec.action ? (
-                <p className="mt-2 text-[var(--keel-teal)]">{rec.action}</p>
+                <p className="mt-2 text-[var(--ozer-accent)]">{rec.action}</p>
               ) : null}
             </div>
           ))}

@@ -133,7 +133,7 @@ export function SupportTicketForm({
 
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-3xl space-y-6">
-      <section className="space-y-4 rounded-[20px] border border-white/6 bg-[var(--workspace-shell-panel)] p-5 md:p-6">
+      <section className="space-y-4 rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 md:p-6">
         <div className="space-y-2">
           <Label htmlFor="title">Title</Label>
           <Input

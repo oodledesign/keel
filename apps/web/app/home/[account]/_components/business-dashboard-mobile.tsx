@@ -17,7 +17,7 @@ import { FinanceTrendBarChart } from '~/components/finance/finance-charts';
 import pathsConfig from '~/config/paths.config';
 
 const panelClass =
-  'rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)]';
+  'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
 
 type BusinessDashboardMobileProps = {
   accountSlug: string;
@@ -71,16 +71,16 @@ export function BusinessDashboardMobile({
             <p className="text-[10px] font-medium uppercase tracking-wide text-violet-200/60">
               {metrics.hasFinanceData ? 'This month' : 'Revenue'}
             </p>
-            <p className="mt-0.5 text-2xl font-semibold tracking-tight text-white">
+            <p className="mt-0.5 text-2xl font-semibold tracking-tight text-[var(--workspace-shell-text)]">
               {totalRevenueLabel}
             </p>
             {netLabel ? (
-              <p className="mt-0.5 text-xs text-zinc-400">
+              <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
                 Net {netLabel}
               </p>
             ) : null}
           </div>
-          <div className="text-right text-[11px] text-zinc-400">
+          <div className="text-right text-[11px] text-[var(--workspace-shell-text-muted)]">
             <p>{metrics.activeProjects} active projects</p>
             <p>{metrics.hoursLogged}h logged</p>
           </div>
@@ -93,11 +93,11 @@ export function BusinessDashboardMobile({
       <section className="xl:col-span-2">{shortcutsBar}</section>
 
       <section className={panelClass}>
-        <div className="flex items-center justify-between border-b border-white/6 px-4 py-3">
-          <h2 className="text-sm font-semibold text-white">Upcoming tasks</h2>
+        <div className="flex items-center justify-between border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
+          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Upcoming tasks</h2>
           <HapticLink
             href={tasksHref}
-            className="flex items-center gap-0.5 text-xs font-medium text-[#5eead4]"
+            className="flex items-center gap-0.5 text-xs font-medium text-[var(--ozer-accent-muted)]"
           >
             View all
             <ChevronRight className="h-3.5 w-3.5" />
@@ -116,10 +116,10 @@ export function BusinessDashboardMobile({
                   workspaceAccountId={accountId}
                   className="flex flex-col gap-0.5 px-4 py-3 active:bg-white/4"
                 >
-                  <span className="text-sm font-medium text-white">
+                  <span className="text-sm font-medium text-[var(--workspace-shell-text)]">
                     {task.title}
                   </span>
-                  <span className="text-xs text-zinc-400">
+                  <span className="text-xs text-[var(--workspace-shell-text-muted)]">
                     {[task.projectName, formatTaskDue(task.dueDate)]
                       .filter(Boolean)
                       .join(' · ')}
@@ -133,10 +133,10 @@ export function BusinessDashboardMobile({
 
       <section>
         <div className="mb-2 flex items-center justify-between px-0.5">
-          <h2 className="text-sm font-semibold text-white">Recent notes</h2>
+          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Recent notes</h2>
           <HapticLink
             href={notesHref}
-            className="flex items-center gap-0.5 text-xs font-medium text-[#5eead4]"
+            className="flex items-center gap-0.5 text-xs font-medium text-[var(--ozer-accent-muted)]"
           >
             View all
             <ChevronRight className="h-3.5 w-3.5" />
@@ -158,16 +158,16 @@ export function BusinessDashboardMobile({
                   'w-[calc(50%-0.375rem)] shrink-0 snap-start p-3 transition-transform active:scale-[0.98] md:w-56 lg:w-64',
                 )}
               >
-                <div className="mb-2 flex h-7 w-7 items-center justify-center rounded-lg bg-white/8 text-[#5eead4]">
+                <div className="mb-2 flex h-7 w-7 items-center justify-center rounded-lg bg-white/8 text-[var(--ozer-accent-muted)]">
                   <StickyNote className="h-3.5 w-3.5" />
                 </div>
-                <p className="line-clamp-2 text-sm font-medium text-white">
+                <p className="line-clamp-2 text-sm font-medium text-[var(--workspace-shell-text)]">
                   {note.title}
                 </p>
-                <p className="mt-1 line-clamp-2 text-xs text-zinc-400">
+                <p className="mt-1 line-clamp-2 text-xs text-[var(--workspace-shell-text-muted)]">
                   {note.excerpt}
                 </p>
-                <p className="mt-2 text-[10px] text-zinc-500">
+                <p className="mt-2 text-[10px] text-[var(--workspace-shell-text-muted)]">
                   {formatRelativeDate(note.updatedAt)}
                 </p>
               </HapticLink>

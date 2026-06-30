@@ -29,7 +29,7 @@ export function InvoicesIncomeSummary({
   if (!summary) return null;
 
   return (
-    <div className="rounded-2xl border border-white/8 bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+    <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
           Income summary
@@ -41,7 +41,7 @@ export function InvoicesIncomeSummary({
               e.target.value as 'month_to_date' | 'last_30_days' | 'last_90_days',
             )
           }
-          className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-[var(--workspace-shell-text)]"
+          className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-1.5 text-xs text-[var(--workspace-shell-text)]"
         >
           <option value="month_to_date">Month to date</option>
           <option value="last_30_days">Last 30 days</option>
@@ -58,7 +58,7 @@ export function InvoicesIncomeSummary({
         ].map((item) => (
           <div
             key={item.label}
-            className="rounded-xl border border-white/6 bg-white/3 px-3 py-3"
+            className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-white/3 px-3 py-3"
           >
             <p className="text-xs text-muted-foreground">{item.label}</p>
             <p className={`mt-1 text-lg font-semibold ${item.color}`}>
@@ -77,7 +77,7 @@ export function InvoicesIncomeSummary({
               title={`${point.date}: ${formatPence(point.amount_pence)}`}
             >
               <div
-                className="w-full rounded-t bg-[var(--keel-teal)]/70 transition-all group-hover:bg-[var(--keel-teal)]"
+                className="w-full rounded-t bg-[var(--ozer-accent)]/70 transition-all group-hover:bg-[var(--ozer-accent)]"
                 style={{
                   height: `${Math.max(4, (point.amount_pence / maxBar) * 100)}%`,
                 }}

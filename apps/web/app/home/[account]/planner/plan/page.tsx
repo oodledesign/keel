@@ -37,7 +37,7 @@ async function WorkspacePlannerPlanPage({ params }: WorkspacePlannerPlanPageProp
         description="Build a day or week plan from this workspace’s tasks — or everything across Ozer."
         account={accountSlug}
       />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-white lg:px-6">
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-[var(--workspace-shell-text)] lg:px-6">
         <PlannerPageClient initialData={data} />
       </PageBody>
     </>

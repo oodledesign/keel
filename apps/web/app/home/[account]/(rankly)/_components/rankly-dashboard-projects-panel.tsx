@@ -63,14 +63,14 @@ export function RanklyDashboardProjectsPanel(props: {
       ) : null}
 
       {props.projects.length === 0 && !open ? (
-        <p className="text-muted-foreground rounded-lg border border-white/10 bg-black/10 px-4 py-6 text-sm">
+        <p className="text-muted-foreground rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-6 text-sm">
           No projects yet. Use &quot;New project&quot; to add a domain manually
           or import details from a client.
         </p>
       ) : null}
 
       {props.projects.length > 0 ? (
-        <ul className="divide-y divide-white/10 rounded-lg border border-white/10">
+        <ul className="divide-y divide-white/10 rounded-lg border border-[color:var(--workspace-shell-border)]">
           {props.projects.slice(0, 6).map((project) => (
             <li
               key={project.id}

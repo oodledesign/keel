@@ -8,7 +8,7 @@ import {
 export const ACCENT = '#059669';
 
 export const panelClass =
-  'rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)] shadow-[0_12px_36px_rgba(4,10,24,0.18)]';
+  'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_12px_36px_rgba(4,10,24,0.18)]';
 
 export const priorityChoices = PRIORITY_OPTIONS;
 export const dietaryChoices = DIETARY_OPTIONS;

@@ -202,19 +202,19 @@ export function ReplanDialog({
           type="button"
           variant="outline"
           size="sm"
-          className="border-white/10 bg-white/[0.04] text-white/80 hover:bg-white/[0.08] hover:text-white"
+          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/80 hover:bg-white/[0.08] hover:text-[var(--workspace-shell-text)]"
         >
           <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
           Re-plan
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto border-white/10 bg-[var(--workspace-shell-panel)] text-white sm:max-w-lg">
+      <DialogContent className="max-h-[90vh] overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Re-plan the rest of today</DialogTitle>
-          <DialogDescription className="text-white/55">
+          <DialogDescription className="text-[var(--workspace-shell-text)]/55">
             Tell the planner where you are now. It will keep what is already
             done, then schedule the remainder of the day from{' '}
-            <span className="font-medium text-white/70" suppressHydrationWarning>
+            <span className="font-medium text-[var(--workspace-shell-text)]/70" suppressHydrationWarning>
               {formatCurrentTime(new Date())}
             </span>{' '}
             onwards.
@@ -223,7 +223,7 @@ export function ReplanDialog({
 
         <div className="space-y-4 py-2">
           <div className="space-y-2">
-            <Label htmlFor="replan-where" className="text-white/80">
+            <Label htmlFor="replan-where" className="text-[var(--workspace-shell-text)]/80">
               Where I am in the day
             </Label>
             <Textarea
@@ -232,12 +232,12 @@ export function ReplanDialog({
               onChange={(event) => setWhereIAm(event.target.value)}
               placeholder="e.g. Just finished the client call, running 20 minutes behind…"
               rows={2}
-              className="resize-none border-white/10 bg-white/[0.04] text-white placeholder:text-white/30"
+              className="resize-none border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="replan-not-done" className="text-white/80">
+            <Label htmlFor="replan-not-done" className="text-[var(--workspace-shell-text)]/80">
               What I haven&apos;t managed to do
             </Label>
             <Textarea
@@ -246,12 +246,12 @@ export function ReplanDialog({
               onChange={(event) => setNotDone(event.target.value)}
               placeholder="e.g. Didn't start the proposal draft or reply to Sarah's email…"
               rows={3}
-              className="resize-none border-white/10 bg-white/[0.04] text-white placeholder:text-white/30"
+              className="resize-none border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="replan-still-needed" className="text-white/80">
+            <Label htmlFor="replan-still-needed" className="text-[var(--workspace-shell-text)]/80">
               What else needs to be done
             </Label>
             <Textarea
@@ -260,7 +260,7 @@ export function ReplanDialog({
               onChange={(event) => setStillNeeded(event.target.value)}
               placeholder="e.g. Need to prep slides for tomorrow's meeting and pick up groceries…"
               rows={3}
-              className="resize-none border-white/10 bg-white/[0.04] text-white placeholder:text-white/30"
+              className="resize-none border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30"
             />
           </div>
         </div>
@@ -271,7 +271,7 @@ export function ReplanDialog({
             variant="ghost"
             disabled={isReplanning}
             onClick={() => setOpen(false)}
-            className="text-white/60 hover:bg-white/[0.06] hover:text-white"
+            className="text-[var(--workspace-shell-text)]/60 hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
           >
             Cancel
           </Button>
@@ -279,7 +279,7 @@ export function ReplanDialog({
             type="button"
             disabled={isReplanning}
             onClick={() => void handleReplan()}
-            className="bg-[var(--keel-teal)] hover:bg-[#238b7f]"
+            className="bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]"
           >
             {isReplanning ? (
               <>

@@ -1,11 +1,12 @@
 import type { PhaseStatus } from '../../_lib/schema/project-phases.schema';
+import { ozerColors } from '~/lib/ozer/design-tokens';
 
 export const DEFAULT_DELIVERY_PHASES = [
-  { name: 'Discovery', colour: '#3B82F6' },
+  { name: 'Discovery', colour: ozerColors.info },
   { name: 'Design', colour: '#8B5CF6' },
-  { name: 'Build', colour: '#2A9D8F' },
-  { name: 'Launch', colour: '#F97316' },
-  { name: 'Care', colour: '#64748B' },
+  { name: 'Build', colour: ozerColors.accent },
+  { name: 'Launch', colour: ozerColors.gold },
+  { name: 'Care', colour: ozerColors.muted },
 ] as const;
 
 export const PHASE_STATUS_LABELS: Record<PhaseStatus, string> = {
@@ -16,10 +17,10 @@ export const PHASE_STATUS_LABELS: Record<PhaseStatus, string> = {
 };
 
 export const PHASE_STATUS_STYLES: Record<PhaseStatus, string> = {
-  not_started: 'bg-zinc-600/40 text-zinc-300',
-  in_progress: 'bg-amber-500/20 text-amber-300',
-  blocked: 'bg-red-500/20 text-red-300',
-  complete: 'bg-[var(--keel-teal)]/20 text-[#5eead4]',
+  not_started: 'bg-[var(--workspace-shell-panel-hover)]/40 text-[var(--workspace-shell-text-muted)]',
+  in_progress: 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]',
+  blocked: 'bg-red-500/20 text-red-400',
+  complete: 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]',
 };
 
 export const TASK_STATUS_LABELS: Record<string, string> = {
@@ -31,19 +32,19 @@ export const TASK_STATUS_LABELS: Record<string, string> = {
 };
 
 export const TASK_STATUS_STYLES: Record<string, string> = {
-  todo: 'bg-zinc-600/50 text-zinc-300',
-  in_progress: 'bg-blue-500/20 text-blue-300',
-  client_review: 'bg-purple-500/20 text-purple-300',
-  done: 'bg-[var(--keel-teal)]/20 text-[#5eead4]',
-  cancelled: 'bg-zinc-700 text-zinc-500',
+  todo: 'bg-[var(--workspace-shell-panel-hover)]/50 text-[var(--workspace-shell-text-muted)]',
+  in_progress: 'bg-[var(--ozer-info)]/15 text-[var(--ozer-info)]',
+  client_review: 'bg-[var(--ozer-coral-alpha-15)] text-[var(--ozer-accent-muted)]',
+  done: 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]',
+  cancelled: 'bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text-muted)]',
 };
 
 export const PRIORITY_DOT: Record<string, string> = {
-  low: 'bg-zinc-400',
-  medium: 'bg-blue-400',
-  high: 'bg-amber-400',
-  urgent: 'bg-rose-500',
-  none: 'bg-zinc-500',
+  low: 'bg-[var(--workspace-shell-text-muted)]',
+  medium: 'bg-[var(--ozer-info)]',
+  high: 'bg-[var(--ozer-gold-500)]',
+  urgent: 'bg-[var(--ozer-accent)]',
+  none: 'bg-[var(--workspace-shell-panel-hover)]',
 };
 
 export const UNPHASED_KEY = '__unphased__';

@@ -45,7 +45,7 @@ export function SignaturesNav({ accountSlug }: { accountSlug: string }) {
 
   return (
     <Tabs value={active} className="w-full">
-      <TabsList className="h-auto flex-wrap justify-start gap-1 border border-white/10 bg-black/20 p-1">
+      <TabsList className="h-auto flex-wrap justify-start gap-1 border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-1">
         {items.map((item) => {
           const Icon = item.icon;
           const href = item.href.replace('[account]', accountSlug);
@@ -55,7 +55,7 @@ export function SignaturesNav({ accountSlug }: { accountSlug: string }) {
               key={item.label}
               value={item.label}
               asChild
-              className="gap-2 rounded-md data-[state=active]:bg-[#1F2C43] data-[state=active]:text-white"
+              className="gap-2 rounded-md data-[state=active]:bg-[#1F2C43] data-[state=active]:text-[var(--workspace-shell-text)]"
             >
               <Link href={href}>
                 <Icon className="h-4 w-4" />

@@ -69,9 +69,9 @@ export default async function FeedflowReviewsPage({
           {social.length === 0 ? (
             <ModuleEmptyState message="No social accounts yet. Connect one under Social accounts in the sidebar." />
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-white/10">
+            <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
               <table className="w-full min-w-[32rem] text-left text-sm">
-                <thead className="border-b border-white/10 bg-black/20 text-xs uppercase tracking-wide text-muted-foreground">
+                <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3">Platform</th>
                     <th className="px-4 py-3">External id</th>
@@ -83,7 +83,7 @@ export default async function FeedflowReviewsPage({
                   {social.map((row) => (
                     <tr
                       key={row.id}
-                      className="border-b border-white/5 last:border-0"
+                      className="border-b border-[color:var(--workspace-shell-border)] last:border-0"
                     >
                       <td className="px-4 py-3">
                         {row.platform ?? row.provider}
@@ -121,9 +121,9 @@ export default async function FeedflowReviewsPage({
           {widgets.length === 0 ? (
             <ModuleEmptyState message="No widgets yet. Create one under Feedflow Widgets." />
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-white/10">
+            <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
               <table className="w-full min-w-[36rem] text-left text-sm">
-                <thead className="border-b border-white/10 bg-black/20 text-xs uppercase tracking-wide text-muted-foreground">
+                <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3">Name</th>
                     <th className="px-4 py-3">Layout</th>
@@ -135,7 +135,7 @@ export default async function FeedflowReviewsPage({
                   {widgets.map((w) => (
                     <tr
                       key={w.id}
-                      className="border-b border-white/5 last:border-0"
+                      className="border-b border-[color:var(--workspace-shell-border)] last:border-0"
                     >
                       <td className="px-4 py-3">{w.name}</td>
                       <td className="px-4 py-3 text-muted-foreground">
@@ -163,19 +163,19 @@ export default async function FeedflowReviewsPage({
         <div className="flex flex-wrap gap-3 text-sm">
           <Link
             href={workAccountPath(workPaths.accountFeedflowSocialAccounts, account)}
-            className="rounded-lg border border-white/10 bg-black/10 px-4 py-2 transition hover:border-white/20"
+            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
           >
             Manage social connections
           </Link>
           <Link
             href={workAccountPath(workPaths.accountFeedflowWidgets, account)}
-            className="rounded-lg border border-white/10 bg-black/10 px-4 py-2 transition hover:border-white/20"
+            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
           >
             Manage widgets
           </Link>
           <Link
             href={workAccountPath(workPaths.accountFeedflowVideos, account)}
-            className="rounded-lg border border-white/10 bg-black/10 px-4 py-2 transition hover:border-white/20"
+            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
           >
             Video library
           </Link>

@@ -98,10 +98,10 @@ export function ContactImageUploader({
         disabled={disabled || uploading}
         onClick={openPicker}
         className={cn(
-          'group relative h-9 w-9 overflow-hidden rounded-full border border-white/10',
-          'bg-zinc-800 ring-1 ring-white/10 transition',
-          'hover:border-[var(--keel-teal)]/40 hover:ring-[var(--keel-teal)]/30',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--keel-teal)]',
+          'group relative h-9 w-9 overflow-hidden rounded-full border border-[color:var(--workspace-shell-border)]',
+          'bg-[var(--workspace-control-surface)] ring-1 ring-white/10 transition',
+          'hover:border-[var(--ozer-accent)]/40 hover:ring-[var(--ozer-accent)]/30',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)]',
           'disabled:cursor-not-allowed disabled:opacity-60',
         )}
         aria-label={previewUrl ? 'Change contact photo' : 'Add contact photo'}
@@ -114,7 +114,7 @@ export function ContactImageUploader({
             className="h-full w-full object-cover"
           />
         ) : (
-          <span className="flex h-full w-full flex-col items-center justify-center text-[11px] font-semibold text-zinc-200">
+          <span className="flex h-full w-full flex-col items-center justify-center text-[11px] font-semibold text-[var(--workspace-shell-text)]">
             {contactInitials(displayName)}
           </span>
         )}
@@ -122,7 +122,7 @@ export function ContactImageUploader({
         {!disabled ? (
           <span
             className={cn(
-              'absolute inset-0 flex items-center justify-center bg-black/45 text-white',
+              'absolute inset-0 flex items-center justify-center bg-black/45 text-[var(--workspace-shell-text)]',
               'opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100',
             )}
           >

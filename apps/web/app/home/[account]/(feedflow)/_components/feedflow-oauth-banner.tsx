@@ -16,7 +16,7 @@ export function FeedflowOauthBanner(props: FeedflowOauthBannerProps) {
   }
   if (props.success) {
     return (
-      <div className="rounded-lg border border-[var(--keel-teal)]/30 bg-[var(--keel-teal)]/10 px-4 py-3 text-sm text-[#5eead4]">
+      <div className="rounded-lg border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-4 py-3 text-sm text-[var(--ozer-accent-muted)]">
         Connected: {props.success}
       </div>
     );

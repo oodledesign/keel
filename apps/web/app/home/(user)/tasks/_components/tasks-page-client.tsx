@@ -71,7 +71,7 @@ const priorityConfig: Record<
   TasksPageTask['priority'],
   { label: string; className: string }
 > = {
-  low: { label: 'Low', className: 'text-zinc-400' },
+  low: { label: 'Low', className: 'text-[var(--workspace-shell-text-muted)]' },
   medium: { label: 'Medium', className: 'text-blue-400' },
   high: { label: 'High', className: 'text-amber-400' },
   urgent: { label: 'Urgent', className: 'text-rose-400' },
@@ -104,7 +104,7 @@ const STATUS_COLUMNS: Array<{
   {
     key: 'completed',
     label: 'Completed',
-    dot: 'var(--keel-teal)',
+    dot: 'var(--ozer-accent)',
     tint: 'rgba(87,200,127,0.10)',
   },
 ];
@@ -136,13 +136,13 @@ function ClientCell({
     <span className="flex min-w-0 items-center gap-1.5" title={name}>
       <Avatar className="h-6 w-6 shrink-0">
         <AvatarFallback
-          className="text-[10px] font-semibold text-white"
+          className="text-[10px] font-semibold text-[var(--workspace-shell-text)]"
           style={{ backgroundColor: color ?? '#64748B' }}
         >
           {initial}
         </AvatarFallback>
       </Avatar>
-      <span className="truncate text-xs text-zinc-400">{name}</span>
+      <span className="truncate text-xs text-[var(--workspace-shell-text-muted)]">{name}</span>
     </span>
   );
 }
@@ -170,14 +170,14 @@ function DueDateCell({
           <CalendarDays
             className={cn(
               'h-4 w-4 shrink-0',
-              overdue ? 'text-rose-400' : 'text-zinc-500',
+              overdue ? 'text-rose-400' : 'text-[var(--workspace-shell-text-muted)]',
             )}
             aria-hidden
           />
           <span
             className={cn(
               'truncate text-xs tabular-nums',
-              overdue ? 'font-medium text-rose-400' : 'text-zinc-400',
+              overdue ? 'font-medium text-rose-400' : 'text-[var(--workspace-shell-text-muted)]',
             )}
           >
             {dueDateLabel}
@@ -291,10 +291,10 @@ function PriorityGroupHeader({
   return (
     <div
       className={cn(
-        'flex items-center gap-2 border-b border-white/8 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide',
+        'flex items-center gap-2 border-b border-[color:var(--workspace-shell-border)] px-4 py-2 text-[11px] font-semibold uppercase tracking-wide',
         isHigh
           ? 'bg-amber-500/[0.07] text-amber-400/95'
-          : 'bg-white/[0.03] text-zinc-500',
+          : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]',
       )}
     >
       {isHigh ? (
@@ -303,7 +303,7 @@ function PriorityGroupHeader({
       <span
         className={cn(
           'h-2 w-2 shrink-0 rounded-full',
-          isHigh ? 'bg-amber-400' : 'bg-zinc-500/70',
+          isHigh ? 'bg-amber-400' : 'bg-[var(--workspace-shell-panel-hover)]/70',
         )}
         aria-hidden
       />
@@ -423,11 +423,11 @@ function TasksByClientList({
         return (
           <div
             key={group.id}
-            className="overflow-x-auto rounded-xl border border-white/6 bg-[var(--workspace-shell-panel)] shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]"
+            className="overflow-x-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]"
           >
-            <div className="border-b border-white/8 bg-white/[0.04] px-4 py-2.5">
-              <p className="text-sm font-semibold text-white">{group.label}</p>
-              <p className="text-xs text-zinc-500">
+            <div className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-2.5">
+              <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">{group.label}</p>
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                 {group.tasks.length} task{group.tasks.length === 1 ? '' : 's'}
               </p>
             </div>
@@ -473,10 +473,10 @@ function updateTaskTitleInTree(
 }
 
 const toolbarIconButtonClass =
-  'relative h-10 w-10 shrink-0 rounded-xl border-white/8 bg-[var(--workspace-shell-panel)] text-zinc-300 hover:bg-white/8 hover:text-white';
+  'relative h-10 w-10 shrink-0 rounded-xl border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text-muted)] hover:bg-white/8 hover:text-[var(--workspace-shell-text)]';
 
 const dropdownContentClass =
-  'border-white/10 bg-[#1A2535] text-white';
+  'border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]';
 
 function TasksFilterMenu(props: {
   dueDateFilter: DueDateFilter;
@@ -535,12 +535,12 @@ function TasksFilterMenu(props: {
         >
           <SlidersHorizontal className="h-4 w-4" />
           {hasActiveFilters ? (
-            <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[var(--keel-teal)]" />
+            <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[var(--ozer-accent)]" />
           ) : null}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className={cn('w-56', dropdownContentClass)}>
-        <DropdownMenuLabel className="text-xs text-zinc-400">Due date</DropdownMenuLabel>
+        <DropdownMenuLabel className="text-xs text-[var(--workspace-shell-text-muted)]">Due date</DropdownMenuLabel>
         <DropdownMenuRadioGroup
           value={props.dueDateFilter}
           onValueChange={(value) =>
@@ -558,7 +558,7 @@ function TasksFilterMenu(props: {
             <DropdownMenuRadioItem
               key={value}
               value={value}
-              className="focus:bg-white/10 focus:text-white"
+              className="focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
             >
               {label}
             </DropdownMenuRadioItem>
@@ -567,8 +567,8 @@ function TasksFilterMenu(props: {
 
         {props.showStatusFilter ? (
           <>
-            <DropdownMenuSeparator className="bg-white/10" />
-            <DropdownMenuLabel className="text-xs text-zinc-400">Status</DropdownMenuLabel>
+            <DropdownMenuSeparator className="bg-[var(--workspace-shell-sidebar-accent)]" />
+            <DropdownMenuLabel className="text-xs text-[var(--workspace-shell-text-muted)]">Status</DropdownMenuLabel>
             <DropdownMenuRadioGroup
               value={props.statusFilter}
               onValueChange={(value) =>
@@ -577,13 +577,13 @@ function TasksFilterMenu(props: {
             >
               <DropdownMenuRadioItem
                 value="active"
-                className="focus:bg-white/10 focus:text-white"
+                className="focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
               >
                 Active
               </DropdownMenuRadioItem>
               <DropdownMenuRadioItem
                 value="completed"
-                className="focus:bg-white/10 focus:text-white"
+                className="focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
               >
                 Completed
               </DropdownMenuRadioItem>
@@ -593,8 +593,8 @@ function TasksFilterMenu(props: {
 
         {props.showContextFilter ? (
           <>
-            <DropdownMenuSeparator className="bg-white/10" />
-            <DropdownMenuLabel className="text-xs text-zinc-400">Scope</DropdownMenuLabel>
+            <DropdownMenuSeparator className="bg-[var(--workspace-shell-sidebar-accent)]" />
+            <DropdownMenuLabel className="text-xs text-[var(--workspace-shell-text-muted)]">Scope</DropdownMenuLabel>
             <DropdownMenuRadioGroup
               value={props.contextFilter}
               onValueChange={(value) =>
@@ -605,7 +605,7 @@ function TasksFilterMenu(props: {
                 <DropdownMenuRadioItem
                   key={value}
                   value={value}
-                  className="capitalize focus:bg-white/10 focus:text-white"
+                  className="capitalize focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
                 >
                   {value}
                 </DropdownMenuRadioItem>
@@ -616,9 +616,9 @@ function TasksFilterMenu(props: {
 
         {props.showWorkspaceFilter && props.workspaceFilterOptions.length > 0 ? (
           <>
-            <DropdownMenuSeparator className="bg-white/10" />
+            <DropdownMenuSeparator className="bg-[var(--workspace-shell-sidebar-accent)]" />
             <DropdownMenuSub>
-              <DropdownMenuSubTrigger className="focus:bg-white/10 focus:text-white">
+              <DropdownMenuSubTrigger className="focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]">
                 Workspace · {workspaceLabel}
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent className={dropdownContentClass}>
@@ -628,13 +628,13 @@ function TasksFilterMenu(props: {
                 >
                   <DropdownMenuRadioItem
                     value="all"
-                    className="focus:bg-white/10 focus:text-white"
+                    className="focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
                   >
                     All workspaces
                   </DropdownMenuRadioItem>
                   <DropdownMenuRadioItem
                     value="personal"
-                    className="focus:bg-white/10 focus:text-white"
+                    className="focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
                   >
                     Personal only
                   </DropdownMenuRadioItem>
@@ -643,7 +643,7 @@ function TasksFilterMenu(props: {
                       <DropdownMenuRadioItem
                         key={ws.slug}
                         value={ws.slug}
-                        className="focus:bg-white/10 focus:text-white"
+                        className="focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
                       >
                         {ws.name}
                       </DropdownMenuRadioItem>
@@ -657,9 +657,9 @@ function TasksFilterMenu(props: {
 
         {props.clientOptions.length > 0 ? (
           <>
-            <DropdownMenuSeparator className="bg-white/10" />
+            <DropdownMenuSeparator className="bg-[var(--workspace-shell-sidebar-accent)]" />
             <DropdownMenuSub>
-              <DropdownMenuSubTrigger className="focus:bg-white/10 focus:text-white">
+              <DropdownMenuSubTrigger className="focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]">
                 Client · {clientLabel}
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent className={dropdownContentClass}>
@@ -669,13 +669,13 @@ function TasksFilterMenu(props: {
                 >
                   <DropdownMenuRadioItem
                     value="all"
-                    className="focus:bg-white/10 focus:text-white"
+                    className="focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
                   >
                     All clients
                   </DropdownMenuRadioItem>
                   <DropdownMenuRadioItem
                     value="__none__"
-                    className="focus:bg-white/10 focus:text-white"
+                    className="focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
                   >
                     No client
                   </DropdownMenuRadioItem>
@@ -683,7 +683,7 @@ function TasksFilterMenu(props: {
                     <DropdownMenuRadioItem
                       key={id}
                       value={id}
-                      className="focus:bg-white/10 focus:text-white"
+                      className="focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
                     >
                       {name}
                     </DropdownMenuRadioItem>
@@ -729,21 +729,21 @@ function TasksViewMenu(props: {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className={cn('w-44', dropdownContentClass)}>
-        <DropdownMenuLabel className="text-xs text-zinc-400">View</DropdownMenuLabel>
+        <DropdownMenuLabel className="text-xs text-[var(--workspace-shell-text-muted)]">View</DropdownMenuLabel>
         {views.map(({ value, label, icon: Icon }) => (
           <button
             key={value}
             type="button"
             onClick={() => props.onViewChange(value)}
             className={cn(
-              'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden hover:bg-white/10',
-              props.view === value ? 'text-white' : 'text-zinc-300',
+              'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden hover:bg-[var(--workspace-shell-sidebar-accent)]',
+              props.view === value ? 'text-[var(--workspace-shell-text)]' : 'text-[var(--workspace-shell-text-muted)]',
             )}
           >
             <Icon className="h-4 w-4 shrink-0" />
             <span className="flex-1 text-left">{label}</span>
             {props.view === value ? (
-              <Check className="h-4 w-4 shrink-0 text-[var(--keel-teal)]" />
+              <Check className="h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
             ) : null}
           </button>
         ))}
@@ -1078,24 +1078,24 @@ export function TasksPageClient({
   })();
 
   return (
-    <div className={cn(workspacePageMainClassName, 'min-h-0 text-white')}>
+    <div className={cn(workspacePageMainClassName, 'min-h-0 text-[var(--workspace-shell-text)]')}>
       <div className="flex flex-col gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
             Tasks
           </h1>
-          <p className="mt-1 text-sm text-zinc-400">{headerSubtitle}</p>
+          <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">{headerSubtitle}</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-0 flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search tasks..."
-              className="h-10 w-full rounded-xl border border-white/8 bg-[var(--workspace-shell-panel)] pl-10 pr-4 text-sm text-white placeholder:text-zinc-500 focus:border-white/16 focus:outline-none"
+              className="h-10 w-full rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] pl-10 pr-4 text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus:border-[color:var(--workspace-shell-border)] focus:outline-none"
             />
           </div>
 
@@ -1146,7 +1146,7 @@ export function TasksPageClient({
       {view === 'list' || view === 'byClient' ? (
         <>
           {filteredForList.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-white/8 px-6 py-12 text-center text-sm text-zinc-500">
+            <div className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-6 py-12 text-center text-sm text-[var(--workspace-shell-text-muted)]">
               {statusFilter === 'completed'
                 ? 'No completed tasks yet'
                 : variant === 'workspace' && tasks.length === 0
@@ -1160,7 +1160,7 @@ export function TasksPageClient({
               handlers={taskRowHandlers}
             />
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-white/6 bg-[var(--workspace-shell-panel)] shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]">
+            <div className="overflow-x-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]">
               <PriorityGroupedTaskList
                   urgent={urgent}
                   rest={rest}
@@ -1274,7 +1274,7 @@ function InlineTaskTitle({
     return (
       <p
         className={`truncate text-[13px] font-medium leading-snug ${
-          isDone ? 'text-zinc-500 line-through' : 'text-white'
+          isDone ? 'text-[var(--workspace-shell-text-muted)] line-through' : 'text-[var(--workspace-shell-text)]'
         }`}
       >
         {title}
@@ -1300,7 +1300,7 @@ function InlineTaskTitle({
             cancel();
           }
         }}
-        className="w-full rounded-md border border-white/15 bg-white/5 px-2 py-1 text-sm font-medium leading-snug text-white shadow-none outline-none focus-visible:ring-1 focus-visible:ring-white/25"
+        className="w-full rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 py-1 text-sm font-medium leading-snug text-[var(--workspace-shell-text)] shadow-none outline-none focus-visible:ring-1 focus-visible:ring-white/25"
         aria-label="Task title"
       />
     );
@@ -1311,8 +1311,8 @@ function InlineTaskTitle({
       type="button"
       onClick={() => setEditing(true)}
       onPointerDown={(e) => isolatePointer && e.stopPropagation()}
-      className={`w-full min-w-0 rounded-sm text-left text-sm font-medium leading-snug transition-colors hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-white/30 ${
-        isDone ? 'text-zinc-500 line-through' : 'text-white'
+      className={`w-full min-w-0 rounded-sm text-left text-sm font-medium leading-snug transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-white/30 ${
+        isDone ? 'text-[var(--workspace-shell-text-muted)] line-through' : 'text-[var(--workspace-shell-text)]'
       }`}
       aria-label="Edit title"
     >
@@ -1405,7 +1405,7 @@ function TaskRow({
             'border-l-[3px] border-l-rose-500 bg-rose-500/[0.07] ring-1 ring-inset ring-rose-400/20 hover:bg-rose-500/[0.09]',
           !overdue && 'hover:bg-white/[0.035]',
           !isRoot && !overdue && 'bg-transparent hover:bg-white/[0.025]',
-          'relative cursor-pointer border-b border-white/[0.06] transition-colors',
+          'relative cursor-pointer border-b border-[color:var(--workspace-shell-border)] transition-colors',
         )}
       >
         <div className="flex justify-center" data-task-row-action>
@@ -1416,7 +1416,7 @@ function TaskRow({
                 e.stopPropagation();
                 onToggleSubtasks?.();
               }}
-              className="rounded p-0.5 text-zinc-500 transition-colors hover:bg-white/5 hover:text-white"
+              className="rounded p-0.5 text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
               aria-expanded={subtasksExpanded}
               aria-label={
                 subtasksExpanded ? 'Collapse subtasks' : 'Expand subtasks'
@@ -1442,7 +1442,7 @@ function TaskRow({
               handleCheckedChange(Boolean(value));
             }}
             aria-label={isDone ? 'Mark task as not done' : 'Mark task as done'}
-            className="h-5 w-5 shrink-0 rounded-full border-white/25 shadow-none data-[state=checked]:border-[var(--keel-teal)] data-[state=checked]:bg-[var(--keel-teal)]/20 data-[state=checked]:text-[var(--keel-teal)]"
+            className="h-5 w-5 shrink-0 rounded-full border-[color:var(--workspace-shell-border)] shadow-none data-[state=checked]:border-[var(--ozer-accent)] data-[state=checked]:bg-[var(--ozer-accent-subtle)] data-[state=checked]:text-[var(--ozer-accent)]"
           />
         </div>
         <div className="min-w-0">
@@ -1454,7 +1454,7 @@ function TaskRow({
           />
           {isRoot && subCount > 0 ? (
             <span
-              className="mt-0.5 block text-[10px] font-normal tabular-nums text-zinc-500"
+              className="mt-0.5 block text-[10px] font-normal tabular-nums text-[var(--workspace-shell-text-muted)]"
               title="Subtasks completed / total"
             >
               {doneSubCount}/{subCount}
@@ -1519,8 +1519,8 @@ function BoardColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`flex min-h-[200px] flex-col rounded-2xl border border-white/6 transition-colors ${
-        isOver ? 'border-white/16 bg-white/[0.03]' : 'bg-[var(--workspace-shell-panel)]'
+      className={`flex min-h-[200px] flex-col rounded-2xl border border-[color:var(--workspace-shell-border)] transition-colors ${
+        isOver ? 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]' : 'bg-[var(--workspace-shell-panel)]'
       }`}
     >
       <div
@@ -1532,17 +1532,17 @@ function BoardColumn({
             className="inline-block h-2 w-2 rounded-full"
             style={{ backgroundColor: column.dot }}
           />
-          <span className="text-sm font-semibold text-white">
+          <span className="text-sm font-semibold text-[var(--workspace-shell-text)]">
             {column.label}
           </span>
         </div>
-        <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-xs text-zinc-300">
+        <span className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
           {tasks.length}
         </span>
       </div>
       <div className="flex flex-1 flex-col gap-2 p-3">
         {tasks.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-white/8 px-3 py-8 text-center text-xs text-zinc-600">
+          <div className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-3 py-8 text-center text-xs text-[var(--workspace-shell-text-muted)]">
             Drop tasks here
           </div>
         ) : (
@@ -1593,12 +1593,12 @@ function BoardCard({
 
   const baseClass = overdue
     ? 'rounded-xl border border-rose-400/30 border-l-[3px] border-l-rose-500 bg-rose-500/[0.08]'
-    : 'rounded-xl border border-white/8 bg-[var(--workspace-shell-canvas)]';
+    : 'rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)]';
   const interactClass = isOverlay
     ? 'shadow-[0_18px_48px_rgba(4,10,24,0.45)]'
     : isDragging
       ? 'opacity-40'
-      : 'hover:border-white/16';
+      : 'hover:border-[color:var(--workspace-shell-border)]';
 
   return (
     <>
@@ -1623,10 +1623,10 @@ function BoardCard({
           />
         </div>
 
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-zinc-400">
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--workspace-shell-text-muted)]">
           {overdue && <OverduePill dueDate={task.dueDate} compact />}
           {task.clientName && (
-            <span className="rounded bg-white/5 px-1.5 py-0.5 font-medium text-zinc-300">
+            <span className="rounded bg-[var(--workspace-shell-sidebar-accent)] px-1.5 py-0.5 font-medium text-[var(--workspace-shell-text-muted)]">
               {task.clientName}
             </span>
           )}
@@ -1649,7 +1649,7 @@ function BoardCard({
             </span>
           )}
           {subCount > 0 && (
-            <span className="rounded bg-white/5 px-1.5 py-0.5 text-zinc-400">
+            <span className="rounded bg-[var(--workspace-shell-sidebar-accent)] px-1.5 py-0.5 text-[var(--workspace-shell-text-muted)]">
               {doneSubCount}/{subCount} complete
             </span>
           )}
@@ -1682,7 +1682,7 @@ function StatusPill({
   return (
     <span
       className={cn(
-        'inline-flex max-w-full items-center gap-1 rounded-[5px] font-medium text-zinc-200',
+        'inline-flex max-w-full items-center gap-1 rounded-[5px] font-medium text-[var(--workspace-shell-text)]',
         compact
           ? 'px-1.5 py-0 text-[11px] leading-5'
           : 'px-1.5 py-0.5 text-xs leading-5',

@@ -19,14 +19,14 @@ import { PAGESPEED_RECOMMENDATION_CATEGORIES } from '~/lib/pagespeed/types';
 const PRIORITY_COLOURS: Record<PagespeedRecommendationPriority, string> = {
   high: 'bg-red-500/20 text-red-200',
   medium: 'bg-amber-500/20 text-amber-200',
-  low: 'bg-white/10 text-muted-foreground',
+  low: 'bg-[var(--workspace-shell-sidebar-accent)] text-muted-foreground',
 };
 
 function RecommendationRow({ rec }: { rec: PagespeedRecommendation }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="rounded-lg border border-white/10 bg-black/20">
+    <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
       <button
         type="button"
         className="flex w-full items-start gap-3 p-3 text-left"
@@ -56,7 +56,7 @@ function RecommendationRow({ rec }: { rec: PagespeedRecommendation }) {
       </button>
 
       {expanded && rec.description ? (
-        <div className="border-t border-white/10 px-3 pb-3 pt-2">
+        <div className="border-t border-[color:var(--workspace-shell-border)] px-3 pb-3 pt-2">
           <p className="text-muted-foreground text-sm leading-relaxed">
             {rec.description}
           </p>
@@ -117,8 +117,8 @@ function CategoryRecommendations(props: {
               type="button"
               className={`rounded-md px-2 py-1 text-xs capitalize ${
                 priorityFilter === filter
-                  ? 'keel-gradient-active text-white'
-                  : 'bg-white/5 text-muted-foreground hover:text-white'
+                  ? 'keel-gradient-active text-[var(--ozer-white)]'
+                  : 'bg-[var(--workspace-shell-sidebar-accent)] text-muted-foreground hover:text-[var(--workspace-shell-text)]'
               }`}
               onClick={() => setPriorityFilter(filter)}
             >
@@ -255,7 +255,7 @@ export function PagespeedRecommendations(props: {
     (props.mobile?.resultId || props.desktop?.resultId)
   ) {
     return (
-      <div className={props.className ?? 'border-t border-white/10 px-4 py-4'}>
+      <div className={props.className ?? 'border-t border-[color:var(--workspace-shell-border)] px-4 py-4'}>
         <p className="text-muted-foreground text-sm">
           Re-run PageSpeed to import Lighthouse fix recommendations for this page.
         </p>
@@ -264,7 +264,7 @@ export function PagespeedRecommendations(props: {
   }
 
   return (
-    <div className={props.className ?? 'border-t border-white/10 bg-black/10 px-4 py-4'}>
+    <div className={props.className ?? 'border-t border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-4'}>
       <div className="mb-3">
         <h4 className="text-sm font-medium">Lighthouse fixes</h4>
         <p className="text-muted-foreground mt-0.5 text-xs">

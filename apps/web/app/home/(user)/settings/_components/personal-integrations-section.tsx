@@ -67,7 +67,7 @@ function IntegrationRow({
   connectDisabledReason?: string;
 }) {
   return (
-    <div className="rounded-xl border border-white/8 bg-white/[0.03] p-4">
+    <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 gap-3">
           <div
@@ -87,7 +87,7 @@ function IntegrationRow({
                     ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200'
                     : status === 'unavailable'
                       ? 'border-amber-400/30 bg-amber-400/10 text-amber-100'
-                      : 'border-white/10 bg-white/5 text-[var(--workspace-shell-text-muted)]'
+                      : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]'
                 }
               >
                 {statusLabel}
@@ -113,7 +113,7 @@ function IntegrationRow({
               type="button"
               variant="outline"
               size="sm"
-              className="border-white/10 bg-transparent text-[var(--workspace-shell-text)] hover:bg-white/5"
+              className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
               onClick={onDisconnect}
               disabled={disconnecting}
             >
@@ -133,7 +133,7 @@ function IntegrationRow({
             <Button
               type="button"
               size="sm"
-              className="keel-gradient-btn text-white"
+              className="keel-gradient-btn text-[var(--ozer-white)]"
               disabled={connectDisabled}
               onClick={() => {
                 window.location.href = connectHref;
@@ -145,7 +145,7 @@ function IntegrationRow({
 
           <Link
             href={featureHref}
-            className="inline-flex items-center gap-1 text-xs font-medium text-[var(--keel-teal)] hover:underline"
+            className="inline-flex items-center gap-1 text-xs font-medium text-[var(--ozer-accent)] hover:underline"
           >
             {featureLabel}
             <ExternalLink className="h-3.5 w-3.5" />
@@ -247,7 +247,7 @@ export function PersonalIntegrationsSection({ data }: Props) {
 
       <IntegrationRow
         icon={<Mail className="h-4 w-4" />}
-        iconClassName="bg-[var(--keel-teal)]/15 text-[var(--keel-teal)]"
+        iconClassName="bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]"
         title="Gmail"
         description="Powers inbox sync, reply drafts, and email assistant settings."
         status={gmailStatus}
@@ -283,7 +283,7 @@ export function PersonalIntegrationsSection({ data }: Props) {
           Need the email assistant?{' '}
           <Link
             href={`${pathsConfig.app.personalAccountBilling}?addon=email-assistant`}
-            className="font-medium text-[var(--keel-teal)] hover:underline"
+            className="font-medium text-[var(--ozer-accent)] hover:underline"
           >
             View billing
           </Link>

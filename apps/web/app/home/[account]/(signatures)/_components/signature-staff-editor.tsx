@@ -136,7 +136,7 @@ export function SignatureStaffEditor({
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
-      <Card className="border-white/10 bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+      <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
         <CardHeader>
           <CardTitle>Edit staff member</CardTitle>
         </CardHeader>
@@ -255,7 +255,7 @@ export function SignatureStaffEditor({
         </CardContent>
       </Card>
 
-      <Card className="border-white/10 bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+      <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
         <CardHeader>
           <CardTitle>Live preview</CardTitle>
         </CardHeader>
@@ -264,11 +264,11 @@ export function SignatureStaffEditor({
             <iframe
               key={previewUrl}
               src={previewUrl}
-              className="h-[420px] w-full rounded-xl border border-white/10 bg-white"
+              className="h-[420px] w-full rounded-xl border border-[color:var(--workspace-shell-border)] bg-white"
               title="Signature preview"
             />
           ) : (
-            <div className="flex h-[420px] items-center justify-center rounded-xl border border-dashed border-white/10 text-sm text-muted-foreground">
+            <div className="flex h-[420px] items-center justify-center rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] text-sm text-muted-foreground">
               <Upload className="mr-2 h-4 w-4" />
               Assign a template to preview this signature.
             </div>

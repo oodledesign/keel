@@ -82,29 +82,29 @@ export function PlanOutputPanel({
   }
 
   return (
-    <section className="sticky top-4 min-h-[min(80vh,720px)] rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.22)]">
+    <section className="sticky top-4 min-h-[min(80vh,720px)] rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.22)]">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h2 className="text-base font-semibold">Generated plan</h2>
-          <p className="mt-1 text-xs text-white/45">
+          <p className="mt-1 text-xs text-[var(--workspace-shell-text)]/45">
             Preview updates as Claude streams your schedule.
           </p>
         </div>
         {isGenerating ? (
-          <span className="inline-flex items-center gap-2 rounded-full border border-[#5eead4]/20 bg-[#5eead4]/10 px-3 py-1 text-xs text-[#5eead4]">
+          <span className="inline-flex items-center gap-2 rounded-full border border-[var(--ozer-accent-muted)]/20 bg-[var(--ozer-accent-subtle)] px-3 py-1 text-xs text-[var(--ozer-accent-muted)]">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
             {mode === 'day' ? 'Planning your day…' : 'Planning your week…'}
           </span>
         ) : null}
       </div>
 
-      <div className="min-h-[min(58vh,560px)] rounded-xl border border-white/8 bg-black/10 p-4">
+      <div className="min-h-[min(58vh,560px)] rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/10 p-4">
         {markdown.trim() ? (
           <PlanOutputRenderer markdown={markdown} />
         ) : isGenerating ? (
-          <div className="flex min-h-[min(52vh,500px)] flex-col items-center justify-center text-center text-white/55">
-            <Loader2 className="mb-3 h-8 w-8 animate-spin text-[#5eead4]" />
-            <p className="font-medium text-white">
+          <div className="flex min-h-[min(52vh,500px)] flex-col items-center justify-center text-center text-[var(--workspace-shell-text)]/55">
+            <Loader2 className="mb-3 h-8 w-8 animate-spin text-[var(--ozer-accent-muted)]" />
+            <p className="font-medium text-[var(--workspace-shell-text)]">
               {mode === 'day' ? 'Planning your day…' : 'Planning your week…'}
             </p>
             <p className="mt-1 max-w-sm text-sm">
@@ -112,8 +112,8 @@ export function PlanOutputPanel({
             </p>
           </div>
         ) : (
-          <div className="flex min-h-[min(52vh,500px)] flex-col items-center justify-center text-center text-white/50">
-            <p className="text-sm font-semibold text-white/70">
+          <div className="flex min-h-[min(52vh,500px)] flex-col items-center justify-center text-center text-[var(--workspace-shell-text)]/50">
+            <p className="text-sm font-semibold text-[var(--workspace-shell-text)]/70">
               Ready when you are.
             </p>
             <p className="mt-2 max-w-md text-sm">
@@ -130,7 +130,7 @@ export function PlanOutputPanel({
               asChild
               type="button"
               variant="outline"
-              className="border-white/10"
+              className="border-[color:var(--workspace-shell-border)]"
             >
               <Link href={dayViewHref}>Open today view</Link>
             </Button>
@@ -138,7 +138,7 @@ export function PlanOutputPanel({
           <Button
             type="button"
             variant="outline"
-            className="border-white/10"
+            className="border-[color:var(--workspace-shell-border)]"
             disabled={!canRegenerate || isGenerating}
             onClick={onRegenerate}
           >

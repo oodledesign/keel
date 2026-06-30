@@ -181,7 +181,7 @@ function AccountModuleList(props: {
   return (
     <div className="space-y-4">
       {props.accounts.map((account) => (
-        <div key={account.id} className="rounded-lg border border-white/10 p-4">
+        <div key={account.id} className="rounded-lg border border-[color:var(--workspace-shell-border)] p-4">
           <h3 className="text-sm font-semibold">{account.name}</h3>
           <div className="mt-3 flex flex-wrap gap-2">
             {SPACE_MODULES[props.spaceType].map((moduleKey) => {

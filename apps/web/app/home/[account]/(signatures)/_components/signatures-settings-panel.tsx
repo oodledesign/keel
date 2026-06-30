@@ -201,14 +201,14 @@ export function SignaturesSettingsPanel({
 
   return (
     <div className="space-y-6">
-        <Card className="border-white/10 bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+        <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
           <CardHeader>
             <CardTitle>Google Workspace connection</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
             {googleConnection ? (
               <div className="space-y-4">
-                <div className="grid gap-3 rounded-2xl border border-white/10 bg-black/10 p-4 text-sm">
+                <div className="grid gap-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-black/10 p-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">Primary domain</p>
                     <p className="font-mono text-xs">{googleConnection.primary_domain}</p>
@@ -235,9 +235,9 @@ export function SignaturesSettingsPanel({
                 </Button>
               </div>
             ) : (
-              <div className="space-y-4 rounded-2xl border border-dashed border-white/10 bg-black/10 p-6">
+              <div className="space-y-4 rounded-2xl border border-dashed border-[color:var(--workspace-shell-border)] bg-black/10 p-6">
                 <div className="flex items-start gap-3">
-                  <div className="rounded-xl bg-[var(--keel-teal)]/10 p-2 text-[var(--keel-teal)]">
+                  <div className="rounded-xl bg-[var(--ozer-accent-subtle)] p-2 text-[var(--ozer-accent)]">
                     <PlugZap className="h-5 w-5" />
                   </div>
                   <div>
@@ -288,14 +288,14 @@ export function SignaturesSettingsPanel({
           </CardContent>
         </Card>
 
-        <Card className="border-white/10 bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+        <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
           <CardHeader>
             <CardTitle>Microsoft 365 connection</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
             {msConnection ? (
               <div className="space-y-4">
-                <div className="grid gap-3 rounded-2xl border border-white/10 bg-black/10 p-4 text-sm">
+                <div className="grid gap-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-black/10 p-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">Tenant ID</p>
                     <p className="font-mono text-xs">{msConnection.ms_tenant_id}</p>
@@ -316,9 +316,9 @@ export function SignaturesSettingsPanel({
                 </Button>
               </div>
             ) : (
-              <div className="space-y-4 rounded-2xl border border-dashed border-white/10 bg-black/10 p-6">
+              <div className="space-y-4 rounded-2xl border border-dashed border-[color:var(--workspace-shell-border)] bg-black/10 p-6">
                 <div className="flex items-start gap-3">
-                  <div className="rounded-xl bg-[var(--keel-teal)]/10 p-2 text-[var(--keel-teal)]">
+                  <div className="rounded-xl bg-[var(--ozer-accent-subtle)] p-2 text-[var(--ozer-accent)]">
                     <PlugZap className="h-5 w-5" />
                   </div>
                   <div>
@@ -337,7 +337,7 @@ export function SignaturesSettingsPanel({
           </CardContent>
         </Card>
 
-        <Card className="border-white/10 bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+        <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
           <CardHeader>
             <CardTitle>Department badges</CardTitle>
           </CardHeader>
@@ -389,11 +389,11 @@ export function SignaturesSettingsPanel({
             )}
 
             {departmentBadges.length ? (
-              <div className="space-y-2 rounded-2xl border border-white/10 bg-black/10 p-4">
+              <div className="space-y-2 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-black/10 p-4">
                 {departmentBadges.map((badge) => (
                   <div
                     key={badge.department}
-                    className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 py-2 last:border-b-0"
+                    className="flex flex-wrap items-center justify-between gap-2 border-b border-[color:var(--workspace-shell-border)] py-2 last:border-b-0"
                   >
                     <div className="min-w-0">
                       <p className="text-sm font-medium">{badge.department}</p>

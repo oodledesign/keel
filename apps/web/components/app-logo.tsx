@@ -4,7 +4,7 @@ import Link from 'next/link';
 
 import { cn } from '@kit/ui/utils';
 
-import { KeelLogoMark } from '~/components/keel-logo-mark';
+import { OzerLogoMark } from '~/components/ozer-logo-mark';
 
 export function AppLogo({
   href,
@@ -15,7 +15,7 @@ export function AppLogo({
   className?: string;
   label?: string;
 }) {
-  const logo = <KeelLogoMark className={className} />;
+  const logo = <OzerLogoMark className={className} />;
 
   if (href === null) {
     return logo;

@@ -29,7 +29,7 @@ import {
 } from '../_lib/server/sops-actions';
 
 const panelClass =
-  'rounded-[24px] border border-white/6 bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]';
+  'rounded-[24px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]';
 
 type StepDraft = { title: string; body_md: string };
 
@@ -155,7 +155,7 @@ export function SopNewPlaybookForm({
       {mode === 'import' ? (
         <div className={`${panelClass} space-y-4 p-6`}>
           <div>
-            <h2 className="text-lg font-semibold text-white">
+            <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
               Paste existing docs or notes
             </h2>
             <p className="text-muted-foreground mt-1 text-sm">
@@ -168,7 +168,7 @@ export function SopNewPlaybookForm({
             onChange={(e) => setRawText(e.target.value)}
             rows={14}
             placeholder="Paste your process here…"
-            className="border-white/10 bg-black/20 font-mono text-sm text-white"
+            className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] font-mono text-sm text-[var(--workspace-shell-text)]"
           />
           <Button
             type="button"
@@ -195,7 +195,7 @@ export function SopNewPlaybookForm({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Monthly SEO & PPC reporting"
-              className="border-white/10 bg-black/20 text-white"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
             />
           </div>
           <div className="space-y-2">
@@ -205,7 +205,7 @@ export function SopNewPlaybookForm({
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               placeholder="Web design, SEO, PPC…"
-              className="border-white/10 bg-black/20 text-white"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
             />
           </div>
           <div className="space-y-2">
@@ -216,7 +216,7 @@ export function SopNewPlaybookForm({
                 setRecurrence(v as typeof recurrence)
               }
             >
-              <SelectTrigger className="border-white/10 bg-black/20 text-white">
+              <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -234,7 +234,7 @@ export function SopNewPlaybookForm({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
-              className="border-white/10 bg-black/20 text-white"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
             />
           </div>
         </div>
@@ -257,7 +257,7 @@ export function SopNewPlaybookForm({
           {steps.map((step, index) => (
             <div
               key={index}
-              className="space-y-2 rounded-xl border border-white/10 bg-black/10 p-4"
+              className="space-y-2 rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/10 p-4"
             >
               <div className="flex items-start gap-2">
                 <span className="text-muted-foreground mt-2 w-6 shrink-0 text-sm">
@@ -274,7 +274,7 @@ export function SopNewPlaybookForm({
                       )
                     }
                     placeholder="Step title"
-                    className="border-white/10 bg-black/20 text-white"
+                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
                   />
                   <Textarea
                     value={step.body_md}
@@ -287,7 +287,7 @@ export function SopNewPlaybookForm({
                     }
                     rows={2}
                     placeholder="Instructions (optional)"
-                    className="border-white/10 bg-black/20 text-sm text-white"
+                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-sm text-[var(--workspace-shell-text)]"
                   />
                 </div>
                 {steps.length > 1 ? (

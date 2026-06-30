@@ -232,8 +232,8 @@ export function JobEditContent({
 
   if (!canEditJobs) {
     return (
-      <div className="flex min-h-[60vh] w-full items-center justify-center rounded-lg border border-zinc-700 bg-[var(--workspace-shell-panel)] p-8">
-        <p className="text-center text-zinc-400">You don&apos;t have permission to edit this job.</p>
+      <div className="flex min-h-[60vh] w-full items-center justify-center rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-8">
+        <p className="text-center text-[var(--workspace-shell-text-muted)]">You don&apos;t have permission to edit this job.</p>
       </div>
     );
   }
@@ -242,28 +242,28 @@ export function JobEditContent({
     <div className="mx-auto w-full max-w-2xl">
       <Link
         href={detailPath}
-        className="mb-4 inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-white"
+        className="mb-4 inline-flex items-center gap-1 text-sm text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to job
       </Link>
 
-      <form onSubmit={handleSubmit} className="rounded-lg border border-zinc-700 bg-[var(--workspace-shell-panel)] p-6">
+      <form onSubmit={handleSubmit} className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6">
         <div className="flex flex-col gap-4">
           <div>
-            <Label htmlFor="title" className="text-zinc-300">
+            <Label htmlFor="title" className="text-[var(--workspace-shell-text-muted)]">
               Title *
             </Label>
             <Input
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="mt-1 border-zinc-600 bg-zinc-800 text-white"
+              className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
               placeholder="Job title"
             />
           </div>
           <div>
-            <Label className="text-zinc-300">Client</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">Client</Label>
             <div className="mt-1">
               <ClientCombobox
                 clients={clients}
@@ -279,7 +279,7 @@ export function JobEditContent({
             )}
           </div>
           <div>
-            <Label htmlFor="description" className="text-zinc-300">
+            <Label htmlFor="description" className="text-[var(--workspace-shell-text-muted)]">
               Description
             </Label>
             <textarea
@@ -287,15 +287,15 @@ export function JobEditContent({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="mt-1 w-full rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-white placeholder:text-zinc-500"
+              className="mt-1 w-full rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] px-3 py-2 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
               placeholder="Optional description"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label className="text-zinc-300">Status</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">Status</Label>
               <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger className="mt-1 border-zinc-600 bg-zinc-800 text-white">
+                <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -308,9 +308,9 @@ export function JobEditContent({
               </Select>
             </div>
             <div>
-              <Label className="text-zinc-300">Priority</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">Priority</Label>
               <Select value={priority} onValueChange={setPriority}>
-                <SelectTrigger className="mt-1 border-zinc-600 bg-zinc-800 text-white">
+                <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -323,7 +323,7 @@ export function JobEditContent({
             </div>
           </div>
           <div>
-            <Label htmlFor="due_date" className="text-zinc-300">
+            <Label htmlFor="due_date" className="text-[var(--workspace-shell-text-muted)]">
               Due date
             </Label>
             <Input
@@ -331,11 +331,11 @@ export function JobEditContent({
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="mt-1 border-zinc-600 bg-zinc-800 text-white"
+              className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
             />
           </div>
           <div>
-            <Label htmlFor="value" className="text-zinc-300">
+            <Label htmlFor="value" className="text-[var(--workspace-shell-text-muted)]">
               Value (£)
             </Label>
             <Input
@@ -345,25 +345,25 @@ export function JobEditContent({
               min="0"
               value={valuePence}
               onChange={(e) => setValuePence(e.target.value)}
-              className="mt-1 border-zinc-600 bg-zinc-800 text-white"
+              className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
               placeholder="0.00"
             />
           </div>
 
-          <div className="border-t border-zinc-700 pt-6">
-            <h3 className="text-sm font-medium text-zinc-400">Assigned team</h3>
+          <div className="border-t border-[color:var(--workspace-shell-border)] pt-6">
+            <h3 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">Assigned team</h3>
             {assignmentsLoading ? (
-              <p className="mt-2 text-sm text-zinc-500">Loading…</p>
+              <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">Loading…</p>
             ) : (
               <>
-                <ul className="mt-2 space-y-1.5 text-sm text-zinc-300">
+                <ul className="mt-2 space-y-1.5 text-sm text-[var(--workspace-shell-text-muted)]">
                   {assignments.map((a) => {
                     const member = members.find((m) => m.user_id === a.user_id);
                     const label = member ? member.name || member.email || a.user_id.slice(0, 8) : a.user_id.slice(0, 8);
                     return (
                       <li
                         key={a.user_id}
-                        className="flex items-center justify-between rounded-md border border-zinc-700 bg-[var(--workspace-shell-panel)] px-3 py-2"
+                        className="flex items-center justify-between rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 py-2"
                       >
                         <span>
                           {a.role_on_job ? `${a.role_on_job}: ` : ''}
@@ -373,7 +373,7 @@ export function JobEditContent({
                           type="button"
                           variant="ghost"
                           size="sm"
-                          className="h-7 text-zinc-400 hover:text-red-400"
+                          className="h-7 text-[var(--workspace-shell-text-muted)] hover:text-red-400"
                           onClick={() => handleRemoveAssignment(a.user_id)}
                         >
                           Remove
@@ -383,17 +383,17 @@ export function JobEditContent({
                   })}
                 </ul>
                 {assignments.length === 0 && (
-                  <p className="mt-2 text-sm text-zinc-500">No one assigned yet.</p>
+                  <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">No one assigned yet.</p>
                 )}
                 <div className="mt-4 flex flex-wrap items-end gap-2">
                   <div className="min-w-[180px]">
-                    <Label className="text-xs text-zinc-500">Add team member</Label>
+                    <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Add team member</Label>
                     <Select
                       value={selectedMemberId || 'none'}
                       onValueChange={(v) => setSelectedMemberId(v === 'none' ? '' : v)}
                       disabled={membersNotAssigned.length === 0}
                     >
-                      <SelectTrigger className="mt-1 border-zinc-600 bg-zinc-800 text-white">
+                      <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
                         <SelectValue placeholder="Select member" />
                       </SelectTrigger>
                       <SelectContent>
@@ -410,12 +410,12 @@ export function JobEditContent({
                     placeholder="Role (optional)"
                     value={assignRole}
                     onChange={(e) => setAssignRole(e.target.value)}
-                    className="h-9 w-32 border-zinc-600 bg-zinc-800 text-white"
+                    className="h-9 w-32 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
                   />
                   <Button
                     type="button"
                     size="sm"
-                    className="bg-zinc-700 hover:bg-zinc-600"
+                    className="bg-[var(--workspace-shell-panel-hover)] hover:bg-[var(--workspace-shell-panel-hover)]"
                     disabled={!selectedMemberId || assigning}
                     onClick={handleAssign}
                   >
@@ -423,21 +423,21 @@ export function JobEditContent({
                   </Button>
                 </div>
                 {membersNotAssigned.length === 0 && members.length > 0 && (
-                  <p className="mt-2 text-sm text-zinc-500">All members are already assigned.</p>
+                  <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">All members are already assigned.</p>
                 )}
               </>
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 border-t border-zinc-700 pt-6">
+          <div className="flex flex-wrap items-center gap-3 border-t border-[color:var(--workspace-shell-border)] pt-6">
             <Button
               type="submit"
               disabled={submitting}
-              className="bg-[var(--keel-teal)] hover:bg-[#238b7f]"
+              className="bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]"
             >
               {submitting ? 'Saving...' : 'Save changes'}
             </Button>
-            <Button type="button" variant="outline" className="border-zinc-600 text-zinc-300" asChild>
+            <Button type="button" variant="outline" className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]" asChild>
               <Link href={detailPath}>Cancel</Link>
             </Button>
 
@@ -453,7 +453,7 @@ export function JobEditContent({
                     Delete job
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent className="border-zinc-700 bg-[var(--workspace-shell-panel)] text-white">
+                <AlertDialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
                   <AlertDialogHeader>
                     <AlertDialogTitle>Delete this job?</AlertDialogTitle>
                     <AlertDialogDescription>
@@ -462,7 +462,7 @@ export function JobEditContent({
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter className="gap-2 sm:gap-0">
-                    <AlertDialogCancel className="border-zinc-600 text-zinc-300">
+                    <AlertDialogCancel className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]">
                       Cancel
                     </AlertDialogCancel>
                     <Button

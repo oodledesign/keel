@@ -178,14 +178,14 @@ export function ClientForm({
       {mode === 'create' && (
         <div className="space-y-2">
           <Label>Client type</Label>
-          <div className="flex rounded-lg border border-zinc-700 overflow-hidden">
+          <div className="flex rounded-lg border border-[color:var(--workspace-shell-border)] overflow-hidden">
             <button
               type="button"
               onClick={() => setClientType('individual')}
               className={`flex flex-1 items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
                 isIndividual
-                  ? 'bg-[var(--keel-teal)] text-white'
-                  : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white'
+                  ? 'bg-[var(--ozer-accent)] text-[var(--ozer-white)]'
+                  : 'bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-panel-hover)] hover:text-[var(--workspace-shell-text)]'
               }`}
             >
               <User className="h-4 w-4" />
@@ -194,10 +194,10 @@ export function ClientForm({
             <button
               type="button"
               onClick={() => setClientType('business')}
-              className={`flex flex-1 items-center justify-center gap-2 border-l border-zinc-700 px-4 py-2.5 text-sm font-medium transition-colors ${
+              className={`flex flex-1 items-center justify-center gap-2 border-l border-[color:var(--workspace-shell-border)] px-4 py-2.5 text-sm font-medium transition-colors ${
                 !isIndividual
-                  ? 'bg-[var(--keel-teal)] text-white'
-                  : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white'
+                  ? 'bg-[var(--ozer-accent)] text-[var(--ozer-white)]'
+                  : 'bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-panel-hover)] hover:text-[var(--workspace-shell-text)]'
               }`}
             >
               <Building2 className="h-4 w-4" />
@@ -205,12 +205,12 @@ export function ClientForm({
             </button>
           </div>
           {isIndividual && (
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
               A single person client. A contact record is created automatically.
             </p>
           )}
           {!isIndividual && (
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
               A company client. Add multiple contacts after creation via the Contacts tab.
             </p>
           )}

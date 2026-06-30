@@ -31,7 +31,7 @@ async function PersonalDictationHistoryPage() {
           </Link>
         </div>
 
-        <div className="rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+        <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
           <h1 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
             Dictation history
           </h1>
@@ -50,7 +50,7 @@ async function PersonalDictationHistoryPage() {
               {items.map((item) => (
                 <li
                   key={item.id}
-                  className="rounded-xl border border-white/8 bg-white/3 px-4 py-3"
+                  className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-white/3 px-4 py-3"
                 >
                   <p className="whitespace-pre-wrap text-sm text-[var(--workspace-shell-text)]">
                     {item.text}

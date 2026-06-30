@@ -80,7 +80,7 @@ const tabs = [
 function statusClass(status: string) {
   if (status === 'sent') return 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200';
   if (status === 'sending') return 'border-sky-400/40 bg-sky-500/10 text-sky-200';
-  if (status === 'cancelled') return 'border-zinc-400/40 bg-zinc-500/10 text-zinc-200';
+  if (status === 'cancelled') return 'border-[color:var(--workspace-shell-border)]/40 bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]';
   return 'border-amber-400/40 bg-amber-500/10 text-amber-200';
 }
 
@@ -118,8 +118,8 @@ export function EmailMarketingDashboard({
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Email marketing</h1>
-          <p className="text-zinc-400">
+          <h1 className="text-2xl font-bold text-[var(--workspace-shell-text)]">Email marketing</h1>
+          <p className="text-[var(--workspace-shell-text-muted)]">
             Compose branded campaigns, manage pre-signup contacts, and review metrics.
           </p>
         </div>
@@ -131,7 +131,7 @@ export function EmailMarketingDashboard({
         </Button>
       </div>
 
-      <div className="flex flex-wrap gap-2 rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-2">
+      <div className="flex flex-wrap gap-2 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-2">
         {tabs.map(([id, label]) => (
           <Link
             key={id}
@@ -139,7 +139,7 @@ export function EmailMarketingDashboard({
             className={`rounded-xl px-4 py-2 text-sm font-medium ${
               currentTab === id
                 ? 'bg-[#57C87F] text-[#09111F]'
-                : 'text-zinc-300 hover:bg-white/5'
+                : 'text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)]'
             }`}
           >
             {label}
@@ -166,46 +166,46 @@ export function EmailMarketingDashboard({
 
 function CampaignsTab({ campaigns }: { campaigns: CampaignListRow[] }) {
   return (
-    <Card className="border-white/10 bg-[var(--workspace-shell-panel)]">
+    <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
       <CardContent className="p-0">
         <Table>
           <TableHeader>
-            <TableRow className="border-white/10 hover:bg-transparent">
-              <TableHead className="text-zinc-400">Title</TableHead>
-              <TableHead className="text-zinc-400">Status</TableHead>
-              <TableHead className="text-zinc-400">Recipient list</TableHead>
-              <TableHead className="text-zinc-400">Sent</TableHead>
-              <TableHead className="text-zinc-400">Open rate</TableHead>
-              <TableHead className="text-zinc-400">Click rate</TableHead>
-              <TableHead className="text-zinc-400">Created</TableHead>
-              <TableHead className="text-zinc-400">Actions</TableHead>
+            <TableRow className="border-[color:var(--workspace-shell-border)] hover:bg-transparent">
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">Title</TableHead>
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">Status</TableHead>
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">Recipient list</TableHead>
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">Sent</TableHead>
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">Open rate</TableHead>
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">Click rate</TableHead>
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">Created</TableHead>
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {campaigns.length === 0 ? (
-              <TableRow className="border-white/10">
-                <TableCell colSpan={8} className="py-10 text-center text-zinc-500">
+              <TableRow className="border-[color:var(--workspace-shell-border)]">
+                <TableCell colSpan={8} className="py-10 text-center text-[var(--workspace-shell-text-muted)]">
                   No campaigns yet.
                 </TableCell>
               </TableRow>
             ) : (
               campaigns.map((campaign) => (
-                <TableRow key={campaign.id} className="border-white/10">
-                  <TableCell className="font-medium text-white">{campaign.title}</TableCell>
+                <TableRow key={campaign.id} className="border-[color:var(--workspace-shell-border)]">
+                  <TableCell className="font-medium text-[var(--workspace-shell-text)]">{campaign.title}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className={statusClass(campaign.status)}>
                       {campaign.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-zinc-300">
+                  <TableCell className="text-[var(--workspace-shell-text-muted)]">
                     {campaign.recipient_list.replace(/_/g, ' ')}
                   </TableCell>
-                  <TableCell className="text-zinc-300">
+                  <TableCell className="text-[var(--workspace-shell-text-muted)]">
                     {campaign.sent_count}/{campaign.total_recipients}
                   </TableCell>
-                  <TableCell className="text-zinc-300">{campaign.open_rate}%</TableCell>
-                  <TableCell className="text-zinc-300">{campaign.click_rate}%</TableCell>
-                  <TableCell className="whitespace-nowrap text-zinc-300">
+                  <TableCell className="text-[var(--workspace-shell-text-muted)]">{campaign.open_rate}%</TableCell>
+                  <TableCell className="text-[var(--workspace-shell-text-muted)]">{campaign.click_rate}%</TableCell>
+                  <TableCell className="whitespace-nowrap text-[var(--workspace-shell-text-muted)]">
                     {formatUkDateMedium(campaign.created_at)}
                   </TableCell>
                   <TableCell>
@@ -260,9 +260,9 @@ function ListsTab({
 
   return (
     <div className="grid gap-4 xl:grid-cols-[320px_1fr]">
-      <Card className="border-white/10 bg-[var(--workspace-shell-panel)]">
+      <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
         <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
-          <CardTitle className="text-base text-white">Audience lists</CardTitle>
+          <CardTitle className="text-base text-[var(--workspace-shell-text)]">Audience lists</CardTitle>
           <Button
             type="button"
             size="sm"
@@ -284,13 +284,13 @@ function ListsTab({
                 className={`w-full rounded-xl border px-3 py-3 text-left transition-colors ${
                   active
                     ? 'border-[#57C87F]/40 bg-[#57C87F]/10'
-                    : 'border-white/10 bg-black/20 hover:border-white/20 hover:bg-white/5'
+                    : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] hover:border-[color:var(--workspace-shell-border)] hover:bg-[var(--workspace-shell-sidebar-accent)]'
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-medium text-white">{summary.label}</p>
-                    <p className="mt-1 text-xs leading-relaxed text-zinc-400">
+                    <p className="font-medium text-[var(--workspace-shell-text)]">{summary.label}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-[var(--workspace-shell-text-muted)]">
                       {summary.description}
                       {summary.editable ? (
                         <span className="mt-1 block text-[#97D9AA]">
@@ -301,7 +301,7 @@ function ListsTab({
                   </div>
                   <Badge
                     variant="outline"
-                    className="shrink-0 border-white/10 text-zinc-200"
+                    className="shrink-0 border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)]"
                   >
                     {summary.campaignSpecific ? '—' : summary.count}
                   </Badge>
@@ -313,13 +313,13 @@ function ListsTab({
       </Card>
 
       <div className="space-y-4">
-        <div className="rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-4">
+        <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-white">
+              <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
                 {selected?.label ?? 'List members'}
               </h2>
-              <p className="text-sm text-zinc-400">
+              <p className="text-sm text-[var(--workspace-shell-text-muted)]">
                 {selected?.campaignSpecific
                   ? 'This audience is configured inside each campaign, not as a shared list.'
                   : editable
@@ -332,7 +332,7 @@ function ListsTab({
                 <Input
                   defaultValue={filters.query}
                   placeholder="Search name or email"
-                  className="max-w-sm border-white/10 bg-black/20 text-white"
+                  className="max-w-sm border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
                   onChange={(event) =>
                     pushFilters({ query: event.target.value.trim() })
                   }
@@ -384,7 +384,7 @@ function ListsTab({
                   />
                   <Button
                     variant="outline"
-                    className="border-white/10"
+                    className="border-[color:var(--workspace-shell-border)]"
                     onClick={() => setImportOpen(true)}
                   >
                     Import CSV
@@ -405,35 +405,35 @@ function ListsTab({
         </div>
 
         {selected?.campaignSpecific ? (
-          <Card className="border-white/10 bg-[var(--workspace-shell-panel)]">
-            <CardContent className="py-10 text-center text-sm text-zinc-400">
-              Choose <span className="text-zinc-200">Manual addresses</span> or{' '}
-              <span className="text-zinc-200">Custom users</span> when composing a
+          <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+            <CardContent className="py-10 text-center text-sm text-[var(--workspace-shell-text-muted)]">
+              Choose <span className="text-[var(--workspace-shell-text)]">Manual addresses</span> or{' '}
+              <span className="text-[var(--workspace-shell-text)]">Custom users</span> when composing a
               campaign to define who receives that send.
             </CardContent>
           </Card>
         ) : (
-          <Card className="border-white/10 bg-[var(--workspace-shell-panel)]">
+          <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-white/10 hover:bg-transparent">
-                    <TableHead className="text-zinc-400">Name</TableHead>
-                    <TableHead className="text-zinc-400">Email</TableHead>
-                    <TableHead className="text-zinc-400">Type</TableHead>
-                    <TableHead className="text-zinc-400">Tier / trade</TableHead>
-                    <TableHead className="text-zinc-400">Last sign-in</TableHead>
+                  <TableRow className="border-[color:var(--workspace-shell-border)] hover:bg-transparent">
+                    <TableHead className="text-[var(--workspace-shell-text-muted)]">Name</TableHead>
+                    <TableHead className="text-[var(--workspace-shell-text-muted)]">Email</TableHead>
+                    <TableHead className="text-[var(--workspace-shell-text-muted)]">Type</TableHead>
+                    <TableHead className="text-[var(--workspace-shell-text-muted)]">Tier / trade</TableHead>
+                    <TableHead className="text-[var(--workspace-shell-text-muted)]">Last sign-in</TableHead>
                     {editable ? (
-                      <TableHead className="text-zinc-400">Actions</TableHead>
+                      <TableHead className="text-[var(--workspace-shell-text-muted)]">Actions</TableHead>
                     ) : null}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {members.length === 0 ? (
-                    <TableRow className="border-white/10">
+                    <TableRow className="border-[color:var(--workspace-shell-border)]">
                       <TableCell
                         colSpan={editable ? 6 : 5}
-                        className="py-10 text-center text-zinc-500"
+                        className="py-10 text-center text-[var(--workspace-shell-text-muted)]"
                       >
                         No subscribers in this list
                         {filters.query ? ' matching your search' : ''}.
@@ -444,21 +444,21 @@ function ListsTab({
                     members.map((member) => (
                       <TableRow
                         key={`${member.kind}-${member.email}`}
-                        className="border-white/10"
+                        className="border-[color:var(--workspace-shell-border)]"
                       >
-                        <TableCell className="text-white">
+                        <TableCell className="text-[var(--workspace-shell-text)]">
                           {member.name ?? '—'}
                         </TableCell>
-                        <TableCell className="text-zinc-300">{member.email}</TableCell>
-                        <TableCell className="text-zinc-300">
+                        <TableCell className="text-[var(--workspace-shell-text-muted)]">{member.email}</TableCell>
+                        <TableCell className="text-[var(--workspace-shell-text-muted)]">
                           {member.kind === 'contact' ? 'Contact' : 'User'}
                         </TableCell>
-                        <TableCell className="text-zinc-300">
+                        <TableCell className="text-[var(--workspace-shell-text-muted)]">
                           {member.tier
                             ? member.tier.replace(/_/g, ' ')
                             : member.trade ?? '—'}
                         </TableCell>
-                        <TableCell className="text-zinc-300">
+                        <TableCell className="text-[var(--workspace-shell-text-muted)]">
                           {member.lastSignInAt
                             ? formatUkDateMedium(member.lastSignInAt)
                             : member.kind === 'contact'
@@ -507,7 +507,7 @@ function ListsTab({
                             </Button>
                           </TableCell>
                         ) : editable ? (
-                          <TableCell className="text-zinc-500">—</TableCell>
+                          <TableCell className="text-[var(--workspace-shell-text-muted)]">—</TableCell>
                         ) : null}
                       </TableRow>
                     ))
@@ -520,7 +520,7 @@ function ListsTab({
       </div>
 
       <Dialog open={createListOpen} onOpenChange={setCreateListOpen}>
-        <DialogContent className="border-white/10 bg-[var(--workspace-shell-panel)] text-white">
+        <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
           <DialogHeader>
             <DialogTitle>Create contact list</DialogTitle>
           </DialogHeader>
@@ -531,11 +531,11 @@ function ListsTab({
               onChange={setNewListName}
             />
             <div className="space-y-2">
-              <Label className="text-white">Description (optional)</Label>
+              <Label className="text-[var(--workspace-shell-text)]">Description (optional)</Label>
               <Textarea
                 value={newListDescription}
                 onChange={(event) => setNewListDescription(event.target.value)}
-                className="border-white/10 bg-black/20 text-white"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
                 rows={3}
               />
             </div>
@@ -625,7 +625,7 @@ function ContactsTab({
         <ContactDialog />
         <Button
           variant="outline"
-          className="border-white/10"
+          className="border-[color:var(--workspace-shell-border)]"
           onClick={() => setImportOpen(true)}
         >
           Import CSV
@@ -635,24 +635,24 @@ function ContactsTab({
           onOpenChange={setImportOpen}
           onImported={() => router.refresh()}
         />
-        <Button variant="outline" className="border-white/10" onClick={exportCsv}>
+        <Button variant="outline" className="border-[color:var(--workspace-shell-border)]" onClick={exportCsv}>
           <Download className="mr-2 h-4 w-4" />
           Export all
         </Button>
       </div>
 
-      <div className="grid gap-3 rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)] p-4 md:grid-cols-3">
+      <div className="grid gap-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 md:grid-cols-3">
         <Input
           defaultValue={filters.query}
           placeholder="Search name or email"
-          className="border-white/10 bg-black/20 text-white"
+          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
           onChange={(event) => pushFilters({ query: event.target.value.trim() })}
         />
         <Select
           value={filters.trade || '__all__'}
           onValueChange={(trade) => pushFilters({ trade: trade === '__all__' ? '' : trade })}
         >
-          <SelectTrigger className="border-white/10 bg-black/20 text-white">
+          <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
             <SelectValue placeholder="Trade" />
           </SelectTrigger>
           <SelectContent>
@@ -666,7 +666,7 @@ function ContactsTab({
           value={filters.source || '__all__'}
           onValueChange={(source) => pushFilters({ source: source === '__all__' ? '' : source })}
         >
-          <SelectTrigger className="border-white/10 bg-black/20 text-white">
+          <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
             <SelectValue placeholder="Source" />
           </SelectTrigger>
           <SelectContent>
@@ -679,24 +679,24 @@ function ContactsTab({
         </Select>
       </div>
 
-      <Card className="border-white/10 bg-[var(--workspace-shell-panel)]">
+      <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow className="border-white/10 hover:bg-transparent">
-                <TableHead className="text-zinc-400">Name</TableHead>
-                <TableHead className="text-zinc-400">Email</TableHead>
-                <TableHead className="text-zinc-400">Trade</TableHead>
-                <TableHead className="text-zinc-400">Source</TableHead>
-                <TableHead className="text-zinc-400">Subscribed</TableHead>
-                <TableHead className="text-zinc-400">Added</TableHead>
-                <TableHead className="text-zinc-400">Actions</TableHead>
+              <TableRow className="border-[color:var(--workspace-shell-border)] hover:bg-transparent">
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">Name</TableHead>
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">Email</TableHead>
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">Trade</TableHead>
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">Source</TableHead>
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">Subscribed</TableHead>
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">Added</TableHead>
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {contacts.map((contact) => (
-                <TableRow key={contact.id} className="border-white/10">
-                  <TableCell className="text-white">
+                <TableRow key={contact.id} className="border-[color:var(--workspace-shell-border)]">
+                  <TableCell className="text-[var(--workspace-shell-text)]">
                     {contact.first_name} {contact.last_name}
                     {contact.has_signed_up ? (
                       <Badge variant="outline" className="ml-2 border-emerald-400/40 text-emerald-200">
@@ -704,9 +704,9 @@ function ContactsTab({
                       </Badge>
                     ) : null}
                   </TableCell>
-                  <TableCell className="text-zinc-300">{contact.email}</TableCell>
-                  <TableCell className="text-zinc-300">{contact.trade ?? '—'}</TableCell>
-                  <TableCell className="text-zinc-300">{contact.source ?? 'manual'}</TableCell>
+                  <TableCell className="text-[var(--workspace-shell-text-muted)]">{contact.email}</TableCell>
+                  <TableCell className="text-[var(--workspace-shell-text-muted)]">{contact.trade ?? '—'}</TableCell>
+                  <TableCell className="text-[var(--workspace-shell-text-muted)]">{contact.source ?? 'manual'}</TableCell>
                   <TableCell>
                     <Switch
                       checked={contact.subscribed}
@@ -718,7 +718,7 @@ function ContactsTab({
                       }
                     />
                   </TableCell>
-                  <TableCell className="text-zinc-300">
+                  <TableCell className="text-[var(--workspace-shell-text-muted)]">
                     {formatUkDateMedium(contact.created_at)}
                   </TableCell>
                   <TableCell className="space-x-2">
@@ -815,7 +815,7 @@ function ContactDialog({
           variant={editing ? 'outline' : 'default'}
           className={
             editing
-              ? 'border-white/10'
+              ? 'border-[color:var(--workspace-shell-border)]'
               : 'bg-[#57C87F] text-[#09111F] hover:bg-[#97D9AA]'
           }
         >
@@ -824,7 +824,7 @@ function ContactDialog({
           {triggerIcon ? <span className="sr-only">Edit contact</span> : null}
         </Button>
       </DialogTrigger>
-      <DialogContent className="border-white/10 bg-[var(--workspace-shell-panel)] text-white">
+      <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
         <DialogHeader>
           <DialogTitle>{editing ? 'Edit contact' : 'Add contact'}</DialogTitle>
         </DialogHeader>
@@ -835,7 +835,7 @@ function ContactDialog({
           <div className="space-y-2">
             <Label>Trade</Label>
             <Select value={form.trade || 'Other'} onValueChange={(trade) => setForm((prev) => ({ ...prev, trade }))}>
-              <SelectTrigger className="border-white/10 bg-black/20 text-white">
+              <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -847,7 +847,7 @@ function ContactDialog({
           </div>
           <div className="space-y-2">
             <Label>Notes</Label>
-            <Textarea value={form.notes} onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))} className="border-white/10 bg-black/20 text-white" />
+            <Textarea value={form.notes} onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))} className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]" />
           </div>
           <div className="flex items-center justify-between">
             <Label>Subscribed</Label>
@@ -902,7 +902,7 @@ function InputField({
       <Input
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="border-white/10 bg-black/20 text-white"
+        className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
       />
     </div>
   );
@@ -911,25 +911,25 @@ function InputField({
 function TemplatesTab() {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <Card className="border-white/10 bg-[var(--workspace-shell-panel)]">
+      <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
         <CardHeader>
-          <CardTitle className="text-white">Announcement</CardTitle>
+          <CardTitle className="text-[var(--workspace-shell-text)]">Announcement</CardTitle>
         </CardHeader>
         <CardContent>
           <AnnouncementTemplatePreview />
-          <p className="mt-4 text-sm text-zinc-400">
+          <p className="mt-4 text-sm text-[var(--workspace-shell-text-muted)]">
             Large hero heading, optional image, rich body copy, and one primary CTA.
           </p>
         </CardContent>
       </Card>
 
-      <Card className="border-white/10 bg-[var(--workspace-shell-panel)]">
+      <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
         <CardHeader>
-          <CardTitle className="text-white">Newsletter</CardTitle>
+          <CardTitle className="text-[var(--workspace-shell-text)]">Newsletter</CardTitle>
         </CardHeader>
         <CardContent>
           <NewsletterTemplatePreview />
-          <p className="mt-4 text-sm text-zinc-400">
+          <p className="mt-4 text-sm text-[var(--workspace-shell-text-muted)]">
             Slim header, intro copy, up to three feature/news blocks, and one CTA.
           </p>
         </CardContent>
@@ -940,8 +940,8 @@ function TemplatesTab() {
 
 function AnnouncementTemplatePreview() {
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#f5f5f5]">
-      <div className="bg-[#1A3A2E] px-6 py-7 text-center text-lg font-extrabold tracking-wide text-white">
+    <div className="overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[#f5f5f5]">
+      <div className="bg-[#1A3A2E] px-6 py-7 text-center text-lg font-extrabold tracking-wide text-[var(--workspace-shell-text)]">
         Tradeways
       </div>
       <div className="relative h-28 bg-gradient-to-br from-[#1A3A2E]/25 via-[#4CC68A]/20 to-[#1A3A2E]/10">
@@ -951,17 +951,17 @@ function AnnouncementTemplatePreview() {
       </div>
       <div className="space-y-3 bg-white px-6 py-8 text-center">
         <div className="mx-auto h-7 w-[80%] max-w-[220px] rounded-md bg-[#1A3A2E]/15" />
-        <div className="mx-auto h-3 w-[60%] max-w-[160px] rounded bg-zinc-200" />
+        <div className="mx-auto h-3 w-[60%] max-w-[160px] rounded bg-[var(--workspace-shell-panel-hover)]" />
         <div className="mx-auto mt-4 space-y-2">
-          <div className="h-2.5 w-full rounded bg-zinc-200" />
-          <div className="h-2.5 w-[92%] rounded bg-zinc-200" />
-          <div className="h-2.5 w-[80%] rounded bg-zinc-200" />
+          <div className="h-2.5 w-full rounded bg-[var(--workspace-shell-panel-hover)]" />
+          <div className="h-2.5 w-[92%] rounded bg-[var(--workspace-shell-panel-hover)]" />
+          <div className="h-2.5 w-[80%] rounded bg-[var(--workspace-shell-panel-hover)]" />
         </div>
         <div className="mx-auto mt-6 h-10 w-36 rounded-full bg-[#4CC68A]" />
       </div>
-      <div className="border-t border-zinc-200 bg-[#f5f5f5] px-6 py-4 text-center">
-        <div className="mx-auto h-2 w-24 rounded bg-zinc-300" />
-        <div className="mx-auto mt-2 h-2 w-16 rounded bg-zinc-200" />
+      <div className="border-t border-[color:var(--ozer-border-on-light)] bg-[#f5f5f5] px-6 py-4 text-center">
+        <div className="mx-auto h-2 w-24 rounded bg-[var(--workspace-shell-text-muted)]" />
+        <div className="mx-auto mt-2 h-2 w-16 rounded bg-[var(--workspace-shell-panel-hover)]" />
       </div>
     </div>
   );
@@ -969,33 +969,33 @@ function AnnouncementTemplatePreview() {
 
 function NewsletterTemplatePreview() {
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#f5f5f5]">
-      <div className="bg-[#1A3A2E] px-6 py-4 text-center text-base font-extrabold tracking-wide text-white">
+    <div className="overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[#f5f5f5]">
+      <div className="bg-[#1A3A2E] px-6 py-4 text-center text-base font-extrabold tracking-wide text-[var(--workspace-shell-text)]">
         Tradeways
       </div>
       <div className="space-y-4 bg-white px-6 py-6">
         <div className="space-y-2">
           <div className="h-6 w-3/4 rounded-md bg-[#1A3A2E]/15" />
-          <div className="h-2.5 w-full rounded bg-zinc-200" />
-          <div className="h-2.5 w-5/6 rounded bg-zinc-200" />
+          <div className="h-2.5 w-full rounded bg-[var(--workspace-shell-panel-hover)]" />
+          <div className="h-2.5 w-5/6 rounded bg-[var(--workspace-shell-panel-hover)]" />
         </div>
         <div className="space-y-2.5 pt-1">
           {[1, 2, 3].map((block) => (
             <div
               key={block}
-              className="rounded-2xl border border-zinc-200 bg-white px-4 py-3"
+              className="rounded-2xl border border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-white)] px-4 py-3"
             >
               <div className="mb-2 h-3 w-2/5 rounded bg-[#1A3A2E]/15" />
-              <div className="h-2 w-full rounded bg-zinc-200" />
-              <div className="mt-1.5 h-2 w-[92%] rounded bg-zinc-200" />
+              <div className="h-2 w-full rounded bg-[var(--workspace-shell-panel-hover)]" />
+              <div className="mt-1.5 h-2 w-[92%] rounded bg-[var(--workspace-shell-panel-hover)]" />
             </div>
           ))}
         </div>
         <div className="mx-auto h-10 w-36 rounded-full bg-[#4CC68A]" />
       </div>
-      <div className="border-t border-zinc-200 bg-[#f5f5f5] px-6 py-4 text-center">
-        <div className="mx-auto h-2 w-24 rounded bg-zinc-300" />
-        <div className="mx-auto mt-2 h-2 w-16 rounded bg-zinc-200" />
+      <div className="border-t border-[color:var(--ozer-border-on-light)] bg-[#f5f5f5] px-6 py-4 text-center">
+        <div className="mx-auto h-2 w-24 rounded bg-[var(--workspace-shell-text-muted)]" />
+        <div className="mx-auto mt-2 h-2 w-16 rounded bg-[var(--workspace-shell-panel-hover)]" />
       </div>
     </div>
   );
@@ -1006,31 +1006,31 @@ function UnsubscribesTab({ rows }: { rows: EmailUnsubscribeRow[] }) {
   const [isPending, startTransition] = useTransition();
 
   return (
-    <Card className="border-white/10 bg-[var(--workspace-shell-panel)]">
+    <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
       <CardContent className="p-0">
         <Table>
           <TableHeader>
-            <TableRow className="border-white/10 hover:bg-transparent">
-              <TableHead className="text-zinc-400">Email</TableHead>
-              <TableHead className="text-zinc-400">Unsubscribed</TableHead>
-              <TableHead className="text-zinc-400">Reason</TableHead>
-              <TableHead className="text-zinc-400">Actions</TableHead>
+            <TableRow className="border-[color:var(--workspace-shell-border)] hover:bg-transparent">
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">Email</TableHead>
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">Unsubscribed</TableHead>
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">Reason</TableHead>
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.map((row) => (
-              <TableRow key={row.id} className="border-white/10">
-                <TableCell className="text-white">{row.email}</TableCell>
-                <TableCell className="text-zinc-300">
+              <TableRow key={row.id} className="border-[color:var(--workspace-shell-border)]">
+                <TableCell className="text-[var(--workspace-shell-text)]">{row.email}</TableCell>
+                <TableCell className="text-[var(--workspace-shell-text-muted)]">
                   {formatUkDateTimeMedium(row.unsubscribed_at)}
                 </TableCell>
-                <TableCell className="text-zinc-300">{row.reason ?? '—'}</TableCell>
+                <TableCell className="text-[var(--workspace-shell-text-muted)]">{row.reason ?? '—'}</TableCell>
                 <TableCell>
                   <Button
                     disabled={isPending}
                     variant="outline"
                     size="sm"
-                    className="border-white/10"
+                    className="border-[color:var(--workspace-shell-border)]"
                     onClick={() => {
                       if (!confirm(`Re-subscribe ${row.email}?`)) return;
                       startTransition(async () => {

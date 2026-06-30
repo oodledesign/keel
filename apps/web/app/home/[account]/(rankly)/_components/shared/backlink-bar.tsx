@@ -41,7 +41,7 @@ export function BacklinkBar({
       className="flex min-w-[140px] items-center gap-2"
       title={`${referringDomains.toLocaleString()} referring domains`}
     >
-      <div className="h-1.5 flex-1 rounded-full bg-white/10">
+      <div className="h-1.5 flex-1 rounded-full bg-[var(--workspace-shell-sidebar-accent)]">
         <div
           className="h-1.5 rounded-full bg-sky-500/80"
           style={{ width: `${pct}%` }}

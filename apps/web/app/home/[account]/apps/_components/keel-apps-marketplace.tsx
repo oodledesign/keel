@@ -39,7 +39,7 @@ export function KeelAppsMarketplace({
           </p>
         </div>
         {installedApps.length === 0 ? (
-          <p className="text-muted-foreground rounded-lg border border-white/10 bg-black/10 px-4 py-6 text-sm">
+          <p className="text-muted-foreground rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-6 text-sm">
             No apps are enabled yet. Subscribe to an add-on below or turn on
             modules in workspace settings.
           </p>
@@ -49,10 +49,10 @@ export function KeelAppsMarketplace({
               <Link
                 key={app.path}
                 href={app.path}
-                className="rounded-lg border border-white/10 bg-black/10 px-4 py-5 transition-colors hover:border-white/20 hover:bg-black/20"
+                className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-5 transition-colors hover:border-[color:var(--workspace-shell-border)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
               >
                 <div className="flex items-start gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-white/10 bg-black/20 text-[var(--keel-teal)]">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--ozer-accent)]">
                     {app.Icon}
                   </span>
                   <div className="min-w-0">
@@ -87,7 +87,7 @@ export function KeelAppsMarketplace({
             return (
               <div
                 key={addon.key}
-                className="flex flex-col rounded-lg border border-white/10 bg-black/10 p-4"
+                className="flex flex-col rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-4"
               >
                 <div className="mb-2 flex items-start justify-between gap-2">
                   <h3 className="font-semibold">{addon.name}</h3>

@@ -58,12 +58,12 @@ export function DocumentRichTextEditor({
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-xl border border-zinc-200 bg-white text-[#1E293B]',
+        'overflow-hidden rounded-xl border border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-white)] text-[var(--ozer-text-on-light)]',
         className,
       )}
     >
       {!readOnly ? (
-        <div className="flex flex-wrap gap-1 border-b border-zinc-200 bg-zinc-50 px-2 py-1.5">
+        <div className="flex flex-wrap gap-1 border-b border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-cream-50)] px-2 py-1.5">
           <ToolbarButton onClick={() => exec('formatBlock', 'h1')} title="Heading 1">
             <Heading1 className="h-4 w-4" />
           </ToolbarButton>
@@ -100,7 +100,7 @@ export function DocumentRichTextEditor({
         onInput={sync}
         data-placeholder={placeholder}
         className={cn(
-          'prose prose-sm max-w-none px-6 py-4 outline-none [&:empty]:before:text-zinc-400 [&:empty]:before:content-[attr(data-placeholder)]',
+          'prose prose-sm max-w-none px-6 py-4 outline-none [&:empty]:before:text-[var(--workspace-shell-text-muted)] [&:empty]:before:content-[attr(data-placeholder)]',
           'prose-headings:font-semibold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg',
         )}
         style={{ minHeight }}
@@ -123,7 +123,7 @@ function ToolbarButton({
       type="button"
       title={title}
       onClick={onClick}
-      className="inline-flex h-8 w-8 items-center justify-center rounded-md text-zinc-600 hover:bg-zinc-200"
+      className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-panel-hover)]"
     >
       {children}
     </button>
@@ -140,7 +140,7 @@ export function DocumentHtmlPreview({
   return (
     <div
       className={cn(
-        'prose prose-sm max-w-none rounded-xl border border-zinc-200 bg-white px-6 py-4 text-[#1E293B] prose-headings:font-semibold',
+        'prose prose-sm max-w-none rounded-xl border border-[color:var(--ozer-border-on-light)] bg-white px-6 py-4 text-[var(--ozer-text-on-light)] prose-headings:font-semibold',
         className,
       )}
       dangerouslySetInnerHTML={{ __html: sanitizeCommunityHtml(html) }}

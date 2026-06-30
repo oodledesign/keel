@@ -35,8 +35,8 @@ export default async function PortalWebsitePage({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900">Website</h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <h2 className="text-2xl font-semibold text-[var(--ozer-text-on-light)]">Website</h2>
+        <p className="mt-1 text-sm text-[var(--ozer-text-on-light-muted)]">
           Your website details and quick links.
         </p>
       </div>
@@ -49,15 +49,15 @@ export default async function PortalWebsitePage({
           <CardContent className="space-y-4">
             <dl className="grid gap-4 sm:grid-cols-2">
               <div>
-                <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                <dt className="text-xs font-medium uppercase tracking-wide text-[var(--ozer-text-on-light-muted)]">
                   Domain
                 </dt>
-                <dd className="mt-1 text-sm text-slate-900">
+                <dd className="mt-1 text-sm text-[var(--ozer-text-on-light)]">
                   {website.domain ?? '—'}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                <dt className="text-xs font-medium uppercase tracking-wide text-[var(--ozer-text-on-light-muted)]">
                   Status
                 </dt>
                 <dd className="mt-1">
@@ -67,7 +67,7 @@ export default async function PortalWebsitePage({
                 </dd>
               </div>
               <div>
-                <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                <dt className="text-xs font-medium uppercase tracking-wide text-[var(--ozer-text-on-light-muted)]">
                   Stack
                 </dt>
                 <dd className="mt-1">
@@ -102,7 +102,7 @@ export default async function PortalWebsitePage({
         </Card>
       ) : (
         <Card>
-          <CardContent className="py-12 text-center text-sm text-slate-500">
+          <CardContent className="py-12 text-center text-sm text-[var(--ozer-text-on-light-muted)]">
             No website has been linked to your account yet.
           </CardContent>
         </Card>
@@ -110,11 +110,11 @@ export default async function PortalWebsitePage({
 
       <Card className="border-dashed">
         <CardHeader className="flex flex-row items-center gap-2 space-y-0">
-          <BarChart3 className="h-5 w-5 text-slate-400" />
+          <BarChart3 className="h-5 w-5 text-[var(--workspace-shell-text-muted)]" />
           <CardTitle className="text-base">Analytics</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-slate-500">Coming soon</p>
+          <p className="text-sm text-[var(--ozer-text-on-light-muted)]">Coming soon</p>
         </CardContent>
       </Card>
     </div>

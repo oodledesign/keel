@@ -53,7 +53,7 @@ export function DashboardShortcutsBar({
       <div className="flex items-center justify-between gap-3">
         <p
           className={cn(
-            'font-medium uppercase tracking-wide text-zinc-500',
+            'font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]',
             compact ? 'text-[10px]' : 'text-xs',
           )}
         >
@@ -62,7 +62,7 @@ export function DashboardShortcutsBar({
         {settingsHref ? (
           <HapticLink
             href={settingsHref}
-            className="text-xs font-medium text-[#5eead4] hover:text-[#34b3a4]"
+            className="text-xs font-medium text-[var(--ozer-accent-muted)] hover:text-[#34b3a4]"
           >
             Manage
           </HapticLink>
@@ -81,7 +81,7 @@ export function DashboardShortcutsBar({
                 key={shortcut.id}
                 href={shortcut.href}
                 className={cn(
-                  'group inline-flex max-w-full items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.10] font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-colors hover:border-[var(--keel-teal)]/35 hover:bg-[var(--keel-teal)]/12',
+                  'group inline-flex max-w-full items-center gap-1.5 rounded-xl border border-[color:var(--workspace-shell-border)] bg-white/[0.10] font-medium text-[var(--workspace-shell-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-colors hover:border-[var(--ozer-accent)]/35 hover:bg-[var(--ozer-accent)]/12',
                   compact ? 'px-2.5 py-1.5 text-xs' : 'px-3 py-2 text-sm',
                 )}
                 title={shortcut.description}
@@ -90,7 +90,7 @@ export function DashboardShortcutsBar({
                   <Avatar className="h-5 w-5 shrink-0 rounded-md">
                     <AvatarImage src={shortcut.avatarUrl ?? undefined} alt="" />
                     <AvatarFallback
-                      className="rounded-md text-[9px] font-semibold text-white"
+                      className="rounded-md text-[9px] font-semibold text-[var(--workspace-shell-text)]"
                       style={{
                         backgroundColor: shortcut.avatarColor ?? '#64748B',
                       }}
@@ -100,17 +100,17 @@ export function DashboardShortcutsBar({
                   </Avatar>
                 ) : null}
                 <span className="truncate">{label}</span>
-                <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-zinc-500 group-hover:text-[#5eead4]" />
+                <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text-muted)] group-hover:text-[var(--ozer-accent-muted)]" />
               </HapticLink>
             );
           })}
         </div>
       ) : emptyDismissed ? null : (
-        <div className="flex items-start justify-between gap-3 rounded-xl border border-white/10 bg-[var(--workspace-shell-panel)] p-3">
-          <p className="text-sm text-zinc-400">
+        <div className="flex items-start justify-between gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-3">
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
             No shortcuts yet.{' '}
             {settingsHref ? (
-              <Link href={settingsHref} className="text-[#5eead4] hover:underline">
+              <Link href={settingsHref} className="text-[var(--ozer-accent-muted)] hover:underline">
                 Add some in settings
               </Link>
             ) : null}
@@ -118,7 +118,7 @@ export function DashboardShortcutsBar({
           <button
             type="button"
             aria-label="Dismiss"
-            className="shrink-0 rounded-md p-1 text-zinc-500 hover:bg-white/8 hover:text-white"
+            className="shrink-0 rounded-md p-1 text-[var(--workspace-shell-text-muted)] hover:bg-white/8 hover:text-[var(--workspace-shell-text)]"
             onClick={() => {
               dismissNotice(dismissKey, 14);
               setEmptyDismissed(true);

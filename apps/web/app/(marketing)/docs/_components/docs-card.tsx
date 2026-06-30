@@ -15,7 +15,7 @@ export function DocsCard({
       <div
         className={`hover:bg-muted/70 flex grow flex-col gap-y-0.5 rounded border p-4`}
       >
-        <h3 className="mt-0 text-lg font-medium hover:underline dark:text-white">
+        <h3 className="mt-0 text-lg font-medium hover:underline dark:text-[var(--workspace-shell-text)]">
           {title}
         </h3>
 

@@ -40,11 +40,11 @@ const statusStyles: Record<
   Property['status'],
   { bg: string; text: string; label: string }
 > = {
-  active: { bg: 'bg-[var(--keel-teal)]/15', text: 'text-[#5eead4]', label: 'Active' },
+  active: { bg: 'bg-[var(--ozer-accent-subtle)]', text: 'text-[var(--ozer-accent-muted)]', label: 'Active' },
   vacant: { bg: 'bg-amber-500/15', text: 'text-amber-300', label: 'Vacant' },
   maintenance: { bg: 'bg-orange-500/15', text: 'text-orange-300', label: 'Maintenance' },
   sold: { bg: 'bg-sky-500/15', text: 'text-sky-300', label: 'Sold' },
-  archived: { bg: 'bg-white/5', text: 'text-white/40', label: 'Archived' },
+  archived: { bg: 'bg-[var(--workspace-shell-sidebar-accent)]', text: 'text-[var(--workspace-shell-text)]/40', label: 'Archived' },
 };
 
 const typeIcons: Record<Property['propertyType'], React.ReactNode> = {
@@ -113,16 +113,16 @@ export function PropertiesList({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-white">
+          <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
             Properties
           </h2>
-          <p className="text-sm text-white/50">
+          <p className="text-sm text-[var(--workspace-shell-text)]/50">
             {properties.length} {properties.length === 1 ? 'property' : 'properties'}
           </p>
         </div>
         <Button
           onClick={openCreate}
-          className="gap-2 bg-violet-600 hover:bg-violet-700 text-white"
+          className="gap-2 bg-violet-600 hover:bg-violet-700 text-[var(--workspace-shell-text)]"
         >
           <Plus className="h-4 w-4" />
           Add Property
@@ -131,16 +131,16 @@ export function PropertiesList({
 
       {/* List */}
       {properties.length === 0 ? (
-        <Card className="rounded-[24px] border border-white/6 bg-[var(--workspace-shell-panel)]">
+        <Card className="rounded-[24px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <Building2 className="mb-4 h-12 w-12 text-white/20" />
-            <p className="text-white font-medium">No properties yet</p>
-            <p className="mt-1 text-sm text-white/50">
+            <Building2 className="mb-4 h-12 w-12 text-[var(--workspace-shell-text)]/20" />
+            <p className="text-[var(--workspace-shell-text)] font-medium">No properties yet</p>
+            <p className="mt-1 text-sm text-[var(--workspace-shell-text)]/50">
               Add your first property to get started.
             </p>
             <Button
               onClick={openCreate}
-              className="mt-4 gap-2 bg-violet-600 hover:bg-violet-700 text-white"
+              className="mt-4 gap-2 bg-violet-600 hover:bg-violet-700 text-[var(--workspace-shell-text)]"
             >
               <Plus className="h-4 w-4" />
               Add Property
@@ -154,7 +154,7 @@ export function PropertiesList({
             return (
               <Card
                 key={property.id}
-                className="group rounded-[20px] border border-white/6 bg-[var(--workspace-shell-panel)] shadow-[0_8px_24px_rgba(4,10,24,0.18)] transition-all hover:border-white/10 hover:shadow-[0_12px_32px_rgba(4,10,24,0.24)]"
+                className="group rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_8px_24px_rgba(4,10,24,0.18)] transition-all hover:border-[color:var(--workspace-shell-border)] hover:shadow-[0_12px_32px_rgba(4,10,24,0.24)]"
               >
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between gap-2">
@@ -167,12 +167,12 @@ export function PropertiesList({
                           href={pathsConfig.app.accountPropertyDetail
                             .replace('[account]', accountSlug)
                             .replace('[id]', property.id)}
-                          className="text-sm font-semibold text-white hover:text-violet-300 transition-colors"
+                          className="text-sm font-semibold text-[var(--workspace-shell-text)] hover:text-violet-300 transition-colors"
                         >
                           {property.name}
                         </Link>
                         {property.address && (
-                          <p className="mt-0.5 text-xs text-white/50 line-clamp-1">
+                          <p className="mt-0.5 text-xs text-[var(--workspace-shell-text)]/50 line-clamp-1">
                             {property.address}
                           </p>
                         )}
@@ -183,7 +183,7 @@ export function PropertiesList({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 text-white/40 opacity-0 group-hover:opacity-100 hover:text-white"
+                          className="h-7 w-7 text-[var(--workspace-shell-text)]/40 opacity-0 group-hover:opacity-100 hover:text-[var(--workspace-shell-text)]"
                         >
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
@@ -215,16 +215,16 @@ export function PropertiesList({
                     >
                       {status.label}
                     </span>
-                    <span className="text-[11px] capitalize text-white/40">
+                    <span className="text-[11px] capitalize text-[var(--workspace-shell-text)]/40">
                       {property.propertyType}
                     </span>
                     {property.bedrooms != null && (
-                      <span className="text-[11px] text-white/40">
+                      <span className="text-[11px] text-[var(--workspace-shell-text)]/40">
                         {property.bedrooms} bed
                       </span>
                     )}
                     {property.bathrooms != null && (
-                      <span className="text-[11px] text-white/40">
+                      <span className="text-[11px] text-[var(--workspace-shell-text)]/40">
                         {property.bathrooms} bath
                       </span>
                     )}
@@ -238,12 +238,12 @@ export function PropertiesList({
                   )}
 
                   {/* CTA */}
-                  <div className="mt-4 border-t border-white/6 pt-3">
+                  <div className="mt-4 border-t border-[color:var(--workspace-shell-border)] pt-3">
                     <Link
                       href={pathsConfig.app.accountPropertyDetail
                         .replace('[account]', accountSlug)
                         .replace('[id]', property.id)}
-                      className="text-xs font-medium text-white/50 hover:text-white transition-colors"
+                      className="text-xs font-medium text-[var(--workspace-shell-text)]/50 hover:text-[var(--workspace-shell-text)] transition-colors"
                     >
                       View details →
                     </Link>

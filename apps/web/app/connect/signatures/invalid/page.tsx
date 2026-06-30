@@ -16,11 +16,11 @@ export default async function SignaturesConnectInvalidPage({
   const detail = sp.message || sp.reason || 'This integration link is not valid.';
 
   return (
-    <main className="mx-auto flex min-h-svh max-w-lg flex-col justify-center px-4 py-16 text-white">
-      <div className="rounded-2xl border border-white/10 bg-[#0F1B35] p-8 shadow-xl">
+    <main className="mx-auto flex min-h-svh max-w-lg flex-col justify-center px-4 py-16 text-[var(--workspace-shell-text)]">
+      <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] p-8 shadow-xl">
         <h1 className="text-2xl font-bold tracking-tight">Link unavailable</h1>
-        <p className="mt-3 text-sm text-zinc-400">{detail}</p>
-        <p className="mt-4 text-xs text-zinc-500">
+        <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">{detail}</p>
+        <p className="mt-4 text-xs text-[var(--workspace-shell-text-muted)]">
           Ask the business owner to generate a new link from Ozer → Signatures →
           Settings.
         </p>

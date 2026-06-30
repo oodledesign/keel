@@ -29,7 +29,7 @@ export function VideoPreviewDialog(props: {
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="max-w-3xl border-white/10 bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+      <DialogContent className="max-w-3xl border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
         <DialogHeader>
           <DialogTitle>{video?.title ?? 'Preview'}</DialogTitle>
           <DialogDescription className="sr-only">
@@ -43,7 +43,7 @@ export function VideoPreviewDialog(props: {
             once encoding finishes.
           </p>
         ) : embedSrc ? (
-          <div className="overflow-hidden rounded-lg border border-white/10 bg-black">
+          <div className="overflow-hidden rounded-lg border border-[color:var(--workspace-shell-border)] bg-black">
             <iframe
               src={embedSrc}
               title={video.title}

@@ -45,8 +45,8 @@ function FolderTreeItem(props: {
         className={cn(
           'flex w-full items-center gap-1 rounded-md px-2 py-1.5 text-left text-sm transition',
           active
-            ? 'bg-[var(--keel-teal)]/15 text-[var(--keel-teal)]'
-            : 'text-muted-foreground hover:bg-white/5 hover:text-white',
+            ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]'
+            : 'text-muted-foreground hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
         )}
         style={{ paddingLeft: `${8 + props.depth * 12}px` }}
       >
@@ -111,7 +111,7 @@ export function FolderSidebar(props: {
   }
 
   return (
-    <aside className="w-56 shrink-0 rounded-xl border border-white/10 bg-black/20 p-3">
+    <aside className="w-56 shrink-0 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
       <div className="mb-3 flex items-center justify-between">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Folders
@@ -134,8 +134,8 @@ export function FolderSidebar(props: {
         className={cn(
           'mb-1 flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition',
           props.selectedFolderId === null
-            ? 'bg-[var(--keel-teal)]/15 text-[var(--keel-teal)]'
-            : 'text-muted-foreground hover:bg-white/5 hover:text-white',
+            ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]'
+            : 'text-muted-foreground hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
         )}
       >
         <Folder className="h-3.5 w-3.5" />

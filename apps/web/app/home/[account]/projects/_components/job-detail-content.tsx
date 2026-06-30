@@ -285,41 +285,41 @@ export function JobDetailContent({
 
   if (!canViewJobs) {
     return (
-      <div className="flex min-h-[60vh] w-full items-center justify-center rounded-lg border border-zinc-700 bg-[var(--workspace-shell-panel)] p-8">
-        <p className="text-center text-zinc-400">You don&apos;t have access to this job.</p>
+      <div className="flex min-h-[60vh] w-full items-center justify-center rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-8">
+        <p className="text-center text-[var(--workspace-shell-text-muted)]">You don&apos;t have access to this job.</p>
       </div>
     );
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden rounded-xl border border-white/8 bg-[var(--workspace-shell-panel)]/40">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/8 px-4 py-3 md:px-5">
+    <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] px-4 py-3 md:px-5">
         <div className="min-w-0 flex-1">
           <Link
             href={jobsPath}
-            className="mb-2 inline-flex items-center gap-1 text-xs text-zinc-500 hover:text-white"
+            className="mb-2 inline-flex items-center gap-1 text-xs text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             Back to projects
           </Link>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-lg font-bold text-white">{job.title}</h1>
+            <h1 className="text-lg font-bold text-[var(--workspace-shell-text)]">{job.title}</h1>
             <span
               className={`inline-flex rounded px-2 py-0.5 text-xs font-medium ${
                 job.status === 'completed'
-                  ? 'bg-[#00c875]/20 text-[#5eead4]'
+                  ? 'bg-[#00c875]/20 text-[var(--ozer-accent-muted)]'
                   : job.status === 'cancelled'
-                    ? 'bg-zinc-600 text-zinc-400'
+                    ? 'bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text-muted)]'
                     : 'bg-[#579bfc]/20 text-[#93c5fd]'
               }`}
             >
               {STATUS_LABELS[job.status] ?? job.status}
             </span>
-            <span className="rounded bg-zinc-700 px-2 py-0.5 text-xs font-medium text-zinc-300">
+            <span className="rounded bg-[var(--workspace-shell-panel-hover)] px-2 py-0.5 text-xs font-medium text-[var(--workspace-shell-text-muted)]">
               {PRIORITY_LABELS[job.priority] ?? job.priority}
             </span>
           </div>
-          <div className="mt-1.5 flex flex-wrap gap-x-4 text-xs text-zinc-500">
+          <div className="mt-1.5 flex flex-wrap gap-x-4 text-xs text-[var(--workspace-shell-text-muted)]">
             <span>Due {formatDueDate(job.due_date)}</span>
             {!isContractorView && (
               <span>Value {formatValue(job.value_pence)}</span>
@@ -327,7 +327,7 @@ export function JobDetailContent({
             {client && (
               <span>
                 Client{' '}
-                <Link href={clientsPath} className="text-zinc-300 hover:text-white">
+                <Link href={clientsPath} className="text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]">
                   {client.display_name ?? 'Client'}
                 </Link>
               </span>
@@ -335,7 +335,7 @@ export function JobDetailContent({
           </div>
         </div>
         {canEditJobs && (
-          <Button asChild variant="outline" size="sm" className="h-8 border-white/10 text-xs">
+          <Button asChild variant="outline" size="sm" className="h-8 border-[color:var(--workspace-shell-border)] text-xs">
             <Link
               href={pathsConfig.app.accountJobEdit.replace('[account]', accountSlug).replace('[id]', jobId)}
               className="inline-flex items-center gap-1.5"
@@ -348,45 +348,45 @@ export function JobDetailContent({
       </div>
 
       <Tabs defaultValue="project" className="flex min-h-0 flex-1 flex-col">
-        <TabsList className="h-auto shrink-0 justify-start gap-0 rounded-none border-b border-white/8 bg-transparent px-2 md:px-3">
+        <TabsList className="h-auto shrink-0 justify-start gap-0 rounded-none border-b border-[color:var(--workspace-shell-border)] bg-transparent px-2 md:px-3">
           <TabsTrigger
             value="project"
-            className="gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none"
+            className="gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
           >
             <LayoutGrid className="h-3.5 w-3.5" />
             Project
           </TabsTrigger>
           <TabsTrigger
             value="overview"
-            className="gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none"
+            className="gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
           >
             <ClipboardList className="h-3.5 w-3.5" />
             Overview
           </TabsTrigger>
           <TabsTrigger
             value="schedule"
-            className="gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none"
+            className="gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
           >
             <Calendar className="h-3.5 w-3.5" />
             Schedule
           </TabsTrigger>
           <TabsTrigger
             value="team"
-            className="gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none"
+            className="gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
           >
             <Users className="h-3.5 w-3.5" />
             Team
           </TabsTrigger>
           <TabsTrigger
             value="messages"
-            className="gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none"
+            className="gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
           >
             <MessageSquare className="h-3.5 w-3.5" />
             Messages
           </TabsTrigger>
           <TabsTrigger
             value="visits"
-            className="gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none"
+            className="gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
           >
             <Briefcase className="h-3.5 w-3.5" />
             Visits
@@ -394,7 +394,7 @@ export function JobDetailContent({
           {!isContractorView && (
             <TabsTrigger
               value="finance"
-              className="gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none"
+              className="gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
             >
               <Wallet className="h-3.5 w-3.5" />
               Finance
@@ -403,7 +403,7 @@ export function JobDetailContent({
           {!isContractorView && (
             <TabsTrigger
               value="docs"
-              className="gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none"
+              className="gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
             >
               <FileText className="h-3.5 w-3.5" />
               Docs
@@ -434,11 +434,11 @@ export function JobDetailContent({
         <TabsContent value="overview" className="mt-0 flex-1 overflow-auto p-4 md:p-5">
           <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
             <div className="prose prose-invert max-w-none text-sm">
-              <h3 className="text-sm font-medium text-zinc-400">Description</h3>
-              <p className="text-zinc-300">
+              <h3 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">Description</h3>
+              <p className="text-[var(--workspace-shell-text-muted)]">
                 {job.description || 'No description.'}
               </p>
-              <ul className="mt-4 list-disc space-y-1 pl-5 text-zinc-400">
+              <ul className="mt-4 list-disc space-y-1 pl-5 text-[var(--workspace-shell-text-muted)]">
                 <li>
                   Due: {formatDueDate(job.due_date)}
                   {!isContractorView ? ` · Value: ${formatValue(job.value_pence)}` : ''}
@@ -449,27 +449,27 @@ export function JobDetailContent({
 
             <div className="space-y-4">
               {client && (
-                <div className="rounded-lg border border-white/8 bg-[var(--workspace-shell-panel)]/60 p-4">
-                  <h3 className="text-sm font-medium text-zinc-400">Client</h3>
+                <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/60 p-4">
+                  <h3 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">Client</h3>
                   <div className="mt-3 space-y-2 text-sm">
-                    <p className="font-medium text-white">
+                    <p className="font-medium text-[var(--workspace-shell-text)]">
                       <Link href={clientsPath} className="hover:underline">
                         {client.display_name ?? 'Unnamed'}
                       </Link>
                     </p>
                     {client.company_name && (
-                      <p className="text-zinc-400">{client.company_name}</p>
+                      <p className="text-[var(--workspace-shell-text-muted)]">{client.company_name}</p>
                     )}
                     {client.email && (
-                      <p className="text-zinc-400">
-                        <a href={`mailto:${client.email}`} className="hover:text-white">
+                      <p className="text-[var(--workspace-shell-text-muted)]">
+                        <a href={`mailto:${client.email}`} className="hover:text-[var(--workspace-shell-text)]">
                           {client.email}
                         </a>
                       </p>
                     )}
                     {client.phone && (
-                      <p className="text-zinc-400">
-                        <a href={`tel:${client.phone}`} className="hover:text-white">
+                      <p className="text-[var(--workspace-shell-text-muted)]">
+                        <a href={`tel:${client.phone}`} className="hover:text-[var(--workspace-shell-text)]">
                           {client.phone}
                         </a>
                       </p>
@@ -478,26 +478,26 @@ export function JobDetailContent({
                 </div>
               )}
 
-              <div className="rounded-lg border border-white/8 bg-[var(--workspace-shell-panel)]/60 p-4">
-                <h3 className="text-sm font-medium text-zinc-400">Activity & notes</h3>
+              <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/60 p-4">
+                <h3 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">Activity & notes</h3>
                 {notesLoading ? (
-                  <p className="mt-3 text-sm text-zinc-500">Loading…</p>
+                  <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">Loading…</p>
                 ) : (
                   <>
                     <ul className="mt-3 space-y-3">
                       {notes.map((n) => (
-                        <li key={n.id} className="border-l-2 border-zinc-600 pl-3 text-sm">
-                          <p className="whitespace-pre-wrap text-zinc-300">{n.note}</p>
-                          <p className="mt-1 text-xs text-zinc-500">{formatNoteDate(n.created_at)}</p>
+                        <li key={n.id} className="border-l-2 border-[color:var(--workspace-shell-border)] pl-3 text-sm">
+                          <p className="whitespace-pre-wrap text-[var(--workspace-shell-text-muted)]">{n.note}</p>
+                          <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">{formatNoteDate(n.created_at)}</p>
                         </li>
                       ))}
                     </ul>
                     {notes.length === 0 && (
-                      <p className="mt-3 text-sm text-zinc-500">No notes yet.</p>
+                      <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">No notes yet.</p>
                     )}
                     {canEditJobs && (
                       <form onSubmit={handleAddNote} className="mt-4">
-                        <Label htmlFor="new-note" className="text-xs text-zinc-500">
+                        <Label htmlFor="new-note" className="text-xs text-[var(--workspace-shell-text-muted)]">
                           Add note
                         </Label>
                         <textarea
@@ -506,12 +506,12 @@ export function JobDetailContent({
                           onChange={(e) => setNewNote(e.target.value)}
                           rows={3}
                           placeholder="Write a note…"
-                          className="mt-1 w-full rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500"
+                          className="mt-1 w-full rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] px-3 py-2 text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
                         />
                         <Button
                           type="submit"
                           size="sm"
-                          className={`mt-2 ${newNote.trim() && !addingNote ? 'bg-[var(--keel-teal)] hover:bg-[#238b7f] text-white' : 'bg-zinc-700 hover:bg-zinc-600 text-zinc-400'}`}
+                          className={`mt-2 ${newNote.trim() && !addingNote ? 'bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)] text-[var(--ozer-white)]' : 'bg-[var(--workspace-shell-panel-hover)] hover:bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text-muted)]'}`}
                           disabled={!newNote.trim() || addingNote}
                         >
                           {addingNote ? 'Adding…' : 'Add note'}
@@ -536,17 +536,17 @@ export function JobDetailContent({
 
         <TabsContent value="team" className="mt-0 flex-1 overflow-auto p-4 md:p-5">
               {loadingAssignments ? (
-                <p className="text-sm text-zinc-500">Loading…</p>
+                <p className="text-sm text-[var(--workspace-shell-text-muted)]">Loading…</p>
               ) : (
                 <>
-                  <ul className="space-y-1.5 text-sm text-zinc-300">
+                  <ul className="space-y-1.5 text-sm text-[var(--workspace-shell-text-muted)]">
                     {assignments.map((a) => {
                       const member = members.find((m) => m.user_id === a.user_id);
                       const label = member ? member.name || member.email || a.user_id.slice(0, 8) : a.user_id.slice(0, 8);
                       return (
                         <li
                           key={a.user_id}
-                          className="flex items-center justify-between rounded-md border border-zinc-700 bg-[var(--workspace-shell-panel)] px-3 py-2"
+                          className="flex items-center justify-between rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 py-2"
                         >
                           <span>
                             {a.role_on_job ? `${a.role_on_job}: ` : ''}
@@ -557,7 +557,7 @@ export function JobDetailContent({
                               type="button"
                               variant="ghost"
                               size="sm"
-                              className="h-7 text-zinc-400 hover:text-red-400"
+                              className="h-7 text-[var(--workspace-shell-text-muted)] hover:text-red-400"
                               onClick={() => handleRemoveAssignment(a.user_id)}
                             >
                               Remove
@@ -568,12 +568,12 @@ export function JobDetailContent({
                     })}
                   </ul>
                   {assignments.length === 0 && (
-                    <p className="text-sm text-zinc-500">No one assigned yet.</p>
+                    <p className="text-sm text-[var(--workspace-shell-text-muted)]">No one assigned yet.</p>
                   )}
                   {canEditJobs && members.length > 0 && (
                     <div className="mt-4 flex flex-wrap items-end gap-2">
                       <div className="min-w-[180px]">
-                        <Label className="flex items-center gap-1.5 text-xs text-zinc-500">
+                        <Label className="flex items-center gap-1.5 text-xs text-[var(--workspace-shell-text-muted)]">
                           <UserPlus className="h-3.5 w-3.5" />
                           Add team member
                         </Label>
@@ -582,7 +582,7 @@ export function JobDetailContent({
                           onValueChange={(v) => setSelectedMemberId(v === 'none' ? '' : v)}
                           disabled={membersNotAssigned.length === 0}
                         >
-                          <SelectTrigger className="mt-1 border-zinc-600 bg-zinc-800 text-white">
+                          <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
                             <SelectValue placeholder="Select member" />
                           </SelectTrigger>
                           <SelectContent>
@@ -599,12 +599,12 @@ export function JobDetailContent({
                         placeholder="Role (optional)"
                         value={assignRole}
                         onChange={(e) => setAssignRole(e.target.value)}
-                        className="h-9 w-32 border-zinc-600 bg-zinc-800 text-white"
+                        className="h-9 w-32 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
                       />
                       <Button
                         type="button"
                         size="sm"
-                        className={selectedMemberId && !assigning ? 'bg-[var(--keel-teal)] hover:bg-[#238b7f] text-white' : 'bg-zinc-700 hover:bg-zinc-600 text-zinc-400'}
+                        className={selectedMemberId && !assigning ? 'bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)] text-[var(--ozer-white)]' : 'bg-[var(--workspace-shell-panel-hover)] hover:bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text-muted)]'}
                         disabled={!selectedMemberId || assigning}
                         onClick={handleAssign}
                       >
@@ -613,14 +613,14 @@ export function JobDetailContent({
                     </div>
                   )}
                   {canEditJobs && membersNotAssigned.length === 0 && members.length > 0 && (
-                    <p className="mt-2 text-sm text-zinc-500">All members are already assigned.</p>
+                    <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">All members are already assigned.</p>
                   )}
                 </>
               )}
         </TabsContent>
 
         <TabsContent value="messages" className="mt-0 flex-1 overflow-auto p-4 md:p-5">
-              <p className="text-sm text-zinc-400">
+              <p className="text-sm text-[var(--workspace-shell-text-muted)]">
                 Message your team and client about this project.
               </p>
               <Button asChild className="mt-3" variant="outline">
@@ -654,7 +654,7 @@ export function JobDetailContent({
         {!isContractorView && (
           <TabsContent value="docs" className="mt-0 flex-1 overflow-auto p-4 md:p-5">
                 <section>
-                  <h3 className="mb-3 text-sm font-medium text-zinc-400">
+                  <h3 className="mb-3 text-sm font-medium text-[var(--workspace-shell-text-muted)]">
                     Notes and files
                   </h3>
                   <ContextWorkspaceNotes

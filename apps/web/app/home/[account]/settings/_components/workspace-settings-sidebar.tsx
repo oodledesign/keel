@@ -53,8 +53,8 @@ export function WorkspaceSettingsSidebar({
                 className={cn(
                   'flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors',
                   active
-                    ? 'bg-white/10 text-white'
-                    : 'text-[var(--workspace-shell-text-muted)] hover:bg-white/5 hover:text-white',
+                    ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                    : 'text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
                 )}
                 aria-current={active ? 'page' : undefined}
               >

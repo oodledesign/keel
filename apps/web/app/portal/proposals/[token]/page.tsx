@@ -72,7 +72,7 @@ export default async function PortalProposalPage({ params }: PortalProposalPageP
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6">
-        <Link href="/" className="text-sm text-zinc-400 hover:text-white">
+        <Link href="/" className="text-sm text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]">
           ← Back to home
         </Link>
       </div>

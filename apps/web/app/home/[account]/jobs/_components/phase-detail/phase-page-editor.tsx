@@ -89,11 +89,11 @@ export function PhasePageEditor({
   }, [content, canEdit, persist]);
 
   return (
-    <section className="rounded-xl border border-zinc-700 bg-[var(--workspace-shell-panel)] p-4 md:p-5">
+    <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 md:p-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="text-sm font-semibold text-white">Phase page</h2>
-          <p className="text-xs text-zinc-500">
+          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Phase page</h2>
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
             {canEdit
               ? saveState === 'saving'
                 ? 'Saving…'
@@ -108,7 +108,7 @@ export function PhasePageEditor({
         <button
           type="button"
           disabled={!canEdit}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-600 px-2.5 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--workspace-shell-border)] px-2.5 py-1.5 text-xs text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-control-surface)] disabled:opacity-50"
           onClick={() => {
             if (canEdit && onOpenAi) onOpenAi();
             else toast.message('You need edit permission to generate content');

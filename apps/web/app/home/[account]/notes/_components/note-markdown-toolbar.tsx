@@ -51,8 +51,8 @@ export function NoteMarkdownToolbar({
       key={format}
       type="button"
       className={cn(
-        'flex h-8 w-8 items-center justify-center rounded-md text-zinc-400 transition-colors',
-        'hover:bg-white/6 hover:text-white',
+        'flex h-8 w-8 items-center justify-center rounded-md text-[var(--workspace-shell-text-muted)] transition-colors',
+        'hover:bg-white/6 hover:text-[var(--workspace-shell-text)]',
       )}
       aria-label={label}
       title={label}
@@ -68,7 +68,7 @@ export function NoteMarkdownToolbar({
   return (
     <div
       className={cn(
-        'flex flex-wrap items-center gap-0.5 border-b border-white/8 py-1.5',
+        'flex flex-wrap items-center gap-0.5 border-b border-[color:var(--workspace-shell-border)] py-1.5',
         className,
       )}
       role="toolbar"

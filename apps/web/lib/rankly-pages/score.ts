@@ -167,7 +167,7 @@ export function computePageScores(input: {
 
 export function scoreTone(score: number | null | undefined): string {
   if (score == null) return 'text-muted-foreground';
-  if (score >= 90) return 'text-[var(--keel-teal)]';
+  if (score >= 90) return 'text-[var(--ozer-accent)]';
   if (score >= 50) return 'text-amber-400';
   return 'text-red-400';
 }

@@ -161,7 +161,7 @@ function OrbitWorkspaceCard({
   return (
     <div
       className={cn(
-        'relative z-10 rounded-xl border border-white/10 bg-[#0F1B35]/90 text-center shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-sm',
+        'relative z-10 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)]/90 text-center shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-sm',
         compact
           ? 'w-full px-1.5 py-2'
           : 'w-[104px] px-2 py-2.5 sm:w-[128px] sm:px-3 sm:py-3 lg:w-[140px]',
@@ -170,7 +170,7 @@ function OrbitWorkspaceCard({
     >
       <span
         className={cn(
-          'mx-auto flex items-center justify-center rounded-lg border border-white/10',
+          'mx-auto flex items-center justify-center rounded-lg border border-[color:var(--workspace-shell-border)]',
           compact ? 'h-7 w-7' : 'h-8 w-8',
         )}
         style={{ backgroundColor: `${node.color}22` }}
@@ -183,7 +183,7 @@ function OrbitWorkspaceCard({
       </span>
       <p
         className={cn(
-          'font-bold text-white',
+          'font-bold text-[var(--workspace-shell-text)]',
           compact ? 'mt-1.5 text-[10px] leading-tight' : 'mt-2 text-sm',
         )}
       >
@@ -226,7 +226,7 @@ function AssistantBillingBadge({
       </TooltipTrigger>
       <TooltipContent
         side="right"
-        className="max-w-[220px] border border-white/10 bg-[#0d0b1e] text-xs text-white"
+        className="max-w-[220px] border border-[color:var(--workspace-shell-border)] bg-[#0d0b1e] text-xs text-[var(--workspace-shell-text)]"
       >
         {assistant.addonTooltip}
       </TooltipContent>
@@ -246,7 +246,7 @@ function AssistantLayerCard({
   return (
     <div
       className={cn(
-        'relative z-10 rounded-lg border border-violet-400/20 border-l-2 border-l-violet-400/60 bg-[#120f24]/95 text-center shadow-[0_4px_16px_rgba(0,0,0,0.25)]',
+        'relative z-10 rounded-lg border border-violet-400/20 border-l-2 border-l-violet-400/60 bg-[var(--ozer-plum-950)]/95 text-center shadow-[0_4px_16px_rgba(0,0,0,0.25)]',
         compact
           ? 'w-full px-1.5 py-2'
           : 'w-[96px] px-2 py-2 sm:w-[118px] sm:px-2.5 sm:py-2.5 lg:w-[132px]',
@@ -263,7 +263,7 @@ function AssistantLayerCard({
       </span>
       <p
         className={cn(
-          'font-semibold leading-tight text-white',
+          'font-semibold leading-tight text-[var(--workspace-shell-text)]',
           compact ? 'mt-1.5 text-[9px]' : 'mt-2 text-[11px]',
         )}
       >
@@ -295,7 +295,7 @@ function PersonalHomeCard({
           ? 'w-[118px] px-3 py-3'
           : 'w-[118px] px-3 py-3 sm:w-[140px] sm:px-4 sm:py-4 lg:w-[160px] lg:scale-110',
         flashing
-          ? 'border-[#5eead4] shadow-[0_0_30px_rgba(45,212,191,0.42)]'
+          ? 'border-[#FFE3DA] shadow-[0_0_30px_rgba(45,212,191,0.42)]'
           : 'border-[#2dd4bf] shadow-[0_0_18px_rgba(45,212,191,0.22)]',
         className,
       )}
@@ -303,7 +303,7 @@ function PersonalHomeCard({
       <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg border border-[#2dd4bf]/30 bg-[#2dd4bf]/10">
         <Home className="h-4 w-4 text-[#2dd4bf]" aria-hidden />
       </span>
-      <p className="mt-2 text-sm font-bold text-white">Personal Home</p>
+      <p className="mt-2 text-sm font-bold text-[var(--workspace-shell-text)]">Personal Home</p>
       <p className="mt-0.5 text-[10px] text-violet-100/70">Your command centre</p>
     </div>
   );

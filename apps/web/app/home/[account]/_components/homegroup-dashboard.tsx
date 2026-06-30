@@ -25,7 +25,7 @@ import type {
 import type { GroupMember, GroupTask } from '../_lib/server/group-dashboard.loader';
 
 const panelClass =
-  'rounded-[24px] border border-white/6 bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]';
+  'rounded-[24px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]';
 
 type HomegroupDashboardProps = CommunityDashboardData;
 
@@ -56,7 +56,7 @@ export function HomegroupDashboard({
   const notesPath = accountPath(accountSlug, pathsConfig.app.accountNotes);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 bg-[radial-gradient(circle_at_18%_0%,rgba(251,191,36,0.09),transparent_35%),radial-gradient(circle_at_82%_6%,rgba(245,158,11,0.08),transparent_40%)] px-4 pb-10 pt-5 text-white md:px-6 lg:px-8">
+    <div className="flex min-h-0 flex-1 flex-col gap-6 bg-[radial-gradient(circle_at_18%_0%,rgba(251,191,36,0.09),transparent_35%),radial-gradient(circle_at_82%_6%,rgba(245,158,11,0.08),transparent_40%)] px-4 pb-10 pt-5 text-[var(--workspace-shell-text)] md:px-6 lg:px-8">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Open Tasks"
@@ -89,9 +89,9 @@ export function HomegroupDashboard({
       </div>
 
       <Card className={panelClass}>
-        <CardHeader className="border-b border-white/6 pb-4">
+        <CardHeader className="border-b border-[color:var(--workspace-shell-border)] pb-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <CardTitle className="text-base font-semibold text-white">
+            <CardTitle className="text-base font-semibold text-[var(--workspace-shell-text)]">
               Group Overview
             </CardTitle>
             <div className="flex gap-2 text-xs">
@@ -131,8 +131,8 @@ export function HomegroupDashboard({
             <StickyNote className="h-4.5 w-4.5 text-amber-400" />
           </span>
           <div>
-            <p className="text-sm font-semibold text-white">Group Notes</p>
-            <p className="text-xs text-white/50">
+            <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">Group Notes</p>
+            <p className="text-xs text-[var(--workspace-shell-text)]/50">
               Shared notes for your homegroup
             </p>
           </div>
@@ -169,7 +169,7 @@ function NextSessionCard({
         </a>
       </div>
       {!session ? (
-        <p className="text-sm text-white/50">
+        <p className="text-sm text-[var(--workspace-shell-text)]/50">
           No upcoming sessions.{' '}
           <a
             href={`${schedulePath}?create=session`}
@@ -180,18 +180,18 @@ function NextSessionCard({
         </p>
       ) : (
         <div className="space-y-2">
-          <p className="text-base font-semibold text-white">{session.title}</p>
-          <p className="flex flex-wrap items-center gap-2 text-sm text-white/70">
+          <p className="text-base font-semibold text-[var(--workspace-shell-text)]">{session.title}</p>
+          <p className="flex flex-wrap items-center gap-2 text-sm text-[var(--workspace-shell-text)]/70">
             <Calendar className="h-3.5 w-3.5 text-amber-400/80" />
             <span>{session.dateLabel}</span>
-            <span className="text-white/30">·</span>
+            <span className="text-[var(--workspace-shell-text)]/30">·</span>
             <span>{session.timeLabel}</span>
           </p>
           {session.location ? (
-            <p className="text-xs text-white/50">{session.location}</p>
+            <p className="text-xs text-[var(--workspace-shell-text)]/50">{session.location}</p>
           ) : null}
           {session.sessionNotes ? (
-            <p className="text-sm leading-relaxed text-white/60">
+            <p className="text-sm leading-relaxed text-[var(--workspace-shell-text)]/60">
               {session.sessionNotes}
             </p>
           ) : null}
@@ -217,7 +217,7 @@ function TabButton({
       className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium transition-colors ${
         active
           ? 'border border-amber-400/50 bg-amber-500/20 text-amber-200'
-          : 'border border-white/10 bg-[var(--workspace-shell-panel)] text-white/60 hover:text-white'
+          : 'border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]/60 hover:text-[var(--workspace-shell-text)]'
       }`}
     >
       {children}
@@ -234,7 +234,7 @@ function TasksPanel({
 }) {
   if (tasks.length === 0) {
     return (
-      <div className="py-4 text-center text-sm text-white/50">
+      <div className="py-4 text-center text-sm text-[var(--workspace-shell-text)]/50">
         No open tasks yet.{' '}
         <a
           href={`${tasksPath}?create=task`}
@@ -258,13 +258,13 @@ function TasksPanel({
             className={`flex flex-col gap-1.5 rounded-xl border px-4 py-3 text-sm md:flex-row md:items-center md:justify-between ${
               overdue
                 ? 'border-rose-400/25 bg-rose-500/5'
-                : 'border-white/6 bg-[var(--workspace-shell-canvas)]'
+                : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)]'
             }`}
           >
             <div className="min-w-0 flex-1">
-              <p className="truncate font-medium text-white">{task.title}</p>
+              <p className="truncate font-medium text-[var(--workspace-shell-text)]">{task.title}</p>
               {task.projectName ? (
-                <p className="mt-0.5 text-xs text-white/50">
+                <p className="mt-0.5 text-xs text-[var(--workspace-shell-text)]/50">
                   {task.projectName}
                 </p>
               ) : null}
@@ -273,7 +273,7 @@ function TasksPanel({
               {task.dueDate ? (
                 <span
                   className={`inline-flex items-center gap-1 text-xs ${
-                    overdue ? 'text-rose-300' : 'text-white/50'
+                    overdue ? 'text-rose-300' : 'text-[var(--workspace-shell-text)]/50'
                   }`}
                 >
                   <Calendar className="h-3 w-3" />
@@ -307,7 +307,7 @@ function TasksPanel({
 function MembersPanel({ members }: { members: GroupMember[] }) {
   if (members.length === 0) {
     return (
-      <p className="py-4 text-center text-sm text-white/50">
+      <p className="py-4 text-center text-sm text-[var(--workspace-shell-text)]/50">
         No members yet. Invite members to get started.
       </p>
     );
@@ -318,20 +318,20 @@ function MembersPanel({ members }: { members: GroupMember[] }) {
       {members.map((member) => (
         <div
           key={member.id}
-          className="flex items-center gap-3 rounded-xl border border-white/6 bg-[var(--workspace-shell-canvas)] px-4 py-3"
+          className="flex items-center gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] px-4 py-3"
         >
           <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-sm font-semibold text-amber-300">
             {getInitials(member.displayName)}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-white">
+            <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
               {member.displayName}
             </p>
-            <p className="truncate text-xs text-white/50">
+            <p className="truncate text-xs text-[var(--workspace-shell-text)]/50">
               {member.email ?? formatRole(member.role)}
             </p>
           </div>
-          <span className="text-xs capitalize text-white/40">
+          <span className="text-xs capitalize text-[var(--workspace-shell-text)]/40">
             {formatRole(member.role)}
           </span>
         </div>
@@ -358,14 +358,14 @@ function StatCard({
     orange: 'bg-orange-500/12',
     sky: 'bg-sky-500/10',
     rose: 'bg-rose-500/15',
-    muted: 'bg-white/5',
+    muted: 'bg-[var(--workspace-shell-sidebar-accent)]',
   };
   const toneText: Record<typeof tone, string> = {
     amber: 'text-amber-400',
     orange: 'text-orange-400',
     sky: 'text-sky-400',
     rose: 'text-rose-400',
-    muted: 'text-white/30',
+    muted: 'text-[var(--workspace-shell-text)]/30',
   };
 
   return (
@@ -377,14 +377,14 @@ function StatCard({
           >
             <Icon className="h-4 w-4" />
           </span>
-          <p className="text-xs font-medium uppercase tracking-wide text-white/50">
+          <p className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text)]/50">
             {label}
           </p>
         </div>
         <p className="text-2xl font-semibold tracking-tight md:text-3xl">
           {value}
         </p>
-        <p className="text-xs text-white/40">{helper}</p>
+        <p className="text-xs text-[var(--workspace-shell-text)]/40">{helper}</p>
       </CardContent>
     </Card>
   );
@@ -392,13 +392,13 @@ function StatCard({
 
 function TaskStatusBadge({ status }: { status: string }) {
   const map: Record<string, { bg: string; text: string; label: string }> = {
-    todo: { bg: 'bg-white/5', text: 'text-white/50', label: 'To do' },
+    todo: { bg: 'bg-[var(--workspace-shell-sidebar-accent)]', text: 'text-[var(--workspace-shell-text)]/50', label: 'To do' },
     in_progress: {
       bg: 'bg-sky-500/15',
       text: 'text-sky-300',
       label: 'In progress',
     },
-    done: { bg: 'bg-[var(--keel-teal)]/15', text: 'text-[#5eead4]', label: 'Done' },
+    done: { bg: 'bg-[var(--ozer-accent-subtle)]', text: 'text-[var(--ozer-accent-muted)]', label: 'Done' },
     blocked: { bg: 'bg-rose-500/15', text: 'text-rose-300', label: 'Blocked' },
   };
   const style = map[status] ?? map.todo;

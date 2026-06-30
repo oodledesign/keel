@@ -141,9 +141,9 @@ export function PropertyDocumentsTab({
   return (
     <div className="space-y-5">
       {/* Upload strip */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-white/6 bg-[var(--workspace-shell-canvas)] p-4 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] p-4 sm:flex-row sm:items-center">
         <Select value={docType} onValueChange={setDocType}>
-          <SelectTrigger className="w-[160px] border-white/10 bg-white/5 text-white text-sm">
+          <SelectTrigger className="w-[160px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -164,7 +164,7 @@ export function PropertyDocumentsTab({
         />
         <Button
           variant="outline"
-          className="gap-2 border-white/10 bg-white/5 text-white/70 hover:text-white"
+          className="gap-2 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/70 hover:text-[var(--workspace-shell-text)]"
           disabled={uploading}
           onClick={() => fileInputRef.current?.click()}
         >
@@ -182,26 +182,26 @@ export function PropertyDocumentsTab({
       {/* Documents list */}
       {documents.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <Paperclip className="mb-3 h-10 w-10 text-white/20" />
-          <p className="text-sm text-white/50">No documents uploaded yet.</p>
+          <Paperclip className="mb-3 h-10 w-10 text-[var(--workspace-shell-text)]/20" />
+          <p className="text-sm text-[var(--workspace-shell-text)]/50">No documents uploaded yet.</p>
         </div>
       ) : (
         <div className="space-y-2">
           {documents.map((doc) => (
             <div
               key={doc.id}
-              className="flex items-center gap-3 rounded-xl border border-white/6 bg-[var(--workspace-shell-canvas)] px-4 py-3"
+              className="flex items-center gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] px-4 py-3"
             >
               <FileText className="h-5 w-5 flex-shrink-0 text-violet-400" />
               <div className="min-w-0 flex-1">
                 <button
                   type="button"
                   onClick={() => handleDownload(doc)}
-                  className="truncate text-sm font-medium text-white hover:text-violet-300 transition-colors text-left"
+                  className="truncate text-sm font-medium text-[var(--workspace-shell-text)] hover:text-violet-300 transition-colors text-left"
                 >
                   {doc.name}
                 </button>
-                <p className="text-xs text-white/40">
+                <p className="text-xs text-[var(--workspace-shell-text)]/40">
                   {DOCTYPE_LABELS[doc.documentType] ?? doc.documentType}
                   {doc.fileSize
                     ? ` · ${formatBytes(doc.fileSize)}`
@@ -212,7 +212,7 @@ export function PropertyDocumentsTab({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 flex-shrink-0 text-white/30 hover:text-rose-400"
+                className="h-7 w-7 flex-shrink-0 text-[var(--workspace-shell-text)]/30 hover:text-rose-400"
                 onClick={() => handleDelete(doc)}
               >
                 <Trash2 className="h-4 w-4" />

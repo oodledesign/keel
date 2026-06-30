@@ -50,17 +50,17 @@ export function OnboardingShell({
   const currentIndex = getStepIndex(companyRole, currentStep);
 
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-950 text-zinc-100 md:flex-row">
-      <header className="flex shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-950 px-4 py-3 md:absolute md:left-0 md:right-0 md:top-0 md:z-10">
+    <div className="flex min-h-screen flex-col bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] md:flex-row">
+      <header className="flex shrink-0 items-center justify-between border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-3 md:absolute md:left-0 md:right-0 md:top-0 md:z-10">
         <AppLogo href={null} className="h-8 w-auto" />
         {helpHref && (
-          <span className="text-sm text-zinc-400">
+          <span className="text-sm text-[var(--workspace-shell-text-muted)]">
             Having trouble?{' '}
             <Link
               href={helpHref}
               target="_blank"
               rel="noopener"
-              className="text-[var(--keel-teal)] hover:text-[#5eead4]"
+              className="text-[var(--ozer-accent)] hover:text-[var(--ozer-accent-muted)]"
             >
               Get help
             </Link>
@@ -68,7 +68,7 @@ export function OnboardingShell({
         )}
       </header>
 
-      <aside className="mt-14 w-full border-b border-zinc-800 bg-zinc-900/60 p-6 md:mt-14 md:w-64 md:border-b-0 md:border-r">
+      <aside className="mt-14 w-full border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/60 p-6 md:mt-14 md:w-64 md:border-b-0 md:border-r">
         <StepSidebar
           steps={steps}
           currentIndex={currentIndex}
@@ -85,7 +85,7 @@ export function OnboardingShell({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-10 w-10 rounded-full bg-zinc-800 hover:bg-zinc-700"
+                className="h-10 w-10 rounded-full bg-[var(--workspace-control-surface)] hover:bg-[var(--workspace-shell-panel-hover)]"
                 asChild
               >
                 <a href={backHref}>
@@ -97,7 +97,7 @@ export function OnboardingShell({
               <Button
                 variant="ghost"
                 size="sm"
-                className="rounded-full bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100"
+                className="rounded-full bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-panel-hover)] hover:text-[var(--workspace-shell-text)]"
                 asChild
               >
                 <a href={dashboardHref}>
@@ -111,7 +111,7 @@ export function OnboardingShell({
           )}
         </div>
 
-        <div className="mx-auto w-full max-w-xl rounded-xl border border-zinc-800 bg-zinc-900/80 p-6 shadow-xl md:p-8">
+        <div className="mx-auto w-full max-w-xl rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/80 p-6 shadow-xl md:p-8">
           {children}
         </div>
       </main>

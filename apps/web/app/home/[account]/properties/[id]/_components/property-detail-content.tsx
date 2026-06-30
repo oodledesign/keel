@@ -41,11 +41,11 @@ const statusStyles: Record<
   Property['status'],
   { bg: string; text: string; label: string }
 > = {
-  active: { bg: 'bg-[var(--keel-teal)]/15', text: 'text-[#5eead4]', label: 'Active' },
+  active: { bg: 'bg-[var(--ozer-accent-subtle)]', text: 'text-[var(--ozer-accent-muted)]', label: 'Active' },
   vacant: { bg: 'bg-amber-500/15', text: 'text-amber-300', label: 'Vacant' },
   maintenance: { bg: 'bg-orange-500/15', text: 'text-orange-300', label: 'Maintenance' },
   sold: { bg: 'bg-sky-500/15', text: 'text-sky-300', label: 'Sold' },
-  archived: { bg: 'bg-white/5', text: 'text-white/40', label: 'Archived' },
+  archived: { bg: 'bg-[var(--workspace-shell-sidebar-accent)]', text: 'text-[var(--workspace-shell-text)]/40', label: 'Archived' },
 };
 
 const typeLabels: Record<Property['propertyType'], string> = {
@@ -82,7 +82,7 @@ export function PropertyDetailContent({
   return (
     <div className="space-y-6">
       {/* Header card */}
-      <Card className="rounded-[24px] border border-white/6 bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+      <Card className="rounded-[24px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
         <CardContent className="p-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="flex items-start gap-4">
@@ -90,9 +90,9 @@ export function PropertyDetailContent({
                 <Home className="h-6 w-6" />
               </span>
               <div>
-                <h1 className="text-xl font-bold text-white">{property.name}</h1>
+                <h1 className="text-xl font-bold text-[var(--workspace-shell-text)]">{property.name}</h1>
                 {property.address && (
-                  <div className="mt-1 flex items-center gap-1.5 text-sm text-white/50">
+                  <div className="mt-1 flex items-center gap-1.5 text-sm text-[var(--workspace-shell-text)]/50">
                     <MapPin className="h-3.5 w-3.5" />
                     {property.address}
                   </div>
@@ -103,14 +103,14 @@ export function PropertyDetailContent({
                   >
                     {status.label}
                   </span>
-                  <span className="text-xs text-white/40">{typeLabels[property.propertyType]}</span>
+                  <span className="text-xs text-[var(--workspace-shell-text)]/40">{typeLabels[property.propertyType]}</span>
                 </div>
               </div>
             </div>
             <Button
               onClick={() => setEditOpen(true)}
               variant="outline"
-              className="gap-2 border-white/10 bg-white/5 text-white/70 hover:text-white"
+              className="gap-2 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/70 hover:text-[var(--workspace-shell-text)]"
             >
               <Edit2 className="h-4 w-4" />
               Edit
@@ -118,7 +118,7 @@ export function PropertyDetailContent({
           </div>
 
           {/* Stats row */}
-          <div className="mt-6 grid grid-cols-2 gap-3 border-t border-white/6 pt-5 sm:grid-cols-4">
+          <div className="mt-6 grid grid-cols-2 gap-3 border-t border-[color:var(--workspace-shell-border)] pt-5 sm:grid-cols-4">
             {property.bedrooms != null && (
               <StatPill icon={Bed} label="Bedrooms" value={String(property.bedrooms)} />
             )}
@@ -154,19 +154,19 @@ export function PropertyDetailContent({
       </Card>
 
       {/* Tabs */}
-      <Card className="rounded-[24px] border border-white/6 bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+      <Card className="rounded-[24px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
         <CardContent className="p-6">
           <Tabs defaultValue="documents">
-            <TabsList className="mb-6 grid h-11 w-full grid-cols-2 rounded-xl border border-white/6 bg-[var(--workspace-control-surface)]/80 p-1 text-xs sm:w-auto sm:grid-cols-2">
+            <TabsList className="mb-6 grid h-11 w-full grid-cols-2 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/80 p-1 text-xs sm:w-auto sm:grid-cols-2">
               <TabsTrigger
                 value="documents"
-                className="gap-2 text-white/60 data-[state=active]:bg-violet-500/15 data-[state=active]:text-violet-200 data-[state=active]:border data-[state=active]:border-violet-400/40"
+                className="gap-2 text-[var(--workspace-shell-text)]/60 data-[state=active]:bg-violet-500/15 data-[state=active]:text-violet-200 data-[state=active]:border data-[state=active]:border-violet-400/40"
               >
                 Documents
               </TabsTrigger>
               <TabsTrigger
                 value="notes"
-                className="gap-2 text-white/60 data-[state=active]:bg-violet-500/15 data-[state=active]:text-violet-200 data-[state=active]:border data-[state=active]:border-violet-400/40"
+                className="gap-2 text-[var(--workspace-shell-text)]/60 data-[state=active]:bg-violet-500/15 data-[state=active]:text-violet-200 data-[state=active]:border data-[state=active]:border-violet-400/40"
               >
                 Notes
               </TabsTrigger>
@@ -183,13 +183,13 @@ export function PropertyDetailContent({
 
             <TabsContent value="notes" className="mt-0 space-y-8">
               <section>
-                <h3 className="mb-3 text-sm font-medium text-white/50">
+                <h3 className="mb-3 text-sm font-medium text-[var(--workspace-shell-text)]/50">
                   Property description
                 </h3>
                 <PropertyNotesTab property={property} />
               </section>
               <section>
-                <h3 className="mb-3 text-sm font-medium text-white/50">
+                <h3 className="mb-3 text-sm font-medium text-[var(--workspace-shell-text)]/50">
                   Notes and files
                 </h3>
                 <ContextWorkspaceNotes
@@ -230,12 +230,12 @@ function StatPill({
   value: string;
 }) {
   return (
-    <div className="rounded-xl border border-white/6 bg-[var(--workspace-shell-canvas)] px-3 py-2.5">
-      <div className="flex items-center gap-1.5 text-xs text-white/40">
+    <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] px-3 py-2.5">
+      <div className="flex items-center gap-1.5 text-xs text-[var(--workspace-shell-text)]/40">
         <Icon className="h-3.5 w-3.5" />
         {label}
       </div>
-      <p className="mt-1 text-sm font-semibold text-white">{value}</p>
+      <p className="mt-1 text-sm font-semibold text-[var(--workspace-shell-text)]">{value}</p>
     </div>
   );
 }
@@ -244,13 +244,13 @@ function PropertyNotesTab({ property }: { property: Property }) {
   return (
     <div className="prose prose-invert prose-sm max-w-none">
       {property.notes ? (
-        <div className="rounded-xl border border-white/6 bg-[var(--workspace-shell-canvas)] p-4">
-          <p className="whitespace-pre-wrap text-sm text-white/80">{property.notes}</p>
+        <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] p-4">
+          <p className="whitespace-pre-wrap text-sm text-[var(--workspace-shell-text)]/80">{property.notes}</p>
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <p className="text-sm text-white/40">No notes for this property.</p>
-          <p className="mt-1 text-xs text-white/30">
+          <p className="text-sm text-[var(--workspace-shell-text)]/40">No notes for this property.</p>
+          <p className="mt-1 text-xs text-[var(--workspace-shell-text)]/30">
             Edit the property to add notes.
           </p>
         </div>

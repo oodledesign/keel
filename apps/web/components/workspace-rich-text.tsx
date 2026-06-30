@@ -54,11 +54,11 @@ export function WorkspaceRichTextEditor({
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-xl border border-white/10 bg-white/5',
+        'overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]',
         className,
       )}
     >
-      <div className="flex flex-wrap gap-0.5 border-b border-white/10 p-1">
+      <div className="flex flex-wrap gap-0.5 border-b border-[color:var(--workspace-shell-border)] p-1">
         <ToolbarBtn label="Bold" onClick={() => exec('bold')}>
           <Bold className="h-3.5 w-3.5" />
         </ToolbarBtn>
@@ -85,9 +85,9 @@ export function WorkspaceRichTextEditor({
         onBlur={sync}
         data-placeholder={placeholder}
         className={cn(
-          'workspace-rich-text-editor min-w-0 px-3 py-2 text-sm text-white outline-none',
-          'empty:before:pointer-events-none empty:before:text-white/35 empty:before:content-[attr(data-placeholder)]',
-          '[&_a]:text-[#5eead4] [&_a]:underline',
+          'workspace-rich-text-editor min-w-0 px-3 py-2 text-sm text-[var(--workspace-shell-text)] outline-none',
+          'empty:before:pointer-events-none empty:before:text-[var(--workspace-shell-text)]/35 empty:before:content-[attr(data-placeholder)]',
+          '[&_a]:text-[var(--ozer-accent-muted)] [&_a]:underline',
           '[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5',
           '[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5',
           '[&_p]:my-1',
@@ -113,7 +113,7 @@ function ToolbarBtn({
       title={label}
       aria-label={label}
       onClick={onClick}
-      className="rounded-md p-1.5 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+      className="rounded-md p-1.5 text-[var(--workspace-shell-text)]/70 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
     >
       {children}
     </button>
@@ -133,13 +133,13 @@ export function WorkspaceRichTextHtml({ html, className }: WorkspaceRichTextHtml
   return (
     <div
       className={cn(
-        'workspace-rich-text-html text-sm leading-relaxed text-white/80',
-        '[&_a]:text-[#5eead4] [&_a]:underline',
+        'workspace-rich-text-html text-sm leading-relaxed text-[var(--workspace-shell-text)]/80',
+        '[&_a]:text-[var(--ozer-accent-muted)] [&_a]:underline',
         '[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5',
         '[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5',
         '[&_p]:my-1',
-        '[&_h2]:mt-3 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-white',
-        '[&_h3]:mt-2 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:text-white',
+        '[&_h2]:mt-3 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-[var(--workspace-shell-text)]',
+        '[&_h3]:mt-2 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:text-[var(--workspace-shell-text)]',
         className,
       )}
       dangerouslySetInnerHTML={{ __html: safe }}

@@ -72,13 +72,13 @@ export default async function FeedflowSocialAccountsPage({
         <div className="flex flex-wrap gap-3 text-sm">
           <Link
             href={workAccountPath(workPaths.accountFeedflowReviews, account)}
-            className="rounded-lg border border-white/10 bg-black/10 px-4 py-2 transition hover:border-white/20"
+            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
           >
             Reviews & widgets
           </Link>
           <Link
             href={workAccountPath(workPaths.accountClients, account)}
-            className="rounded-lg border border-white/10 bg-black/10 px-4 py-2 transition hover:border-white/20"
+            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
           >
             CRM clients
           </Link>

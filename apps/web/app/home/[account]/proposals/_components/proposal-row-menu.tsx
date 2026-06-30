@@ -66,7 +66,7 @@ export function ProposalRowMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-white">
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]">
           {loading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
@@ -74,7 +74,7 @@ export function ProposalRowMenu({
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="border-zinc-700 bg-zinc-900">
+      <DropdownMenuContent align="end" className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
         <DropdownMenuItem onClick={() => router.push(editPath)}>Open</DropdownMenuItem>
         {canEditProposals ? (
           <DropdownMenuItem

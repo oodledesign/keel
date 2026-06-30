@@ -39,7 +39,7 @@ const CATEGORY_SEGMENT: Record<WorkspaceCategory, SegmentSlug> = {
   property: 'property',
 };
 
-export function KeelPricingPage() {
+export function OzerPricingPage() {
   const [interval, setInterval] = useState<BillingInterval>('month');
   const [category, setCategory] = useState<WorkspaceCategory>('business');
 
@@ -67,13 +67,13 @@ export function KeelPricingPage() {
         <p className="mx-auto max-w-2xl text-lg leading-relaxed text-violet-100/85">
           Start free with personal and family workspaces — your hub for every
           connected space. Subscribe when you add community, business, or
-          property workspaces. One Life CRM account, not a pile of siloed tools.
+          property workspaces. One Ozer account, not a pile of siloed tools.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Button
             asChild
             size="lg"
-            className="h-11 rounded-full bg-gradient-to-r from-[#2A9D8F] to-[#2563EB] px-6 text-white hover:opacity-95"
+            className="h-11 rounded-full bg-gradient-to-r from-[var(--ozer-accent)] to-[var(--ozer-info)] px-6 text-[var(--workspace-shell-text)] hover:opacity-95"
           >
             <Link href={buildPricingSignupUrl({ profile: 'family' })}>
               Get free access
@@ -84,7 +84,7 @@ export function KeelPricingPage() {
             asChild
             size="lg"
             variant="outline"
-            className="h-11 rounded-full border-white/20 bg-white/5 text-white hover:bg-white/10"
+            className="h-11 rounded-full border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
           >
             <Link href={pathsConfig.auth.signIn}>Sign in</Link>
           </Button>
@@ -94,7 +94,7 @@ export function KeelPricingPage() {
         </p>
       </section>
 
-      <InterconnectedWorkspacesSection className="rounded-3xl border border-white/10" />
+      <InterconnectedWorkspacesSection className="rounded-3xl border border-[color:var(--workspace-shell-border)]" />
 
       <BillingIntervalToggle interval={interval} onChange={setInterval} />
 
@@ -126,8 +126,8 @@ export function KeelPricingPage() {
               className={cn(
                 'rounded-full px-4 py-2 text-sm font-medium transition',
                 category === key
-                  ? 'bg-[#2A9D8F] text-[#0B132B]'
-                  : 'border border-white/15 bg-white/5 text-violet-100 hover:bg-white/10',
+                  ? 'bg-[var(--ozer-accent)] text-[var(--ozer-plum-950)]'
+                  : 'border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-violet-100 hover:bg-[var(--workspace-shell-sidebar-accent)]',
               )}
             >
               {CATEGORY_LABELS[key]}
@@ -157,8 +157,8 @@ export function KeelPricingPage() {
         </div>
       </PricingSection>
 
-      <section className="rounded-2xl border border-white/10 bg-white/5 px-6 py-10 text-center backdrop-blur-sm">
-        <h2 className="text-xl font-semibold text-white">Ready to get organised?</h2>
+      <section className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-6 py-10 text-center backdrop-blur-sm">
+        <h2 className="text-xl font-semibold text-[var(--workspace-shell-text)]">Ready to get organised?</h2>
         <p className="mx-auto mt-2 max-w-lg text-sm text-violet-100/80">
           Create your free account, choose your workspaces, and start a trial when you
           are ready. Invited team members never pay — billing stays with the workspace
@@ -166,7 +166,7 @@ export function KeelPricingPage() {
         </p>
         <Button
           asChild
-          className="mt-6 h-11 rounded-full bg-[#2A9D8F] px-6 text-[#0B132B] hover:bg-[#238b7f] hover:text-white"
+          className="mt-6 h-11 rounded-full bg-[var(--ozer-accent)] px-6 text-[var(--ozer-plum-950)] hover:bg-[var(--ozer-accent-hover)] hover:text-[var(--ozer-white)]"
           size="lg"
         >
           <Link href={buildPricingSignupUrl({})}>Create your free account</Link>
@@ -182,15 +182,15 @@ function BillingIntervalToggle(props: {
 }) {
   return (
     <div className="flex justify-center">
-      <div className="inline-flex rounded-full border border-white/15 bg-white/5 p-1">
+      <div className="inline-flex rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-1">
         <button
           type="button"
           onClick={() => props.onChange('month')}
           className={cn(
             'rounded-full px-4 py-2 text-sm font-medium transition',
             props.interval === 'month'
-              ? 'bg-white text-[#0B132B]'
-              : 'text-violet-100 hover:text-white',
+              ? 'bg-white text-[var(--ozer-plum-950)]'
+              : 'text-violet-100 hover:text-[var(--workspace-shell-text)]',
           )}
         >
           Monthly
@@ -201,12 +201,12 @@ function BillingIntervalToggle(props: {
           className={cn(
             'rounded-full px-4 py-2 text-sm font-medium transition',
             props.interval === 'year'
-              ? 'bg-white text-[#0B132B]'
-              : 'text-violet-100 hover:text-white',
+              ? 'bg-white text-[var(--ozer-plum-950)]'
+              : 'text-violet-100 hover:text-[var(--workspace-shell-text)]',
           )}
         >
           Annual
-          <span className="ml-1.5 text-xs text-[#2A9D8F]">Save ~17%</span>
+          <span className="ml-1.5 text-xs text-[var(--ozer-accent)]">Save ~17%</span>
         </button>
       </div>
     </div>
@@ -215,7 +215,7 @@ function BillingIntervalToggle(props: {
 
 function FreePlanCard() {
   return (
-    <article className="flex h-full flex-col rounded-2xl border border-white/10 bg-[#0F1B35]/80 p-6 text-white">
+    <article className="flex h-full flex-col rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)]/80 p-6 text-[var(--workspace-shell-text)]">
       <h3 className="text-lg font-semibold">{MARKETING_FREE_TIER.name}</h3>
       <p className="mt-1 text-sm text-violet-100/75">{MARKETING_FREE_TIER.description}</p>
       <p className="mt-4 text-3xl font-bold tracking-tight">Free</p>
@@ -223,7 +223,7 @@ function FreePlanCard() {
       <div className="mt-6">
         <Button
           asChild
-          className="w-full rounded-full border-white/20 bg-white/10 text-white hover:bg-white/15"
+          className="w-full rounded-full border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] hover:bg-white/15"
           variant="outline"
         >
           <Link href={buildPricingSignupUrl({ profile: 'family' })}>Get free access</Link>
@@ -251,14 +251,14 @@ function WorkspacePlanCard(props: {
   return (
     <article
       className={cn(
-        'relative flex h-full flex-col rounded-2xl border p-6 text-white',
+        'relative flex h-full flex-col rounded-2xl border p-6 text-[var(--workspace-shell-text)]',
         plan.highlighted
-          ? 'border-[#2A9D8F] bg-[#0F1B35] shadow-[0_0_0_1px_rgba(42,157,143,0.35)]'
-          : 'border-white/10 bg-[#0F1B35]/80',
+          ? 'border-[var(--ozer-accent)] bg-[var(--ozer-surface-panel)] shadow-[0_0_0_1px_var(--ozer-coral-alpha-45)]'
+          : 'border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)]/80',
       )}
     >
       {plan.badge ? (
-        <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#2A9D8F] px-3 py-0.5 text-xs font-semibold text-[#0B132B]">
+        <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[var(--ozer-accent)] px-3 py-0.5 text-xs font-semibold text-[var(--ozer-plum-950)]">
           {plan.badge}
         </span>
       ) : null}
@@ -271,7 +271,7 @@ function WorkspacePlanCard(props: {
         </span>
       </p>
       {interval === 'year' ? (
-        <p className="mt-1 text-xs text-[#2A9D8F]">
+        <p className="mt-1 text-xs text-[var(--ozer-accent)]">
           {formatGbp(Math.round(plan.yearlyPriceGbp / 12))}/mo billed annually
         </p>
       ) : null}
@@ -282,8 +282,8 @@ function WorkspacePlanCard(props: {
           className={cn(
             'w-full rounded-full',
             plan.highlighted
-              ? 'bg-[#2A9D8F] text-[#0B132B] hover:bg-[#238b7f] hover:text-white'
-              : 'border-white/20 bg-white/10 text-white hover:bg-white/15',
+              ? 'bg-[var(--ozer-accent)] text-[var(--ozer-plum-950)] hover:bg-[var(--ozer-accent-hover)] hover:text-[var(--ozer-white)]'
+              : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] hover:bg-white/15',
           )}
           variant={plan.highlighted ? 'default' : 'outline'}
         >
@@ -306,7 +306,7 @@ function AddonPlanCard(props: {
   const { plan } = props;
 
   return (
-    <article className="flex h-full flex-col rounded-2xl border border-white/10 bg-[#0F1B35]/60 p-6 text-white">
+    <article className="flex h-full flex-col rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)]/60 p-6 text-[var(--workspace-shell-text)]">
       <h3 className="text-lg font-semibold">{plan.name}</h3>
       <p className="mt-1 text-sm text-violet-100/75">{plan.description}</p>
       <p className="mt-4 text-2xl font-bold tracking-tight">
@@ -317,7 +317,7 @@ function AddonPlanCard(props: {
       <div className="mt-6">
         <Button
           asChild
-          className="w-full rounded-full border-white/20 bg-white/10 text-white hover:bg-white/15"
+          className="w-full rounded-full border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] hover:bg-white/15"
           variant="outline"
         >
           <Link href={buildPricingSignupUrl({})}>Get started free</Link>
@@ -335,7 +335,7 @@ function FeatureList(props: { features: string[]; compact?: boolean }) {
     <ul className={cn('mt-4 space-y-2', props.compact && 'text-sm')}>
       {props.features.map((feature) => (
         <li key={feature} className="flex gap-2">
-          <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#2A9D8F]" />
+          <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
           <span className="text-violet-50/90">{feature}</span>
         </li>
       ))}
@@ -351,7 +351,7 @@ function PricingSection(props: {
   return (
     <section className="space-y-6">
       <div className="text-center">
-        <h2 className="text-2xl font-bold tracking-tight text-white">{props.title}</h2>
+        <h2 className="text-2xl font-bold tracking-tight text-[var(--workspace-shell-text)]">{props.title}</h2>
         <p className="mt-1 text-sm text-violet-100/75">{props.subtitle}</p>
       </div>
       {props.children}

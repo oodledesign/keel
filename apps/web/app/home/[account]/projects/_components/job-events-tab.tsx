@@ -71,19 +71,19 @@ function EventCardAssignees({
   if (assignments.length === 0) return null;
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <Users className="h-3.5 w-3.5 text-zinc-500" />
+      <Users className="h-3.5 w-3.5 text-[var(--workspace-shell-text-muted)]" />
       {assignments.map((a) => {
         const m = members.find((x) => x.user_id === a.user_id);
         const label = m ? m.name || m.email || a.user_id.slice(0, 8) : a.user_id.slice(0, 8);
         return (
-          <div key={a.user_id} className="flex items-center gap-1 rounded-full bg-zinc-700/80 px-2 py-0.5">
+          <div key={a.user_id} className="flex items-center gap-1 rounded-full bg-[var(--workspace-shell-panel-hover)]/80 px-2 py-0.5">
             <Avatar className="h-5 w-5 rounded-full">
               <AvatarImage src={m?.picture_url ?? undefined} />
-              <AvatarFallback className="text-[10px] bg-zinc-600 text-zinc-300">
+              <AvatarFallback className="text-[10px] bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text-muted)]">
                 {(label || '?').slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <span className="text-xs text-zinc-300">{label}</span>
+            <span className="text-xs text-[var(--workspace-shell-text-muted)]">{label}</span>
           </div>
         );
       })}
@@ -180,7 +180,7 @@ export function JobEventsTabContent({
           <Button
             type="button"
             size="sm"
-            className="bg-zinc-700 hover:bg-zinc-600"
+            className="bg-[var(--workspace-shell-panel-hover)] hover:bg-[var(--workspace-shell-panel-hover)]"
             onClick={openCreate}
           >
             <CalendarPlus className="mr-2 h-4 w-4" />
@@ -190,13 +190,13 @@ export function JobEventsTabContent({
       )}
 
       {loading ? (
-        <p className="text-sm text-zinc-500">Loading…</p>
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">Loading…</p>
       ) : (
         <>
           <section>
-            <h3 className="text-sm font-medium text-zinc-400">Upcoming</h3>
+            <h3 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">Upcoming</h3>
             {upcoming.length === 0 ? (
-              <p className="mt-2 text-sm text-zinc-500">No upcoming visits or meetings.</p>
+              <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">No upcoming visits or meetings.</p>
             ) : (
               <ul className="mt-2 space-y-2">
                 {upcoming.map((event) => (
@@ -204,10 +204,10 @@ export function JobEventsTabContent({
                     <button
                       type="button"
                       onClick={() => openEvent(event.id)}
-                      className="w-full rounded-lg border border-zinc-700 bg-[var(--workspace-shell-panel)] p-4 text-left transition hover:border-zinc-600 hover:bg-[var(--workspace-shell-panel-hover)]"
+                      className="w-full rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 text-left transition hover:border-[color:var(--workspace-shell-border)] hover:bg-[var(--workspace-shell-panel-hover)]"
                     >
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-500">
-                        <span className="font-medium text-zinc-400">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--workspace-shell-text-muted)]">
+                        <span className="font-medium text-[var(--workspace-shell-text-muted)]">
                           {formatEventDateTime(event.scheduled_start_at)}
                         </span>
                         <span
@@ -220,15 +220,15 @@ export function JobEventsTabContent({
                           {event.event_type === 'site_visit' ? 'Site visit' : 'Meeting'}
                         </span>
                         {event.location && (
-                          <span className="flex items-center gap-1 text-zinc-400">
+                          <span className="flex items-center gap-1 text-[var(--workspace-shell-text-muted)]">
                             <MapPin className="h-3.5 w-3.5 shrink-0" />
                             <span className="truncate max-w-[200px]">{event.location}</span>
                           </span>
                         )}
                       </div>
-                      <p className="mt-1.5 font-medium text-white">{event.title}</p>
+                      <p className="mt-1.5 font-medium text-[var(--workspace-shell-text)]">{event.title}</p>
                       <div className="mt-1.5 flex flex-wrap items-start gap-x-4 gap-y-1">
-                        <p className="min-w-0 flex-1 text-sm text-zinc-500 basis-0">
+                        <p className="min-w-0 flex-1 text-sm text-[var(--workspace-shell-text-muted)] basis-0">
                           {snippet(event.prep_notes, 120)}
                         </p>
                         <div className="shrink-0">
@@ -247,9 +247,9 @@ export function JobEventsTabContent({
           </section>
 
           <section>
-            <h3 className="text-sm font-medium text-zinc-400">Previous</h3>
+            <h3 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">Previous</h3>
             {previous.length === 0 ? (
-              <p className="mt-2 text-sm text-zinc-500">No previous visits or meetings.</p>
+              <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">No previous visits or meetings.</p>
             ) : (
               <ul className="mt-2 space-y-2">
                 {previous.map((event) => (
@@ -257,10 +257,10 @@ export function JobEventsTabContent({
                     <button
                       type="button"
                       onClick={() => openEvent(event.id)}
-                      className="w-full rounded-lg border border-zinc-700 bg-[var(--workspace-shell-panel)] p-4 text-left transition hover:border-zinc-600 hover:bg-[var(--workspace-shell-panel-hover)]"
+                      className="w-full rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 text-left transition hover:border-[color:var(--workspace-shell-border)] hover:bg-[var(--workspace-shell-panel-hover)]"
                     >
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-500">
-                        <span className="font-medium text-zinc-400">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--workspace-shell-text-muted)]">
+                        <span className="font-medium text-[var(--workspace-shell-text-muted)]">
                           {formatEventDateTime(event.scheduled_start_at)}
                         </span>
                         <span
@@ -273,15 +273,15 @@ export function JobEventsTabContent({
                           {event.event_type === 'site_visit' ? 'Site visit' : 'Meeting'}
                         </span>
                         {event.location && (
-                          <span className="flex items-center gap-1 text-zinc-400">
+                          <span className="flex items-center gap-1 text-[var(--workspace-shell-text-muted)]">
                             <MapPin className="h-3.5 w-3.5 shrink-0" />
                             <span className="truncate max-w-[200px]">{event.location}</span>
                           </span>
                         )}
                       </div>
-                      <p className="mt-1.5 font-medium text-white">{event.title}</p>
+                      <p className="mt-1.5 font-medium text-[var(--workspace-shell-text)]">{event.title}</p>
                       <div className="mt-1.5 flex flex-wrap items-start gap-x-4 gap-y-1">
-                        <p className="min-w-0 flex-1 text-sm text-zinc-500 basis-0">
+                        <p className="min-w-0 flex-1 text-sm text-[var(--workspace-shell-text-muted)] basis-0">
                           {snippet(event.outcome_notes, 120)}
                         </p>
                         <div className="shrink-0">
@@ -302,9 +302,9 @@ export function JobEventsTabContent({
       )}
 
       <Sheet open={sheetOpen} onOpenChange={(open) => !open && closeSheet()}>
-        <SheetContent className="flex max-sm:w-full flex-col border-zinc-700 bg-[var(--workspace-shell-panel)] text-white sm:max-w-lg">
+        <SheetContent className="flex max-sm:w-full flex-col border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-lg">
           <SheetHeader className="shrink-0">
-            <SheetTitle className="text-white">
+            <SheetTitle className="text-[var(--workspace-shell-text)]">
               {isCreate ? 'Add visit/meeting' : 'Visit / meeting'}
             </SheetTitle>
           </SheetHeader>

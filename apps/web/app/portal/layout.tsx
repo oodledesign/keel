@@ -5,7 +5,7 @@ import { ReactNode } from 'react';
  */
 export default function PortalLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <div className="min-h-screen bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
       {children}
     </div>
   );

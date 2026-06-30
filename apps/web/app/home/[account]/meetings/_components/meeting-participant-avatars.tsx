@@ -38,10 +38,10 @@ export function MeetingParticipantAvatars({
           return (
             <Avatar
               key={participant.key}
-              className="h-7 w-7 border-2 border-[var(--workspace-shell-panel)] bg-zinc-800"
+              className="h-7 w-7 border-2 border-[var(--workspace-shell-panel)] bg-[var(--workspace-control-surface)]"
             >
               {photoUrl ? <AvatarImage src={photoUrl} alt="" /> : null}
-              <AvatarFallback className="bg-zinc-700 text-[10px] font-medium text-zinc-200">
+              <AvatarFallback className="bg-[var(--workspace-shell-panel-hover)] text-[10px] font-medium text-[var(--workspace-shell-text)]">
                 {participantInitials(participant.name)}
               </AvatarFallback>
             </Avatar>
@@ -49,7 +49,7 @@ export function MeetingParticipantAvatars({
         })}
       </div>
       {overflow > 0 ? (
-        <span className="ml-1.5 text-[11px] font-medium text-zinc-500">
+        <span className="ml-1.5 text-[11px] font-medium text-[var(--workspace-shell-text-muted)]">
           +{overflow}
         </span>
       ) : null}

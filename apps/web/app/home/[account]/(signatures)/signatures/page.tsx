@@ -20,7 +20,7 @@ type SignaturesDashboardPageProps = {
 
 const cards = [
   { key: 'total', label: 'Total Staff', icon: Users, tone: 'text-[#39AEB3]' },
-  { key: 'pushed', label: 'Pushed', icon: CheckCircle2, tone: 'text-[var(--keel-teal)]' },
+  { key: 'pushed', label: 'Pushed', icon: CheckCircle2, tone: 'text-[var(--ozer-accent)]' },
   { key: 'pending', label: 'Pending', icon: Clock, tone: 'text-[#F2C94C]' },
   { key: 'errors', label: 'Errors', icon: AlertCircle, tone: 'text-[#E85D75]' },
 ] as const;
@@ -69,7 +69,7 @@ export default async function SignaturesDashboardPage({
           return (
             <Card
               key={card.key}
-              className="border-white/10 bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
             >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">

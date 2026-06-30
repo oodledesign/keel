@@ -184,15 +184,15 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
   return (
     <div className="mx-auto w-full max-w-2xl space-y-8 px-4 py-10">
       <header className="space-y-2 text-center">
-        <h1 className="text-2xl font-bold tracking-tight text-white md:text-3xl">
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--workspace-shell-text)] md:text-3xl">
           Welcome to Ozer
         </h1>
-        <p className="text-sm text-zinc-400 md:text-base">
+        <p className="text-sm text-[var(--workspace-shell-text-muted)] md:text-base">
           Let&apos;s set up your workspaces. Pick one or more — you can add more
           later from the workspace menu.
         </p>
         {props.intent?.productId && props.intent.planId ? (
-          <p className="text-sm text-[#2A9D8F]">
+          <p className="text-sm text-[var(--ozer-accent)]">
             Your selected plan will be ready to start after workspace setup.
           </p>
         ) : null}
@@ -220,8 +220,8 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
               className={cn(
                 'rounded-2xl border bg-[var(--workspace-shell-panel)] p-4 shadow-[0_18px_50px_rgba(4,10,24,0.24)] transition-colors',
                 draft.enabled
-                  ? 'border-[var(--keel-teal)]/40 ring-1 ring-[var(--keel-teal)]/25'
-                  : 'border-white/[0.08]',
+                  ? 'border-[var(--ozer-accent)]/40 ring-1 ring-[var(--ozer-accent)]/25'
+                  : 'border-[color:var(--workspace-shell-border)]',
               )}
             >
               <button
@@ -230,15 +230,15 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
                 className="flex w-full items-start gap-4 text-left"
               >
                 <span
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-[var(--workspace-shell-text)]"
                   style={{ backgroundColor: color }}
                 >
                   {(draft.name[0] ?? 'W').toUpperCase()}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-2">
-                    <Icon className="h-4 w-4 text-zinc-400" aria-hidden />
-                    <span className="text-[15px] font-semibold text-white">
+                    <Icon className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" aria-hidden />
+                    <span className="text-[15px] font-semibold text-[var(--workspace-shell-text)]">
                       {isBusiness
                         ? 'Business'
                         : draft.profile === 'family'
@@ -246,7 +246,7 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
                           : 'Community'}
                     </span>
                   </span>
-                  <span className="mt-1 block text-sm text-zinc-400">
+                  <span className="mt-1 block text-sm text-[var(--workspace-shell-text-muted)]">
                     {isBusiness
                       ? draft.profile === 'work_property'
                         ? 'From £19/mo — up to 5 properties, tenants & maintenance'
@@ -262,8 +262,8 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
                   className={cn(
                     'mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs font-bold',
                     draft.enabled
-                      ? 'border-[var(--keel-teal)] bg-[var(--keel-teal)] text-[#060C18]'
-                      : 'border-white/20 text-transparent',
+                      ? 'border-[var(--ozer-accent)] bg-[var(--ozer-accent)] text-[#060C18]'
+                      : 'border-[color:var(--workspace-shell-border)] text-transparent',
                   )}
                   aria-hidden
                 >
@@ -272,22 +272,22 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
               </button>
 
               {draft.enabled ? (
-                <div className="mt-4 space-y-3 border-t border-white/[0.08] pt-4">
+                <div className="mt-4 space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-4">
                   {isBusiness ? (
                     <div className="space-y-2">
-                      <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
+                      <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--workspace-shell-text-muted)]">
                         <input
                           type="checkbox"
                           checked={draft.profile === 'work_property'}
                           onChange={(e) =>
                             setBusinessProperty(draft.id, e.target.checked)
                           }
-                          className="rounded border-white/20"
+                          className="rounded border-[color:var(--workspace-shell-border)]"
                         />
                         Property — track properties, tenants and maintenance
                       </label>
                       {draft.profile === 'work_design' ? (
-                        <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
+                        <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--workspace-shell-text-muted)]">
                           <input
                             type="checkbox"
                             checked={!!draft.fullBusinessMode}
@@ -303,19 +303,19 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
                                 ),
                               )
                             }
-                            className="rounded border-white/20"
+                            className="rounded border-[color:var(--workspace-shell-border)]"
                           />
                           Full business CRM — clients, jobs, invoices (from £29/mo)
                         </label>
                       ) : null}
                     </div>
                   ) : null}
-                  <label className="block text-xs font-medium uppercase tracking-wide text-zinc-500">
+                  <label className="block text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
                     Workspace name
                     <input
                       value={draft.name}
                       onChange={(e) => setName(draft.id, e.target.value)}
-                      className="mt-1.5 h-10 w-full rounded-xl border border-white/10 bg-[var(--workspace-shell-canvas)] px-3 text-sm text-white focus:border-white/20 focus:outline-none"
+                      className="mt-1.5 h-10 w-full rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] px-3 text-sm text-[var(--workspace-shell-text)] focus:border-[color:var(--workspace-shell-border)] focus:outline-none"
                     />
                   </label>
                 </div>

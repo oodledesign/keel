@@ -118,7 +118,7 @@ export function RankCheckJobPoller({
 
   if (!job) {
     return (
-      <div className="max-w-xl space-y-3 rounded-lg border border-white/10 bg-black/20 p-4">
+      <div className="max-w-xl space-y-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
         <p className="text-muted-foreground text-sm">Starting rank check…</p>
         <Button
           type="button"
@@ -139,7 +139,7 @@ export function RankCheckJobPoller({
       <div
         className={`rounded-lg border px-4 py-3 text-sm ${
           cancelled
-            ? 'border-white/10 bg-black/20 text-muted-foreground'
+            ? 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-muted-foreground'
             : 'border-red-500/30 bg-red-500/10 text-red-200'
         }`}
       >
@@ -150,7 +150,7 @@ export function RankCheckJobPoller({
 
   if (job.status === 'done') {
     return (
-      <p className="text-sm text-[var(--keel-teal)]">
+      <p className="text-sm text-[var(--ozer-accent)]">
         Rank check complete · {formatUsdCost(Number(job.api_cost_usd))} spent
       </p>
     );
@@ -162,7 +162,7 @@ export function RankCheckJobPoller({
       : 10;
 
   return (
-    <div className="max-w-xl space-y-3 rounded-lg border border-white/10 bg-black/20 p-4">
+    <div className="max-w-xl space-y-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
         <span className="text-muted-foreground">
           {job.status === 'pending' ? 'Queued…' : 'Checking SERP positions…'}
@@ -177,7 +177,7 @@ export function RankCheckJobPoller({
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-black/30">
         <div
-          className="h-full rounded-full bg-[var(--keel-teal)] transition-all duration-500"
+          className="h-full rounded-full bg-[var(--ozer-accent)] transition-all duration-500"
           style={{ width: `${percent}%` }}
         />
       </div>

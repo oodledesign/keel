@@ -37,9 +37,9 @@ export function QualityScorecard({ gates }: { gates: QualityGate[] }) {
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-white/10">
+    <div className="overflow-hidden rounded-lg border border-[color:var(--workspace-shell-border)]">
       <table className="w-full text-left text-sm">
-        <thead className="border-b border-white/10 bg-black/20 text-xs uppercase tracking-wide text-muted-foreground">
+        <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs uppercase tracking-wide text-muted-foreground">
           <tr>
             <th className="px-4 py-3">Gate</th>
             <th className="px-4 py-3">Status</th>
@@ -48,7 +48,7 @@ export function QualityScorecard({ gates }: { gates: QualityGate[] }) {
         </thead>
         <tbody>
           {gates.map((gate) => (
-            <tr key={gate.gate} className="border-b border-white/5 last:border-0">
+            <tr key={gate.gate} className="border-b border-[color:var(--workspace-shell-border)] last:border-0">
               <td className="px-4 py-3 capitalize">{formatGate(gate.gate)}</td>
               <td
                 className={`px-4 py-3 font-medium ${STATUS_COLOURS[gate.status]}`}

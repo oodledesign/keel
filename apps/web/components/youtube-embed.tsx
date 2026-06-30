@@ -18,7 +18,7 @@ export function YoutubeEmbed({ url, title = 'YouTube video', className }: Youtub
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-sm text-[#5eead4] underline"
+        className="text-sm text-[var(--ozer-accent-muted)] underline"
       >
         {url}
       </a>
@@ -29,7 +29,7 @@ export function YoutubeEmbed({ url, title = 'YouTube video', className }: Youtub
     <div
       className={
         className ??
-        'aspect-video w-full overflow-hidden rounded-xl border border-white/10 bg-black/40'
+        'aspect-video w-full overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/40'
       }
     >
       <iframe

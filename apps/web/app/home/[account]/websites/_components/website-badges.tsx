@@ -21,12 +21,12 @@ export const websiteStatusStyles: Record<
   },
   paused: {
     bg: 'bg-slate-500/15',
-    text: 'text-slate-300',
+    text: 'text-[var(--workspace-shell-text-muted)]',
     label: 'Paused',
   },
   archived: {
     bg: 'bg-slate-500/15',
-    text: 'text-slate-400',
+    text: 'text-[var(--workspace-shell-text-muted)]',
     label: 'Archived',
   },
 };
@@ -36,8 +36,8 @@ export const websiteStackStyles: Record<
   { bg: string; text: string; label: string }
 > = {
   'next-payload': {
-    bg: 'bg-[var(--keel-teal)]/15',
-    text: 'text-[#5eead4]',
+    bg: 'bg-[var(--ozer-accent-subtle)]',
+    text: 'text-[var(--ozer-accent-muted)]',
     label: 'Next + Payload',
   },
   webflow: {
@@ -52,7 +52,7 @@ export const websiteStackStyles: Record<
   },
   other: {
     bg: 'bg-slate-500/15',
-    text: 'text-slate-300',
+    text: 'text-[var(--workspace-shell-text-muted)]',
     label: 'Other',
   },
 };

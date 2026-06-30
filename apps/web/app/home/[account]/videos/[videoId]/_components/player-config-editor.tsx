@@ -40,7 +40,7 @@ function ConfigRow(props: {
   children: ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-white/5 py-4 last:border-0">
+    <div className="flex items-start justify-between gap-4 border-b border-[color:var(--workspace-shell-border)] py-4 last:border-0">
       <div className="min-w-0 flex-1">
         <Label className="text-sm font-medium">{props.label}</Label>
         {props.description ? (
@@ -64,7 +64,7 @@ function ColorField(props: {
   return (
     <div className="flex items-center gap-2">
       <span
-        className="h-8 w-8 shrink-0 rounded-md border border-white/10"
+        className="h-8 w-8 shrink-0 rounded-md border border-[color:var(--workspace-shell-border)]"
         style={{ backgroundColor: normalized }}
         aria-hidden
       />
@@ -73,7 +73,7 @@ function ColorField(props: {
         value={normalized}
         onChange={(event) => props.onChange(event.target.value)}
         onBlur={props.onBlur}
-        className="h-8 w-10 cursor-pointer rounded border border-white/10 bg-transparent p-0.5"
+        className="h-8 w-10 cursor-pointer rounded border border-[color:var(--workspace-shell-border)] bg-transparent p-0.5"
         aria-label="Pick colour"
       />
       <Input
@@ -99,15 +99,15 @@ function LogoPositionControl(props: {
   ];
 
   return (
-    <div className="flex rounded-lg border border-white/10 p-0.5">
+    <div className="flex rounded-lg border border-[color:var(--workspace-shell-border)] p-0.5">
       {options.map((option) => (
         <button
           key={option.value}
           type="button"
           className={`rounded-md px-2.5 py-1 text-xs transition ${
             props.value === option.value
-              ? 'keel-gradient-active text-white'
-              : 'text-muted-foreground hover:text-white'
+              ? 'keel-gradient-active text-[var(--ozer-white)]'
+              : 'text-muted-foreground hover:text-[var(--workspace-shell-text)]'
           }`}
           onClick={() => props.onChange(option.value)}
         >
@@ -193,8 +193,8 @@ export function PlayerConfigEditor(props: {
   };
 
   return (
-    <div className="rounded-xl border border-white/10 bg-black/20">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
+    <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
         <p className="text-sm font-medium">Player settings</p>
         <div className="flex flex-wrap items-center gap-2">
           <Button
@@ -487,7 +487,7 @@ export function PlayerConfigEditor(props: {
             description={
               <>
                 Restrict embed access with signed tokens.{' '}
-                <Link href="#" className="text-[var(--keel-teal)] underline-offset-2 hover:underline">
+                <Link href="#" className="text-[var(--ozer-accent)] underline-offset-2 hover:underline">
                   Manage tokens
                 </Link>{' '}
                 (coming soon)

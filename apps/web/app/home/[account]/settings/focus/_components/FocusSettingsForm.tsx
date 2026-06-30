@@ -97,10 +97,10 @@ export function FocusSettingsForm({
         onSubmit={form.handleSubmit(handleSubmit)}
       >
         <div className="space-y-1">
-          <h1 className="text-xl font-semibold text-white">
+          <h1 className="text-xl font-semibold text-[var(--workspace-shell-text)]">
             Focus & Availability
           </h1>
-          <p className="text-sm text-zinc-400">
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
             Control work hours, holiday mode, and automatic out-of-office replies
             for this workspace.
           </p>
@@ -116,8 +116,8 @@ export function FocusSettingsForm({
         />
         <OOOSection form={form} accountId={accountId} persisted={persisted} />
 
-        <div className="sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[var(--workspace-shell-panel)]/95 p-4 shadow-lg backdrop-blur">
-          <p className="text-sm text-zinc-400">
+        <div className="sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/95 p-4 shadow-lg backdrop-blur">
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
             {isDirty ? (
               <span className="text-amber-200">Unsaved changes</span>
             ) : (

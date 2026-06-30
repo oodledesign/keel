@@ -57,7 +57,7 @@ function PersonalAccountSettingsPage() {
         <PersonalIntegrationsToasts />
       </Suspense>
       <div className="flex w-full flex-1 flex-col lg:max-w-2xl">
-        <div className="rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+        <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
           <PersonalAccountSettingsContainer
             userId={user.id}
             features={features}
@@ -66,7 +66,7 @@ function PersonalAccountSettingsPage() {
           />
         </div>
 
-        <div className="mt-6 rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+        <div className="mt-6 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
           <h2 className="mb-1 text-lg font-semibold text-[var(--workspace-shell-text)]">
             Integrations
           </h2>
@@ -79,7 +79,7 @@ function PersonalAccountSettingsPage() {
           </Suspense>
         </div>
 
-        <div className="mt-6 rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+        <div className="mt-6 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
           <h2 className="mb-1 text-lg font-semibold text-[var(--workspace-shell-text)]">
             Desktop recorder
           </h2>
@@ -99,13 +99,13 @@ function PersonalAccountSettingsPage() {
           </p>
         </div>
 
-        <div className="mt-6 rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+        <div className="mt-6 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
           <Suspense fallback={<p className="text-sm text-[var(--workspace-shell-text-muted)]">Loading…</p>}>
             <KeelUsePreferencesSection />
           </Suspense>
         </div>
 
-        <div className="mt-6 rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+        <div className="mt-6 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
           <Suspense fallback={<p className="text-sm text-[var(--workspace-shell-text-muted)]">Loading…</p>}>
             <PersonalDashboardShortcutsSection />
           </Suspense>

@@ -321,14 +321,14 @@ export function EmailContactImportFlow({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <p className="mb-4 text-sm text-zinc-400">{stepDescription}</p>
+      <p className="mb-4 text-sm text-[var(--workspace-shell-text-muted)]">{stepDescription}</p>
 
       <div className="min-h-0 flex-1 overflow-y-auto pr-1">
         {step === 0 && (
           <div className="space-y-4">
-            <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-zinc-600 bg-zinc-900/40 px-6 py-10 transition hover:border-emerald-600/50 hover:bg-zinc-900/60">
-              <Upload className="mb-2 h-8 w-8 text-zinc-400" />
-              <span className="text-sm text-zinc-300">{t('clientImportUploadHint')}</span>
+            <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40 px-6 py-10 transition hover:border-emerald-600/50 hover:bg-[var(--workspace-shell-panel)]/60">
+              <Upload className="mb-2 h-8 w-8 text-[var(--workspace-shell-text-muted)]" />
+              <span className="text-sm text-[var(--workspace-shell-text-muted)]">{t('clientImportUploadHint')}</span>
               <input
                 type="file"
                 accept=".csv"
@@ -339,14 +339,14 @@ export function EmailContactImportFlow({
             {parseError && <p className="text-sm text-red-400">{parseError}</p>}
             {headers.length > 0 && (
               <>
-                <div className="flex flex-wrap gap-4 text-sm text-zinc-400">
+                <div className="flex flex-wrap gap-4 text-sm text-[var(--workspace-shell-text-muted)]">
                   <span>{t('clientImportColumns', { count: headers.length })}</span>
                   <span>{t('clientImportRows', { count: allRows.length })}</span>
                 </div>
-                <p className="text-sm font-medium text-zinc-300">{t('clientImportPreview')}</p>
-                <div className="overflow-x-auto rounded-md border border-zinc-700">
-                  <table className="w-full min-w-[480px] text-left text-xs text-zinc-200">
-                    <thead className="bg-zinc-900/80 text-zinc-400">
+                <p className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">{t('clientImportPreview')}</p>
+                <div className="overflow-x-auto rounded-md border border-[color:var(--workspace-shell-border)]">
+                  <table className="w-full min-w-[480px] text-left text-xs text-[var(--workspace-shell-text)]">
+                    <thead className="bg-[var(--workspace-shell-panel)]/80 text-[var(--workspace-shell-text-muted)]">
                       <tr>
                         {headers.map((header) => (
                           <th key={header} className="px-2 py-2 font-medium">
@@ -359,7 +359,7 @@ export function EmailContactImportFlow({
                       {previewRows.map((row, index) => (
                         <tr
                           key={index}
-                          className="border-t border-zinc-800 odd:bg-zinc-950/40"
+                          className="border-t border-[color:var(--workspace-shell-border)] odd:bg-[var(--workspace-shell-panel)]/40"
                         >
                           {headers.map((header) => (
                             <td key={header} className="max-w-[200px] truncate px-2 py-1.5">
@@ -385,7 +385,7 @@ export function EmailContactImportFlow({
                 size="sm"
                 disabled={aiLoading || headers.length === 0}
                 onClick={() => void handleMapWithAi()}
-                className="border-zinc-600 bg-zinc-900/50 text-zinc-200 hover:bg-zinc-800"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/50 text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-control-surface)]"
               >
                 {aiLoading ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -404,9 +404,9 @@ export function EmailContactImportFlow({
             {!mappingOk && !issue && (
               <p className="text-sm text-amber-400">{t('clientImportMappingRequiredHint')}</p>
             )}
-            <div className="overflow-x-auto rounded-md border border-zinc-700">
+            <div className="overflow-x-auto rounded-md border border-[color:var(--workspace-shell-border)]">
               <table className="w-full min-w-[520px] text-left text-sm">
-                <thead className="bg-zinc-900/80 text-xs text-zinc-400">
+                <thead className="bg-[var(--workspace-shell-panel)]/80 text-xs text-[var(--workspace-shell-text-muted)]">
                   <tr>
                     <th className="px-3 py-2 font-medium">{t('clientImportCsvColumn')}</th>
                     <th className="px-3 py-2 font-medium">{t('clientImportTradewaysField')}</th>
@@ -414,10 +414,10 @@ export function EmailContactImportFlow({
                 </thead>
                 <tbody>
                   {headers.map((header) => (
-                    <tr key={header} className="border-t border-zinc-800 odd:bg-zinc-950/30">
+                    <tr key={header} className="border-t border-[color:var(--workspace-shell-border)] odd:bg-[var(--workspace-shell-panel)]/30">
                       <td className="px-3 py-2 align-middle">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-zinc-200">{header}</span>
+                          <span className="text-[var(--workspace-shell-text)]">{header}</span>
                           {aiSuggestedHeaders.has(header) && (
                             <Badge
                               variant="secondary"
@@ -430,7 +430,7 @@ export function EmailContactImportFlow({
                       </td>
                       <td className="px-3 py-2 align-middle">
                         <select
-                          className="w-full max-w-xs rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-2 py-1.5 text-sm text-white focus-visible:ring-2 focus-visible:ring-emerald-500"
+                          className="w-full max-w-xs rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-2 py-1.5 text-sm text-[var(--workspace-shell-text)] focus-visible:ring-2 focus-visible:ring-emerald-500"
                           value={mapping[header] ?? '__skip__'}
                           onChange={(event) =>
                             updateMapping(
@@ -455,7 +455,7 @@ export function EmailContactImportFlow({
         )}
 
         {step === 2 && (
-          <div className="space-y-3 text-sm text-zinc-300">
+          <div className="space-y-3 text-sm text-[var(--workspace-shell-text-muted)]">
             <p>
               {t('clientImportReviewSummary', {
                 total: allRows.length,
@@ -463,31 +463,31 @@ export function EmailContactImportFlow({
                 missing: missingCount,
               })}
             </p>
-            <p className="text-zinc-400">{t('clientImportDuplicateEmailHint')}</p>
+            <p className="text-[var(--workspace-shell-text-muted)]">{t('clientImportDuplicateEmailHint')}</p>
             {importMode === 'beta_users' ? (
-              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-white/10 bg-black/20 px-4 py-3">
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-3">
                 <Checkbox
                   checked={markPrepaid}
                   onCheckedChange={(checked) => setMarkPrepaid(checked === true)}
                   className="mt-0.5"
                 />
                 <span>
-                  <span className="block font-medium text-white">
+                  <span className="block font-medium text-[var(--workspace-shell-text)]">
                     Mark all as paid £1 (prepaid beta)
                   </span>
-                  <span className="mt-1 block text-zinc-400">
+                  <span className="mt-1 block text-[var(--workspace-shell-text-muted)]">
                     Skips checkout on signup. Dashboard access opens 8 June 2026 for
                     three months.
                   </span>
                 </span>
               </label>
             ) : null}
-            <ul className="list-inside list-disc text-zinc-400">
+            <ul className="list-inside list-disc text-[var(--workspace-shell-text-muted)]">
               {Object.entries(mapping)
                 .filter(([, value]) => value !== '__skip__')
                 .map(([column, field]) => (
                   <li key={column}>
-                    <span className="text-zinc-200">{column}</span>
+                    <span className="text-[var(--workspace-shell-text)]">{column}</span>
                     {' → '}
                     <span className="text-emerald-300">{field}</span>
                   </li>
@@ -498,13 +498,13 @@ export function EmailContactImportFlow({
 
         {step === 3 && result && (
           <div className="space-y-3 text-sm">
-            <p className="text-zinc-200">
+            <p className="text-[var(--workspace-shell-text)]">
               {t('clientImportImported', { count: result.imported })}
               {', '}
               {t('clientImportSkipped', { count: result.skipped.length })}
             </p>
             {result.skipped.length > 0 && (
-              <div className="max-h-48 overflow-y-auto rounded border border-zinc-700 bg-zinc-950/40 p-2 text-xs text-zinc-400">
+              <div className="max-h-48 overflow-y-auto rounded border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40 p-2 text-xs text-[var(--workspace-shell-text-muted)]">
                 {result.skipped.slice(0, 50).map((skipped) => (
                   <div key={`${skipped.rowNumber}-${skipped.reason}`} className="py-0.5">
                     Row {skipped.rowNumber}: {skipReasonLabel(skipped.reason, t)}
@@ -512,7 +512,7 @@ export function EmailContactImportFlow({
                   </div>
                 ))}
                 {result.skipped.length > 50 && (
-                  <p className="pt-1 text-zinc-500">…and {result.skipped.length - 50} more</p>
+                  <p className="pt-1 text-[var(--workspace-shell-text-muted)]">…and {result.skipped.length - 50} more</p>
                 )}
               </div>
             )}
@@ -520,13 +520,13 @@ export function EmailContactImportFlow({
         )}
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2 border-t border-zinc-800 pt-4 sm:justify-between">
+      <div className="mt-4 flex flex-wrap gap-2 border-t border-[color:var(--workspace-shell-border)] pt-4 sm:justify-between">
         <div className="flex gap-2">
           {step > 0 && step < 3 && (
             <Button
               type="button"
               variant="outline"
-              className="border-zinc-600 text-zinc-300"
+              className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]"
               onClick={() => setStep((current) => Math.max(0, current - 1))}
             >
               {t('clientImportBack')}
@@ -621,7 +621,7 @@ export function EmailContactImportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] max-w-4xl flex-col border border-[color:var(--workspace-control-border)] bg-[var(--workspace-shell-panel)] text-white">
+      <DialogContent className="flex max-h-[90vh] max-w-4xl flex-col border border-[color:var(--workspace-control-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription className="sr-only">

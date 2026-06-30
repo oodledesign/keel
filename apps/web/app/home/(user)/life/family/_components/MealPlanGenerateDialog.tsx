@@ -187,17 +187,17 @@ export function MealPlanGenerateDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto border-white/10 bg-[var(--workspace-shell-panel)] text-white sm:max-w-2xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {mode === 'fill' ? (
-              <Wand2 className="h-5 w-5 text-[#5eead4]" />
+              <Wand2 className="h-5 w-5 text-[var(--ozer-accent-muted)]" />
             ) : (
-              <Sparkles className="h-5 w-5 text-[#5eead4]" />
+              <Sparkles className="h-5 w-5 text-[var(--ozer-accent-muted)]" />
             )}
             {modeLabel} with AI
           </DialogTitle>
-          <DialogDescription className="text-zinc-400">
+          <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
             {step === 'confirm'
               ? mode === 'fill'
                 ? `Suggest dinners for ${dayCount} empty day${dayCount === 1 ? '' : 's'}, keeping your existing meals in mind.`
@@ -209,15 +209,15 @@ export function MealPlanGenerateDialog({
         {step === 'confirm' ? (
           <div className="space-y-4">
             {preferenceSummary.length > 0 ? (
-              <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3">
-                <p className="text-xs font-medium text-zinc-400">
+              <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
+                <p className="text-xs font-medium text-[var(--workspace-shell-text-muted)]">
                   Using saved preferences
                 </p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {preferenceSummary.map((item) => (
                     <span
                       key={item}
-                      className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[11px] capitalize text-zinc-300"
+                      className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[11px] capitalize text-[var(--workspace-shell-text-muted)]"
                     >
                       {item}
                     </span>
@@ -225,7 +225,7 @@ export function MealPlanGenerateDialog({
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                 Tip: set dietary requirements in Preferences for better results.
               </p>
             )}
@@ -240,7 +240,7 @@ export function MealPlanGenerateDialog({
         ) : (
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm text-zinc-400">
+              <p className="text-sm text-[var(--workspace-shell-text-muted)]">
                 {selectedCount} of {generated.length} selected
               </p>
               <div className="flex gap-2">
@@ -248,7 +248,7 @@ export function MealPlanGenerateDialog({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-8 text-zinc-400"
+                  className="h-8 text-[var(--workspace-shell-text-muted)]"
                   onClick={() => toggleAll(true)}
                 >
                   Select all
@@ -257,7 +257,7 @@ export function MealPlanGenerateDialog({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-8 text-zinc-400"
+                  className="h-8 text-[var(--workspace-shell-text-muted)]"
                   onClick={() => toggleAll(false)}
                 >
                   Clear
@@ -275,8 +275,8 @@ export function MealPlanGenerateDialog({
                     className={cn(
                       'flex cursor-pointer gap-3 rounded-xl border p-3 transition-colors',
                       checked
-                        ? 'border-[#5eead4]/30 bg-[#5eead4]/5'
-                        : 'border-white/8 bg-white/[0.02] opacity-80',
+                        ? 'border-[#FFE3DA]/30 bg-[#FFE3DA]/5'
+                        : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] opacity-80',
                     )}
                   >
                     <Checkbox
@@ -288,18 +288,18 @@ export function MealPlanGenerateDialog({
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline gap-2">
-                        <span className="text-[11px] font-semibold uppercase text-[#5eead4]/90">
+                        <span className="text-[11px] font-semibold uppercase text-[var(--ozer-accent-muted)]/90">
                           {weekdayLabel(meal.date).slice(0, 3)}
                         </span>
-                        <span className="text-[11px] text-zinc-500">
+                        <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">
                           {meal.date.slice(8, 10)}/{meal.date.slice(5, 7)}
                         </span>
                       </div>
-                      <p className="mt-0.5 text-sm font-semibold text-white">
+                      <p className="mt-0.5 text-sm font-semibold text-[var(--workspace-shell-text)]">
                         {meal.title}
                       </p>
                       {meal.description ? (
-                        <p className="mt-0.5 text-xs text-zinc-400">
+                        <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
                           {meal.description}
                         </p>
                       ) : null}
@@ -308,7 +308,7 @@ export function MealPlanGenerateDialog({
                           {meal.tags.slice(0, 4).map((tag) => (
                             <span
                               key={tag}
-                              className="rounded-full bg-white/[0.06] px-1.5 py-0.5 capitalize text-zinc-400"
+                              className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-1.5 py-0.5 capitalize text-[var(--workspace-shell-text-muted)]"
                             >
                               {tag}
                             </span>
@@ -349,7 +349,7 @@ export function MealPlanGenerateDialog({
               onClick={() => void handleGenerate()}
               disabled={isGenerating || dayCount === 0}
               style={{ backgroundColor: ACCENT }}
-              className="text-white hover:opacity-90"
+              className="text-[var(--workspace-shell-text)] hover:opacity-90"
             >
               {isGenerating ? (
                 <>
@@ -368,7 +368,7 @@ export function MealPlanGenerateDialog({
               onClick={handleApplySelected}
               disabled={isPending || selectedCount === 0}
               style={{ backgroundColor: ACCENT }}
-              className="text-white hover:opacity-90"
+              className="text-[var(--workspace-shell-text)] hover:opacity-90"
             >
               {isPending
                 ? 'Applying…'

@@ -26,7 +26,7 @@ import { createMemberNote, deleteMemberNote } from '../_lib/server/community-sch
 import type { GroupMemberOption, MemberNoteRow } from '../_lib/community-schedule.types';
 
 const panelClass =
-  'rounded-2xl border border-white/6 bg-[var(--workspace-shell-panel)]';
+  'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
 
 type Props = {
   accountSlug: string;
@@ -79,21 +79,21 @@ export function CommunityMemberNotesPanel({
 
   return (
     <section className={panelClass}>
-      <div className="border-b border-white/6 px-5 py-4">
+      <div className="border-b border-[color:var(--workspace-shell-border)] px-5 py-4">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-amber-200/80">
           Member notes & prayer requests
         </h3>
-        <p className="mt-1 text-xs text-white/50">
+        <p className="mt-1 text-xs text-[var(--workspace-shell-text)]/50">
           Pastoral notes per person. Visibility controls who can read them.
         </p>
       </div>
 
-      <form onSubmit={submit} className="space-y-4 border-b border-white/6 p-5">
+      <form onSubmit={submit} className="space-y-4 border-b border-[color:var(--workspace-shell-border)] p-5">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label>About</Label>
             <Select value={subjectUserId} onValueChange={setSubjectUserId}>
-              <SelectTrigger className="border-white/10 bg-white/5 text-white">
+              <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                 <SelectValue placeholder="Member" />
               </SelectTrigger>
               <SelectContent>
@@ -113,7 +113,7 @@ export function CommunityMemberNotesPanel({
                 setCategory(v as 'general' | 'prayer_request')
               }
             >
-              <SelectTrigger className="border-white/10 bg-white/5 text-white">
+              <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -130,7 +130,7 @@ export function CommunityMemberNotesPanel({
                 setVisibility(v as typeof visibility)
               }
             >
-              <SelectTrigger className="border-white/10 bg-white/5 text-white">
+              <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -158,13 +158,13 @@ export function CommunityMemberNotesPanel({
       </form>
 
       {notes.length === 0 ? (
-        <p className="px-5 py-6 text-sm text-white/50">No notes you can view yet.</p>
+        <p className="px-5 py-6 text-sm text-[var(--workspace-shell-text)]/50">No notes you can view yet.</p>
       ) : (
         <ul className="divide-y divide-white/6">
           {notes.map((n) => (
             <li key={n.id} className="px-5 py-4">
-              <div className="flex flex-wrap items-center gap-2 text-xs text-white/50">
-                <span className="font-medium text-white/80">{n.subjectName}</span>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--workspace-shell-text)]/50">
+                <span className="font-medium text-[var(--workspace-shell-text)]/80">{n.subjectName}</span>
                 {n.category === 'prayer_request' ? (
                   <span className="inline-flex items-center gap-1 text-rose-300/90">
                     <Heart className="h-3 w-3" />
@@ -185,14 +185,14 @@ export function CommunityMemberNotesPanel({
                   <span>Leaders + member</span>
                 )}
               </div>
-              <div className="mt-2 text-sm text-white/75">
+              <div className="mt-2 text-sm text-[var(--workspace-shell-text)]/75">
                 {isHtmlContent(n.content) ? (
                   <WorkspaceRichTextHtml html={n.content} />
                 ) : (
                   <p className="whitespace-pre-wrap">{n.content}</p>
                 )}
               </div>
-              <p className="mt-1 text-xs text-white/40">
+              <p className="mt-1 text-xs text-[var(--workspace-shell-text)]/40">
                 {n.authorName} ·{' '}
                 {new Date(n.createdAt).toLocaleDateString('en-GB')}
               </p>

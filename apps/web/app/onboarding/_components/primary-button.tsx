@@ -18,7 +18,7 @@ export function PrimaryButton({
       className={
         className
           ? className
-          : 'w-full bg-[var(--keel-teal)] text-white hover:bg-[#238b7f]'
+          : 'w-full bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]'
       }
       {...props}
     >

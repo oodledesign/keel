@@ -93,14 +93,14 @@ export function PortalProposalView({
 
   const statusClasses =
     localStatus === 'approved'
-      ? 'border-[var(--keel-teal)]/25 bg-[var(--keel-teal)]/12 text-[#97D9AA]'
+      ? 'border-[var(--ozer-accent)]/25 bg-[var(--ozer-accent)]/12 text-[#97D9AA]'
       : localStatus === 'declined'
         ? 'border-[#E85D75]/25 bg-[#E85D75]/12 text-[#F6A7B5]'
         : localStatus === 'read'
           ? 'border-amber-500/25 bg-amber-500/10 text-amber-200'
           : localStatus === 'sent'
             ? 'border-[#39AEB3]/25 bg-[#39AEB3]/12 text-[#B8D3D7]'
-            : 'border-white/10 bg-white/6 text-[#D7DEEE]';
+            : 'border-[color:var(--workspace-shell-border)] bg-white/6 text-[#D7DEEE]';
 
   const handleComment = () => {
     if (!commentBody.trim() || !authorName.trim()) {
@@ -155,11 +155,11 @@ export function PortalProposalView({
   };
 
   return (
-    <div className="rounded-xl border border-zinc-700 bg-zinc-900/80 p-6 shadow-lg sm:p-8">
+    <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/80 p-6 shadow-lg sm:p-8">
       <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-bold text-white">
+            <h1 className="text-2xl font-bold text-[var(--workspace-shell-text)]">
               {data.title?.trim() || 'Proposal'}
             </h1>
             <span
@@ -168,7 +168,7 @@ export function PortalProposalView({
               {localStatus}
             </span>
           </div>
-          <p className="mt-1 text-sm text-zinc-400">Prepared for {recipientLabel}</p>
+          <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">Prepared for {recipientLabel}</p>
         </div>
         <Button variant="outline" size="sm" asChild>
           <a href={pdfUrl}>
@@ -181,14 +181,14 @@ export function PortalProposalView({
       <div className="mt-6 flex flex-wrap gap-6 text-sm">
         {data.expires_at ? (
           <div>
-            <span className="text-zinc-500">Expires</span>
-            <p className="font-medium text-zinc-200">{formatDate(data.expires_at)}</p>
+            <span className="text-[var(--workspace-shell-text-muted)]">Expires</span>
+            <p className="font-medium text-[var(--workspace-shell-text)]">{formatDate(data.expires_at)}</p>
           </div>
         ) : null}
         {data.total_pence != null ? (
           <div>
-            <span className="text-zinc-500">Total</span>
-            <p className="font-medium text-zinc-200">
+            <span className="text-[var(--workspace-shell-text-muted)]">Total</span>
+            <p className="font-medium text-[var(--workspace-shell-text)]">
               {formatPence(data.total_pence, data.currency ?? 'GBP')}
             </p>
           </div>
@@ -196,7 +196,7 @@ export function PortalProposalView({
       </div>
 
       <div
-        className="prose prose-invert mt-8 max-w-none rounded-lg border border-zinc-700 bg-white p-6 text-[#1E293B] prose-headings:text-[#1E293B] prose-p:text-[#334155]"
+        className="prose prose-invert mt-8 max-w-none rounded-lg border border-[color:var(--workspace-shell-border)] bg-white p-6 text-[var(--ozer-text-on-light)] prose-headings:text-[var(--ozer-text-on-light)] prose-p:text-[#334155]"
         dangerouslySetInnerHTML={{
           __html: sanitizeCommunityHtml(data.content_html ?? ''),
         }}
@@ -204,41 +204,41 @@ export function PortalProposalView({
 
       {comments.length > 0 ? (
         <div className="mt-8 space-y-3">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-300">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-[var(--workspace-shell-text-muted)]">
             <MessageSquare className="h-4 w-4" />
             Comments
           </h2>
           {comments.map((comment) => (
-            <div key={comment.id} className="rounded-lg border border-zinc-700 bg-zinc-800/50 p-3">
-              <p className="text-xs text-zinc-500">
+            <div key={comment.id} className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/50 p-3">
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                 {comment.author_name ?? 'Guest'} · {formatDate(comment.created_at)}
               </p>
-              <p className="mt-1 text-sm text-zinc-200">{comment.body}</p>
+              <p className="mt-1 text-sm text-[var(--workspace-shell-text)]">{comment.body}</p>
             </div>
           ))}
         </div>
       ) : null}
 
       {canRespond ? (
-        <div className="mt-8 space-y-4 rounded-lg border border-zinc-700 bg-zinc-800/40 p-4">
-          <h2 className="text-sm font-semibold text-white">Your response</h2>
+        <div className="mt-8 space-y-4 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/40 p-4">
+          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Your response</h2>
           <div>
-            <Label className="text-zinc-400">Your name</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">Your name</Label>
             <Input
               value={authorName}
               onChange={(e) => setAuthorName(e.target.value)}
               placeholder="Your name"
-              className="mt-1 border-zinc-600 bg-zinc-900"
+              className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]"
             />
           </div>
           <div>
-            <Label className="text-zinc-400">Leave a comment (optional)</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">Leave a comment (optional)</Label>
             <Textarea
               value={commentBody}
               onChange={(e) => setCommentBody(e.target.value)}
               rows={3}
               placeholder="Questions or feedback…"
-              className="mt-1 border-zinc-600 bg-zinc-900"
+              className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]"
             />
           </div>
           {commentBody.trim() ? (
@@ -248,11 +248,11 @@ export function PortalProposalView({
             </Button>
           ) : null}
 
-          <div className="flex flex-wrap gap-2 border-t border-zinc-700 pt-4">
+          <div className="flex flex-wrap gap-2 border-t border-[color:var(--workspace-shell-border)] pt-4">
             <Button
               size="sm"
               disabled={pending}
-              className="bg-[var(--keel-teal)] text-[#09111F] hover:bg-[#6BD48F]"
+              className="bg-[var(--ozer-accent)] text-[#09111F] hover:bg-[#6BD48F]"
               onClick={handleApprove}
             >
               {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
@@ -266,12 +266,12 @@ export function PortalProposalView({
             ) : (
               <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-end">
                 <div className="flex-1">
-                  <Label className="text-zinc-400">Reason (optional)</Label>
+                  <Label className="text-[var(--workspace-shell-text-muted)]">Reason (optional)</Label>
                   <Input
                     value={declineReason}
                     onChange={(e) => setDeclineReason(e.target.value)}
                     placeholder="Let us know why"
-                    className="mt-1 border-zinc-600 bg-zinc-900"
+                    className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]"
                   />
                 </div>
                 <Button variant="destructive" size="sm" disabled={pending} onClick={handleDecline}>
@@ -284,7 +284,7 @@ export function PortalProposalView({
       ) : null}
 
       {localStatus === 'approved' ? (
-        <div className="mt-6 rounded-lg border border-emerald-700 bg-[var(--keel-teal)]/10 px-4 py-3 text-[#5eead4]">
+        <div className="mt-6 rounded-lg border border-emerald-700 bg-[var(--ozer-accent-subtle)] px-4 py-3 text-[var(--ozer-accent-muted)]">
           This proposal was approved{data.approved_at ? ` on ${formatDate(data.approved_at)}` : ''}. Thank you!
         </div>
       ) : null}

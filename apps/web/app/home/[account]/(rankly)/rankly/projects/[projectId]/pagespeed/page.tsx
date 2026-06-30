@@ -44,7 +44,7 @@ export default async function RanklyProjectPagespeedPage({
         title="PageSpeed Insights"
         description="Track Lighthouse scores and Core Web Vitals for your homepage and key landing pages — refreshed automatically on your schedule."
       />
-      <div className="rounded-lg border border-white/10 bg-black/10 p-5">
+      <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-5">
         <PagespeedPanel
           account={account}
           accountId={accountId}

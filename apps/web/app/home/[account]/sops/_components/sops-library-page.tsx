@@ -13,7 +13,7 @@ import type {
 } from '../_lib/server/sops-data';
 
 const panelClass =
-  'rounded-[24px] border border-white/6 bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]';
+  'rounded-[24px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]';
 
 const recurrenceLabel: Record<string, string> = {
   monthly: 'Monthly',
@@ -68,7 +68,7 @@ export function SopsLibraryPage({
       {playbooks.length === 0 ? (
         <div className={`${panelClass} px-6 py-12 text-center`}>
           <ListChecks className="text-muted-foreground mx-auto h-10 w-10" />
-          <h2 className="mt-4 text-lg font-semibold text-white">
+          <h2 className="mt-4 text-lg font-semibold text-[var(--workspace-shell-text)]">
             No playbooks yet
           </h2>
           <p className="text-muted-foreground mx-auto mt-2 max-w-md text-sm">
@@ -83,7 +83,7 @@ export function SopsLibraryPage({
       ) : (
         Object.entries(byCategory).map(([category, items]) => (
           <section key={category} className="space-y-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
               {category}
             </h2>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -93,10 +93,10 @@ export function SopsLibraryPage({
                   href={pathsConfig.app.accountSopsPlaybook
                     .replace('[account]', accountSlug)
                     .replace('[playbookId]', pb.id)}
-                  className={`${panelClass} block p-5 transition-colors hover:border-white/15`}
+                  className={`${panelClass} block p-5 transition-colors hover:border-[color:var(--workspace-shell-border)]`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-semibold text-white">{pb.title}</h3>
+                    <h3 className="font-semibold text-[var(--workspace-shell-text)]">{pb.title}</h3>
                     <Badge variant="outline" className="shrink-0 text-xs">
                       {recurrenceLabel[pb.recurrence] ?? pb.recurrence}
                     </Badge>
@@ -121,7 +121,7 @@ export function SopsLibraryPage({
 
       {recentRuns.length > 0 ? (
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
             Recent runs
           </h2>
           <div className={`${panelClass} divide-y divide-white/6`}>
@@ -136,10 +136,10 @@ export function SopsLibraryPage({
                   href={pathsConfig.app.accountSopsRun
                     .replace('[account]', accountSlug)
                     .replace('[runId]', run.id)}
-                  className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-white/[0.02]"
+                  className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-white">{run.title}</p>
+                    <p className="truncate font-medium text-[var(--workspace-shell-text)]">{run.title}</p>
                     <p className="text-muted-foreground text-xs">
                       {run.playbook_title}
                       {run.period_label ? ` · ${run.period_label}` : ''}
@@ -147,7 +147,7 @@ export function SopsLibraryPage({
                     </p>
                   </div>
                   <div className="text-right text-sm">
-                    <p className="text-[var(--keel-teal)]">{pct}%</p>
+                    <p className="text-[var(--ozer-accent)]">{pct}%</p>
                     <p className="text-muted-foreground text-xs">
                       {run.completed_steps}/{run.total_steps}
                     </p>

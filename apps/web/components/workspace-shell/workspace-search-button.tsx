@@ -15,14 +15,14 @@ export function WorkspaceSearchButton(props: { className?: string }) {
       type="button"
       variant="outline"
       className={cn(
-        'hidden h-10 gap-2 rounded-lg border-white/12 bg-transparent px-3 text-sm font-medium text-white/90 shadow-none hover:bg-white/[0.06] hover:text-white sm:inline-flex',
+        'hidden h-10 gap-2 rounded-lg border-[color:var(--workspace-shell-border)] bg-transparent px-3 text-sm font-medium text-[var(--workspace-shell-text)]/90 shadow-none hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)] sm:inline-flex',
         props.className,
       )}
       onClick={() => setOpen(true)}
     >
-      <Sparkles className="h-4 w-4 text-white/70" />
+      <Sparkles className="h-4 w-4 text-[var(--workspace-shell-text)]/70" />
       <span>Quick action</span>
-      <kbd className="pointer-events-none hidden rounded border border-white/12 bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-medium text-white/55 lg:inline">
+      <kbd className="pointer-events-none hidden rounded border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--workspace-shell-text)]/55 lg:inline">
         ⌘K
       </kbd>
     </Button>

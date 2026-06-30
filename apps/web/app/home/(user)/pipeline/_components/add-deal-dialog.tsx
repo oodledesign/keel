@@ -216,24 +216,24 @@ export function AddDealDialog({
           Add to pipeline
         </button>
       </DialogTrigger>
-      <DialogContent className="border-white/8 bg-[#0F1923] text-white sm:max-w-md">
+      <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[#0F1923] text-[var(--workspace-shell-text)] sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add to pipeline</DialogTitle>
-          <DialogDescription className="text-zinc-400">
+          <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
             Track a new lead or an opportunity for an existing client.
           </DialogDescription>
         </DialogHeader>
 
         {canLinkClient ? (
-          <div className="flex rounded-xl border border-white/8 bg-white/5 p-1 text-sm">
+          <div className="flex rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-1 text-sm">
             <button
               type="button"
               onClick={() => setMode('lead')}
               className={cn(
                 'flex-1 rounded-lg px-3 py-1.5 font-medium transition-colors',
                 mode === 'lead'
-                  ? 'bg-white/10 text-white'
-                  : 'text-zinc-400 hover:text-white',
+                  ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                  : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
               )}
             >
               New lead
@@ -244,8 +244,8 @@ export function AddDealDialog({
               className={cn(
                 'flex-1 rounded-lg px-3 py-1.5 font-medium transition-colors',
                 mode === 'client'
-                  ? 'bg-white/10 text-white'
-                  : 'text-zinc-400 hover:text-white',
+                  ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                  : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
               )}
             >
               Existing client
@@ -256,7 +256,7 @@ export function AddDealDialog({
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
           {mode === 'client' ? (
             <div className="space-y-2">
-              <Label className="text-zinc-300">Client *</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">Client *</Label>
               <ClientCombobox
                 clients={clients}
                 value={clientId}
@@ -268,25 +268,25 @@ export function AddDealDialog({
           ) : (
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="contactName" className="text-zinc-300">
+                <Label htmlFor="contactName" className="text-[var(--workspace-shell-text-muted)]">
                   Contact name *
                 </Label>
                 <Input
                   id="contactName"
                   name="contactName"
                   placeholder="Jane Smith"
-                  className="border-white/10 bg-white/5 text-white placeholder:text-zinc-600"
+                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="companyName" className="text-zinc-300">
+                <Label htmlFor="companyName" className="text-[var(--workspace-shell-text-muted)]">
                   Company
                 </Label>
                 <Input
                   id="companyName"
                   name="companyName"
                   placeholder="Acme Ltd"
-                  className="border-white/10 bg-white/5 text-white placeholder:text-zinc-600"
+                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
                 />
               </div>
             </div>
@@ -295,12 +295,12 @@ export function AddDealDialog({
           <div className={`grid gap-4 ${showAssignField ? 'grid-cols-2' : 'grid-cols-1'}`}>
             {showAssignField ? (
               <div className="space-y-2">
-                <Label className="text-zinc-300">Workspace *</Label>
+                <Label className="text-[var(--workspace-shell-text-muted)]">Workspace *</Label>
                 <Select value={businessId} onValueChange={setBusinessId}>
-                  <SelectTrigger className="border-white/10 bg-white/5 text-white">
+                  <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                     <SelectValue placeholder="Select workspace" />
                   </SelectTrigger>
-                  <SelectContent className="border-white/10 bg-[#1A2535] text-white">
+                  <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
                     {businesses.map((biz) => (
                       <SelectItem key={biz.id} value={biz.id}>
                         <span className="flex items-center gap-2">
@@ -319,12 +319,12 @@ export function AddDealDialog({
               </div>
             ) : null}
             <div className="space-y-2">
-              <Label className="text-zinc-300">Stage</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">Stage</Label>
               <Select value={stage} onValueChange={setStage}>
-                <SelectTrigger className="border-white/10 bg-white/5 text-white">
+                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="border-white/10 bg-[#1A2535] text-white">
+                <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
                   {STAGES.map((s) => (
                     <SelectItem key={s.key} value={s.key}>
                       {s.label}
@@ -336,7 +336,7 @@ export function AddDealDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="value" className="text-zinc-300">
+            <Label htmlFor="value" className="text-[var(--workspace-shell-text-muted)]">
               Value (£)
             </Label>
             <Input
@@ -346,31 +346,31 @@ export function AddDealDialog({
               min="0"
               step="1"
               placeholder="5000"
-              className="border-white/10 bg-white/5 text-white placeholder:text-zinc-600"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="nextAction" className="text-zinc-300">
+              <Label htmlFor="nextAction" className="text-[var(--workspace-shell-text-muted)]">
                 Short description / next action
               </Label>
               <Input
                 id="nextAction"
                 name="nextAction"
                 placeholder="Short description"
-                className="border-white/10 bg-white/5 text-white placeholder:text-zinc-600"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="nextActionDate" className="text-zinc-300">
+              <Label htmlFor="nextActionDate" className="text-[var(--workspace-shell-text-muted)]">
                 Action date
               </Label>
               <Input
                 id="nextActionDate"
                 name="nextActionDate"
                 type="date"
-                className="border-white/10 bg-white/5 text-white placeholder:text-zinc-600"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
               />
             </div>
           </div>
@@ -381,7 +381,7 @@ export function AddDealDialog({
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="h-9 rounded-xl border border-white/10 px-4 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/5"
+              className="h-9 rounded-xl border border-[color:var(--workspace-shell-border)] px-4 text-sm font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
             >
               Cancel
             </button>

@@ -1,15 +1,8 @@
 import { Metadata, Viewport } from 'next';
 
 import appConfig from '~/config/app.config';
-import { brandConfig } from '~/config/brand.config';
+import { brandAssets, brandConfig } from '~/config/brand.config';
 import { getSearchIndexingRobots } from '~/lib/seo/search-indexing';
-
-/**
- * @name generateRootMetadata
- * @description Generates the root metadata for the application.
- * Kept static (no headers()) to avoid Next.js 16 metadata boundary hydration mismatch.
- * CSRF is read from cookies/headers at request time where needed.
- */
 export const generateRootMetadata = (): Metadata => ({
   title: appConfig.title,
   description: appConfig.description,
@@ -35,14 +28,17 @@ export const generateRootMetadata = (): Metadata => ({
   },
   icons: {
     icon: [
-      { url: '/images/brand/favicon-32.png', type: 'image/png', sizes: '32x32' },
-      { url: brandConfig.logos.icon.light, type: 'image/png', sizes: '512x512' },
+      { url: brandAssets.favicon, type: 'image/svg+xml' },
+      { url: brandConfig.logos.icon.light, type: 'image/svg+xml', sizes: 'any' },
     ],
-    apple: '/images/brand/apple-touch-icon.png',
+    apple: brandConfig.logos.icon.light,
   },
 });
 
 export const generateRootViewport = (): Viewport => ({
-  colorScheme: 'dark',
-  themeColor: appConfig.themeColorDark,
+  colorScheme: 'light dark',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: appConfig.themeColor },
+    { media: '(prefers-color-scheme: dark)', color: appConfig.themeColorDark },
+  ],
 });

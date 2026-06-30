@@ -79,7 +79,7 @@ export function PersonalEmailAssistantBillingCard(props: {
   }
 
   return (
-    <Card className={props.highlighted ? 'ring-2 ring-[var(--keel-teal)]' : undefined}>
+    <Card className={props.highlighted ? 'ring-2 ring-[var(--ozer-accent)]' : undefined}>
       <CardHeader>
         <CardTitle className="text-base">{EMAIL_ASSISTANT.name}</CardTitle>
         <CardDescription>{EMAIL_ASSISTANT.description}</CardDescription>

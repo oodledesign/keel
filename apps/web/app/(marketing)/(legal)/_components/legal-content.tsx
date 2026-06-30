@@ -7,7 +7,7 @@ export function PrivacyPolicyContent() {
       <p>
         <strong>Last updated:</strong> 15 June 2026. Oodle Designs Ltd (&quot;Ozer&quot;,
         &quot;we&quot;, &quot;us&quot;) is the data controller for personal data processed
-        through keelos.so and related services. We comply with the UK GDPR, EU GDPR, and
+        through ozer.so and related services. We comply with the UK GDPR, EU GDPR, and
         the Data Protection Act 2018.
       </p>
 
@@ -65,7 +65,7 @@ export function PrivacyPolicyContent() {
         <p>
           We retain data while your account is active and as required by law. You may
           access, rectify, erase, restrict, object, or port your data, and lodge a complaint
-          with the ICO (UK) or your local supervisory authority. Contact: privacy@keelos.so.
+          with the ICO (UK) or your local supervisory authority. Contact: privacy@ozer.so.
         </p>
       </section>
     </article>
