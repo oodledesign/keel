@@ -28,8 +28,17 @@ export function navHrefPathname(href: string): string {
 
 /** Map legacy `/home/*` stored shortcuts to public `/app/*` paths. */
 export function normalizeAppHref(href: string): string {
-  const trimmed = href.trim();
+  let trimmed = href.trim();
   if (!trimmed) return trimmed;
+
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    try {
+      const url = new URL(trimmed);
+      trimmed = `${url.pathname}${url.search}`;
+    } catch {
+      return trimmed;
+    }
+  }
 
   const [pathPart, ...rest] = trimmed.split('?');
   const path = pathPart ?? trimmed;

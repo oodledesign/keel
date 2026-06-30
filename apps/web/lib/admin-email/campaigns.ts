@@ -2,10 +2,13 @@ import 'server-only';
 
 import { randomUUID, createHmac, timingSafeEqual } from 'node:crypto';
 
-import { isEmailSuppressed } from '~/lib/email/is-suppressed';
+import { htmlToPlainText } from '~/lib/email/html-to-plain-text';
+import {
+  getTransactionalEmailSender,
+  sendTransactionalEmail,
+} from '~/lib/email/zeptomail-client';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { insertPlatformEmailLog } from '@kit/supabase/platform-email-log';
-import { htmlToPlainText, sendSesRawEmail } from '~/lib/server/ses-raw-email';
 
 import {
   prepareCampaignHtmlForDelivery,
@@ -952,7 +955,7 @@ function buildRecipientHtml(params: {
   });
 }
 
-async function sendSesEmail(params: {
+async function sendCampaignEmail(params: {
   to: string;
   subject: string;
   html: string;
@@ -960,20 +963,22 @@ async function sendSesEmail(params: {
   campaignId: string;
   listUnsubscribeUrl?: string;
 }) {
-  if (await isEmailSuppressed(params.to)) {
+  const result = await sendTransactionalEmail({
+    to: params.to,
+    subject: params.subject,
+    htmlBody: params.html,
+    textBody: params.text,
+    clientReference: params.campaignId,
+    listUnsubscribeUrl: params.listUnsubscribeUrl,
+  });
+
+  if (!result.sent) {
     throw new Error(
       `${params.to} is on the email suppression list (bounce or complaint). Remove it in Supabase email_suppressions before retrying.`,
     );
   }
 
-  return sendSesRawEmail({
-    to: params.to,
-    subject: params.subject,
-    html: params.html,
-    text: params.text,
-    campaignId: params.campaignId,
-    listUnsubscribeUrl: params.listUnsubscribeUrl,
-  });
+  return getTransactionalEmailSender();
 }
 
 export async function sendCampaign(campaignId: string) {
@@ -1061,7 +1066,7 @@ export async function sendCampaign(campaignId: string) {
         let from: string | null = null;
 
         try {
-          from = await sendSesEmail({
+          from = await sendCampaignEmail({
             to: recipient.email,
             subject: campaign.subject,
             html,
@@ -1135,7 +1140,7 @@ export async function sendTestCampaignEmail(params: {
   const subject = `[${label}] ${params.subject}`;
   const html = prepareCampaignHtmlForDelivery(params.html);
 
-  const from = await sendSesEmail({
+  const from = await sendCampaignEmail({
     to: params.to,
     subject,
     html,

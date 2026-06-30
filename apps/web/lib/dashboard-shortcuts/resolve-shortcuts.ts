@@ -4,7 +4,11 @@ import type { ShortcutCatalogItem, ResolvedShortcut, StoredShortcut } from './ty
 import { catalogItemKey } from './types';
 import { catalogItemHref, resolveShortcutHref } from './resolve-href';
 import { normalizeAppHref } from './personal-home-url';
-import { resolveNavIconKey, type MobileNavIconKey } from '~/lib/mobile-nav/nav-icon-keys';
+import {
+  coerceMobileNavIconKey,
+  resolveNavIconKey,
+  type MobileNavIconKey,
+} from '~/lib/mobile-nav/nav-icon-keys';
 
 const LEGACY_MODULE_ICON_KEYS: Record<string, MobileNavIconKey> = {
   projects: 'jobs',
@@ -37,55 +41,14 @@ const LEGACY_MODULE_ICON_KEYS: Record<string, MobileNavIconKey> = {
   social: 'social',
 };
 
-function coerceStoredIconKey(value: string | undefined): MobileNavIconKey | null {
-  if (!value?.trim()) return null;
-
-  const key = value.trim() as MobileNavIconKey;
-  const allowed: MobileNavIconKey[] = [
-    'home',
-    'tasks',
-    'pipeline',
-    'email',
-    'planner',
-    'today',
-    'people',
-    'jobs',
-    'schedule',
-    'clients',
-    'meetings',
-    'websites',
-    'support',
-    'invoices',
-    'proposals',
-    'contracts',
-    'notes',
-    'brain',
-    'sops',
-    'messages',
-    'finances',
-    'videos',
-    'rankly',
-    'signatures',
-    'feedflow',
-    'reviews',
-    'social',
-    'apps',
-    'properties',
-    'calendar',
-    'shopping',
-    'meal',
-    'workspace',
-  ];
-
-  return allowed.includes(key) ? key : null;
-}
-
 function resolveStoredIconKey(
   row: StoredShortcut,
   normalizedHref: string,
 ): MobileNavIconKey {
-  const stored = coerceStoredIconKey(row.iconKey);
-  if (stored) return stored;
+  const stored = coerceMobileNavIconKey(row.iconKey);
+  if (stored && stored !== 'workspace') {
+    return stored;
+  }
 
   if (row.catalogId === 'workspace.module') {
     const moduleKey = row.params.module?.trim();

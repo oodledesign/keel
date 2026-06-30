@@ -32,7 +32,10 @@ import {
 
 import { cn } from '@kit/ui/utils';
 
-import type { MobileNavIconKey } from '~/lib/mobile-nav/nav-icon-keys';
+import {
+  coerceMobileNavIconKey,
+  type MobileNavIconKey,
+} from '~/lib/mobile-nav/nav-icon-keys';
 
 const ICON_BY_KEY: Record<MobileNavIconKey, LucideIcon> = {
   home: Home,
@@ -85,7 +88,7 @@ export function MobileNavTabIcon({
   avatarFallback,
   className,
 }: MobileNavTabIconProps) {
-  const resolvedKey = coerceIconKey(iconKey) ?? 'workspace';
+  const resolvedKey = coerceMobileNavIconKey(iconKey) ?? 'workspace';
 
   if (avatarUrl) {
     return (
@@ -112,10 +115,6 @@ export function MobileNavTabIcon({
     );
   }
 
-  const Icon = ICON_BY_KEY[resolvedKey] ?? LayoutDashboard;
+  const Icon = ICON_BY_KEY[resolvedKey];
   return <Icon className={cn('h-[21px] w-[21px]', className)} />;
-}
-
-function coerceIconKey(value: MobileNavIconKey): MobileNavIconKey {
-  return value in ICON_BY_KEY ? value : 'workspace';
 }

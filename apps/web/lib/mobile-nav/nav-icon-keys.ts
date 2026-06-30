@@ -51,6 +51,7 @@ const PERSONAL_SEGMENT_KEYS: Record<string, MobileNavIconKey> = {
 
 const WORKSPACE_SEGMENT_KEYS: Record<string, MobileNavIconKey> = {
   jobs: 'jobs',
+  projects: 'jobs',
   campaigns: 'jobs',
   tasks: 'tasks',
   planner: 'planner',
@@ -88,8 +89,79 @@ const WORKSPACE_SEGMENT_KEYS: Record<string, MobileNavIconKey> = {
   billing: 'finances',
 };
 
+const MOBILE_NAV_ICON_KEY_SET = new Set<string>([
+  'home',
+  'tasks',
+  'pipeline',
+  'email',
+  'planner',
+  'today',
+  'people',
+  'jobs',
+  'schedule',
+  'clients',
+  'meetings',
+  'websites',
+  'support',
+  'invoices',
+  'proposals',
+  'contracts',
+  'notes',
+  'brain',
+  'sops',
+  'messages',
+  'finances',
+  'videos',
+  'rankly',
+  'signatures',
+  'feedflow',
+  'reviews',
+  'social',
+  'apps',
+  'properties',
+  'calendar',
+  'shopping',
+  'meal',
+  'workspace',
+]);
+
+export function coerceMobileNavIconKey(
+  value: string | undefined | null,
+): MobileNavIconKey | null {
+  const key = value?.trim();
+  if (!key) return null;
+  return MOBILE_NAV_ICON_KEY_SET.has(key) ? (key as MobileNavIconKey) : null;
+}
+
 function normalizeNavPath(path: string): string {
   return navHrefPathname(path);
+}
+
+export function resolveMobileNavIconKey(
+  path: string,
+  options?: { homePath?: string; preferredKey?: string },
+): MobileNavIconKey {
+  const preferred = coerceMobileNavIconKey(options?.preferredKey);
+  const fromPath = resolveNavIconKey(path);
+
+  if (preferred && preferred !== 'workspace') {
+    return preferred;
+  }
+
+  if (options?.homePath) {
+    const target = normalizeNavPath(normalizeAppHref(path));
+    const homePathname = normalizeNavPath(normalizeAppHref(options.homePath));
+
+    if (target === homePathname) {
+      return 'home';
+    }
+  }
+
+  if (fromPath !== 'workspace') {
+    return fromPath;
+  }
+
+  return preferred ?? fromPath;
 }
 
 export function resolveNavIconKey(path: string): MobileNavIconKey {

@@ -3,9 +3,9 @@ import 'server-only';
 import { getMailer, sanitizeEmailSender } from '@kit/mailers';
 import { insertPlatformEmailLog } from '@kit/supabase/platform-email-log';
 
-import { isEmailSuppressed } from '~/lib/email/is-suppressed';
 import { formatEmailDeliveryError } from '~/lib/email/format-email-delivery-error';
-import { sendSesRawEmail } from '~/lib/server/ses-raw-email';
+import { htmlToPlainText } from '~/lib/email/html-to-plain-text';
+import { sendTransactionalEmail } from '~/lib/email/zeptomail-client';
 
 export const PLATFORM_EMAIL_TYPES = [
   'invitation',
@@ -46,12 +46,6 @@ export async function sendPlatformEmail(params: {
 }): Promise<void> {
   const recipient = params.mail.to.trim();
 
-  if (await isEmailSuppressed(recipient)) {
-    throw new Error(
-      `Email could not be sent: ${recipient} is on the suppression list.`,
-    );
-  }
-
   const mail = {
     ...params.mail,
     from: sanitizeEmailSender(params.mail.from),
@@ -64,12 +58,23 @@ export async function sendPlatformEmail(params: {
       const mailer = await getMailer();
       await mailer.sendEmail(mail);
     } else {
-      await sendSesRawEmail({
+      const htmlBody =
+        'html' in mail ? mail.html : `<pre>${mail.text}</pre>`;
+      const textBody =
+        'text' in mail ? mail.text : htmlToPlainText(htmlBody);
+
+      const result = await sendTransactionalEmail({
         to: mail.to,
-        from: mail.from,
         subject: mail.subject,
-        ...('html' in mail ? { html: mail.html } : { text: mail.text }),
+        htmlBody,
+        textBody,
       });
+
+      if (!result.sent) {
+        throw new Error(
+          `Email could not be sent: ${recipient} is on the suppression list.`,
+        );
+      }
     }
   } catch (error) {
     status = 'failed';
