@@ -122,7 +122,8 @@ function CircuitPaths({
           <path
             d={path.d}
             fill="none"
-            stroke="rgba(45,212,191,0.2)"
+            stroke="var(--ozer-coral-alpha-45)"
+            strokeOpacity="0.35"
             strokeWidth="1.5"
             vectorEffect="non-scaling-stroke"
           />
@@ -130,8 +131,8 @@ function CircuitPaths({
             <circle
               key={`${path.id}-${begin}`}
               r="1"
-              fill="#2dd4bf"
-              style={{ filter: 'drop-shadow(0 0 1.5px #2dd4bf)' }}
+              fill="var(--ozer-accent)"
+              style={{ filter: 'drop-shadow(0 0 2px var(--ozer-coral-alpha-45))' }}
             >
               <animateMotion
                 dur={`${DOT_DURATION_S}s`}
@@ -161,7 +162,7 @@ function OrbitWorkspaceCard({
   return (
     <div
       className={cn(
-        'relative z-10 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)]/90 text-center shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-sm',
+        'relative z-10 rounded-xl border border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-cream-50)] text-center shadow-[0_8px_24px_rgba(42,23,32,0.28)] backdrop-blur-sm',
         compact
           ? 'w-full px-1.5 py-2'
           : 'w-[104px] px-2 py-2.5 sm:w-[128px] sm:px-3 sm:py-3 lg:w-[140px]',
@@ -170,7 +171,7 @@ function OrbitWorkspaceCard({
     >
       <span
         className={cn(
-          'mx-auto flex items-center justify-center rounded-lg border border-[color:var(--workspace-shell-border)]',
+          'mx-auto flex items-center justify-center rounded-lg border border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-white)]',
           compact ? 'h-7 w-7' : 'h-8 w-8',
         )}
         style={{ backgroundColor: `${node.color}22` }}
@@ -183,14 +184,14 @@ function OrbitWorkspaceCard({
       </span>
       <p
         className={cn(
-          'font-bold text-[var(--workspace-shell-text)]',
+          'font-bold text-[var(--ozer-text-on-light)]',
           compact ? 'mt-1.5 text-[10px] leading-tight' : 'mt-2 text-sm',
         )}
       >
         {compact && node.id === 'family' ? 'Family' : node.label}
       </p>
       {!compact ? (
-        <p className="mt-1.5 text-[9px] leading-snug text-violet-100/60 sm:mt-2 sm:text-[10px]">
+        <p className="mt-1.5 text-[9px] leading-snug text-[var(--ozer-plum-600)] sm:mt-2 sm:text-[10px]">
           {node.examples}
         </p>
       ) : null}
@@ -212,8 +213,8 @@ function AssistantBillingBadge({
           className={cn(
             'absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full border',
             isAddon
-              ? 'border-violet-300/50 bg-violet-600 text-violet-50'
-              : 'border-[#2dd4bf]/50 bg-[#0d4f47] text-[#2dd4bf]',
+              ? 'border-[color:var(--ozer-coral-alpha-45)] bg-[var(--ozer-coral-600)] text-[var(--ozer-white)]'
+              : 'border-[color:var(--ozer-coral-alpha-45)] bg-[var(--ozer-plum-800)] text-[var(--ozer-accent)]',
           )}
           aria-label={assistant.addonTooltip}
         >
@@ -246,7 +247,7 @@ function AssistantLayerCard({
   return (
     <div
       className={cn(
-        'relative z-10 rounded-lg border border-violet-400/20 border-l-2 border-l-violet-400/60 bg-[var(--ozer-plum-950)]/95 text-center shadow-[0_4px_16px_rgba(0,0,0,0.25)]',
+        'relative z-10 rounded-lg border border-[color:var(--ozer-border-on-dark)] border-l-2 border-l-[var(--ozer-accent)]/50 bg-[color-mix(in_srgb,var(--ozer-plum-900)_95%,var(--ozer-plum-950))] text-center shadow-[0_4px_16px_rgba(42,23,32,0.35)]',
         compact
           ? 'w-full px-1.5 py-2'
           : 'w-[96px] px-2 py-2 sm:w-[118px] sm:px-2.5 sm:py-2.5 lg:w-[132px]',
@@ -254,7 +255,7 @@ function AssistantLayerCard({
     >
       <span
         className={cn(
-          'relative mx-auto flex items-center justify-center rounded-md bg-violet-500/15 text-violet-300',
+          'relative mx-auto flex items-center justify-center rounded-md bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]',
           compact ? 'h-7 w-7' : 'h-8 w-8',
         )}
       >
@@ -290,18 +291,18 @@ function PersonalHomeCard({
   return (
     <div
       className={cn(
-        'relative z-20 rounded-xl border-2 bg-[#0d0b1e] text-center transition-[border-color,box-shadow] duration-200',
+        'relative z-20 rounded-xl border-2 bg-[var(--ozer-plum-900)] text-center transition-[border-color,box-shadow] duration-200',
         compact
           ? 'w-[118px] px-3 py-3'
           : 'w-[118px] px-3 py-3 sm:w-[140px] sm:px-4 sm:py-4 lg:w-[160px] lg:scale-110',
         flashing
-          ? 'border-[#FFE3DA] shadow-[0_0_30px_rgba(45,212,191,0.42)]'
-          : 'border-[#2dd4bf] shadow-[0_0_18px_rgba(45,212,191,0.22)]',
+          ? 'border-[var(--ozer-coral-100)] shadow-[0_0_30px_var(--ozer-coral-alpha-45)]'
+          : 'border-[var(--ozer-accent)] shadow-[0_0_18px_var(--ozer-coral-alpha-15)]',
         className,
       )}
     >
-      <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg border border-[#2dd4bf]/30 bg-[#2dd4bf]/10">
-        <Home className="h-4 w-4 text-[#2dd4bf]" aria-hidden />
+      <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg border border-[color:var(--ozer-coral-alpha-45)] bg-[var(--ozer-accent-subtle)]">
+        <Home className="h-4 w-4 text-[var(--ozer-accent)]" aria-hidden />
       </span>
       <p className="mt-2 text-sm font-bold text-[var(--ozer-text-on-dark)]">Personal Home</p>
       <p className="mt-0.5 text-[10px] text-[var(--ozer-text-on-dark-muted)]">Your command centre</p>

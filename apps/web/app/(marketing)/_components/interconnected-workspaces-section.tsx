@@ -14,6 +14,7 @@ import {
   INTERCONNECTED_WORKSPACES_MARKETING,
   type InterconnectedBenefit,
 } from '~/lib/marketing/interconnected-workspaces';
+import { marketingHeadlineGradient } from '~/lib/marketing/marketing-ui';
 
 import { WorkspaceOrbitDiagram } from './workspace-orbit-diagram';
 
@@ -64,7 +65,7 @@ export function InterconnectedWorkspacesSection({
               className="mt-6 font-heading text-3xl font-bold leading-tight text-[var(--ozer-text-on-dark)] md:text-5xl lg:text-[3.25rem]"
             >
               {m.title}
-              <span className="mt-1 block bg-gradient-to-r from-[var(--ozer-accent)] via-[var(--ozer-coral-100)] to-[var(--ozer-info)] bg-clip-text text-transparent">
+              <span className={cn('mt-1 block', marketingHeadlineGradient)}>
                 {m.titleAccent}
               </span>
             </h2>
@@ -98,8 +99,8 @@ export function InterconnectedWorkspacesSection({
           </div>
         </div>
 
-        <div className="mt-16 rounded-3xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/90 p-6 md:p-10">
-          <h3 className="text-center font-heading text-2xl font-semibold text-[var(--workspace-shell-text)] md:text-3xl">
+        <div className="mt-16 rounded-3xl border border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-cream-50)] p-6 md:p-10">
+          <h3 className="text-center font-heading text-2xl font-semibold text-[var(--ozer-text-on-light)] md:text-3xl">
             {m.comparison.heading}
           </h3>
           <div className="mt-8 grid gap-6 md:grid-cols-2">
@@ -126,12 +127,12 @@ export function InterconnectedWorkspacesSection({
 function BenefitCard({ benefit }: { benefit: InterconnectedBenefit }) {
   const Icon = benefit.icon;
   return (
-    <article className="flex h-full flex-col rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)]/50 p-4 backdrop-blur-sm md:p-5">
+    <article className="flex h-full flex-col rounded-2xl border border-[color:var(--ozer-border-on-dark)] bg-[color-mix(in_srgb,var(--ozer-plum-800)_90%,var(--ozer-plum-950))] p-4 backdrop-blur-sm md:p-5">
       <Icon className="h-5 w-5 shrink-0 text-[var(--ozer-accent)]" aria-hidden />
-      <h3 className="mt-3 font-heading text-base font-semibold leading-snug text-[var(--workspace-shell-text)] md:text-lg">
+      <h3 className="mt-3 font-heading text-base font-semibold leading-snug text-[var(--ozer-text-on-dark)] md:text-lg">
         {benefit.title}
       </h3>
-      <p className="mt-2 flex-1 text-sm leading-relaxed text-[var(--workspace-shell-text-muted)]">
+      <p className="mt-2 flex-1 text-sm leading-relaxed text-[var(--ozer-text-on-dark-muted)]">
         {benefit.description}
       </p>
     </article>
@@ -173,7 +174,7 @@ function ComparisonColumn({
             ) : (
               <X className="mt-0.5 h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]" aria-hidden />
             )}
-            <span className={isOzer ? 'text-[var(--workspace-shell-text)]' : 'text-[var(--workspace-shell-text-muted)]'}>
+            <span className={isOzer ? 'text-[var(--ozer-text-on-light)]' : 'text-[var(--ozer-text-on-light-muted)]'}>
               {item}
             </span>
           </li>

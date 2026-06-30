@@ -12,6 +12,10 @@ import {
   marketingBtnGradient,
   marketingBtnOutline,
   marketingEyebrow,
+  marketingHeadlineGradient,
+  marketingHeroChip,
+  marketingHeroEase,
+  marketingMutedText,
 } from '~/lib/marketing/marketing-ui';
 
 import { MarketingHeroShowcaseCarousel } from './marketing-hero-showcase-carousel';
@@ -29,43 +33,41 @@ const FEATURE_CHIPS = [
 ] as const;
 
 const fadeUp = {
-  initial: { opacity: 0, y: 20 },
+  initial: { opacity: 0, y: 14 },
   animate: { opacity: 1, y: 0 },
 };
 
 export function MarketingHomeHero() {
   const reducedMotion = useReducedMotion() ?? false;
 
-  const fadeUpProps = (delay = 0, duration = 0.5) =>
+  const fadeUpProps = (delay = 0, duration = 0.4) =>
     reducedMotion
       ? {}
       : {
           initial: fadeUp.initial,
           animate: fadeUp.animate,
-          transition: { duration, delay, ease: 'easeOut' as const },
+          transition: { duration, delay, ease: marketingHeroEase },
         };
 
   return (
     <>
-      <div className="mx-auto max-w-4xl text-center">
-        <motion.span
-          className={marketingEyebrow}
-          {...fadeUpProps(0, 0.45)}
-        >
+      <div className="mx-auto max-w-[46rem] text-center">
+        <motion.span className={marketingEyebrow} {...fadeUpProps(0, 0.38)}>
           Built for people who do it all
         </motion.span>
 
-        <div className="mt-6 space-y-5">
+        <div className="mt-8 space-y-6 md:mt-10">
           <motion.h1
-            className="font-heading text-4xl font-bold leading-[1.08] tracking-tight text-[var(--workspace-shell-text)] md:text-6xl lg:text-[4.25rem]"
-            {...fadeUpProps(0.05, 0.5)}
+            className="font-heading text-[2.625rem] font-bold leading-[1.06] tracking-[-0.02em] text-[var(--workspace-shell-text)] md:text-6xl lg:text-[4.5rem]"
+            {...fadeUpProps(0.06, 0.42)}
           >
-            The one system built for every part of your life.
+            The one system built for{' '}
+            <span className={marketingHeadlineGradient}>every part of your life</span>.
           </motion.h1>
 
           <motion.p
-            className="mx-auto max-w-2xl text-base leading-relaxed text-[var(--workspace-shell-text-muted)] md:text-lg"
-            {...fadeUpProps(0.12, 0.5)}
+            className={`mx-auto max-w-[34rem] text-base leading-[1.65] md:text-lg md:leading-[1.7] ${marketingMutedText}`}
+            {...fadeUpProps(0.14, 0.38)}
           >
             Your agency, your family, your personal life — each in its own workspace.
             One home that sees across all of them, with Meeting Assistant ready at launch
@@ -73,25 +75,29 @@ export function MarketingHomeHero() {
           </motion.p>
 
           <motion.div
-            className="flex flex-wrap justify-center gap-2"
+            className="flex flex-wrap justify-center gap-2.5 px-1"
             {...(reducedMotion
               ? {}
               : {
                   initial: { opacity: 0 },
                   animate: { opacity: 1 },
-                  transition: { duration: 0.3, delay: 0.18 },
+                  transition: { duration: 0.28, delay: 0.2, ease: marketingHeroEase },
                 })}
           >
             {FEATURE_CHIPS.map((chip, index) => (
               <motion.span
                 key={chip}
-                className="rounded-full border border-[color:var(--workspace-shell-border)] px-3 py-1 text-xs uppercase tracking-wide text-[var(--workspace-shell-text-muted)]"
+                className={marketingHeroChip}
                 {...(reducedMotion
                   ? {}
                   : {
-                      initial: { opacity: 0, y: 8 },
+                      initial: { opacity: 0, y: 6 },
                       animate: { opacity: 1, y: 0 },
-                      transition: { duration: 0.3, delay: 0.2 + index * 0.04 },
+                      transition: {
+                        duration: 0.32,
+                        delay: 0.22 + index * 0.05,
+                        ease: marketingHeroEase,
+                      },
                     })}
               >
                 {chip}
@@ -101,32 +107,23 @@ export function MarketingHomeHero() {
         </div>
 
         <motion.div
-          className="mt-8 flex flex-wrap items-center justify-center gap-3"
-          {...fadeUpProps(0.28, 0.5)}
+          className="mt-10 flex flex-wrap items-center justify-center gap-3 md:mt-12"
+          {...fadeUpProps(0.32, 0.38)}
         >
-          <Button
-            asChild
-            size="lg"
-            className={marketingBtnGradient}
-          >
+          <Button asChild size="lg" className={marketingBtnGradient}>
             <Link href={pathsConfig.auth.signUp}>
               Start free
               <ArrowRight className="ml-1.5 h-4 w-4" />
             </Link>
           </Button>
-          <Button
-            asChild
-            variant="outline"
-            size="lg"
-            className={marketingBtnOutline}
-          >
+          <Button asChild variant="outline" size="lg" className={marketingBtnOutline}>
             <Link href="/pricing">View pricing</Link>
           </Button>
         </motion.div>
 
         <motion.p
-          className="mt-6 text-sm text-[var(--workspace-shell-text-muted)]"
-          {...fadeUpProps(0.36, 0.5)}
+          className={`mt-5 text-sm ${marketingMutedText}`}
+          {...fadeUpProps(0.4, 0.32)}
         >
           Designed by a freelancer, for freelancers and small agencies.
         </motion.p>

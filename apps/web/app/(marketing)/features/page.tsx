@@ -5,6 +5,14 @@ import type { Metadata } from 'next';
 import { ArrowRight } from 'lucide-react';
 
 import { listFeaturePageConfigs } from '~/lib/marketing/feature-landing-pages';
+import {
+  marketingBodyText,
+  marketingEyebrow,
+  marketingFeatureCard,
+  marketingIconAccent,
+  marketingIconWell,
+  marketingMutedText,
+} from '~/lib/marketing/marketing-ui';
 
 import { FeatureCoverPreview } from '../_components/feature-cover-previews';
 import { FeatureLandingIcon } from '../_components/feature-landing-icon';
@@ -48,13 +56,11 @@ export default function FeaturesIndexPage() {
 
       <section className="relative mx-auto w-full max-w-7xl px-6 pb-20 pt-24 md:pt-28">
         <div className="max-w-3xl space-y-5">
-          <span className="inline-flex items-center rounded-full border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-4 py-1.5 text-xs font-medium uppercase tracking-[0.14em] text-[var(--ozer-accent-muted)]">
-            Ozer Features
-          </span>
+          <span className={marketingEyebrow}>Ozer Features</span>
           <h1 className="font-heading text-4xl font-bold leading-tight text-[var(--workspace-shell-text)] md:text-5xl lg:text-6xl">
             Everything You Need. All in One Place.
           </h1>
-          <p className="text-base leading-relaxed text-violet-100/85 md:text-lg">
+          <p className={`text-base leading-relaxed md:text-lg ${marketingBodyText}`}>
             Ozer replaces the pile of disconnected tools with one system where
             everything knows about everything else.
           </p>
@@ -65,7 +71,7 @@ export default function FeaturesIndexPage() {
             <Link
               key={feature.slug}
               href={`/features/${feature.slug}`}
-              className="group overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] transition hover:border-[var(--ozer-accent)]/30 hover:bg-[var(--workspace-shell-sidebar-accent)]"
+              className={`group overflow-hidden transition hover:border-[var(--ozer-accent)]/30 ${marketingFeatureCard}`}
             >
               <FeatureCoverPreview
                 slug={feature.slug}
@@ -73,24 +79,24 @@ export default function FeaturesIndexPage() {
                 className="rounded-none border-0 border-b border-[color:var(--workspace-shell-border)] shadow-none"
               />
               <div className="p-6">
-                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)] transition group-hover:bg-[var(--ozer-accent-subtle)]">
+                <div className={`mb-4 h-11 w-11 ${marketingIconWell}`}>
                   <FeatureLandingIcon
                     name={feature.indexIcon}
-                    className="h-5 w-5"
+                    className={`h-5 w-5 ${marketingIconAccent}`}
                   />
                 </div>
-                <h2 className="text-lg font-semibold text-violet-50">
+                <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
                   {feature.name}
                 </h2>
                 {feature.heroBadge ? (
-                  <p className="mt-1 text-xs font-medium text-violet-300/70">
+                  <p className={`mt-1 text-xs font-medium ${marketingMutedText}`}>
                     {feature.heroBadge}
                   </p>
                 ) : null}
-                <p className="mt-2 text-sm leading-relaxed text-violet-100/75">
+                <p className={`mt-2 text-sm leading-relaxed ${marketingMutedText}`}>
                   {feature.shortDescription}
                 </p>
-                <span className="mt-4 inline-flex items-center text-sm font-medium text-[var(--ozer-accent-muted)]">
+                <span className="mt-4 inline-flex items-center text-sm font-medium text-[var(--ozer-coral-600)] dark:text-[var(--ozer-coral-400)]">
                   Learn more
                   <ArrowRight className="ml-1.5 h-4 w-4 transition group-hover:translate-x-0.5" />
                 </span>

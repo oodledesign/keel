@@ -21,13 +21,13 @@ const toneStyles: Record<
   { item: string; trigger: string; content: string; heading: string }
 > = {
   light: {
-    item: 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]',
+    item: 'marketing-faq-item',
     trigger: 'text-[var(--workspace-shell-text)]',
     content: 'text-[var(--workspace-shell-text-muted)]',
     heading: 'text-[var(--workspace-shell-text)]',
   },
   muted: {
-    item: 'border-[color:var(--workspace-shell-border)] bg-[color-mix(in_srgb,var(--ozer-cream-100)_92%,var(--ozer-white))]',
+    item: 'marketing-faq-item marketing-faq-item-muted',
     trigger: 'text-[var(--workspace-shell-text)]',
     content: 'text-[var(--workspace-shell-text-muted)]',
     heading: 'text-[var(--workspace-shell-text)]',
@@ -55,12 +55,13 @@ export function MarketingFaqs({
         <AccordionItem
           key={faq.question}
           value={`faq-${index}`}
-          className={cn('rounded-xl border px-4', styles.item)}
+          className={cn('border border-b-0 px-4', styles.item)}
         >
           <AccordionTrigger
             className={cn(
-              'text-left text-base font-medium hover:no-underline',
+              'text-left text-base font-medium hover:no-underline [&>svg]:text-[var(--workspace-shell-text-muted)] dark:[&>svg]:text-[var(--ozer-text-on-dark-muted)]',
               styles.trigger,
+              tone === 'dark' && '[&>svg]:text-[var(--ozer-text-on-dark-muted)]',
             )}
           >
             {faq.question}

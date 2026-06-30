@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 import Image from 'next/image';
 
-import { motion, useReducedMotion } from 'framer-motion';
+import { useReducedMotion } from 'framer-motion';
 import {
   Brain,
   CalendarDays,
@@ -29,7 +29,7 @@ type ShowcaseCard = {
 };
 
 const TODAY_PREVIEW = [
-  { time: '09:00', text: 'School run prep', tag: 'Personal', color: '#7C3AED' },
+  { time: '09:00', text: 'School run prep', tag: 'Personal', color: 'var(--ozer-gold-500)' },
   { time: '10:30', text: 'Review Acme proposal', tag: 'Business', color: 'var(--ozer-info)' },
   { time: '15:00', text: 'Community event notes', tag: 'Community', color: 'var(--ozer-accent)' },
 ] as const;
@@ -40,28 +40,28 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
     width: 300,
     featureLabel: 'Today view',
     render: () => (
-      <div className="flex h-full flex-col rounded-[1.75rem] border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)] p-4">
+      <div className="flex h-full flex-col rounded-[1.75rem] border border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-plum-950)] p-4">
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-200/80">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--ozer-text-on-dark-muted)]">
             Today in Ozer
           </p>
-          <LayoutDashboard className="h-3.5 w-3.5 text-violet-200/70" />
+          <LayoutDashboard className="h-3.5 w-3.5 text-[var(--ozer-text-on-dark-muted)]" />
         </div>
         <div className="space-y-2">
           {TODAY_PREVIEW.map((item) => (
             <div
               key={item.text}
-              className="flex items-start gap-2 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-2"
+              className="flex items-start gap-2 rounded-xl border border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-plum-800)]/60 px-2.5 py-2"
             >
-              <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-300" />
+              <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--ozer-coral-400)]" />
               <div className="min-w-0">
-                <p className="truncate text-xs text-violet-50/90">
-                  <span className="font-mono text-[10px] text-violet-300/70">
+                <p className="truncate text-xs text-[var(--ozer-text-on-dark)]">
+                  <span className="font-mono text-[10px] text-[var(--ozer-text-on-dark-muted)]">
                     {item.time}
                   </span>{' '}
                   {item.text}
                 </p>
-                <span className="mt-0.5 inline-flex items-center gap-1 rounded-md border border-[color:var(--workspace-shell-border)] px-1 py-0.5 text-[9px] text-[var(--workspace-shell-text)]/70">
+                <span className="mt-0.5 inline-flex items-center gap-1 rounded-md border border-[color:var(--ozer-border-on-dark)] px-1 py-0.5 text-[9px] text-[var(--ozer-text-on-dark-muted)]">
                   <span
                     className="h-1 w-1 rounded-full"
                     style={{ backgroundColor: item.color }}
@@ -80,12 +80,12 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
     width: 260,
     featureLabel: 'Workspaces',
     render: () => (
-      <div className="flex h-full flex-col justify-between rounded-[1.75rem] bg-[linear-gradient(145deg,#dbeafe,#bfdbfe)] p-5 text-[var(--ozer-text-on-light)]">
+      <div className="flex h-full flex-col justify-between rounded-[1.75rem] bg-[linear-gradient(145deg,var(--ozer-coral-100),var(--ozer-cream-100))] p-5 text-[var(--ozer-text-on-light)]">
         <div className="flex -space-x-2">
-          {['#7C3AED', '#2563EB', '#FF5C34'].map((color) => (
+          {['var(--ozer-gold-500)', 'var(--ozer-info)', 'var(--ozer-accent)'].map((color) => (
             <span
               key={color}
-              className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[color:var(--workspace-shell-border)] text-[10px] font-bold text-[var(--workspace-shell-text)]"
+              className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[color:var(--ozer-border-on-light)] text-[10px] font-bold text-[var(--ozer-plum-950)]"
               style={{ backgroundColor: color }}
             >
               K
@@ -95,7 +95,7 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
         <div>
           <p className="font-heading text-3xl font-bold">4</p>
           <p className="text-sm font-medium text-[var(--ozer-text-on-light-muted)]">Workspaces, one home</p>
-          <p className="mt-1 text-xs text-slate-600">
+          <p className="mt-1 text-xs text-[var(--ozer-text-on-light-muted)]">
             Personal, business, property & community
           </p>
         </div>
@@ -116,7 +116,7 @@ const SHOWCASE_CARDS: ShowcaseCard[] = [
           sizes="420px"
         />
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[var(--ozer-plum-950)] via-[var(--ozer-plum-950)]/80 to-transparent p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-violet-200/90">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ozer-text-on-dark-muted)]">
             Your home dashboard
           </p>
         </div>
@@ -372,7 +372,7 @@ function ShowcaseCardShell({
     >
       {card.render()}
       {featureBadgeLabel(card) ? (
-        <span className="absolute bottom-3 left-3 z-10 rounded-md border border-[color:var(--workspace-shell-border)] bg-black/50 px-2 py-1 text-xs font-medium text-[var(--workspace-shell-text)]/80 backdrop-blur-sm">
+        <span className="absolute bottom-3 left-3 z-10 rounded-md border border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-plum-950)]/75 px-2 py-1 text-xs font-medium text-[var(--ozer-text-on-dark)] backdrop-blur-sm">
           {featureBadgeLabel(card)}
         </span>
       ) : null}
@@ -387,15 +387,15 @@ export function MarketingHeroShowcaseCarousel() {
 
   return (
     <div
-      className="relative mt-14 w-screen max-w-[100vw] -translate-x-1/2 left-1/2 sm:mt-16"
+      className="relative mt-16 w-screen max-w-[100vw] -translate-x-1/2 left-1/2 md:mt-20"
       aria-label="Product feature previews"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
     >
-      <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-[var(--ozer-plum-950)] to-transparent sm:w-28" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-[var(--ozer-plum-950)] to-transparent sm:w-28" />
+      <div className="marketing-hero-fade-left" aria-hidden />
+      <div className="marketing-hero-fade-right" aria-hidden />
 
       {reducedMotion ? (
         <div className="flex gap-4 overflow-x-auto px-6 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -404,22 +404,14 @@ export function MarketingHeroShowcaseCarousel() {
           ))}
         </div>
       ) : (
-        <motion.div
-          className="flex w-max gap-4 px-6"
-          animate={paused ? undefined : { x: ['0%', '-50%'] }}
-          transition={{
-            x: {
-              repeat: Infinity,
-              repeatType: 'loop',
-              duration: 48,
-              ease: 'linear',
-            },
-          }}
+        <div
+          className="marketing-hero-marquee-track"
+          data-paused={paused ? 'true' : 'false'}
         >
           {track.map((card, index) => (
             <ShowcaseCardShell key={`${card.id}-${index}`} card={card} />
           ))}
-        </motion.div>
+        </div>
       )}
     </div>
   );

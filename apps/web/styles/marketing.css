@@ -5,6 +5,7 @@
 
 @layer utilities {
   .marketing-shell {
+    --marketing-hero-fade-color: var(--ozer-cream-50);
     color: var(--ozer-text-on-light);
     background:
       radial-gradient(
@@ -26,6 +27,7 @@
   }
 
   .dark .marketing-shell {
+    --marketing-hero-fade-color: var(--ozer-plum-950);
     color: var(--ozer-text-on-dark);
     background:
       radial-gradient(
@@ -87,6 +89,113 @@
       color-mix(in srgb, var(--ozer-plum-800) 95%, transparent),
       color-mix(in srgb, var(--ozer-plum-950) 95%, transparent)
     );
+  }
+
+  .marketing-faq-item {
+    @apply rounded-xl border;
+    border-color: var(--ozer-border-on-light);
+    background: var(--workspace-shell-panel);
+  }
+
+  .dark .marketing-faq-item {
+    border-color: var(--ozer-border-on-dark);
+    background: color-mix(in srgb, var(--ozer-plum-800) 92%, var(--ozer-plum-950));
+  }
+
+  .marketing-faq-item-muted {
+    background: color-mix(in srgb, var(--ozer-cream-100) 92%, var(--ozer-white));
+  }
+
+  .dark .marketing-faq-item-muted {
+    background: color-mix(in srgb, var(--ozer-plum-800) 88%, var(--ozer-plum-950));
+  }
+
+  .marketing-hero-chip {
+    @apply rounded-full border px-3.5 py-1.5 text-xs font-medium uppercase tracking-[0.08em];
+    border-color: color-mix(in srgb, var(--ozer-plum-900) 12%, transparent);
+    background: color-mix(in srgb, var(--ozer-white) 72%, var(--ozer-cream-100));
+    color: var(--workspace-shell-text-muted);
+    transition:
+      border-color 180ms cubic-bezier(0.23, 1, 0.32, 1),
+      background-color 180ms cubic-bezier(0.23, 1, 0.32, 1),
+      color 180ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .dark .marketing-hero-chip {
+    border-color: color-mix(in srgb, var(--ozer-cream-50) 14%, transparent);
+    background: color-mix(in srgb, var(--ozer-plum-800) 55%, var(--ozer-plum-950));
+    color: var(--ozer-text-on-dark-muted);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .marketing-hero-chip:hover {
+      border-color: color-mix(in srgb, var(--ozer-accent) 35%, transparent);
+      background: color-mix(in srgb, var(--ozer-accent-subtle) 65%, var(--ozer-white));
+      color: var(--workspace-shell-text);
+    }
+
+    .dark .marketing-hero-chip:hover {
+      background: color-mix(in srgb, var(--ozer-plum-800) 80%, var(--ozer-plum-950));
+      color: var(--ozer-text-on-dark);
+    }
+  }
+
+  .marketing-hero-fade-left {
+    pointer-events: none;
+    position: absolute;
+    inset-block: 0;
+    left: 0;
+    z-index: 10;
+    width: 4rem;
+    background: linear-gradient(
+      to right,
+      var(--marketing-hero-fade-color),
+      transparent
+    );
+  }
+
+  .marketing-hero-fade-right {
+    pointer-events: none;
+    position: absolute;
+    inset-block: 0;
+    right: 0;
+    z-index: 10;
+    width: 4rem;
+    background: linear-gradient(
+      to left,
+      var(--marketing-hero-fade-color),
+      transparent
+    );
+  }
+
+  @media (min-width: 640px) {
+    .marketing-hero-fade-left,
+    .marketing-hero-fade-right {
+      width: 7rem;
+    }
+  }
+
+  .marketing-hero-marquee-track {
+    display: flex;
+    width: max-content;
+    gap: 1rem;
+    padding-inline: 1.5rem;
+    animation: marketing-hero-marquee 52s linear infinite;
+    will-change: transform;
+  }
+
+  .marketing-hero-marquee-track[data-paused='true'] {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes marketing-hero-marquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
   }
 }
 

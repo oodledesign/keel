@@ -105,7 +105,7 @@ export const INTERCONNECTED_WORKSPACES_MARKETING = {
     {
       id: 'family',
       label: 'Family workspace',
-      color: '#7C3AED',
+      color: 'var(--ozer-gold-500)',
       examples: 'Calendar, meals, shopping',
     },
     {

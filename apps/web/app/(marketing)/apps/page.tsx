@@ -10,7 +10,7 @@ import {
   formatGbp,
 } from '~/lib/billing/pricing-marketing';
 import { listAppLandingSummaries } from '~/lib/marketing/app-landing-pages';
-import { marketingBtnGradient } from '~/lib/marketing/marketing-ui';
+import { marketingBtnGradient, marketingHeadlineGradient } from '~/lib/marketing/marketing-ui';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 const BUSINESS_LITE_SIGNUP = buildPricingSignupUrl({
@@ -39,7 +39,7 @@ function AppsMarketingPage() {
           </span>
           <h1 className="font-heading text-4xl font-bold leading-tight text-[var(--workspace-shell-text)] md:text-5xl lg:text-6xl">
             Add the tools you need to any{' '}
-            <span className="bg-gradient-to-r from-[var(--ozer-accent)] via-[var(--ozer-coral-100)] to-[var(--ozer-info)] bg-clip-text text-transparent">
+            <span className={marketingHeadlineGradient}>
               business workspace
             </span>
             .

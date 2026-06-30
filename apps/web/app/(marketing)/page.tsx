@@ -60,7 +60,7 @@ function Home() {
     <main className={cn('relative overflow-hidden', marketingShellClass)}>
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_22%)]" />
 
-      <section className="relative mx-auto flex w-full max-w-7xl flex-col px-6 pb-12 pt-24 md:pb-16 md:pt-28">
+      <section className="relative mx-auto flex w-full max-w-7xl flex-col px-6 pb-14 pt-24 md:pb-20 md:pt-32">
         <MarketingHomeHero />
       </section>
 

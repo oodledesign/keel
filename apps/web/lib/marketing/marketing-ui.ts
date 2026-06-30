@@ -26,7 +26,7 @@ export const marketingEyebrow =
   'inline-flex items-center rounded-full border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-4 py-1.5 text-xs font-medium uppercase tracking-[0.14em] text-[var(--ozer-coral-600)]';
 
 export const marketingHeadlineGradient =
-  'bg-gradient-to-r from-[var(--ozer-accent)] via-[var(--ozer-coral-100)] to-[var(--ozer-info)] bg-clip-text text-transparent';
+  'bg-gradient-to-r from-[var(--ozer-coral-400)] to-[var(--ozer-coral-100)] bg-clip-text text-transparent';
 
 export const marketingCard =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/80';
@@ -88,3 +88,9 @@ export const marketingSectionDarkMuted = 'text-[var(--ozer-text-on-dark-muted)]'
 
 export const marketingEyebrowOnDark =
   'inline-flex items-center rounded-full border border-[var(--ozer-accent)]/35 bg-[var(--ozer-accent-subtle)] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ozer-coral-400)]';
+
+/** Hero feature chips — theme-aware pill on marketing shell */
+export const marketingHeroChip = 'marketing-hero-chip';
+
+/** Strong ease-out curve for hero entrance (matches marketingBtnPress) */
+export const marketingHeroEase = [0.23, 1, 0.32, 1] as const;
