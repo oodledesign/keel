@@ -86,19 +86,36 @@ export type CitationPlatform =
   | 'perplexity'
   | 'claude';
 
+export type PromptLayer = 'generic' | 'contextual';
+
+export type CitationRunSample = {
+  domainCited: boolean;
+  triggered: boolean;
+  citedUrls: string[];
+};
+
 export type CitationCheck = {
   query: string;
+  /** Category benchmark vs buyer-context prompts */
+  promptLayer?: PromptLayer;
   triggered: boolean;
   domainCited: boolean;
   citedUrls: string[];
+  /** Share of sample runs where the domain was cited (0–100) */
+  presenceRate?: number;
+  sampleCount?: number;
+  runs?: CitationRunSample[];
 };
 
 export type PlatformCitationResult = {
   platform: CitationPlatform;
   label: string;
+  promptLayer?: PromptLayer;
   domainCitedInAny: boolean;
   citedQueries: string[];
   citations: CitationCheck[];
+  /** Mean presence rate across prompts on this platform (0–100) */
+  averagePresenceRate?: number;
 };
 
 export type CompetingBrandOpr = {
@@ -211,7 +228,7 @@ export const AUDIT_STATUS_LABELS: Record<string, string> = {
   error: 'Something went wrong',
 };
 
-export const AUDIT_CREDITS_ESTIMATE = 100;
+export const AUDIT_CREDITS_ESTIMATE = 220;
 
 export const CITATION_PLATFORM_LABELS: Record<CitationPlatform, string> = {
   google_ai_overview: 'Google AI Overview',
@@ -223,6 +240,18 @@ export const CITATION_PLATFORM_LABELS: Record<CitationPlatform, string> = {
 /** Google AI Overview (5) + ChatGPT/Perplexity/Claude LLM Responses (3 each) */
 export const CITATION_QUERIES_GOOGLE = 5;
 export const CITATION_QUERIES_LLM = 3;
+
+/** Sample each prompt multiple times — LLM answers are probabilistic */
+export const CITATION_SAMPLE_RUNS = 3;
+
+/** Contextual (buyer-decision) prompts derived from brief + crawl */
+export const CITATION_CONTEXTUAL_PROMPTS_GOOGLE = 8;
+export const CITATION_CONTEXTUAL_PROMPTS_LLM = 5;
+
+export const PROMPT_LAYER_LABELS: Record<PromptLayer, string> = {
+  generic: 'Category benchmark',
+  contextual: 'Buyer context',
+};
 
 export const DIMENSION_LABELS: Record<AuditDimension, string> = {
   entity: 'Entity Analysis',

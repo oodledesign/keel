@@ -51,25 +51,25 @@ Optimize dropdowns for mobile
 
 @layer components {
   .keel-gradient-btn {
-    background-color: var(--keel-teal);
+    background-color: var(--ozer-accent);
     background-image: none;
-    color: #ffffff;
+    color: var(--ozer-white);
     transition:
       background-color 200ms ease,
       opacity 200ms ease;
   }
 
   .keel-gradient-btn:hover {
-    background-color: var(--keel-teal-hover, #238b7f);
+    background-color: var(--ozer-accent-hover);
     background-image: none;
   }
 
   .keel-gradient-active {
     background-image: linear-gradient(
       to right,
-      var(--keel-gradient-from),
-      var(--keel-gradient-to)
+      var(--ozer-gradient-active-from),
+      var(--ozer-gradient-active-to)
     );
-    color: #ffffff;
+    color: var(--ozer-white);
   }
 }

@@ -7,6 +7,7 @@ import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
+import { BrandVisibilityLayerPanel } from '~/home/[account]/(rankly)/_components/brand-visibility-layers';
 import type { SiteOverviewSnapshot } from '~/lib/site-overview/types';
 
 type ApiResponse<T> =
@@ -56,17 +57,6 @@ function MetricCard(props: {
       ) : null}
     </div>
   );
-}
-
-function SentimentIcon({ pct }: { pct: number | null }) {
-  if (pct == null) {
-    return <span className="text-muted-foreground text-xs">—</span>;
-  }
-
-  const tone =
-    pct >= 75 ? 'text-[var(--keel-teal)]' : pct >= 60 ? 'text-amber-400' : 'text-red-400';
-
-  return <span className={`text-sm font-medium tabular-nums ${tone}`}>{pct}%</span>;
 }
 
 export function SiteOverviewPanel(props: {
@@ -242,45 +232,10 @@ export function SiteOverviewPanel(props: {
               </p>
             </div>
 
-            {data.brandVisibility.length === 0 ? (
-              <div className="mt-4 space-y-2 text-sm">
-                <p className="text-muted-foreground">
-                  Run an AI Search Audit to populate platform-level brand visibility.
-                </p>
-                <a
-                  href={props.auditHref}
-                  className="text-primary inline-block underline-offset-4 hover:underline"
-                >
-                  Open AI Search Audit →
-                </a>
-              </div>
-            ) : (
-              <div className="mt-4 overflow-x-auto">
-                <table className="w-full min-w-[32rem] text-left text-sm">
-                  <thead className="border-b border-white/10 text-xs uppercase tracking-wide text-muted-foreground">
-                    <tr>
-                      <th className="px-3 py-2">Platform</th>
-                      <th className="px-3 py-2">Visibility</th>
-                      <th className="px-3 py-2">Sentiment</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.brandVisibility.map((row) => (
-                      <tr key={row.platform} className="border-b border-white/5 last:border-0">
-                        <td className="px-3 py-3">{row.label}</td>
-                        <td className="px-3 py-3 text-muted-foreground">
-                          {row.topicsVisible} topic{row.topicsVisible === 1 ? '' : 's'}{' '}
-                          · {row.visibilityPct}%
-                        </td>
-                        <td className="px-3 py-3">
-                          <SentimentIcon pct={row.sentimentPct} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <BrandVisibilityLayerPanel
+              rows={data.brandVisibility}
+              emptyHref={props.auditHref}
+            />
           </div>
         </>
       )}

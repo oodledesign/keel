@@ -5,5 +5,5 @@
 }
 
 @utility workspace-btn-primary {
-  @apply inline-flex items-center justify-center rounded-xl bg-[var(--keel-teal)] text-white transition-colors hover:bg-[#238b7f] disabled:opacity-50;
+  @apply inline-flex items-center justify-center rounded-xl bg-[var(--ozer-accent)] text-white transition-colors hover:bg-[var(--ozer-accent-hover)] disabled:opacity-50;
 }

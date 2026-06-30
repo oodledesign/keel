@@ -1,23 +1,9 @@
-import { Inter } from 'next/font/google';
-
+/**
+ * Typography is loaded from Fontshare in styles/ozer-tokens.css.
+ * This module only applies layout/theme classes on <html>.
+ */
 import { cn } from '@kit/ui/utils';
 
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-sans-fallback',
-  fallback: ['system-ui', 'Helvetica Neue', 'Helvetica', 'Arial'],
-  preload: true,
-  weight: ['400', '500', '700'],
-});
-
-// Inter for both body and headings (Ozer brand)
-export const sans = inter;
-export const heading = inter;
-
-/**
- * @name getFontsClassName
- * @description Get the class name for the root layout.
- */
 export function getFontsClassName(_theme?: string) {
-  return cn(inter.variable, { dark: true });
+  return cn({ dark: true });
 }

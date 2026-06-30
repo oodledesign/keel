@@ -1,151 +1,137 @@
 /*
-* shadcn-ui.css
-*
-* Update the below to customize your Shadcn UI CSS Colors.
-* Refer to https://ui.shadcn.com/themes for applying new colors.
-* NB: apply the hsl function to the colors copied from the theme.
+ * Shadcn UI theme — maps component tokens to Ozer semantic tokens.
+ * Do not hardcode hex here; edit styles/ozer-tokens.css instead.
  */
 
 @layer base {
   :root {
-    --font-sans: var(--font-sans-fallback), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    --font-heading: var(--font-sans-fallback), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-sans: var(--ozer-font-body);
+    --font-heading: var(--ozer-font-display);
 
-    --background: var(--color-white);
-    --foreground: var(--color-neutral-950);
+    --background: var(--ozer-cream-50);
+    --foreground: var(--ozer-text-on-light);
 
     --card: var(--workspace-shell-panel);
     --card-foreground: var(--workspace-shell-text);
 
-    --popover: var(--color-white);
-    --popover-foreground: var(--color-neutral-950);
+    --popover: var(--ozer-white);
+    --popover-foreground: var(--ozer-text-on-light);
 
-    --primary: #2a9d8f;
-    --primary-foreground: #ffffff;
+    --primary: var(--ozer-accent);
+    --primary-foreground: var(--ozer-white);
 
-    --secondary: oklch(96.76% 0.0013 286.38);
-    --secondary-foreground: #1e293b;
+    --secondary: var(--ozer-cream-100);
+    --secondary-foreground: var(--ozer-text-on-light);
 
-    --muted: oklch(96.71% 0.0029 264.54);
-    --muted-foreground: oklch(55.13% 0.0233 264.36);
+    --muted: var(--ozer-cream-100);
+    --muted-foreground: var(--ozer-text-on-light-muted);
 
-    --accent: #2563eb;
-    --accent-foreground: var(--color-white);
+    --accent: var(--ozer-info);
+    --accent-foreground: var(--ozer-white);
 
     --destructive: var(--color-red-500);
-    --destructive-foreground: var(--color-white);
+    --destructive-foreground: var(--ozer-white);
 
-    --border: var(--color-gray-100);
-    --input: var(--color-gray-200);
+    --border: var(--ozer-border-on-light);
+    --input: var(--ozer-plum-alpha-18);
     --ring: transparent;
-    --focus-ring: rgba(42, 157, 143, 0.45);
+    --focus-ring: var(--ozer-coral-alpha-45);
 
-    --radius: 0.5rem;
+    --radius: var(--ozer-radius-md);
 
-    --chart-1: var(--color-orange-400);
-    --chart-2: var(--color-teal-600);
-    --chart-3: var(--color-green-800);
-    --chart-4: var(--color-yellow-200);
-    --chart-5: var(--color-orange-200);
+    --chart-1: var(--ozer-accent);
+    --chart-2: var(--ozer-info);
+    --chart-3: var(--ozer-gold-500);
+    --chart-4: var(--ozer-lime-400);
+    --chart-5: var(--ozer-coral-400);
 
-    --sidebar-background: var(--color-neutral-50);
-    --sidebar-foreground: oklch(37.05% 0.012 285.8);
-    --sidebar-primary: var(--color-neutral-950);
-    --sidebar-primary-foreground: var(--color-white);
-    --sidebar-accent: var(--color-neutral-100);
-    --sidebar-accent-foreground: var(--color-neutral-950);
+    --sidebar-background: var(--ozer-cream-100);
+    --sidebar-foreground: var(--ozer-text-on-light);
+    --sidebar-primary: var(--ozer-plum-950);
+    --sidebar-primary-foreground: var(--ozer-white);
+    --sidebar-accent: var(--ozer-cream-200);
+    --sidebar-accent-foreground: var(--ozer-text-on-light);
     --sidebar-border: var(--border);
-    --sidebar-ring: var(--color-blue-500);
+    --sidebar-ring: var(--ozer-info);
 
+    /* Workspace shell (Phase 1 — app chrome) */
     --workspace-shell-header: transparent;
-    --workspace-shell-sidebar: #0f1b35;
-    --workspace-shell-canvas: #0b132b;
-    --workspace-shell-panel: #0f1b35;
-    --workspace-shell-panel-hover: #152544;
-    --workspace-shell-sidebar-active: #1e403a;
-    --workspace-shell-sidebar-accent: rgba(255, 255, 255, 0.06);
-    --workspace-shell-text: #1e293b;
-    --workspace-shell-text-muted: #64748b;
-    --workspace-shell-text-on-light: #1e293b;
+    --workspace-shell-sidebar: var(--ozer-surface-panel);
+    --workspace-shell-canvas: var(--ozer-surface-canvas);
+    --workspace-shell-panel: var(--ozer-surface-panel);
+    --workspace-shell-panel-hover: var(--ozer-surface-panel-hover);
+    --workspace-shell-sidebar-active: var(--ozer-surface-elevated);
+    --workspace-shell-sidebar-accent: var(--ozer-on-dark-alpha-06);
+    --workspace-shell-border: var(--ozer-border-on-dark);
+    --workspace-shell-text: var(--ozer-text-on-light);
+    --workspace-shell-text-muted: var(--ozer-text-on-light-muted);
+    --workspace-shell-text-on-dark: var(--ozer-text-on-dark);
+    --workspace-shell-text-on-dark-muted: var(--ozer-text-on-dark-muted);
 
-    --keel-gradient-from: #152544;
-    --keel-gradient-to: #18352f;
-    --keel-gradient-hover-from: #1a3052;
-    --keel-gradient-hover-to: #1c4039;
-    --keel-accent-blue: #2563eb;
-    --keel-teal: #2a9d8f;
-    --keel-teal-hover: #238b7f;
-
-    --workspace-control-surface: #0f1b35;
-    --workspace-control-border: rgba(255, 255, 255, 0.12);
+    --workspace-control-surface: var(--ozer-surface-panel);
+    --workspace-control-border: var(--ozer-border-on-dark);
   }
 
   .dark {
-    --background: #0f1b35;
-    --foreground: var(--color-white);
+    --background: var(--ozer-surface-panel);
+    --foreground: var(--ozer-text-on-dark);
 
     --card: var(--workspace-shell-panel);
-    --card-foreground: var(--workspace-shell-text);
+    --card-foreground: var(--workspace-shell-text-on-dark);
 
-    --popover: var(--color-neutral-900);
-    --popover-foreground: var(--color-white);
+    --popover: var(--ozer-plum-800);
+    --popover-foreground: var(--ozer-text-on-dark);
 
-    --primary: #2a9d8f;
-    --primary-foreground: #ffffff;
+    --primary: var(--ozer-accent);
+    --primary-foreground: var(--ozer-white);
 
-    --secondary: var(--color-neutral-800);
-    --secondary-foreground: oklch(98.43% 0.0017 247.84);
+    --secondary: var(--ozer-plum-800);
+    --secondary-foreground: var(--ozer-text-on-dark);
 
-    --muted: var(--color-neutral-800);
-    --muted-foreground: oklch(71.19% 0.0129 286.07);
+    --muted: var(--ozer-plum-800);
+    --muted-foreground: var(--ozer-text-on-dark-muted);
 
-    --accent: var(--color-neutral-800);
-    --accent-foreground: oklch(98.48% 0 0);
+    --accent: var(--ozer-plum-700);
+    --accent-foreground: var(--ozer-text-on-dark);
 
     --destructive: var(--color-red-700);
-    --destructive-foreground: var(--color-white);
+    --destructive-foreground: var(--ozer-white);
 
-    --border: var(--color-neutral-800);
-    --input: var(--color-neutral-700);
+    --border: var(--ozer-border-on-dark);
+    --input: var(--ozer-plum-700);
     --ring: transparent;
-    --focus-ring: rgba(42, 157, 143, 0.45);
+    --focus-ring: var(--ozer-coral-alpha-45);
 
-    --chart-1: var(--color-blue-600);
-    --chart-2: var(--color-emerald-400);
-    --chart-3: var(--color-orange-400);
-    --chart-4: var(--color-purple-500);
-    --chart-5: var(--color-pink-500);
+    --chart-1: var(--ozer-accent);
+    --chart-2: var(--ozer-success-muted);
+    --chart-3: var(--ozer-gold-500);
+    --chart-4: var(--ozer-lime-400);
+    --chart-5: var(--ozer-coral-400);
 
-    --sidebar-background: var(--color-neutral-900);
-    --sidebar-foreground: var(--color-white);
-    --sidebar-primary: var(--color-blue-500);
-    --sidebar-primary-foreground: var(--color-white);
-    --sidebar-accent: var(--color-neutral-800);
-    --sidebar-accent-foreground: var(--color-white);
+    --sidebar-background: var(--ozer-surface-panel);
+    --sidebar-foreground: var(--ozer-text-on-dark);
+    --sidebar-primary: var(--ozer-accent);
+    --sidebar-primary-foreground: var(--ozer-white);
+    --sidebar-accent: var(--ozer-on-dark-alpha-06);
+    --sidebar-accent-foreground: var(--ozer-text-on-dark);
     --sidebar-border: var(--border);
-    --sidebar-ring: var(--color-blue-500);
+    --sidebar-ring: var(--ozer-accent);
 
     --workspace-shell-header: transparent;
-    --workspace-shell-sidebar: #0f1b35;
-    --workspace-shell-canvas: #0b132b;
-    --workspace-shell-panel: #0f1b35;
-    --workspace-shell-panel-hover: #152544;
-    --workspace-shell-sidebar-active: #1e403a;
-    --workspace-shell-sidebar-accent: rgba(255, 255, 255, 0.06);
-    --workspace-shell-text: #ffffff;
-    --workspace-shell-text-muted: rgba(255, 255, 255, 0.65);
-    --workspace-shell-text-on-light: #1e293b;
+    --workspace-shell-sidebar: var(--ozer-surface-panel);
+    --workspace-shell-canvas: var(--ozer-surface-canvas);
+    --workspace-shell-panel: var(--ozer-surface-panel);
+    --workspace-shell-panel-hover: var(--ozer-surface-panel-hover);
+    --workspace-shell-sidebar-active: var(--ozer-surface-elevated);
+    --workspace-shell-sidebar-accent: var(--ozer-on-dark-alpha-06);
+    --workspace-shell-border: var(--ozer-border-on-dark);
+    --workspace-shell-text: var(--ozer-text-on-dark);
+    --workspace-shell-text-muted: var(--ozer-text-on-dark-muted);
+    --workspace-shell-text-on-dark: var(--ozer-text-on-dark);
+    --workspace-shell-text-on-dark-muted: var(--ozer-text-on-dark-muted);
 
-    --keel-gradient-from: #152544;
-    --keel-gradient-to: #18352f;
-    --keel-gradient-hover-from: #1a3052;
-    --keel-gradient-hover-to: #1c4039;
-    --keel-accent-blue: #2563eb;
-    --keel-teal: #2a9d8f;
-    --keel-teal-hover: #238b7f;
-
-    --workspace-control-surface: #0f1b35;
-    --workspace-control-border: rgba(255, 255, 255, 0.12);
+    --workspace-control-surface: var(--ozer-surface-panel);
+    --workspace-control-border: var(--ozer-border-on-dark);
   }
 }
 
@@ -165,12 +151,10 @@
     outline: none;
   }
 
-  /* Taps/clicks should not leave persistent focus chrome */
   *:focus:not(:focus-visible) {
     outline: none;
   }
 
-  /* Default app chrome: no rings/outlines unless enhanced focus is enabled */
   html:not([data-enhanced-focus='true']) *:is(:focus, :focus-visible) {
     --tw-ring-width: 0px;
     --tw-ring-shadow: 0 0 #0000;

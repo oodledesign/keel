@@ -155,7 +155,7 @@ export function WorkspaceAccountsSelector({
                   setIsCreating(true);
                 }}
               >
-                <Plus className="mr-2 h-4 w-4 text-[#2A9D8F]" />
+                <Plus className="mr-2 h-4 w-4 text-[var(--ozer-accent)]" />
                 Create new workspace
               </CommandItem>
             </CommandGroup>
@@ -171,7 +171,7 @@ export function WorkspaceAccountsSelector({
         <div className="w-full">
           {trigger}
           {open ? (
-            <div className="mt-2 max-h-[min(50dvh,20rem)] overflow-y-auto rounded-xl border border-white/10 bg-[#141c2e]">
+            <div className="mt-2 max-h-[min(50dvh,20rem)] overflow-y-auto rounded-xl border border-[var(--workspace-shell-border)] bg-[var(--workspace-shell-panel-hover)]">
               {list}
             </div>
           ) : null}
@@ -181,7 +181,7 @@ export function WorkspaceAccountsSelector({
           <PopoverTrigger asChild>{trigger}</PopoverTrigger>
           <PopoverContent
             data-test="account-selector-content"
-            className="z-[200] w-[min(100vw-2rem,320px)] border-white/10 bg-[#1A2535] p-0 text-white"
+            className="z-[200] w-[min(100vw-2rem,320px)] border-[var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text-on-dark)]"
             align="start"
           >
             {list}
@@ -210,7 +210,7 @@ export function buildPersonalSwitcherAccounts(
     image: null,
     profile: 'work_design',
     typeLabel: 'Life',
-    accentColor: '#2A9D8F',
+    accentColor: 'var(--ozer-accent)',
     createdAt: '',
   };
 

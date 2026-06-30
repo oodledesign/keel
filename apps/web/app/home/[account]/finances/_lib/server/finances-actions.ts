@@ -16,6 +16,10 @@ import {
 import { suggestTransactionCategories } from '~/lib/ai/finance-category-suggest';
 import { accumulateFinanceTotals } from '~/lib/finance/transaction-totals';
 import {
+  projectDisplayName,
+  resolveFinanceTransactionLinks,
+} from '~/lib/finance/transaction-links';
+import {
   pushCategoryToFreeAgent,
   syncFreeAgentToKeel,
 } from '~/lib/integrations/freeagent/sync';
@@ -34,13 +38,18 @@ const DEFAULT_CATEGORIES = [
   { name: 'Uncategorised', kind: 'expense' as const },
 ];
 
-function revalidateFinances(accountSlug: string) {
+function revalidateFinances(accountSlug: string, projectId?: string | null) {
   revalidatePath(
     pathsConfig.app.accountFinances.replace('[account]', accountSlug),
   );
   revalidatePath(
     pathsConfig.app.accountHome.replace('[account]', accountSlug),
   );
+  if (projectId) {
+    revalidatePath(
+      `${pathsConfig.app.accountProjects.replace('[account]', accountSlug)}/${projectId}`,
+    );
+  }
 }
 
 export async function ensureDefaultFinanceCategories(accountId: string) {
@@ -96,7 +105,10 @@ export const loadFinancesDashboardAction = enhanceAction(
     let txQuery = client
       .from('finance_transactions')
       .select(
-        'id, transaction_date, description, amount_pence, category_id, is_transfer, source, sync_status, bank_account_id',
+        `id, transaction_date, description, amount_pence, category_id, is_transfer, source, sync_status, bank_account_id,
+        client_id, project_id,
+        clients:client_id ( id, display_name ),
+        projects:project_id ( id, title, name )`,
       )
       .eq('account_id', input.accountId)
       .order('transaction_date', { ascending: false })
@@ -110,6 +122,8 @@ export const loadFinancesDashboardAction = enhanceAction(
       categories,
       { data: bankAccounts },
       { data: connection },
+      { data: clients },
+      { data: projects },
     ] = await Promise.all([
       txQuery,
       loadFinanceCategoriesForAccount(client, input.accountId),
@@ -127,6 +141,18 @@ export const loadFinancesDashboardAction = enhanceAction(
         .eq('account_id', input.accountId)
         .eq('provider', 'freeagent')
         .maybeSingle(),
+      client
+        .from('clients')
+        .select('id, display_name')
+        .eq('account_id', input.accountId)
+        .order('display_name')
+        .limit(200),
+      client
+        .from('projects')
+        .select('id, title, name, client_id')
+        .eq('account_id', input.accountId)
+        .order('updated_at', { ascending: false })
+        .limit(300),
     ]);
 
     if (txError) throw txError;
@@ -143,6 +169,12 @@ export const loadFinancesDashboardAction = enhanceAction(
       categories: categories ?? [],
       bankAccounts: bankAccounts ?? [],
       connection: connection ?? null,
+      clients: clients ?? [],
+      projects: (projects ?? []).map((project) => ({
+        id: project.id as string,
+        label: projectDisplayName(project as { title?: string | null; name?: string | null }),
+        client_id: (project.client_id as string | null) ?? null,
+      })),
       summary: {
         incomePence: totals.incomePence,
         expensePence: totals.expensePence,
@@ -157,6 +189,40 @@ export const loadFinancesDashboardAction = enhanceAction(
       accountId: z.string().uuid(),
       dateFrom: z.string().optional(),
       dateTo: z.string().optional(),
+    }),
+  },
+);
+
+export const setFinanceTransactionLinksAction = enhanceAction(
+  async (input) => {
+    const client = getSupabaseServerClient();
+
+    const links = await resolveFinanceTransactionLinks(client, input.accountId, {
+      clientId: input.clientId,
+      projectId: input.projectId,
+    });
+
+    const { error } = await client
+      .from('finance_transactions')
+      .update({
+        client_id: links.client_id,
+        project_id: links.project_id,
+      })
+      .eq('id', input.transactionId)
+      .eq('account_id', input.accountId);
+
+    if (error) throw error;
+
+    revalidateFinances(input.accountSlug, links.project_id);
+    return { ok: true, ...links };
+  },
+  {
+    schema: z.object({
+      accountId: z.string().uuid(),
+      accountSlug: z.string().min(1),
+      transactionId: z.string().uuid(),
+      clientId: z.string().uuid().nullable(),
+      projectId: z.string().uuid().nullable(),
     }),
   },
 );
@@ -392,10 +458,17 @@ export const importCsvTransactionsAction = enhanceAction(
 export const createManualTransactionAction = enhanceAction(
   async (input, user) => {
     const client = getSupabaseServerClient();
+    const links = await resolveFinanceTransactionLinks(client, input.accountId, {
+      clientId: input.clientId,
+      projectId: input.projectId,
+    });
+
     const { error } = await client.from('finance_transactions').insert({
       account_id: input.accountId,
       bank_account_id: input.bankAccountId,
       category_id: input.categoryId,
+      client_id: links.client_id,
+      project_id: links.project_id,
       transaction_date: input.transactionDate,
       description: input.description,
       amount_pence: input.amountPence,
@@ -404,7 +477,7 @@ export const createManualTransactionAction = enhanceAction(
       created_by: user.id,
     });
     if (error) throw error;
-    revalidateFinances(input.accountSlug);
+    revalidateFinances(input.accountSlug, links.project_id);
     return { ok: true };
   },
   {
@@ -413,6 +486,8 @@ export const createManualTransactionAction = enhanceAction(
       accountSlug: z.string().min(1),
       bankAccountId: z.string().uuid().nullable().optional(),
       categoryId: z.string().uuid().nullable().optional(),
+      clientId: z.string().uuid().nullable().optional(),
+      projectId: z.string().uuid().nullable().optional(),
       transactionDate: z.string(),
       description: z.string().max(500),
       amountPence: z.number().int(),

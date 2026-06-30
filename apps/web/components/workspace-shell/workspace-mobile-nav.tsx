@@ -81,7 +81,7 @@ export function WorkspaceMobileMenu({
 
       <div
         className={cn(
-          'fixed inset-0 z-[101] flex flex-col bg-[#0B132B] transition-transform duration-200 ease-out lg:hidden',
+          'fixed inset-0 z-[101] flex flex-col bg-[var(--workspace-shell-canvas)] transition-transform duration-200 ease-out lg:hidden',
           open ? 'translate-x-0' : '-translate-x-full',
         )}
         role="dialog"
@@ -201,7 +201,7 @@ export function WorkspaceMobileBottomNav({
         )}
         aria-label="Menu controls"
       >
-        <div className="pointer-events-auto flex h-12 min-w-[6.5rem] items-center justify-between gap-6 rounded-full border border-white/10 bg-[#1A2535]/98 px-2 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+        <div className="pointer-events-auto flex h-12 min-w-[6.5rem] items-center justify-between gap-6 rounded-full border border-[var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/98 px-2 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl">
           <HapticLink
             href={settingsHref}
             onClick={() => onMenuOpenChange(false)}
@@ -242,7 +242,7 @@ export function WorkspaceMobileBottomNav({
       aria-label="Primary"
     >
       <div aria-hidden />
-      <div className="pointer-events-auto flex h-12 items-center gap-0.5 justify-self-center rounded-full border border-white/10 bg-[#1A2535]/98 px-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+      <div className="pointer-events-auto flex h-12 items-center gap-0.5 justify-self-center rounded-full border border-[var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/98 px-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl">
         {bottomNavTabs.map((tab) => {
           const tabPathname = navHrefPathname(tab.path);
           const active =
@@ -262,8 +262,8 @@ export function WorkspaceMobileBottomNav({
               className={cn(
                 MOBILE_NAV_BTN_CLASS,
                 active
-                  ? 'bg-[var(--keel-teal)]/15 text-[#5eead4]'
-                  : 'text-zinc-400 hover:bg-white/[0.08] hover:text-zinc-200',
+                  ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]'
+                  : 'text-[var(--workspace-shell-text-on-dark-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text-on-dark)]',
               )}
             >
               <span

@@ -1,4 +1,5 @@
-import type { PlatformCitationResult } from '~/lib/ai-audit/types';
+import type { PlatformCitationResult, PromptLayer } from '~/lib/ai-audit/types';
+import { CITATION_SAMPLE_RUNS } from '~/lib/ai-audit/types';
 
 import type { BacklinkSummaryMetrics, BrandVisibilityRow } from './types';
 
@@ -31,9 +32,13 @@ export function computeBrandSignal(input: {
   brandVisibility: BrandVisibilityRow[];
   auditOverallScore: number | null;
 }): number | null {
-  const hasVisibility = input.brandVisibility.length > 0;
-  const citedPlatforms = input.brandVisibility.filter((row) => row.domainCited).length;
-  const totalPlatforms = input.brandVisibility.length;
+  const genericRows = input.brandVisibility.filter(
+    (row) => (row.promptLayer ?? 'generic') === 'generic',
+  );
+  const visibilityRows = genericRows.length ? genericRows : input.brandVisibility;
+  const hasVisibility = visibilityRows.length > 0;
+  const citedPlatforms = visibilityRows.filter((row) => row.domainCited).length;
+  const totalPlatforms = visibilityRows.length;
 
   const citationScore =
     totalPlatforms > 0 ? (citedPlatforms / totalPlatforms) * 100 : 0;
@@ -58,12 +63,34 @@ export function computeBrandSignal(input: {
 export function buildBrandVisibilityRows(
   platforms: PlatformCitationResult[],
   auditOverallScore: number | null,
+  options?: { promptLayer?: PromptLayer },
 ): BrandVisibilityRow[] {
-  return platforms.map((platform) => {
-    const totalQueries = platform.citations.length;
+  const filtered = options?.promptLayer
+    ? platforms.filter(
+        (platform) => (platform.promptLayer ?? 'generic') === options.promptLayer,
+      )
+    : platforms;
+
+  return filtered.map((platform) => {
+    const citations = platform.citations;
+    const promptsChecked = citations.length;
+    const sampleRunsPerPrompt = citations[0]?.sampleCount ?? CITATION_SAMPLE_RUNS;
+
+    const presenceRatePct =
+      platform.averagePresenceRate ??
+      (promptsChecked > 0
+        ? Math.round(
+            citations.reduce(
+              (sum, citation) =>
+                sum +
+                (citation.presenceRate ?? (citation.domainCited ? 100 : 0)),
+              0,
+            ) / promptsChecked,
+          )
+        : 0);
+
     const topicsVisible = platform.citedQueries.length;
-    const visibilityPct =
-      totalQueries > 0 ? Math.round((topicsVisible / totalQueries) * 100) : 0;
+    const visibilityPct = presenceRatePct;
 
     let sentimentPct: number | null = null;
     if (platform.domainCitedInAny) {
@@ -71,15 +98,20 @@ export function buildBrandVisibilityRows(
         auditOverallScore != null
           ? Math.min(95, Math.max(70, auditOverallScore))
           : 80;
-    } else if (totalQueries > 0) {
-      sentimentPct = auditOverallScore != null ? Math.max(50, auditOverallScore - 15) : null;
+    } else if (promptsChecked > 0) {
+      sentimentPct =
+        auditOverallScore != null ? Math.max(50, auditOverallScore - 15) : null;
     }
 
     return {
       platform: platform.platform,
       label: platform.label,
+      promptLayer: platform.promptLayer ?? 'generic',
+      presenceRatePct,
+      sampleRunsPerPrompt,
+      promptsChecked,
       topicsVisible,
-      totalQueries,
+      totalQueries: promptsChecked,
       visibilityPct,
       sentimentPct,
       domainCited: platform.domainCitedInAny,

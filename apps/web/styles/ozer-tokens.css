@@ -1,0 +1,109 @@
+/*
+ * Ozer brand tokens — single source of truth for colours, type, and radii.
+ * Extracted from public/brand/ozer-brand-guide.html (Figma export).
+ *
+ * To rebrand: edit primitive values below. Semantic + legacy aliases update automatically.
+ * See DESIGN_SYSTEM.md for the token map and usage.
+ */
+
+@import url('https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,700,800&f[]=general-sans@400,500,600,700&display=swap');
+
+@layer base {
+  :root {
+    /* ── Primitives (change these first) ── */
+    --ozer-plum-950: #2a1720;
+    --ozer-plum-900: #351e28;
+    --ozer-plum-800: #3d2a33;
+    --ozer-plum-700: #4a3540;
+    --ozer-plum-600: #5a4450;
+    --ozer-plum-500: #6e5862;
+
+    --ozer-coral-600: #c2452a;
+    --ozer-coral-500: #ff5c34;
+    --ozer-coral-400: #ff7a5c;
+    --ozer-coral-100: #ffe3da;
+    --ozer-coral-50: #ffe0d6;
+
+    --ozer-cream-50: #fbf6ec;
+    --ozer-cream-100: #f2e9db;
+    --ozer-cream-200: #e7decf;
+
+    --ozer-text-muted: #b7a4ac;
+    --ozer-text-subtle: #9b8590;
+
+    --ozer-slate-blue: #41606f;
+    --ozer-sky-100: #d7efff;
+
+    --ozer-gold-500: #f0c14b;
+    --ozer-lime-400: #e9f056;
+
+    --ozer-white: #ffffff;
+    --ozer-black: #000000;
+
+    --ozer-plum-alpha-08: rgba(53, 30, 40, 0.08);
+    --ozer-plum-alpha-12: rgba(53, 30, 40, 0.12);
+    --ozer-plum-alpha-18: rgba(53, 30, 40, 0.18);
+    --ozer-coral-alpha-45: rgba(255, 92, 52, 0.45);
+    --ozer-coral-alpha-15: rgba(255, 92, 52, 0.15);
+    --ozer-on-dark-alpha-06: rgba(251, 246, 236, 0.06);
+    --ozer-on-dark-alpha-08: rgba(251, 246, 236, 0.08);
+    --ozer-on-dark-alpha-65: rgba(251, 246, 236, 0.65);
+    --ozer-on-dark-alpha-80: rgba(251, 246, 236, 0.8);
+
+    /* ── Typography ── */
+    --ozer-font-body: 'General Sans', var(--font-sans-fallback, ui-sans-serif), system-ui,
+      sans-serif;
+    --ozer-font-display: 'Cabinet Grotesk', var(--font-heading-fallback, ui-sans-serif),
+      system-ui, sans-serif;
+
+    --ozer-font-weight-body: 400;
+    --ozer-font-weight-nav: 500;
+    --ozer-font-weight-heading: 700;
+
+    /* ── Shape ── */
+    --ozer-radius-sm: 0.375rem;
+    --ozer-radius-md: 0.5rem;
+    --ozer-radius-lg: 0.75rem;
+    --ozer-radius-xl: 1rem;
+
+    /* ── Semantic brand ── */
+    --ozer-accent: var(--ozer-coral-500);
+    --ozer-accent-hover: var(--ozer-coral-400);
+    --ozer-accent-pressed: var(--ozer-coral-600);
+    --ozer-accent-muted: var(--ozer-coral-100);
+    --ozer-accent-subtle: var(--ozer-coral-alpha-15);
+
+    --ozer-surface-canvas: var(--ozer-plum-900);
+    --ozer-surface-panel: var(--ozer-plum-950);
+    --ozer-surface-panel-hover: var(--ozer-plum-800);
+    --ozer-surface-elevated: var(--ozer-plum-700);
+    --ozer-surface-active: var(--ozer-plum-600);
+
+    --ozer-text-on-dark: var(--ozer-cream-50);
+    --ozer-text-on-dark-muted: var(--ozer-on-dark-alpha-65);
+    --ozer-text-on-light: var(--ozer-plum-950);
+    --ozer-text-on-light-muted: var(--ozer-text-muted);
+
+    --ozer-border-on-dark: var(--ozer-on-dark-alpha-08);
+    --ozer-border-on-dark-strong: var(--ozer-on-dark-alpha-12);
+    --ozer-border-on-light: var(--ozer-plum-alpha-12);
+
+    --ozer-info: var(--ozer-slate-blue);
+    --ozer-success: var(--ozer-coral-500);
+    --ozer-success-muted: var(--ozer-coral-400);
+
+    --ozer-gradient-active-from: var(--ozer-coral-600);
+    --ozer-gradient-active-to: var(--ozer-coral-500);
+    --ozer-gradient-active-hover-from: var(--ozer-coral-500);
+    --ozer-gradient-active-hover-to: var(--ozer-coral-400);
+
+    /* ── Legacy Keel aliases (keep until Phase 2 grep cleanup) ── */
+    --keel-teal: var(--ozer-accent);
+    --keel-teal-hover: var(--ozer-accent-hover);
+    --keel-accent-blue: var(--ozer-info);
+    --keel-gradient-from: var(--ozer-gradient-active-from);
+    --keel-gradient-to: var(--ozer-gradient-active-to);
+    --keel-gradient-hover-from: var(--ozer-gradient-active-hover-from);
+    --keel-gradient-hover-to: var(--ozer-gradient-active-hover-to);
+  }
+}

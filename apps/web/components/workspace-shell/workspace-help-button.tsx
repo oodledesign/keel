@@ -17,7 +17,7 @@ type WorkspaceHelpButtonProps = {
 };
 
 const triggerBaseClass =
-  'flex items-center justify-center rounded-full border border-white/10 text-[var(--keel-teal)] transition-colors hover:border-[var(--keel-teal)]/40 hover:bg-[var(--keel-teal)]/10';
+  'flex items-center justify-center rounded-full border border-[var(--workspace-shell-border)] text-[var(--ozer-accent)] transition-colors hover:border-[var(--ozer-accent)]/40 hover:bg-[var(--ozer-accent-subtle)]';
 
 export function WorkspaceHelpButton({
   className,

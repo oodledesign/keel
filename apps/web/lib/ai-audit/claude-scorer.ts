@@ -3,6 +3,7 @@ import 'server-only';
 import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
 
 import type { ScorerInput, ScorerOutput } from './types';
+import { CITATION_SAMPLE_RUNS } from './types';
 
 function buildScorerPrompt(input: ScorerInput): string {
   const { domain, robotsResult, llmsTxt, sitemap, pages, aiCitations } = input;
@@ -96,15 +97,15 @@ ${pages
   )
   .join('\n')}
 
-AI CITATIONS BY PLATFORM (DataForSEO live checks):
+AI CITATIONS BY PLATFORM (DataForSEO live checks, ${CITATION_SAMPLE_RUNS} samples per prompt):
 ${aiCitations.platforms
   .map(
     (platform) =>
-      `${platform.label}:
+      `${platform.label} (${platform.promptLayer === 'contextual' ? 'buyer context' : 'category benchmark'}):
 ${platform.citations
   .map(
     (citation) =>
-      `    "${citation.query}": triggered=${citation.triggered}, domain cited=${citation.domainCited}${citation.citedUrls.length ? `, urls=${citation.citedUrls.slice(0, 3).join('; ')}` : ''}`,
+      `    "${citation.query}": presence=${citation.presenceRate ?? (citation.domainCited ? 100 : 0)}% (${citation.sampleCount ?? 1} runs), triggered=${citation.triggered}${citation.citedUrls.length ? `, urls=${citation.citedUrls.slice(0, 3).join('; ')}` : ''}`,
   )
   .join('\n')}`,
   )

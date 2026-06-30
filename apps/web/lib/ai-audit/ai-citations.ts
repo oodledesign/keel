@@ -9,13 +9,16 @@ import type {
   AiCitationResult,
   CitationCheck,
   CitationPlatform,
+  CitationRunSample,
   PageCrawl,
   PlatformCitationResult,
+  PromptLayer,
 } from './types';
 import {
   CITATION_PLATFORM_LABELS,
   CITATION_QUERIES_GOOGLE,
   CITATION_QUERIES_LLM,
+  CITATION_SAMPLE_RUNS,
 } from './types';
 
 const COUNTRY_ISO: Record<string, string> = {
@@ -142,15 +145,64 @@ function extractLlmAnnotationUrls(
   return [...new Set(urls)];
 }
 
-async function checkGoogleAiOverview(
+function aggregateSampleRuns(
+  query: string,
+  promptLayer: PromptLayer,
+  runs: CitationRunSample[],
+): CitationCheck {
+  const sampleCount = runs.length;
+  const citedRuns = runs.filter((run) => run.domainCited).length;
+  const presenceRate =
+    sampleCount > 0 ? Math.round((citedRuns / sampleCount) * 100) : 0;
+
+  return {
+    query,
+    promptLayer,
+    triggered: runs.some((run) => run.triggered),
+    domainCited: citedRuns > 0,
+    presenceRate,
+    sampleCount,
+    runs,
+    citedUrls: [...new Set(runs.flatMap((run) => run.citedUrls))],
+  };
+}
+
+function summarisePlatform(
+  platform: CitationPlatform,
+  promptLayer: PromptLayer,
+  citations: CitationCheck[],
+): PlatformCitationResult {
+  const citedQueries = citations
+    .filter((citation) => citation.domainCited)
+    .map((citation) => citation.query);
+  const averagePresenceRate =
+    citations.length > 0
+      ? Math.round(
+          citations.reduce((sum, citation) => sum + (citation.presenceRate ?? 0), 0) /
+            citations.length,
+        )
+      : 0;
+
+  return {
+    platform,
+    label: CITATION_PLATFORM_LABELS[platform],
+    promptLayer,
+    domainCitedInAny: citedQueries.length > 0,
+    citedQueries,
+    citations,
+    averagePresenceRate,
+  };
+}
+
+async function sampleGoogleAiOverviewQuery(
   host: string,
-  queries: string[],
+  query: string,
   locationCode: number,
   competingBrands: Set<string>,
-): Promise<PlatformCitationResult> {
-  const citations: CitationCheck[] = [];
+): Promise<CitationRunSample[]> {
+  const runs: CitationRunSample[] = [];
 
-  for (const query of queries) {
+  for (let index = 0; index < CITATION_SAMPLE_RUNS; index += 1) {
     try {
       const json = await dfsPost('/serp/google/ai_overview/live', [
         { keyword: query, location_code: locationCode, language_code: 'en' },
@@ -163,63 +215,62 @@ async function checkGoogleAiOverview(
       const aiOverview = items.find((item) => item.type === 'ai_overview');
 
       if (!aiOverview) {
-        citations.push({
-          query,
-          triggered: false,
-          domainCited: false,
-          citedUrls: [],
+        runs.push({ triggered: false, domainCited: false, citedUrls: [] });
+      } else {
+        const references =
+          (aiOverview.references as Array<{ url?: string }> | undefined) ?? [];
+        const citedUrls = references
+          .map((ref) => String(ref.url ?? ''))
+          .filter(Boolean);
+        addCompetingBrands(host, citedUrls, competingBrands);
+        runs.push({
+          triggered: true,
+          domainCited: domainInUrls(host, citedUrls),
+          citedUrls,
         });
-        continue;
       }
-
-      const references =
-        (aiOverview.references as Array<{ url?: string }> | undefined) ?? [];
-      const citedUrls = references
-        .map((ref) => String(ref.url ?? ''))
-        .filter(Boolean);
-      addCompetingBrands(host, citedUrls, competingBrands);
-
-      citations.push({
-        query,
-        triggered: true,
-        domainCited: domainInUrls(host, citedUrls),
-        citedUrls,
-      });
     } catch {
-      citations.push({
-        query,
-        triggered: false,
-        domainCited: false,
-        citedUrls: [],
-      });
+      runs.push({ triggered: false, domainCited: false, citedUrls: [] });
     }
 
     await delay(200);
   }
 
-  const citedQueries = citations
-    .filter((citation) => citation.domainCited)
-    .map((citation) => citation.query);
-
-  return {
-    platform: 'google_ai_overview',
-    label: CITATION_PLATFORM_LABELS.google_ai_overview,
-    domainCitedInAny: citedQueries.length > 0,
-    citedQueries,
-    citations,
-  };
+  return runs;
 }
 
-async function checkLlmPlatform(
-  config: LlmPlatformConfig,
+async function checkGoogleAiOverview(
   host: string,
   queries: string[],
-  countryIso: string,
+  locationCode: number,
   competingBrands: Set<string>,
+  promptLayer: PromptLayer,
 ): Promise<PlatformCitationResult> {
   const citations: CitationCheck[] = [];
 
   for (const query of queries) {
+    const runs = await sampleGoogleAiOverviewQuery(
+      host,
+      query,
+      locationCode,
+      competingBrands,
+    );
+    citations.push(aggregateSampleRuns(query, promptLayer, runs));
+  }
+
+  return summarisePlatform('google_ai_overview', promptLayer, citations);
+}
+
+async function sampleLlmQuery(
+  config: LlmPlatformConfig,
+  host: string,
+  query: string,
+  countryIso: string,
+  competingBrands: Set<string>,
+): Promise<CitationRunSample[]> {
+  const runs: CitationRunSample[] = [];
+
+  for (let index = 0; index < CITATION_SAMPLE_RUNS; index += 1) {
     try {
       const body: Record<string, unknown> = {
         user_prompt: query.slice(0, 500),
@@ -248,35 +299,111 @@ async function checkLlmPlatform(
         addCompetingBrands(host, citedUrls, competingBrands);
       }
 
-      citations.push({
-        query,
+      runs.push({
         triggered,
         domainCited: domainInUrls(host, citedUrls),
         citedUrls,
       });
     } catch {
-      citations.push({
-        query,
-        triggered: false,
-        domainCited: false,
-        citedUrls: [],
-      });
+      runs.push({ triggered: false, domainCited: false, citedUrls: [] });
     }
 
     await delay(400);
   }
 
-  const citedQueries = citations
-    .filter((citation) => citation.domainCited)
-    .map((citation) => citation.query);
+  return runs;
+}
 
-  return {
-    platform: config.platform,
-    label: CITATION_PLATFORM_LABELS[config.platform],
-    domainCitedInAny: citedQueries.length > 0,
-    citedQueries,
-    citations,
-  };
+async function checkLlmPlatform(
+  config: LlmPlatformConfig,
+  host: string,
+  queries: string[],
+  countryIso: string,
+  competingBrands: Set<string>,
+  promptLayer: PromptLayer,
+): Promise<PlatformCitationResult> {
+  const citations: CitationCheck[] = [];
+
+  for (const query of queries) {
+    const runs = await sampleLlmQuery(
+      config,
+      host,
+      query,
+      countryIso,
+      competingBrands,
+    );
+    citations.push(aggregateSampleRuns(query, promptLayer, runs));
+  }
+
+  return summarisePlatform(config.platform, promptLayer, citations);
+}
+
+async function runCitationLayer(
+  host: string,
+  genericQueries: string[],
+  contextualGoogleQueries: string[],
+  contextualLlmQueries: string[],
+  locationCode: number,
+  countryIso: string,
+  competingBrands: Set<string>,
+): Promise<PlatformCitationResult[]> {
+  const platforms: PlatformCitationResult[] = [];
+
+  const googleGeneric = genericQueries.slice(0, CITATION_QUERIES_GOOGLE);
+  if (googleGeneric.length) {
+    platforms.push(
+      await checkGoogleAiOverview(
+        host,
+        googleGeneric,
+        locationCode,
+        competingBrands,
+        'generic',
+      ),
+    );
+  }
+
+  if (contextualGoogleQueries.length) {
+    platforms.push(
+      await checkGoogleAiOverview(
+        host,
+        contextualGoogleQueries,
+        locationCode,
+        competingBrands,
+        'contextual',
+      ),
+    );
+  }
+
+  const llmGeneric = genericQueries.slice(0, CITATION_QUERIES_LLM);
+  for (const config of LLM_PLATFORMS) {
+    if (llmGeneric.length) {
+      platforms.push(
+        await checkLlmPlatform(
+          config,
+          host,
+          llmGeneric,
+          countryIso,
+          competingBrands,
+          'generic',
+        ),
+      );
+    }
+
+    if (contextualLlmQueries.length) {
+      platforms.push(
+        await checkLlmPlatform(
+          config,
+          host,
+          contextualLlmQueries,
+          countryIso,
+          competingBrands,
+          'contextual',
+        ),
+      );
+    }
+  }
+
+  return platforms;
 }
 
 export async function checkAiCitations(
@@ -284,29 +411,22 @@ export async function checkAiCitations(
   brandQueries: string[],
   locationCode: number,
   country = 'gb',
+  contextualQueries: { google: string[]; llm: string[] } = { google: [], llm: [] },
 ): Promise<AiCitationResult> {
   const host = normaliseDomain(domain);
   const countryIso = countryToIso(country);
   const competingBrands = new Set<string>();
 
-  const googleQueries = brandQueries.slice(0, CITATION_QUERIES_GOOGLE);
-  const llmQueries = brandQueries.slice(0, CITATION_QUERIES_LLM);
-
-  const google = await checkGoogleAiOverview(
+  const platforms = await runCitationLayer(
     host,
-    googleQueries,
+    brandQueries,
+    contextualQueries.google,
+    contextualQueries.llm,
     locationCode,
+    countryIso,
     competingBrands,
   );
 
-  const llmResults: PlatformCitationResult[] = [];
-  for (const config of LLM_PLATFORMS) {
-    llmResults.push(
-      await checkLlmPlatform(config, host, llmQueries, countryIso, competingBrands),
-    );
-  }
-
-  const platforms = [google, ...llmResults];
   const allCitations = platforms.flatMap((platform) => platform.citations);
   const citedQueries = [
     ...new Set(platforms.flatMap((platform) => platform.citedQueries)),
@@ -331,4 +451,17 @@ export async function checkAiCitations(
       };
     }),
   };
+}
+
+export function platformPromptLayer(
+  platform: PlatformCitationResult,
+): PromptLayer {
+  return platform.promptLayer ?? 'generic';
+}
+
+export function filterPlatformsByLayer(
+  platforms: PlatformCitationResult[],
+  layer: PromptLayer,
+): PlatformCitationResult[] {
+  return platforms.filter((platform) => platformPromptLayer(platform) === layer);
 }

@@ -53,6 +53,7 @@ import type {
 import { JobEventsTabContent } from './job-events-tab';
 import { JobScheduleTabContent } from './job-schedule-tab';
 import { JobProjectWorkspace } from './job-project/job-project-workspace';
+import { ProjectFinancePanel } from './project-finance-panel';
 
 type Job = {
   id: string;
@@ -642,17 +643,11 @@ export function JobDetailContent({
 
         {!isContractorView && (
           <TabsContent value="finance" className="mt-0 flex-1 overflow-auto p-4 md:p-5">
-                <dl className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <dt className="text-sm font-medium text-zinc-400">Value</dt>
-                    <dd className="mt-0.5 text-white">{formatValue(job.value_pence)}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm font-medium text-zinc-400">Cost</dt>
-                    <dd className="mt-0.5 text-white">{formatValue(job.cost_pence)}</dd>
-                  </div>
-                </dl>
-                <p className="mt-4 text-sm text-zinc-500">Invoices and more finance features coming soon.</p>
+            <ProjectFinancePanel
+              accountId={accountId}
+              accountSlug={accountSlug}
+              projectId={jobId}
+            />
           </TabsContent>
         )}
 

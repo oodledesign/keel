@@ -3,6 +3,7 @@ import 'server-only';
 import { countryToLocationCode } from '~/lib/clusters/utils';
 
 import { checkAiCitations, deriveBrandQueries } from './ai-citations';
+import { loadContextualPromptInputs, sliceContextualPromptsForLlm } from './contextual-prompts';
 import { scoreAndRecommend } from './claude-scorer';
 import {
   compareBacklinks,
@@ -63,11 +64,21 @@ export async function runAuditJob(
     await updateAuditJobStatus(jobId, 'checking_citations');
 
     const brandQueries = deriveBrandQueries(domain, pages);
+    const contextualPrompts = await loadContextualPromptInputs({
+      projectId: job.project_id,
+      domain,
+      pages,
+      locationCode,
+    });
+    const contextualForLlm = sliceContextualPromptsForLlm(contextualPrompts);
     const aiCitations = await checkAiCitations(
       domain,
       brandQueries,
       locationCode,
       country,
+      contextualPrompts.length
+        ? { google: contextualPrompts, llm: contextualForLlm }
+        : { google: [], llm: [] },
     );
 
     const [targetOpr, targetBacklinks, competitorBacklinks] = await Promise.all([

@@ -1,58 +1,122 @@
-# Keel Design System
+# Keel / Ozer Design System
 
-Brand-aligned tokens for the Keel workspace shell (sidebar, top bar, cards, and actions).
+Brand-aligned tokens for the Ozer workspace shell, Shadcn UI, and shared components.
+
+## How to change the brand (quick reference)
+
+1. **Colours, gradients, radii** — edit **`apps/web/styles/ozer-tokens.css`** (primitives + semantic section).
+2. **App shell mapping** — usually no change needed; `shadcn-ui.css` reads semantic tokens automatically.
+3. **Fonts** — update the Fontshare `@import` in `ozer-tokens.css` and `--ozer-font-*` variables.
+4. **Component utilities** — prefer `var(--ozer-*)` or legacy `var(--keel-teal)`; avoid new hardcoded hex in TS/TSX.
+5. **Logos** — replace files under `apps/web/public/brand/` (wordmark, icon, favicon).
+
+Legacy `--keel-*` variables are aliases to `--ozer-*` so existing code keeps working during migration.
+
+---
 
 ## Typography
 
-- **Font:** [Inter](https://fonts.google.com/specimen/Inter) (Google Fonts via `next/font`)
-- **Headings:** weight `700`
-- **Navigation labels:** weight `500`
-- **Body:** weight `400`
+| Role | Font | Weight | CSS variable |
+|------|------|--------|--------------|
+| Body | General Sans (Fontshare) | 400 | `--ozer-font-body` |
+| Navigation | General Sans | 500 | `--ozer-font-weight-nav` |
+| Headings / display | Cabinet Grotesk (Fontshare) | 700 | `--ozer-font-display` |
 
-## Colours
+Loaded via Fontshare in `ozer-tokens.css`. Shadcn maps `--font-sans` → body, `--font-heading` → display.
 
-| Token | Value | Usage |
-|-------|--------|--------|
-| Primary CTA | `#2A9D8F` (flat teal) | Primary action buttons (`keel-gradient-btn`) |
-| Primary gradient | `#152544` → `#18352F` (subtle panel wash) | Active nav, selected tabs |
-| Background (page) | `#0B132B` | Main canvas (`--workspace-shell-canvas`) |
-| Sidebar / cards | `#0F1B35` | Sidebar, panels (`--workspace-shell-panel`) |
-| Accent blue | `#2563EB` | Links, focus ring, info |
-| Teal | `#2A9D8F` | Highlights, success, primary |
-| Text on dark | `#FFFFFF` | Sidebar and dark workspace UI |
-| Text on light | `#1E293B` | Light marketing / documents |
+---
 
-CSS variables: `--keel-gradient-from`, `--keel-gradient-to`, `--keel-gradient-hover-from`, `--keel-gradient-hover-to`, `--keel-teal`, `--keel-teal-hover`, `--keel-accent-blue`. Utility classes: `keel-gradient-btn` (flat teal primary CTA), `keel-gradient-active`.
+## Colour primitives (from brand guide)
+
+| Token | Hex | Usage |
+|-------|-----|--------|
+| `--ozer-plum-900` | `#351E28` | Main canvas background |
+| `--ozer-plum-950` | `#2A1720` | Sidebar / panels |
+| `--ozer-plum-800` | `#3D2A33` | Panel hover, elevated surfaces |
+| `--ozer-coral-500` | `#FF5C34` | Primary accent, CTAs, active nav |
+| `--ozer-coral-400` | `#FF7A5C` | Accent hover |
+| `--ozer-cream-50` | `#FBF6EC` | Text on dark surfaces |
+| `--ozer-text-muted` | `#B7A4AC` | Muted text on light |
+| `--ozer-info` | `#41606F` | Links, info accent |
+
+Full list: `apps/web/styles/ozer-tokens.css`
+
+---
+
+## Semantic tokens (prefer these in new code)
+
+| Token | Maps to |
+|-------|---------|
+| `--ozer-accent` | Primary CTA, focus, success highlights |
+| `--ozer-accent-hover` | Hover state for primary |
+| `--ozer-surface-canvas` | Page background |
+| `--ozer-surface-panel` | Cards, sidebar |
+| `--ozer-text-on-dark` | Primary text on plum surfaces |
+| `--ozer-border-on-dark` | Dividers on dark UI |
+| `--ozer-gradient-active-from` / `--to` | Active sidebar item gradient |
+
+Workspace shell uses `--workspace-shell-*` variables (defined in `shadcn-ui.css`, backed by Ozer semantics).
+
+---
+
+## Legacy aliases (Phase 1 compatibility)
+
+| Old | New |
+|-----|-----|
+| `--keel-teal` | `--ozer-accent` |
+| `--keel-teal-hover` | `--ozer-accent-hover` |
+| `--keel-gradient-from` / `--to` | `--ozer-gradient-active-*` |
+| `--keel-accent-blue` | `--ozer-info` |
+
+Utility classes: `keel-gradient-btn`, `keel-gradient-active`, `workspace-btn-primary` — all use CSS variables.
+
+---
 
 ## Workspace shell
 
 ### Sidebar (all workspaces)
 
 - Fixed width **240px** (`15rem`, `--sidebar-width`)
-- **Top:** Ozer logo (`/brand/ozer-wordmark.png`), then workspace switcher (avatar, name, role badge, chevron)
-- **Nav:** icon + label, **40px** row height, **12px** horizontal padding; active item uses primary gradient; hover uses subtle white tint
-- Nav items from `account_module_settings` (enabled modules), ordered per `config/workspace-module-order.ts`
-- No “Application” / “Settings” section headings — **8px** gap between nav groups (`mt-2` on adjacent groups)
-- **Bottom:** collapse control, then profile block (avatar, display name, email, chevron)
+- **Top:** Ozer logo (`/brand/ozer-wordmark.png`), workspace switcher
+- **Nav:** icon + label, **40px** row height; active item uses coral gradient (`keel-gradient-active`)
+- **Bottom:** collapse control, profile (team) or moved to top bar (personal)
 
-### Top bar (all workspaces)
+### Top bar
 
-- Transparent background (blends with page)
-- **Right only:** notifications, Search (outlined + ⌘K pill), **New** (teal flat + chevron dropdown)
-- No floating action button in the shell
+- Transparent background
+- **Right:** notifications, Search (⌘K), **New** (coral primary)
 
 ### Logos
 
 | Asset | Path |
 |--------|------|
-| Wordmark (all surfaces) | `apps/web/public/brand/ozer-wordmark.png` |
-| Collapsed sidebar / favicon | `apps/web/public/brand/ozer-icon.png` |
+| Wordmark | `apps/web/public/brand/ozer-wordmark.png` |
+| Icon / favicon | `apps/web/public/brand/ozer-icon.png` |
+| Brand guide (reference) | `apps/web/public/brand/ozer-brand-guide.html` |
+
+---
 
 ## Implementation map
 
-- Tokens: `apps/web/styles/shadcn-ui.css`
-- Fonts: `apps/web/lib/fonts.ts`
-- Shell components: `apps/web/components/workspace-shell/*`
-- Team sidebar: `apps/web/app/home/[account]/_components/team-account-layout-sidebar.tsx`
-- Personal sidebar: `apps/web/app/home/(user)/_components/home-sidebar.tsx`
-- Module order: `apps/web/config/workspace-module-order.ts`
+| Concern | File |
+|---------|------|
+| **Brand primitives** | `apps/web/styles/ozer-tokens.css` |
+| Shadcn + shell mapping | `apps/web/styles/shadcn-ui.css` |
+| Tailwind `@theme` bridge | `apps/web/styles/theme.css` |
+| Button utilities | `apps/web/styles/theme.utilities.css`, `makerkit.css` |
+| TS class helpers | `apps/web/lib/workspace-ui.ts` |
+| Shell layout classes | `apps/web/components/workspace-shell/workspace-shell-styles.ts` |
+| Fonts bootstrap | `apps/web/lib/fonts.ts` |
+| Live token preview | `apps/web/app/admin/_components/keel-branding-guide.tsx` |
+
+---
+
+## Rollout phases
+
+| Phase | Scope | Status |
+|-------|--------|--------|
+| **1** | Token file + shell (sidebar, top bar, primary buttons via CSS vars) | Current |
+| **2** | Replace hardcoded hex in feature modules (~90 files) | Planned |
+| **3** | Marketing site alignment | Planned |
+
+Interactive reference: deploy `ozer-brand-guide.html` or open locally after `npm run dev`.

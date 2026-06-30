@@ -1,8 +1,13 @@
-import type { PlatformCitationResult } from '~/lib/ai-audit/types';
+import type { PlatformCitationResult, PromptLayer } from '~/lib/ai-audit/types';
 
 export type BrandVisibilityRow = {
   platform: string;
   label: string;
+  promptLayer?: PromptLayer;
+  /** Sampled presence rate across prompts (0–100) */
+  presenceRatePct?: number;
+  sampleRunsPerPrompt?: number;
+  promptsChecked?: number;
   topicsVisible: number;
   totalQueries: number;
   visibilityPct: number;

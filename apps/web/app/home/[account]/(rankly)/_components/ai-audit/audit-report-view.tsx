@@ -15,6 +15,7 @@ import {
 } from '~/lib/ai-audit/types';
 import { analyzeCrawlAccess } from '~/lib/crawl/access-summary';
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
+import { AuditCitationLayerPanel } from '~/home/[account]/(rankly)/_components/brand-visibility-layers';
 
 import { CrawlAccessBanner } from '../crawl-access-banner';
 import { BacklinkBar, BacklinkSourceNote } from '../shared/backlink-bar';
@@ -285,7 +286,11 @@ function AiCitationStatus({ report }: { report: AuditReportRow }) {
     ) : null;
 
   if (hasPlatformData) {
-    const citedCount = platforms.filter((p) => p.domainCitedInAny).length;
+    const genericPlatforms = platforms.filter(
+      (platform) => (platform.promptLayer ?? 'generic') === 'generic',
+    );
+    const citedCount = genericPlatforms.filter((p) => p.domainCitedInAny).length;
+    const platformCount = genericPlatforms.length || platforms.length;
 
     return (
       <div className="space-y-3">
@@ -293,14 +298,14 @@ function AiCitationStatus({ report }: { report: AuditReportRow }) {
 
         <div
           className={`rounded-lg border px-4 py-3 text-sm ${
-            report.ai_cited
+            citedCount > 0
               ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-100'
               : 'border-amber-500/30 bg-amber-500/10 text-amber-100'
           }`}
         >
-          {report.ai_cited
-            ? `Your domain is cited on ${citedCount} of ${platforms.length} AI platforms tested.`
-            : `Not cited on any of ${platforms.length} AI platforms tested.`}
+          {citedCount > 0
+            ? `Your domain appeared in ${citedCount} of ${platformCount} category-benchmark checks (sampled).`
+            : `Not cited in category-benchmark checks on ${platformCount} platforms tested.`}
         </div>
 
         {competingBrandsPanel}
@@ -322,39 +327,7 @@ function AiCitationStatus({ report }: { report: AuditReportRow }) {
           </div>
         ) : null}
 
-        <div className="overflow-x-auto rounded-lg border border-white/10">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-white/10 text-left text-xs uppercase text-muted-foreground">
-                <th className="px-4 py-2 font-medium">Platform</th>
-                <th className="px-4 py-2 font-medium">Cited</th>
-                <th className="px-4 py-2 font-medium">Queries</th>
-              </tr>
-            </thead>
-            <tbody>
-              {platforms.map((platform) => (
-                <tr
-                  key={platform.platform}
-                  className="border-b border-white/5 last:border-0"
-                >
-                  <td className="px-4 py-2 font-medium">{platform.label}</td>
-                  <td className="px-4 py-2">
-                    {platform.domainCitedInAny ? (
-                      <span className="text-emerald-400">Yes</span>
-                    ) : (
-                      <span className="text-muted-foreground">No</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2 text-muted-foreground">
-                    {platform.citedQueries.length
-                      ? platform.citedQueries.join(', ')
-                      : '—'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <AuditCitationLayerPanel platforms={platforms} />
       </div>
     );
   }

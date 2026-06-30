@@ -8,6 +8,7 @@
 @import 'tailwindcss';
 
 /* local styles - update the below if you add a new style */
+@import './ozer-tokens.css';
 @import './theme.css';
 @import './theme.utilities.css';
 @import './shadcn-ui.css';

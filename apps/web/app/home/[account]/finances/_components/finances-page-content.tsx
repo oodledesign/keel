@@ -52,6 +52,7 @@ import {
   disconnectFreeAgentAction,
   importCsvTransactionsAction,
   loadFinancesDashboardAction,
+  setFinanceTransactionLinksAction,
   setFinanceTransferAction,
   suggestCsvMappingAction,
   suggestTransactionCategoriesAction,
@@ -271,6 +272,28 @@ export function FinancesPageContent({
       projectedNetPence: Math.round(avgIncome - avgExpense),
     };
   }, [data?.transactions]);
+
+  const onSetLinks = (
+    transactionId: string,
+    clientId: string | null,
+    projectId: string | null,
+  ) => {
+    startTransition(async () => {
+      try {
+        await setFinanceTransactionLinksAction({
+          accountId,
+          accountSlug,
+          transactionId,
+          clientId,
+          projectId,
+        });
+        await refresh({ background: true });
+        toast.success('Client / project updated');
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Could not update links');
+      }
+    });
+  };
 
   const onSetTransfer = (transactionId: string, isTransfer: boolean) => {
     startTransition(async () => {
@@ -539,6 +562,7 @@ export function FinancesPageContent({
             onApplySuggestions={onApplySuggestions}
             onCategorize={onCategorize}
             onSetTransfer={onSetTransfer}
+            onSetLinks={onSetLinks}
           />
         </div>
       )}
@@ -641,6 +665,7 @@ function TransactionsPanel({
   onApplySuggestions,
   onCategorize,
   onSetTransfer,
+  onSetLinks,
 }: {
   data: DashboardData | null;
   loading: boolean;
@@ -652,6 +677,11 @@ function TransactionsPanel({
   onApplySuggestions: () => void;
   onCategorize: (transactionId: string, categoryId: string | null) => void;
   onSetTransfer: (transactionId: string, isTransfer: boolean) => void;
+  onSetLinks: (
+    transactionId: string,
+    clientId: string | null,
+    projectId: string | null,
+  ) => void;
 }) {
   return (
     <div className={cn(panelClass, 'overflow-hidden')}>
@@ -701,6 +731,8 @@ function TransactionsPanel({
                 <th className="px-4 py-2 font-medium">Amount</th>
                 <th className="px-4 py-2 font-medium">Type</th>
                 <th className="px-4 py-2 font-medium">Category</th>
+                <th className="px-4 py-2 font-medium">Client</th>
+                <th className="px-4 py-2 font-medium">Project</th>
                 <th className="px-4 py-2 font-medium">Source</th>
               </tr>
             </thead>
@@ -713,6 +745,12 @@ function TransactionsPanel({
                 const suggestedCat = suggestion?.categoryId
                   ? data.categories.find((c) => c.id === suggestion.categoryId)
                   : null;
+                const txClientId = (tx.client_id as string | null) ?? null;
+                const txProjectId = (tx.project_id as string | null) ?? null;
+                const projectOptions = (data.projects ?? []).filter(
+                  (project) =>
+                    !txClientId || !project.client_id || project.client_id === txClientId,
+                );
                 return (
                   <tr
                     key={tx.id as string}
@@ -786,6 +824,69 @@ function TransactionsPanel({
                       {cat?.name ? (
                         <span className="sr-only">{String(cat.name)}</span>
                       ) : null}
+                    </td>
+                    <td className="px-4 py-2">
+                      <Select
+                        value={txClientId ?? 'none'}
+                        onValueChange={(v) => {
+                          const nextClientId = v === 'none' ? null : v;
+                          const nextProjectId =
+                            txProjectId &&
+                            (data.projects ?? []).find((p) => p.id === txProjectId)
+                              ?.client_id &&
+                            (data.projects ?? []).find((p) => p.id === txProjectId)
+                              ?.client_id !== nextClientId
+                              ? null
+                              : txProjectId;
+                          onSetLinks(tx.id as string, nextClientId, nextProjectId);
+                        }}
+                        disabled={pending}
+                      >
+                        <SelectTrigger className="h-8 w-36 border-white/10 bg-transparent text-xs text-white">
+                          <SelectValue placeholder="Client" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No client</SelectItem>
+                          {(data.clients ?? []).map((clientRow) => (
+                            <SelectItem
+                              key={clientRow.id as string}
+                              value={clientRow.id as string}
+                            >
+                              {String(clientRow.display_name ?? clientRow.id)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="px-4 py-2">
+                      <Select
+                        value={txProjectId ?? 'none'}
+                        onValueChange={(v) => {
+                          if (v === 'none') {
+                            onSetLinks(tx.id as string, txClientId, null);
+                            return;
+                          }
+                          const project = (data.projects ?? []).find((p) => p.id === v);
+                          onSetLinks(
+                            tx.id as string,
+                            project?.client_id ?? txClientId,
+                            v,
+                          );
+                        }}
+                        disabled={pending}
+                      >
+                        <SelectTrigger className="h-8 w-40 border-white/10 bg-transparent text-xs text-white">
+                          <SelectValue placeholder="Project" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No project</SelectItem>
+                          {projectOptions.map((project) => (
+                            <SelectItem key={project.id} value={project.id}>
+                              {project.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </td>
                     <td className="px-4 py-2 text-xs capitalize text-zinc-500">
                       {String(tx.source)}

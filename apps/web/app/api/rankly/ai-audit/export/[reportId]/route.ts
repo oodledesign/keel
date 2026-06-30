@@ -53,7 +53,7 @@ function buildExportHtml(
     (report.ai_citations_by_platform ?? [])
       .map(
         (platform) =>
-          `<tr><td>${escapeHtml(platform.label)}</td><td>${platform.domainCitedInAny ? 'Yes' : 'No'}</td><td>${escapeHtml(platform.citedQueries.join(', ') || '—')}</td></tr>`,
+          `<tr><td>${escapeHtml(platform.label)}</td><td>${escapeHtml(platform.promptLayer === 'contextual' ? 'Buyer context' : 'Category benchmark')}</td><td>${platform.domainCitedInAny ? `${platform.averagePresenceRate ?? 0}% avg` : '0% avg'}</td><td>${escapeHtml(platform.citations.map((c) => `${c.query} (${c.presenceRate ?? (c.domainCited ? 100 : 0)}%)`).join('; ') || '—')}</td></tr>`,
       )
       .join('') || '';
 
@@ -94,7 +94,7 @@ function buildExportHtml(
     platformHtml
       ? `<h2>AI citations by platform</h2>
   <table style="width:100%; border-collapse: collapse; margin-bottom: 2rem;">
-    <thead><tr style="border-bottom: 1px solid #ddd;"><th style="text-align:left; padding: 0.5rem;">Platform</th><th style="text-align:left; padding: 0.5rem;">Cited</th><th style="text-align:left; padding: 0.5rem;">Queries</th></tr></thead>
+    <thead><tr style="border-bottom: 1px solid #ddd;"><th style="text-align:left; padding: 0.5rem;">Platform</th><th style="text-align:left; padding: 0.5rem;">Layer</th><th style="text-align:left; padding: 0.5rem;">Presence</th><th style="text-align:left; padding: 0.5rem;">Prompts</th></tr></thead>
     <tbody>${platformHtml}</tbody>
   </table>`
       : ''
