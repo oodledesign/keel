@@ -99,7 +99,14 @@ export function MagicLinkAuthContainer({
   };
 
   if (signInWithOtpMutation.data) {
-    return <SuccessAlert />;
+    return (
+      <SuccessAlert
+        onResend={() => {
+          signInWithOtpMutation.reset();
+          captcha.reset();
+        }}
+      />
+    );
   }
 
   return (
@@ -152,19 +159,25 @@ export function MagicLinkAuthContainer({
   );
 }
 
-function SuccessAlert() {
+function SuccessAlert({ onResend }: { onResend: () => void }) {
   return (
-    <Alert variant={'success'}>
-      <CheckIcon className={'h-4'} />
+    <div className="flex flex-col gap-4">
+      <Alert variant={'success'}>
+        <CheckIcon className={'h-4'} />
 
-      <AlertTitle>
-        <Trans i18nKey={'auth:sendLinkSuccess'} />
-      </AlertTitle>
+        <AlertTitle>
+          <Trans i18nKey={'auth:sendLinkSuccess'} />
+        </AlertTitle>
 
-      <AlertDescription>
-        <Trans i18nKey={'auth:sendLinkSuccessDescription'} />
-      </AlertDescription>
-    </Alert>
+        <AlertDescription>
+          <Trans i18nKey={'auth:sendLinkSuccessDescription'} />
+        </AlertDescription>
+      </Alert>
+
+      <Button type="button" variant="outline" onClick={onResend}>
+        <Trans i18nKey={'auth:getNewLink'} />
+      </Button>
+    </div>
   );
 }
 

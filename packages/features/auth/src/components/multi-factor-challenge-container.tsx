@@ -190,9 +190,29 @@ export function MultiFactorChallengeContainer({
               <Trans i18nKey={'account:submitVerificationCode'} />
             </If>
           </Button>
+
+          <MfaSignOutButton />
         </div>
       </form>
     </Form>
+  );
+}
+
+function MfaSignOutButton() {
+  const signOut = useSignOut();
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      className="w-full"
+      disabled={signOut.isPending}
+      onClick={() => {
+        void signOut.mutateAsync();
+      }}
+    >
+      <Trans i18nKey="auth:signOut" defaults="Sign out" />
+    </Button>
   );
 }
 

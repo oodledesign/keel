@@ -41,6 +41,8 @@ type OtpSignInContainerProps = {
 
 export function OtpSignInContainer(props: OtpSignInContainerProps) {
   const verifyMutation = useVerifyOtp();
+  const signInMutation = useSignInWithOtp();
+  const captcha = useCaptcha({ siteKey: props.captchaSiteKey });
   const router = useRouter();
   const { recordAuthMethod } = useLastAuthMethod();
   const params = useSearchParams();
@@ -63,6 +65,21 @@ export function OtpSignInContainer(props: OtpSignInContainerProps) {
   const shouldCreateUser =
     'shouldCreateUser' in props && props.shouldCreateUser;
 
+  const sendOtp = async (targetEmail: string) => {
+    await signInMutation.mutateAsync({
+      email: targetEmail,
+      options: {
+        captchaToken: captcha.token,
+        shouldCreateUser,
+      },
+    });
+
+    captcha.reset();
+    otpForm.setValue('email', targetEmail, { shouldValidate: true });
+    otpForm.setValue('token', '');
+    verifyMutation.reset();
+  };
+
   const handleVerifyOtp = async ({
     token,
     email,
@@ -76,28 +93,35 @@ export function OtpSignInContainer(props: OtpSignInContainerProps) {
       token,
     });
 
-    // Record successful OTP sign-in
     recordAuthMethod('otp', { email });
 
-    // on sign ups we redirect to the app home
     const next = params.get('next') ?? '/app';
 
     router.replace(next);
   };
 
+  const handleResendOtp = async () => {
+    const targetEmail = otpForm.getValues('email');
+
+    if (!targetEmail) {
+      otpForm.setValue('email', '', { shouldValidate: true });
+      return;
+    }
+
+    await sendOtp(targetEmail);
+  };
+
   if (isEmailStep) {
     return (
       <OtpEmailForm
-        shouldCreateUser={shouldCreateUser}
-        captchaSiteKey={props.captchaSiteKey}
-        onSendOtp={(email) => {
-          otpForm.setValue('email', email, {
-            shouldValidate: true,
-          });
-        }}
+        captcha={captcha}
+        signInMutation={signInMutation}
+        onSendOtp={sendOtp}
       />
     );
   }
+
+  const isBusy = verifyMutation.isPending || signInMutation.isPending;
 
   return (
     <Form {...otpForm}>
@@ -105,7 +129,14 @@ export function OtpSignInContainer(props: OtpSignInContainerProps) {
         className="flex w-full flex-col items-center space-y-8"
         onSubmit={otpForm.handleSubmit(handleVerifyOtp)}
       >
-        <AuthErrorAlert error={verifyMutation.error} />
+        <AuthErrorAlert error={verifyMutation.error ?? signInMutation.error} />
+
+        <p className="text-muted-foreground text-center text-sm">
+          <Trans
+            i18nKey="common:otp.codeSentToEmail"
+            values={{ email }}
+          />
+        </p>
 
         <FormField
           name="token"
@@ -117,7 +148,7 @@ export function OtpSignInContainer(props: OtpSignInContainerProps) {
                   {...field}
                   autoComplete="one-time-code"
                   autoFocus
-                  disabled={verifyMutation.isPending}
+                  disabled={isBusy}
                 >
                   <InputOTPGroup>
                     <InputOTPSlot index={0} data-slot="0" />
@@ -145,7 +176,7 @@ export function OtpSignInContainer(props: OtpSignInContainerProps) {
         <div className="flex w-full flex-col gap-y-2">
           <Button
             type="submit"
-            disabled={verifyMutation.isPending}
+            disabled={isBusy}
             data-test="otp-verify-button"
           >
             {verifyMutation.isPending ? (
@@ -161,46 +192,59 @@ export function OtpSignInContainer(props: OtpSignInContainerProps) {
           <Button
             type="button"
             variant="ghost"
-            disabled={verifyMutation.isPending}
+            disabled={isBusy}
             onClick={() => {
-              otpForm.setValue('email', '', {
-                shouldValidate: true,
-              });
+              void handleResendOtp();
             }}
           >
-            <Trans i18nKey="common:otp.requestNewCode" />
+            {signInMutation.isPending ? (
+              <>
+                <Spinner className="mr-2 h-4 w-4" />
+                <Trans i18nKey="common:otp.sendingCode" />
+              </>
+            ) : (
+              <Trans i18nKey="common:otp.requestNewCode" />
+            )}
+          </Button>
+
+          <Button
+            type="button"
+            variant="link"
+            disabled={isBusy}
+            className="text-muted-foreground"
+            onClick={() => {
+              signInMutation.reset();
+              verifyMutation.reset();
+              otpForm.setValue('email', '', { shouldValidate: true });
+              otpForm.setValue('token', '');
+            }}
+          >
+            <Trans i18nKey="auth:changeEmailAddress" />
           </Button>
         </div>
+
+        {captcha.field}
       </form>
     </Form>
   );
 }
 
 function OtpEmailForm({
-  shouldCreateUser,
-  captchaSiteKey,
+  captcha,
+  signInMutation,
   onSendOtp,
 }: {
-  shouldCreateUser: boolean;
-  captchaSiteKey?: string;
-  onSendOtp: (email: string) => void;
+  captcha: ReturnType<typeof useCaptcha>;
+  signInMutation: ReturnType<typeof useSignInWithOtp>;
+  onSendOtp: (email: string) => Promise<void>;
 }) {
-  const captcha = useCaptcha({ siteKey: captchaSiteKey });
-  const signInMutation = useSignInWithOtp();
-
   const emailForm = useForm({
     resolver: zodResolver(EmailSchema),
     defaultValues: { email: '' },
   });
 
   const handleSendOtp = async ({ email }: z.infer<typeof EmailSchema>) => {
-    await signInMutation.mutateAsync({
-      email,
-      options: { captchaToken: captcha.token, shouldCreateUser },
-    });
-
-    captcha.reset();
-    onSendOtp(email);
+    await onSendOtp(email);
   };
 
   return (
