@@ -30,7 +30,9 @@ export type PropertyDocument = {
   fileSize: number | null;
   mimeType: string | null;
   documentType: string;
+  financialYear: string | null;
   createdAt: string;
+  updatedAt: string;
 };
 
 type PropertyRow = {
@@ -61,7 +63,9 @@ type DocumentRow = {
   file_size?: number | null;
   mime_type?: string | null;
   document_type?: string | null;
+  financial_year?: string | null;
   created_at: string;
+  updated_at?: string;
 };
 
 function mapProperty(row: PropertyRow): Property {
@@ -95,7 +99,9 @@ function mapDocument(row: DocumentRow): PropertyDocument {
     fileSize: row.file_size ?? null,
     mimeType: row.mime_type ?? null,
     documentType: row.document_type ?? 'other',
+    financialYear: row.financial_year ?? null,
     createdAt: row.created_at,
+    updatedAt: row.updated_at ?? row.created_at,
   };
 }
 
@@ -255,6 +261,7 @@ export function createPropertiesService(client: SupabaseClient) {
       fileSize?: number | null;
       mimeType?: string | null;
       documentType?: string;
+      financialYear?: string | null;
     }): Promise<PropertyDocument> {
       const { data, error } = await client
         .from('property_documents')
@@ -267,11 +274,35 @@ export function createPropertiesService(client: SupabaseClient) {
           file_size: input.fileSize ?? null,
           mime_type: input.mimeType ?? null,
           document_type: input.documentType ?? 'other',
+          financial_year: input.financialYear ?? null,
         })
         .select('*')
         .single();
 
       if (error || !data) throw new Error(error?.message ?? 'Failed to create document record');
+      return mapDocument(data as DocumentRow);
+    },
+
+    async updateDocument(
+      documentId: string,
+      input: {
+        name?: string;
+        documentType?: string;
+        financialYear?: string | null;
+      },
+    ): Promise<PropertyDocument> {
+      const { data, error } = await client
+        .from('property_documents')
+        .update({
+          ...(input.name !== undefined && { name: input.name }),
+          ...(input.documentType !== undefined && { document_type: input.documentType }),
+          ...(input.financialYear !== undefined && { financial_year: input.financialYear }),
+        })
+        .eq('id', documentId)
+        .select('*')
+        .single();
+
+      if (error || !data) throw new Error(error?.message ?? 'Failed to update document');
       return mapDocument(data as DocumentRow);
     },
 

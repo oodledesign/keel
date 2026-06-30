@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState, useTransition } from 'react';
 
-import { FileText, Paperclip, Trash2, Upload } from 'lucide-react';
+import { FileText, Paperclip, Pencil, Trash2, Upload } from 'lucide-react';
 
 import { useSupabase } from '@kit/supabase/hooks/use-supabase';
 import { Button } from '@kit/ui/button';
@@ -14,11 +14,13 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 
+import { DOCUMENT_TYPE_LABELS } from '../../_lib/document-types';
 import type { PropertyDocument } from '../../_lib/server/properties.service';
 import {
   createDocument,
   deleteDocument,
 } from '../../_lib/server/server-actions';
+import { PropertyDocumentEditModal } from './property-document-edit-modal';
 
 interface PropertyDocumentsTabProps {
   propertyId: string;
@@ -27,18 +29,7 @@ interface PropertyDocumentsTabProps {
   initialDocuments: PropertyDocument[];
 }
 
-const DOCTYPE_LABELS: Record<string, string> = {
-  contract: 'Contract',
-  lease: 'Lease',
-  insurance: 'Insurance',
-  inspection: 'Inspection',
-  title_deed: 'Title Deed',
-  mortgage: 'Mortgage',
-  tax: 'Tax',
-  utility: 'Utility',
-  photo: 'Photo',
-  other: 'Other',
-};
+const DOCTYPE_LABELS: Record<string, string> = DOCUMENT_TYPE_LABELS;
 
 export function PropertyDocumentsTab({
   propertyId,
@@ -50,6 +41,7 @@ export function PropertyDocumentsTab({
   const [uploading, setUploading] = useState(false);
   const [docType, setDocType] = useState<string>('other');
   const [error, setError] = useState<string | null>(null);
+  const [editingDoc, setEditingDoc] = useState<PropertyDocument | null>(null);
   const [, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = useSupabase();
@@ -203,12 +195,21 @@ export function PropertyDocumentsTab({
                 </button>
                 <p className="text-xs text-[var(--workspace-shell-text)]/40">
                   {DOCTYPE_LABELS[doc.documentType] ?? doc.documentType}
+                  {doc.financialYear ? ` · FY ${doc.financialYear}` : ''}
                   {doc.fileSize
                     ? ` · ${formatBytes(doc.fileSize)}`
                     : ''}
                   {` · ${formatDate(doc.createdAt)}`}
                 </p>
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 flex-shrink-0 text-[var(--workspace-shell-text)]/30 hover:text-[var(--workspace-shell-text)]"
+                onClick={() => setEditingDoc(doc)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
               <Button
                 variant="ghost"
                 size="icon"
@@ -221,6 +222,18 @@ export function PropertyDocumentsTab({
           ))}
         </div>
       )}
+
+      <PropertyDocumentEditModal
+        open={Boolean(editingDoc)}
+        doc={editingDoc}
+        onClose={() => setEditingDoc(null)}
+        onSaved={(updated) => {
+          setDocuments((prev) =>
+            prev.map((d) => (d.id === updated.id ? updated : d)),
+          );
+          setEditingDoc(null);
+        }}
+      />
     </div>
   );
 }
