@@ -2,13 +2,11 @@ import type { NoteContextLink } from './types';
 
 type RawNoteRow = {
   project_id?: string | null;
-  job_id?: string | null;
   client_org_id?: string | null;
   client_id?: string | null;
   property_id?: string | null;
   task_id?: string | null;
   projects?: { name?: string | null } | null;
-  jobs?: { title?: string | null } | null;
   client_orgs?: { name?: string | null } | null;
   clients?: { display_name?: string | null } | null;
   properties?: { name?: string | null } | null;
@@ -46,13 +44,6 @@ export function resolveNoteContext(row: RawNoteRow): NoteContextLink | null {
       type: 'project',
       id: row.project_id,
       label: row.projects.name.trim(),
-    };
-  }
-  if (row.job_id && row.jobs?.title) {
-    return {
-      type: 'job',
-      id: row.job_id,
-      label: row.jobs.title.trim(),
     };
   }
   const clientName =

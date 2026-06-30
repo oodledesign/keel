@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
 import {
   Dialog,
@@ -19,15 +19,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
+import { cn } from '@kit/ui/utils';
 
 import { Loader2 } from 'lucide-react';
 
-import { pickDefaultPipelineTargetId } from '~/home/(user)/_lib/pipeline-constants';
+import {
+  PIPELINE_WORKSPACE_BUSINESS_PREFIX,
+  pickDefaultPipelineTargetId,
+} from '~/home/(user)/_lib/pipeline-constants';
+import { ClientCombobox } from '~/home/[account]/projects/_components/client-combobox';
+import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
 import { updateDeal } from '../actions';
 import type { PipelineDeal } from '../../_lib/server/pipeline.loader';
 import { MeetingTranscriptsBlock } from '~/home/[account]/_components/meeting-transcripts-block';
+
+type ClientOption = { id: string; display_name: string | null };
 
 const STAGES = [
   { key: 'lead', label: 'Lead' },
@@ -38,6 +46,8 @@ const STAGES = [
   { key: 'won', label: 'Won' },
   { key: 'lost', label: 'Lost' },
 ];
+
+type Mode = 'lead' | 'client';
 
 type Props = {
   deal: PipelineDeal | null;
@@ -67,16 +77,52 @@ export function EditDealDialog({
   const [businessId, setBusinessId] = useState(
     deal?.businessId ?? pickDefaultPipelineTargetId(businesses, { workspaceScoped }),
   );
+  const [mode, setMode] = useState<Mode>(deal?.clientId ? 'client' : 'lead');
+  const [clientId, setClientId] = useState(deal?.clientId ?? '');
+  const [clients, setClients] = useState<ClientOption[]>([]);
+  const [clientsLoading, setClientsLoading] = useState(false);
 
   const showAssignField = !workspaceScoped && businesses.length > 1;
+
+  const resolvedAccountId = useMemo(() => {
+    if (accountId?.trim()) return accountId.trim();
+    if (businessId?.startsWith(PIPELINE_WORKSPACE_BUSINESS_PREFIX)) {
+      return businessId.slice(PIPELINE_WORKSPACE_BUSINESS_PREFIX.length);
+    }
+    return null;
+  }, [accountId, businessId]);
+
+  const canLinkClient = Boolean(resolvedAccountId);
 
   useEffect(() => {
     if (deal && open) {
       setStage(deal.stage);
-      setBusinessId((deal.businessId || pickDefaultPipelineTargetId(businesses, { workspaceScoped })) ?? '');
+      setBusinessId(
+        (deal.businessId ||
+          pickDefaultPipelineTargetId(businesses, { workspaceScoped })) ?? '',
+      );
+      setMode(deal.clientId ? 'client' : 'lead');
+      setClientId(deal.clientId ?? '');
       setError(null);
     }
-  }, [deal, open, businesses]);
+  }, [deal, open, businesses, workspaceScoped]);
+
+  useEffect(() => {
+    if (!open || mode !== 'client' || !resolvedAccountId) return;
+    setClientsLoading(true);
+    listClients({ accountId: resolvedAccountId, page: 1, pageSize: 100 })
+      .then((r: unknown) => {
+        const raw = r as { data?: unknown } | unknown[];
+        const list = Array.isArray(raw)
+          ? raw
+          : Array.isArray((raw as { data?: unknown })?.data)
+            ? (raw as { data: unknown[] }).data
+            : [];
+        setClients((list || []) as ClientOption[]);
+      })
+      .catch(() => setClients([]))
+      .finally(() => setClientsLoading(false));
+  }, [open, mode, resolvedAccountId]);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -84,16 +130,34 @@ export function EditDealDialog({
     setError(null);
     const form = new FormData(e.currentTarget);
 
-    const contactName = (form.get('contactName') as string).trim();
-    const companyName = (form.get('companyName') as string).trim();
     const valueStr = (form.get('value') as string).trim();
     const nextAction = (form.get('nextAction') as string).trim();
     const nextActionDate = (form.get('nextActionDate') as string).trim();
 
-    if (!contactName) {
-      setError('Contact name is required');
-      return;
+    let contactName = '';
+    let companyName = '';
+    let linkedClientId: string | null = null;
+    let linkedClientName: string | null = null;
+
+    if (mode === 'client') {
+      const selected = clients.find((c) => c.id === clientId);
+      if (!selected) {
+        setError('Select a client for this opportunity');
+        return;
+      }
+      linkedClientId = selected.id;
+      linkedClientName = selected.display_name ?? 'Client';
+      contactName = linkedClientName;
+      companyName = '';
+    } else {
+      contactName = (form.get('contactName') as string).trim();
+      companyName = (form.get('companyName') as string).trim();
+      if (!contactName) {
+        setError('Contact name is required');
+        return;
+      }
     }
+
     const resolvedBusinessId =
       businessId || pickDefaultPipelineTargetId(businesses, { workspaceScoped });
 
@@ -113,11 +177,12 @@ export function EditDealDialog({
         nextAction: nextAction || undefined,
         nextActionDate: nextActionDate || undefined,
         businessId: resolvedBusinessId,
+        clientId: linkedClientId,
         accountSlug: accountSlug ?? null,
       });
 
       if (!result.success) {
-        setError(result.error ?? 'Failed to update lead');
+        setError(result.error ?? 'Failed to update pipeline item');
         return;
       }
 
@@ -133,6 +198,8 @@ export function EditDealDialog({
         businessId: resolvedBusinessId,
         businessName: biz?.name ?? '',
         businessColor: biz?.color ?? null,
+        clientId: linkedClientId,
+        clientName: linkedClientName,
       });
 
       onOpenChange(false);
@@ -145,40 +212,81 @@ export function EditDealDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto border-white/8 bg-[#0F1923] text-white sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Edit lead</DialogTitle>
+          <DialogTitle>Edit pipeline item</DialogTitle>
           <DialogDescription className="text-zinc-400">
-            Update contact, value, stage, and next action.
+            Update the client or contact, value, stage, and next action.
           </DialogDescription>
         </DialogHeader>
 
-        <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-contactName" className="text-zinc-300">
-                Contact name *
-              </Label>
-              <Input
-                id="edit-contactName"
-                name="contactName"
-                defaultValue={deal.contactName}
-                placeholder="Jane Smith"
-                required
-                className="border-white/10 bg-white/5 text-white placeholder:text-zinc-600"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-companyName" className="text-zinc-300">
-                Company
-              </Label>
-              <Input
-                id="edit-companyName"
-                name="companyName"
-                defaultValue={deal.companyName}
-                placeholder="Acme Ltd"
-                className="border-white/10 bg-white/5 text-white placeholder:text-zinc-600"
-              />
-            </div>
+        {canLinkClient ? (
+          <div className="flex rounded-xl border border-white/8 bg-white/5 p-1 text-sm">
+            <button
+              type="button"
+              onClick={() => setMode('lead')}
+              className={cn(
+                'flex-1 rounded-lg px-3 py-1.5 font-medium transition-colors',
+                mode === 'lead'
+                  ? 'bg-white/10 text-white'
+                  : 'text-zinc-400 hover:text-white',
+              )}
+            >
+              New lead
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('client')}
+              className={cn(
+                'flex-1 rounded-lg px-3 py-1.5 font-medium transition-colors',
+                mode === 'client'
+                  ? 'bg-white/10 text-white'
+                  : 'text-zinc-400 hover:text-white',
+              )}
+            >
+              Existing client
+            </button>
           </div>
+        ) : null}
+
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
+          {mode === 'client' ? (
+            <div className="space-y-2">
+              <Label className="text-zinc-300">Client *</Label>
+              <ClientCombobox
+                clients={clients}
+                value={clientId}
+                onValueChange={setClientId}
+                loading={clientsLoading}
+                placeholder="Select an existing client"
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-contactName" className="text-zinc-300">
+                  Contact name *
+                </Label>
+                <Input
+                  id="edit-contactName"
+                  name="contactName"
+                  defaultValue={deal.contactName}
+                  placeholder="Jane Smith"
+                  className="border-white/10 bg-white/5 text-white placeholder:text-zinc-600"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-companyName" className="text-zinc-300">
+                  Company
+                </Label>
+                <Input
+                  id="edit-companyName"
+                  name="companyName"
+                  defaultValue={deal.companyName}
+                  placeholder="Acme Ltd"
+                  className="border-white/10 bg-white/5 text-white placeholder:text-zinc-600"
+                />
+              </div>
+            </div>
+          )}
 
           <div className={`grid gap-4 ${showAssignField ? 'grid-cols-2' : 'grid-cols-1'}`}>
             {showAssignField ? (
@@ -225,7 +333,7 @@ export function EditDealDialog({
 
           <div className="space-y-2">
             <Label htmlFor="edit-value" className="text-zinc-300">
-              Lead value (£)
+              Value (£)
             </Label>
             <Input
               id="edit-value"
@@ -248,7 +356,7 @@ export function EditDealDialog({
                 id="edit-nextAction"
                 name="nextAction"
                 defaultValue={deal.nextAction}
-                placeholder="Short description for this lead"
+                placeholder="Short description"
                 className="border-white/10 bg-white/5 text-white placeholder:text-zinc-600"
               />
             </div>
@@ -266,9 +374,7 @@ export function EditDealDialog({
             </div>
           </div>
 
-          {error && (
-            <p className="text-sm text-rose-400">{error}</p>
-          )}
+          {error && <p className="text-sm text-rose-400">{error}</p>}
 
           <DialogFooter>
             <button

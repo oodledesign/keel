@@ -13,9 +13,8 @@ import { NOTE_FILE_CATEGORY_OPTIONS } from './types';
 const NOTES_SELECT = `
   id, title, content, is_pinned, category, tags,
   is_public, public_token,
-  job_id, project_id, client_id, client_org_id, property_id, task_id,
+  project_id, client_id, client_org_id, property_id, task_id,
   created_at, updated_at,
-  jobs(title),
   projects(name),
   clients(display_name),
   properties(name),
@@ -54,7 +53,7 @@ function mapNoteRow(row: Record<string, unknown>): NoteListItem {
     category: parseCategory(row.category),
     tags: parseTags(row.tags),
     projectId: (row.project_id as string | null) ?? null,
-    jobId: (row.job_id as string | null) ?? null,
+    jobId: (row.project_id as string | null) ?? null,
     clientOrgId: (row.client_org_id as string | null) ?? null,
     clientId: (row.client_id as string | null) ?? null,
     propertyId: (row.property_id as string | null) ?? null,
@@ -88,7 +87,7 @@ export async function loadAccountNotes(
     .order('updated_at', { ascending: false });
 
   if (scope?.projectId) query = query.eq('project_id', scope.projectId);
-  if (scope?.jobId) query = query.eq('job_id', scope.jobId);
+  if (scope?.jobId) query = query.eq('project_id', scope.jobId);
   if (scope?.clientOrgId) {
     query = query.or(
       `client_org_id.eq.${scope.clientOrgId},client_id.eq.${scope.clientOrgId}`,

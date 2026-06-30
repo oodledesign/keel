@@ -72,6 +72,8 @@ export type CreateDealInput = {
   nextAction?: string;
   nextActionDate?: string;
   businessId: string;
+  /** Link this opportunity to an existing client (null = new lead). */
+  clientId?: string | null;
   /** When creating from a known workspace (optional; also derived from businesses.account_id). */
   accountId?: string | null;
   /** Revalidate team routes after mutation */
@@ -100,6 +102,7 @@ export async function createDeal(input: CreateDealInput) {
       next_action_date: input.nextActionDate || null,
       business_id: parsed.businessId,
       account_id: resolvedAccountId,
+      client_id: input.clientId || null,
     })
     .select('id')
     .single();
@@ -121,6 +124,8 @@ export type UpdateDealInput = {
   nextAction?: string;
   nextActionDate?: string | null;
   businessId?: string;
+  /** Set to a client id to link, or null to unlink (back to a new lead). */
+  clientId?: string | null;
   accountSlug?: string | null;
 };
 
@@ -134,6 +139,7 @@ export async function updateDeal(dealId: string, input: UpdateDealInput) {
   if (input.stage !== undefined) updates.stage = input.stage;
   if (input.nextAction !== undefined) updates.next_action = input.nextAction || null;
   if (input.nextActionDate !== undefined) updates.next_action_date = input.nextActionDate || null;
+  if (input.clientId !== undefined) updates.client_id = input.clientId || null;
 
   if (input.businessId !== undefined) {
     const parsed = parseWorkspaceDealBusinessId(input.businessId);
@@ -190,4 +196,96 @@ export async function getDefaultAccountSlug(): Promise<{ accountSlug: string } |
 
   const slug = account?.slug ?? null;
   return slug ? { accountSlug: slug } : null;
+}
+
+export type ConvertWonDealResult =
+  | { kind: 'project'; accountSlug: string; projectId: string }
+  | { kind: 'lead' }
+  | { kind: 'error'; error: string };
+
+/**
+ * When a deal linked to an existing client is Won, spin up a delivery project
+ * for that client in the deal's own workspace. Deals without a client fall back
+ * to the new-client flow (kind: 'lead').
+ */
+export async function convertWonDealToProject(
+  dealId: string,
+): Promise<ConvertWonDealResult> {
+  const client = getSupabaseServerClient();
+  await requireUserInServerComponent();
+
+  const { data: deal, error } = await client
+    .from('pipeline_deals')
+    .select(
+      'id, account_id, client_id, company_name, contact_name, value, clients(display_name)',
+    )
+    .eq('id', dealId)
+    .maybeSingle();
+
+  if (error) {
+    return { kind: 'error', error: error.message };
+  }
+
+  const row = deal as
+    | {
+        account_id?: string | null;
+        client_id?: string | null;
+        company_name?: string | null;
+        contact_name?: string | null;
+        value?: number | null;
+        clients?: { display_name?: string | null } | null;
+      }
+    | null;
+
+  if (!row?.client_id || !row.account_id) {
+    return { kind: 'lead' };
+  }
+
+  const accountId = row.account_id;
+  const clientName = row.clients?.display_name?.trim() || null;
+  const title =
+    row.company_name?.trim() ||
+    clientName ||
+    row.contact_name?.trim() ||
+    'New project';
+  const valuePence =
+    row.value != null && !Number.isNaN(Number(row.value))
+      ? Math.round(Number(row.value) * 100)
+      : undefined;
+
+  try {
+    const { createJobsService } = await import(
+      '~/home/[account]/projects/_lib/server/jobs.service'
+    );
+    const service = createJobsService(client);
+    const project = await service.createJob({
+      accountId,
+      client_id: row.client_id,
+      title,
+      value_pence: valuePence,
+    });
+
+    const { data: account } = await client
+      .from('accounts')
+      .select('slug')
+      .eq('id', accountId)
+      .maybeSingle();
+
+    const slug = (account as { slug?: string | null } | null)?.slug ?? null;
+    if (!slug) {
+      return { kind: 'error', error: 'Workspace not found for this deal.' };
+    }
+
+    revalidatePipelinePaths(slug);
+
+    return {
+      kind: 'project',
+      accountSlug: slug,
+      projectId: project.id as string,
+    };
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : 'Could not create the project.';
+    return { kind: 'error', error: message };
+  }
 }

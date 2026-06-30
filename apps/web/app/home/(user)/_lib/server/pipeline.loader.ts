@@ -25,6 +25,9 @@ export type PipelineDeal = {
   businessId: string;
   businessName: string;
   businessColor: string | null;
+  /** Linked existing client (opportunity), or null for a new lead. */
+  clientId: string | null;
+  clientName: string | null;
 };
 
 export type PipelineData = {
@@ -46,8 +49,10 @@ type PipelineDealRow = {
   next_action_date?: string | null;
   business_id?: string | null;
   account_id?: string | null;
+  client_id?: string | null;
   businesses?: { name?: string | null; colour?: string | null } | null;
   accounts?: { name?: string | null } | null;
+  clients?: { display_name?: string | null } | null;
 };
 
 type BusinessRow = {
@@ -64,6 +69,7 @@ function mapDealRow(row: PipelineDealRow): PipelineDeal {
   const syntheticBizId =
     row.business_id ??
     (row.account_id ? `${PIPELINE_WORKSPACE_BUSINESS_PREFIX}${row.account_id}` : '');
+  const clientName = row.clients?.display_name?.trim() || null;
   return {
     id: row.id,
     contactName: row.contact_name ?? '',
@@ -75,13 +81,15 @@ function mapDealRow(row: PipelineDealRow): PipelineDeal {
     businessId: syntheticBizId,
     businessName: bizName,
     businessColor: row.businesses?.colour ?? null,
+    clientId: row.client_id ?? null,
+    clientName,
   };
 }
 
 export { PIPELINE_WORKSPACE_BUSINESS_PREFIX } from '~/home/(user)/_lib/pipeline-constants';
 
 const DEAL_SELECT =
-  'id, contact_name, company_name, value, stage, next_action, next_action_date, business_id, account_id, businesses(name, colour), accounts(name)';
+  'id, contact_name, company_name, value, stage, next_action, next_action_date, business_id, account_id, client_id, businesses(name, colour), accounts(name), clients(display_name)';
 
 // ─── Loader ──────────────────────────────────────────────────────────
 

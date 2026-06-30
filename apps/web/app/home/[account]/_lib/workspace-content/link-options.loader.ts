@@ -33,11 +33,12 @@ export async function loadWorkspaceLinkOptions(
     .order('name')
     .limit(200);
 
-  const loadJobs = client
-    .from('jobs')
-    .select('id, title')
+  const loadDeliveryProjects = client
+    .from('projects')
+    .select('id, name')
     .eq('account_id', accountId)
-    .order('title')
+    .eq('project_type', 'delivery')
+    .order('name')
     .limit(200);
 
   const loadClients = client
@@ -62,9 +63,10 @@ export async function loadWorkspaceLinkOptions(
     .limit(200);
 
   if (profile === 'work_design') {
-    const [projectsRes, jobsRes, clientsRes, tasksRes] = await Promise.all([
+    const [projectsRes, deliveryProjectsRes, clientsRes, tasksRes] =
+      await Promise.all([
       loadProjects,
-      loadJobs,
+      loadDeliveryProjects,
       loadClients,
       loadTasks,
     ]);
@@ -75,10 +77,10 @@ export async function loadWorkspaceLinkOptions(
         id: p.id as string,
         label: (p.name as string) || 'Project',
       })),
-      jobs: (jobsRes.data ?? []).map((j) => ({
+      jobs: (deliveryProjectsRes.data ?? []).map((j) => ({
         type: 'job' as const,
         id: j.id as string,
-        label: (j.title as string) || 'Job',
+        label: (j.name as string) || 'Project',
       })),
       clients: (clientsRes.data ?? []).map((c) => ({
         type: 'client' as const,

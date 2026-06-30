@@ -42,7 +42,6 @@ const SaveNoteSchema = z.object({
 function linkToColumns(link: z.infer<typeof LinkSchema>) {
   const cols = {
     project_id: null as string | null,
-    job_id: null as string | null,
     client_id: null as string | null,
     client_org_id: null as string | null,
     property_id: null as string | null,
@@ -51,10 +50,8 @@ function linkToColumns(link: z.infer<typeof LinkSchema>) {
   if (!link) return cols;
   switch (link.type) {
     case 'project':
-      cols.project_id = link.id;
-      break;
     case 'job':
-      cols.job_id = link.id;
+      cols.project_id = link.id;
       break;
     case 'client':
       cols.client_id = link.id;

@@ -222,7 +222,7 @@ export function PipelineBoard({
   );
 
   return (
-    <div className="flex min-h-full w-full flex-col gap-6 px-4 pb-12 pt-6 text-white md:px-6 lg:px-8">
+    <div className="flex min-h-[calc(100svh-3.5rem)] w-full flex-col gap-6 px-4 pb-12 pt-6 text-white md:px-6 lg:px-8">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -259,6 +259,7 @@ export function PipelineBoard({
             businesses={initialData.businesses}
             onDealCreated={(deal) => setDeals((prev) => [deal, ...prev])}
             accountSlug={workspaceAccountSlug}
+            accountId={workspaceAccountId}
           />
         </div>
       </div>
@@ -365,7 +366,7 @@ function StageColumn({
       >
         <div className="flex flex-1 flex-col gap-2">
           {deals.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-white/8 px-4 py-8 text-center text-xs text-zinc-600">
+            <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-white/8 px-4 py-8 text-center text-xs text-zinc-600">
               Drag leads here
             </div>
           ) : (
@@ -430,9 +431,16 @@ function DealCard({
         <div className="flex items-start gap-2">
           <div>
             <p className="text-sm font-medium text-white">
-              {deal.contactName}
+              {deal.contactName || deal.clientName}
             </p>
-            <p className="text-xs text-zinc-400">{deal.companyName}</p>
+            <p className="text-xs text-zinc-400">
+              {deal.companyName || (deal.clientId ? deal.clientName : '')}
+            </p>
+            {deal.clientId ? (
+              <span className="mt-1 inline-flex items-center rounded-full bg-[#2A9D8F]/15 px-2 py-0.5 text-[10px] font-medium text-[#5eead4]">
+                Existing client
+              </span>
+            ) : null}
           </div>
         </div>
         <button

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
 import {
   Dialog,
@@ -20,14 +20,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
+import { cn } from '@kit/ui/utils';
 
 import { Plus, Loader2 } from 'lucide-react';
 
-import { pickDefaultPipelineTargetId } from '~/home/(user)/_lib/pipeline-constants';
+import {
+  PIPELINE_WORKSPACE_BUSINESS_PREFIX,
+  pickDefaultPipelineTargetId,
+} from '~/home/(user)/_lib/pipeline-constants';
+import { ClientCombobox } from '~/home/[account]/projects/_components/client-combobox';
+import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
 import { createDeal } from '../actions';
 import type { PipelineDeal } from '../../_lib/server/pipeline.loader';
+
+type ClientOption = { id: string; display_name: string | null };
 
 const STAGES = [
   { key: 'lead', label: 'Lead' },
@@ -37,16 +45,21 @@ const STAGES = [
   { key: 'negotiation', label: 'Negotiation' },
 ];
 
+type Mode = 'lead' | 'client';
+
 type Props = {
   businesses: Array<{ id: string; name: string; color: string | null }>;
   onDealCreated: (deal: PipelineDeal) => void;
   accountSlug?: string;
+  /** Workspace-scoped board passes its account id so existing clients can be linked. */
+  accountId?: string;
 };
 
 export function AddDealDialog({
   businesses,
   onDealCreated,
   accountSlug,
+  accountId,
 }: Props) {
   const workspaceScoped = Boolean(accountSlug?.trim());
   const [open, setOpen] = useState(false);
@@ -58,29 +71,86 @@ export function AddDealDialog({
   const [businessId, setBusinessId] = useState(() =>
     pickDefaultPipelineTargetId(businesses, { workspaceScoped }),
   );
+  const [mode, setMode] = useState<Mode>('lead');
+  const [clientId, setClientId] = useState('');
+  const [clients, setClients] = useState<ClientOption[]>([]);
+  const [clientsLoading, setClientsLoading] = useState(false);
+
+  // Resolve the account this deal belongs to: explicit (workspace board) or
+  // derived from the selected workspace target on the personal board.
+  const resolvedAccountId = useMemo(() => {
+    if (accountId?.trim()) return accountId.trim();
+    if (businessId?.startsWith(PIPELINE_WORKSPACE_BUSINESS_PREFIX)) {
+      return businessId.slice(PIPELINE_WORKSPACE_BUSINESS_PREFIX.length);
+    }
+    return null;
+  }, [accountId, businessId]);
 
   useEffect(() => {
     if (!open) return;
     setBusinessId(pickDefaultPipelineTargetId(businesses, { workspaceScoped }));
   }, [open, businesses, workspaceScoped]);
 
+  // Existing-client linking only makes sense when we know the workspace.
+  useEffect(() => {
+    if (!resolvedAccountId && mode === 'client') {
+      setMode('lead');
+    }
+  }, [resolvedAccountId, mode]);
+
+  useEffect(() => {
+    if (!open || mode !== 'client' || !resolvedAccountId) return;
+    setClientsLoading(true);
+    listClients({ accountId: resolvedAccountId, page: 1, pageSize: 100 })
+      .then((r: unknown) => {
+        const raw = r as { data?: unknown } | unknown[];
+        const list = Array.isArray(raw)
+          ? raw
+          : Array.isArray((raw as { data?: unknown })?.data)
+            ? (raw as { data: unknown[] }).data
+            : [];
+        setClients((list || []) as ClientOption[]);
+      })
+      .catch(() => setClients([]))
+      .finally(() => setClientsLoading(false));
+  }, [open, mode, resolvedAccountId]);
+
   const showAssignField = !workspaceScoped && businesses.length > 1;
+  const canLinkClient = Boolean(resolvedAccountId);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     const form = new FormData(e.currentTarget);
 
-    const contactName = (form.get('contactName') as string).trim();
-    const companyName = (form.get('companyName') as string).trim();
     const valueStr = (form.get('value') as string).trim();
     const nextAction = (form.get('nextAction') as string).trim();
     const nextActionDate = (form.get('nextActionDate') as string).trim();
 
-    if (!contactName) {
-      setError('Contact name is required');
-      return;
+    let contactName = '';
+    let companyName = '';
+    let linkedClientId: string | null = null;
+    let linkedClientName: string | null = null;
+
+    if (mode === 'client') {
+      const selected = clients.find((c) => c.id === clientId);
+      if (!selected) {
+        setError('Select a client for this opportunity');
+        return;
+      }
+      linkedClientId = selected.id;
+      linkedClientName = selected.display_name ?? 'Client';
+      contactName = linkedClientName;
+      companyName = '';
+    } else {
+      contactName = (form.get('contactName') as string).trim();
+      companyName = (form.get('companyName') as string).trim();
+      if (!contactName) {
+        setError('Contact name is required');
+        return;
+      }
     }
+
     const resolvedBusinessId =
       businessId || pickDefaultPipelineTargetId(businesses, { workspaceScoped });
 
@@ -88,7 +158,7 @@ export function AddDealDialog({
       setError(
         workspaceScoped
           ? 'No workspace available for this pipeline.'
-          : 'Join or create a workspace before adding leads.',
+          : 'Join or create a workspace before adding to the pipeline.',
       );
       return;
     }
@@ -104,11 +174,12 @@ export function AddDealDialog({
         nextAction: nextAction || undefined,
         nextActionDate: nextActionDate || undefined,
         businessId: resolvedBusinessId,
+        clientId: linkedClientId,
         accountSlug: accountSlug ?? null,
       });
 
       if (!result.success) {
-        setError(result.error ?? 'Failed to create lead');
+        setError(result.error ?? 'Failed to create pipeline item');
         return;
       }
 
@@ -124,10 +195,14 @@ export function AddDealDialog({
         businessId: resolvedBusinessId,
         businessName: biz?.name ?? '',
         businessColor: biz?.color ?? null,
+        clientId: linkedClientId,
+        clientName: linkedClientName,
       });
 
       setOpen(false);
       setStage('lead');
+      setMode('lead');
+      setClientId('');
       setBusinessId(pickDefaultPipelineTargetId(businesses, { workspaceScoped }));
       formRef.current?.reset();
     });
@@ -136,50 +211,86 @@ export function AddDealDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <button
-          type="button"
-          className={workspaceBtnPrimaryMd}
-        >
+        <button type="button" className={workspaceBtnPrimaryMd}>
           <Plus className="h-4 w-4" />
-          Add lead
+          Add to pipeline
         </button>
       </DialogTrigger>
       <DialogContent className="border-white/8 bg-[#0F1923] text-white sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add a new lead</DialogTitle>
+          <DialogTitle>Add to pipeline</DialogTitle>
           <DialogDescription className="text-zinc-400">
-            {workspaceScoped
-              ? 'Track a lead or opportunity for this workspace. Company name is optional.'
-              : 'Create a pipeline lead and assign it to a workspace.'}
+            Track a new lead or an opportunity for an existing client.
           </DialogDescription>
         </DialogHeader>
 
-        <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="contactName" className="text-zinc-300">
-                Contact name *
-              </Label>
-              <Input
-                id="contactName"
-                name="contactName"
-                placeholder="Jane Smith"
-                required
-                className="border-white/10 bg-white/5 text-white placeholder:text-zinc-600"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="companyName" className="text-zinc-300">
-                Company
-              </Label>
-              <Input
-                id="companyName"
-                name="companyName"
-                placeholder="Acme Ltd"
-                className="border-white/10 bg-white/5 text-white placeholder:text-zinc-600"
-              />
-            </div>
+        {canLinkClient ? (
+          <div className="flex rounded-xl border border-white/8 bg-white/5 p-1 text-sm">
+            <button
+              type="button"
+              onClick={() => setMode('lead')}
+              className={cn(
+                'flex-1 rounded-lg px-3 py-1.5 font-medium transition-colors',
+                mode === 'lead'
+                  ? 'bg-white/10 text-white'
+                  : 'text-zinc-400 hover:text-white',
+              )}
+            >
+              New lead
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('client')}
+              className={cn(
+                'flex-1 rounded-lg px-3 py-1.5 font-medium transition-colors',
+                mode === 'client'
+                  ? 'bg-white/10 text-white'
+                  : 'text-zinc-400 hover:text-white',
+              )}
+            >
+              Existing client
+            </button>
           </div>
+        ) : null}
+
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
+          {mode === 'client' ? (
+            <div className="space-y-2">
+              <Label className="text-zinc-300">Client *</Label>
+              <ClientCombobox
+                clients={clients}
+                value={clientId}
+                onValueChange={setClientId}
+                loading={clientsLoading}
+                placeholder="Select an existing client"
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="contactName" className="text-zinc-300">
+                  Contact name *
+                </Label>
+                <Input
+                  id="contactName"
+                  name="contactName"
+                  placeholder="Jane Smith"
+                  className="border-white/10 bg-white/5 text-white placeholder:text-zinc-600"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="companyName" className="text-zinc-300">
+                  Company
+                </Label>
+                <Input
+                  id="companyName"
+                  name="companyName"
+                  placeholder="Acme Ltd"
+                  className="border-white/10 bg-white/5 text-white placeholder:text-zinc-600"
+                />
+              </div>
+            </div>
+          )}
 
           <div className={`grid gap-4 ${showAssignField ? 'grid-cols-2' : 'grid-cols-1'}`}>
             {showAssignField ? (
@@ -226,7 +337,7 @@ export function AddDealDialog({
 
           <div className="space-y-2">
             <Label htmlFor="value" className="text-zinc-300">
-              Lead value (£)
+              Value (£)
             </Label>
             <Input
               id="value"
@@ -247,7 +358,7 @@ export function AddDealDialog({
               <Input
                 id="nextAction"
                 name="nextAction"
-                placeholder="Short description for this lead"
+                placeholder="Short description"
                 className="border-white/10 bg-white/5 text-white placeholder:text-zinc-600"
               />
             </div>
@@ -264,9 +375,7 @@ export function AddDealDialog({
             </div>
           </div>
 
-          {error && (
-            <p className="text-sm text-rose-400">{error}</p>
-          )}
+          {error && <p className="text-sm text-rose-400">{error}</p>}
 
           <DialogFooter>
             <button
@@ -287,7 +396,7 @@ export function AddDealDialog({
                   Creating...
                 </>
               ) : (
-                'Create lead'
+                'Create'
               )}
             </button>
           </DialogFooter>
