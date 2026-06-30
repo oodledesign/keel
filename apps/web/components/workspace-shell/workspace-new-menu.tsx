@@ -59,7 +59,7 @@ const MOBILE_NEW_MENU_ROW_CLASS =
   'flex min-h-[3.25rem] w-full items-center gap-4 rounded-xl px-4 py-3 text-[1.05rem] font-medium text-zinc-200 transition-colors hover:bg-white/6';
 
 const DESKTOP_NEW_MENU_CONTENT_CLASS =
-  'w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-[1.25rem] border border-white/10 bg-[#0B132B] p-0 text-white shadow-[0_16px_48px_rgba(0,0,0,0.45)] outline-none ring-0 focus:outline-none focus-visible:outline-none';
+  'w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-[1.25rem] border border-[var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text-on-dark)] shadow-[0_16px_48px_rgba(0,0,0,0.45)] outline-none ring-0 focus:outline-none focus-visible:outline-none';
 
 const DESKTOP_NEW_MENU_ITEM_CLASS =
   'rounded-xl p-0 outline-none ring-0 focus:bg-white/6 focus:text-zinc-200 data-[highlighted]:bg-white/6 data-[highlighted]:text-zinc-200';
@@ -93,8 +93,8 @@ function NewMenuItemRow({
 }) {
   const iconClassName =
     variant === 'mobile' || variant === 'panel'
-      ? 'h-5 w-5 shrink-0 text-[#2A9D8F]'
-      : 'mr-2 h-4 w-4 text-[#2A9D8F]';
+      ? 'h-5 w-5 shrink-0 text-[var(--ozer-accent)]'
+      : 'mr-2 h-4 w-4 text-[var(--ozer-accent)]';
 
   if (item.action === 'create-task') {
     const className =
@@ -241,7 +241,7 @@ export function WorkspaceMobileNewMenu(props: WorkspaceNewMenuProps) {
         type="button"
         aria-label="Create new"
         aria-expanded={open}
-        className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--keel-teal)] text-white shadow-sm hover:bg-[#238b7f]"
+        className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--ozer-accent)] text-white shadow-sm hover:bg-[var(--ozer-accent-hover)]"
         onClick={() => setOpen(true)}
       >
         <Plus className="h-[21px] w-[21px]" />
@@ -271,7 +271,7 @@ export function WorkspaceMobileNewMenu(props: WorkspaceNewMenuProps) {
             aria-label="Create menu"
             aria-hidden={!open}
           >
-            <div className="overflow-hidden rounded-[1.25rem] border border-white/10 bg-[#0B132B] shadow-[0_16px_48px_rgba(0,0,0,0.45)]">
+            <div className="overflow-hidden rounded-[1.25rem] border border-[var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_16px_48px_rgba(0,0,0,0.45)]">
               <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
                 <p className="text-base font-semibold text-white">Create</p>
                 <HapticButton
@@ -331,7 +331,7 @@ function getTeamItems(account: string, spaceType: WorkspaceSpaceType): NewMenuIt
         key: 'note',
         label: 'New Note',
         icon: StickyNote,
-        href: `${accountPath(account, pathsConfig.app.accountNotes)}/new`,
+        href: `${accountPath(account, pathsConfig.app.accountNotes)}?new=1`,
       },
       {
         key: 'session',
@@ -360,7 +360,7 @@ function getTeamItems(account: string, spaceType: WorkspaceSpaceType): NewMenuIt
         key: 'note',
         label: 'New Note',
         icon: StickyNote,
-        href: `${accountPath(account, pathsConfig.app.accountNotes)}/new`,
+        href: `${accountPath(account, pathsConfig.app.accountNotes)}?new=1`,
       },
       {
         key: 'event',
@@ -395,7 +395,7 @@ function getTeamItems(account: string, spaceType: WorkspaceSpaceType): NewMenuIt
         key: 'note',
         label: 'New Note',
         icon: StickyNote,
-        href: `${accountPath(account, pathsConfig.app.accountNotes)}/new`,
+        href: `${accountPath(account, pathsConfig.app.accountNotes)}?new=1`,
       },
       {
         key: 'property',
@@ -435,7 +435,7 @@ function getTeamItems(account: string, spaceType: WorkspaceSpaceType): NewMenuIt
       key: 'note',
       label: 'New Note',
       icon: StickyNote,
-      href: `${accountPath(account, pathsConfig.app.accountNotes)}/new`,
+      href: `${accountPath(account, pathsConfig.app.accountNotes)}?new=1`,
     },
     {
       key: 'project',

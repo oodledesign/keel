@@ -6,8 +6,6 @@ import type {
 } from '~/home/[account]/_lib/workspace-content/types';
 import { WorkspaceNotesPage } from '~/home/[account]/_components/workspace-content/workspace-notes-page';
 
-import pathsConfig from '~/config/paths.config';
-
 export function PersonalNotesPageContent({
   accountId,
   accountSlug,
@@ -32,7 +30,6 @@ export function PersonalNotesPageContent({
       variant="work"
       linkOptions={[]}
       hideFilters
-      newNoteHref={pathsConfig.app.personalNoteNew}
       customCategories={customCategories}
     />
   );

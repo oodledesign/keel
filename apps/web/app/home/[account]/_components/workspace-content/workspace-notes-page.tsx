@@ -11,6 +11,7 @@ import {
   FileImage,
   FileText,
   Globe,
+  ListFilter,
   Pin,
   Plus,
   Upload,
@@ -21,8 +22,11 @@ import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
 import { Input } from '@kit/ui/input';
@@ -36,8 +40,6 @@ import {
 import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
-
-import pathsConfig from '~/config/paths.config';
 
 import { ACCOUNT_DOCS_BUCKET } from '../../_lib/workspace-content/docs-constants';
 import {
@@ -117,6 +119,11 @@ function matchesListFilter(
   return true;
 }
 
+function isProjectLinked(item: NoteListItem | DocListItem) {
+  if (item.projectId || item.jobId) return true;
+  return item.context?.type === 'project' || item.context?.type === 'job';
+}
+
 export function WorkspaceNotesPage({
   accountId,
   accountSlug,
@@ -129,7 +136,6 @@ export function WorkspaceNotesPage({
   canEdit = true,
   defaultLink,
   hideFilters = false,
-  newNoteHref,
   customCategories = [],
 }: {
   accountId: string;
@@ -143,20 +149,36 @@ export function WorkspaceNotesPage({
   canEdit?: boolean;
   defaultLink?: LinkValue;
   hideFilters?: boolean;
-  newNoteHref?: string;
   customCategories?: CustomNoteCategory[];
 }) {
   const [notes, setNotes] = useState(initialNotes);
   const [docs, setDocs] = useState(initialDocs);
   const [listFilter, setListFilter] = useState<ListFilter>('all');
+  const [showProjectLinked, setShowProjectLinked] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [noteSheetOpen, setNoteSheetOpen] = useState(false);
+  const [editingNote, setEditingNote] = useState<NoteListItem | null>(null);
   const [editingFile, setEditingFile] = useState<DocListItem | null>(null);
+  const [notePending, startNoteTransition] = useTransition();
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const openNewNote = () => {
+    setEditingNote(null);
+    setNoteSheetOpen(true);
+  };
+
+  const openEditNote = (note: NoteListItem) => {
+    setEditingNote(note);
+    setNoteSheetOpen(true);
+  };
 
   useEffect(() => {
     if (searchParams.get('upload') === '1') {
       setUploadOpen(true);
+    }
+    if (searchParams.get('new') === '1') {
+      openNewNote();
     }
   }, [searchParams]);
 
@@ -170,12 +192,16 @@ export function WorkspaceNotesPage({
     ];
     return items
       .filter((item) => matchesListFilter(item, listFilter))
+      .filter(
+        (item) =>
+          hideFilters || showProjectLinked || !isProjectLinked(item.data),
+      )
       .sort(
         (a, b) =>
           new Date(b.data.updatedAt).getTime() -
           new Date(a.data.updatedAt).getTime(),
       );
-  }, [notes, docs, listFilter]);
+  }, [notes, docs, listFilter, hideFilters, showProjectLinked]);
 
   if (!tableAvailable && !docsTableAvailable) {
     return (
@@ -194,22 +220,11 @@ export function WorkspaceNotesPage({
         : 'text-zinc-400 hover:bg-white/5 hover:text-white',
     );
 
-  const noteDetailPath = (noteId: string) =>
-    newNoteHref
-      ? pathsConfig.app.personalNoteDetail.replace('[noteId]', noteId)
-      : pathsConfig.app.accountNoteDetail
-          .replace('[account]', accountSlug)
-          .replace('[noteId]', noteId);
-
-  const createNoteHref =
-    newNoteHref ??
-    pathsConfig.app.accountNoteNew.replace('[account]', accountSlug);
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         {!hideFilters ? (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {(
               [
                 { key: 'all' as const, label: 'All' },
@@ -227,6 +242,39 @@ export function WorkspaceNotesPage({
                 {f.label}
               </button>
             ))}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className={cn(
+                    'border-white/10 text-zinc-300 hover:bg-white/5 hover:text-white',
+                    !showProjectLinked && 'border-[#2A9D8F]/30 text-[#5eead4]',
+                  )}
+                >
+                  <ListFilter className="mr-1.5 h-4 w-4" />
+                  Show
+                  <ChevronDown className="ml-1 h-4 w-4 opacity-80" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="start"
+                className="w-52 border-white/10 bg-[var(--workspace-shell-panel)] text-white"
+              >
+                <DropdownMenuLabel className="text-xs text-zinc-400">
+                  Include in list
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-white/10" />
+                <DropdownMenuCheckboxItem
+                  checked={showProjectLinked}
+                  onCheckedChange={setShowProjectLinked}
+                  className="text-white focus:bg-white/5 focus:text-white"
+                >
+                  Project notes
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         ) : (
           <div />
@@ -248,7 +296,7 @@ export function WorkspaceNotesPage({
               align="end"
               className="border-white/10 bg-[var(--workspace-shell-panel)] text-white"
             >
-              <DropdownMenuItem onClick={() => router.push(createNoteHref)}>
+              <DropdownMenuItem onClick={openNewNote}>
                 <Plus className="mr-2 h-4 w-4" />
                 New note
               </DropdownMenuItem>
@@ -272,7 +320,7 @@ export function WorkspaceNotesPage({
               <li key={`note-${item.data.id}`}>
                 <button
                   type="button"
-                  onClick={() => router.push(noteDetailPath(item.data.id))}
+                  onClick={() => openEditNote(item.data)}
                   className={cn(
                     panelClass,
                     'w-full p-4 text-left transition hover:border-[#2A9D8F]/30 hover:bg-white/[0.02]',
@@ -297,6 +345,34 @@ export function WorkspaceNotesPage({
           )}
         </ul>
       )}
+
+      <NoteFormSheet
+        open={noteSheetOpen}
+        onOpenChange={(open) => {
+          setNoteSheetOpen(open);
+          if (!open) {
+            setEditingNote(null);
+          }
+        }}
+        title={editingNote ? 'Edit note' : 'New note'}
+        accountId={accountId}
+        accountSlug={accountSlug}
+        linkOptions={linkOptions}
+        note={editingNote ?? undefined}
+        defaultLink={defaultLink}
+        pending={notePending}
+        canDelete={canEdit}
+        customCategories={customCategories}
+        onSaved={() => {
+          router.refresh();
+        }}
+        onDeleted={() => {
+          setNoteSheetOpen(false);
+          setEditingNote(null);
+          router.refresh();
+        }}
+        startTransition={startNoteTransition}
+      />
 
       <UploadFileSheet
         open={uploadOpen}
@@ -473,6 +549,7 @@ function NoteFormSheet({
   defaultLink,
   pending,
   canDelete,
+  customCategories = [],
   onSaved,
   onDeleted,
   startTransition,
@@ -487,11 +564,11 @@ function NoteFormSheet({
   defaultLink?: LinkValue;
   pending: boolean;
   canDelete?: boolean;
+  customCategories?: CustomNoteCategory[];
   onSaved: () => void;
   onDeleted?: () => void;
   startTransition: (fn: () => void) => void;
 }) {
-  const router = useRouter();
   const [noteTitle, setNoteTitle] = useState(note?.title ?? '');
   const [content, setContent] = useState(note?.content ?? '');
   const [isPinned, setIsPinned] = useState(note?.isPinned ?? false);
@@ -531,17 +608,9 @@ function NoteFormSheet({
           link,
         });
         setSavedNoteId(result.noteId);
-        if (!note && !savedNoteId) {
-          onOpenChange(false);
-          router.push(
-            pathsConfig.app.accountNoteDetail
-              .replace('[account]', accountSlug)
-              .replace('[noteId]', result.noteId),
-          );
-          return;
-        }
-        onSaved();
         toast.success(note || savedNoteId ? 'Note saved' : 'Note created');
+        onOpenChange(false);
+        onSaved();
       } catch {
         toast.error('Could not save note');
       }
@@ -584,6 +653,7 @@ function NoteFormSheet({
             value={category}
             onChange={setCategory}
             disabled={pending}
+            customCategories={customCategories}
           />
           <div className="space-y-2">
             <Label className="text-zinc-300">Content</Label>
@@ -601,7 +671,6 @@ function NoteFormSheet({
                 options={linkOptions}
                 value={link}
                 onChange={setLink}
-                disabled={Boolean(defaultLink)}
               />
             </div>
           ) : null}
@@ -780,7 +849,6 @@ function UploadFileSheet({
                 options={linkOptions}
                 value={link}
                 onChange={setLink}
-                disabled={Boolean(defaultLink)}
               />
             </div>
           ) : null}
