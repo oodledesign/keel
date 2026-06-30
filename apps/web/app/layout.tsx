@@ -36,6 +36,10 @@ export default async function RootLayout({
 
   return (
     <html lang={language} className={className} suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href="https://api.fontshare.com" crossOrigin="" />
+        <link rel="preconnect" href="https://cdn.fontshare.com" crossOrigin="" />
+      </head>
       <body suppressHydrationWarning>
         <TextSizeSync />
         <RootProviders theme={theme} lang={language} nonce={nonce}>

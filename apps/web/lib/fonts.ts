@@ -1,9 +1,7 @@
 /**
- * Typography is loaded from Fontshare in styles/ozer-tokens.css.
- * This module only applies layout/theme classes on <html>.
+ * Typography is loaded from Fontshare in styles/globals.css.
+ * Applies Tailwind font utilities on <html> so body/headings resolve correctly.
  */
-import { cn } from '@kit/ui/utils';
-
 export function getFontsClassName(_theme?: string) {
-  return cn({ dark: true });
+  return 'font-sans';
 }

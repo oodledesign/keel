@@ -4,6 +4,9 @@
 * Global styles for the entire application
  */
 
+/* Brand fonts — must precede other @import rules */
+@import url('https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,700,800&f[]=general-sans@400,500,600,700&display=swap');
+
 /* Tailwind CSS */
 @import 'tailwindcss';
 
@@ -54,7 +57,7 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background font-sans text-foreground;
     font-feature-settings:
       'rlig' 1,
       'calt' 1;
@@ -80,6 +83,9 @@
   input::placeholder,
   textarea::placeholder {
     color: theme(--color-muted-foreground);
+  }
+  .font-heading {
+    font-family: var(--font-heading);
   }
 }
 

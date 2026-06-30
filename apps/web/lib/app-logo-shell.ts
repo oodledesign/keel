@@ -1,7 +1,7 @@
 /** Compact wordmark for app shell (dashboard header, mobile nav, marketing header). */
 export const APP_LOGO_SHELL_CLASSNAME =
-  'h-6 w-[84px] md:h-7 md:w-[98px] lg:h-8 lg:w-[112px]';
+  'h-7 w-[100px] md:h-8 md:w-[118px] lg:h-9 lg:w-[134px]';
 
 /** Tighter wordmark for sidebar rail (narrow column). */
 export const APP_LOGO_SIDEBAR_CLASSNAME =
-  'h-4 w-[64px] md:h-4 md:w-[72px] lg:h-4 lg:w-[72px]';
+  'h-5 w-[76px] md:h-5 md:w-[86px] lg:h-6 lg:w-[96px]';

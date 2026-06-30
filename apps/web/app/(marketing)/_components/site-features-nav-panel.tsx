@@ -8,6 +8,13 @@ import { usePathname } from 'next/navigation';
 import { cn, isRouteActive } from '@kit/ui/utils';
 
 import { FEATURE_NAV_GROUPS } from '~/lib/marketing/feature-landing-pages';
+import {
+  marketingNavDropdownDesc,
+  marketingNavDropdownItem,
+  marketingNavDropdownTitle,
+  marketingNavLink,
+  marketingNavLinkActive,
+} from '~/lib/marketing/marketing-ui';
 
 import {
   marketingNavPanelClass,
@@ -32,12 +39,9 @@ export function SiteFeaturesNavPanel() {
         marketingNavScrollClass,
       )}
     >
-      <Link
-        href="/features"
-        className="block rounded-lg px-3 py-2.5 text-sm font-medium text-violet-50 transition hover:bg-violet-500/15"
-      >
-        All features
-        <span className="mt-0.5 block text-xs font-normal text-violet-200/70">
+      <Link href="/features" className={cn(marketingNavDropdownItem, 'block')}>
+        <span className={marketingNavDropdownTitle}>All features</span>
+        <span className={marketingNavDropdownDesc}>
           One connected system for your agency
         </span>
       </Link>
@@ -60,8 +64,9 @@ export function SiteFeaturesNavPanel() {
                 onMouseEnter={() => setActiveGroup(group.label)}
                 onFocus={() => setActiveGroup(group.label)}
                 className={cn(
-                  'flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-violet-100/80 transition hover:bg-violet-500/10 hover:text-violet-50',
-                  selected && 'bg-violet-500/15 text-violet-50',
+                  marketingNavLink,
+                  'w-full justify-between px-2.5 py-2 text-xs font-semibold',
+                  selected && marketingNavLinkActive,
                 )}
               >
                 {group.label}
@@ -83,8 +88,9 @@ export function SiteFeaturesNavPanel() {
                 key={`${activeGroup}-${item.href}-${item.label}`}
                 href={item.href}
                 className={cn(
-                  'block rounded-lg px-3 py-2 text-sm text-violet-100/85 transition hover:bg-violet-500/15 hover:text-violet-50',
-                  itemActive && 'bg-violet-500/10 text-violet-50',
+                  marketingNavLink,
+                  'block rounded-lg px-3 py-2 text-sm',
+                  itemActive && marketingNavLinkActive,
                 )}
               >
                 {item.label}

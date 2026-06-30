@@ -71,6 +71,7 @@
   .marketing-feature-card {
     @apply rounded-2xl border;
     border-color: var(--ozer-border-on-light);
+    color: var(--ozer-text-on-light);
     background: linear-gradient(
       145deg,
       color-mix(in srgb, var(--ozer-white) 95%, transparent),
@@ -80,6 +81,7 @@
 
   .dark .marketing-feature-card {
     border-color: var(--ozer-border-on-dark);
+    color: var(--ozer-text-on-dark);
     background: linear-gradient(
       145deg,
       color-mix(in srgb, var(--ozer-plum-800) 95%, transparent),

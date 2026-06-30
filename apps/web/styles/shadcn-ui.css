@@ -24,7 +24,7 @@
     --secondary-foreground: var(--ozer-text-on-light);
 
     --muted: var(--ozer-cream-100);
-    --muted-foreground: var(--ozer-text-on-light-muted);
+    --muted-foreground: var(--ozer-plum-600);
 
     --accent: var(--ozer-info);
     --accent-foreground: var(--ozer-white);
@@ -46,11 +46,11 @@
     --chart-5: var(--ozer-coral-400);
 
     --sidebar-background: var(--ozer-cream-100);
-    --sidebar-foreground: var(--ozer-text-on-light);
+    --sidebar-foreground: var(--ozer-plum-700);
     --sidebar-primary: var(--ozer-plum-950);
     --sidebar-primary-foreground: var(--ozer-white);
-    --sidebar-accent: var(--ozer-cream-200);
-    --sidebar-accent-foreground: var(--ozer-text-on-light);
+    --sidebar-accent: var(--ozer-plum-alpha-08);
+    --sidebar-accent-foreground: var(--ozer-plum-950);
     --sidebar-border: var(--border);
     --sidebar-ring: var(--ozer-info);
 
@@ -64,7 +64,10 @@
     --workspace-shell-sidebar-accent: var(--ozer-plum-alpha-08);
     --workspace-shell-border: var(--ozer-border-on-light);
     --workspace-shell-text: var(--ozer-text-on-light);
-    --workspace-shell-text-muted: var(--ozer-text-on-light-muted);
+    --workspace-shell-text-muted: var(--ozer-plum-600);
+    --workspace-shell-text-subtle: var(--ozer-plum-500);
+    --workspace-shell-nav-text: var(--ozer-plum-700);
+    --workspace-shell-nav-text-hover: var(--ozer-plum-950);
     --workspace-shell-text-on-dark: var(--ozer-text-on-dark);
     --workspace-shell-text-on-dark-muted: var(--ozer-text-on-dark-muted);
 
@@ -127,6 +130,9 @@
     --workspace-shell-border: var(--ozer-border-on-dark);
     --workspace-shell-text: var(--ozer-text-on-dark);
     --workspace-shell-text-muted: var(--ozer-text-on-dark-muted);
+    --workspace-shell-text-subtle: var(--ozer-on-dark-alpha-65);
+    --workspace-shell-nav-text: var(--ozer-on-dark-alpha-65);
+    --workspace-shell-nav-text-hover: var(--ozer-text-on-dark);
     --workspace-shell-text-on-dark: var(--ozer-text-on-dark);
     --workspace-shell-text-on-dark-muted: var(--ozer-text-on-dark-muted);
 

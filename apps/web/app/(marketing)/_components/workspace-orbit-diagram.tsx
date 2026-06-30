@@ -226,7 +226,7 @@ function AssistantBillingBadge({
       </TooltipTrigger>
       <TooltipContent
         side="right"
-        className="max-w-[220px] border border-[color:var(--workspace-shell-border)] bg-[#0d0b1e] text-xs text-[var(--workspace-shell-text)]"
+        className="max-w-[220px] border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)] text-xs text-[var(--ozer-text-on-dark)]"
       >
         {assistant.addonTooltip}
       </TooltipContent>
@@ -263,14 +263,14 @@ function AssistantLayerCard({
       </span>
       <p
         className={cn(
-          'font-semibold leading-tight text-[var(--workspace-shell-text)]',
+          'font-semibold leading-tight text-[var(--ozer-text-on-dark)]',
           compact ? 'mt-1.5 text-[9px]' : 'mt-2 text-[11px]',
         )}
       >
         {assistant.label}
       </p>
       {!compact ? (
-        <p className="mt-1.5 text-[9px] leading-snug text-violet-200/65 sm:mt-1.5 sm:text-[10px]">
+        <p className="mt-1.5 text-[9px] leading-snug text-[var(--ozer-text-on-dark-muted)] sm:mt-1.5 sm:text-[10px]">
           {assistant.description}
         </p>
       ) : null}
@@ -303,8 +303,8 @@ function PersonalHomeCard({
       <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg border border-[#2dd4bf]/30 bg-[#2dd4bf]/10">
         <Home className="h-4 w-4 text-[#2dd4bf]" aria-hidden />
       </span>
-      <p className="mt-2 text-sm font-bold text-[var(--workspace-shell-text)]">Personal Home</p>
-      <p className="mt-0.5 text-[10px] text-violet-100/70">Your command centre</p>
+      <p className="mt-2 text-sm font-bold text-[var(--ozer-text-on-dark)]">Personal Home</p>
+      <p className="mt-0.5 text-[10px] text-[var(--ozer-text-on-dark-muted)]">Your command centre</p>
     </div>
   );
 }

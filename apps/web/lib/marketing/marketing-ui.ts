@@ -23,7 +23,7 @@ export const marketingBtnGradient = `h-11 rounded-full bg-gradient-to-r from-[va
 export const marketingBtnOutline = `h-11 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/70 px-6 text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel-hover)] ${marketingBtnPress}`;
 
 export const marketingEyebrow =
-  'inline-flex items-center rounded-full border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-4 py-1.5 text-xs font-medium uppercase tracking-[0.14em] text-[var(--ozer-coral-600)] dark:text-[var(--ozer-accent-muted)]';
+  'inline-flex items-center rounded-full border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-4 py-1.5 text-xs font-medium uppercase tracking-[0.14em] text-[var(--ozer-coral-600)]';
 
 export const marketingHeadlineGradient =
   'bg-gradient-to-r from-[var(--ozer-accent)] via-[var(--ozer-coral-100)] to-[var(--ozer-info)] bg-clip-text text-transparent';
@@ -53,5 +53,38 @@ export const marketingPlanBadge =
 
 export const marketingMutedText = 'text-[var(--workspace-shell-text-muted)]';
 
+export const marketingBodyText = 'text-[var(--workspace-shell-text-muted)]';
+
+/** Nav pill in marketing header */
+export const marketingNavPill =
+  'gap-x-1 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/90 p-1 xl:gap-x-2';
+
+/** Idle nav link — readable on cream (light) and plum (dark) headers */
+export const marketingNavLink =
+  'inline-flex w-max rounded-full px-3 py-1.5 text-sm font-medium transition-colors duration-200 text-[var(--workspace-shell-nav-text)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-nav-text-hover)]';
+
+export const marketingNavLinkActive =
+  'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-plum-950)] hover:bg-[var(--ozer-accent-subtle)] hover:text-[var(--ozer-plum-950)] dark:text-[var(--ozer-text-on-dark)] dark:hover:text-[var(--ozer-text-on-dark)]';
+
+export const marketingNavTrigger =
+  'inline-flex h-auto w-max rounded-full px-3 py-1.5 text-sm font-medium transition-colors duration-200 bg-transparent text-[var(--workspace-shell-nav-text)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-nav-text-hover)] focus:bg-[var(--workspace-shell-sidebar-accent)] data-[state=open]:bg-[var(--ozer-accent-subtle)] data-[state=open]:text-[var(--ozer-plum-950)] dark:data-[state=open]:text-[var(--ozer-text-on-dark)]';
+
+export const marketingNavDropdownTitle =
+  'block text-sm font-medium text-[var(--workspace-shell-text)]';
+
+export const marketingNavDropdownDesc =
+  'mt-0.5 block text-xs leading-relaxed text-[var(--workspace-shell-text-muted)]';
+
+export const marketingNavDropdownItem =
+  'flex items-start gap-3 rounded-lg px-3 py-2.5 transition hover:bg-[var(--workspace-shell-sidebar-accent)]';
+
 export const marketingNavPanel =
   'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/98 text-[var(--workspace-shell-text)]';
+
+/** Fixed plum sections (hero bands, pricing) — always use on-dark text */
+export const marketingSectionDark = 'bg-[var(--ozer-plum-950)] text-[var(--ozer-text-on-dark)]';
+
+export const marketingSectionDarkMuted = 'text-[var(--ozer-text-on-dark-muted)]';
+
+export const marketingEyebrowOnDark =
+  'inline-flex items-center rounded-full border border-[var(--ozer-accent)]/35 bg-[var(--ozer-accent-subtle)] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ozer-coral-400)]';

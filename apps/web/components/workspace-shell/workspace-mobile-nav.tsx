@@ -262,8 +262,8 @@ export function WorkspaceMobileBottomNav({
               className={cn(
                 MOBILE_NAV_BTN_CLASS,
                 active
-                  ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]'
-                  : 'text-[var(--workspace-shell-text-on-dark-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text-on-dark)]',
+                  ? 'bg-gradient-to-r from-[var(--ozer-gradient-active-from)] to-[var(--ozer-gradient-active-to)] text-[var(--ozer-white)]'
+                  : 'text-[var(--workspace-shell-nav-text)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-nav-text-hover)]',
               )}
             >
               <span

@@ -85,7 +85,7 @@ function Home() {
               key={feature.title}
               className={cn(marketingFeatureCard, 'p-6')}
             >
-              <feature.icon className="h-5 w-5 text-[var(--ozer-accent-muted)]" />
+              <feature.icon className="h-5 w-5 text-[var(--ozer-accent)]" />
               <h3 className="mt-4 font-heading text-xl font-semibold text-[var(--workspace-shell-text)]">
                 {feature.title}
               </h3>

@@ -14,6 +14,13 @@ import {
   getMarketingWorkspaceNavLinks,
   isWorkspaceNavPath,
 } from '~/lib/marketing/segment-landing-pages';
+import {
+  marketingNavDropdownDesc,
+  marketingNavDropdownItem,
+  marketingNavDropdownTitle,
+  marketingNavLinkActive,
+  marketingNavTrigger,
+} from '~/lib/marketing/marketing-ui';
 
 import {
   marketingNavPanelClass,
@@ -29,13 +36,7 @@ export function SiteWorkspacesNavMenu() {
   return (
     <NavigationMenuItem>
       <NavigationMenuTrigger
-        className={cn(
-          'inline-flex h-auto w-max rounded-full px-3 py-1.5 text-sm font-medium transition-colors duration-300',
-          'bg-transparent hover:bg-violet-500/10 hover:text-violet-50 focus:bg-violet-500/10 data-[state=open]:bg-violet-500/15',
-          active
-            ? 'bg-violet-500/15 text-violet-50'
-            : 'text-violet-100/75',
-        )}
+        className={cn(marketingNavTrigger, active && marketingNavLinkActive)}
       >
         Workspaces
       </NavigationMenuTrigger>
@@ -56,20 +57,16 @@ export function SiteWorkspacesNavMenu() {
                 key={workspace.slug}
                 href={workspace.path}
                 className={cn(
-                  'flex items-start gap-3 rounded-lg px-3 py-2.5 transition hover:bg-violet-500/15',
-                  itemActive && 'bg-violet-500/10',
+                  marketingNavDropdownItem,
+                  itemActive && 'bg-[var(--workspace-shell-sidebar-accent)]',
                 )}
               >
                 <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--ozer-accent)]">
                   <Icon className="h-4 w-4" aria-hidden />
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-sm font-medium text-violet-50">
-                    {workspace.label}
-                  </span>
-                  <span className="mt-0.5 block text-xs leading-relaxed text-violet-200/70">
-                    {workspace.description}
-                  </span>
+                  <span className={marketingNavDropdownTitle}>{workspace.label}</span>
+                  <span className={marketingNavDropdownDesc}>{workspace.description}</span>
                 </span>
               </Link>
             );

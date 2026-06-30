@@ -64,7 +64,7 @@ export function OzerLogoMark({
     <span
       className={cn(
         'relative flex shrink-0 items-center overflow-hidden',
-        'h-8 w-[112px] lg:h-9 lg:w-[128px]',
+        'h-9 w-[124px] lg:h-10 lg:w-[142px]',
         className,
       )}
     >

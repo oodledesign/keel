@@ -4,9 +4,9 @@
  *
  * To rebrand: edit primitive values below. Semantic + legacy aliases update automatically.
  * See DESIGN_SYSTEM.md for the token map and usage.
+ *
+ * Fonts: loaded via Fontshare @import at the top of globals.css
  */
-
-@import url('https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,700,800&f[]=general-sans@400,500,600,700&display=swap');
 
 @layer base {
   :root {
@@ -77,7 +77,9 @@
     --ozer-text-on-dark: var(--ozer-cream-50);
     --ozer-text-on-dark-muted: var(--ozer-on-dark-alpha-65);
     --ozer-text-on-light: var(--ozer-plum-950);
-    --ozer-text-on-light-muted: var(--ozer-text-muted);
+    /* Muted on cream — plum-600 passes WCAG AA on cream-50 (avoid #b7a4ac pink-grey) */
+    --ozer-text-on-light-muted: var(--ozer-plum-600);
+    --ozer-text-on-light-subtle: var(--ozer-plum-500);
 
     --ozer-border-on-dark: var(--ozer-on-dark-alpha-08);
     --ozer-border-on-dark-strong: var(--ozer-on-dark-alpha-12);

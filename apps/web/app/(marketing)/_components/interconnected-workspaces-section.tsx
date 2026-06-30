@@ -55,20 +55,20 @@ export function InterconnectedWorkspacesSection({
       <div className="relative mx-auto w-full max-w-7xl px-6">
         <div className="grid gap-10 lg:grid-cols-[minmax(0,38fr)_minmax(0,62fr)] lg:items-center lg:gap-8">
           <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--ozer-accent)]/35 bg-[var(--ozer-accent-subtle)] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ozer-accent-muted)]">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--ozer-accent)]/35 bg-[var(--ozer-accent-subtle)] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ozer-coral-400)]">
               <Link2 className="h-3.5 w-3.5" aria-hidden />
               {m.eyebrow}
             </span>
             <h2
               id="connected-workspaces-heading"
-              className="mt-6 font-heading text-3xl font-bold leading-tight text-[var(--workspace-shell-text)] md:text-5xl lg:text-[3.25rem]"
+              className="mt-6 font-heading text-3xl font-bold leading-tight text-[var(--ozer-text-on-dark)] md:text-5xl lg:text-[3.25rem]"
             >
               {m.title}
               <span className="mt-1 block bg-gradient-to-r from-[var(--ozer-accent)] via-[var(--ozer-coral-100)] to-[var(--ozer-info)] bg-clip-text text-transparent">
                 {m.titleAccent}
               </span>
             </h2>
-            <p className="mt-5 max-w-xl text-base leading-relaxed text-violet-100/85 md:text-lg">
+            <p className="mt-5 max-w-xl text-base leading-relaxed text-[var(--ozer-text-on-dark-muted)] md:text-lg">
               {subtitle}
             </p>
           </div>
@@ -88,7 +88,7 @@ export function InterconnectedWorkspacesSection({
             <Button
               asChild
               variant="outline"
-              className="h-11 rounded-full border-violet-300/25 bg-[var(--workspace-shell-sidebar-accent)] px-6 text-violet-100 hover:bg-[var(--workspace-shell-sidebar-accent)]"
+              className="h-11 rounded-full border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-on-dark-alpha-06)] px-6 text-[var(--ozer-text-on-dark)] hover:bg-[var(--ozer-on-dark-alpha-08)]"
             >
               <Link href="/features">
                 All features
@@ -114,7 +114,7 @@ export function InterconnectedWorkspacesSection({
               tone="ozer"
             />
           </div>
-          <p className="mt-8 text-center text-sm font-medium text-[var(--ozer-accent-muted)] md:text-base">
+          <p className="mt-8 text-center text-sm font-medium text-[var(--ozer-plum-700)] md:text-base">
             {m.ctaLine}
           </p>
         </div>
@@ -131,7 +131,7 @@ function BenefitCard({ benefit }: { benefit: InterconnectedBenefit }) {
       <h3 className="mt-3 font-heading text-base font-semibold leading-snug text-[var(--workspace-shell-text)] md:text-lg">
         {benefit.title}
       </h3>
-      <p className="mt-2 flex-1 text-sm leading-relaxed text-violet-100/70">
+      <p className="mt-2 flex-1 text-sm leading-relaxed text-[var(--workspace-shell-text-muted)]">
         {benefit.description}
       </p>
     </article>
@@ -160,7 +160,7 @@ function ComparisonColumn({
       <p
         className={cn(
           'text-sm font-semibold uppercase tracking-wide',
-          isOzer ? 'text-[var(--ozer-accent-muted)]' : 'text-[var(--workspace-shell-text-muted)]',
+          isOzer ? 'text-[var(--ozer-coral-600)]' : 'text-[var(--ozer-plum-700)]',
         )}
       >
         {label}

@@ -49,8 +49,8 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
 
-  --font-sans: -apple-system, var(--font-sans);
-  --font-heading: var(--font-heading);
+  --font-sans: var(--ozer-font-body);
+  --font-heading: var(--ozer-font-display);
 
   --color-sidebar: var(--sidebar-background);
   --color-sidebar-foreground: var(--sidebar-foreground);

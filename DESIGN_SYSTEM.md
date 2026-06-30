@@ -22,7 +22,7 @@ Legacy `--keel-*` variables are aliases to `--ozer-*` so existing code keeps wor
 | Navigation | General Sans | 500 | `--ozer-font-weight-nav` |
 | Headings / display | Cabinet Grotesk (Fontshare) | 700 | `--ozer-font-display` |
 
-Loaded via Fontshare in `ozer-tokens.css`. Shadcn maps `--font-sans` → body, `--font-heading` → display.
+Loaded via Fontshare at the top of `globals.css` (with preconnect in root layout). Shadcn maps `--font-sans` → body, `--font-heading` → Cabinet Grotesk via `--ozer-font-display`.
 
 ---
 
@@ -52,6 +52,11 @@ Full list: `apps/web/styles/ozer-tokens.css`
 | `--ozer-surface-panel-hover` | `--ozer-cream-100` | `--ozer-plum-800` |
 | `--ozer-accent` | Coral CTA (both) | Coral CTA (both) |
 | `--workspace-shell-text` | Plum on cream | Cream on plum |
+
+| `--workspace-shell-nav-text` | Plum nav labels on cream sidebar | Muted cream on plum sidebar |
+| `--workspace-shell-text-on-dark` | — | Fixed cream text on forced-dark bands |
+
+**Contrast rule:** On cream/light panels use `--workspace-shell-text` / `-muted`. On fixed plum bands (hero, pricing, interconnected section) use `--ozer-text-on-dark` / `-muted` — never `--workspace-shell-text`, which flips with theme.
 
 Semantic surfaces flip in `ozer-tokens.css` via `.dark` on `<html>`. Static tokens (`--ozer-text-on-dark`, `--ozer-border-on-light`, etc.) stay fixed for contrast pairs.
 
