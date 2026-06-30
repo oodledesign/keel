@@ -12,6 +12,8 @@ type Props = {
   accountSlug: string;
   accountName?: string;
   compact?: boolean;
+  /** When true, skip outer padding — shortcuts sit inside a padded dashboard grid. */
+  embedded?: boolean;
   className?: string;
 };
 
@@ -20,6 +22,7 @@ export async function WorkspaceDashboardShortcutsBar({
   accountSlug,
   accountName,
   compact,
+  embedded,
   className,
 }: Props) {
   const client = getSupabaseServerClient();
@@ -40,7 +43,10 @@ export async function WorkspaceDashboardShortcutsBar({
       )}
       stripWorkspacePrefix={accountName}
       compact={compact}
-      className={cn('mb-4 px-4 pt-4 md:px-6 lg:px-8', className)}
+      className={cn(
+        embedded ? 'mb-0' : 'mb-4 px-4 pt-4 md:px-6 lg:px-8',
+        className,
+      )}
     />
   );
 }

@@ -1528,7 +1528,7 @@ export default function PricingSection() {
               asChild
               size="lg"
               className={cn(
-                'mt-6 h-11 w-full rounded-full bg-gradient-to-r from-[#2dd4bf] to-[var(--ozer-info)] text-[var(--ozer-text-on-dark)] hover:opacity-95',
+                'mt-6 h-11 w-full rounded-full bg-gradient-to-r from-[var(--ozer-btn-gradient-from)] to-[var(--ozer-btn-gradient-to)] text-[var(--ozer-white)] hover:opacity-95',
                 ctaGlow && !reducedMotion && 'animate-[ozer-cta-glow_1.2s_ease-out_1]',
               )}
             >

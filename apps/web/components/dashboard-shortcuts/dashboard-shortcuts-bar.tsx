@@ -62,7 +62,7 @@ export function DashboardShortcutsBar({
         {settingsHref ? (
           <HapticLink
             href={settingsHref}
-            className="text-xs font-medium text-[var(--ozer-accent-muted)] hover:text-[#34b3a4]"
+            className="text-xs font-medium text-[var(--workspace-shell-text-muted)] hover:text-[var(--ozer-accent)]"
           >
             Manage
           </HapticLink>
@@ -81,7 +81,7 @@ export function DashboardShortcutsBar({
                 key={shortcut.id}
                 href={shortcut.href}
                 className={cn(
-                  'group inline-flex max-w-full items-center gap-1.5 rounded-xl border border-[color:var(--workspace-shell-border)] bg-white/[0.10] font-medium text-[var(--workspace-shell-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-colors hover:border-[var(--ozer-accent)]/35 hover:bg-[var(--ozer-accent)]/12',
+                  'group inline-flex max-w-full items-center gap-1.5 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] font-medium text-[var(--workspace-shell-text)] shadow-sm transition-colors hover:border-[var(--ozer-accent)]/35 hover:bg-[var(--ozer-accent-subtle)]',
                   compact ? 'px-2.5 py-1.5 text-xs' : 'px-3 py-2 text-sm',
                 )}
                 title={shortcut.description}

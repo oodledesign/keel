@@ -10,6 +10,9 @@ import {
   formatGbp,
 } from '~/lib/billing/pricing-marketing';
 import type { AppLandingConfig } from '~/lib/marketing/app-landing-pages';
+import { marketingBtnGradient } from '~/lib/marketing/marketing-ui';
+
+import { MarketingFaqsSection } from './marketing-faqs';
 
 type AppLandingPageProps = {
   config: AppLandingConfig;
@@ -55,11 +58,7 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              <Button
-                asChild
-                size="lg"
-                className="h-11 rounded-full bg-gradient-to-r from-[var(--ozer-accent)] to-[var(--ozer-info)] px-6 text-[var(--workspace-shell-text)] hover:opacity-95"
-              >
+              <Button asChild size="lg" className={marketingBtnGradient}>
                 <Link href={BUSINESS_LITE_SIGNUP}>
                   Start with free Business Lite
                   <ArrowRight className="ml-1.5 h-4 w-4" />
@@ -173,29 +172,12 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
         </div>
       </section>
 
-      <section className="border-t border-[color:var(--workspace-shell-border)] bg-[#070610]/80 py-20">
-        <div className="mx-auto w-full max-w-3xl px-6">
-          <h2 className="font-heading text-3xl font-semibold text-[var(--workspace-shell-text)] md:text-4xl">
-            Frequently asked questions
-          </h2>
-          <div className="mt-8 space-y-3">
-            {config.faqs.map((faq) => (
-              <details
-                key={faq.question}
-                className="group rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-5 py-4"
-              >
-                <summary className="cursor-pointer list-none font-medium text-[var(--workspace-shell-text)] marker:content-none [&::-webkit-details-marker]:hidden">
-                  <span className="flex items-center justify-between gap-4">
-                    {faq.question}
-                    <span className="text-violet-300/80 transition group-open:rotate-45">+</span>
-                  </span>
-                </summary>
-                <p className="mt-3 text-sm leading-relaxed text-violet-100/80">{faq.answer}</p>
-              </details>
-            ))}
-          </div>
-        </div>
-      </section>
+      <MarketingFaqsSection
+        faqs={config.faqs}
+        tone="muted"
+        headingId="app-faq-heading"
+        sectionClassName="border-t border-[color:var(--workspace-shell-border)] marketing-section-muted"
+      />
 
       <section className="relative mx-auto w-full max-w-7xl px-6 py-20">
         <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-gradient-to-br from-[var(--ozer-surface-panel)] to-[var(--ozer-surface-canvas)] px-8 py-12 text-center">

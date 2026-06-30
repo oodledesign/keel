@@ -191,7 +191,7 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
         accountSlug={account}
         accountName={data.accountName}
         compact
-        className="px-0 pt-0"
+        embedded
       />
     </Suspense>
   );

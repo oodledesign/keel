@@ -181,7 +181,7 @@ function DashboardSection(
             {props.title}
           </h2>
           {props.subtitle ? (
-            <p className="mt-0.5 text-xs text-[var(--workspace-shell-text)]/45">{props.subtitle}</p>
+            <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">{props.subtitle}</p>
           ) : null}
         </div>
         {props.action ? <div className="shrink-0">{props.action}</div> : null}
@@ -195,7 +195,7 @@ function ViewAllTasksLink() {
   return (
     <Link
       href={personalTasksHref}
-      className="inline-flex items-center gap-1 text-xs font-medium text-[var(--ozer-accent)] hover:text-[#34b3a4]"
+      className="inline-flex items-center gap-1 text-xs font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:text-[var(--ozer-accent)]"
     >
       View all
       <ArrowRight className="h-3.5 w-3.5" />

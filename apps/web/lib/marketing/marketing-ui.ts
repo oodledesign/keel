@@ -18,7 +18,7 @@ export const marketingBtnPress =
 
 export const marketingBtnPrimary = `h-11 rounded-full bg-[var(--ozer-accent)] px-6 text-[var(--ozer-plum-950)] hover:bg-[var(--ozer-accent-hover)] hover:text-[var(--ozer-white)] ${marketingBtnPress}`;
 
-export const marketingBtnGradient = `h-11 rounded-full bg-gradient-to-r from-[var(--ozer-accent)] to-[var(--ozer-info)] px-6 text-[var(--ozer-white)] hover:opacity-95 ${marketingBtnPress}`;
+export const marketingBtnGradient = `h-11 rounded-full bg-gradient-to-r from-[var(--ozer-btn-gradient-from)] to-[var(--ozer-btn-gradient-to)] px-6 text-[var(--ozer-white)] hover:opacity-95 ${marketingBtnPress}`;
 
 export const marketingBtnOutline = `h-11 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/70 px-6 text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel-hover)] ${marketingBtnPress}`;
 

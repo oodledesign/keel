@@ -10,6 +10,7 @@ import {
   formatGbp,
 } from '~/lib/billing/pricing-marketing';
 import { listAppLandingSummaries } from '~/lib/marketing/app-landing-pages';
+import { marketingBtnGradient } from '~/lib/marketing/marketing-ui';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 const BUSINESS_LITE_SIGNUP = buildPricingSignupUrl({
@@ -46,11 +47,7 @@ function AppsMarketingPage() {
           <p className="text-base leading-relaxed text-violet-100/85 md:text-lg">
             Ozer apps install per workspace — start with free Business Lite, then subscribe to Signatures, Rankly, Feedflow, or Videos when you need them. No bundle bloat.
           </p>
-          <Button
-            asChild
-            size="lg"
-            className="h-11 rounded-full bg-gradient-to-r from-[var(--ozer-accent)] to-[var(--ozer-info)] px-6 text-[var(--workspace-shell-text)] hover:opacity-95"
-          >
+          <Button asChild size="lg" className={marketingBtnGradient}>
             <Link href={BUSINESS_LITE_SIGNUP}>
               Start with free Business Lite
               <ArrowRight className="ml-1.5 h-4 w-4" />

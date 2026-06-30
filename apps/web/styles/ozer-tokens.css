@@ -94,6 +94,10 @@
     --ozer-gradient-active-hover-from: var(--ozer-coral-500);
     --ozer-gradient-active-hover-to: var(--ozer-coral-400);
 
+    /* Two-tint CTA gradient (same hue only — no cross-colour blends) */
+    --ozer-btn-gradient-from: var(--ozer-coral-500);
+    --ozer-btn-gradient-to: var(--ozer-coral-600);
+
     /* ── Light mode semantics (html without .dark) ── */
     --ozer-surface-canvas: var(--ozer-cream-50);
     --ozer-surface-panel: var(--ozer-white);

@@ -4,9 +4,22 @@ import { ArrowRight, Download } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 
+import {
+  marketingBodyText,
+  marketingBtnGradient,
+  marketingBtnOutline,
+  marketingEyebrow,
+  marketingFeatureCard,
+  marketingIconWell,
+  marketingMutedText,
+  marketingPanelDeep,
+  marketingSectionMuted,
+} from '~/lib/marketing/marketing-ui';
+
 import { FeatureCoverPreview } from './feature-cover-previews';
-import { FeatureLandingFaqs, type FAQItem } from './feature-landing-faqs';
+import type { FAQItem } from './feature-landing-faqs';
 import { FeatureLandingIcon } from './feature-landing-icon';
+import { MarketingFaqsSection } from './marketing-faqs';
 import type { FeatureSlug } from '~/lib/marketing/feature-landing-pages';
 
 export type FeatureHighlight = {
@@ -63,16 +76,12 @@ export function FeatureLandingPage({
       className="relative overflow-hidden marketing-shell"
       aria-label={primaryKeyword}
     >
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_22%)]" />
-
       <section className="relative mx-auto flex w-full max-w-7xl flex-col gap-10 px-6 pb-16 pt-24 md:pt-28 lg:flex-row lg:items-center lg:gap-12">
         <div className="max-w-3xl flex-1 space-y-8">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center rounded-full border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-4 py-1.5 text-xs font-medium uppercase tracking-[0.14em] text-[var(--ozer-accent-muted)]">
-              {eyebrow}
-            </span>
+            <span className={marketingEyebrow}>{eyebrow}</span>
             {heroBadge ? (
-              <span className="inline-flex items-center rounded-full border border-[color:var(--workspace-shell-border)] bg-violet-500/10 px-3 py-1.5 text-xs font-medium text-violet-100/90">
+              <span className="inline-flex items-center rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 py-1.5 text-xs font-medium text-[var(--workspace-shell-text-muted)]">
                 {heroBadge}
               </span>
             ) : null}
@@ -82,41 +91,27 @@ export function FeatureLandingPage({
             <h1 className="font-heading text-4xl font-bold leading-tight text-[var(--workspace-shell-text)] md:text-5xl lg:text-6xl">
               {heading}
             </h1>
-            <p className="max-w-2xl text-base leading-relaxed text-violet-100/85 md:text-lg">
+            <p className={`max-w-2xl text-base leading-relaxed md:text-lg ${marketingBodyText}`}>
               {subheading}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button
-              asChild
-              size="lg"
-              className="h-11 rounded-full bg-gradient-to-r from-[var(--ozer-accent)] to-[var(--ozer-info)] px-6 text-[var(--workspace-shell-text)] hover:from-[var(--ozer-accent-hover)] hover:to-[#1d4ed8]"
-            >
+            <Button asChild size="lg" className={marketingBtnGradient}>
               <Link href={ctaHref}>
                 {ctaText}
                 <ArrowRight className="ml-1.5 h-4 w-4" />
               </Link>
             </Button>
             {secondaryCta ? (
-              <Button
-                asChild
-                variant="outline"
-                size="lg"
-                className="h-11 rounded-full border-violet-300/25 bg-[#100d1f]/70 px-6 text-violet-100 hover:bg-[#17122e]"
-              >
+              <Button asChild variant="outline" size="lg" className={marketingBtnOutline}>
                 <Link href={secondaryCta.href}>
                   <Download className="mr-1.5 h-4 w-4" />
                   {secondaryCta.label}
                 </Link>
               </Button>
             ) : null}
-            <Button
-              asChild
-              variant="outline"
-              size="lg"
-              className="h-11 rounded-full border-violet-300/25 bg-[#100d1f]/70 px-6 text-violet-100 hover:bg-[#17122e]"
-            >
+            <Button asChild variant="outline" size="lg" className={marketingBtnOutline}>
               <Link href="/features">See all features</Link>
             </Button>
           </div>
@@ -136,15 +131,14 @@ export function FeatureLandingPage({
 
         <div className="grid gap-5 md:grid-cols-2">
           {highlights.map((item) => (
-            <article
-              key={item.title}
-              className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.25)]"
-            >
-              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]">
+            <article key={item.title} className={`${marketingFeatureCard} p-6`}>
+              <div className={`mb-4 h-11 w-11 ${marketingIconWell}`}>
                 <FeatureLandingIcon name={item.icon} className="h-5 w-5" />
               </div>
-              <h3 className="text-lg font-semibold text-violet-50">{item.title}</h3>
-              <p className="mt-3 text-sm leading-relaxed text-violet-100/80">
+              <h3 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
+                {item.title}
+              </h3>
+              <p className={`mt-3 text-sm leading-relaxed ${marketingMutedText}`}>
                 {item.description}
               </p>
             </article>
@@ -152,14 +146,14 @@ export function FeatureLandingPage({
         </div>
       </section>
 
-      <section className="relative border-y border-[color:var(--workspace-shell-border)] bg-[#0c0a18]/80 py-16">
+      <section className={`relative py-16 ${marketingSectionMuted}`}>
         <div className="mx-auto w-full max-w-7xl px-6">
           <div className="max-w-2xl space-y-4">
             <h2 className="font-heading text-3xl font-semibold tracking-tight text-[var(--workspace-shell-text)] md:text-4xl">
               {connectionHeading}
             </h2>
             {connectionDescription ? (
-              <p className="text-base leading-relaxed text-violet-100/80">
+              <p className={`text-base leading-relaxed ${marketingBodyText}`}>
                 {connectionDescription}
               </p>
             ) : null}
@@ -170,7 +164,7 @@ export function FeatureLandingPage({
               <Link
                 key={`${item.href}-${item.label}`}
                 href={item.href}
-                className="inline-flex items-center rounded-full border border-[var(--ozer-accent)]/25 bg-[var(--ozer-accent-subtle)] px-4 py-2 text-sm font-medium text-[var(--ozer-accent-muted)] transition hover:border-[var(--ozer-accent)]/40 hover:bg-[var(--ozer-accent-subtle)]"
+                className="inline-flex items-center rounded-full border border-[var(--ozer-accent)]/25 bg-[var(--ozer-accent-subtle)] px-4 py-2 text-sm font-medium text-[var(--ozer-coral-600)] transition hover:border-[var(--ozer-accent)]/40 hover:bg-[var(--ozer-accent-subtle)]"
               >
                 {item.label}
               </Link>
@@ -180,30 +174,21 @@ export function FeatureLandingPage({
       </section>
 
       {faqs && faqs.length > 0 ? (
-        <section className="relative mx-auto w-full max-w-3xl px-6 py-16">
-          <h2 className="font-heading mb-8 text-3xl font-semibold tracking-tight text-[var(--workspace-shell-text)] md:text-4xl">
-            Frequently asked questions
-          </h2>
-          <FeatureLandingFaqs faqs={faqs} />
-        </section>
+        <MarketingFaqsSection faqs={faqs} tone="muted" headingId="feature-faq-heading" />
       ) : null}
 
       <section
         id="early-access"
         className="relative mx-auto w-full max-w-7xl scroll-mt-24 px-6 pb-20 pt-4"
       >
-        <div className="rounded-3xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)]/85 p-8 text-center shadow-[0_30px_100px_rgba(23,8,50,0.55)] md:p-12">
+        <div className={`${marketingPanelDeep} p-8 text-center md:p-12`}>
           <h2 className="font-heading text-3xl font-semibold tracking-tight text-[var(--workspace-shell-text)]">
             Ready to see it in action?
           </h2>
-          <p className="text-muted-foreground mx-auto mt-3 max-w-xl text-sm leading-relaxed text-violet-100/75 md:text-base">
+          <p className={`mx-auto mt-3 max-w-xl text-sm leading-relaxed md:text-base ${marketingBodyText}`}>
             Join early access and be one of the first agencies running on Ozer.
           </p>
-          <Button
-            asChild
-            size="lg"
-            className="mt-6 h-11 rounded-full bg-gradient-to-r from-[var(--ozer-accent)] to-[var(--ozer-info)] px-6 text-[var(--workspace-shell-text)] hover:from-[var(--ozer-accent-hover)] hover:to-[#1d4ed8]"
-          >
+          <Button asChild size="lg" className={`mt-6 ${marketingBtnGradient}`}>
             <Link href={ctaHref}>
               {ctaText}
               <ArrowRight className="ml-1.5 h-4 w-4" />

@@ -21,6 +21,7 @@ import {
 } from '~/lib/billing/pricing-marketing';
 import { getSegmentPricingComparison } from '~/lib/marketing/pricing-comparison';
 import type { SegmentSlug } from '~/lib/marketing/segment-landing-pages';
+import { marketingBtnGradient } from '~/lib/marketing/marketing-ui';
 
 import { PricingComparisonTable } from '../../_components/pricing-comparison-table';
 import { InterconnectedWorkspacesSection } from '../../_components/interconnected-workspaces-section';
@@ -70,11 +71,7 @@ export function OzerPricingPage() {
           property workspaces. One Ozer account, not a pile of siloed tools.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Button
-            asChild
-            size="lg"
-            className="h-11 rounded-full bg-gradient-to-r from-[var(--ozer-accent)] to-[var(--ozer-info)] px-6 text-[var(--workspace-shell-text)] hover:opacity-95"
-          >
+          <Button asChild size="lg" className={marketingBtnGradient}>
             <Link href={buildPricingSignupUrl({ profile: 'family' })}>
               Get free access
               <ArrowRight className="ml-1.5 h-4 w-4" />

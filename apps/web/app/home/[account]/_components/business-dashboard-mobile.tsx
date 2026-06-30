@@ -19,6 +19,16 @@ import pathsConfig from '~/config/paths.config';
 const panelClass =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
 
+const dashboardLinkClass =
+  'flex items-center gap-0.5 text-xs font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:text-[var(--ozer-accent)]';
+
+const dashboardTaskBackgrounds = [
+  'border-[color:var(--ozer-coral-alpha-45)] bg-[var(--ozer-coral-50)]',
+  'border-[color:color-mix(in_srgb,var(--ozer-sky-100)_80%,var(--ozer-info))] bg-[color-mix(in_srgb,var(--ozer-sky-100)_75%,var(--ozer-white))]',
+  'border-[color:color-mix(in_srgb,var(--ozer-gold-500)_45%,transparent)] bg-[color-mix(in_srgb,var(--ozer-gold-500)_22%,var(--ozer-cream-50))]',
+  'border-[color:color-mix(in_srgb,var(--ozer-lime-400)_40%,transparent)] bg-[color-mix(in_srgb,var(--ozer-lime-400)_24%,var(--ozer-cream-50))]',
+] as const;
+
 type BusinessDashboardMobileProps = {
   accountSlug: string;
   accountId: string;
@@ -68,7 +78,7 @@ export function BusinessDashboardMobile({
       <section className={cn(panelClass, 'overflow-hidden p-4 xl:col-span-2')}>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] font-medium uppercase tracking-wide text-violet-200/60">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
               {metrics.hasFinanceData ? 'This month' : 'Revenue'}
             </p>
             <p className="mt-0.5 text-2xl font-semibold tracking-tight text-[var(--workspace-shell-text)]">
@@ -95,26 +105,26 @@ export function BusinessDashboardMobile({
       <section className={panelClass}>
         <div className="flex items-center justify-between border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
           <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Upcoming tasks</h2>
-          <HapticLink
-            href={tasksHref}
-            className="flex items-center gap-0.5 text-xs font-medium text-[var(--ozer-accent-muted)]"
-          >
+          <HapticLink href={tasksHref} className={dashboardLinkClass}>
             View all
             <ChevronRight className="h-3.5 w-3.5" />
           </HapticLink>
         </div>
-        <ul className="divide-y divide-white/6">
+        <ul className="space-y-2 p-3">
           {upcomingTasks.length === 0 ? (
-            <li className="px-4 py-4 text-sm text-violet-200/70">
+            <li className="px-1 py-2 text-sm text-[var(--workspace-shell-text-muted)]">
               No upcoming tasks.
             </li>
           ) : (
-            upcomingTasks.map((task) => (
+            upcomingTasks.map((task, index) => (
               <li key={task.id}>
                 <DashboardTaskDetailTrigger
                   taskId={task.id}
                   workspaceAccountId={accountId}
-                  className="flex flex-col gap-0.5 px-4 py-3 active:bg-white/4"
+                  className={cn(
+                    'flex flex-col gap-0.5 rounded-xl border px-3 py-2.5 transition-colors active:scale-[0.99]',
+                    dashboardTaskBackgrounds[index % dashboardTaskBackgrounds.length],
+                  )}
                 >
                   <span className="text-sm font-medium text-[var(--workspace-shell-text)]">
                     {task.title}
@@ -134,17 +144,14 @@ export function BusinessDashboardMobile({
       <section>
         <div className="mb-2 flex items-center justify-between px-0.5">
           <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Recent notes</h2>
-          <HapticLink
-            href={notesHref}
-            className="flex items-center gap-0.5 text-xs font-medium text-[var(--ozer-accent-muted)]"
-          >
+          <HapticLink href={notesHref} className={dashboardLinkClass}>
             View all
             <ChevronRight className="h-3.5 w-3.5" />
           </HapticLink>
         </div>
 
         {recentNotes.length === 0 ? (
-          <div className={cn(panelClass, 'px-4 py-6 text-sm text-violet-200/70')}>
+          <div className={cn(panelClass, 'px-4 py-6 text-sm text-[var(--workspace-shell-text-muted)]')}>
             No notes yet.
           </div>
         ) : (
