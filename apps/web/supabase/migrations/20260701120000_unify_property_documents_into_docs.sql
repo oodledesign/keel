@@ -21,6 +21,34 @@ ALTER TABLE public.docs ADD CONSTRAINT docs_doc_type_check CHECK (
   )
 );
 
+-- Drop storage policies that reference property_documents before dropping the table.
+DROP POLICY IF EXISTS "property_documents_storage_select" ON storage.objects;
+DROP POLICY IF EXISTS "property_documents_storage_delete" ON storage.objects;
+
+-- property-documents bucket RLS: account-scoped paths (no property_documents join).
+CREATE POLICY "property_documents_storage_select"
+  ON storage.objects FOR SELECT TO authenticated
+  USING (
+    bucket_id = 'property-documents'
+    AND EXISTS (
+      SELECT 1 FROM public.accounts_memberships am
+      WHERE am.user_id = auth.uid()
+        AND storage.objects.name LIKE (am.account_id::text || '/%')
+    )
+  );
+
+CREATE POLICY "property_documents_storage_delete"
+  ON storage.objects FOR DELETE TO authenticated
+  USING (
+    bucket_id = 'property-documents'
+    AND EXISTS (
+      SELECT 1 FROM public.accounts_memberships am
+      WHERE am.user_id = auth.uid()
+        AND am.account_id::text = (storage.foldername(name))[1]
+        AND am.account_role IN ('owner', 'admin')
+    )
+  );
+
 -- Backfill legacy property uploads into docs (preserve ids and bucket paths).
 DO $$
 BEGIN
@@ -70,34 +98,8 @@ BEGIN
     FROM public.property_documents pd
     WHERE NOT EXISTS (SELECT 1 FROM public.docs d WHERE d.id = pd.id);
 
-    DROP TABLE public.property_documents;
+    DROP TABLE public.property_documents CASCADE;
   END IF;
 END $$;
-
--- property-documents bucket RLS: account-scoped paths (no property_documents join).
-DROP POLICY IF EXISTS "property_documents_storage_select" ON storage.objects;
-CREATE POLICY "property_documents_storage_select"
-  ON storage.objects FOR SELECT TO authenticated
-  USING (
-    bucket_id = 'property-documents'
-    AND EXISTS (
-      SELECT 1 FROM public.accounts_memberships am
-      WHERE am.user_id = auth.uid()
-        AND storage.objects.name LIKE (am.account_id::text || '/%')
-    )
-  );
-
-DROP POLICY IF EXISTS "property_documents_storage_delete" ON storage.objects;
-CREATE POLICY "property_documents_storage_delete"
-  ON storage.objects FOR DELETE TO authenticated
-  USING (
-    bucket_id = 'property-documents'
-    AND EXISTS (
-      SELECT 1 FROM public.accounts_memberships am
-      WHERE am.user_id = auth.uid()
-        AND am.account_id::text = (storage.foldername(name))[1]
-        AND am.account_role IN ('owner', 'admin')
-    )
-  );
 
 NOTIFY pgrst, 'reload schema';
