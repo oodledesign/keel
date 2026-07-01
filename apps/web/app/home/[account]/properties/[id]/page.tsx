@@ -1,8 +1,11 @@
 import { notFound, redirect } from 'next/navigation';
 
+import Link from 'next/link';
+
 import { PageBody } from '@kit/ui/page';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import pathsConfig from '~/config/paths.config';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
@@ -53,14 +56,11 @@ async function PropertyDetailPage({ params }: PropertyDetailPageProps) {
     redirect(getDefaultAccountPath(slug, workspace.account));
   }
 
-  const user = await requireUserInServerComponent();
+  await requireUserInServerComponent();
   const client = getSupabaseServerClient();
   const service = createPropertiesService(client);
 
-  const [property, documents] = await Promise.all([
-    service.getProperty(propertyId),
-    service.listDocuments(propertyId),
-  ]);
+  const property = await service.getProperty(propertyId);
 
   if (!property) {
     notFound();
@@ -77,16 +77,21 @@ async function PropertyDetailPage({ params }: PropertyDetailPageProps) {
     <>
       <TeamAccountLayoutPageHeader
         account={slug}
-        title={property.name}
-        description={property.address ?? 'Property details'}
+        title="Property"
+        description={
+          <Link
+            href={pathsConfig.app.accountProperties.replace('[account]', slug)}
+            className="text-sm text-[var(--workspace-shell-text-muted)] transition-colors hover:text-[var(--workspace-shell-accent-text)]"
+          >
+            ← Back to all properties
+          </Link>
+        }
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 lg:px-6">
         <PropertyDetailContent
           property={property}
           accountId={workspace.account.id as string}
           accountSlug={slug}
-          userId={user.id}
-          documents={documents}
           workspaceNotes={workspaceContent.notes}
           workspaceDocs={workspaceContent.docs}
           notesTableAvailable={workspaceContent.notesTableAvailable}

@@ -21,6 +21,7 @@ export function ContextWorkspaceNotes({
   defaultLink,
   variant = 'work',
   canEdit = true,
+  initialListFilter = 'all',
 }: {
   accountId: string;
   accountSlug: string;
@@ -32,6 +33,7 @@ export function ContextWorkspaceNotes({
   defaultLink: LinkValue;
   variant?: WorkspaceNotesVariant;
   canEdit?: boolean;
+  initialListFilter?: 'all' | 'pinned' | 'notes' | 'files';
 }) {
   return (
     <WorkspaceNotesPage
@@ -46,6 +48,7 @@ export function ContextWorkspaceNotes({
       defaultLink={defaultLink}
       canEdit={canEdit}
       hideFilters
+      initialListFilter={initialListFilter}
     />
   );
 }

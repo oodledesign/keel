@@ -50,6 +50,7 @@ import {
   categorizeFinanceTransactionAction,
   createManualTransactionAction,
   disconnectFreeAgentAction,
+  disconnectStarlingAction,
   importCsvTransactionsAction,
   loadFinancesDashboardAction,
   setFinanceTransactionLinksAction,
@@ -57,6 +58,7 @@ import {
   suggestCsvMappingAction,
   suggestTransactionCategoriesAction,
   syncFreeAgentAction,
+  syncStarlingAction,
 } from '../_lib/server/finances-actions';
 import { FinancesDashboardSkeleton } from './finances-dashboard-skeleton';
 
@@ -171,6 +173,23 @@ export function FinancesPageContent({
           await syncFreeAgentAction({ accountId, accountSlug });
           toast.success(
             'FreeAgent synced — transactions and categories imported',
+          );
+          await refresh({ background: true });
+        } catch {
+          toast.error('Connected, but initial sync failed — try Sync now');
+        }
+      });
+      router.replace(
+        pathsConfig.app.accountFinances.replace('[account]', accountSlug),
+      );
+    }
+    if (searchParams.get('finance_connected') === 'starling') {
+      toast.success('Starling connected');
+      startTransition(async () => {
+        try {
+          const result = await syncStarlingAction({ accountId, accountSlug });
+          toast.success(
+            `Starling synced — ${result.imported} new transaction${result.imported === 1 ? '' : 's'}`,
           );
           await refresh({ background: true });
         } catch {
@@ -338,7 +357,7 @@ export function FinancesPageContent({
     });
   };
 
-  const onSync = () => {
+  const onSyncFreeAgent = () => {
     startTransition(async () => {
       try {
         const result = await syncFreeAgentAction({ accountId, accountSlug });
@@ -359,6 +378,20 @@ export function FinancesPageContent({
         toast.success(`Synced ${parts.join(', ')}`);
       } catch (e) {
         toast.error(e instanceof Error ? e.message : 'Sync failed');
+      }
+    });
+  };
+
+  const onSyncStarling = () => {
+    startTransition(async () => {
+      try {
+        const result = await syncStarlingAction({ accountId, accountSlug });
+        await refresh({ background: true });
+        toast.success(
+          `Synced ${result.imported} new Starling transaction${result.imported === 1 ? '' : 's'}`,
+        );
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Starling sync failed');
       }
     });
   };
@@ -425,7 +458,8 @@ export function FinancesPageContent({
     });
   };
 
-  const connectUrl = `/api/integrations/freeagent/start?account=${encodeURIComponent(accountSlug)}`;
+  const connectFreeAgentUrl = `/api/integrations/freeagent/start?account=${encodeURIComponent(accountSlug)}`;
+  const connectStarlingUrl = `/api/integrations/starling/start?account=${encodeURIComponent(accountSlug)}`;
   const showSkeleton = loading || data === null;
 
   return (
@@ -537,16 +571,25 @@ export function FinancesPageContent({
             </div>
           ) : null}
 
-          <FreeAgentPanel
+          <FinanceConnectionsPanel
             data={data}
-            connectUrl={connectUrl}
+            connectFreeAgentUrl={connectFreeAgentUrl}
+            connectStarlingUrl={connectStarlingUrl}
             pending={pending}
-            onSync={onSync}
-            onDisconnect={() =>
+            onSyncFreeAgent={onSyncFreeAgent}
+            onSyncStarling={onSyncStarling}
+            onDisconnectFreeAgent={() =>
               startTransition(async () => {
                 await disconnectFreeAgentAction({ accountId, accountSlug });
                 await refresh({ background: true });
-                toast.success('Disconnected');
+                toast.success('FreeAgent disconnected');
+              })
+            }
+            onDisconnectStarling={() =>
+              startTransition(async () => {
+                await disconnectStarlingAction({ accountId, accountSlug });
+                await refresh({ background: true });
+                toast.success('Starling disconnected');
               })
             }
           />
@@ -587,32 +630,100 @@ export function FinancesPageContent({
   );
 }
 
-function FreeAgentPanel({
+function FinanceConnectionsPanel({
   data,
+  connectFreeAgentUrl,
+  connectStarlingUrl,
+  pending,
+  onSyncFreeAgent,
+  onSyncStarling,
+  onDisconnectFreeAgent,
+  onDisconnectStarling,
+}: {
+  data: DashboardData | null;
+  connectFreeAgentUrl: string;
+  connectStarlingUrl: string;
+  pending: boolean;
+  onSyncFreeAgent: () => void;
+  onSyncStarling: () => void;
+  onDisconnectFreeAgent: () => void;
+  onDisconnectStarling: () => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <FinanceProviderCard
+        title="FreeAgent"
+        connected={Boolean(data?.connection)}
+        configured={Boolean(data?.freeAgentConfigured)}
+        description={
+          data?.connection
+            ? `Connected to ${data.connection.freeagent_company_name ?? 'FreeAgent'}. Ozer is your UI; FreeAgent stays the ledger. Categories sync from FreeAgent on each sync. When you categorise here, Ozer writes a bank transaction explanation in FreeAgent. New transactions sync automatically each morning; use Sync now for a full refresh.`
+            : 'Connect FreeAgent to import bank transactions and categories. Categorise in Ozer and sync explanations back to FreeAgent.'
+        }
+        configuredHint="Set FREEAGENT_CLIENT_ID and FREEAGENT_CLIENT_SECRET to enable."
+        connectUrl={connectFreeAgentUrl}
+        pending={pending}
+        onSync={onSyncFreeAgent}
+        onDisconnect={onDisconnectFreeAgent}
+        lastSyncAt={data?.connection?.last_sync_at ?? null}
+      />
+      <FinanceProviderCard
+        title="Starling Bank"
+        connected={Boolean(data?.starlingConnection)}
+        configured={Boolean(data?.starlingConfigured)}
+        description={
+          data?.starlingConnection
+            ? 'Connected to Starling. Transactions import from your business account feed into the same Finances view. Use Sync now for a full refresh; incremental sync runs on the morning cron.'
+            : 'Connect your Starling business account to import bank transactions automatically.'
+        }
+        configuredHint="Set STARLING_CLIENT_ID and STARLING_CLIENT_SECRET to enable (use STARLING_SANDBOX=true for sandbox)."
+        connectUrl={connectStarlingUrl}
+        pending={pending}
+        onSync={onSyncStarling}
+        onDisconnect={onDisconnectStarling}
+        lastSyncAt={data?.starlingConnection?.last_sync_at ?? null}
+      />
+    </div>
+  );
+}
+
+function FinanceProviderCard({
+  title,
+  connected,
+  configured,
+  description,
+  configuredHint,
   connectUrl,
   pending,
   onSync,
   onDisconnect,
+  lastSyncAt,
 }: {
-  data: DashboardData | null;
+  title: string;
+  connected: boolean;
+  configured: boolean;
+  description: string;
+  configuredHint: string;
   connectUrl: string;
   pending: boolean;
   onSync: () => void;
   onDisconnect: () => void;
+  lastSyncAt: string | null;
 }) {
   return (
     <div className={cn(panelClass, 'p-4')}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="font-medium text-[var(--workspace-shell-text)]">FreeAgent</h3>
-          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-            {data?.connection
-              ? `Connected to ${data.connection.freeagent_company_name ?? 'FreeAgent'}. Ozer is your UI; FreeAgent stays the ledger. Categories sync from FreeAgent on each sync. When you categorise here, Ozer writes a bank transaction explanation in FreeAgent (fully explained, not a draft). New transactions sync automatically each morning; use Sync now for a full refresh.`
-              : 'Connect FreeAgent to import bank transactions and categories. Categorise in Ozer and sync explanations back to FreeAgent.'}
-          </p>
+          <h3 className="font-medium text-[var(--workspace-shell-text)]">{title}</h3>
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">{description}</p>
+          {connected && lastSyncAt ? (
+            <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+              Last synced {new Date(lastSyncAt).toLocaleString('en-GB')}
+            </p>
+          ) : null}
         </div>
         <div className="flex gap-2">
-          {data?.connection ? (
+          {connected ? (
             <>
               <Button
                 type="button"
@@ -636,17 +747,15 @@ function FreeAgentPanel({
                 Disconnect
               </Button>
             </>
-          ) : data?.freeAgentConfigured ? (
+          ) : configured ? (
             <Button type="button" asChild className="bg-[var(--ozer-accent)] text-[var(--ozer-white)]">
               <a href={connectUrl}>
                 <Link2 className="mr-2 h-4 w-4" />
-                Connect FreeAgent
+                Connect {title}
               </a>
             </Button>
           ) : (
-            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              Set FREEAGENT_CLIENT_ID and FREEAGENT_CLIENT_SECRET to enable.
-            </p>
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">{configuredHint}</p>
           )}
         </div>
       </div>

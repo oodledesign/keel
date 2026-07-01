@@ -5,7 +5,6 @@ import { z } from 'zod';
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { PROPERTY_DOCUMENT_TYPES } from '../document-types';
 import { createPropertiesService } from './properties.service';
 
 function getService() {
@@ -41,33 +40,6 @@ const UpdatePropertySchema = PropertyInputSchema.extend({
 
 const DeletePropertySchema = z.object({
   propertyId: z.string().uuid(),
-});
-
-const ListDocumentsSchema = z.object({
-  propertyId: z.string().uuid(),
-});
-
-const CreateDocumentSchema = z.object({
-  propertyId: z.string().uuid(),
-  accountId: z.string().uuid(),
-  uploadedBy: z.string().uuid(),
-  name: z.string().min(1),
-  filePath: z.string().min(1),
-  fileSize: z.number().optional().nullable(),
-  mimeType: z.string().optional().nullable(),
-  documentType: z.enum(PROPERTY_DOCUMENT_TYPES).default('other'),
-  financialYear: z.string().max(20).optional().nullable(),
-});
-
-const UpdateDocumentSchema = z.object({
-  documentId: z.string().uuid(),
-  name: z.string().min(1).optional(),
-  documentType: z.enum(PROPERTY_DOCUMENT_TYPES).optional(),
-  financialYear: z.string().max(20).optional().nullable(),
-});
-
-const DeleteDocumentSchema = z.object({
-  documentId: z.string().uuid(),
 });
 
 export const listProperties = enhanceAction(
@@ -110,38 +82,4 @@ export const deleteProperty = enhanceAction(
     return { success: true };
   },
   { schema: DeletePropertySchema },
-);
-
-export const listDocuments = enhanceAction(
-  async (input) => {
-    const service = getService();
-    return service.listDocuments(input.propertyId);
-  },
-  { schema: ListDocumentsSchema },
-);
-
-export const createDocument = enhanceAction(
-  async (input) => {
-    const service = getService();
-    return service.createDocument(input);
-  },
-  { schema: CreateDocumentSchema },
-);
-
-export const updateDocument = enhanceAction(
-  async (input) => {
-    const { documentId, ...rest } = input;
-    const service = getService();
-    return service.updateDocument(documentId, rest);
-  },
-  { schema: UpdateDocumentSchema },
-);
-
-export const deleteDocument = enhanceAction(
-  async (input) => {
-    const service = getService();
-    await service.deleteDocument(input.documentId);
-    return { success: true };
-  },
-  { schema: DeleteDocumentSchema },
 );

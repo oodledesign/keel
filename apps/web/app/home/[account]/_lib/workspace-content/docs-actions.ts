@@ -113,6 +113,7 @@ const RegisterUploadSchema = z.object({
   accountSlug: z.string().min(1),
   title: z.string().max(500),
   docType: z.enum(DOC_TYPE_OPTIONS).nullable().optional(),
+  financialYear: z.string().max(20).nullable().optional(),
   category: z.enum(NOTE_FILE_CATEGORY_OPTIONS).optional(),
   tags: z.array(z.string()).optional(),
   link: LinkSchema,
@@ -139,8 +140,10 @@ export const registerUploadedWorkspaceDocAction = enhanceAction(
         title: data.title.trim() || 'Uploaded file',
         kind: 'uploaded',
         doc_type: data.docType ?? 'general',
+        financial_year: data.financialYear ?? null,
         category: data.category ?? 'idea',
         tags,
+        storage_bucket: ACCOUNT_DOCS_BUCKET,
         file_path: data.filePath,
         storage_path: data.filePath,
         mime_type: data.mimeType ?? null,
@@ -149,7 +152,7 @@ export const registerUploadedWorkspaceDocAction = enhanceAction(
         user_id: user.id,
         created_by: user.id,
         ...linkCols,
-      })
+      } as never)
       .select('id')
       .single();
 
@@ -166,27 +169,35 @@ export const getWorkspaceDocDownloadUrlAction = enhanceAction(
     const client = getSupabaseServerClient();
     const { data: doc, error } = await client
       .from('docs')
-      .select('file_path, storage_path, file_url, kind')
+      .select('file_path, storage_path, file_url, kind, storage_bucket')
       .eq('id', data.docId)
       .eq('account_id', data.accountId)
       .maybeSingle();
 
     if (error) throw error;
-    if (!doc || doc.kind !== 'uploaded') {
+    const row = doc as {
+      kind: string;
+      storage_bucket: string | null;
+      file_url: string | null;
+      file_path: string | null;
+      storage_path: string | null;
+    } | null;
+    if (!row || row.kind !== 'uploaded') {
       return { url: null };
     }
 
-    if (doc.file_url) {
-      return { url: doc.file_url as string };
+    const bucket = row.storage_bucket ?? ACCOUNT_DOCS_BUCKET;
+
+    if (row.file_url && bucket === ACCOUNT_DOCS_BUCKET) {
+      return { url: row.file_url };
     }
 
-    const path =
-      (doc.file_path as string | null) ?? (doc.storage_path as string | null);
+    const path = row.file_path ?? row.storage_path;
     if (!path) return { url: null };
 
     const admin = getSupabaseServerAdminClient();
     const { data: signed, error: signError } = await admin.storage
-      .from(ACCOUNT_DOCS_BUCKET)
+      .from(bucket)
       .createSignedUrl(path, 3600);
 
     if (signError) throw signError;
@@ -195,6 +206,94 @@ export const getWorkspaceDocDownloadUrlAction = enhanceAction(
   {
     schema: z.object({
       accountId: z.string().uuid(),
+      docId: z.string().uuid(),
+    }),
+  },
+);
+
+const UpdateDocMetadataSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1),
+  docId: z.string().uuid(),
+  title: z.string().max(500),
+  docType: z.enum(DOC_TYPE_OPTIONS).nullable().optional(),
+  financialYear: z.string().max(20).nullable().optional(),
+  category: z.enum(NOTE_FILE_CATEGORY_OPTIONS).optional(),
+  tags: z.array(z.string()).optional(),
+  link: LinkSchema,
+});
+
+export const updateWorkspaceDocMetadataAction = enhanceAction(
+  async (data) => {
+    const client = getSupabaseServerClient();
+    const linkCols = linkToColumns(data.link);
+    const tags = (data.tags ?? []).map((t) => t.trim()).filter(Boolean);
+
+    const { error } = await client
+      .from('docs')
+      .update({
+        title: data.title.trim() || 'Untitled file',
+        doc_type: data.docType ?? 'general',
+        financial_year: data.financialYear ?? null,
+        category: data.category ?? 'idea',
+        tags,
+        ...linkCols,
+      } as never)
+      .eq('id', data.docId)
+      .eq('account_id', data.accountId);
+
+    if (error) throw error;
+    queueBrainIndexSource(data.accountId, 'doc', data.docId);
+    revalidateDocsPaths(data.accountSlug, data.docId);
+    return { ok: true };
+  },
+  { schema: UpdateDocMetadataSchema },
+);
+
+export const deleteWorkspaceDocAction = enhanceAction(
+  async (data) => {
+    const client = getSupabaseServerClient();
+    const admin = getSupabaseServerAdminClient();
+
+    const { data: doc, error: fetchError } = await client
+      .from('docs')
+      .select('kind, file_path, storage_path, storage_bucket')
+      .eq('id', data.docId)
+      .eq('account_id', data.accountId)
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+    const row = doc as {
+      kind: string;
+      file_path: string | null;
+      storage_path: string | null;
+      storage_bucket: string | null;
+    } | null;
+    if (!row) return { ok: true };
+
+    const { error } = await client
+      .from('docs')
+      .delete()
+      .eq('id', data.docId)
+      .eq('account_id', data.accountId);
+
+    if (error) throw error;
+
+    if (row.kind === 'uploaded') {
+      const path = row.file_path ?? row.storage_path;
+      const bucket = row.storage_bucket ?? ACCOUNT_DOCS_BUCKET;
+      if (path) {
+        await admin.storage.from(bucket).remove([path]);
+      }
+    }
+
+    revalidateDocsPaths(data.accountSlug, data.docId);
+    return { ok: true };
+  },
+  {
+    schema: z.object({
+      accountId: z.string().uuid(),
+      accountSlug: z.string().min(1),
       docId: z.string().uuid(),
     }),
   },

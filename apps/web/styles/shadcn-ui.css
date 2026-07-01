@@ -70,6 +70,7 @@
     --workspace-shell-nav-text-hover: var(--ozer-plum-950);
     --workspace-shell-text-on-dark: var(--ozer-text-on-dark);
     --workspace-shell-text-on-dark-muted: var(--ozer-text-on-dark-muted);
+    --workspace-shell-accent-text: var(--ozer-coral-600);
 
     --workspace-control-surface: var(--ozer-white);
     --workspace-control-border: var(--ozer-border-on-light);
@@ -135,6 +136,7 @@
     --workspace-shell-nav-text-hover: var(--ozer-text-on-dark);
     --workspace-shell-text-on-dark: var(--ozer-text-on-dark);
     --workspace-shell-text-on-dark-muted: var(--ozer-text-on-dark-muted);
+    --workspace-shell-accent-text: var(--ozer-coral-100);
 
     --workspace-control-surface: var(--ozer-surface-panel);
     --workspace-control-border: var(--ozer-border-on-dark);

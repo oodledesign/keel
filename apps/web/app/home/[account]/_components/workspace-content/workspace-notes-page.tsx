@@ -14,6 +14,7 @@ import {
   ListFilter,
   Pin,
   Plus,
+  Trash2,
   Upload,
 } from 'lucide-react';
 
@@ -29,6 +30,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@kit/ui/select';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import {
@@ -44,9 +52,12 @@ import { cn } from '@kit/ui/utils';
 import { ACCOUNT_DOCS_BUCKET } from '../../_lib/workspace-content/docs-constants';
 import { workspaceBtnPrimaryMd, workspaceCardHover, workspaceFilterActive, workspaceSuccessBadgeBorder } from '~/lib/workspace-ui';
 import {
+  deleteWorkspaceDocAction,
   getWorkspaceDocDownloadUrlAction,
   registerUploadedWorkspaceDocAction,
+  updateWorkspaceDocMetadataAction,
 } from '../../_lib/workspace-content/docs-actions';
+import { generateFinancialYearOptions } from '../../_lib/workspace-content/financial-year';
 import { docContentPreview, previewContent } from '../../_lib/workspace-content/context-resolve';
 import {
   deleteWorkspaceNoteAction,
@@ -55,11 +66,13 @@ import {
 import type {
   CustomNoteCategory,
   DocListItem,
+  DocTypeOption,
   LinkOption,
   NoteFileCategory,
   NoteListItem,
   WorkspaceNotesVariant,
 } from '../../_lib/workspace-content/types';
+import { DOC_TYPE_LABELS, DOC_TYPE_OPTIONS } from '../../_lib/workspace-content/types';
 import { CategoryBadge, CategorySelect } from './category-select';
 import { LinkToSelect, type LinkValue } from './link-to-select';
 import { PublicSharingSection } from './public-sharing-section';
@@ -138,6 +151,7 @@ export function WorkspaceNotesPage({
   defaultLink,
   hideFilters = false,
   customCategories = [],
+  initialListFilter = 'all',
 }: {
   accountId: string;
   accountSlug: string;
@@ -151,16 +165,19 @@ export function WorkspaceNotesPage({
   defaultLink?: LinkValue;
   hideFilters?: boolean;
   customCategories?: CustomNoteCategory[];
+  initialListFilter?: ListFilter;
 }) {
   const [notes, setNotes] = useState(initialNotes);
   const [docs, setDocs] = useState(initialDocs);
-  const [listFilter, setListFilter] = useState<ListFilter>('all');
+  const [listFilter, setListFilter] = useState<ListFilter>(initialListFilter);
+  const [propertyFilterId, setPropertyFilterId] = useState('__all__');
   const [showProjectLinked, setShowProjectLinked] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [noteSheetOpen, setNoteSheetOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<NoteListItem | null>(null);
   const [editingFile, setEditingFile] = useState<DocListItem | null>(null);
   const [notePending, startNoteTransition] = useTransition();
+  const [deletePending, startDeleteTransition] = useTransition();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -185,6 +202,49 @@ export function WorkspaceNotesPage({
 
   useEffect(() => setNotes(initialNotes), [initialNotes]);
   useEffect(() => setDocs(initialDocs), [initialDocs]);
+  useEffect(() => setListFilter(initialListFilter), [initialListFilter]);
+
+  const propertyOptions = useMemo(
+    () => linkOptions.filter((option) => option.type === 'property'),
+    [linkOptions],
+  );
+
+  const financialYearOptions = useMemo(() => generateFinancialYearOptions(), []);
+
+  const deleteNote = (noteId: string) => {
+    if (!confirm('Delete this note?')) return;
+    startDeleteTransition(async () => {
+      try {
+        await deleteWorkspaceNoteAction({
+          accountId,
+          accountSlug,
+          noteId,
+        });
+        toast.success('Note deleted');
+        router.refresh();
+      } catch {
+        toast.error('Could not delete note');
+      }
+    });
+  };
+
+  const deleteFile = (docId: string) => {
+    if (!confirm('Delete this file?')) return;
+    startDeleteTransition(async () => {
+      try {
+        await deleteWorkspaceDocAction({
+          accountId,
+          accountSlug,
+          docId,
+        });
+        toast.success('File deleted');
+        setEditingFile((current) => (current?.id === docId ? null : current));
+        router.refresh();
+      } catch {
+        toast.error('Could not delete file');
+      }
+    });
+  };
 
   const unified = useMemo(() => {
     const items: UnifiedItem[] = [
@@ -197,12 +257,17 @@ export function WorkspaceNotesPage({
         (item) =>
           hideFilters || showProjectLinked || !isProjectLinked(item.data),
       )
+      .filter(
+        (item) =>
+          propertyFilterId === '__all__' ||
+          item.data.propertyId === propertyFilterId,
+      )
       .sort(
         (a, b) =>
           new Date(b.data.updatedAt).getTime() -
           new Date(a.data.updatedAt).getTime(),
       );
-  }, [notes, docs, listFilter, hideFilters, showProjectLinked]);
+  }, [notes, docs, listFilter, hideFilters, showProjectLinked, propertyFilterId]);
 
   if (!tableAvailable && !docsTableAvailable) {
     return (
@@ -274,6 +339,21 @@ export function WorkspaceNotesPage({
                 </DropdownMenuCheckboxItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            {propertyOptions.length > 0 ? (
+              <Select value={propertyFilterId} onValueChange={setPropertyFilterId}>
+                <SelectTrigger className="h-8 w-[180px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-sm text-[var(--workspace-shell-text)]">
+                  <SelectValue placeholder="All properties" />
+                </SelectTrigger>
+                <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+                  <SelectItem value="__all__">All properties</SelectItem>
+                  {propertyOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : null}
           </div>
         ) : (
           <div />
@@ -326,6 +406,9 @@ export function WorkspaceNotesPage({
                     note={item.data}
                     showPin={variant === 'work' || variant === 'property'}
                     customCategories={customCategories}
+                    canDelete={canEdit}
+                    deletePending={deletePending}
+                    onDelete={() => deleteNote(item.data.id)}
                   />
                 </button>
               </li>
@@ -334,6 +417,9 @@ export function WorkspaceNotesPage({
                 <FileListRow
                   doc={item.data}
                   accountId={accountId}
+                  canDelete={canEdit}
+                  deletePending={deletePending}
+                  onDelete={() => deleteFile(item.data.id)}
                   onEdit={() => setEditingFile(item.data)}
                 />
               </li>
@@ -377,6 +463,7 @@ export function WorkspaceNotesPage({
         accountSlug={accountSlug}
         linkOptions={linkOptions}
         defaultLink={defaultLink}
+        financialYearOptions={financialYearOptions}
         onUploaded={() => {
           setUploadOpen(false);
           router.refresh();
@@ -390,6 +477,16 @@ export function WorkspaceNotesPage({
           doc={editingFile}
           accountId={accountId}
           accountSlug={accountSlug}
+          linkOptions={linkOptions}
+          financialYearOptions={financialYearOptions}
+          canEdit={canEdit}
+          onSaved={() => {
+            router.refresh();
+          }}
+          onDeleted={() => {
+            setEditingFile(null);
+            router.refresh();
+          }}
         />
       ) : null}
     </div>
@@ -400,10 +497,16 @@ function NoteListRow({
   note,
   showPin,
   customCategories = [],
+  canDelete,
+  deletePending,
+  onDelete,
 }: {
   note: NoteListItem;
   showPin: boolean;
   customCategories?: CustomNoteCategory[];
+  canDelete?: boolean;
+  deletePending?: boolean;
+  onDelete?: () => void;
 }) {
   return (
     <div className="flex items-start justify-between gap-3">
@@ -442,9 +545,26 @@ function NoteListRow({
           ))}
         </div>
       </div>
-      <span className="shrink-0 text-xs text-[var(--workspace-shell-text-muted)]">
-        {formatDate(note.updatedAt)}
-      </span>
+      <div className="flex shrink-0 items-center gap-2">
+        {canDelete ? (
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 text-[var(--workspace-shell-text-muted)] hover:text-red-400"
+            disabled={deletePending}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete?.();
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        ) : null}
+        <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+          {formatDate(note.updatedAt)}
+        </span>
+      </div>
     </div>
   );
 }
@@ -453,10 +573,16 @@ function FileListRow({
   doc,
   accountId,
   onEdit,
+  canDelete,
+  deletePending,
+  onDelete,
 }: {
   doc: DocListItem;
   accountId: string;
   onEdit: () => void;
+  canDelete?: boolean;
+  deletePending?: boolean;
+  onDelete?: () => void;
 }) {
   const [pending, startTransition] = useTransition();
   const Icon = mimeIcon(doc.mimeType);
@@ -517,6 +643,21 @@ function FileListRow({
       </div>
       <div className="flex items-center gap-3">
         <span className="text-xs text-[var(--workspace-shell-text-muted)]">{formatDate(doc.updatedAt)}</span>
+        {canDelete ? (
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 text-[var(--workspace-shell-text-muted)] hover:text-red-400"
+            disabled={deletePending}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete?.();
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        ) : null}
         {doc.kind === 'uploaded' ? (
           <Button
             type="button"
@@ -732,6 +873,7 @@ function UploadFileSheet({
   accountSlug,
   linkOptions,
   defaultLink,
+  financialYearOptions,
   onUploaded,
 }: {
   open: boolean;
@@ -740,12 +882,15 @@ function UploadFileSheet({
   accountSlug: string;
   linkOptions: LinkOption[];
   defaultLink?: LinkValue;
+  financialYearOptions: string[];
   onUploaded: () => void;
 }) {
   const supabase = useSupabase();
   const fileRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
   const [title, setTitle] = useState('');
+  const [docType, setDocType] = useState<DocTypeOption>('general');
+  const [financialYear, setFinancialYear] = useState<string>('__none__');
   const [category, setCategory] = useState<NoteFileCategory>('idea');
   const [tags, setTags] = useState<string[]>([]);
   const [link, setLink] = useState<LinkValue>(defaultLink ?? null);
@@ -754,6 +899,8 @@ function UploadFileSheet({
   useEffect(() => {
     if (open) {
       setTitle('');
+      setDocType('general');
+      setFinancialYear('__none__');
       setCategory('idea');
       setTags([]);
       setLink(defaultLink ?? null);
@@ -779,6 +926,9 @@ function UploadFileSheet({
           accountId,
           accountSlug,
           title: title || file.name,
+          docType,
+          financialYear:
+            financialYear === '__none__' ? null : financialYear,
           category,
           tags,
           link,
@@ -834,6 +984,37 @@ function UploadFileSheet({
               className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
             />
           </div>
+          <div className="space-y-2">
+            <Label className="text-[var(--workspace-shell-text-muted)]">Document type</Label>
+            <Select value={docType} onValueChange={(value) => setDocType(value as DocTypeOption)}>
+              <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+                {DOC_TYPE_OPTIONS.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {DOC_TYPE_LABELS[option]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-[var(--workspace-shell-text-muted)]">Financial year</Label>
+            <Select value={financialYear} onValueChange={setFinancialYear}>
+              <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+                <SelectValue placeholder="None" />
+              </SelectTrigger>
+              <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+                <SelectItem value="__none__">None</SelectItem>
+                {financialYearOptions.map((year) => (
+                  <SelectItem key={year} value={year}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <CategorySelect
             value={category}
             onChange={setCategory}
@@ -873,14 +1054,45 @@ function FileDetailSheet({
   doc,
   accountId,
   accountSlug,
+  linkOptions,
+  financialYearOptions,
+  canEdit = true,
+  onSaved,
+  onDeleted,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   doc: DocListItem;
   accountId: string;
   accountSlug: string;
+  linkOptions: LinkOption[];
+  financialYearOptions: string[];
+  canEdit?: boolean;
+  onSaved?: () => void;
+  onDeleted?: () => void;
 }) {
   const [pending, startTransition] = useTransition();
+  const [title, setTitle] = useState(doc.title);
+  const [docType, setDocType] = useState<DocTypeOption>(
+    (doc.docType as DocTypeOption | null) ?? 'general',
+  );
+  const [financialYear, setFinancialYear] = useState(
+    doc.financialYear ?? '__none__',
+  );
+  const [category, setCategory] = useState<NoteFileCategory>(doc.category);
+  const [tags, setTags] = useState<string[]>(doc.tags);
+  const [link, setLink] = useState<LinkValue>(linkFromItem(doc));
+
+  useEffect(() => {
+    if (open) {
+      setTitle(doc.title);
+      setDocType((doc.docType as DocTypeOption | null) ?? 'general');
+      setFinancialYear(doc.financialYear ?? '__none__');
+      setCategory(doc.category);
+      setTags(doc.tags);
+      setLink(linkFromItem(doc));
+    }
+  }, [open, doc]);
 
   const download = () => {
     startTransition(async () => {
@@ -897,23 +1109,121 @@ function FileDetailSheet({
     });
   };
 
+  const save = () => {
+    startTransition(async () => {
+      try {
+        await updateWorkspaceDocMetadataAction({
+          accountId,
+          accountSlug,
+          docId: doc.id,
+          title,
+          docType,
+          financialYear: financialYear === '__none__' ? null : financialYear,
+          category,
+          tags,
+          link,
+        });
+        toast.success('File updated');
+        onOpenChange(false);
+        onSaved?.();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Could not save file');
+      }
+    });
+  };
+
+  const remove = () => {
+    if (!confirm('Delete this file?')) return;
+    startTransition(async () => {
+      try {
+        await deleteWorkspaceDocAction({
+          accountId,
+          accountSlug,
+          docId: doc.id,
+        });
+        toast.success('File deleted');
+        onOpenChange(false);
+        onDeleted?.();
+      } catch {
+        toast.error('Could not delete file');
+      }
+    });
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] text-[var(--workspace-shell-text)] sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle className="text-[var(--workspace-shell-text)]">{doc.title}</SheetTitle>
+          <SheetTitle className="text-[var(--workspace-shell-text)]">Edit file</SheetTitle>
         </SheetHeader>
         <div className="mt-6 space-y-4">
-          <div className="flex flex-wrap gap-2">
-            <CategoryBadge category={doc.category} />
-            {doc.context ? (
-              <Badge
-                variant="outline"
-                className="border-[var(--ozer-accent)]/30 text-xs text-[var(--ozer-accent-muted)]"
-              >
-                {doc.context.label}
-              </Badge>
-            ) : null}
+          <div className="space-y-2">
+            <Label className="text-[var(--workspace-shell-text-muted)]">Title</Label>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              disabled={!canEdit || pending}
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-[var(--workspace-shell-text-muted)]">Document type</Label>
+            <Select
+              value={docType}
+              onValueChange={(value) => setDocType(value as DocTypeOption)}
+              disabled={!canEdit || pending}
+            >
+              <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+                {DOC_TYPE_OPTIONS.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {DOC_TYPE_LABELS[option]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-[var(--workspace-shell-text-muted)]">Financial year</Label>
+            <Select
+              value={financialYear}
+              onValueChange={setFinancialYear}
+              disabled={!canEdit || pending}
+            >
+              <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+                <SelectValue placeholder="None" />
+              </SelectTrigger>
+              <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+                <SelectItem value="__none__">None</SelectItem>
+                {financialYearOptions.map((year) => (
+                  <SelectItem key={year} value={year}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <CategorySelect
+            value={category}
+            onChange={setCategory}
+            disabled={!canEdit || pending}
+          />
+          {linkOptions.length > 0 ? (
+            <div className="space-y-2">
+              <Label className="text-[var(--workspace-shell-text-muted)]">Link to</Label>
+              <LinkToSelect
+                options={linkOptions}
+                value={link}
+                onChange={setLink}
+                disabled={!canEdit || pending}
+              />
+            </div>
+          ) : null}
+          <div className="space-y-2">
+            <Label className="text-[var(--workspace-shell-text-muted)]">Tags</Label>
+            <TagsInput tags={tags} onChange={setTags} disabled={!canEdit || pending} />
           </div>
           {doc.kind === 'uploaded' ? (
             <>
@@ -943,6 +1253,27 @@ function FileDetailSheet({
             itemId={doc.id}
             isPublic={doc.isPublic}
           />
+          {canEdit ? (
+            <div className="flex gap-2 pt-2">
+              <Button
+                type="button"
+                onClick={save}
+                disabled={pending}
+                className={workspaceBtnPrimaryMd}
+              >
+                Save
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={remove}
+                disabled={pending}
+                className="border-red-500/30 text-red-300"
+              >
+                Delete
+              </Button>
+            </div>
+          ) : null}
         </div>
       </SheetContent>
     </Sheet>

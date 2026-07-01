@@ -13,27 +13,27 @@ export const workspaceBtnPrimaryMd = `inline-flex h-9 items-center gap-2 rounded
 export const workspaceBtnPrimaryLg = `inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-medium shadow-sm transition-colors disabled:opacity-50 ${workspaceBtnPrimary} ${workspaceBtnPress}`;
 
 export const workspaceLinkAccent =
-  'text-[var(--ozer-accent-muted)] hover:text-[var(--ozer-accent)]';
+  'text-[var(--workspace-shell-accent-text)] hover:text-[var(--ozer-accent)]';
 
 export const workspaceFocusRing =
   'focus-visible:ring-[var(--ozer-accent)] focus-visible:border-[var(--ozer-accent)]/50 focus-visible:ring-[var(--ozer-accent)]/30';
 
 export const workspaceTabActive =
-  'border-[var(--ozer-accent)] text-[var(--ozer-accent-muted)]';
+  'border-[var(--ozer-accent)] text-[var(--workspace-shell-accent-text)]';
 
 export const workspaceFilterActive =
-  'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]';
+  'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]';
 
 export const workspaceSuccessBadge =
-  'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]';
+  'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]';
 
 export const workspaceSuccessBadgeBorder =
-  'border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]';
+  'border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]';
 
 export const workspaceCardHover =
   'transition-[border-color,background-color] duration-200 ease-out hover:border-[var(--ozer-accent)]/30 hover:bg-[var(--workspace-shell-panel-hover)]';
 
-export const workspaceAccentText = 'text-[var(--ozer-accent-muted)]';
+export const workspaceAccentText = 'text-[var(--workspace-shell-accent-text)]';
 
 export const workspaceSurfacePanel = 'bg-[var(--workspace-shell-panel)]';
 

@@ -7,10 +7,10 @@ import type { DocListItem, NoteFileCategory } from './types';
 import { NOTE_FILE_CATEGORY_OPTIONS } from './types';
 
 const DOCS_SELECT = `
-  id, title, content, kind, doc_type, category, is_pinned, tags,
+  id, title, content, kind, doc_type, financial_year, category, is_pinned, tags,
   is_public, public_token,
   project_id, client_id, client_org_id, property_id, task_id,
-  mime_type, file_url, file_path, storage_path, file_size_bytes,
+  mime_type, file_url, file_path, storage_path, storage_bucket, file_size_bytes,
   updated_at,
   projects(name),
   clients(display_name),
@@ -71,6 +71,8 @@ function mapDocRow(row: Record<string, unknown>): DocListItem {
         : row.file_size_bytes != null
           ? Number(row.file_size_bytes)
           : null,
+    financialYear: (row.financial_year as string | null) ?? null,
+    storageBucket: (row.storage_bucket as string | null) ?? 'account-documents',
     isPublic: Boolean(row.is_public),
     publicToken: (row.public_token as string | null) ?? null,
     updatedAt: row.updated_at as string,
@@ -113,7 +115,7 @@ export async function loadAccountDocs(
     throw error;
   }
 
-  const docs = (data ?? []).map((row) =>
+  const docs = ((data ?? []) as unknown[]).map((row) =>
     mapDocRow(row as Record<string, unknown>),
   );
 
@@ -134,5 +136,5 @@ export async function loadAccountDocById(
 
   if (error && !isTableMissing(error)) throw error;
   if (!data) return null;
-  return mapDocRow(data as Record<string, unknown>);
+  return mapDocRow(data as unknown as Record<string, unknown>);
 }

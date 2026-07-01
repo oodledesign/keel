@@ -28,6 +28,7 @@ import {
 import type { Property } from '../_lib/server/properties.service';
 import { deleteProperty } from '../_lib/server/server-actions';
 import pathsConfig from '~/config/paths.config';
+import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 import { PropertyFormModal } from './property-form-modal';
 
 interface PropertiesListProps {
@@ -40,7 +41,7 @@ const statusStyles: Record<
   Property['status'],
   { bg: string; text: string; label: string }
 > = {
-  active: { bg: 'bg-[var(--ozer-accent-subtle)]', text: 'text-[var(--ozer-accent-muted)]', label: 'Active' },
+  active: { bg: 'bg-[var(--ozer-accent-subtle)]', text: 'text-[var(--workspace-shell-accent-text)]', label: 'Active' },
   vacant: { bg: 'bg-amber-500/15', text: 'text-amber-300', label: 'Vacant' },
   maintenance: { bg: 'bg-orange-500/15', text: 'text-orange-300', label: 'Maintenance' },
   sold: { bg: 'bg-sky-500/15', text: 'text-sky-300', label: 'Sold' },
@@ -122,7 +123,7 @@ export function PropertiesList({
         </div>
         <Button
           onClick={openCreate}
-          className="gap-2 bg-violet-600 hover:bg-violet-700 text-[var(--workspace-shell-text)]"
+          className={workspaceBtnPrimaryMd}
         >
           <Plus className="h-4 w-4" />
           Add Property
@@ -140,7 +141,7 @@ export function PropertiesList({
             </p>
             <Button
               onClick={openCreate}
-              className="mt-4 gap-2 bg-violet-600 hover:bg-violet-700 text-[var(--workspace-shell-text)]"
+              className={`mt-4 ${workspaceBtnPrimaryMd}`}
             >
               <Plus className="h-4 w-4" />
               Add Property
@@ -183,7 +184,7 @@ export function PropertiesList({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 text-[var(--workspace-shell-text)]/40 opacity-0 group-hover:opacity-100 hover:text-[var(--workspace-shell-text)]"
+                          className="h-7 w-7 text-[var(--workspace-shell-text-muted)] opacity-0 group-hover:opacity-100 hover:text-[var(--workspace-shell-text)]"
                         >
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>

@@ -28,6 +28,8 @@ import {
   loadFinanceCategoriesForAccount,
 } from '~/lib/integrations/freeagent/finance-categories';
 import { isFreeAgentConfigured } from '~/lib/integrations/freeagent/env';
+import { isStarlingConfigured } from '~/lib/integrations/starling/env';
+import { syncStarlingToKeel } from '~/lib/integrations/starling/sync';
 
 const DEFAULT_CATEGORIES = [
   { name: 'Sales', kind: 'income' as const },
@@ -121,7 +123,7 @@ export const loadFinancesDashboardAction = enhanceAction(
       { data: transactions, error: txError },
       categories,
       { data: bankAccounts },
-      { data: connection },
+      { data: connections },
       { data: clients },
       { data: projects },
     ] = await Promise.all([
@@ -136,11 +138,10 @@ export const loadFinancesDashboardAction = enhanceAction(
       client
         .from('finance_connections')
         .select(
-          'id, freeagent_company_name, last_sync_at, token_expires_at',
+          'id, provider, freeagent_company_name, last_sync_at, token_expires_at, sync_state',
         )
         .eq('account_id', input.accountId)
-        .eq('provider', 'freeagent')
-        .maybeSingle(),
+        .in('provider', ['freeagent', 'starling']),
       client
         .from('clients')
         .select('id, display_name')
@@ -164,11 +165,18 @@ export const loadFinancesDashboardAction = enhanceAction(
       })),
     );
 
+    const connectionList = connections ?? [];
+    const freeagentConnection =
+      connectionList.find((row) => row.provider === 'freeagent') ?? null;
+    const starlingConnection =
+      connectionList.find((row) => row.provider === 'starling') ?? null;
+
     return {
       transactions: transactions ?? [],
       categories: categories ?? [],
       bankAccounts: bankAccounts ?? [],
-      connection: connection ?? null,
+      connection: freeagentConnection,
+      starlingConnection,
       clients: clients ?? [],
       projects: (projects ?? []).map((project) => ({
         id: project.id as string,
@@ -182,6 +190,7 @@ export const loadFinancesDashboardAction = enhanceAction(
         transferPence: totals.transferPence,
       },
       freeAgentConfigured: isFreeAgentConfigured(),
+      starlingConfigured: isStarlingConfigured(),
     };
   },
   {
@@ -322,6 +331,43 @@ export const disconnectFreeAgentAction = enhanceAction(
       .delete()
       .eq('account_id', input.accountId)
       .eq('provider', 'freeagent');
+    if (error) throw error;
+    revalidateFinances(input.accountSlug);
+    return { ok: true };
+  },
+  {
+    schema: z.object({
+      accountId: z.string().uuid(),
+      accountSlug: z.string().min(1),
+    }),
+  },
+);
+
+export const syncStarlingAction = enhanceAction(
+  async (input) => {
+    const client = getSupabaseServerClient();
+    const result = await syncStarlingToKeel(client, input.accountId, {
+      mode: 'full',
+    });
+    revalidateFinances(input.accountSlug);
+    return result;
+  },
+  {
+    schema: z.object({
+      accountId: z.string().uuid(),
+      accountSlug: z.string().min(1),
+    }),
+  },
+);
+
+export const disconnectStarlingAction = enhanceAction(
+  async (input) => {
+    const client = getSupabaseServerClient();
+    const { error } = await client
+      .from('finance_connections')
+      .delete()
+      .eq('account_id', input.accountId)
+      .eq('provider', 'starling');
     if (error) throw error;
     revalidateFinances(input.accountSlug);
     return { ok: true };

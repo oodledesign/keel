@@ -20,21 +20,6 @@ export type Property = {
   updatedAt: string;
 };
 
-export type PropertyDocument = {
-  id: string;
-  propertyId: string;
-  accountId: string;
-  uploadedBy: string | null;
-  name: string;
-  filePath: string;
-  fileSize: number | null;
-  mimeType: string | null;
-  documentType: string;
-  financialYear: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
 type PropertyRow = {
   id: string;
   account_id: string;
@@ -51,21 +36,6 @@ type PropertyRow = {
   notes?: string | null;
   created_at: string;
   updated_at: string;
-};
-
-type DocumentRow = {
-  id: string;
-  property_id: string;
-  account_id: string;
-  uploaded_by?: string | null;
-  name?: string | null;
-  file_path: string;
-  file_size?: number | null;
-  mime_type?: string | null;
-  document_type?: string | null;
-  financial_year?: string | null;
-  created_at: string;
-  updated_at?: string;
 };
 
 function mapProperty(row: PropertyRow): Property {
@@ -85,23 +55,6 @@ function mapProperty(row: PropertyRow): Property {
     notes: row.notes ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-  };
-}
-
-function mapDocument(row: DocumentRow): PropertyDocument {
-  return {
-    id: row.id,
-    propertyId: row.property_id,
-    accountId: row.account_id,
-    uploadedBy: row.uploaded_by ?? null,
-    name: row.name ?? 'Document',
-    filePath: row.file_path,
-    fileSize: row.file_size ?? null,
-    mimeType: row.mime_type ?? null,
-    documentType: row.document_type ?? 'other',
-    financialYear: row.financial_year ?? null,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at ?? row.created_at,
   };
 }
 
@@ -237,80 +190,6 @@ export function createPropertiesService(client: SupabaseClient) {
         .from('properties')
         .delete()
         .eq('id', propertyId);
-
-      if (error) throw new Error(error.message);
-    },
-
-    async listDocuments(propertyId: string): Promise<PropertyDocument[]> {
-      const { data, error } = await client
-        .from('property_documents')
-        .select('*')
-        .eq('property_id', propertyId)
-        .order('created_at', { ascending: false });
-
-      if (error) return [];
-      return ((data ?? []) as DocumentRow[]).map(mapDocument);
-    },
-
-    async createDocument(input: {
-      propertyId: string;
-      accountId: string;
-      uploadedBy: string;
-      name: string;
-      filePath: string;
-      fileSize?: number | null;
-      mimeType?: string | null;
-      documentType?: string;
-      financialYear?: string | null;
-    }): Promise<PropertyDocument> {
-      const { data, error } = await client
-        .from('property_documents')
-        .insert({
-          property_id: input.propertyId,
-          account_id: input.accountId,
-          uploaded_by: input.uploadedBy,
-          name: input.name,
-          file_path: input.filePath,
-          file_size: input.fileSize ?? null,
-          mime_type: input.mimeType ?? null,
-          document_type: input.documentType ?? 'other',
-          financial_year: input.financialYear ?? null,
-        })
-        .select('*')
-        .single();
-
-      if (error || !data) throw new Error(error?.message ?? 'Failed to create document record');
-      return mapDocument(data as DocumentRow);
-    },
-
-    async updateDocument(
-      documentId: string,
-      input: {
-        name?: string;
-        documentType?: string;
-        financialYear?: string | null;
-      },
-    ): Promise<PropertyDocument> {
-      const { data, error } = await client
-        .from('property_documents')
-        .update({
-          ...(input.name !== undefined && { name: input.name }),
-          ...(input.documentType !== undefined && { document_type: input.documentType }),
-          ...(input.financialYear !== undefined && { financial_year: input.financialYear }),
-        })
-        .eq('id', documentId)
-        .select('*')
-        .single();
-
-      if (error || !data) throw new Error(error?.message ?? 'Failed to update document');
-      return mapDocument(data as DocumentRow);
-    },
-
-    async deleteDocument(documentId: string): Promise<void> {
-      const { error } = await client
-        .from('property_documents')
-        .delete()
-        .eq('id', documentId);
 
       if (error) throw new Error(error.message);
     },

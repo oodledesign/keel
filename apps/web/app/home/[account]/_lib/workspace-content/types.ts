@@ -92,6 +92,8 @@ export type DocListItem = {
   fileUrl: string | null;
   filePath: string | null;
   fileSizeBytes: number | null;
+  financialYear: string | null;
+  storageBucket: string;
   isPublic: boolean;
   publicToken: string | null;
   updatedAt: string;
@@ -113,7 +115,24 @@ export const DOC_TYPE_OPTIONS = [
   'mortgage',
   'tax',
   'template',
+  'utility',
+  'photo',
   'other',
 ] as const;
 
 export type DocTypeOption = (typeof DOC_TYPE_OPTIONS)[number];
+
+export const DOC_TYPE_LABELS: Record<DocTypeOption, string> = {
+  general: 'General',
+  contract: 'Contract',
+  lease: 'Lease',
+  insurance: 'Insurance',
+  inspection: 'Inspection',
+  title_deed: 'Title deed',
+  mortgage: 'Mortgage',
+  tax: 'Tax',
+  template: 'Template',
+  utility: 'Utility',
+  photo: 'Photo',
+  other: 'Other',
+};

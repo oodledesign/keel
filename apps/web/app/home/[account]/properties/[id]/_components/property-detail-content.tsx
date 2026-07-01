@@ -7,10 +7,10 @@ import { useRouter } from 'next/navigation';
 import { Bath, Bed, Building2, Calendar, Edit2, Home, MapPin, Maximize2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
+import { Card, CardContent } from '@kit/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 
-import type { Property, PropertyDocument } from '../../_lib/server/properties.service';
+import type { Property } from '../../_lib/server/properties.service';
 import { PropertyFormModal } from '../../_components/property-form-modal';
 import { ContextWorkspaceNotes } from '../../../_components/workspace-content/context-workspace-notes';
 import type { LinkValue } from '../../../_components/workspace-content/link-to-select';
@@ -20,14 +20,11 @@ import type {
   NoteListItem,
   WorkspaceNotesVariant,
 } from '../../../_lib/workspace-content/types';
-import { PropertyDocumentsTab } from './property-documents-tab';
 
 interface PropertyDetailContentProps {
   property: Property;
   accountId: string;
   accountSlug: string;
-  userId: string;
-  documents: PropertyDocument[];
   workspaceNotes: NoteListItem[];
   workspaceDocs: DocListItem[];
   notesTableAvailable: boolean;
@@ -41,12 +38,15 @@ const statusStyles: Record<
   Property['status'],
   { bg: string; text: string; label: string }
 > = {
-  active: { bg: 'bg-[var(--ozer-accent-subtle)]', text: 'text-[var(--ozer-accent-muted)]', label: 'Active' },
+  active: { bg: 'bg-[var(--ozer-accent-subtle)]', text: 'text-[var(--workspace-shell-accent-text)]', label: 'Active' },
   vacant: { bg: 'bg-amber-500/15', text: 'text-amber-300', label: 'Vacant' },
   maintenance: { bg: 'bg-orange-500/15', text: 'text-orange-300', label: 'Maintenance' },
   sold: { bg: 'bg-sky-500/15', text: 'text-sky-300', label: 'Sold' },
   archived: { bg: 'bg-[var(--workspace-shell-sidebar-accent)]', text: 'text-[var(--workspace-shell-text)]/40', label: 'Archived' },
 };
+
+const tabTriggerClass =
+  'gap-2 text-[var(--workspace-shell-text)]/60 data-[state=active]:border data-[state=active]:border-[var(--ozer-accent)]/30 data-[state=active]:bg-[var(--ozer-accent-subtle)] data-[state=active]:text-[var(--workspace-shell-accent-text)]';
 
 const typeLabels: Record<Property['propertyType'], string> = {
   residential: 'Residential',
@@ -59,8 +59,6 @@ export function PropertyDetailContent({
   property: initialProperty,
   accountId,
   accountSlug,
-  userId,
-  documents,
   workspaceNotes,
   workspaceDocs,
   notesTableAvailable,
@@ -81,7 +79,6 @@ export function PropertyDetailContent({
 
   return (
     <div className="space-y-6">
-      {/* Header card */}
       <Card className="rounded-[24px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
         <CardContent className="p-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -117,7 +114,6 @@ export function PropertyDetailContent({
             </Button>
           </div>
 
-          {/* Stats row */}
           <div className="mt-6 grid grid-cols-2 gap-3 border-t border-[color:var(--workspace-shell-border)] pt-5 sm:grid-cols-4">
             {property.bedrooms != null && (
               <StatPill icon={Bed} label="Bedrooms" value={String(property.bedrooms)} />
@@ -153,31 +149,30 @@ export function PropertyDetailContent({
         </CardContent>
       </Card>
 
-      {/* Tabs */}
       <Card className="rounded-[24px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
         <CardContent className="p-6">
           <Tabs defaultValue="documents">
             <TabsList className="mb-6 grid h-11 w-full grid-cols-2 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/80 p-1 text-xs sm:w-auto sm:grid-cols-2">
-              <TabsTrigger
-                value="documents"
-                className="gap-2 text-[var(--workspace-shell-text)]/60 data-[state=active]:bg-violet-500/15 data-[state=active]:text-violet-200 data-[state=active]:border data-[state=active]:border-violet-400/40"
-              >
+              <TabsTrigger value="documents" className={tabTriggerClass}>
                 Documents
               </TabsTrigger>
-              <TabsTrigger
-                value="notes"
-                className="gap-2 text-[var(--workspace-shell-text)]/60 data-[state=active]:bg-violet-500/15 data-[state=active]:text-violet-200 data-[state=active]:border data-[state=active]:border-violet-400/40"
-              >
+              <TabsTrigger value="notes" className={tabTriggerClass}>
                 Notes
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="documents" className="mt-0">
-              <PropertyDocumentsTab
-                propertyId={property.id}
+              <ContextWorkspaceNotes
                 accountId={accountId}
-                userId={userId}
-                initialDocuments={documents}
+                accountSlug={accountSlug}
+                notes={workspaceNotes}
+                docs={workspaceDocs}
+                tableAvailable={notesTableAvailable}
+                docsTableAvailable={docsTableAvailable}
+                linkOptions={linkOptions}
+                defaultLink={defaultLink}
+                variant={notesVariant}
+                initialListFilter="files"
               />
             </TabsContent>
 
@@ -202,6 +197,7 @@ export function PropertyDetailContent({
                   linkOptions={linkOptions}
                   defaultLink={defaultLink}
                   variant={notesVariant}
+                  initialListFilter="notes"
                 />
               </section>
             </TabsContent>
