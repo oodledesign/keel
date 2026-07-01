@@ -5,7 +5,7 @@ Keel already integrates Stripe in code. This guide wires a **new** Stripe accoun
 1. **Platform subscriptions** — Community, Business, Property workspaces and add-ons
 2. **Stripe Connect** — business owners connect Stripe so clients can pay invoices via Checkout
 
-Production app host: `https://app.keelos.so`
+Production app host: `https://app.ozer.so`
 
 ---
 
@@ -44,7 +44,7 @@ Paste the printed `STRIPE_PRICE_*` values into Vercel (Production + Preview) and
 1. [Stripe Dashboard → Connect](https://dashboard.stripe.com/connect) → **Get started**.
 2. Choose **Platform** (Keel onboard businesses; payments go to their connected accounts).
 3. Under **Connect settings → OAuth**:
-   - **Redirect URI:** `https://app.keelos.so/api/stripe-connect/callback`
+   - **Redirect URI:** `https://app.ozer.so/api/stripe-connect/callback`
    - For local dev add: `http://localhost:3000/api/stripe-connect/callback`
 4. Copy **Client ID** (`ca_...`) → `STRIPE_CONNECT_CLIENT_ID`
 
@@ -65,7 +65,7 @@ Create **three** webhook endpoints in [Developers → Webhooks](https://dashboar
 
 | Field | Value |
 |-------|--------|
-| URL | `https://app.keelos.so/api/billing/webhook` |
+| URL | `https://app.ozer.so/api/billing/webhook` |
 | Secret env | `STRIPE_WEBHOOK_SECRET` |
 
 **Events:**
@@ -81,7 +81,7 @@ Create **three** webhook endpoints in [Developers → Webhooks](https://dashboar
 
 | Field | Value |
 |-------|--------|
-| URL | `https://app.keelos.so/api/invoices/stripe-webhook` |
+| URL | `https://app.ozer.so/api/invoices/stripe-webhook` |
 | Secret env | `STRIPE_INVOICE_WEBHOOK_SECRET` (or reuse `STRIPE_WEBHOOK_SECRET` if you prefer one secret per endpoint) |
 
 **Events:**
@@ -92,7 +92,7 @@ Create **three** webhook endpoints in [Developers → Webhooks](https://dashboar
 
 | Field | Value |
 |-------|--------|
-| URL | `https://app.keelos.so/api/stripe-connect/webhook` |
+| URL | `https://app.ozer.so/api/stripe-connect/webhook` |
 | Secret env | `STRIPE_CONNECT_WEBHOOK_SECRET` |
 | Listen to | **Events on Connected accounts** (toggle on when creating endpoint) |
 

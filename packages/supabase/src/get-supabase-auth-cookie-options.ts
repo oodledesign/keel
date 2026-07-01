@@ -51,7 +51,7 @@ function inferSharedCookieDomain(): string | undefined {
 
 /**
  * When set (or inferred from app + marketing hosts), auth cookies are shared
- * across subdomains — required for app.keelos.so + www.keelos.so split.
+ * across subdomains — required for app.ozer.so + www.ozer.so split.
  */
 export function getSupabaseAuthCookieDomain(): string | undefined {
   const explicit = process.env.NEXT_PUBLIC_SUPABASE_COOKIE_DOMAIN?.trim();

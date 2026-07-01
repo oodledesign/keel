@@ -45,7 +45,7 @@ describe('gmail mime', () => {
 
   it('embeds html signatures in the html part without escaping tags', () => {
     const signatureHtml =
-      '<div>Best,<br><strong>Dan Potter</strong><br><a href="https://keelos.so">Ozer</a></div>';
+      '<div>Best,<br><strong>Dan Potter</strong><br><a href="https://ozer.so">Ozer</a></div>';
     const plainSignature = htmlSignatureToPlain(signatureHtml);
     const raw = buildRawMessage({
       to: 'client@example.com',

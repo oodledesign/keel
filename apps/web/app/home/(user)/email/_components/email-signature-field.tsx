@@ -113,7 +113,7 @@ export function EmailSignatureField({
         disabled={disabled}
         placeholder={
           format === 'html'
-            ? 'Best,<br>Dan Potter<br><a href="https://keelos.so">Ozer</a>'
+            ? 'Best,<br>Dan Potter<br><a href="https://ozer.so">Ozer</a>'
             : 'Best,\nDan Potter\nOzer'
         }
         rows={format === 'html' ? 6 : 4}

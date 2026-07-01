@@ -13,7 +13,7 @@
  */
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 import {
   AnimatePresence,
@@ -49,6 +49,11 @@ import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 import {
+  getPricingTheme,
+  type PricingTheme,
+  type PricingTone,
+} from '~/lib/marketing/pricing-theme';
+import {
   KEEL_BILLING_CURRENCY,
   KEEL_STRIPE_PRICES,
 } from '~/lib/billing/stripe-price-ids';
@@ -57,6 +62,12 @@ import {
   MarketingFaqsSection,
   type MarketingFaqItem,
 } from './marketing-faqs';
+
+const PricingThemeContext = createContext<PricingTheme>(getPricingTheme('dark'));
+
+function usePricingTheme() {
+  return useContext(PricingThemeContext);
+}
 
 const PRICING_CONFIG = {
   currency: KEEL_BILLING_CURRENCY,
@@ -595,11 +606,13 @@ function BillingToggle({
   onChange: (value: BillingInterval) => void;
   reducedMotion: boolean;
 }) {
+  const t = usePricingTheme();
+
   return (
     <div
       role="radiogroup"
       aria-label="Billing interval"
-      className="inline-flex items-center gap-2 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)]/80 p-1"
+      className={t.toggleTrack}
     >
       {(['monthly', 'annual'] as const).map((option) => {
         const selected = billing === option;
@@ -613,17 +626,17 @@ function BillingToggle({
             onClick={() => onChange(option)}
             className={cn(
               'relative rounded-full px-4 py-2 text-sm font-medium capitalize transition-colors',
-              selected ? 'text-[var(--ozer-text-on-dark)]' : 'text-[var(--ozer-text-on-dark-muted)] hover:text-[var(--ozer-text-on-dark)]',
+              selected ? t.toggleText : t.toggleTextInactive,
             )}
           >
             {selected && !reducedMotion ? (
               <motion.span
                 layoutId="billing-pill"
-                className="absolute inset-0 rounded-full bg-[var(--ozer-info)]/80"
+                className={cn('absolute inset-0 rounded-full', t.togglePill)}
                 transition={{ type: 'spring', stiffness: 400, damping: 30 }}
               />
             ) : selected ? (
-              <span className="absolute inset-0 rounded-full bg-[var(--ozer-info)]/80" />
+              <span className={cn('absolute inset-0 rounded-full', t.togglePill)} />
             ) : null}
             <span className="relative z-10 flex items-center gap-2">
               {option}
@@ -651,6 +664,8 @@ function WorkspaceAssistantBadges({
 }: {
   assistants: WorkspaceConfig['assistants'];
 }) {
+  const t = usePricingTheme();
+
   return (
     <div className="mt-3 flex flex-wrap gap-1.5">
       {(Object.keys(ASSISTANT_BADGE_ICONS) as Array<keyof typeof ASSISTANT_BADGE_ICONS>).map(
@@ -669,7 +684,7 @@ function WorkspaceAssistantBadges({
                     isIncluded
                       ? 'border-[var(--ozer-accent)]/40 bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]'
                       : isComingSoon
-                        ? 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--ozer-text-on-dark-muted)]'
+                        ? cn('border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]', t.muted)
                         : 'border-[var(--ozer-gold-500)]/30 bg-[var(--ozer-gold-500)]/10 text-[var(--ozer-gold-500)]',
                   )}
                 >
@@ -678,7 +693,7 @@ function WorkspaceAssistantBadges({
               </TooltipTrigger>
               <TooltipContent
                 side="top"
-                className="max-w-[200px] border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)] text-[var(--ozer-text-on-dark)]"
+                className={t.tooltip}
               >
                 {badge.tooltip}
               </TooltipContent>
@@ -707,6 +722,7 @@ function WorkspaceCard({
 }) {
   const Icon = WORKSPACE_ICONS[workspace.icon];
   const locked = workspace.alwaysIncluded;
+  const t = usePricingTheme();
 
   return (
     <motion.button
@@ -735,10 +751,8 @@ function WorkspaceCard({
       }
       className={cn(
         'relative flex h-full flex-col rounded-2xl border p-5 text-left transition-shadow duration-150',
-        'bg-[var(--ozer-plum-950)]/60 backdrop-blur-sm',
-        selected
-          ? 'border-[var(--ozer-accent)]/60 bg-[var(--ozer-accent-subtle)] shadow-[0_12px_40px_var(--ozer-coral-alpha-15)]'
-          : 'border-[color:var(--workspace-shell-border)] shadow-none hover:border-[color:var(--workspace-shell-border)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.35)]',
+        t.card,
+        selected ? t.cardSelected : t.cardUnselected,
         locked ? 'cursor-default' : 'cursor-pointer',
       )}
     >
@@ -780,14 +794,14 @@ function WorkspaceCard({
         </div>
       </div>
 
-      <h3 className="mt-4 font-heading text-lg font-semibold text-[var(--ozer-text-on-dark)]">{workspace.label}</h3>
-      <p className="mt-1 text-sm leading-relaxed text-[var(--ozer-text-on-dark-muted)]">{workspace.description}</p>
+      <h3 className={cn('mt-4 font-heading text-lg font-semibold', t.text)}>{workspace.label}</h3>
+      <p className={cn('mt-1 text-sm leading-relaxed', t.muted)}>{workspace.description}</p>
 
       <WorkspaceAssistantBadges assistants={workspace.assistants} />
 
       <ul className="mt-3 space-y-1">
         {workspace.highlights.map((line) => (
-          <li key={line} className="flex gap-2 text-xs leading-relaxed text-[var(--ozer-text-on-dark-muted)]">
+          <li key={line} className={cn('flex gap-2 text-xs leading-relaxed', t.muted)}>
             <Check className="mt-0.5 h-3 w-3 shrink-0 text-[var(--ozer-accent)]/70" aria-hidden />
             <span>{line}</span>
           </li>
@@ -795,11 +809,11 @@ function WorkspaceCard({
       </ul>
 
       <div className="mt-auto pt-4">
-        <p className="font-heading text-2xl font-semibold text-[var(--ozer-text-on-dark)]">{priceLabel}</p>
+        <p className={cn('font-heading text-2xl font-semibold', t.text)}>{priceLabel}</p>
         {workspace.hasTiers && selected ? (
-          <p className="mt-1 text-xs text-[var(--ozer-text-on-dark-muted)]">Choose your tier below</p>
+          <p className={cn('mt-1 text-xs', t.muted)}>Choose your tier below</p>
         ) : billing === 'annual' && workspace.monthlyPrice > 0 && selected ? (
-          <p className="mt-1 text-xs text-[var(--ozer-text-on-dark-muted)]">Billed annually</p>
+          <p className={cn('mt-1 text-xs', t.muted)}>Billed annually</p>
         ) : null}
       </div>
     </motion.button>
@@ -821,14 +835,16 @@ function TierPicker({
   billing: BillingInterval;
   reducedMotion: boolean;
 }) {
+  const t = usePricingTheme();
+
   return (
     <motion.div
       initial={reducedMotion ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={reducedMotion ? undefined : { opacity: 0, y: 8 }}
-      className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)]/50 p-4 sm:p-5"
+      className={t.tierPanel}
     >
-      <h4 className="font-heading text-sm font-semibold uppercase tracking-wide text-[var(--ozer-text-on-dark-muted)]">
+      <h4 className={cn('font-heading text-sm font-semibold uppercase tracking-wide', t.muted)}>
         {title}
       </h4>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -849,15 +865,15 @@ function TierPicker({
               )}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="font-medium text-[var(--ozer-text-on-dark)]">{tier.label}</span>
+                <span className={cn('font-medium', t.text)}>{tier.label}</span>
                 {'badge' in tier && tier.badge ? (
                   <span className="rounded-full bg-[var(--ozer-gold-500)]/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--ozer-gold-500)]">
                     {tier.badge}
                   </span>
                 ) : null}
               </div>
-              <p className="mt-1 text-xs text-[var(--ozer-text-on-dark-muted)]">{tier.description}</p>
-              <p className="mt-2 text-sm font-semibold text-[var(--ozer-text-on-dark)]">
+              <p className={cn('mt-1 text-xs', t.muted)}>{tier.description}</p>
+              <p className={cn('mt-2 text-sm font-semibold', t.text)}>
                 {formatWorkspacePrice(price)}
                 {price > 0 ? '/mo' : ''}
               </p>
@@ -886,6 +902,8 @@ function AddonToggle({
   icon?: LucideIcon;
   disabled?: boolean;
 }) {
+  const t = usePricingTheme();
+
   return (
     <button
       type="button"
@@ -918,14 +936,14 @@ function AddonToggle({
             </span>
           ) : null}
           <div>
-            <p className="font-medium text-[var(--ozer-text-on-dark)]">{label}</p>
-            <p className="mt-1 text-xs leading-relaxed text-[var(--ozer-text-on-dark-muted)]">{description}</p>
+            <p className={cn('font-medium', t.text)}>{label}</p>
+            <p className={cn('mt-1 text-xs leading-relaxed', t.muted)}>{description}</p>
           </div>
         </div>
         <span
           className={cn(
             'shrink-0 text-sm font-semibold',
-            disabled ? 'text-[var(--ozer-text-on-dark-muted)]' : 'text-[var(--ozer-accent)]',
+            disabled ? t.muted : 'text-[var(--ozer-accent)]',
           )}
         >
           {priceLabel}
@@ -952,22 +970,23 @@ function AddonsPanel({
   paidWorkspaceCount: number;
   reducedMotion: boolean;
 }) {
+  const t = usePricingTheme();
   const videosSelected = selectedAddons.has('videos');
   const workspaceMultiplier =
     paidWorkspaceCount > 1 ? ` × ${paidWorkspaceCount} workspaces` : '';
 
   return (
-    <div className="space-y-6 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)]/40 p-4 sm:p-5">
+    <div className={t.addonsPanel}>
       <div>
-        <h4 className="font-heading text-lg font-semibold text-[var(--ozer-text-on-dark)]">Add-ons</h4>
-        <p className="mt-1 text-sm text-[var(--ozer-text-on-dark-muted)]">
+        <h4 className={cn('font-heading text-lg font-semibold', t.text)}>Add-ons</h4>
+        <p className={cn('mt-1 text-sm', t.muted)}>
           Optional extras on top of your workspaces. Workspace add-ons are priced per
           workspace.
         </p>
       </div>
 
       <div className="space-y-3">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--ozer-text-on-dark-muted)]">
+        <div className={cn('flex items-center gap-2 text-xs font-semibold uppercase tracking-wide', t.muted)}>
           <span className="inline-flex items-center gap-1">
             <Mail className="h-3.5 w-3.5" aria-hidden />
             <Mic className="h-3.5 w-3.5" aria-hidden />
@@ -1008,11 +1027,11 @@ function AddonsPanel({
       </div>
 
       <div className="space-y-3">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--ozer-text-on-dark-muted)]">
+        <div className={cn('flex items-center gap-2 text-xs font-semibold uppercase tracking-wide', t.muted)}>
           <Puzzle className="h-3.5 w-3.5" aria-hidden />
           Workspace apps
           {paidWorkspaceCount === 0 ? (
-            <span className="font-normal normal-case text-[var(--ozer-text-on-dark-muted)]">
+            <span className={cn('font-normal normal-case', t.muted)}>
               — select a paid workspace first
             </span>
           ) : null}
@@ -1051,12 +1070,16 @@ function AddonsPanel({
               exit={reducedMotion ? undefined : { height: 0, opacity: 0 }}
               className="overflow-hidden"
             >
-              <label className="block text-xs font-medium uppercase tracking-wide text-[var(--ozer-text-on-dark-muted)]">
+              <label className={cn('block text-xs font-medium uppercase tracking-wide', t.muted)}>
                 Videos tier
                 <select
                   value={videoTierId}
                   onChange={(event) => onVideoTierChange(event.target.value)}
-                  className="mt-2 w-full rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)] px-3 py-2 text-sm text-[var(--ozer-text-on-dark)]"
+                  className={cn(
+                    'mt-2 w-full rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2 text-sm',
+                    t.card,
+                    t.text,
+                  )}
                 >
                   {PRICING_CONFIG.videoTiers.map((tier) => (
                     <option key={tier.id} value={tier.id}>
@@ -1072,14 +1095,14 @@ function AddonsPanel({
       </div>
 
       {selected.has('business') ? (
-        <p className="flex items-start gap-2 text-xs text-[var(--ozer-text-on-dark-muted)]">
+        <p className={cn('flex items-start gap-2 text-xs', t.muted)}>
           <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--ozer-gold-500)]" aria-hidden />
           Business Lite is free and built for the apps marketplace — pick Lite above if you
           only need Signatures, Rankly, or other add-ons without full CRM features.
         </p>
       ) : null}
 
-      <p className="text-xs text-[var(--ozer-text-on-dark-muted)]">
+      <p className={cn('text-xs', t.muted)}>
         Add-ons are monthly only today. See{' '}
         <Link href="/pricing" className="text-[var(--ozer-accent)] underline-offset-4 hover:underline">
           full pricing
@@ -1122,6 +1145,7 @@ const PRICING_FAQS: MarketingFaqItem[] = [
 
 function ComparisonTable({ reducedMotion }: { reducedMotion: boolean }) {
   const [expanded, setExpanded] = useState(false);
+  const t = usePricingTheme();
 
   const rows = [
     {
@@ -1161,16 +1185,16 @@ function ComparisonTable({ reducedMotion }: { reducedMotion: boolean }) {
       <table className="w-full min-w-[520px] text-left text-sm">
         <thead>
           <tr className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
-            <th className="px-4 py-3 font-medium text-[var(--ozer-text-on-dark-muted)]">Feature</th>
-            <th className="px-4 py-3 font-medium text-[var(--ozer-text-on-dark-muted)]">Typical tools</th>
+            <th className={cn('px-4 py-3 font-medium', t.muted)}>Feature</th>
+            <th className={cn('px-4 py-3 font-medium', t.muted)}>Typical tools</th>
             <th className="px-4 py-3 font-medium text-[var(--ozer-accent)]">Ozer</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
             <tr key={row.feature} className="border-b border-[color:var(--workspace-shell-border)] last:border-0">
-              <td className="px-4 py-3 text-[var(--ozer-text-on-dark)]">{row.feature}</td>
-              <td className="px-4 py-3 text-[var(--ozer-text-on-dark-muted)]">
+              <td className={cn('px-4 py-3', t.text)}>{row.feature}</td>
+              <td className={cn('px-4 py-3', t.muted)}>
                 {typeof row.typical === 'boolean' ? (
                   row.typical ? (
                     <Check className="h-4 w-4 text-[var(--ozer-accent)]" aria-label="Yes" />
@@ -1189,7 +1213,7 @@ function ComparisonTable({ reducedMotion }: { reducedMotion: boolean }) {
                     <span aria-label="No">✗</span>
                   )
                 ) : (
-                  <span className="font-medium text-[var(--ozer-text-on-dark)]">{row.ozer}</span>
+                  <span className={cn('font-medium', t.text)}>{row.ozer}</span>
                 )}
               </td>
             </tr>
@@ -1202,7 +1226,7 @@ function ComparisonTable({ reducedMotion }: { reducedMotion: boolean }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 lg:hidden">
-        <h3 className="font-heading text-xl font-semibold text-[var(--ozer-text-on-dark)]">Compare the stack</h3>
+        <h3 className={cn('font-heading text-xl font-semibold', t.text)}>Compare the stack</h3>
         <button
           type="button"
           onClick={() => setExpanded((value) => !value)}
@@ -1212,7 +1236,7 @@ function ComparisonTable({ reducedMotion }: { reducedMotion: boolean }) {
         </button>
       </div>
 
-      <h3 className="hidden font-heading text-xl font-semibold text-[var(--ozer-text-on-dark)] lg:block">
+      <h3 className={cn('hidden font-heading text-xl font-semibold lg:block', t.text)}>
         Compare the stack
       </h3>
 
@@ -1236,8 +1260,9 @@ function ComparisonTable({ reducedMotion }: { reducedMotion: boolean }) {
   );
 }
 
-export default function PricingSection() {
+export default function PricingSection({ tone = 'dark' }: { tone?: PricingTone }) {
   const reducedMotion = useReducedMotion() ?? false;
+  const theme = useMemo(() => getPricingTheme(tone), [tone]);
   const [billing, setBilling] = useState<BillingInterval>('monthly');
   const [selected, setSelected] = useState<Set<string>>(new Set(['personal']));
   const [businessTierId, setBusinessTierId] = useState('business-solo');
@@ -1305,19 +1330,20 @@ export default function PricingSection() {
   };
 
   return (
+    <PricingThemeContext.Provider value={theme}>
     <TooltipProvider delayDuration={200}>
-    <section className="relative overflow-hidden bg-[radial-gradient(circle_at_15%_0%,var(--ozer-coral-alpha-15),transparent_42%),linear-gradient(180deg,var(--ozer-plum-950)_0%,var(--ozer-plum-900)_100%)] pb-24 pt-20 text-[var(--ozer-text-on-dark)] md:pb-32">
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_22%)]" />
+    <section className={theme.section}>
+      <div className={theme.sectionGlow} />
 
       <div className="relative mx-auto w-full max-w-7xl px-6">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--ozer-text-on-dark-muted)]">
+          <p className={theme.eyebrow}>
             Simple pricing
           </p>
-          <h2 className="mt-3 font-heading text-3xl font-semibold tracking-tight text-[var(--ozer-text-on-dark)] md:text-5xl">
+          <h2 className={theme.title}>
             Build your Ozer
           </h2>
-          <p className="mt-4 text-base leading-relaxed text-[var(--ozer-text-on-dark-muted)] md:text-lg">
+          <p className={theme.subtitle}>
             Start with your personal home free. Add the workspaces you need.
           </p>
           <div className="mt-8 flex justify-center">
@@ -1392,8 +1418,8 @@ export default function PricingSection() {
             />
           </div>
 
-          <aside className="rounded-3xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)]/70 p-6 backdrop-blur-sm lg:sticky lg:top-24">
-            <h3 className="font-heading text-xl font-semibold text-[var(--ozer-text-on-dark)]">Your plan</h3>
+          <aside className={theme.panel}>
+            <h3 className={cn('font-heading text-xl font-semibold', theme.text)}>Your plan</h3>
 
             <ul className="mt-5 space-y-3">
               <AnimatePresence initial={false}>
@@ -1410,8 +1436,8 @@ export default function PricingSection() {
                     }}
                     className="flex items-center justify-between gap-3 text-sm"
                   >
-                    <span className="text-slate-200">{item.label}</span>
-                    <span className="font-medium text-[var(--ozer-text-on-dark)]">
+                    <span className={cn('font-medium', theme.lineLabel)}>{item.label}</span>
+                    <span className={cn('font-medium', theme.text)}>
                       {formatWorkspacePrice(item.price)}
                       {item.price > 0 ? '/mo' : ''}
                     </span>
@@ -1423,33 +1449,33 @@ export default function PricingSection() {
             <div className="my-5 border-t border-[color:var(--workspace-shell-border)]" />
 
             <div className="flex items-end justify-between gap-3">
-              <span className="text-sm text-[var(--ozer-text-on-dark-muted)]">Total</span>
+              <span className={cn('text-sm', theme.muted)}>Total</span>
               <div className="text-right">
-                <p className="font-heading text-3xl font-semibold text-[var(--ozer-text-on-dark)]">
+                <p className={cn('font-heading text-3xl font-semibold', theme.text)}>
                   <AnimatedTotal value={total} reducedMotion={reducedMotion} />
                   {total > 0 ? (
-                    <span className="text-base font-normal text-[var(--ozer-text-on-dark-muted)]">/mo</span>
+                    <span className={cn('text-base font-normal', theme.muted)}>/mo</span>
                   ) : null}
                 </p>
-                <p className="mt-1 text-xs text-[var(--ozer-text-on-dark-muted)]">
+                <p className={cn('mt-1 text-xs', theme.muted)}>
                   {billing === 'annual' ? 'Billed annually' : 'Billed monthly'}
                 </p>
               </div>
             </div>
 
-            <div className="mt-5 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
+            <div className={theme.panelInner}>
               <button
                 type="button"
                 aria-expanded={alwaysIncludedOpen}
                 onClick={() => setAlwaysIncludedOpen((value) => !value)}
-                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm font-medium text-[var(--ozer-text-on-dark)]"
+                className={cn('flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm font-medium', theme.text)}
               >
                 Always included
                 <motion.span
                   animate={{ rotate: alwaysIncludedOpen ? 180 : 0 }}
                   transition={{ duration: reducedMotion ? 0 : 0.2 }}
                 >
-                  <ChevronDown className="h-4 w-4 text-[var(--ozer-text-on-dark-muted)]" aria-hidden />
+                  <ChevronDown className={cn('h-4 w-4', theme.muted)} aria-hidden />
                 </motion.span>
               </button>
               <AnimatePresence initial={false}>
@@ -1462,7 +1488,7 @@ export default function PricingSection() {
                     className="space-y-2 overflow-hidden px-4 pb-4"
                   >
                     {PRICING_CONFIG.alwaysIncludedFeatures.map((feature) => (
-                      <li key={feature} className="flex items-start gap-2 text-sm text-[var(--ozer-text-on-dark-muted)]">
+                      <li key={feature} className={cn('flex items-start gap-2 text-sm', theme.muted)}>
                         <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]" aria-hidden />
                         {feature}
                       </li>
@@ -1482,7 +1508,7 @@ export default function PricingSection() {
             >
               <Link href={pathsConfig.auth.signUp}>Start free →</Link>
             </Button>
-            <p className="mt-3 text-center text-xs text-[var(--ozer-text-on-dark-muted)]">
+            <p className={cn('mt-3 text-center text-xs', theme.muted)}>
               No credit card required. Cancel anytime.
             </p>
           </aside>
@@ -1494,7 +1520,7 @@ export default function PricingSection() {
 
         <MarketingFaqsSection
           faqs={PRICING_FAQS}
-          tone="dark"
+          tone={theme.faqTone}
           title="Pricing FAQ"
           headingId="pricing-faq-heading"
           sectionClassName="mt-16 py-0"
@@ -1514,5 +1540,6 @@ export default function PricingSection() {
       `}</style>
     </section>
     </TooltipProvider>
+    </PricingThemeContext.Provider>
   );
 }

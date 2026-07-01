@@ -7,7 +7,7 @@ import {
 
 describe('email assignee resolution', () => {
   const members = [
-    { userId: 'user-owner', name: 'Dan', email: 'dan@keelos.so' },
+    { userId: 'user-owner', name: 'Dan', email: 'dan@ozer.so' },
     { userId: 'user-sarah', name: 'Sarah', email: 'sarah@client.com' },
   ];
 
@@ -19,7 +19,7 @@ describe('email assignee resolution', () => {
           assigneeConfidence: 0.9,
         },
         members,
-        'dan@keelos.so',
+        'dan@ozer.so',
       ),
     ).toBe('user-sarah');
   });
@@ -32,7 +32,7 @@ describe('email assignee resolution', () => {
           assigneeConfidence: 0.4,
         },
         members,
-        'dan@keelos.so',
+        'dan@ozer.so',
       ),
     ).toBeNull();
   });
@@ -45,7 +45,7 @@ describe('email assignee resolution', () => {
           assigneeConfidence: 0.95,
         },
         members,
-        'dan@keelos.so',
+        'dan@ozer.so',
       ),
     ).toBe(false);
   });
@@ -58,7 +58,7 @@ describe('email assignee resolution', () => {
           assigneeConfidence: 0.4,
         },
         members,
-        'dan@keelos.so',
+        'dan@ozer.so',
       ),
     ).toBe(true);
   });

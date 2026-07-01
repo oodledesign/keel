@@ -1,4 +1,4 @@
--- Agency client portal branding (subdomain: {slug}.keelos.so → /portal/{slug}).
+-- Agency client portal branding (subdomain: {slug}.ozer.so → /portal/{slug}).
 
 CREATE TABLE IF NOT EXISTS public.agency_branding (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -26,7 +26,7 @@ CREATE INDEX IF NOT EXISTS ix_agency_branding_business_id
   ON public.agency_branding (business_id);
 
 COMMENT ON TABLE public.agency_branding IS
-  'Per-workspace agency portal branding; slug powers {slug}.keelos.so subdomains.';
+  'Per-workspace agency portal branding; slug powers {slug}.ozer.so subdomains.';
 
 DROP TRIGGER IF EXISTS agency_branding_set_timestamps ON public.agency_branding;
 CREATE TRIGGER agency_branding_set_timestamps

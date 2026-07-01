@@ -93,7 +93,10 @@ export function OzerPricingPage() {
         </p>
       </section>
 
-      <InterconnectedWorkspacesSection className="rounded-3xl border border-[color:var(--workspace-shell-border)]" />
+      <InterconnectedWorkspacesSection
+        className="rounded-3xl border border-[color:var(--workspace-shell-border)]"
+        tone="light"
+      />
 
       <BillingIntervalToggle interval={interval} onChange={setInterval} />
 

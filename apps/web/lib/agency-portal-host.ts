@@ -1,4 +1,4 @@
-const AGENCY_PORTAL_DOMAIN = 'keelos.so';
+const AGENCY_PORTAL_DOMAIN = 'ozer.so';
 
 const IGNORED_SUBDOMAINS = new Set(['www', 'app', 'staging', 'localhost']);
 

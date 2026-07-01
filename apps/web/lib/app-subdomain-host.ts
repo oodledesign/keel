@@ -4,7 +4,7 @@ import {
   isAppMarketingHostSplitEnabled,
 } from '~/lib/app-host-routing';
 
-/** Reserved on keelos.so — hosts the authenticated Ozer app, not agency portals. */
+/** Reserved on ozer.so — hosts the authenticated Ozer app, not agency portals. */
 export const APP_SUBDOMAIN = 'app';
 
 const APP_ROUTE_PREFIXES = [
@@ -115,9 +115,14 @@ export function shouldSplitAppAndMarketingHosts(): boolean {
   return isAppMarketingHostSplitEnabled();
 }
 
-/** True when the request hostname is the reserved app subdomain (e.g. app.keelos.so). */
+/** True when the request hostname is the reserved app subdomain (e.g. app.ozer.so). */
 export function isAppSubdomainHostname(hostname: string): boolean {
   const normalized = normalizeHostname(hostname);
+
+  // Local dev serves marketing and app from the same origin — never treat as app-only host.
+  if (normalized === 'localhost' || normalized === '127.0.0.1') {
+    return false;
+  }
 
   if (normalized.startsWith(`${APP_SUBDOMAIN}.`)) {
     return !normalized.includes('localhost');

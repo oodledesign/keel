@@ -17,6 +17,7 @@ import {
   type InterconnectedWorkspaceNode,
   type PersonalAssistantMarketing,
 } from '~/lib/marketing/interconnected-workspaces';
+import type { PricingTone } from '~/lib/marketing/pricing-theme';
 
 /** One full circuit traversal — slower than the original 2.5s. */
 const DOT_DURATION_S = 6;
@@ -201,10 +202,13 @@ function OrbitWorkspaceCard({
 
 function AssistantBillingBadge({
   assistant,
+  tone = 'dark',
 }: {
   assistant: PersonalAssistantMarketing;
+  tone?: PricingTone;
 }) {
   const isAddon = assistant.billing === 'addon';
+  const isLight = tone === 'light';
 
   return (
     <Tooltip>
@@ -214,7 +218,9 @@ function AssistantBillingBadge({
             'absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full border',
             isAddon
               ? 'border-[color:var(--ozer-coral-alpha-45)] bg-[var(--ozer-coral-600)] text-[var(--ozer-white)]'
-              : 'border-[color:var(--ozer-coral-alpha-45)] bg-[var(--ozer-plum-800)] text-[var(--ozer-accent)]',
+              : isLight
+                ? 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--ozer-accent)]'
+                : 'border-[color:var(--ozer-coral-alpha-45)] bg-[var(--ozer-plum-800)] text-[var(--ozer-accent)]',
           )}
           aria-label={assistant.addonTooltip}
         >
@@ -227,7 +233,12 @@ function AssistantBillingBadge({
       </TooltipTrigger>
       <TooltipContent
         side="right"
-        className="max-w-[220px] border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)] text-xs text-[var(--ozer-text-on-dark)]"
+        className={cn(
+          'max-w-[220px] border border-[color:var(--workspace-shell-border)] text-xs',
+          isLight
+            ? 'bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]'
+            : 'bg-[var(--ozer-plum-950)] text-[var(--ozer-text-on-dark)]',
+        )}
       >
         {assistant.addonTooltip}
       </TooltipContent>
@@ -238,16 +249,22 @@ function AssistantBillingBadge({
 function AssistantLayerCard({
   assistant,
   compact = false,
+  tone = 'dark',
 }: {
   assistant: PersonalAssistantMarketing;
   compact?: boolean;
+  tone?: PricingTone;
 }) {
   const Icon = assistant.icon;
+  const isLight = tone === 'light';
 
   return (
     <div
       className={cn(
-        'relative z-10 rounded-lg border border-[color:var(--ozer-border-on-dark)] border-l-2 border-l-[var(--ozer-accent)]/50 bg-[color-mix(in_srgb,var(--ozer-plum-900)_95%,var(--ozer-plum-950))] text-center shadow-[0_4px_16px_rgba(42,23,32,0.35)]',
+        'relative z-10 rounded-lg border border-l-2 border-l-[var(--ozer-accent)]/50 text-center',
+        isLight
+          ? 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_4px_16px_rgba(53,30,40,0.08)]'
+          : 'border-[color:var(--ozer-border-on-dark)] bg-[color-mix(in_srgb,var(--ozer-plum-900)_95%,var(--ozer-plum-950))] shadow-[0_4px_16px_rgba(42,23,32,0.35)]',
         compact
           ? 'w-full px-1.5 py-2'
           : 'w-[96px] px-2 py-2 sm:w-[118px] sm:px-2.5 sm:py-2.5 lg:w-[132px]',
@@ -260,18 +277,26 @@ function AssistantLayerCard({
         )}
       >
         <Icon className={cn(compact ? 'h-3.5 w-3.5' : 'h-4 w-4')} aria-hidden />
-        <AssistantBillingBadge assistant={assistant} />
+        <AssistantBillingBadge assistant={assistant} tone={tone} />
       </span>
       <p
         className={cn(
-          'font-semibold leading-tight text-[var(--ozer-text-on-dark)]',
+          'font-semibold leading-tight',
+          isLight ? 'text-[var(--workspace-shell-text)]' : 'text-[var(--ozer-text-on-dark)]',
           compact ? 'mt-1.5 text-[9px]' : 'mt-2 text-[11px]',
         )}
       >
         {assistant.label}
       </p>
       {!compact ? (
-        <p className="mt-1.5 text-[9px] leading-snug text-[var(--ozer-text-on-dark-muted)] sm:mt-1.5 sm:text-[10px]">
+        <p
+          className={cn(
+            'mt-1.5 text-[9px] leading-snug sm:mt-1.5 sm:text-[10px]',
+            isLight
+              ? 'text-[var(--workspace-shell-text-muted)]'
+              : 'text-[var(--ozer-text-on-dark-muted)]',
+          )}
+        >
           {assistant.description}
         </p>
       ) : null}
@@ -283,15 +308,22 @@ function PersonalHomeCard({
   className,
   flashing,
   compact = false,
+  tone = 'dark',
 }: {
   className?: string;
   flashing: boolean;
   compact?: boolean;
+  tone?: PricingTone;
 }) {
+  const isLight = tone === 'light';
+
   return (
     <div
       className={cn(
-        'relative z-20 rounded-xl border-2 bg-[var(--ozer-plum-900)] text-center transition-[border-color,box-shadow] duration-200',
+        'relative z-20 rounded-xl border-2 text-center transition-[border-color,box-shadow] duration-200',
+        isLight
+          ? 'bg-[var(--workspace-shell-panel)]'
+          : 'bg-[var(--ozer-plum-900)]',
         compact
           ? 'w-[118px] px-3 py-3'
           : 'w-[118px] px-3 py-3 sm:w-[140px] sm:px-4 sm:py-4 lg:w-[160px] lg:scale-110',
@@ -304,8 +336,22 @@ function PersonalHomeCard({
       <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg border border-[color:var(--ozer-coral-alpha-45)] bg-[var(--ozer-accent-subtle)]">
         <Home className="h-4 w-4 text-[var(--ozer-accent)]" aria-hidden />
       </span>
-      <p className="mt-2 text-sm font-bold text-[var(--ozer-text-on-dark)]">Personal Home</p>
-      <p className="mt-0.5 text-[10px] text-[var(--ozer-text-on-dark-muted)]">Your command centre</p>
+      <p
+        className={cn(
+          'mt-2 text-sm font-bold',
+          isLight ? 'text-[var(--workspace-shell-text)]' : 'text-[var(--ozer-text-on-dark)]',
+        )}
+      >
+        Personal Home
+      </p>
+      <p
+        className={cn(
+          'mt-0.5 text-[10px]',
+          isLight ? 'text-[var(--workspace-shell-text-muted)]' : 'text-[var(--ozer-text-on-dark-muted)]',
+        )}
+      >
+        Your command centre
+      </p>
     </div>
   );
 }
@@ -315,11 +361,13 @@ function MobileWorkspaceDiagram({
   family,
   community,
   hubFlashing,
+  tone = 'dark',
 }: {
   business: InterconnectedWorkspaceNode | undefined;
   family: InterconnectedWorkspaceNode | undefined;
   community: InterconnectedWorkspaceNode | undefined;
   hubFlashing: boolean;
+  tone?: PricingTone;
 }) {
   return (
     <div className="flex w-full flex-col gap-4 py-2">
@@ -348,12 +396,12 @@ function MobileWorkspaceDiagram({
       </div>
 
       <div className="flex justify-center py-1">
-        <PersonalHomeCard compact flashing={hubFlashing} />
+        <PersonalHomeCard compact flashing={hubFlashing} tone={tone} />
       </div>
 
       <div className="grid grid-cols-3 gap-2">
         {PERSONAL_ASSISTANTS_MARKETING.map((assistant) => (
-          <AssistantLayerCard key={assistant.id} compact assistant={assistant} />
+          <AssistantLayerCard key={assistant.id} compact assistant={assistant} tone={tone} />
         ))}
       </div>
     </div>
@@ -365,11 +413,13 @@ function DesktopWorkspaceDiagram({
   family,
   community,
   hubFlashing,
+  tone = 'dark',
 }: {
   business: InterconnectedWorkspaceNode | undefined;
   family: InterconnectedWorkspaceNode | undefined;
   community: InterconnectedWorkspaceNode | undefined;
   hubFlashing: boolean;
+  tone?: PricingTone;
 }) {
   return (
     <div
@@ -388,7 +438,7 @@ function DesktopWorkspaceDiagram({
 
       <div className="absolute left-0 top-1/2 z-10 flex -translate-y-1/2 flex-col gap-1.5 pl-0 sm:gap-2">
         {PERSONAL_ASSISTANTS_MARKETING.map((assistant) => (
-          <AssistantLayerCard key={assistant.id} assistant={assistant} />
+          <AssistantLayerCard key={assistant.id} assistant={assistant} tone={tone} />
         ))}
       </div>
 
@@ -411,7 +461,7 @@ function DesktopWorkspaceDiagram({
       </div>
 
       <div className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2">
-        <PersonalHomeCard flashing={hubFlashing} />
+        <PersonalHomeCard flashing={hubFlashing} tone={tone} />
       </div>
     </div>
   );
@@ -419,8 +469,10 @@ function DesktopWorkspaceDiagram({
 
 export function WorkspaceOrbitDiagram({
   nodes,
+  tone = 'dark',
 }: {
   nodes: readonly InterconnectedWorkspaceNode[];
+  tone?: PricingTone;
 }) {
   const hubFlashing = useHubBorderPulse(ALL_DOT_BEGINS, DOT_DURATION_S);
   const business = nodes.find((node) => node.id === 'work');
@@ -436,6 +488,7 @@ export function WorkspaceOrbitDiagram({
             family={family}
             community={community}
             hubFlashing={hubFlashing}
+            tone={tone}
           />
         </div>
 
@@ -445,6 +498,7 @@ export function WorkspaceOrbitDiagram({
             family={family}
             community={community}
             hubFlashing={hubFlashing}
+            tone={tone}
           />
         </div>
       </div>

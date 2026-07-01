@@ -1,4 +1,3 @@
-import { SitePageHeader } from '~/(marketing)/_components/site-page-header';
 import PricingSection from '~/(marketing)/_components/pricing-section';
 import { cn } from '@kit/ui/utils';
 import { marketingShellClass } from '~/lib/marketing/marketing-ui';
@@ -17,19 +16,12 @@ export const generateMetadata = async () => {
 };
 
 async function PricingPage() {
-  const { t } = await createI18nServerInstance();
-
   return (
     <div className={cn('relative overflow-hidden', marketingShellClass)}>
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_22%)]" />
-      <div className="relative flex flex-col space-y-8">
-        <SitePageHeader
-          title={t('marketing:pricing')}
-          subtitle={t('marketing:pricingSubtitle')}
-        />
-
-        <div className="container mx-auto px-4 pb-8 xl:pb-16">
-          <PricingSection />
+      <div className="relative flex flex-col">
+        <div className="container mx-auto px-4 pb-8 pt-8 xl:pb-16">
+          <PricingSection tone="light" />
 
           <div className="mt-16 border-t border-[color:var(--workspace-shell-border)] pt-16">
             <OzerPricingPage />
