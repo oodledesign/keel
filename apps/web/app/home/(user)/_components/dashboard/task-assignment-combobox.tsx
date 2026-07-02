@@ -90,10 +90,10 @@ export function TaskAssignmentCombobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-[var(--radix-popover-trigger-width)] border-[color:var(--workspace-shell-border)] bg-[#1A2535] p-0"
+        className="w-[var(--radix-popover-trigger-width)] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0"
         align="start"
       >
-        <Command className="bg-[#1A2535] text-[var(--workspace-shell-text)]">
+        <Command className="bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
           <CommandInput
             placeholder="Search projects and clients…"
             className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"

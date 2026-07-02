@@ -277,7 +277,7 @@ export function EditTaskDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[#0F1923] text-[var(--workspace-shell-text)] sm:max-w-xl">
+        <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>Edit task</DialogTitle>
             <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
@@ -380,7 +380,7 @@ export function EditTaskDialog({
                   <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
+                  <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
                     {PRIORITIES.map((p) => (
                       <SelectItem key={p.key} value={p.key}>
                         {p.label}
@@ -400,7 +400,7 @@ export function EditTaskDialog({
                   <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
+                  <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
                     {STATUSES.map((s) => (
                       <SelectItem key={s.key} value={s.key}>
                         {s.label}
@@ -433,7 +433,7 @@ export function EditTaskDialog({
                       }
                     />
                   </SelectTrigger>
-                  <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
+                  <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
                     {!isWorkspaceMode ? (
                       <SelectItem value="none">No assignment (life)</SelectItem>
                     ) : null}
@@ -586,7 +586,7 @@ export function EditTaskDialog({
       </Dialog>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="border-[color:var(--workspace-shell-border)] bg-[#0F1923] text-[var(--workspace-shell-text)] sm:max-w-md">
+        <AlertDialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this task?</AlertDialogTitle>
             <AlertDialogDescription className="text-[var(--workspace-shell-text-muted)]">
