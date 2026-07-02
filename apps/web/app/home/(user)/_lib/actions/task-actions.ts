@@ -73,6 +73,14 @@ export type CreateTaskInput = {
   clientId?: string;
   /** When set, inherits project/client/area from parent if those are omitted. */
   parentTaskId?: string;
+  /** Skip parent re-fetch when the parent was just created in the same request. */
+  parentTaskContext?: {
+    projectId?: string | null;
+    clientId?: string | null;
+    areaId?: string | null;
+    accountId?: string | null;
+    jobId?: string | null;
+  };
   notes?: string | null;
   /** Team workspace when creating from a business context without project/client. */
   accountId?: string;
@@ -88,32 +96,43 @@ export async function createTask(input: CreateTaskInput) {
   let accountId = input.accountId || null;
 
   if (input.parentTaskId) {
-    const { data: parent, error: pe } = await client
-      .from('tasks')
-      .select('user_id, project_id, client_id, area_id, account_id, job_id')
-      .eq('id', input.parentTaskId)
-      .maybeSingle();
+    if (input.parentTaskContext) {
+      const p = input.parentTaskContext;
+      projectId = projectId ?? p.projectId ?? null;
+      clientId = clientId ?? p.clientId ?? null;
+      areaId = areaId ?? p.areaId ?? null;
+      accountId = accountId ?? p.accountId ?? null;
+      if (!accountId && p.jobId) {
+        accountId = await resolveTaskAccountId(client, { jobId: p.jobId });
+      }
+    } else {
+      const { data: parent, error: pe } = await client
+        .from('tasks')
+        .select('user_id, project_id, client_id, area_id, account_id, job_id')
+        .eq('id', input.parentTaskId)
+        .maybeSingle();
 
-    if (pe || !parent || (parent as { user_id: string }).user_id !== user.id) {
-      return {
-        success: false,
-        error: 'Parent task not found',
-        id: null,
+      if (pe || !parent) {
+        return {
+          success: false,
+          error: 'Parent task not found',
+          id: null,
+        };
+      }
+      const p = parent as {
+        project_id: string | null;
+        client_id: string | null;
+        area_id: string | null;
+        account_id: string | null;
+        job_id: string | null;
       };
-    }
-    const p = parent as {
-      project_id: string | null;
-      client_id: string | null;
-      area_id: string | null;
-      account_id: string | null;
-      job_id: string | null;
-    };
-    projectId = projectId ?? p.project_id;
-    clientId = clientId ?? p.client_id;
-    areaId = areaId ?? p.area_id;
-    accountId = accountId ?? p.account_id;
-    if (!accountId && p.job_id) {
-      accountId = await resolveTaskAccountId(client, { jobId: p.job_id });
+      projectId = projectId ?? p.project_id;
+      clientId = clientId ?? p.client_id;
+      areaId = areaId ?? p.area_id;
+      accountId = accountId ?? p.account_id;
+      if (!accountId && p.job_id) {
+        accountId = await resolveTaskAccountId(client, { jobId: p.job_id });
+      }
     }
   }
 

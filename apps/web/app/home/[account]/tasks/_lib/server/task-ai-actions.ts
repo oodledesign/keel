@@ -170,6 +170,7 @@ export const commitWorkspaceExtractedTasks = enhanceAction(
   async (input, user) => {
     await assertWorkspaceMember(input.accountId, user.id);
 
+    const client = getSupabaseServerClient();
     const options = await loadTaskAssignmentOptionsForWorkspace(
       input.accountId,
     );
@@ -179,6 +180,20 @@ export const commitWorkspaceExtractedTasks = enhanceAction(
     const validClient = new Set(
       options.filter((o) => o.type === 'client').map((o) => o.id),
     );
+
+    async function resolveClientId(candidate: string | null): Promise<string | null> {
+      if (!candidate) return null;
+      if (validClient.has(candidate)) return candidate;
+
+      const { data } = await client
+        .from('clients')
+        .select('id')
+        .eq('id', candidate)
+        .eq('account_id', input.accountId)
+        .maybeSingle();
+
+      return data ? candidate : null;
+    }
 
     let created = 0;
     /** When AI only resolves the first group, carry the same link to later parents. */
@@ -192,8 +207,7 @@ export const commitWorkspaceExtractedTasks = enhanceAction(
         item.projectId && validProject.has(item.projectId)
           ? item.projectId
           : null;
-      let clientId =
-        item.clientId && validClient.has(item.clientId) ? item.clientId : null;
+      let clientId = await resolveClientId(item.clientId);
 
       if (!projectId && !clientId) {
         projectId = lastValidProjectId;
@@ -218,6 +232,13 @@ export const commitWorkspaceExtractedTasks = enhanceAction(
       lastValidProjectId = projectId;
       lastValidClientId = clientId;
 
+      const parentTaskContext = {
+        projectId,
+        clientId,
+        areaId: null as string | null,
+        accountId: input.accountId,
+      };
+
       for (const st of item.subtasks) {
         if (!st.included) continue;
         const subResult = await createTask({
@@ -228,6 +249,7 @@ export const commitWorkspaceExtractedTasks = enhanceAction(
           clientId: clientId ?? undefined,
           accountId: input.accountId,
           parentTaskId: parentResult.id,
+          parentTaskContext,
           notes: st.notes ?? undefined,
         });
         if (!subResult.success) {
