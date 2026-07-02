@@ -48,6 +48,11 @@ export async function syncRankCheckJobProgress(jobId: string): Promise<void> {
   }
 
   const counts = await countRankCheckTasksByStatus(jobId);
+  if (counts.total === 0 && job.status === 'pending') {
+    await triggerRankCheckRunDebounced(jobId);
+    return;
+  }
+
   if (counts.total === 0) {
     return;
   }

@@ -1,20 +1,65 @@
 import 'server-only';
 
+import { delay } from '~/lib/clusters/utils';
+import { getAppSiteOrigin } from '~/lib/app-host-routing';
+
 import { getRankCheckJob, updateRankCheckJob } from './db';
 import { RANK_WORKER_TRIGGER_DEBOUNCE_SEC } from './queue-config';
 
+const RUN_TRIGGER_ATTEMPTS = 4;
+const RUN_TRIGGER_TIMEOUT_MS = 20_000;
+
 export function getRankCheckRunUrl(jobId: string): string {
-  const base =
-    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ??
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '');
+  const base = getAppSiteOrigin().replace(/\/$/, '');
 
   if (!base) {
-    throw new Error(
-      'Site URL not configured (NEXT_PUBLIC_SITE_URL or VERCEL_URL)',
-    );
+    throw new Error('App site origin not configured');
   }
 
   return `${base}/api/rankly/rank-check/${jobId}/run`;
+}
+
+async function postRankCheckRunWithRetry(
+  jobId: string,
+  secret: string,
+): Promise<boolean> {
+  const url = getRankCheckRunUrl(jobId);
+
+  for (let attempt = 1; attempt <= RUN_TRIGGER_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${secret}` },
+        signal: AbortSignal.timeout(RUN_TRIGGER_TIMEOUT_MS),
+      });
+
+      if (response.ok) {
+        return true;
+      }
+
+      const body = await response.text().catch(() => '');
+      console.error(
+        '[rankly] rank check run trigger bad status',
+        jobId,
+        response.status,
+        body.slice(0, 200),
+        attempt,
+      );
+    } catch (error) {
+      console.error(
+        '[rankly] rank check run trigger attempt failed',
+        jobId,
+        attempt,
+        error,
+      );
+    }
+
+    if (attempt < RUN_TRIGGER_ATTEMPTS) {
+      await delay(1500 * attempt);
+    }
+  }
+
+  return false;
 }
 
 /**
@@ -51,15 +96,7 @@ export async function triggerRankCheckRunDebounced(
     last_worker_trigger_at: new Date().toISOString(),
   });
 
-  const url = getRankCheckRunUrl(jobId);
-  void fetch(url, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${secret}` },
-  }).catch((err) => {
-    console.error('[rankly] trigger rank check run failed', jobId, err);
-  });
-
-  return true;
+  return postRankCheckRunWithRetry(jobId, secret);
 }
 
 /** Immediate worker trigger (new jobs, cron job creation). */

@@ -191,6 +191,15 @@ export async function findJobsNeedingWorker(
   const results: Array<{ jobId: string; pendingTasks: number }> = [];
 
   for (const job of jobs) {
+    const jobId = job.id as string;
+    const status = String(job.status);
+
+    // Jobs still in `pending` have not enqueued tasks yet — the worker must run first.
+    if (status === 'pending') {
+      results.push({ jobId, pendingTasks: 1 });
+      continue;
+    }
+
     const { count } = await ranklyAdmin()
       .from('rank_check_tasks')
       .select('id', { count: 'exact', head: true })
@@ -199,7 +208,7 @@ export async function findJobsNeedingWorker(
 
     const pendingTasks = count ?? 0;
     if (pendingTasks > 0) {
-      results.push({ jobId: job.id as string, pendingTasks });
+      results.push({ jobId, pendingTasks });
     }
   }
 
