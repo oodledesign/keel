@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from 'react';
 
 import { Button } from '@kit/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
+import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
@@ -19,6 +20,7 @@ import {
   SpeakerLabelPicker,
   type SpeakerPickerClient,
   type SpeakerPickerContact,
+  type SpeakerPickerMember,
 } from './speaker-label-picker';
 
 type Props = {
@@ -29,8 +31,13 @@ type Props = {
   mappings: SpeakerMappings;
   clients: SpeakerPickerClient[];
   contacts: SpeakerPickerContact[];
+  members?: SpeakerPickerMember[];
+  currentUserId?: string | null;
   linkClientId?: string | null;
   canEdit: boolean;
+  editing?: boolean;
+  draftSegments?: TranscriptSegment[];
+  onDraftChange?: (segments: TranscriptSegment[]) => void;
   onSaved: () => void;
   onMappingsChange: (mappings: SpeakerMappings) => void;
   onContactsChange: (contacts: SpeakerPickerContact[]) => void;
@@ -43,6 +50,8 @@ function SpeakerAssignPopover({
   binding,
   clients,
   contacts,
+  members,
+  currentUserId,
   linkClientId,
   disabled,
   onSave,
@@ -54,6 +63,8 @@ function SpeakerAssignPopover({
   binding: SpeakerBinding | null;
   clients: SpeakerPickerClient[];
   contacts: SpeakerPickerContact[];
+  members: SpeakerPickerMember[];
+  currentUserId?: string | null;
   linkClientId?: string | null;
   disabled?: boolean;
   onSave: (binding: SpeakerBinding | null) => void;
@@ -79,7 +90,13 @@ function SpeakerAssignPopover({
             'rounded px-1 -mx-1 transition hover:bg-[var(--workspace-shell-sidebar-accent)] hover:underline',
           )}
         >
-          {resolveSpeakerLabel(speakerKey, mappings, clients, contacts)}
+          {resolveSpeakerLabel(
+            speakerKey,
+            mappings,
+            clients,
+            contacts,
+            members.map((member) => ({ userId: member.userId, name: member.name })),
+          )}
         </button>
       </PopoverTrigger>
       <PopoverContent
@@ -93,6 +110,8 @@ function SpeakerAssignPopover({
           onBindingChange={setDraft}
           clients={clients}
           contacts={contacts}
+          members={members}
+          currentUserId={currentUserId}
           linkClientId={linkClientId}
           onContactCreated={(contact) => {
             onContactsChange(
@@ -138,13 +157,23 @@ export function MeetingTranscriptSegments({
   mappings,
   clients,
   contacts,
+  members = [],
+  currentUserId,
   linkClientId,
   canEdit,
+  editing = false,
+  draftSegments,
+  onDraftChange,
   onSaved,
   onMappingsChange,
   onContactsChange,
 }: Props) {
   const [pending, startTransition] = useTransition();
+  const memberLookup = members.map((member) => ({
+    userId: member.userId,
+    name: member.name,
+  }));
+  const visibleSegments = draftSegments ?? segments;
 
   const persistMapping = (speakerKey: string, binding: SpeakerBinding | null) => {
     const next: SpeakerMappings = { ...mappings };
@@ -173,18 +202,19 @@ export function MeetingTranscriptSegments({
 
   return (
     <div className="space-y-4">
-      {segments.map((segment, index) => {
+      {visibleSegments.map((segment, index) => {
         const speakerKey = segment.speaker;
         const displaySpeaker = resolveSpeakerLabel(
           speakerKey,
           mappings,
           clients,
           contacts,
+          memberLookup,
         );
 
         return (
           <div key={`${speakerKey}-${index}`}>
-            {canEdit ? (
+            {canEdit && !editing ? (
               <SpeakerAssignPopover
                 accountId={accountId}
                 speakerKey={speakerKey}
@@ -192,6 +222,8 @@ export function MeetingTranscriptSegments({
                 binding={mappings[speakerKey] ?? null}
                 clients={clients}
                 contacts={contacts}
+                members={members}
+                currentUserId={currentUserId}
                 linkClientId={linkClientId}
                 disabled={pending}
                 onSave={(binding) => persistMapping(speakerKey, binding)}
@@ -202,9 +234,24 @@ export function MeetingTranscriptSegments({
                 {displaySpeaker}
               </p>
             )}
-            <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--workspace-shell-text)]">
-              {segment.text}
-            </p>
+            {editing && onDraftChange ? (
+              <Textarea
+                value={segment.text}
+                onChange={(event) => {
+                  const next = visibleSegments.map((row, rowIndex) =>
+                    rowIndex === index
+                      ? { ...row, text: event.target.value }
+                      : row,
+                  );
+                  onDraftChange(next);
+                }}
+                className="mt-1 min-h-[72px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-sm text-[var(--workspace-shell-text)]"
+              />
+            ) : (
+              <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--workspace-shell-text)]">
+                {segment.text}
+              </p>
+            )}
           </div>
         );
       })}

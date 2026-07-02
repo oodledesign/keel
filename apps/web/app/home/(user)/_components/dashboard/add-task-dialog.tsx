@@ -194,7 +194,7 @@ export function AddTaskDialog({
           </button>
         </DialogTrigger>
       )}
-      <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-md">
+      <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Add a new task</DialogTitle>
           <DialogDescription className="text-[var(--workspace-shell-text-muted)]">

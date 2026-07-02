@@ -6,12 +6,14 @@ export type TranscriptSegment = {
 export type SpeakerBinding =
   | { type: 'custom'; name: string }
   | { type: 'client'; clientId: string }
-  | { type: 'contact'; contactId: string };
+  | { type: 'contact'; contactId: string }
+  | { type: 'member'; userId: string };
 
 export type SpeakerMappings = Record<string, SpeakerBinding>;
 
 export type SpeakerLookupClient = { id: string; name: string };
 export type SpeakerLookupContact = { id: string; name: string };
+export type SpeakerLookupMember = { userId: string; name: string };
 
 const SPEAKER_LINE_RE = /^([^:]+):\s*(.*)$/;
 
@@ -169,6 +171,10 @@ function isSpeakerBinding(value: unknown): value is SpeakerBinding {
     const contactId = (value as { contactId?: unknown }).contactId;
     return typeof contactId === 'string' && contactId.length > 0;
   }
+  if (type === 'member') {
+    const userId = (value as { userId?: unknown }).userId;
+    return typeof userId === 'string' && userId.length > 0;
+  }
   return false;
 }
 
@@ -189,7 +195,11 @@ export function normalizeSpeakerMappings(value: unknown): SpeakerMappings {
       mappings[trimmedKey] = { type: 'client', clientId: binding.clientId };
       continue;
     }
-    mappings[trimmedKey] = { type: 'contact', contactId: binding.contactId };
+    if (binding.type === 'contact') {
+      mappings[trimmedKey] = { type: 'contact', contactId: binding.contactId };
+      continue;
+    }
+    mappings[trimmedKey] = { type: 'member', userId: binding.userId };
   }
 
   return mappings;
@@ -200,6 +210,7 @@ export function resolveSpeakerLabel(
   mappings: SpeakerMappings,
   clients: SpeakerLookupClient[],
   contacts: SpeakerLookupContact[],
+  members: SpeakerLookupMember[] = [],
 ): string {
   const binding = mappings[speakerKey];
   if (!binding) return speakerKey;
@@ -213,8 +224,13 @@ export function resolveSpeakerLabel(
     return client?.name ?? speakerKey;
   }
 
-  const contact = contacts.find((row) => row.id === binding.contactId);
-  return contact?.name ?? speakerKey;
+  if (binding.type === 'contact') {
+    const contact = contacts.find((row) => row.id === binding.contactId);
+    return contact?.name ?? speakerKey;
+  }
+
+  const member = members.find((row) => row.userId === binding.userId);
+  return member?.name ?? speakerKey;
 }
 
 export function segmentsWithResolvedSpeakers(
@@ -222,10 +238,17 @@ export function segmentsWithResolvedSpeakers(
   mappings: SpeakerMappings,
   clients: SpeakerLookupClient[],
   contacts: SpeakerLookupContact[],
+  members: SpeakerLookupMember[] = [],
 ): TranscriptSegment[] {
   return segments.map((segment) => ({
     ...segment,
-    speaker: resolveSpeakerLabel(segment.speaker, mappings, clients, contacts),
+    speaker: resolveSpeakerLabel(
+      segment.speaker,
+      mappings,
+      clients,
+      contacts,
+      members,
+    ),
   }));
 }
 
@@ -234,8 +257,15 @@ export function serializeResolvedTranscriptSegments(
   mappings: SpeakerMappings,
   clients: SpeakerLookupClient[],
   contacts: SpeakerLookupContact[],
+  members: SpeakerLookupMember[] = [],
 ): string {
   return serializeTranscriptSegments(
-    segmentsWithResolvedSpeakers(segments, mappings, clients, contacts),
+    segmentsWithResolvedSpeakers(
+      segments,
+      mappings,
+      clients,
+      contacts,
+      members,
+    ),
   );
 }

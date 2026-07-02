@@ -11,8 +11,10 @@ import {
   Copy,
   Loader2,
   Mic,
+  Pencil,
   Sparkles,
   Trash2,
+  X,
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
@@ -25,6 +27,7 @@ import {
 } from '@kit/ui/dialog';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import { Textarea } from '@kit/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -48,11 +51,12 @@ import {
 import {
   deleteMeetingTranscript,
   updateMeetingTranscript,
+  updateMeetingTranscriptContent,
 } from '../../meeting-transcripts/_lib/server/server-actions';
 import { meetingDisplayDate } from '../_lib/format-meeting-date';
 import { MeetingSpeakerLabelsEditor } from './meeting-speaker-labels-editor';
 import { MeetingTranscriptSegments } from './meeting-transcript-segments';
-import type { SpeakerPickerContact } from './speaker-label-picker';
+import type { SpeakerPickerMember } from './speaker-label-picker';
 
 type Transcript = {
   id: string;
@@ -85,12 +89,14 @@ type Props = {
   summary: MeetingSummary;
   clients: ClientOption[];
   contacts: ContactOption[];
+  members: SpeakerPickerMember[];
+  currentUserId: string;
   canEdit: boolean;
   assignmentOptions: TaskAssignmentOption[];
 };
 
 const panelClassName =
-  'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.24)]';
+  'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 shadow-sm';
 
 export function MeetingTranscriptDetailClient({
   accountId,
@@ -99,6 +105,8 @@ export function MeetingTranscriptDetailClient({
   summary,
   clients,
   contacts: initialContacts,
+  members,
+  currentUserId,
   canEdit,
   assignmentOptions,
 }: Props) {
@@ -111,12 +119,21 @@ export function MeetingTranscriptDetailClient({
   const [mappings, setMappings] = useState<SpeakerMappings>(
     transcript.speakerMappings,
   );
-  const [contacts, setContacts] = useState<SpeakerPickerContact[]>(
+  const [contacts, setContacts] = useState<ContactOption[]>(
     initialContacts,
   );
   const [copied, setCopied] = useState(false);
   const [extractOpen, setExtractOpen] = useState(false);
+  const [editingTranscript, setEditingTranscript] = useState(false);
+  const [draftSegments, setDraftSegments] = useState<TranscriptSegment[]>(
+    transcript.speakerSegments,
+  );
+  const [draftContent, setDraftContent] = useState(transcript.content);
   const [pending, startTransition] = useTransition();
+  const memberLookup = members.map((member) => ({
+    userId: member.userId,
+    name: member.name,
+  }));
 
   useEffect(() => {
     setMappings(transcript.speakerMappings);
@@ -125,6 +142,12 @@ export function MeetingTranscriptDetailClient({
   useEffect(() => {
     setContacts(initialContacts);
   }, [initialContacts]);
+
+  useEffect(() => {
+    setDraftSegments(transcript.speakerSegments);
+    setDraftContent(transcript.content);
+    setEditingTranscript(false);
+  }, [transcript.id, transcript.speakerSegments, transcript.content]);
 
   const meetingsPath = pathsConfig.app.accountMeetings.replace(
     '[account]',
@@ -146,12 +169,15 @@ export function MeetingTranscriptDetailClient({
   const displayContent =
     transcript.speakerSegments.length > 0
       ? serializeResolvedTranscriptSegments(
-          transcript.speakerSegments,
+          editingTranscript ? draftSegments : transcript.speakerSegments,
           mappings,
           clients,
           contacts,
+          memberLookup,
         )
-      : transcript.content;
+      : editingTranscript
+        ? draftContent
+        : transcript.content;
 
   const saveMeta = () => {
     if (!canEdit) return;
@@ -232,6 +258,47 @@ export function MeetingTranscriptDetailClient({
     }
   };
 
+  const startEditingTranscript = () => {
+    setDraftSegments(transcript.speakerSegments);
+    setDraftContent(transcript.content);
+    setEditingTranscript(true);
+  };
+
+  const cancelEditingTranscript = () => {
+    setDraftSegments(transcript.speakerSegments);
+    setDraftContent(transcript.content);
+    setEditingTranscript(false);
+  };
+
+  const saveTranscript = () => {
+    if (!canEdit) return;
+
+    startTransition(async () => {
+      try {
+        if (transcript.speakerSegments.length > 0) {
+          await updateMeetingTranscriptContent({
+            accountId,
+            accountSlug,
+            transcriptId: transcript.id,
+            speakerSegments: draftSegments,
+          });
+        } else {
+          await updateMeetingTranscriptContent({
+            accountId,
+            accountSlug,
+            transcriptId: transcript.id,
+            content: draftContent,
+          });
+        }
+        toast.success('Transcript updated');
+        setEditingTranscript(false);
+        router.refresh();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Update failed');
+      }
+    });
+  };
+
   return (
     <div
       className={cn(
@@ -277,20 +344,63 @@ export function MeetingTranscriptDetailClient({
               <Mic className="h-4 w-4 text-[var(--ozer-accent)]" />
               <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Transcript</h2>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
-              onClick={() => void copyTranscript()}
-            >
-              {copied ? (
-                <Check className="mr-2 h-4 w-4 text-emerald-400" />
-              ) : (
-                <Copy className="mr-2 h-4 w-4" />
-              )}
-              {copied ? 'Copied' : 'Copy transcript'}
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              {canEdit && !editingTranscript ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                  onClick={startEditingTranscript}
+                >
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit transcript
+                </Button>
+              ) : null}
+              {canEdit && editingTranscript ? (
+                <>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={pending}
+                    className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
+                    onClick={saveTranscript}
+                  >
+                    {pending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Check className="mr-2 h-4 w-4" />
+                    )}
+                    Save
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={pending}
+                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                    onClick={cancelEditingTranscript}
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Cancel
+                  </Button>
+                </>
+              ) : null}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                onClick={() => void copyTranscript()}
+              >
+                {copied ? (
+                  <Check className="mr-2 h-4 w-4 text-emerald-400" />
+                ) : (
+                  <Copy className="mr-2 h-4 w-4" />
+                )}
+                {copied ? 'Copied' : 'Copy transcript'}
+              </Button>
+            </div>
           </div>
           <div className="max-h-[min(70vh,720px)] overflow-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4 text-sm leading-relaxed text-[var(--workspace-shell-text)]">
             {transcript.speakerSegments.length > 0 ? (
@@ -302,11 +412,22 @@ export function MeetingTranscriptDetailClient({
                 mappings={mappings}
                 clients={clients}
                 contacts={contacts}
+                members={members}
+                currentUserId={currentUserId}
                 linkClientId={clientId || transcript.clientId}
                 canEdit={canEdit}
+                editing={editingTranscript}
+                draftSegments={draftSegments}
+                onDraftChange={setDraftSegments}
                 onSaved={() => router.refresh()}
                 onMappingsChange={setMappings}
                 onContactsChange={setContacts}
+              />
+            ) : editingTranscript ? (
+              <Textarea
+                value={draftContent}
+                onChange={(event) => setDraftContent(event.target.value)}
+                className="min-h-[min(60vh,640px)] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] font-mono text-sm text-[var(--workspace-shell-text)]"
               />
             ) : (
               <pre className="whitespace-pre-wrap">{displayContent}</pre>
@@ -362,7 +483,7 @@ export function MeetingTranscriptDetailClient({
                       >
                         <SelectValue placeholder="Select client" />
                       </SelectTrigger>
-                      <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
+                      <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
                         {clients.map((client) => (
                           <SelectItem key={client.id} value={client.id}>
                             {client.name}
@@ -459,6 +580,8 @@ export function MeetingTranscriptDetailClient({
             initialMappings={mappings}
             clients={clients}
             contacts={contacts}
+            members={members}
+            currentUserId={currentUserId}
             linkClientId={clientId || transcript.clientId}
             canEdit={canEdit}
             onSaved={() => router.refresh()}
@@ -469,7 +592,7 @@ export function MeetingTranscriptDetailClient({
       </div>
 
       <Dialog open={extractOpen} onOpenChange={setExtractOpen}>
-        <DialogContent className="max-h-[min(90vh,900px)] max-w-4xl gap-0 overflow-hidden border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text)]">
+        <DialogContent className="max-h-[min(90vh,900px)] max-w-6xl gap-0 overflow-hidden border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text)]">
           <DialogHeader className="border-b border-[color:var(--workspace-shell-border)] px-6 py-4">
             <DialogTitle>Extract tasks</DialogTitle>
             <DialogDescription className="text-[var(--workspace-shell-text-muted)]">

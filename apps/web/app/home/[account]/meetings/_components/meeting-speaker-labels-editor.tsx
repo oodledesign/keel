@@ -20,6 +20,7 @@ import {
   SpeakerLabelPicker,
   type SpeakerPickerClient,
   type SpeakerPickerContact,
+  type SpeakerPickerMember,
 } from './speaker-label-picker';
 
 type Props = {
@@ -30,6 +31,8 @@ type Props = {
   initialMappings: SpeakerMappings;
   clients: SpeakerPickerClient[];
   contacts: SpeakerPickerContact[];
+  members?: SpeakerPickerMember[];
+  currentUserId?: string | null;
   linkClientId?: string | null;
   canEdit: boolean;
   onSaved: () => void;
@@ -45,6 +48,8 @@ export function MeetingSpeakerLabelsEditor({
   initialMappings,
   clients,
   contacts: initialContacts,
+  members = [],
+  currentUserId,
   linkClientId,
   canEdit,
   onSaved,
@@ -116,14 +121,14 @@ export function MeetingSpeakerLabelsEditor({
   };
 
   return (
-    <section className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+    <section className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 shadow-sm">
       <div className="mb-4 flex items-center gap-2">
         <Users className="h-4 w-4 text-[var(--ozer-accent)]" />
         <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Speaker labels</h2>
       </div>
       <p className="mb-4 text-sm text-[var(--workspace-shell-text-muted)]">
-        Assign speakers to clients, contacts, or a custom name. Linked records update
-        automatically when their name changes.
+        Assign speakers to team members, clients, contacts, or a custom name.
+        Linked records update automatically when their name changes.
       </p>
 
       <div className="space-y-4">
@@ -136,6 +141,8 @@ export function MeetingSpeakerLabelsEditor({
               onBindingChange={(binding) => updateMapping(speakerKey, binding)}
               clients={clients}
               contacts={contacts}
+              members={members}
+              currentUserId={currentUserId}
               linkClientId={linkClientId}
               onContactCreated={handleContactCreated}
               disabled={!canEdit || pending}

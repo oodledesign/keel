@@ -97,6 +97,7 @@ describe('resolveTranscriptSegments', () => {
 describe('speaker mappings', () => {
   const clients = [{ id: 'c1', name: 'Acme Corp' }];
   const contacts = [{ id: 'p1', name: 'Jane Doe' }];
+  const members = [{ userId: 'u1', name: 'Dan Potter' }];
 
   it('normalizes valid bindings and ignores invalid entries', () => {
     expect(
@@ -104,34 +105,40 @@ describe('speaker mappings', () => {
         'Speaker 1': { type: 'custom', name: ' Alex ' },
         'Speaker 2': { type: 'client', clientId: 'c1' },
         'Speaker 3': { type: 'contact', contactId: 'p1' },
-        'Speaker 4': { type: 'custom', name: '   ' },
+        'Speaker 4': { type: 'member', userId: 'u1' },
+        'Speaker 5': { type: 'custom', name: '   ' },
         bad: null,
       }),
     ).toEqual({
       'Speaker 1': { type: 'custom', name: 'Alex' },
       'Speaker 2': { type: 'client', clientId: 'c1' },
       'Speaker 3': { type: 'contact', contactId: 'p1' },
+      'Speaker 4': { type: 'member', userId: 'u1' },
     });
   });
 
-  it('resolves labels from clients, contacts, and custom names', () => {
+  it('resolves labels from clients, contacts, members, and custom names', () => {
     const mappings = {
       'Speaker 1': { type: 'client' as const, clientId: 'c1' },
       'Speaker 2': { type: 'contact' as const, contactId: 'p1' },
       'Speaker 3': { type: 'custom' as const, name: 'Guest' },
+      'Speaker 4': { type: 'member' as const, userId: 'u1' },
     };
 
-    expect(resolveSpeakerLabel('Speaker 1', mappings, clients, contacts)).toBe(
+    expect(resolveSpeakerLabel('Speaker 1', mappings, clients, contacts, members)).toBe(
       'Acme Corp',
     );
-    expect(resolveSpeakerLabel('Speaker 2', mappings, clients, contacts)).toBe(
+    expect(resolveSpeakerLabel('Speaker 2', mappings, clients, contacts, members)).toBe(
       'Jane Doe',
     );
-    expect(resolveSpeakerLabel('Speaker 3', mappings, clients, contacts)).toBe(
+    expect(resolveSpeakerLabel('Speaker 3', mappings, clients, contacts, members)).toBe(
       'Guest',
     );
-    expect(resolveSpeakerLabel('Speaker 4', mappings, clients, contacts)).toBe(
-      'Speaker 4',
+    expect(resolveSpeakerLabel('Speaker 4', mappings, clients, contacts, members)).toBe(
+      'Dan Potter',
+    );
+    expect(resolveSpeakerLabel('Speaker 5', mappings, clients, contacts, members)).toBe(
+      'Speaker 5',
     );
   });
 
@@ -139,14 +146,16 @@ describe('speaker mappings', () => {
     const segments = [
       { speaker: 'Speaker 1', text: 'Hello' },
       { speaker: 'Speaker 2', text: 'Hi there' },
+      { speaker: 'Me', text: 'Sounds good' },
     ];
     const mappings = {
       'Speaker 1': { type: 'client' as const, clientId: 'c1' },
       'Speaker 2': { type: 'custom' as const, name: 'Bob' },
+      Me: { type: 'member' as const, userId: 'u1' },
     };
 
     expect(
-      serializeResolvedTranscriptSegments(segments, mappings, clients, contacts),
-    ).toBe('Acme Corp: Hello\n\nBob: Hi there');
+      serializeResolvedTranscriptSegments(segments, mappings, clients, contacts, members),
+    ).toBe('Acme Corp: Hello\n\nBob: Hi there\n\nDan Potter: Sounds good');
   });
 });

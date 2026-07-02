@@ -27,6 +27,12 @@ export type MeetingContactOption = {
   pictureUrl?: string | null;
 };
 
+export type MeetingMemberOption = {
+  userId: string;
+  name: string;
+  email: string;
+};
+
 export type MeetingTranscriptListRow = {
   id: string;
   title: string;
@@ -63,6 +69,34 @@ function mapClientOptions(
         'Unnamed client',
       pictureUrl: row.picture_url ?? null,
     }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function mapMemberOptions(
+  rows: unknown[],
+): MeetingMemberOption[] {
+  return rows
+    .map((row) => {
+      const member = row as {
+        user_id?: string;
+        name?: string | null;
+        email?: string | null;
+      };
+
+      const userId = member.user_id?.trim();
+      const email = member.email?.trim();
+
+      if (!userId || !email) {
+        return null;
+      }
+
+      return {
+        userId,
+        name: member.name?.trim() || email,
+        email,
+      };
+    })
+    .filter((member): member is MeetingMemberOption => member !== null)
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -174,7 +208,8 @@ async function loadMeetingTranscriptPageDataImpl(
   const transcriptsService = createMeetingTranscriptsService(client);
   const clientsService = createClientsService(client);
 
-  const [transcript, clientsResult, contactsResult, summary] = await Promise.all([
+  const [transcript, clientsResult, contactsResult, membersResult, summary] =
+    await Promise.all([
     transcriptsService.getById({
       accountId,
       transcriptId,
@@ -185,8 +220,13 @@ async function loadMeetingTranscriptPageDataImpl(
       pageSize: 100,
     }),
     clientsService.listWorkspaceContacts({ accountId }),
+    client.rpc('get_account_members', { account_slug: accountSlug }),
     loadMeetingSummary(client, { meetingTranscriptId: transcriptId, accountId }),
   ]);
+
+  if (membersResult.error) {
+    throw new Error(membersResult.error.message);
+  }
 
   return {
     accountId,
@@ -195,6 +235,8 @@ async function loadMeetingTranscriptPageDataImpl(
     summary,
     clients: mapClientOptions(clientsResult.data ?? []),
     contacts: mapContactOptions(contactsResult.data ?? []),
+    members: mapMemberOptions(membersResult.data ?? []),
+    currentUserId: workspace.user.id,
     canEdit: access.canEditClients,
     canView: access.canViewClients,
   };

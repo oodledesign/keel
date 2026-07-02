@@ -277,7 +277,7 @@ export function EditTaskDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-xl">
+        <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Edit task</DialogTitle>
             <DialogDescription className="text-[var(--workspace-shell-text-muted)]">

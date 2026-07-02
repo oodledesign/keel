@@ -549,6 +549,81 @@ class MeetingTranscriptsService {
     return updated;
   }
 
+  async updateContent(input: {
+    accountId: string;
+    transcriptId: string;
+    speakerSegments?: TranscriptSegment[];
+    content?: string;
+  }): Promise<MeetingTranscriptListItem> {
+    await this.ensureUserAndPermission(input.accountId, 'clients.edit');
+
+    const existing = await this.getById({
+      accountId: input.accountId,
+      transcriptId: input.transcriptId,
+    });
+    if (!existing) throw new Error('Transcript not found');
+
+    const payload: Record<string, unknown> = {};
+
+    if (input.speakerSegments !== undefined) {
+      const segments = input.speakerSegments
+        .map((segment) => ({
+          speaker: segment.speaker.trim(),
+          text: segment.text,
+        }))
+        .filter((segment) => segment.speaker.length > 0);
+
+      if (segments.length === 0) {
+        throw new Error('Transcript cannot be empty');
+      }
+
+      const { clients, contacts, members } = await this.loadSpeakerResolutionData(
+        input.accountId,
+        existing.speakerMappings,
+      );
+
+      payload.speaker_segments = segments;
+      payload.content = serializeResolvedTranscriptSegments(
+        segments,
+        existing.speakerMappings,
+        clients,
+        contacts,
+        members,
+      );
+    } else if (input.content !== undefined) {
+      const content = input.content.trim();
+      if (!content) {
+        throw new Error('Transcript cannot be empty');
+      }
+
+      const parsed = parseTranscriptContent(content);
+      payload.content = content;
+      payload.speaker_segments = parsed.hasSpeakerLabels ? parsed.segments : null;
+      if (!parsed.hasSpeakerLabels) {
+        payload.speaker_mappings = {};
+      }
+    } else {
+      return existing;
+    }
+
+    const { error } = await this.db
+      .from('meeting_transcripts')
+      .update(payload)
+      .eq('id', input.transcriptId)
+      .eq('account_id', input.accountId);
+
+    if (error) throw new Error(error.message);
+
+    queueBrainIndexSource(input.accountId, 'transcript', input.transcriptId);
+
+    const updated = await this.getById({
+      accountId: input.accountId,
+      transcriptId: input.transcriptId,
+    });
+    if (!updated) throw new Error('Transcript not found');
+    return updated;
+  }
+
   async updateSpeakerMappings(input: {
     accountId: string;
     transcriptId: string;
@@ -568,7 +643,7 @@ class MeetingTranscriptsService {
     }
 
     const mappings = normalizeSpeakerMappings(input.mappings);
-    const { clients, contacts } = await this.loadSpeakerResolutionData(
+    const { clients, contacts, members } = await this.loadSpeakerResolutionData(
       input.accountId,
       mappings,
     );
@@ -578,6 +653,7 @@ class MeetingTranscriptsService {
       mappings,
       clients,
       contacts,
+      members,
     );
 
     const { error } = await this.db
@@ -618,6 +694,13 @@ class MeetingTranscriptsService {
         Object.values(mappings)
           .filter((binding): binding is Extract<SpeakerBinding, { type: 'contact' }> => binding.type === 'contact')
           .map((binding) => binding.contactId),
+      ),
+    ];
+    const memberUserIds = [
+      ...new Set(
+        Object.values(mappings)
+          .filter((binding): binding is Extract<SpeakerBinding, { type: 'member' }> => binding.type === 'member')
+          .map((binding) => binding.userId),
       ),
     ];
 
@@ -661,7 +744,45 @@ class MeetingTranscriptsService {
       }
     }
 
-    return { clients, contacts };
+    const members: Array<{ userId: string; name: string }> = [];
+    if (memberUserIds.length > 0) {
+      const { data, error } = await this.db
+        .from('accounts_memberships')
+        .select('user_id')
+        .eq('account_id', accountId)
+        .in('user_id', memberUserIds);
+
+      if (error) throw new Error(error.message);
+
+      const resolvedUserIds = (data ?? [])
+        .map((row) => (row as { user_id?: string }).user_id)
+        .filter((userId): userId is string => Boolean(userId));
+
+      if (resolvedUserIds.length > 0) {
+        const { data: personalAccounts, error: accountsError } = await this.db
+          .from('accounts')
+          .select('id, name, email')
+          .in('id', resolvedUserIds);
+
+        if (accountsError) throw new Error(accountsError.message);
+
+        for (const userId of resolvedUserIds) {
+          const account = (personalAccounts ?? []).find(
+            (row) => (row as { id?: string }).id === userId,
+          ) as { id?: string; name?: string | null; email?: string | null } | undefined;
+
+          members.push({
+            userId,
+            name:
+              account?.name?.trim() ||
+              account?.email?.trim() ||
+              'Team member',
+          });
+        }
+      }
+    }
+
+    return { clients, contacts, members };
   }
 
   async delete(input: {

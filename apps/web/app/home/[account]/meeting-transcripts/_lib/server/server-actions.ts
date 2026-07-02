@@ -60,6 +60,10 @@ const SpeakerBindingSchema = z.discriminatedUnion('type', [
     type: z.literal('contact'),
     contactId: z.string().uuid(),
   }),
+  z.object({
+    type: z.literal('member'),
+    userId: z.string().uuid(),
+  }),
 ]);
 
 const UpdateSpeakerMappingsSchema = z.object({
@@ -73,6 +77,19 @@ const DeleteSchema = z.object({
   accountId: z.string().uuid(),
   accountSlug: z.string().min(1).max(200).optional(),
   transcriptId: z.string().uuid(),
+});
+
+const TranscriptSegmentSchema = z.object({
+  speaker: z.string().min(1),
+  text: z.string(),
+});
+
+const UpdateContentSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1).max(200).optional(),
+  transcriptId: z.string().uuid(),
+  content: z.string().min(1).optional(),
+  speakerSegments: z.array(TranscriptSegmentSchema).min(1).optional(),
 });
 
 const GetSchema = z.object({
@@ -187,6 +204,24 @@ export const updateMeetingTranscriptSpeakerMappings = enhanceAction(
     return row;
   },
   { schema: UpdateSpeakerMappingsSchema },
+);
+
+export const updateMeetingTranscriptContent = enhanceAction(
+  async (input) => {
+    const row = await getService().updateContent({
+      accountId: input.accountId,
+      transcriptId: input.transcriptId,
+      content: input.content,
+      speakerSegments: input.speakerSegments,
+    });
+
+    if (input.accountSlug) {
+      revalidateMeetingPages(input.accountSlug, input.transcriptId);
+    }
+
+    return row;
+  },
+  { schema: UpdateContentSchema },
 );
 
 export const deleteMeetingTranscript = enhanceAction(

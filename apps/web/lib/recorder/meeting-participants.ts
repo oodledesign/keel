@@ -17,12 +17,13 @@ export type MeetingParticipant = {
   key: string;
   name: string;
   pictureUrl: string | null;
-  type: 'client' | 'contact' | 'custom';
+  type: 'client' | 'contact' | 'custom' | 'member';
 };
 
 function participantKey(binding: SpeakerMappings[string]): string {
   if (binding.type === 'client') return `client:${binding.clientId}`;
   if (binding.type === 'contact') return `contact:${binding.contactId}`;
+  if (binding.type === 'member') return `member:${binding.userId}`;
   return `custom:${binding.name.trim().toLowerCase()}`;
 }
 
@@ -30,6 +31,7 @@ export function resolveMeetingParticipants(
   mappings: SpeakerMappings,
   clients: MeetingParticipantLookupClient[],
   contacts: MeetingParticipantLookupContact[],
+  members: Array<{ userId: string; name: string; pictureUrl?: string | null }> = [],
 ): MeetingParticipant[] {
   const byKey = new Map<string, MeetingParticipant>();
 
@@ -59,6 +61,17 @@ export function resolveMeetingParticipants(
       continue;
     }
 
+    if (binding.type === 'member') {
+      const member = members.find((row) => row.userId === binding.userId);
+      byKey.set(key, {
+        key,
+        name: member?.name ?? 'Team member',
+        pictureUrl: member?.pictureUrl ?? null,
+        type: 'member',
+      });
+      continue;
+    }
+
     byKey.set(key, {
       key,
       name: binding.name.trim(),
@@ -82,6 +95,7 @@ export function resolvedSpeakerNames(
   mappings: SpeakerMappings,
   clients: MeetingParticipantLookupClient[],
   contacts: MeetingParticipantLookupContact[],
+  members: Array<{ userId: string; name: string }> = [],
 ) {
   return speakerKeys.map((key) =>
     resolveSpeakerLabel(
@@ -89,6 +103,7 @@ export function resolvedSpeakerNames(
       mappings,
       clients.map((row) => ({ id: row.id, name: row.name })),
       contacts.map((row) => ({ id: row.id, name: row.name })),
+      members,
     ),
   );
 }
