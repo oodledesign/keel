@@ -116,21 +116,40 @@ const STATUS_LABEL: Record<TaskStatus, string> = STATUS_COLUMNS.reduce(
 
 /** List row: expand · done · title · due (icon + label) · client (avatar + name) · priority */
 function taskListRowGridClass() {
-  return 'grid grid-cols-[1.25rem_1.5rem_minmax(0,1fr)_minmax(5.5rem,7.5rem)_minmax(6rem,10rem)_1.75rem] items-center gap-x-3 px-3 py-2.5 sm:px-4';
+  return cn(
+    'grid items-center gap-x-2 px-2 py-2.5 sm:gap-x-3 sm:px-4',
+    // Mobile: expand · checkbox · title · date + client · priority
+    'grid-cols-[1.25rem_1.5rem_minmax(0,1fr)_auto_1.25rem]',
+    // Desktop: separate due date and client columns
+    'sm:grid-cols-[1.25rem_1.5rem_minmax(0,1fr)_minmax(5.5rem,7.5rem)_minmax(6rem,10rem)_1.75rem]',
+  );
 }
 
 function ClientCell({
   name,
   color,
+  compact = false,
 }: {
   name: string | null;
   color?: string | null;
+  compact?: boolean;
 }) {
   if (!name?.trim()) {
-    return <span className="inline-block min-h-6 shrink-0" aria-hidden />;
+    return compact ? null : <span className="inline-block min-h-6 shrink-0" aria-hidden />;
   }
 
   const initial = (name.trim()[0] ?? '?').toUpperCase();
+
+  if (compact) {
+    return (
+      <span
+        className="max-w-[5.5rem] truncate text-[10px] leading-tight text-[var(--workspace-shell-text-muted)]"
+        title={name}
+      >
+        {name}
+      </span>
+    );
+  }
 
   return (
     <span className="flex min-w-0 items-center gap-1.5" title={name}>
@@ -147,36 +166,72 @@ function ClientCell({
   );
 }
 
-function DueDateCell({
+function TaskRowMetaColumn({
   dueDateLabel,
   overdue,
   calendarScheduleStatus,
+  clientName,
+  clientColor,
 }: {
   dueDateLabel: string;
   overdue: boolean;
   calendarScheduleStatus?: 'scheduled' | 'failed' | null;
+  clientName: string | null;
+  clientColor?: string | null;
+}) {
+  return (
+    <div className="flex min-w-0 flex-col items-end gap-0.5 text-right">
+      <DueDateCell
+        dueDateLabel={dueDateLabel}
+        overdue={overdue}
+        calendarScheduleStatus={calendarScheduleStatus}
+        align="end"
+      />
+      <ClientCell name={clientName} color={clientColor} compact />
+    </div>
+  );
+}
+
+function DueDateCell({
+  dueDateLabel,
+  overdue,
+  calendarScheduleStatus,
+  align = 'start',
+}: {
+  dueDateLabel: string;
+  overdue: boolean;
+  calendarScheduleStatus?: 'scheduled' | 'failed' | null;
+  align?: 'start' | 'end';
 }) {
   if (!dueDateLabel && !calendarScheduleStatus) {
     return <span className="inline-block min-h-4 shrink-0" aria-hidden />;
   }
 
   return (
-    <span className="flex min-w-0 flex-col gap-1">
+    <span
+      className={cn(
+        'flex min-w-0 flex-col gap-1',
+        align === 'end' && 'items-end',
+      )}
+    >
       {dueDateLabel ? (
         <span
-          className="flex min-w-0 items-center gap-1.5"
+          className={cn(
+            'flex min-w-0 items-center gap-1',
+            align === 'end' && 'justify-end',
+          )}
           title={overdue ? `Overdue · ${dueDateLabel}` : dueDateLabel}
         >
           <CalendarDays
             className={cn(
-              'h-4 w-4 shrink-0',
+              'h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4',
               overdue ? 'text-rose-400' : 'text-[var(--workspace-shell-text-muted)]',
             )}
             aria-hidden
           />
           <span
             className={cn(
-              'truncate text-xs tabular-nums',
+              'truncate text-[11px] tabular-nums sm:text-xs',
               overdue ? 'font-medium text-rose-400' : 'text-[var(--workspace-shell-text-muted)]',
             )}
           >
@@ -476,7 +531,7 @@ const toolbarIconButtonClass =
   'relative h-10 w-10 shrink-0 rounded-xl border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text-muted)] hover:bg-white/8 hover:text-[var(--workspace-shell-text)]';
 
 const dropdownContentClass =
-  'border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]';
+  'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] shadow-lg';
 
 function TasksFilterMenu(props: {
   dueDateFilter: DueDateFilter;
@@ -1445,7 +1500,7 @@ function TaskRow({
             className="h-5 w-5 shrink-0 rounded-full border-[color:var(--workspace-shell-border)] shadow-none data-[state=checked]:border-[var(--ozer-accent)] data-[state=checked]:bg-[var(--ozer-accent-subtle)] data-[state=checked]:text-[var(--ozer-accent)]"
           />
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 pr-1">
           <InlineTaskTitle
             taskId={task.id}
             title={task.title}
@@ -1461,12 +1516,25 @@ function TaskRow({
             </span>
           ) : null}
         </div>
-        <DueDateCell
-          dueDateLabel={task.dueDateLabel}
-          overdue={overdue}
-          calendarScheduleStatus={task.calendarScheduleStatus}
-        />
-        <ClientCell name={task.clientName} color={clientColor} />
+        <div className="sm:hidden">
+          <TaskRowMetaColumn
+            dueDateLabel={task.dueDateLabel}
+            overdue={overdue}
+            calendarScheduleStatus={task.calendarScheduleStatus}
+            clientName={task.clientName}
+            clientColor={clientColor}
+          />
+        </div>
+        <div className="hidden sm:block">
+          <DueDateCell
+            dueDateLabel={task.dueDateLabel}
+            overdue={overdue}
+            calendarScheduleStatus={task.calendarScheduleStatus}
+          />
+        </div>
+        <div className="hidden sm:block">
+          <ClientCell name={task.clientName} color={clientColor} />
+        </div>
         <PriorityIndicator priority={task.priority} />
       </div>
 

@@ -45,8 +45,13 @@ function resolveStoredIconKey(
   row: StoredShortcut,
   normalizedHref: string,
 ): MobileNavIconKey {
+  const fromPath = resolveNavIconKey(normalizedHref);
+  if (fromPath !== 'workspace') {
+    return fromPath;
+  }
+
   const stored = coerceMobileNavIconKey(row.iconKey);
-  if (stored && stored !== 'workspace') {
+  if (stored) {
     return stored;
   }
 
@@ -57,7 +62,7 @@ function resolveStoredIconKey(
     }
   }
 
-  return resolveNavIconKey(normalizedHref);
+  return fromPath;
 }
 
 export function resolveStoredShortcuts(

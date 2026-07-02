@@ -28,12 +28,14 @@ export function resolveMobileBottomNavTabs(input: {
 
   for (const shortcut of input.shortcuts.slice(0, 3)) {
     const href = normalizeAppHref(shortcut.href);
+    const fromPath = resolveMobileNavIconKey(href, { homePath: input.homePath });
     tabs.push({
       path: href,
       label: shortcut.label,
       iconKey: resolveMobileNavIconKey(href, {
         homePath: input.homePath,
-        preferredKey: shortcut.iconKey,
+        preferredKey:
+          fromPath !== 'workspace' ? fromPath : shortcut.iconKey,
       }),
       avatarUrl: shortcut.avatarUrl,
       avatarColor: shortcut.avatarColor,

@@ -34,6 +34,7 @@ import { cn } from '@kit/ui/utils';
 
 import {
   coerceMobileNavIconKey,
+  resolveMobileNavIconKey,
   type MobileNavIconKey,
 } from '~/lib/mobile-nav/nav-icon-keys';
 
@@ -75,6 +76,8 @@ const ICON_BY_KEY: Record<MobileNavIconKey, LucideIcon> = {
 
 type MobileNavTabIconProps = {
   iconKey: MobileNavIconKey;
+  href?: string;
+  homePath?: string;
   avatarUrl?: string | null;
   avatarColor?: string;
   avatarFallback?: string;
@@ -83,12 +86,17 @@ type MobileNavTabIconProps = {
 
 export function MobileNavTabIcon({
   iconKey,
+  href,
+  homePath,
   avatarUrl,
   avatarColor,
   avatarFallback,
   className,
 }: MobileNavTabIconProps) {
-  const resolvedKey = coerceMobileNavIconKey(iconKey) ?? 'workspace';
+  const resolvedKey =
+    href != null
+      ? resolveMobileNavIconKey(href, { homePath, preferredKey: iconKey })
+      : coerceMobileNavIconKey(iconKey) ?? 'workspace';
 
   if (avatarUrl) {
     return (

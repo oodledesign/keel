@@ -1,5 +1,9 @@
 import type { WorkspaceAccountRow } from '~/home/_lib/server/workspace-scope';
 import { workspaceColorForSpaceType } from '~/home/(user)/_lib/workspace-accent';
+import {
+  navHrefPathname,
+  normalizeAppHref,
+} from '~/lib/dashboard-shortcuts/personal-home-url';
 
 import type { ResolvedShortcut } from './types';
 
@@ -19,6 +23,12 @@ function workspaceSlugFromHref(href: string): string | null {
   const segment = match[1]!.trim();
   if (!segment || PERSONAL_APP_SEGMENTS.has(segment)) return null;
   return segment;
+}
+
+function isWorkspaceHomeHref(href: string, slug: string): boolean {
+  const normalized = navHrefPathname(normalizeAppHref(href));
+  const homePath = `/app/${slug}`.replace(/\/$/, '') || '/';
+  return normalized === homePath;
 }
 
 function stripWorkspacePrefix(label: string, workspaceName: string): string {
@@ -52,6 +62,14 @@ export function enrichPersonalShortcutsWithWorkspaceAvatars(
 
     if (!workspace) {
       return shortcut;
+    }
+
+    if (!isWorkspaceHomeHref(shortcut.href, slug)) {
+      const workspaceName = workspace.name?.trim() || slug;
+      return {
+        ...shortcut,
+        label: stripWorkspacePrefix(shortcut.label, workspaceName),
+      };
     }
 
     const workspaceName = workspace.name?.trim() || slug;

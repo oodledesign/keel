@@ -34,7 +34,9 @@ function NavLink(props: {
       href={props.href}
       className={cn(
         'flex h-10 items-center rounded-md text-sm font-medium transition-colors',
-        props.collapsed ? 'justify-center px-0' : 'gap-2.5 px-3',
+        props.collapsed
+          ? 'justify-center px-0 max-lg:h-9 max-lg:w-9 lg:justify-center lg:px-0'
+          : 'gap-2.5 px-3',
         props.active
           ? 'keel-gradient-active'
           : 'text-muted-foreground hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
@@ -52,7 +54,7 @@ function NavLink(props: {
   return (
     <Tooltip delayDuration={0}>
       <TooltipTrigger asChild>{link}</TooltipTrigger>
-      <TooltipContent side="right" sideOffset={8}>
+      <TooltipContent side="right" sideOffset={8} className="max-lg:hidden">
         {props.label}
       </TooltipContent>
     </Tooltip>
@@ -97,12 +99,15 @@ export function RanklyProjectNav(props: {
       <TooltipProvider>
         <nav
           aria-label="Project sections"
-          className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-2"
+          className={cn(
+            'rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-2',
+            collapsed && 'max-lg:px-1.5 max-lg:py-2',
+          )}
         >
           <div
             className={cn(
               'mb-1 flex',
-              collapsed ? 'justify-center' : 'justify-end',
+              collapsed ? 'max-lg:mb-2 max-lg:justify-end lg:justify-center' : 'justify-end',
             )}
           >
             <Button
@@ -122,7 +127,13 @@ export function RanklyProjectNav(props: {
             </Button>
           </div>
 
-          <ul className="space-y-0.5">
+          <ul
+            className={cn(
+              collapsed
+                ? 'flex flex-wrap items-center justify-center gap-1 max-lg:flex-row lg:block lg:space-y-0.5'
+                : 'space-y-0.5',
+            )}
+          >
             {RANKLY_PROJECT_SECTIONS.map((section) => {
               const href = paths[section.pathKey];
               const active = isRanklySectionActive(section.id, pathname, href);
