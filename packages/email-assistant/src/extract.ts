@@ -38,6 +38,13 @@ Assignee rules (critical):
 - Never guess an assignee to avoid leaving tasks unassigned.
 - assignee_confidence is 0-1 for how confident you are in suggested_assignee_email (use null email → confidence ≤ 0.5).`;
 
+function formatExtractInstructionsBlock(instructions: string | null | undefined): string {
+  const trimmed = instructions?.trim();
+  if (!trimmed) return '';
+
+  return `\nUser instructions (follow these when deciding what to extract, how to group items, and how to word tasks):\n${trimmed.slice(0, 2000)}\n`;
+}
+
 function buildMemberList(context: ExtractContext): string {
   if (context.accountMembers.length === 0) {
     return 'Account members: (none linked — only surface tasks explicitly for the mailbox owner)';
@@ -70,7 +77,7 @@ export async function extract(
 
 Mailbox owner: ${ownerLabel}
 
-${buildMemberList(context)}
+${buildMemberList(context)}${formatExtractInstructionsBlock(context.instructions)}
 
 Email thread:
 ---

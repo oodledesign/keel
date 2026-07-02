@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { Label } from '@kit/ui/label';
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 import { toast } from '@kit/ui/sonner';
@@ -82,6 +83,7 @@ export function EmailThreadPanel({
   const [draftBody, setDraftBody] = useState('');
   const [acceptItem, setAcceptItem] = useState<EmailActionItemRow | null>(null);
   const [acceptOpen, setAcceptOpen] = useState(false);
+  const [extractInstructions, setExtractInstructions] = useState('');
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -156,7 +158,12 @@ export function EmailThreadPanel({
       try {
         await emailApiFetch<{ items: EmailActionItemRow[] }>(
           `/api/gmail/threads/${threadId}/extract`,
-          { method: 'POST' },
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              instructions: extractInstructions.trim() || undefined,
+            }),
+          },
         );
         toast.success('Suggested to-dos updated');
         refreshDetail();
@@ -329,6 +336,23 @@ export function EmailThreadPanel({
                 )}
                 {suggestedItems.length > 0 ? 'Refresh' : 'Extract'}
               </Button>
+            </div>
+
+            <div className="space-y-2">
+              <Label
+                htmlFor="email-extract-instructions"
+                className="text-xs text-[var(--workspace-shell-text-muted)]"
+              >
+                Extraction instructions{' '}
+                <span className="font-normal">(optional)</span>
+              </Label>
+              <Textarea
+                id="email-extract-instructions"
+                value={extractInstructions}
+                onChange={(e) => setExtractInstructions(e.target.value)}
+                placeholder="e.g. Put everything I need to email Tim into one task, with bullet points in the notes"
+                className="min-h-[68px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+              />
             </div>
 
             {suggestedItems.length === 0 ? (

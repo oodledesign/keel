@@ -20,11 +20,25 @@ type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
-export async function POST(_request: Request, context: RouteContext) {
+export async function POST(request: Request, context: RouteContext) {
   const auth = await requireEmailAssistantApiUser();
 
   if (!auth.ok) {
     return auth.response;
+  }
+
+  let instructions: string | undefined;
+  const contentType = request.headers.get('content-type') ?? '';
+  if (contentType.includes('application/json')) {
+    try {
+      const body = (await request.json()) as { instructions?: unknown };
+      if (typeof body.instructions === 'string') {
+        const trimmed = body.instructions.trim();
+        if (trimmed) instructions = trimmed.slice(0, 2000);
+      }
+    } catch {
+      // Empty body is fine for refresh without custom instructions.
+    }
   }
 
   const { id: threadId } = await context.params;
@@ -89,6 +103,7 @@ export async function POST(_request: Request, context: RouteContext) {
       mailboxOwnerEmail: owner.email,
       mailboxOwnerName: owner.displayName,
       accountMembers,
+      instructions,
     });
   } catch (error) {
     return jsonErr(

@@ -12,6 +12,7 @@ import {
   resolveDraftAssignment,
   type WorkspaceContextForExtract,
 } from '~/lib/ai/workspace-task-extract';
+import { MAX_EXTRACT_INSTRUCTIONS_LENGTH } from '~/lib/ai/extract-instructions';
 
 import { createTask, loadTaskAssignmentOptionsForWorkspace } from '~/home/(user)/_lib/actions/task-actions';
 import pathsConfig from '~/config/paths.config';
@@ -41,6 +42,8 @@ const extractSchema = z.object({
   rawText: z.string().min(20).max(120_000),
   /** When extracting from a meeting transcript, prefer this client for all tasks. */
   preferredClientId: z.string().uuid().optional(),
+  /** Optional guidance for how the AI should group or phrase extracted tasks. */
+  instructions: z.string().max(MAX_EXTRACT_INSTRUCTIONS_LENGTH).optional(),
 });
 
 export type ExtractedTaskReviewRow = {
@@ -106,6 +109,7 @@ export const extractWorkspaceTasksFromTranscript = enhanceAction(
     const drafts = await extractWorkspaceTasksWithAnthropic(
       input.rawText,
       context,
+      input.instructions,
     );
 
     const rows: ExtractedTaskReviewRow[] = drafts.map((d) => {

@@ -20,6 +20,8 @@ export type ExtractContext = {
   mailboxOwnerEmail: string;
   mailboxOwnerName: string | null;
   accountMembers: ExtractAccountMember[];
+  /** Optional guidance for how the AI should group or phrase extracted tasks. */
+  instructions?: string | null;
 };
 
 export type EmailThreadCategory = 'needs_reply' | 'no_reply';

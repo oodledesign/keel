@@ -96,6 +96,7 @@ export function ExtractWorkspaceTasksClient({
   successRedirectHref,
 }: Props) {
   const [rawText, setRawText] = useState(initialRawText);
+  const [instructions, setInstructions] = useState('');
   const [rows, setRows] = useState<ExtractedTaskReviewRow[] | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [committing, setCommitting] = useState(false);
@@ -126,6 +127,7 @@ export function ExtractWorkspaceTasksClient({
           accountId,
           rawText,
           preferredClientId: defaultClientId ?? undefined,
+          instructions: instructions.trim() || undefined,
         });
         setRows(
           fillMissingParentAssignments(
@@ -249,6 +251,24 @@ export function ExtractWorkspaceTasksClient({
               workspace.
             </p>
           )}
+          <div className="space-y-2">
+            <Label htmlFor="extract-instructions">
+              Extraction instructions{' '}
+              <span className="font-normal text-[var(--workspace-shell-text-muted)]">
+                (optional)
+              </span>
+            </Label>
+            <Textarea
+              id="extract-instructions"
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+              placeholder="e.g. Put everything I need to email Tim into one task, with bullet points in the notes"
+              className="min-h-[72px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+            />
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+              Tell the AI how to group or phrase tasks before you review the suggestions.
+            </p>
+          </div>
           <Button
             type="button"
             onClick={extract}

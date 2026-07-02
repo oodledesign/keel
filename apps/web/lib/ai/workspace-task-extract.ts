@@ -7,6 +7,8 @@ import {
   todayLocalYmd,
 } from '~/home/_lib/due-date-ymd';
 
+import { formatExtractInstructionsBlock } from './extract-instructions';
+
 const AnthropicSubtaskSchema = z.object({
   title: z.string(),
   notes: z.string().optional().nullable(),
@@ -81,6 +83,7 @@ function mapNameToId(
 export async function extractWorkspaceTasksWithAnthropic(
   rawText: string,
   context: WorkspaceContextForExtract,
+  instructions?: string | null,
 ): Promise<ExtractedWorkspaceTaskDraft[]> {
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
   if (!apiKey) {
@@ -134,7 +137,7 @@ Rules:
 - Calendar context: today is ${todayLocal} (local). For actionable due dates, use year ${currentYearStr} or a later year when the source implies a future deadline. If the text gives month/day (or "June 20", "20/6") without a year, assume the next occurrence on or after today — almost always ${currentYearStr} or ${nextYearStr}. Do not use 2023, 2024, or other past years unless the source explicitly names that year for a historical reference (then prefer null for due_date if it is not an actionable deadline).`;
 
   const userContent = `Today (for interpreting relative deadlines): ${todayLocal}
-${meetingClientLine}
+${meetingClientLine}${formatExtractInstructionsBlock(instructions)}
 Workspace projects (choose names that best match the text; we map to ids server-side):\n${projectLines || '(none)'}\n\nWorkspace clients:\n${clientLines || '(none)'}\n\n---\nSOURCE TEXT:\n${rawText}\n---\nRespond with JSON only.`;
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
