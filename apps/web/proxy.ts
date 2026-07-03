@@ -30,7 +30,6 @@ import {
 import {
   getMiddlewareAuthenticatedUser,
   getMiddlewareSessionUser,
-  validateMiddlewareSessionUser,
 } from '~/lib/server/middleware-auth';
 import { applyNoIndexResponseHeader } from '~/lib/seo/search-indexing';
 
@@ -39,7 +38,7 @@ const NEXT_ACTION_HEADER = 'next-action';
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|brand|images|locales|assets|api|sw.js|manifest.webmanifest|favicon.ico|robots.txt).*)',
+    '/((?!_next/static|_next/image|brand|images|locales|assets|api|sw.js|manifest.webmanifest|favicon.ico|favicon.svg|robots.txt).*)',
   ],
 };
 
@@ -326,16 +325,9 @@ async function getPatterns() {
           return;
         }
 
-        const { user: sessionUser, supabase } =
-          await getMiddlewareAuthenticatedUser(req, res);
+        const sessionUser = await getMiddlewareSessionUser(req, res);
 
         if (!sessionUser) {
-          return;
-        }
-
-        const user = await validateMiddlewareSessionUser(req, res, supabase);
-
-        if (!user) {
           return;
         }
 
@@ -353,7 +345,7 @@ async function getPatterns() {
             nextPath === '/'
           ) {
             try {
-              nextPath = await getUserDefaultLandingPath(client, user.id);
+              nextPath = await getUserDefaultLandingPath(client, sessionUser.id);
             } catch {
               nextPath = pathsConfig.app.home;
             }

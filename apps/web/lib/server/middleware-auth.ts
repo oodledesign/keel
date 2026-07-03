@@ -1,9 +1,12 @@
 import type { NextRequest, NextResponse } from 'next/server';
 
-import type { User } from '@supabase/supabase-js';
+import type { Session, User } from '@supabase/supabase-js';
 
 import { createMiddlewareClient } from '@kit/supabase/middleware-client';
+import { getSupabaseAuthCookieOptions } from '@kit/supabase/get-supabase-auth-cookie-options';
 import type { JWTUserData } from '@kit/supabase/types';
+
+const AUTH_COOKIE_RE = /^sb-[a-z0-9-]+-auth-token(\.\d+)?$/i;
 
 function isRefreshTokenError(error: unknown): boolean {
   if (!error || typeof error !== 'object') {
@@ -42,29 +45,56 @@ function setSuppressGetSessionWarning(
   supabase.auth.suppressGetSessionWarning = value;
 }
 
-async function readSession(request: NextRequest, response: NextResponse) {
-  const supabase = createMiddlewareClient(request, response);
+function hasSupabaseAuthCookies(request: NextRequest): boolean {
+  return request.cookies.getAll().some((cookie) => AUTH_COOKIE_RE.test(cookie.name));
+}
 
-  setSuppressGetSessionWarning(supabase, true);
+function readStoredSessionExpiry(request: NextRequest): number | null {
+  const chunks = request.cookies
+    .getAll()
+    .filter((cookie) => AUTH_COOKIE_RE.test(cookie.name))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  if (chunks.length === 0) {
+    return null;
+  }
+
+  const raw = chunks.map((chunk) => chunk.value).join('');
 
   try {
-    const { data, error } = await supabase.auth.getSession();
+    const decoded = raw.startsWith('base64-')
+      ? Buffer.from(raw.slice('base64-'.length), 'base64').toString('utf8')
+      : raw;
+    const session = JSON.parse(decoded) as { expires_at?: number };
+    return typeof session.expires_at === 'number' ? session.expires_at : null;
+  } catch {
+    return null;
+  }
+}
 
-    if (error && isRefreshTokenError(error)) {
-      await supabase.auth.signOut();
-      return { supabase, session: null };
+function clearSupabaseAuthCookies(request: NextRequest, response: NextResponse) {
+  const sharedOptions = getSupabaseAuthCookieOptions();
+  const domain = sharedOptions?.domain;
+
+  for (const cookie of request.cookies.getAll()) {
+    if (!AUTH_COOKIE_RE.test(cookie.name)) {
+      continue;
     }
 
-    return { supabase, session: data.session };
-  } catch (error) {
-    if (isRefreshTokenError(error)) {
-      await supabase.auth.signOut();
-      return { supabase, session: null };
-    }
+    response.cookies.set(cookie.name, '', {
+      path: '/',
+      maxAge: 0,
+      expires: new Date(0),
+    });
 
-    throw error;
-  } finally {
-    setSuppressGetSessionWarning(supabase, false);
+    if (domain) {
+      response.cookies.set(cookie.name, '', {
+        path: '/',
+        domain,
+        maxAge: 0,
+        expires: new Date(0),
+      });
+    }
   }
 }
 
@@ -73,24 +103,87 @@ export async function clearInvalidMiddlewareSession(
   response: NextResponse,
 ) {
   const supabase = createMiddlewareClient(request, response);
-  await supabase.auth.signOut();
+
+  try {
+    await supabase.auth.signOut();
+  } catch {
+    // Refresh token may already be invalid — still clear cookies below.
+  }
+
+  clearSupabaseAuthCookies(request, response);
+}
+
+async function readSession(
+  request: NextRequest,
+  response: NextResponse,
+  options?: { allowRefresh?: boolean },
+) {
+  const allowRefresh = options?.allowRefresh ?? true;
+  const supabase = createMiddlewareClient(request, response);
+
+  if (!hasSupabaseAuthCookies(request)) {
+    return { supabase, session: null as Session | null };
+  }
+
+  const storedExpiry = readStoredSessionExpiry(request);
+  const now = Math.floor(Date.now() / 1000);
+
+  if (!allowRefresh && (storedExpiry === null || storedExpiry <= now)) {
+    await clearInvalidMiddlewareSession(request, response);
+    return { supabase, session: null };
+  }
+
+  setSuppressGetSessionWarning(supabase, true);
+
+  try {
+    const { data, error } = await supabase.auth.getUser();
+
+    if (error || !data.user) {
+      if (error && isRefreshTokenError(error)) {
+        await clearInvalidMiddlewareSession(request, response);
+      }
+
+      return { supabase, session: null };
+    }
+
+    const { data: sessionData, error: sessionError } =
+      await supabase.auth.getSession();
+
+    if (sessionError && isRefreshTokenError(sessionError)) {
+      await clearInvalidMiddlewareSession(request, response);
+      return { supabase, session: null };
+    }
+
+    return { supabase, session: sessionData.session };
+  } catch (error) {
+    if (isRefreshTokenError(error)) {
+      await clearInvalidMiddlewareSession(request, response);
+      return { supabase, session: null };
+    }
+
+    return { supabase, session: null };
+  } finally {
+    setSuppressGetSessionWarning(supabase, false);
+  }
 }
 
 /**
- * Read auth from cookies only — no token refresh. Safe for /auth routes and
- * parallel requests (manifest, sw.js, sign-in page assets).
+ * Read auth from cookies without forcing a refresh on expired tokens.
+ * Safe for /auth routes and parallel asset requests.
  */
 export async function getMiddlewareSessionUser(
   request: NextRequest,
   response: NextResponse,
 ): Promise<JWTUserData | null> {
-  const { session } = await readSession(request, response);
+  const { session } = await readSession(request, response, {
+    allowRefresh: false,
+  });
   return session?.user ? mapSessionUser(session.user) : null;
 }
 
 /**
- * Validate session for protected routes. Refreshes only when the access token
- * is near expiry. Clears cookies when refresh tokens are invalid/reused.
+ * Validate session for protected routes. Refreshes when the access token
+ * is expired. Clears cookies when refresh tokens are invalid or reused.
  */
 export async function getMiddlewareAuthenticatedUser(
   request: NextRequest,
@@ -99,78 +192,27 @@ export async function getMiddlewareAuthenticatedUser(
   | { user: JWTUserData; supabase: ReturnType<typeof createMiddlewareClient> }
   | { user: null; supabase: ReturnType<typeof createMiddlewareClient> }
 > {
-  const { supabase, session } = await readSession(request, response);
+  const { supabase, session } = await readSession(request, response, {
+    allowRefresh: true,
+  });
 
   if (!session?.user) {
     return { user: null, supabase };
   }
 
-  const expiresAt = session.expires_at ?? 0;
-  const now = Math.floor(Date.now() / 1000);
-  const shouldValidateWithServer = expiresAt - now < 120;
-
-  if (!shouldValidateWithServer) {
-    return { user: mapSessionUser(session.user), supabase };
-  }
-
-  try {
-    const { data, error } = await supabase.auth.getUser();
-
-    if (error) {
-      if (isRefreshTokenError(error)) {
-        await clearInvalidMiddlewareSession(request, response);
-        return { user: null, supabase };
-      }
-
-      throw error;
-    }
-
-    if (!data.user) {
-      return { user: null, supabase };
-    }
-
-    return { user: mapSessionUser(data.user), supabase };
-  } catch (error) {
-    if (isRefreshTokenError(error)) {
-      await clearInvalidMiddlewareSession(request, response);
-      return { user: null, supabase };
-    }
-
-    console.warn('[middleware] Auth fetch failed (is Supabase running?):', error);
-    return { user: null, supabase };
-  }
+  return { user: mapSessionUser(session.user), supabase };
 }
 
 /**
- * Confirm the cookie session with Supabase Auth before redirecting away from
- * sign-in/sign-up. Clears cookies when refresh tokens are invalid.
+ * @deprecated Prefer getMiddlewareSessionUser on auth pages or
+ * getMiddlewareAuthenticatedUser on protected routes.
  */
 export async function validateMiddlewareSessionUser(
   request: NextRequest,
   response: NextResponse,
-  supabase: ReturnType<typeof createMiddlewareClient>,
+  _supabase: ReturnType<typeof createMiddlewareClient>,
 ): Promise<JWTUserData | null> {
-  try {
-    const { data, error } = await supabase.auth.getUser();
-
-    if (error) {
-      if (isRefreshTokenError(error)) {
-        await clearInvalidMiddlewareSession(request, response);
-      }
-
-      return null;
-    }
-
-    return data.user ? mapSessionUser(data.user) : null;
-  } catch (error) {
-    if (isRefreshTokenError(error)) {
-      await clearInvalidMiddlewareSession(request, response);
-      return null;
-    }
-
-    console.warn('[middleware] Auth validation failed:', error);
-    return null;
-  }
+  return getMiddlewareSessionUser(request, response);
 }
 
 export { isRefreshTokenError };
