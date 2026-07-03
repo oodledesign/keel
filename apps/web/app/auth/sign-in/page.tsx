@@ -54,7 +54,7 @@ async function SignInPage({ searchParams }: SignInPageProps) {
 
       <div className={'flex justify-center'}>
         <Button asChild variant={'link'} size={'sm'}>
-          <Link href={pathsConfig.auth.signUp} prefetch={true}>
+          <Link href={pathsConfig.auth.signUp} prefetch={false}>
             <Trans i18nKey={'auth:doNotHaveAccountYet'} />
           </Link>
         </Button>

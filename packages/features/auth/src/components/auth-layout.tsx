@@ -13,7 +13,7 @@ export function AuthLayoutShell({
   return (
     <div
       className={cn(
-        'bg-background lg:bg-muted/30 animate-in fade-in slide-in-from-top-16 zoom-in-95 flex h-screen flex-col items-center justify-center gap-y-10 duration-1000 lg:gap-y-8',
+        'bg-background lg:bg-muted/30 flex h-screen flex-col items-center justify-center gap-y-10 lg:gap-y-8',
         className,
       )}
     >

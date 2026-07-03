@@ -128,8 +128,11 @@ async function readSession(
   const storedExpiry = readStoredSessionExpiry(request);
   const now = Math.floor(Date.now() / 1000);
 
+  // On auth pages we skip refresh and treat expired tokens as logged out.
+  // Do not clear cookies here — Set-Cookie deletions cause a visible page
+  // re-fetch on /auth/sign-in. Invalid refresh tokens are cleared below
+  // when getUser() returns an explicit refresh error.
   if (!allowRefresh && (storedExpiry === null || storedExpiry <= now)) {
-    await clearInvalidMiddlewareSession(request, response);
     return { supabase, session: null };
   }
 

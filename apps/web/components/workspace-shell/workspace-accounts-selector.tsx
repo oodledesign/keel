@@ -17,6 +17,7 @@ import {
   CommandList,
   CommandSeparator,
 } from '@kit/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
 import { workspaceComboboxListClass } from '~/components/workspace-shell/workspace-combobox-styles';
 import { cn } from '@kit/ui/utils';
 import { SidebarContext } from '@kit/ui/shadcn-sidebar';
