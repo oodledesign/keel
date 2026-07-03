@@ -10,6 +10,8 @@ import { refreshGoogleCalendarToken } from './oauth';
 import type {
   GoogleCalendarConnection,
   PlannerCalendarEvent,
+  PlannerCalendarSyncBlock,
+  PlannerCalendarSyncMapping,
   RecorderCalendarEvent,
   ScheduledPlannerBlock,
 } from './types';
@@ -113,7 +115,10 @@ async function googleJson<T>(
   return (await res.json()) as T;
 }
 
-function mapGoogleEvent(event: GoogleEvent): PlannerCalendarEvent | null {
+function mapGoogleEvent(
+  event: GoogleEvent,
+  calendarId: string,
+): PlannerCalendarEvent | null {
   if (!isPlannerCalendarBlock(event)) return null;
 
   const start = event.start?.dateTime ?? event.start?.date;
@@ -126,12 +131,16 @@ function mapGoogleEvent(event: GoogleEvent): PlannerCalendarEvent | null {
     start,
     end,
     calendar: event.organizer?.displayName ?? event.organizer?.email ?? 'Google',
+    calendar_id: calendarId,
     is_all_day: Boolean(event.start?.date),
   };
 }
 
-function mapRecorderCalendarEvent(event: GoogleEvent): RecorderCalendarEvent | null {
-  const base = mapGoogleEvent(event);
+function mapRecorderCalendarEvent(
+  event: GoogleEvent,
+  calendarId: string,
+): RecorderCalendarEvent | null {
+  const base = mapGoogleEvent(event, calendarId);
   if (!base) return null;
 
   return {
@@ -229,7 +238,7 @@ async function listGoogleCalendarEventsInRange(
           connection,
           `/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
         );
-        return body.items ?? [];
+        return (body.items ?? []).map((item) => ({ item, calendarId }));
       } catch {
         return [];
       }
@@ -299,7 +308,7 @@ export async function getRecorderCalendarEvent(
   );
 
   const events = items
-    .map(mapRecorderCalendarEvent)
+    .map(({ item, calendarId }) => mapRecorderCalendarEvent(item, calendarId))
     .filter((event): event is RecorderCalendarEvent => Boolean(event))
     .sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
 
@@ -335,7 +344,7 @@ export async function findRecorderCalendarEventAt(
 
   const items = await listGoogleCalendarEventsInRange(connection, timeMin, timeMax);
   const events = items
-    .map(mapRecorderCalendarEvent)
+    .map(({ item, calendarId }) => mapRecorderCalendarEvent(item, calendarId))
     .filter((event): event is RecorderCalendarEvent => Boolean(event));
 
   return pickBestRecorderEventForInstant(events, instantMs);
@@ -407,6 +416,7 @@ function mockEvents(timeMin: string): PlannerCalendarEvent[] {
       start: first.toISOString(),
       end: firstEnd.toISOString(),
       calendar: 'Google Calendar',
+      calendar_id: 'mock-calendar',
       is_all_day: false,
     },
     {
@@ -415,6 +425,7 @@ function mockEvents(timeMin: string): PlannerCalendarEvent[] {
       start: second.toISOString(),
       end: secondEnd.toISOString(),
       calendar: 'Google Calendar',
+      calendar_id: 'mock-calendar',
       is_all_day: false,
     },
   ];
@@ -453,7 +464,7 @@ export async function listPlannerCalendarEvents(
     connected: true,
     configured: true,
     events: (body.items ?? [])
-      .map(mapGoogleEvent)
+      .map((item) => mapGoogleEvent(item, connection.calendarId))
       .filter((event): event is PlannerCalendarEvent => Boolean(event)),
   };
 }
@@ -657,7 +668,7 @@ export async function listBusyIntervalsForScheduling(
         );
 
         return (body.items ?? [])
-          .map(mapGoogleEvent)
+          .map((item) => mapGoogleEvent(item, calendarId))
           .filter((event): event is PlannerCalendarEvent => Boolean(event))
           .map((event) => ({ start: event.start, end: event.end }));
       } catch {
@@ -705,4 +716,122 @@ export async function createTaskCalendarEvent(
   }
 
   return created.id;
+}
+
+async function patchGoogleCalendarEvent(
+  connection: GoogleCalendarConnection,
+  input: {
+    calendarId: string;
+    eventId: string;
+    summary: string;
+    start: string;
+    end: string;
+  },
+) {
+  await googleJson(
+    connection,
+    `/calendars/${encodeURIComponent(input.calendarId)}/events/${encodeURIComponent(input.eventId)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({
+        summary: input.summary,
+        start: { dateTime: input.start },
+        end: { dateTime: input.end },
+      }),
+    },
+  );
+}
+
+export async function syncPlannerCalendarEvents(
+  client: SupabaseClient,
+  input: {
+    userId: string;
+    blocks: PlannerCalendarSyncBlock[];
+  },
+) {
+  const connection = await validConnection(client, input.userId);
+  if (!connection) {
+    throw new Error('Connect Google Calendar before syncing planner events');
+  }
+
+  const plannerCalendarId = await ensurePlannerCalendar(
+    client,
+    input.userId,
+    connection,
+  );
+  const readCalendarId = connection.calendarId;
+  const errors: string[] = [];
+  let created = 0;
+  let updated = 0;
+  const mappings: PlannerCalendarSyncMapping[] = [];
+
+  for (const block of input.blocks) {
+    if (block.isBreak) {
+      continue;
+    }
+
+    if (block.googleEventId) {
+      const calendarId = block.isCalendarEvent
+        ? block.googleCalendarId || readCalendarId
+        : block.googleCalendarId || plannerCalendarId;
+
+      try {
+        await patchGoogleCalendarEvent(connection, {
+          calendarId,
+          eventId: block.googleEventId,
+          summary: block.title,
+          start: block.start,
+          end: block.end,
+        });
+        updated += 1;
+        mappings.push({
+          blockId: block.blockId,
+          googleEventId: block.googleEventId,
+          googleCalendarId: calendarId,
+          pushedByPlanner: block.pushedByPlanner || !block.isCalendarEvent,
+        });
+      } catch (err) {
+        errors.push(
+          `${block.title}: ${err instanceof Error ? err.message : 'Could not update event'}`,
+        );
+      }
+      continue;
+    }
+
+    if (block.isCalendarEvent) {
+      continue;
+    }
+
+    try {
+      const createdEvent = await googleJson<{ id?: string }>(
+        connection,
+        `/calendars/${encodeURIComponent(plannerCalendarId)}/events`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            summary: block.title,
+            description: 'Scheduled by Ozer Planner',
+            start: { dateTime: block.start },
+            end: { dateTime: block.end },
+          }),
+        },
+      );
+
+      if (createdEvent.id) {
+        created += 1;
+        mappings.push({
+          blockId: block.blockId,
+          googleEventId: createdEvent.id,
+          googleCalendarId: plannerCalendarId,
+          pushedByPlanner: true,
+        });
+      }
+    } catch (err) {
+      errors.push(
+        `${block.title}: ${err instanceof Error ? err.message : 'Could not create event'}`,
+      );
+    }
+  }
+
+  return { created, updated, errors, mappings };
 }

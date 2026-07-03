@@ -6,7 +6,10 @@ export function plannerTaskToPageTask(task: PlannerTask): TasksPageTask {
   return {
     id: task.id,
     title: task.title,
-    projectName: task.project === 'No project' ? null : task.project,
+    projectName:
+      task.project === 'No project' || task.project.toLowerCase() === 'general'
+        ? null
+        : task.project,
     areaLabel: null,
     context: task.context,
     status: task.status,

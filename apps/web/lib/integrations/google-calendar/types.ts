@@ -28,6 +28,8 @@ export type PlannerCalendarEvent = {
   start: string;
   end: string;
   calendar: string;
+  /** Google Calendar ID used for updates (defaults to the user's read calendar). */
+  calendar_id: string;
   is_all_day: boolean;
 };
 
@@ -43,6 +45,25 @@ export type ScheduledPlannerBlock = {
   title: string;
   start: string;
   end: string;
+};
+
+export type PlannerCalendarSyncBlock = {
+  blockId: string;
+  title: string;
+  start: string;
+  end: string;
+  isCalendarEvent: boolean;
+  isBreak: boolean;
+  googleEventId: string | null;
+  googleCalendarId: string | null;
+  pushedByPlanner: boolean;
+};
+
+export type PlannerCalendarSyncMapping = {
+  blockId: string;
+  googleEventId: string;
+  googleCalendarId: string;
+  pushedByPlanner: boolean;
 };
 
 export type RecorderCalendarAttendee = {

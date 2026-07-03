@@ -85,6 +85,15 @@ describe('schedule-constraints', () => {
     expect(findValidDuration(blocks, 'admin', 45)).toBe(45);
   });
 
+  it('allows moving a calendar event when it is marked movable', () => {
+    const movableMeeting = { ...blocks[1]!, movable: true };
+    const movableBlocks = [blocks[0]!, movableMeeting, blocks[2]!];
+
+    expect(
+      canPlaceBlock(movableBlocks, 'meeting', 11 * 60, 12 * 60).ok,
+    ).toBe(true);
+  });
+
   it('keeps calendar blocks immovable in serialized lines', () => {
     const meeting = blocks[1]!;
     expect(blockToScheduleLine(meeting)).toContain('📅 Team standup');

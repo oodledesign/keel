@@ -53,8 +53,8 @@ export function PlanOutputRenderer({ markdown }: Props) {
             return (
               <h3
                 className={cn(
-                  'pt-3 text-sm font-semibold uppercase tracking-wide text-[var(--ozer-accent-muted)]',
-                  muted && 'text-[var(--workspace-shell-text)]/45',
+                  'pt-3 text-sm font-semibold uppercase tracking-wide text-[var(--workspace-shell-accent-text)]',
+                  muted && 'text-[var(--workspace-shell-text-muted)]',
                 )}
               >
                 {children}
@@ -121,8 +121,10 @@ function ScheduleSegmentRow({ segment }: { segment: ScheduleSegment }) {
       <span
         className={cn(
           'mt-0.5 shrink-0 rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 py-1 font-mono text-[11px] leading-none tabular-nums',
-          segment.isCalendarEvent ? 'text-sky-200/90' : 'text-[var(--ozer-accent-muted)]',
-          isBreak && 'text-[var(--workspace-shell-text)]/35',
+          segment.isCalendarEvent
+            ? 'text-sky-800'
+            : 'text-[var(--workspace-shell-accent-text)]',
+          isBreak && 'text-[var(--workspace-shell-text-muted)]',
         )}
       >
         {segment.timeLabel}
@@ -132,17 +134,17 @@ function ScheduleSegmentRow({ segment }: { segment: ScheduleSegment }) {
           className={cn(
             'text-sm font-medium leading-snug',
             segment.isCalendarEvent
-              ? 'text-sky-100/90'
+              ? 'text-sky-900'
               : isBreak
-                ? 'text-[var(--workspace-shell-text)]/45'
-                : 'text-[var(--workspace-shell-text)]/90',
+                ? 'text-[var(--workspace-shell-text-muted)]'
+                : 'text-[var(--workspace-shell-text)]',
           )}
         >
           {segment.isCalendarEvent ? '📅 ' : ''}
           {segment.title}
         </p>
         {segment.meta.length > 0 ? (
-          <p className="mt-0.5 text-xs text-[var(--workspace-shell-text)]/35">
+          <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
             {segment.meta.join(' · ')}
           </p>
         ) : null}

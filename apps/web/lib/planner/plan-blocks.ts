@@ -2,6 +2,10 @@ import {
   splitScheduleSegments,
   type ScheduleSegment,
 } from './parse-plan-markdown';
+import {
+  googleSyncMetaParts,
+  parseGoogleSyncMeta,
+} from './google-sync-meta';
 
 export type EditablePlanBlock = {
   id: string;
@@ -11,8 +15,12 @@ export type EditablePlanBlock = {
   meta: string[];
   isCalendarEvent: boolean;
   isBreak: boolean;
-  /** Calendar events stay fixed on the grid. */
+  /** Calendar events stay fixed on the grid unless overridden in the editor. */
   movable: boolean;
+  googleEventId?: string | null;
+  googleCalendarId?: string | null;
+  /** Task block was created on the Ozer Planner Google calendar. */
+  pushedByPlanner?: boolean;
 };
 
 export type PlanSection = {
@@ -39,16 +47,20 @@ function nextBlockId() {
 function segmentToBlock(segment: ScheduleSegment): EditablePlanBlock {
   const startMinutes = segment.startMinutes ?? 0;
   const endMinutes = segment.endMinutes ?? startMinutes + 30;
+  const sync = parseGoogleSyncMeta(segment.meta);
 
   return {
     id: nextBlockId(),
     startMinutes,
     endMinutes,
     title: segment.title,
-    meta: segment.meta,
+    meta: sync.displayMeta,
     isCalendarEvent: segment.isCalendarEvent,
     isBreak: segment.isBreak,
     movable: !segment.isCalendarEvent,
+    googleEventId: sync.googleEventId,
+    googleCalendarId: sync.googleCalendarId,
+    pushedByPlanner: sync.pushedByPlanner,
   };
 }
 
@@ -70,8 +82,15 @@ export function blockToScheduleLine(block: EditablePlanBlock): string {
   const start = formatClockMinutes(block.startMinutes);
   const end = formatClockMinutes(block.endMinutes);
   const prefix = block.isCalendarEvent ? '📅 ' : '';
-  const meta =
-    block.meta.length > 0 ? ` · ${block.meta.join(' · ')}` : '';
+  const metaParts = [
+    ...googleSyncMetaParts({
+      googleEventId: block.googleEventId,
+      googleCalendarId: block.googleCalendarId,
+      pushedByPlanner: block.pushedByPlanner,
+    }),
+    ...block.meta,
+  ];
+  const meta = metaParts.length > 0 ? ` · ${metaParts.join(' · ')}` : '';
 
   return `${start}–${end} · ${prefix}${block.title}${meta}`;
 }
@@ -183,10 +202,35 @@ export function flattenPlanBlocks(doc: PlanDocument): EditablePlanBlock[] {
   return doc.sections.flatMap((section) => section.blocks);
 }
 
+/** Optional overrides for the schedule editor (e.g. movable calendar events on the plan page). */
+export function resolveEditablePlanBlocks(
+  doc: PlanDocument,
+  options?: { movableCalendarEvents?: boolean },
+): EditablePlanBlock[] {
+  const blocks = flattenPlanBlocks(doc);
+  if (!options?.movableCalendarEvents) {
+    return blocks;
+  }
+
+  return blocks.map((block) =>
+    block.isCalendarEvent ? { ...block, movable: true } : block,
+  );
+}
+
 export function updatePlanBlock(
   doc: PlanDocument,
   blockId: string,
-  patch: Partial<Pick<EditablePlanBlock, 'startMinutes' | 'endMinutes' | 'meta'>>,
+  patch: Partial<
+    Pick<
+      EditablePlanBlock,
+      | 'startMinutes'
+      | 'endMinutes'
+      | 'meta'
+      | 'googleEventId'
+      | 'googleCalendarId'
+      | 'pushedByPlanner'
+    >
+  >,
 ): PlanDocument {
   return {
     ...doc,
@@ -233,7 +277,13 @@ export function setPlanBlockDuration(
 }
 
 export function blocksFromCalendarFallback(
-  events: Array<{ id: string; start: string; end: string; title: string }>,
+  events: Array<{
+    id: string;
+    start: string;
+    end: string;
+    title: string;
+    calendarId?: string | null;
+  }>,
 ): EditablePlanBlock[] {
   return events
     .map((event) => {
@@ -252,6 +302,9 @@ export function blocksFromCalendarFallback(
         isCalendarEvent: true,
         isBreak: false,
         movable: false,
+        googleEventId: event.id,
+        googleCalendarId: event.calendarId ?? null,
+        pushedByPlanner: false,
       } satisfies EditablePlanBlock;
     })
     .filter((block): block is EditablePlanBlock => block !== null)
@@ -264,4 +317,86 @@ function isoToMinutes(iso: string): number | null {
     return null;
   }
   return date.getHours() * 60 + date.getMinutes();
+}
+
+function normalizeTitle(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function isoToMinutesOnDate(iso: string, dateIso: string): number | null {
+  const date = new Date(iso);
+  const base = new Date(dateIso);
+  if (Number.isNaN(date.getTime()) || Number.isNaN(base.getTime())) {
+    return null;
+  }
+
+  if (date.toDateString() !== base.toDateString()) {
+    return null;
+  }
+
+  return date.getHours() * 60 + date.getMinutes();
+}
+
+/** Link 📅 plan blocks to fetched Google events by title + start time. */
+export function attachGoogleEventIdsToPlan(
+  doc: PlanDocument,
+  events: Array<{
+    id: string;
+    title: string;
+    start: string;
+    calendarId: string;
+  }>,
+  dateIso: string,
+): PlanDocument {
+  if (events.length === 0) {
+    return doc;
+  }
+
+  const usedIds = new Set(
+    flattenPlanBlocks(doc)
+      .map((block) => block.googleEventId)
+      .filter((id): id is string => Boolean(id)),
+  );
+
+  return {
+    ...doc,
+    sections: doc.sections.map((section) => ({
+      ...section,
+      blocks: section.blocks.map((block) => {
+        if (!block.isCalendarEvent || block.googleEventId) {
+          return block;
+        }
+
+        const targetTitle = normalizeTitle(block.title);
+        let best: (typeof events)[number] | null = null;
+        let bestDistance = Number.POSITIVE_INFINITY;
+
+        for (const event of events) {
+          if (usedIds.has(event.id)) continue;
+          if (normalizeTitle(event.title) !== targetTitle) continue;
+
+          const eventStart = isoToMinutesOnDate(event.start, dateIso);
+          if (eventStart === null) continue;
+
+          const distance = Math.abs(eventStart - block.startMinutes);
+          if (distance <= 45 && distance < bestDistance) {
+            best = event;
+            bestDistance = distance;
+          }
+        }
+
+        if (!best) {
+          return block;
+        }
+
+        usedIds.add(best.id);
+        return {
+          ...block,
+          googleEventId: best.id,
+          googleCalendarId: best.calendarId,
+          pushedByPlanner: false,
+        };
+      }),
+    })),
+  };
 }

@@ -22,11 +22,18 @@ import { workspacePageMainClassName } from '~/components/workspace-shell/workspa
 import type { PlannerCalendarEvent } from '~/lib/integrations/google-calendar/types';
 import { parseDayScheduleFromMarkdown } from '~/lib/planner/parse-plan-markdown';
 import {
+  attachGoogleEventIdsToPlan,
   flattenPlanBlocks,
   parsePlanDocument,
   serializePlanDocument,
   type PlanDocument,
 } from '~/lib/planner/plan-blocks';
+import {
+  applySyncMappingsToDocument,
+  blocksForCalendarSync,
+  planGainedGoogleIds,
+} from '~/lib/planner/plan-calendar-sync';
+import { syncPlannerCalendarBlocks } from '~/lib/planner/sync-calendar-client';
 import { savePlannerPlanAction } from '~/lib/planner/plan-actions';
 import {
   loadStoredPlan,
@@ -42,7 +49,13 @@ import type {
 } from '~/lib/planner/types';
 
 import { createTask, updateTask } from '../../_lib/actions/task-actions';
+import { useRouter } from 'next/navigation';
+
+import { EditTaskDialog } from '~/home/(user)/tasks/_components/edit-task-dialog';
+import { plannerTaskToPageTask } from '~/lib/planner/planner-task-to-page-task';
+import { plannerTaskSubtitle } from '~/lib/planner/build-task-tree';
 import { DayScheduleEditor } from './DayScheduleEditor';
+import { PlannerSyncCalendarButton } from './planner-push-to-calendar-button';
 import { PlannerRemindersToggle } from './PlannerRemindersToggle';
 import { PlannerViewTabs } from './PlannerViewTabs';
 import { ReplanDialog } from './ReplanDialog';
@@ -85,6 +98,7 @@ const gbp = new Intl.NumberFormat('en-GB', {
 });
 
 export function DayViewClient({ initialData, dayViewHref }: Props) {
+  const router = useRouter();
   const dateYmd = toLocalDateYmd();
   const [planMarkdown, setPlanMarkdown] = useState(
     initialData.planMarkdown ?? '',
@@ -99,6 +113,15 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [now, setNow] = useState(() => new Date());
+
+  const workspaceAccountId =
+    initialData.scope.kind === 'workspace'
+      ? initialData.scope.accountId
+      : undefined;
+
+  useEffect(() => {
+    setTasks(initialData.tasksDueToday);
+  }, [initialData.tasksDueToday]);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 30_000);
@@ -123,15 +146,6 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
     initialData.scope,
     dateYmd,
   ]);
-
-  useEffect(() => {
-    if (!planMarkdown.trim()) {
-      setPlanDocument(null);
-      return;
-    }
-
-    setPlanDocument(parsePlanDocument(planMarkdown));
-  }, [planMarkdown]);
 
   const persistPlanDocument = useCallback(
     async (document: PlanDocument) => {
@@ -160,6 +174,69 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
       }
     },
     [dateYmd, initialData.scope],
+  );
+
+  useEffect(() => {
+    if (!planMarkdown.trim()) {
+      setPlanDocument(null);
+      return;
+    }
+
+    const dateIso = `${dateYmd}T12:00:00`;
+    let doc = parsePlanDocument(planMarkdown);
+
+    if (calendarEvents.length > 0) {
+      const enriched = attachGoogleEventIdsToPlan(
+        doc,
+        calendarEvents.map((event) => ({
+          id: event.id,
+          title: event.title,
+          start: event.start,
+          calendarId: event.calendar_id,
+        })),
+        dateIso,
+      );
+
+      if (planGainedGoogleIds(doc, enriched)) {
+        void persistPlanDocument(enriched);
+        return;
+      }
+
+      doc = enriched;
+    }
+
+    setPlanDocument(doc);
+  }, [calendarEvents, dateYmd, persistPlanDocument, planMarkdown]);
+
+  const syncBlockToGoogle = useCallback(
+    async (document: PlanDocument, blockId: string) => {
+      const block = flattenPlanBlocks(document).find((item) => item.id === blockId);
+      if (!block?.googleEventId) {
+        return null;
+      }
+
+      const dateIso = `${dateYmd}T12:00:00`;
+      const blocks = blocksForCalendarSync(document, dateIso).filter(
+        (item) => item.blockId === blockId,
+      );
+      if (blocks.length === 0) {
+        return null;
+      }
+
+      try {
+        const result = await syncPlannerCalendarBlocks({ date: dateIso, blocks });
+        if (result.errors.length > 0) {
+          toast.message('Google Calendar could not update one or more events');
+        }
+        return applySyncMappingsToDocument(document, result.mappings);
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : 'Could not update Google Calendar',
+        );
+        return null;
+      }
+    },
+    [dateYmd],
   );
 
   useEffect(() => {
@@ -383,15 +460,25 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
 
       <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
         <section className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]/80">Schedule</h2>
-            <ReplanDialog
-              scope={initialData.scope}
-              planMarkdown={planMarkdown}
-              openTasks={replanOpenTasks}
-              calendarEvents={calendarEvents}
-              onPlanUpdated={setPlanMarkdown}
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              {hasPlan ? (
+                <PlannerSyncCalendarButton
+                  dateIso={`${dateYmd}T12:00:00`}
+                  planDocument={planDocument}
+                  onSynced={persistPlanDocument}
+                  size="sm"
+                />
+              ) : null}
+              <ReplanDialog
+                scope={initialData.scope}
+                planMarkdown={planMarkdown}
+                openTasks={replanOpenTasks}
+                calendarEvents={calendarEvents}
+                onPlanUpdated={setPlanMarkdown}
+              />
+            </div>
           </div>
           {displayBlocks.length === 0 ? (
             <EmptySchedule planHref={initialData.planViewHref} />
@@ -401,6 +488,9 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
               onDocumentChange={setPlanDocument}
               onPersist={persistPlanDocument}
               now={now}
+              scheduleDateYmd={dateYmd}
+              calendarEventsMovable
+              onSyncBlock={syncBlockToGoogle}
             />
           ) : (
             <div className="space-y-2">
@@ -454,7 +544,13 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
           ) : (
             <ul className="space-y-2">
               {[...openTasks, ...doneTasks].map((task) => (
-                <TaskRow key={task.id} task={task} onToggle={toggleTask} />
+                <TaskRow
+                  key={task.id}
+                  task={task}
+                  onToggle={toggleTask}
+                  workspaceAccountId={workspaceAccountId}
+                  onTaskUpdated={() => router.refresh()}
+                />
               ))}
             </ul>
           )}
@@ -610,46 +706,74 @@ function ScheduleRow({
 function TaskRow({
   task,
   onToggle,
+  workspaceAccountId,
+  onTaskUpdated,
 }: {
   task: PlannerTask;
   onToggle: (task: PlannerTask) => void;
+  workspaceAccountId?: string;
+  onTaskUpdated?: () => void;
 }) {
+  const [editOpen, setEditOpen] = useState(false);
   const done = task.status === 'completed';
+  const subtitle = plannerTaskSubtitle(task);
+  const pageTask = plannerTaskToPageTask(task);
 
   return (
-    <li
-      className={cn(
-        'flex items-start gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-3',
-        done && 'opacity-55',
-      )}
-    >
-      <button
-        type="button"
-        onClick={() => onToggle(task)}
-        aria-label={done ? 'Mark as not done' : 'Mark as done'}
-        className="mt-0.5 shrink-0 text-[var(--workspace-shell-text)]/30 transition-colors hover:text-[var(--ozer-accent-muted)]"
-      >
-        {done ? (
-          <CheckCircle2 className="h-4 w-4 text-[var(--ozer-accent)]" />
-        ) : (
-          <Circle className="h-4 w-4" />
+    <>
+      <li
+        className={cn(
+          'flex items-start gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-3',
+          done && 'opacity-55',
         )}
-      </button>
-      <div className="min-w-0 flex-1">
-        <p
-          className={cn(
-            'text-sm font-medium text-[var(--workspace-shell-text)]',
-            done && 'line-through decoration-white/40',
-          )}
+      >
+        <button
+          type="button"
+          onClick={() => onToggle(task)}
+          aria-label={done ? 'Mark as not done' : 'Mark as done'}
+          className="mt-0.5 shrink-0 text-[var(--workspace-shell-text)]/30 transition-colors hover:text-[var(--ozer-accent-muted)]"
         >
-          {task.title}
-        </p>
-        <p className="mt-0.5 text-xs text-[var(--workspace-shell-text)]/45">
-          {task.workspace}
-          {task.project !== 'No project' ? ` · ${task.project}` : ''}
-        </p>
-      </div>
-    </li>
+          {done ? (
+            <CheckCircle2 className="h-4 w-4 text-[var(--ozer-accent)]" />
+          ) : (
+            <Circle className="h-4 w-4" />
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setEditOpen(true)}
+          className="min-w-0 flex-1 rounded-lg text-left transition-colors hover:bg-white/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)]/40"
+        >
+          <p
+            className={cn(
+              'text-sm font-medium text-[var(--workspace-shell-text)]',
+              done && 'line-through decoration-white/40',
+            )}
+          >
+            {task.title}
+          </p>
+          {subtitle ? (
+            <p className="mt-0.5 text-xs text-[var(--workspace-shell-text)]/45">
+              {subtitle}
+            </p>
+          ) : null}
+          {task.notes?.trim() ? (
+            <p className="mt-1 line-clamp-2 text-xs text-[var(--workspace-shell-text)]/35">
+              {task.notes.trim()}
+            </p>
+          ) : null}
+        </button>
+      </li>
+
+      <EditTaskDialog
+        task={pageTask}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        workspaceAccountId={workspaceAccountId}
+        onSaved={onTaskUpdated}
+        onDeleted={onTaskUpdated}
+      />
+    </>
   );
 }
 

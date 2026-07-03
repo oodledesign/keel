@@ -47,8 +47,66 @@ function workspaceLabel(task: TasksPageTask, scope?: PlannerScope) {
   return area ?? 'Personal';
 }
 
+function isGenericProjectName(name: string) {
+  return name.trim().toLowerCase() === 'general';
+}
+
 function projectLabel(task: TasksPageTask) {
-  return task.projectName ?? 'General';
+  const project = task.projectName?.trim();
+  const client = task.clientName?.trim();
+  const area = task.areaLabel?.trim();
+
+  if (project && !isGenericProjectName(project)) {
+    return project;
+  }
+  if (client) {
+    return client;
+  }
+  if (project) {
+    return project;
+  }
+  if (area) {
+    return area;
+  }
+  return 'No project';
+}
+
+/** Subtitle under task titles in planner surfaces (Today, trees, etc.). */
+export function plannerTaskSubtitle(task: PlannerTask): string {
+  const parts: string[] = [];
+
+  const assignment = plannerTaskAssignmentLabel(task);
+  const workspace = task.workspace.trim();
+
+  if (
+    workspace &&
+    workspace !== 'Personal' &&
+    workspace !== assignment
+  ) {
+    parts.push(workspace);
+  }
+
+  if (assignment) {
+    parts.push(assignment);
+  }
+
+  return parts.join(' · ');
+}
+
+export function plannerTaskAssignmentLabel(task: PlannerTask): string | null {
+  const client = task.clientName?.trim();
+  const project = task.project?.trim();
+
+  if (client && project && !isGenericProjectName(project) && project !== client) {
+    return `${client} · ${project}`;
+  }
+  if (client) {
+    return client;
+  }
+  if (project && project !== 'No project') {
+    return isGenericProjectName(project) ? null : project;
+  }
+  return null;
 }
 
 export function toPlannerTask(

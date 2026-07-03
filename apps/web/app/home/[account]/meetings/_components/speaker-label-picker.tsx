@@ -4,7 +4,10 @@ import { useMemo, useState } from 'react';
 
 import { Check, ChevronsUpDown, Plus, X } from 'lucide-react';
 
-import { Button } from '@kit/ui/button';
+import {
+  workspaceComboboxListClass,
+  workspaceComboboxPopoverClass,
+} from '~/components/workspace-shell/workspace-combobox-styles';
 import {
   Command,
   CommandEmpty,
@@ -15,6 +18,7 @@ import {
 } from '@kit/ui/command';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import { Button } from '@kit/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
@@ -100,16 +104,13 @@ function SearchableSelect({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent
-        className="w-[var(--radix-popover-trigger-width)] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0"
-        align="start"
-      >
+      <PopoverContent className={workspaceComboboxPopoverClass} align="start">
         <Command className="bg-[var(--workspace-shell-panel)]">
           <CommandInput
             placeholder="Search…"
             className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
           />
-          <CommandList>
+          <CommandList className={workspaceComboboxListClass}>
             <CommandEmpty>{emptyMessage}</CommandEmpty>
             <CommandGroup>
               {options.map((option) => (

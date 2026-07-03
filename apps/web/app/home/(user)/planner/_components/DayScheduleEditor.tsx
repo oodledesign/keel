@@ -16,6 +16,7 @@ import { cn } from '@kit/ui/utils';
 
 import {
   flattenPlanBlocks,
+  resolveEditablePlanBlocks,
   setPlanBlockDuration,
   updatePlanBlock,
   type EditablePlanBlock,
@@ -30,6 +31,7 @@ import {
   snapToQuarterHour,
   canPlaceBlock,
 } from '~/lib/planner/schedule-constraints';
+import { toLocalDateYmd } from '~/lib/planner/plan-storage';
 
 const PX_PER_MINUTE = 1.25;
 const DURATION_OPTIONS = [15, 30, 45, 60, 75, 90, 105, 120];
@@ -47,6 +49,15 @@ type Props = {
   onDocumentChange: (document: PlanDocument) => void;
   onPersist: (document: PlanDocument) => Promise<void>;
   now: Date;
+  /** When set, the current-time line only appears if this is today's date. */
+  scheduleDateYmd?: string;
+  /** When true, calendar events can be dragged on the plan page. */
+  calendarEventsMovable?: boolean;
+  /** After a block move/resize is saved, push the change to Google Calendar when linked. */
+  onSyncBlock?: (
+    document: PlanDocument,
+    blockId: string,
+  ) => Promise<PlanDocument | null>;
 };
 
 function formatClock(minutes: number) {
@@ -70,6 +81,9 @@ export function DayScheduleEditor({
   onDocumentChange,
   onPersist,
   now,
+  calendarEventsMovable = false,
+  onSyncBlock,
+  scheduleDateYmd,
 }: Props) {
   const gridRef = useRef<HTMLDivElement>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
@@ -80,9 +94,33 @@ export function DayScheduleEditor({
   } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const blocks = useMemo(() => flattenPlanBlocks(document), [document]);
+  const blocks = useMemo(
+    () =>
+      resolveEditablePlanBlocks(document, {
+        movableCalendarEvents: calendarEventsMovable,
+      }),
+    [calendarEventsMovable, document],
+  );
   const { dayStart, dayEnd } = useMemo(() => getDayBounds(blocks), [blocks]);
   const gridHeight = (dayEnd - dayStart) * PX_PER_MINUTE;
+
+  const nowLine = useMemo(() => {
+    const viewingToday =
+      !scheduleDateYmd || scheduleDateYmd === toLocalDateYmd(now);
+    if (!viewingToday) {
+      return null;
+    }
+
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    if (nowMinutes < dayStart || nowMinutes > dayEnd) {
+      return null;
+    }
+
+    return {
+      top: (nowMinutes - dayStart) * PX_PER_MINUTE,
+      label: formatClock(nowMinutes),
+    };
+  }, [dayEnd, dayStart, now, scheduleDateYmd]);
 
   const hourMarks = useMemo(() => {
     const marks: number[] = [];
@@ -92,21 +130,35 @@ export function DayScheduleEditor({
     return marks;
   }, [dayStart, dayEnd]);
 
+  const persistAndMaybeSync = useCallback(
+    async (nextDocument: PlanDocument, blockId: string) => {
+      onDocumentChange(nextDocument);
+      setIsSaving(true);
+      try {
+        await onPersist(nextDocument);
+        if (onSyncBlock) {
+          const synced = await onSyncBlock(nextDocument, blockId);
+          if (synced) {
+            onDocumentChange(synced);
+            await onPersist(synced);
+          }
+        }
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [onDocumentChange, onPersist, onSyncBlock],
+  );
+
   const applyBlockTimes = useCallback(
     async (blockId: string, startMinutes: number, endMinutes: number) => {
       const nextDocument = updatePlanBlock(document, blockId, {
         startMinutes,
         endMinutes,
       });
-      onDocumentChange(nextDocument);
-      setIsSaving(true);
-      try {
-        await onPersist(nextDocument);
-      } finally {
-        setIsSaving(false);
-      }
+      await persistAndMaybeSync(nextDocument, blockId);
     },
-    [document, onDocumentChange, onPersist],
+    [document, persistAndMaybeSync],
   );
 
   const applyDuration = useCallback(
@@ -118,15 +170,9 @@ export function DayScheduleEditor({
       }
 
       const nextDocument = setPlanBlockDuration(document, blockId, validDuration);
-      onDocumentChange(nextDocument);
-      setIsSaving(true);
-      try {
-        await onPersist(nextDocument);
-      } finally {
-        setIsSaving(false);
-      }
+      await persistAndMaybeSync(nextDocument, blockId);
     },
-    [blocks, document, onDocumentChange, onPersist],
+    [blocks, document, persistAndMaybeSync],
   );
 
   useEffect(() => {
@@ -240,7 +286,9 @@ export function DayScheduleEditor({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-3 text-xs text-[var(--workspace-shell-text)]/45">
-        <p>Drag task blocks to reschedule. Calendar events stay fixed.</p>
+        <p>
+          Drag blocks to reschedule. Linked events sync to Google Calendar automatically.
+        </p>
         {isSaving ? (
           <span className="inline-flex items-center gap-1.5 text-[var(--ozer-accent-muted)]">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -249,7 +297,24 @@ export function DayScheduleEditor({
         ) : null}
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+      <div className="relative overflow-x-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+        {nowLine ? (
+          <div
+            className="pointer-events-none absolute inset-x-0 z-30 flex items-center"
+            style={{ top: nowLine.top }}
+            aria-hidden
+          >
+            <div className="flex w-14 shrink-0 justify-end pr-1.5">
+              <span className="rounded-md bg-[var(--ozer-accent)] px-1.5 py-0.5 text-[9px] font-semibold tabular-nums text-white shadow-sm">
+                {nowLine.label}
+              </span>
+            </div>
+            <div className="relative h-[2px] min-w-0 flex-1 bg-[var(--ozer-accent)]">
+              <span className="absolute -left-1 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-[var(--ozer-accent)] ring-2 ring-[var(--workspace-shell-panel)]" />
+            </div>
+          </div>
+        ) : null}
+
         <div className="flex min-w-[320px]">
           <div
             className="relative w-14 shrink-0 border-r border-[color:var(--workspace-shell-border)] bg-black/10"

@@ -4,7 +4,10 @@ import { useMemo, useState } from 'react';
 
 import { Check, ChevronsUpDown } from 'lucide-react';
 
-import { Button } from '@kit/ui/button';
+import {
+  workspaceComboboxListClass,
+  workspaceComboboxPopoverClass,
+} from '~/components/workspace-shell/workspace-combobox-styles';
 import {
   Command,
   CommandEmpty,
@@ -15,6 +18,7 @@ import {
   CommandSeparator,
 } from '@kit/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
+import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
 
 import type { TaskAssignmentOption } from '../../_lib/actions/task-actions';
@@ -89,16 +93,13 @@ export function TaskAssignmentCombobox({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent
-        className="w-[var(--radix-popover-trigger-width)] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0"
-        align="start"
-      >
+      <PopoverContent className={workspaceComboboxPopoverClass} align="start">
         <Command className="bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
           <CommandInput
             placeholder="Search projects and clients…"
             className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
           />
-          <CommandList className="max-h-[min(50dvh,16rem)]">
+          <CommandList className={workspaceComboboxListClass}>
             <CommandEmpty>No matches found.</CommandEmpty>
 
             {!isWorkspaceMode ? (

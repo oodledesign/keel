@@ -105,24 +105,28 @@ export async function getDbForWorkspaceTaskAssignmentOptions(
   accountId: string,
 ): Promise<SupabaseClient> {
   const api = createTeamAccountsApi(userClient);
-  const hasClientsAccess =
-    (await api.hasPermission({
+
+  const [clientsView, clientsEdit, membershipResult] = await Promise.all([
+    api.hasPermission({
       userId,
       accountId,
       permission: 'clients.view',
-    })) ||
-    (await api.hasPermission({
+    }),
+    api.hasPermission({
       userId,
       accountId,
       permission: 'clients.edit',
-    }));
+    }),
+    userClient
+      .from('accounts_memberships')
+      .select('account_role')
+      .eq('account_id', accountId)
+      .eq('user_id', userId)
+      .maybeSingle(),
+  ]);
 
-  const { data: membership, error } = await userClient
-    .from('accounts_memberships')
-    .select('account_role')
-    .eq('account_id', accountId)
-    .eq('user_id', userId)
-    .maybeSingle();
+  const hasClientsAccess = clientsView || clientsEdit;
+  const { data: membership, error } = membershipResult;
 
   if (error) throw error;
 

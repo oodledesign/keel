@@ -25,13 +25,11 @@ import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { Textarea } from '@kit/ui/textarea';
+import { TaskAssignmentCombobox } from '~/home/(user)/_components/dashboard/task-assignment-combobox';
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
-  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
@@ -48,7 +46,6 @@ import {
   type TaskAssignmentOption,
   type TaskAssignmentUpdate,
 } from '../../_lib/actions/task-actions';
-import { groupProjectsByWorkspace } from '../_lib/group-task-options';
 
 const PRIORITIES = [
   { key: 'low', label: 'Low' },
@@ -271,8 +268,6 @@ export function EditTaskDialog({
 
   const projects = options.filter((o) => o.type === 'project');
   const clients = options.filter((o) => o.type === 'client');
-  const areas = options.filter((o) => o.type === 'area');
-  const projectGroups = groupProjectsByWorkspace(projects);
 
   return (
     <>
@@ -423,103 +418,17 @@ export function EditTaskDialog({
                   Loading…
                 </div>
               ) : (
-                <Select value={assignTo} onValueChange={setAssignTo}>
-                  <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
-                    <SelectValue
-                      placeholder={
-                        isWorkspaceMode
-                          ? 'Select project or client'
-                          : 'No assignment'
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-                    {!isWorkspaceMode ? (
-                      <SelectItem value="none">No assignment (life)</SelectItem>
-                    ) : null}
-                    {projectGroups.length > 0
-                      ? projectGroups.map((group) => (
-                          <SelectGroup key={group.key}>
-                            <SelectLabel className="text-[11px] font-semibold uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
-                              {isWorkspaceMode ? 'Projects' : group.label}
-                            </SelectLabel>
-                            {group.projects.map((p) => (
-                              <SelectItem key={p.id} value={p.id}>
-                                <span className="flex items-center gap-2">
-                                  {p.color && (
-                                    <span
-                                      className="inline-block h-2 w-2 shrink-0 rounded-full"
-                                      style={{ backgroundColor: p.color }}
-                                    />
-                                  )}
-                                  {p.name}
-                                </span>
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        ))
-                      : null}
-                    {isWorkspaceMode && clients.length > 0 ? (
-                      <>
-                        {projectGroups.length > 0 ? (
-                          <SelectSeparator className="my-1 bg-[var(--workspace-shell-sidebar-accent)]" />
-                        ) : null}
-                        <SelectGroup>
-                          <SelectLabel className="text-[11px] font-semibold uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
-                            Clients
-                          </SelectLabel>
-                          {clients.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>
-                              {c.name}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </>
-                    ) : null}
-                    {!isWorkspaceMode && clients.length > 0 ? (
-                      <>
-                        {projectGroups.length > 0 ? (
-                          <SelectSeparator className="my-1 bg-[var(--workspace-shell-sidebar-accent)]" />
-                        ) : null}
-                        <SelectGroup>
-                          <SelectLabel className="text-[11px] font-semibold uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
-                            Clients (workspaces)
-                          </SelectLabel>
-                          {clients.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>
-                              {c.name}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </>
-                    ) : null}
-                    {!isWorkspaceMode && areas.length > 0 ? (
-                      <>
-                        {projectGroups.length > 0 || clients.length > 0 ? (
-                          <SelectSeparator className="my-1 bg-[var(--workspace-shell-sidebar-accent)]" />
-                        ) : null}
-                        <SelectGroup>
-                          <SelectLabel className="text-[11px] font-semibold uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
-                            Life areas
-                          </SelectLabel>
-                          {areas.map((a) => (
-                            <SelectItem key={a.id} value={a.id}>
-                              <span className="flex items-center gap-2">
-                                {a.color && (
-                                  <span
-                                    className="inline-block h-2 w-2 shrink-0 rounded-full"
-                                    style={{ backgroundColor: a.color }}
-                                  />
-                                )}
-                                {a.name}
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </>
-                    ) : null}
-                  </SelectContent>
-                </Select>
+                <TaskAssignmentCombobox
+                  value={assignTo}
+                  onValueChange={setAssignTo}
+                  options={options}
+                  isWorkspaceMode={isWorkspaceMode}
+                  placeholder={
+                    isWorkspaceMode
+                      ? 'Select project or client'
+                      : 'No assignment'
+                  }
+                />
               )}
               {isWorkspaceMode &&
               !optionsLoading &&

@@ -68,10 +68,12 @@ export function canPlaceBlock(
         other.endMinutes,
       )
     ) {
-      if (other.isCalendarEvent) {
-        return { ok: false, reason: 'Overlaps a calendar event' };
-      }
-      return { ok: false, reason: 'Overlaps another block' };
+      return {
+        ok: false,
+        reason: other.isCalendarEvent
+          ? 'Overlaps a calendar event'
+          : 'Overlaps another block',
+      };
     }
   }
 

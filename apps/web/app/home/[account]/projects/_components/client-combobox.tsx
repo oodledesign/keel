@@ -14,6 +14,10 @@ import {
 } from '@kit/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
 
+import {
+  workspaceComboboxListClass,
+  workspaceComboboxPopoverClass,
+} from '~/components/workspace-shell/workspace-combobox-styles';
 import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
 
@@ -65,16 +69,13 @@ export function ClientCombobox({
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent
-          className="w-[var(--radix-popover-trigger-width)] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0"
-          align="start"
-        >
+        <PopoverContent className={workspaceComboboxPopoverClass} align="start">
           <Command className="bg-[var(--workspace-shell-panel)]">
             <CommandInput
               placeholder="Search clients…"
               className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
             />
-            <CommandList>
+            <CommandList className={workspaceComboboxListClass}>
               <CommandEmpty>{emptyMessage}</CommandEmpty>
               <CommandGroup>
                 <CommandItem

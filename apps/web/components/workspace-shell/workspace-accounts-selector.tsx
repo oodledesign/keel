@@ -17,7 +17,7 @@ import {
   CommandList,
   CommandSeparator,
 } from '@kit/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
+import { workspaceComboboxListClass } from '~/components/workspace-shell/workspace-combobox-styles';
 import { cn } from '@kit/ui/utils';
 import { SidebarContext } from '@kit/ui/shadcn-sidebar';
 
@@ -132,7 +132,7 @@ export function WorkspaceAccountsSelector({
         placeholder="Search workspaces…"
         className="h-9 border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)]"
       />
-      <CommandList className="max-h-[min(50dvh,var(--radix-popover-content-available-height,50dvh))]">
+      <CommandList className={workspaceComboboxListClass}>
         <CommandGroup heading="Your workspaces">
           {accounts.map((account) => (
             <WorkspaceSwitcherAccountRow
@@ -181,7 +181,7 @@ export function WorkspaceAccountsSelector({
           <PopoverTrigger asChild>{trigger}</PopoverTrigger>
           <PopoverContent
             data-test="account-selector-content"
-            className="z-[200] w-[min(100vw-2rem,320px)] border-[var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text-on-dark)]"
+            className="z-[200] w-[min(100vw-2rem,320px)] overflow-hidden border-[var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text-on-dark)]"
             align="start"
           >
             {list}

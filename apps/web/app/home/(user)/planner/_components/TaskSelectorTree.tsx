@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -14,6 +14,7 @@ import {
   Loader2,
   Pencil,
   Plus,
+  Search,
 } from 'lucide-react';
 
 import { Badge } from '@kit/ui/badge';
@@ -24,6 +25,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@kit/ui/collapsible';
+import { Input } from '@kit/ui/input';
 import { cn } from '@kit/ui/utils';
 
 import { updateTask } from '~/home/(user)/_lib/actions/task-actions';
@@ -47,11 +49,47 @@ type Props = {
 };
 
 const priorityClass: Record<PlannerTask['priority'], string> = {
-  urgent: 'border-rose-400/40 bg-rose-400/10 text-rose-200',
-  high: 'border-orange-400/40 bg-orange-400/10 text-orange-200',
-  medium: 'border-sky-400/40 bg-sky-400/10 text-sky-200',
-  low: 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/55',
+  urgent: 'border-rose-600/30 bg-rose-50 text-rose-800',
+  high: 'border-orange-600/30 bg-orange-50 text-orange-800',
+  medium: 'border-sky-700/25 bg-sky-50 text-sky-900',
+  low: 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]',
 };
+
+function filterPlannerTaskTree(
+  tree: PlannerWorkspaceNode[],
+  query: string,
+): PlannerWorkspaceNode[] {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return tree;
+
+  return tree
+    .map((workspace) => {
+      const projects = workspace.projects
+        .map((project) => ({
+          ...project,
+          tasks: project.tasks.filter((task) => {
+            const haystack = [
+              task.title,
+              task.clientName ?? '',
+              project.name,
+              workspace.name,
+            ]
+              .join(' ')
+              .toLowerCase();
+            return haystack.includes(normalized);
+          }),
+        }))
+        .filter((project) => project.tasks.length > 0)
+        .map((project) => ({
+          ...project,
+          taskCount: project.tasks.length,
+        }));
+
+      const taskCount = projects.reduce((sum, project) => sum + project.taskCount, 0);
+      return { ...workspace, projects, taskCount };
+    })
+    .filter((workspace) => workspace.taskCount > 0);
+}
 
 export function TaskSelectorTree({
   taskTree,
@@ -62,6 +100,12 @@ export function TaskSelectorTree({
   scope,
 }: Props) {
   const [addTaskOpen, setAddTaskOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredTree = useMemo(
+    () => filterPlannerTaskTree(taskTree, searchQuery),
+    [taskTree, searchQuery],
+  );
 
   function toggle(ids: string[], checked: boolean) {
     const next = new Set(selectedTaskIds);
@@ -80,15 +124,15 @@ export function TaskSelectorTree({
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="flex items-center gap-2 text-sm font-semibold text-[var(--workspace-shell-text)]">
-            <ListTodo className="h-4 w-4 text-[var(--ozer-accent-muted)]" />
+            <ListTodo className="h-4 w-4 text-[var(--workspace-shell-accent-text)]" />
             Tasks to plan
           </h2>
-          <p className="mt-1 text-xs text-[var(--workspace-shell-text)]/45">
+          <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
             {selectedCount} of {allCount} open tasks selected.
             {!includeWorkspaceTasks ? (
               <>
                 {' '}
-                <Link href={settingsHref} className="text-[var(--ozer-accent-muted)] hover:underline">
+                <Link href={settingsHref} className="text-[var(--workspace-shell-accent-text)] hover:underline">
                   Workspace tasks off
                 </Link>
               </>
@@ -109,7 +153,7 @@ export function TaskSelectorTree({
           {allCount > 0 ? (
             <button
               type="button"
-              className="text-xs font-medium text-[var(--ozer-accent-muted)] hover:underline"
+              className="text-xs font-medium text-[var(--workspace-shell-accent-text)] hover:underline"
               onClick={() => {
                 const allIds = taskTree.flatMap((workspace) =>
                   workspace.projects.flatMap((project) =>
@@ -142,6 +186,20 @@ export function TaskSelectorTree({
         />
       )}
 
+      {taskTree.length > 0 ? (
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
+          <Input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search tasks…"
+            aria-label="Search tasks to plan"
+            className="h-9 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] pl-9 text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+          />
+        </div>
+      ) : null}
+
       {taskTree.length === 0 ? (
         <div className="rounded-lg border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center">
           <p className="text-sm text-[var(--workspace-shell-text)]/55">No open tasks found.</p>
@@ -156,9 +214,15 @@ export function TaskSelectorTree({
             Add a task to plan
           </Button>
         </div>
+      ) : filteredTree.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-6 text-center">
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+            No tasks match &ldquo;{searchQuery.trim()}&rdquo;.
+          </p>
+        </div>
       ) : (
-        <div className="max-h-[min(60vh,640px)] divide-y divide-white/8 overflow-y-auto pr-1">
-          {taskTree.map((workspace) => (
+        <div className="max-h-[min(60vh,640px)] divide-y divide-white/8 overflow-y-auto overscroll-contain pr-1 touch-pan-y">
+          {filteredTree.map((workspace) => (
             <WorkspaceNode
               key={workspace.id}
               workspace={workspace}
@@ -339,8 +403,8 @@ function TaskRow({
             {task.dueDateLabel ? (
               <span
                 className={cn(
-                  'text-[11px] text-[var(--workspace-shell-text)]/40',
-                  task.overdue && 'text-amber-200',
+                  'text-[11px] text-[var(--workspace-shell-text-muted)]',
+                  task.overdue && 'font-medium text-rose-600',
                 )}
               >
                 {task.overdue ? 'Overdue · ' : ''}

@@ -59,7 +59,10 @@ const CommandList: React.FC<
   React.ComponentPropsWithRef<typeof CommandPrimitive.List>
 > = ({ className, ...props }) => (
   <CommandPrimitive.List
-    className={cn('max-h-[min(70dvh,480px)] overflow-x-hidden overflow-y-auto', className)}
+    className={cn(
+      'max-h-[min(70dvh,480px)] overflow-x-hidden overflow-y-auto overscroll-contain touch-pan-y',
+      className,
+    )}
     {...props}
   />
 );
@@ -79,7 +82,7 @@ const CommandGroup: React.FC<
 > = ({ className, ...props }) => (
   <CommandPrimitive.Group
     className={cn(
-      'text-foreground [&_[cmdk-group-heading]]:text-muted-foreground overflow-hidden p-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium',
+      'text-foreground [&_[cmdk-group-heading]]:text-muted-foreground p-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium',
       className,
     )}
     {...props}

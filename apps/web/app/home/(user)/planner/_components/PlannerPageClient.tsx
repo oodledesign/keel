@@ -1,11 +1,24 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { toast } from '@kit/ui/sonner';
 
 import type { PlannerCalendarEvent } from '~/lib/integrations/google-calendar/types';
 import { savePlannerPlanAction } from '~/lib/planner/plan-actions';
+import {
+  attachGoogleEventIdsToPlan,
+  flattenPlanBlocks,
+  parsePlanDocument,
+  serializePlanDocument,
+  type PlanDocument,
+} from '~/lib/planner/plan-blocks';
+import {
+  applySyncMappingsToDocument,
+  blocksForCalendarSync,
+  planGainedGoogleIds,
+} from '~/lib/planner/plan-calendar-sync';
+import { syncPlannerCalendarBlocks } from '~/lib/planner/sync-calendar-client';
 import {
   plannerScopeKey,
   saveStoredPlan,
@@ -68,6 +81,7 @@ export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
   const [planMarkdown, setPlanMarkdown] = useState(
     initialData.savedPlanMarkdown ?? '',
   );
+  const [planDocument, setPlanDocument] = useState<PlanDocument | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [lastPayload, setLastPayload] = useState<PlannerGeneratePayload | null>(
     null,
@@ -125,6 +139,110 @@ export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
         .filter((event) => selectedCalendarEventIds.has(event.id))
         .map(({ id: _id, ...event }) => event),
     [calendarEvents, selectedCalendarEventIds],
+  );
+
+  const persistPlanDocument = useCallback(
+    async (document: PlanDocument) => {
+      const markdown = serializePlanDocument(document);
+      setPlanMarkdown(markdown);
+      setPlanDocument(document);
+
+      const dateYmd = toLocalDateYmd(new Date(date));
+
+      saveStoredPlan(initialData.scope, dateYmd, {
+        markdown,
+        updatedAt: new Date().toISOString(),
+        mode,
+      });
+
+      const result = await savePlannerPlanAction({
+        scopeKey: plannerScopeKey(initialData.scope),
+        planDate: dateYmd,
+        mode,
+        markdown,
+      });
+
+      if (!result.success) {
+        toast.error(
+          result.error ??
+            'Changes saved locally but could not sync to your account.',
+        );
+      }
+    },
+    [date, initialData.scope, mode],
+  );
+
+  useEffect(() => {
+    if (!planMarkdown.trim() || isGenerating) {
+      if (!planMarkdown.trim()) {
+        setPlanDocument(null);
+      }
+      return;
+    }
+
+    const dateYmd = toLocalDateYmd(new Date(date));
+    const dateIso = `${dateYmd}T12:00:00`;
+    let doc = parsePlanDocument(planMarkdown);
+
+    if (mode === 'day' && calendarEvents.length > 0) {
+      const enriched = attachGoogleEventIdsToPlan(
+        doc,
+        calendarEvents.map((event) => ({
+          id: event.id,
+          title: event.title,
+          start: event.start,
+          calendarId: event.calendar_id,
+        })),
+        dateIso,
+      );
+
+      if (planGainedGoogleIds(doc, enriched)) {
+        void persistPlanDocument(enriched);
+        return;
+      }
+
+      doc = enriched;
+    }
+
+    setPlanDocument(doc);
+  }, [
+    calendarEvents,
+    date,
+    isGenerating,
+    mode,
+    persistPlanDocument,
+    planMarkdown,
+  ]);
+
+  const syncBlockToGoogle = useCallback(
+    async (document: PlanDocument, blockId: string) => {
+      const block = flattenPlanBlocks(document).find((item) => item.id === blockId);
+      if (!block?.googleEventId) {
+        return null;
+      }
+
+      const dateIso = `${toLocalDateYmd(new Date(date))}T12:00:00`;
+      const blocks = blocksForCalendarSync(document, dateIso).filter(
+        (item) => item.blockId === blockId,
+      );
+      if (blocks.length === 0) {
+        return null;
+      }
+
+      try {
+        const result = await syncPlannerCalendarBlocks({ date: dateIso, blocks });
+        if (result.errors.length > 0) {
+          toast.message('Google Calendar could not update one or more events');
+        }
+        return applySyncMappingsToDocument(document, result.mappings);
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : 'Could not update Google Calendar',
+        );
+        return null;
+      }
+    },
+    [date],
   );
 
   function buildPayload(): PlannerGeneratePayload {
@@ -259,6 +377,10 @@ export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
             onRegenerate={() => lastPayload && generatePlan(lastPayload)}
             canRegenerate={Boolean(lastPayload)}
             dayViewHref={initialData.dayViewHref}
+            planDocument={planDocument}
+            onPlanDocumentChange={setPlanDocument}
+            onPersistPlanDocument={persistPlanDocument}
+            onSyncBlock={syncBlockToGoogle}
           />
           <SopSuggestionsStrip suggestions={initialData.sopSuggestions} />
         </div>
