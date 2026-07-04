@@ -5,12 +5,16 @@ import { SitePageHeader } from '../_components/site-page-header';
 import { DocsCards } from './_components/docs-cards';
 import { getDocs } from './_lib/server/docs.loader';
 
-export const generateMetadata = async () => {
-  const { t } = await createI18nServerInstance();
+import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
 
-  return {
-    title: t('marketing:documentation'),
-  };
+export const generateMetadata = async () => {
+  return buildMarketingMetadata({
+    title: 'Documentation — Ozer',
+    description:
+      'Tutorials and guides for configuring and using the Ozer Workspace OS.',
+    path: '/docs',
+    ogType: 'default',
+  });
 };
 
 async function DocsPage() {

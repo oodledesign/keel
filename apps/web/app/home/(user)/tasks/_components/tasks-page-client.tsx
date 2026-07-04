@@ -58,7 +58,7 @@ import {
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
 
-import { compareYmd, parseDueDateParts } from '../../../_lib/due-date-ymd';
+import { compareYmd, parseDueDateParts, toIsoDateString } from '../../../_lib/due-date-ymd';
 import type { TasksPageTask } from '../../_lib/server/tasks.loader';
 import { updateTask } from '../../_lib/actions/task-actions';
 import { AddTaskDialog } from '../../_components/dashboard/add-task-dialog';
@@ -166,29 +166,260 @@ function ClientCell({
   );
 }
 
+function formatDueDateLabel(due: string | null): string {
+  const parts = parseDueDateParts(due);
+  if (!parts) return '';
+  const date = new Date(parts.y, parts.m - 1, parts.d, 12, 0, 0, 0);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+}
+
 function TaskRowMetaColumn({
+  taskId,
+  dueDate,
   dueDateLabel,
   overdue,
   calendarScheduleStatus,
   clientName,
   clientColor,
+  onDueDateChanged,
 }: {
+  taskId: string;
+  dueDate: string | null;
   dueDateLabel: string;
   overdue: boolean;
   calendarScheduleStatus?: 'scheduled' | 'failed' | null;
   clientName: string | null;
   clientColor?: string | null;
+  onDueDateChanged?: (
+    taskId: string,
+    dueDate: string | null,
+    dueDateLabel: string,
+  ) => void;
 }) {
   return (
     <div className="flex min-w-0 flex-col items-end gap-0.5 text-right">
-      <DueDateCell
+      <InlineDueDate
+        taskId={taskId}
+        dueDate={dueDate}
         dueDateLabel={dueDateLabel}
         overdue={overdue}
         calendarScheduleStatus={calendarScheduleStatus}
         align="end"
+        onDueDateChanged={onDueDateChanged}
       />
       <ClientCell name={clientName} color={clientColor} compact />
     </div>
+  );
+}
+
+function InlineDueDate({
+  taskId,
+  dueDate,
+  dueDateLabel,
+  overdue,
+  calendarScheduleStatus,
+  align = 'start',
+  onDueDateChanged,
+  readOnly,
+}: {
+  taskId: string;
+  dueDate: string | null;
+  dueDateLabel: string;
+  overdue: boolean;
+  calendarScheduleStatus?: 'scheduled' | 'failed' | null;
+  align?: 'start' | 'end';
+  onDueDateChanged?: (
+    taskId: string,
+    dueDate: string | null,
+    dueDateLabel: string,
+  ) => void;
+  readOnly?: boolean;
+}) {
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [pending, setPending] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const isoValue = dueDate ? (toIsoDateString(dueDate) ?? '') : '';
+
+  useEffect(() => {
+    if (!editing) return;
+    const el = inputRef.current;
+    if (!el) return;
+    el.focus();
+    try {
+      el.showPicker?.();
+    } catch {
+      // showPicker may throw if not triggered by user gesture
+    }
+  }, [editing]);
+
+  const save = useCallback(
+    async (raw: string) => {
+      setEditing(false);
+      const normalized = raw.trim() ? toIsoDateString(raw.trim()) : null;
+      const current = dueDate ? toIsoDateString(dueDate) : null;
+      if (normalized === current) {
+        return;
+      }
+
+      const prevDate = dueDate;
+      const prevLabel = dueDateLabel;
+      const nextLabel = formatDueDateLabel(normalized);
+
+      onDueDateChanged?.(taskId, normalized, nextLabel);
+      setPending(true);
+      const result = await updateTask(taskId, { dueDate: normalized });
+      setPending(false);
+      if (!result.success) {
+        onDueDateChanged?.(taskId, prevDate, prevLabel);
+        return;
+      }
+      router.refresh();
+    },
+    [dueDate, dueDateLabel, onDueDateChanged, router, taskId],
+  );
+
+  if (readOnly) {
+    return (
+      <DueDateCell
+        dueDateLabel={dueDateLabel}
+        overdue={overdue}
+        calendarScheduleStatus={calendarScheduleStatus}
+        align={align}
+      />
+    );
+  }
+
+  if (!dueDateLabel && !calendarScheduleStatus && !editing) {
+    return (
+      <span
+        className={cn(
+          'flex min-w-0 flex-col gap-1',
+          align === 'end' && 'items-end',
+        )}
+        data-task-row-action
+      >
+        <button
+          type="button"
+          disabled={pending}
+          onClick={(e) => {
+            e.stopPropagation();
+            setEditing(true);
+          }}
+          className={cn(
+            'inline-flex min-h-4 items-center gap-1 rounded px-1 py-0.5 text-[11px] text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)] sm:text-xs',
+            align === 'end' && 'justify-end',
+            pending && 'opacity-60',
+          )}
+          aria-label="Set due date"
+        >
+          <CalendarDays className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" aria-hidden />
+          <span>Add date</span>
+        </button>
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className={cn(
+        'flex min-w-0 flex-col gap-1',
+        align === 'end' && 'items-end',
+      )}
+      data-task-row-action
+    >
+      {editing ? (
+        <input
+          ref={inputRef}
+          type="date"
+          defaultValue={isoValue}
+          disabled={pending}
+          onClick={(e) => e.stopPropagation()}
+          onChange={(e) => {
+            void save(e.target.value);
+          }}
+          onBlur={(e) => {
+            if (e.target.value !== isoValue) {
+              void save(e.target.value);
+            } else {
+              setEditing(false);
+            }
+          }}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            if (e.key === 'Escape') {
+              e.preventDefault();
+              setEditing(false);
+            }
+          }}
+          className={cn(
+            'max-w-full rounded border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-1.5 py-0.5 text-[11px] text-[var(--workspace-shell-text)] outline-none focus-visible:ring-1 focus-visible:ring-[var(--ozer-accent)]/50 sm:text-xs',
+            align === 'end' && 'text-right',
+          )}
+        />
+      ) : (
+        <button
+          type="button"
+          disabled={pending}
+          onClick={(e) => {
+            e.stopPropagation();
+            setEditing(true);
+          }}
+          className={cn(
+            'flex min-w-0 items-center gap-1 rounded px-1 py-0.5 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]',
+            align === 'end' && 'justify-end',
+            pending && 'opacity-60',
+          )}
+          title={overdue ? `Overdue · ${dueDateLabel}` : dueDateLabel || 'Set due date'}
+          aria-label={dueDateLabel ? `Edit due date ${dueDateLabel}` : 'Set due date'}
+        >
+          {dueDateLabel ? (
+            <>
+              <CalendarDays
+                className={cn(
+                  'h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4',
+                  overdue ? 'text-rose-400' : 'text-[var(--workspace-shell-text-muted)]',
+                )}
+                aria-hidden
+              />
+              <span
+                className={cn(
+                  'truncate text-[11px] tabular-nums sm:text-xs',
+                  overdue
+                    ? 'font-medium text-rose-400'
+                    : 'text-[var(--workspace-shell-text-muted)]',
+                )}
+              >
+                {dueDateLabel}
+              </span>
+            </>
+          ) : (
+            <>
+              <CalendarDays
+                className="h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text-muted)] sm:h-4 sm:w-4"
+                aria-hidden
+              />
+              <span className="text-[11px] text-[var(--workspace-shell-text-muted)] sm:text-xs">
+                Add date
+              </span>
+            </>
+          )}
+        </button>
+      )}
+      {calendarScheduleStatus === 'failed' ? (
+        <span
+          className="text-[11px] font-medium text-amber-300"
+          title="Could not find a free calendar slot before the due date"
+        >
+          Couldn&apos;t auto-schedule
+        </span>
+      ) : null}
+    </span>
   );
 }
 
@@ -375,6 +606,11 @@ type TaskRowHandlers = {
   onToggleSubtasks: (taskId: string) => void;
   onStatusChanged: (taskId: string, status: TaskStatus) => void;
   onTitleChanged: (taskId: string, title: string) => void;
+  onDueDateChanged: (
+    taskId: string,
+    dueDate: string | null,
+    dueDateLabel: string,
+  ) => void;
 };
 
 function renderTaskRows(list: TasksPageTask[], handlers: TaskRowHandlers) {
@@ -387,6 +623,7 @@ function renderTaskRows(list: TasksPageTask[], handlers: TaskRowHandlers) {
       today={handlers.today}
       onStatusChanged={handlers.onStatusChanged}
       onTitleChanged={handlers.onTitleChanged}
+      onDueDateChanged={handlers.onDueDateChanged}
       subtasksExpanded={
         (task.subtasks?.length ?? 0) > 0
           ? handlers.expandedRootTaskIds.has(task.id)
@@ -508,6 +745,31 @@ function isOverdue(task: TasksPageTask, today = todayISO()): boolean {
   const t = parseDueDateParts(today);
   if (!due || !t) return false;
   return compareYmd(due, t) < 0;
+}
+
+function updateTaskDueDateInTree(
+  list: TasksPageTask[],
+  taskId: string,
+  dueDate: string | null,
+  dueDateLabel: string,
+): TasksPageTask[] {
+  return list.map((node) => {
+    if (node.id === taskId) {
+      return { ...node, dueDate, dueDateLabel };
+    }
+    if (node.subtasks?.length) {
+      return {
+        ...node,
+        subtasks: updateTaskDueDateInTree(
+          node.subtasks,
+          taskId,
+          dueDate,
+          dueDateLabel,
+        ),
+      };
+    }
+    return node;
+  });
 }
 
 function updateTaskTitleInTree(
@@ -1051,6 +1313,15 @@ export function TasksPageClient({
     setTasks((prev) => updateTaskTitleInTree(prev, taskId, title));
   }, []);
 
+  const handleDueDateChanged = useCallback(
+    (taskId: string, dueDate: string | null, dueDateLabel: string) => {
+      setTasks((prev) =>
+        updateTaskDueDateInTree(prev, taskId, dueDate, dueDateLabel),
+      );
+    },
+    [],
+  );
+
   const taskRowHandlers: TaskRowHandlers = useMemo(
     () => ({
       showWorkspaceTag,
@@ -1060,6 +1331,7 @@ export function TasksPageClient({
       onToggleSubtasks: toggleRootExpanded,
       onStatusChanged: handleStatusChanged,
       onTitleChanged: handleTitleChanged,
+      onDueDateChanged: handleDueDateChanged,
     }),
     [
       showWorkspaceTag,
@@ -1069,6 +1341,7 @@ export function TasksPageClient({
       toggleRootExpanded,
       handleStatusChanged,
       handleTitleChanged,
+      handleDueDateChanged,
     ],
   );
 
@@ -1383,6 +1656,7 @@ function TaskRow({
   today,
   onStatusChanged,
   onTitleChanged,
+  onDueDateChanged,
   subtasksExpanded = true,
   onToggleSubtasks,
 }: {
@@ -1392,6 +1666,11 @@ function TaskRow({
   today: string;
   onStatusChanged?: (taskId: string, status: TaskStatus) => void;
   onTitleChanged?: (taskId: string, title: string) => void;
+  onDueDateChanged?: (
+    taskId: string,
+    dueDate: string | null,
+    dueDateLabel: string,
+  ) => void;
   /** When false, nested subtasks are hidden (root parents only). */
   subtasksExpanded?: boolean;
   onToggleSubtasks?: () => void;
@@ -1518,18 +1797,24 @@ function TaskRow({
         </div>
         <div className="sm:hidden">
           <TaskRowMetaColumn
+            taskId={task.id}
+            dueDate={task.dueDate}
             dueDateLabel={task.dueDateLabel}
             overdue={overdue}
             calendarScheduleStatus={task.calendarScheduleStatus}
             clientName={task.clientName}
             clientColor={clientColor}
+            onDueDateChanged={onDueDateChanged}
           />
         </div>
         <div className="hidden sm:block">
-          <DueDateCell
+          <InlineDueDate
+            taskId={task.id}
+            dueDate={task.dueDate}
             dueDateLabel={task.dueDateLabel}
             overdue={overdue}
             calendarScheduleStatus={task.calendarScheduleStatus}
+            onDueDateChanged={onDueDateChanged}
           />
         </div>
         <div className="hidden sm:block">
@@ -1549,6 +1834,7 @@ function TaskRow({
               today={today}
               onStatusChanged={onStatusChanged}
               onTitleChanged={onTitleChanged}
+              onDueDateChanged={onDueDateChanged}
             />
           ))}
         </div>

@@ -40,8 +40,6 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
 
   return (
     <main className="relative overflow-hidden marketing-shell">
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_22%)]" />
-
       <section className="relative mx-auto flex w-full max-w-7xl flex-col gap-14 px-6 pb-16 pt-24 md:pt-28">
         <div className="grid items-center gap-12 lg:grid-cols-[1.05fr,0.95fr]">
           <div className="space-y-8">
@@ -79,13 +77,12 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
                 size="lg"
                 className={marketingBtnOutline}
               >
-                <Link href="/pricing">View pricing</Link>
+                <Link href="/pricing">See pricing</Link>
               </Button>
             </div>
           </div>
 
           <div className={`relative rounded-3xl p-5 ${marketingPanelDeep}`}>
-            <div className="absolute -inset-px rounded-3xl bg-[linear-gradient(135deg,var(--ozer-coral-alpha-15),transparent_58%)] opacity-70" />
             <div className={`relative space-y-4 p-5 ${marketingPanelInner}`}>
               <div className="flex items-center gap-3">
                 <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-alpha-08)] text-[var(--ozer-accent)]">
@@ -201,7 +198,7 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
             size="lg"
             className="mt-6 rounded-full bg-[var(--ozer-accent)] px-7 text-[var(--ozer-plum-950)] hover:bg-[var(--ozer-accent-hover)] hover:text-[var(--ozer-white)]"
           >
-            <Link href={BUSINESS_LITE_SIGNUP}>Get started free</Link>
+            <Link href={BUSINESS_LITE_SIGNUP}>Start free</Link>
           </Button>
           <p className={`mt-4 text-xs ${marketingMutedText}`}>
             Explore all apps on the{' '}

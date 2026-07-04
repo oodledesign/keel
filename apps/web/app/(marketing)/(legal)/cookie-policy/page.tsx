@@ -1,13 +1,19 @@
 import { SitePageHeader } from '~/(marketing)/_components/site-page-header';
+import { CookiePolicyContent } from '../_components/legal-content';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
+import { JsonLd } from '~/lib/seo/json-ld';
+import { breadcrumbJsonLd, schemaGraph, webPageJsonLd } from '~/lib/seo/schema';
 
 export async function generateMetadata() {
-  const { t } = await createI18nServerInstance();
-
-  return {
-    title: t('marketing:cookiePolicy'),
-  };
+  return buildMarketingMetadata({
+    title: 'Cookie policy — Ozer',
+    description:
+      'How Ozer uses essential, analytics, and preference cookies on ozer.so and how you can control them.',
+    path: '/cookie-policy',
+    ogType: 'legal',
+  });
 }
 
 async function CookiePolicyPage() {
@@ -15,13 +21,26 @@ async function CookiePolicyPage() {
 
   return (
     <div>
+      <JsonLd
+        data={schemaGraph([
+          webPageJsonLd({
+            name: 'Cookie policy — Ozer',
+            description: 'How Ozer uses cookies on ozer.so.',
+            path: '/cookie-policy',
+          }),
+          breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'Cookie policy', path: '/cookie-policy' },
+          ]),
+        ])}
+      />
       <SitePageHeader
         title={t(`marketing:cookiePolicy`)}
         subtitle={t(`marketing:cookiePolicyDescription`)}
       />
 
-      <div className={'container mx-auto py-8'}>
-        <div>Your terms of service content here</div>
+      <div className="container mx-auto px-4 py-8">
+        <CookiePolicyContent />
       </div>
     </div>
   );

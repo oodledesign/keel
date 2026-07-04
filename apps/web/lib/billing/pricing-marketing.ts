@@ -2,6 +2,12 @@ import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
 import pathsConfig from '~/config/paths.config';
 import { getSafeRedirectPath } from '@kit/shared/utils';
 
+import {
+  formatGbp as formatGbpFromConfig,
+  getBillingProductPrice,
+  listAllWorkspacePrices,
+} from '~/lib/billing/billing-config-prices';
+
 export type BillingInterval = 'month' | 'year';
 
 export type MarketingWorkspacePlan = {
@@ -27,6 +33,16 @@ export type MarketingAddonPlan = {
   features: string[];
 };
 
+const PRODUCT_PROFILE: Record<string, WorkspaceProfile> = {
+  'keel-community': 'community',
+  'keel-business-lite': 'work_design',
+  'keel-business-solo': 'work_design',
+  'keel-business-team': 'work_design',
+  'keel-business-scale': 'work_design',
+  'keel-property-starter': 'work_property',
+  'keel-property-portfolio': 'work_property',
+};
+
 export const MARKETING_FREE_TIER = {
   name: 'Personal & Family',
   description: 'Your personal command centre plus one family workspace.',
@@ -37,161 +53,48 @@ export const MARKETING_FREE_TIER = {
   ],
 } as const;
 
-export const MARKETING_WORKSPACE_PLANS: MarketingWorkspacePlan[] = [
-  {
-    productId: 'keel-community',
-    monthlyPlanId: 'community-monthly',
-    yearlyPlanId: 'community-yearly',
-    profile: 'community',
-    name: 'Community',
-    description: 'Clubs, homegroups, and small communities.',
-    monthlyPriceGbp: 12,
-    yearlyPriceGbp: 120,
-    features: ['Shared schedule & events', 'Group tasks & notes', '3 members included'],
-  },
-  {
-    productId: 'keel-business-lite',
-    monthlyPlanId: 'business-lite-free',
-    yearlyPlanId: 'business-lite-free',
-    profile: 'work_design',
-    name: 'Business Lite',
-    description: 'Free apps workspace — add Signatures, Rankly, and more.',
-    monthlyPriceGbp: 0,
-    yearlyPriceGbp: 0,
-    features: ['Apps marketplace', 'Team & brand settings', 'Pay per app add-on'],
-  },
-  {
-    productId: 'keel-business-solo',
-    monthlyPlanId: 'business-solo-monthly',
-    yearlyPlanId: 'business-solo-yearly',
-    profile: 'work_design',
-    name: 'Business Solo',
-    description: 'Full business workspace for one person.',
-    monthlyPriceGbp: 29,
-    yearlyPriceGbp: 290,
-    features: ['Clients, jobs, invoices & tasks', '1 team member', 'Docs, finances & pipeline'],
-  },
-  {
-    productId: 'keel-business-team',
-    monthlyPlanId: 'business-team-monthly',
-    yearlyPlanId: 'business-team-yearly',
-    profile: 'work_design',
-    name: 'Business Team',
-    description: 'Small agencies and teams.',
-    monthlyPriceGbp: 79,
-    yearlyPriceGbp: 790,
-    features: ['Everything in Solo', 'Up to 5 team members', 'Shared client work'],
-    highlighted: true,
-    badge: 'Popular',
-  },
-  {
-    productId: 'keel-business-scale',
-    monthlyPlanId: 'business-scale-monthly',
-    yearlyPlanId: 'business-scale-yearly',
-    profile: 'work_design',
-    name: 'Business Scale',
-    description: 'Larger teams with more seats.',
-    monthlyPriceGbp: 149,
-    yearlyPriceGbp: 1490,
-    features: ['Everything in Team', 'Up to 15 team members', 'Priority support'],
-  },
-  {
-    productId: 'keel-property-starter',
-    monthlyPlanId: 'property-starter-monthly',
-    yearlyPlanId: 'property-starter-yearly',
-    profile: 'work_property',
-    name: 'Property Starter',
-    description: 'Landlords and small portfolios.',
-    monthlyPriceGbp: 19,
-    yearlyPriceGbp: 190,
-    features: ['Up to 5 properties', 'Tenants & maintenance', 'Property finances'],
-  },
-  {
-    productId: 'keel-property-portfolio',
-    monthlyPlanId: 'property-portfolio-monthly',
-    yearlyPlanId: 'property-portfolio-yearly',
-    profile: 'work_property',
-    name: 'Property Portfolio',
-    description: 'Property managers with larger portfolios.',
-    monthlyPriceGbp: 29,
-    yearlyPriceGbp: 290,
-    features: ['Up to 20 properties', 'Bulk workflows', 'Portfolio reporting'],
-  },
-];
+/** Derived from apps/web/config/billing.config.ts — do not hardcode costs here. */
+export const MARKETING_WORKSPACE_PLANS: MarketingWorkspacePlan[] =
+  listAllWorkspacePrices().map((plan) => ({
+    productId: plan.productId,
+    monthlyPlanId: plan.monthlyPlanId ?? `${plan.productId}-monthly`,
+    yearlyPlanId: plan.yearlyPlanId ?? plan.monthlyPlanId ?? `${plan.productId}-yearly`,
+    profile: PRODUCT_PROFILE[plan.productId] ?? 'work_design',
+    name: plan.productName,
+    description: plan.description,
+    monthlyPriceGbp: plan.monthlyPriceGbp,
+    yearlyPriceGbp: plan.yearlyPriceGbp ?? plan.monthlyPriceGbp * 12,
+    features: plan.features,
+    highlighted: plan.highlighted,
+    badge: plan.badge,
+  }));
 
-/** Core Videos capabilities shown on pricing and marketing (all tiers). */
-export const VIDEOS_MARKETING_CORE_FEATURES = [
-  'Private & public visibility',
-  'Shareable public watch links',
-  'Custom branded player presets',
-  'Iframe, HTML5 & JS embed codes',
-  'Webflow, WordPress & any CMS',
+const ADDON_PRODUCT_IDS = [
+  'keel-addon-rankly',
+  'keel-addon-feedflow',
+  'keel-addon-videos-starter',
+  'keel-addon-videos-growth',
+  'keel-addon-videos-pro',
+  'keel-addon-videos-studio',
 ] as const;
 
-function videosMarketingFeatures(
-  videoLimit: string,
-  ...extras: string[]
-): string[] {
-  return [videoLimit, ...VIDEOS_MARKETING_CORE_FEATURES, ...extras];
-}
-
-export const MARKETING_ADDON_PLANS: MarketingAddonPlan[] = [
-  {
-    productId: 'keel-addon-rankly',
-    planId: 'rankly-monthly',
-    name: 'Rankly',
-    description: 'SEO suite per workspace.',
-    monthlyPriceGbp: 36,
-    features: [
-      'Rank tracking & alerts',
-      'Scheduled PageSpeed Insights',
-      'Notifications on score drops',
-      'AI insights & audits',
-      'Site explorer & briefs',
-      'Backlinks (coming soon)',
-    ],
+/** Derived from billing.config.ts. */
+export const MARKETING_ADDON_PLANS: MarketingAddonPlan[] = ADDON_PRODUCT_IDS.map(
+  (productId) => {
+    const plan = getBillingProductPrice(productId);
+    if (!plan) {
+      throw new Error(`Missing billing product ${productId}`);
+    }
+    return {
+      productId,
+      planId: plan.monthlyPlanId ?? `${productId}-monthly`,
+      name: plan.productName,
+      description: plan.description,
+      monthlyPriceGbp: plan.monthlyPriceGbp,
+      features: plan.features,
+    };
   },
-  {
-    productId: 'keel-addon-feedflow',
-    planId: 'feedflow-monthly',
-    name: 'Feedflow',
-    description: 'Reviews and social per workspace.',
-    monthlyPriceGbp: 9,
-    features: ['Review widgets', 'Social accounts', 'Video snippets'],
-  },
-  {
-    productId: 'keel-addon-videos-starter',
-    planId: 'videos-starter-monthly',
-    name: 'Videos Starter',
-    description: 'Up to 5 hosted videos with embeds & sharing.',
-    monthlyPriceGbp: 5,
-    features: videosMarketingFeatures('Up to 5 hosted videos'),
-  },
-  {
-    productId: 'keel-addon-videos-growth',
-    planId: 'videos-growth-monthly',
-    name: 'Videos Growth',
-    description: 'Up to 20 hosted videos for growing libraries.',
-    monthlyPriceGbp: 12,
-    features: videosMarketingFeatures('Up to 20 hosted videos', 'View analytics'),
-  },
-  {
-    productId: 'keel-addon-videos-pro',
-    planId: 'videos-pro-monthly',
-    name: 'Videos Pro',
-    description: 'Up to 49 hosted videos with full player control.',
-    monthlyPriceGbp: 29,
-    features: videosMarketingFeatures('Up to 49 hosted videos'),
-  },
-  {
-    productId: 'keel-addon-videos-studio',
-    planId: 'videos-studio-monthly',
-    name: 'Videos Studio',
-    description: 'Up to 100 hosted videos for large libraries.',
-    monthlyPriceGbp: 47,
-    features: videosMarketingFeatures('Up to 100 hosted videos', 'Priority encoding'),
-  },
-];
+);
 
 export function planIdForInterval(
   plan: MarketingWorkspacePlan,
@@ -201,11 +104,20 @@ export function planIdForInterval(
 }
 
 export function formatGbp(amount: number) {
-  return new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: 'GBP',
-    maximumFractionDigits: 0,
-  }).format(amount);
+  return formatGbpFromConfig(amount);
+}
+
+export function addonPriceFromBilling(productId: string, planId: string) {
+  const product = getBillingProductPrice(productId);
+  if (!product) return null;
+  return {
+    productId,
+    planId: product.monthlyPlanId ?? planId,
+    name: product.productName,
+    description: product.description,
+    monthlyPriceGbp: product.monthlyPriceGbp,
+    features: product.features,
+  } satisfies MarketingAddonPlan;
 }
 
 export function buildSetupPath(params: {

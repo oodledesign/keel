@@ -1,7 +1,14 @@
 import type { Metadata } from 'next';
 
-import appConfig from '~/config/app.config';
-import { getSearchIndexingRobots } from '~/lib/seo/search-indexing';
+import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
+import {
+  absoluteUrl,
+  breadcrumbJsonLd,
+  faqPageJsonLd,
+  schemaGraph,
+  softwareApplicationJsonLd,
+  webPageJsonLd,
+} from '~/lib/seo/schema';
 
 import type { SegmentLandingConfig } from './segment-landing-pages';
 
@@ -10,110 +17,44 @@ export function segmentCanonicalPath(slug: SegmentLandingConfig['slug']) {
 }
 
 export function buildSegmentMetadata(config: SegmentLandingConfig): Metadata {
-  const url = `${appConfig.url}${segmentCanonicalPath(config.slug)}`;
-
-  return {
+  return buildMarketingMetadata({
     title: config.seo.title,
     description: config.seo.description,
+    path: segmentCanonicalPath(config.slug),
+    ogType: 'segment',
     keywords: config.seo.keywords,
-    alternates: {
-      canonical: url,
-    },
-    openGraph: {
-      title: config.seo.title,
-      description: config.seo.description,
-      url,
-      siteName: appConfig.name,
-      type: 'website',
-      locale: appConfig.locale,
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: config.seo.title,
-      description: config.seo.description,
-    },
-    robots: getSearchIndexingRobots(),
-  };
+  });
 }
 
 export function buildSegmentJsonLd(config: SegmentLandingConfig) {
-  const pageUrl = `${appConfig.url}${segmentCanonicalPath(config.slug)}`;
+  const path = segmentCanonicalPath(config.slug);
+  const pageUrl = absoluteUrl(path);
 
-  const faqPage =
-    config.faqs.length > 0
-      ? {
-          '@context': 'https://schema.org',
-          '@type': 'FAQPage',
-          mainEntity: config.faqs.map((faq) => ({
-            '@type': 'Question',
-            name: faq.question,
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: faq.answer,
-            },
-          })),
-        }
-      : null;
-
-  const softwareApplication = {
-    '@context': 'https://schema.org',
-    '@type': 'SoftwareApplication',
-    name: `${appConfig.name} — ${config.hero.eyebrow}`,
-    applicationCategory: 'BusinessApplication',
-    operatingSystem: 'Web',
-    description: config.seo.description,
-    url: pageUrl,
-    offers: config.pricingPlans.map((plan) => ({
-      '@type': 'Offer',
-      name: plan.name,
-      price: plan.priceGbp,
-      priceCurrency: 'GBP',
-      description: plan.description,
+  return schemaGraph([
+    webPageJsonLd({
+      name: config.seo.title,
+      description: config.seo.description,
+      path,
+    }),
+    softwareApplicationJsonLd({
+      name: `Ozer — ${config.hero.eyebrow}`,
+      description: config.seo.description,
       url: pageUrl,
-    })),
-    provider: {
-      '@type': 'Organization',
-      name: appConfig.name,
-      url: appConfig.url,
-    },
-  };
-
-  const breadcrumb = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      {
-        '@type': 'ListItem',
-        position: 1,
-        name: 'Home',
-        item: appConfig.url,
-      },
-      {
-        '@type': 'ListItem',
-        position: 2,
-        name: config.hero.eyebrow,
-        item: pageUrl,
-      },
-    ],
-  };
-
-  const webPage = {
-    '@context': 'https://schema.org',
-    '@type': 'WebPage',
-    name: config.seo.title,
-    description: config.seo.description,
-    url: pageUrl,
-    isPartOf: {
-      '@type': 'WebSite',
-      name: appConfig.name,
-      url: appConfig.url,
-    },
-  };
-
-  return [webPage, softwareApplication, breadcrumb, faqPage].filter(Boolean);
+      offers: config.pricingPlans.map((plan) => ({
+        name: plan.name,
+        price: plan.priceGbp,
+        description: plan.description,
+        url: pageUrl,
+      })),
+    }),
+    breadcrumbJsonLd([
+      { name: 'Home', path: '/' },
+      { name: config.hero.eyebrow, path },
+    ]),
+    faqPageJsonLd(config.faqs),
+  ]);
 }
 
 export function segmentJsonLdScript(config: SegmentLandingConfig) {
-  const graphs = buildSegmentJsonLd(config);
-  return JSON.stringify(graphs.length === 1 ? graphs[0] : graphs);
+  return JSON.stringify(buildSegmentJsonLd(config));
 }

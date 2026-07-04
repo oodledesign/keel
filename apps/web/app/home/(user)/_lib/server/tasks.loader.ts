@@ -519,7 +519,41 @@ export async function loadTaskById(
     false,
   );
 
-  return tasks[0] ?? null;
+  const task = tasks[0] ?? null;
+
+  if (!task || task.parentTaskId) {
+    return task;
+  }
+
+  const { data: childRows, error: childError } = await client
+    .from('tasks')
+    .select(
+      'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, notes, calendar_schedule_status',
+    )
+    .eq('user_id', user.id)
+    .eq('parent_task_id', taskId)
+    .order('due_date', { ascending: true, nullsLast: true });
+
+  if (childError || !childRows?.length) {
+    return { ...task, subtasks: [] };
+  }
+
+  const subtasks = await enrichTaskRows(
+    client,
+    childRows as TaskQueryRow[],
+    options?.workspaceAccountId ? 'work' : undefined,
+    enrichmentClient,
+    false,
+  );
+
+  subtasks.sort((a, b) => {
+    const da = a.dueDate ?? '';
+    const db = b.dueDate ?? '';
+    if (da !== db) return da.localeCompare(db);
+    return a.title.localeCompare(b.title);
+  });
+
+  return { ...task, subtasks };
 }
 
 export const loadTasksForUser = cache(async (): Promise<TasksPageTask[]> => {

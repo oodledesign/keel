@@ -35,8 +35,6 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
 
   return (
     <main className="relative overflow-hidden marketing-shell">
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_22%)]" />
-
       {/* Hero */}
       <section className="relative mx-auto flex w-full max-w-7xl flex-col gap-14 px-6 pb-16 pt-24 md:pt-28">
         <div className="grid items-center gap-12 lg:grid-cols-[1.05fr,0.95fr]">
@@ -77,7 +75,7 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
             <div className="flex flex-wrap items-center gap-3">
               <Button asChild size="lg" className={marketingBtnGradient}>
                 <Link href={primarySignup}>
-                  {isPersonal ? 'Get free access' : 'Start 14-day trial'}
+                  Start free
                   <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Link>
               </Button>
@@ -88,14 +86,13 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
                 className={marketingBtnOutline}
               >
                 <Link href={isPersonal ? '#pricing' : '/pricing'}>
-                  {isPersonal ? 'See what’s included free' : 'Compare all pricing'}
+                  See pricing
                 </Link>
               </Button>
             </div>
           </div>
 
           <div className={`relative rounded-3xl p-5 ${marketingPanelDeep}`}>
-            <div className="absolute -inset-px rounded-3xl bg-[linear-gradient(135deg,var(--ozer-coral-alpha-15),transparent_58%)] opacity-70" />
             <div className={`relative space-y-4 p-5 ${marketingPanelInner}`}>
               <p className={`text-xs uppercase tracking-[0.12em] ${marketingMutedText}`}>
                 Included in {config.hero.eyebrow.toLowerCase()}
@@ -124,7 +121,7 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
           {config.stats.map((stat) => (
             <div
               key={stat.label}
-              className="rounded-2xl border border-[color:var(--workspace-shell-border)] marketing-feature-card px-5 py-4 backdrop-blur"
+              className="rounded-2xl border border-[color:var(--workspace-shell-border)] marketing-feature-card px-5 py-4"
             >
               <p className="text-2xl font-semibold text-[var(--workspace-shell-text)]">{stat.value}</p>
               <p className={`mt-1 text-xs uppercase tracking-[0.1em] ${marketingMutedText}`}>
@@ -291,13 +288,7 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
                     )}
                     variant={plan.highlighted ? 'default' : 'outline'}
                   >
-                    <Link href={signupUrl}>
-                      {plan.priceGbp === 0
-                        ? isPersonal
-                          ? 'Get free access'
-                          : 'Start free'
-                        : 'Start 14-day trial'}
-                    </Link>
+                    <Link href={signupUrl}>Start free</Link>
                   </Button>
                 </div>
               </article>
@@ -372,7 +363,7 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
             className="mt-6 rounded-full bg-[var(--ozer-accent)] px-7 text-[var(--ozer-plum-950)] hover:bg-[var(--ozer-accent-hover)] hover:text-[var(--ozer-white)]"
           >
             <Link href={primarySignup}>
-              {isPersonal ? 'Get free access' : 'Start your trial'}
+              Start free
             </Link>
           </Button>
           <p className={`mt-4 text-xs ${marketingMutedText}`}>

@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 
 import { AppLandingPage } from '~/(marketing)/_components/app-landing-page';
 import {
-  appJsonLdScript,
+  buildAppJsonLd,
   buildAppMetadata,
 } from '~/lib/marketing/app-landing-seo';
 import {
@@ -10,6 +10,7 @@ import {
   getAppLandingConfig,
 } from '~/lib/marketing/app-landing-pages';
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { JsonLd } from '~/lib/seo/json-ld';
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -36,10 +37,7 @@ async function AppMarketingPage({ params }: PageProps) {
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: appJsonLdScript(config) }}
-      />
+      <JsonLd data={buildAppJsonLd(config)} />
       <AppLandingPage config={config} />
     </>
   );

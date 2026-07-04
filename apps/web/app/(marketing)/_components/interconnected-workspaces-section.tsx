@@ -54,21 +54,8 @@ export function InterconnectedWorkspacesSection({
           : 'border-y border-[var(--ozer-accent)]/20 bg-[var(--ozer-plum-950)]',
         className,
       )}
-      style={
-        isLight
-          ? undefined
-          : {
-              backgroundImage:
-                'radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)',
-              backgroundSize: '24px 24px',
-            }
-      }
       aria-labelledby="connected-workspaces-heading"
     >
-      {!isLight ? (
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,var(--ozer-coral-alpha-15),transparent_50%)]" />
-      ) : null}
-
       <div className="relative mx-auto w-full max-w-7xl px-6">
         <div className="grid gap-10 lg:grid-cols-[minmax(0,38fr)_minmax(0,62fr)] lg:items-center lg:gap-8">
           <div>
@@ -201,7 +188,7 @@ function BenefitCard({
         'flex h-full flex-col rounded-2xl border p-4 md:p-5',
         isLight
           ? 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]'
-          : 'border-[color:var(--ozer-border-on-dark)] bg-[color-mix(in_srgb,var(--ozer-plum-800)_90%,var(--ozer-plum-950))] backdrop-blur-sm',
+          : 'border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-plum-800)]',
       )}
     >
       <Icon className="h-5 w-5 shrink-0 text-[var(--ozer-accent)]" aria-hidden />

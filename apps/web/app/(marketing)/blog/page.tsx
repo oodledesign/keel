@@ -1,51 +1,47 @@
-import type { Metadata } from 'next';
-
 import { getBlogPosts } from '~/lib/blog';
+import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
+import { JsonLd } from '~/lib/seo/json-ld';
+import { blogJsonLd, breadcrumbJsonLd, schemaGraph } from '~/lib/seo/schema';
 
 import { SitePageHeader } from '../_components/site-page-header';
 import { BlogPostCard } from './_components/blog-post-card';
 
 export const dynamic = 'force-dynamic';
 
-const BLOG_JSON_LD = {
-  '@context': 'https://schema.org',
-  '@type': 'Blog',
-  name: 'Ozer Blog',
-  url: 'https://ozer.so/blog',
+export const metadata = buildMarketingMetadata({
+  title: 'Studio notes and updates — Ozer',
   description:
-    'Thoughts on running a freelance agency, building in public, and the tools that help.',
-  publisher: {
-    '@type': 'Organization',
-    name: 'Ozer',
-    url: 'https://ozer.so',
-  },
-};
-
-export const metadata: Metadata = {
-  title: 'Blog | Ozer',
-  description:
-    'Thoughts on running a freelance agency, building in public, and the tools that help.',
-  alternates: {
-    canonical: 'https://ozer.so/blog',
-  },
-};
+    'Notes from the studio on running freelance work, delivery, and the Workspace OS. Written by operators for operators.',
+  path: '/blog',
+  ogType: 'blog',
+});
 
 export default async function BlogPage() {
   const posts = await getBlogPosts();
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(BLOG_JSON_LD) }}
+      <JsonLd
+        data={schemaGraph([
+          blogJsonLd(),
+          breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'Blog', path: '/blog' },
+          ]),
+        ])}
       />
 
       <SitePageHeader
         title="Blog"
-        subtitle="Thoughts on running a freelance agency, building in public, and the tools that help."
+        subtitle="Notes from the studio on running freelance work and the Workspace OS."
       />
 
       <div className="container py-8 xl:py-10">
+        <p className="text-muted-foreground mx-auto mb-8 max-w-2xl text-center text-sm">
+          <a href="/blog/rss.xml" className="underline underline-offset-2">
+            RSS feed
+          </a>
+        </p>
         {posts.length === 0 ? (
           <p className="text-muted-foreground text-center">No posts yet.</p>
         ) : (

@@ -32,9 +32,19 @@ export const generateMetadata = async (
 
   const { total } = await getContentItems(resolvedLanguage, limit, offset);
 
+  const { buildMarketingMetadata } = await import(
+    '~/lib/seo/marketing-metadata'
+  );
+
   return {
-    title: t('marketing:changelog'),
-    description: t('marketing:changelogSubtitle'),
+    ...buildMarketingMetadata({
+      title: 'Product changelog — Ozer',
+      description:
+        t('marketing:changelogSubtitle') ||
+        'Latest updates and improvements to the Ozer Workspace OS.',
+      path: '/changelog',
+      ogType: 'default',
+    }),
     pagination: {
       previous: page > 0 ? `/changelog?page=${page - 1}` : undefined,
       next: offset + limit < total ? `/changelog?page=${page + 1}` : undefined,

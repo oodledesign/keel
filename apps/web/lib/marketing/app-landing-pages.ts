@@ -55,9 +55,9 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
     productId: 'keel-addon-signatures',
     planId: 'signatures-monthly',
     seo: {
-      title: 'Ozer Signatures — Branded Email Signatures for Teams',
+      title: 'Team email signatures — Ozer',
       description:
-        'Deploy consistent, on-brand email signatures across Microsoft 365 and Google Workspace. From £9/mo per workspace with Ozer Business Lite.',
+        'Deploy on-brand signatures to Microsoft 365 and Google Workspace from £9 per month per workspace. Flat price for the whole team.',
       keywords: [
         'email signature manager',
         'Microsoft 365 email signatures',
@@ -68,10 +68,10 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
     },
     hero: {
       eyebrow: 'Ozer app',
-      title: 'On-brand email signatures for',
-      titleAccent: 'every team member',
+      title: 'On-brand signatures for',
+      titleAccent: 'the whole team',
       subtitle:
-        'Stop copying HTML from a shared doc. Signatures gives you templates, staff profiles, and one-click deployment to Microsoft 365 or Google Workspace.',
+        'Ozer Signatures answers “how do we keep every mailbox on brand?” Templates and staff profiles, deployed to Microsoft 365 or Google Workspace — from £9/mo per workspace, not a per-seat tax.',
     },
     features: [
       {
@@ -97,7 +97,7 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
       {
         title: 'Create a free Business Lite workspace',
         description:
-          'Ozer apps attach to a business workspace. Business Lite is free — no card required to get started.',
+          'Ozer apps attach to a business workspace. Business Lite is free — no card required to start free.',
       },
       {
         title: 'Subscribe to Signatures',
@@ -136,9 +136,9 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
     productId: 'keel-addon-rankly',
     planId: 'rankly-monthly',
     seo: {
-      title: 'Ozer Rankly — SEO Rank Tracking, PageSpeed & AI Insights',
+      title: 'SEO ranks and PageSpeed — Ozer',
       description:
-        'Track keyword rankings, schedule PageSpeed Insights scans with drop alerts, run AI SEO audits, and explore site structure — £36/mo per workspace inside Ozer. Backlink analysis coming soon.',
+        'Rank tracking, scheduled PageSpeed, and SEO audits in your business workspace from £36 per month. Flat price for the whole team.',
       keywords: [
         'SEO rank tracker UK',
         'keyword rank tracking software',
@@ -152,10 +152,10 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
     },
     hero: {
       eyebrow: 'Ozer app',
-      title: 'Your SEO command centre with',
-      titleAccent: 'rankings, PageSpeed & AI insights',
+      title: 'Rankings, PageSpeed, and',
+      titleAccent: 'SEO work in one workspace',
       subtitle:
-        'Rankly brings rank tracking, scheduled PageSpeed Insights, score-drop notifications, AI audits, and content briefs into the same workspace where you run client work.',
+        'Ozer Rankly answers “where do we track client SEO?” Rank tracking, scheduled PageSpeed, drop alerts, and audits in the same business workspace as the jobs — £36/mo per workspace.',
     },
     features: [
       {
@@ -247,9 +247,9 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
     productId: 'keel-addon-feedflow',
     planId: 'feedflow-monthly',
     seo: {
-      title: 'Ozer Feedflow — Review Widgets & Social Publishing',
+      title: 'Reviews and social widgets — Ozer',
       description:
-        'Collect reviews, embed trust widgets on your site, and manage social accounts from Ozer. Feedflow from £9/mo per workspace.',
+        'Collect reviews, embed widgets, and manage social accounts from £9 per month per workspace. Flat price for the whole team.',
       keywords: [
         'review widget software',
         'Google reviews embed',
@@ -260,10 +260,10 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
     },
     hero: {
       eyebrow: 'Ozer app',
-      title: 'Turn reviews and social into',
-      titleAccent: 'proof that converts',
+      title: 'Reviews and social in',
+      titleAccent: 'the same workspace',
       subtitle:
-        'Feedflow helps you showcase customer reviews on your website and keep social accounts connected — without another standalone marketing login.',
+        'Ozer Feedflow answers “where do we show reviews?” Widgets and social accounts in the business workspace — not another marketing login.',
     },
     features: [
       {
@@ -326,9 +326,9 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
     productId: 'keel-addon-videos-starter',
     planId: 'videos-starter-monthly',
     seo: {
-      title: 'Ozer Videos — Hosted Video Library & Embeds',
+      title: 'Hosted video library — Ozer',
       description:
-        'Host videos with private/public controls, shareable public links, custom branded players, and embed codes for Webflow, WordPress, and any website. Plans from £5/mo per workspace.',
+        'Host and embed client videos with branded players from £5 per month per workspace. Flat price for the whole team.',
       keywords: [
         'hosted video embed',
         'video hosting for business',
@@ -342,10 +342,10 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
     },
     hero: {
       eyebrow: 'Ozer app',
-      title: 'Professional video hosting with',
-      titleAccent: 'embeds, sharing & branded players',
+      title: 'Host and embed video',
+      titleAccent: 'with your brand',
       subtitle:
-        'Keep videos private in your library or publish shareable watch links. Custom player presets match your brand — then paste embed codes on Webflow, WordPress, or any site.',
+        'Ozer Videos answers “where do client videos live?” Private library or shareable links, branded players, embeds for Webflow, WordPress, or any site — in the same workspace as the job.',
     },
     features: [
       {

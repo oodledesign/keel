@@ -128,15 +128,15 @@ function relatedExcept(current: SegmentSlug) {
   > = {
     personal: {
       label: 'Personal & family',
-      description: 'Free hub — tasks and planner connected across every workspace.',
+      description: 'Free hub — tasks and planner across every workspace.',
     },
     work: {
       label: 'Business workspace',
-      description: 'Full CRM that plugs into your Life CRM — not a separate silo.',
+      description: 'Clients, jobs, and invoices inside the Workspace OS.',
     },
     property: {
       label: 'Property management',
-      description: 'Tenants, maintenance, and portfolio finances in one place.',
+      description: 'Tenants, maintenance, and portfolio money in one place.',
     },
     community: {
       label: 'Community groups',
@@ -155,109 +155,106 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
   personal: {
     slug: 'personal',
     seo: {
-      title: 'Ozer Personal — Free Workspace Hub for Every Workspace',
+      title: 'Free hub for every workspace — Ozer',
       description:
-        'Free personal home that connects tasks, planner, and shortcuts across business, family, property, and community workspaces. One workspace OS — not separate apps. No credit card required.',
+        'Free personal home connects tasks and planner across business, family, property, and community. One Workspace OS. No card required.',
       keywords: [
-        'connected CRM',
         'workspace OS',
-        'personal CRM',
-        'life organizer app',
+        'personal workspace hub',
         'unified task manager',
-        'work and personal CRM',
         'family task manager',
         'free planner app',
         'household organisation software',
       ],
     },
     hero: {
-      eyebrow: 'Personal & family — your free hub',
+      eyebrow: 'Personal & family — free hub',
       title: 'One free home for',
-      titleAccent: 'life, work, and every workspace',
+      titleAccent: 'life and every workspace',
       subtitle:
-        'Ozer is not a siloed CRM. Your personal home unifies tasks, today’s focus, and AI planning across business, family, and community spaces — while personal and family stay completely free.',
+        'Ozer is a Workspace OS, not a siloed CRM. Your personal home shows tasks and today across business, family, and community — while personal and family stay free.',
     },
     stats: [
       { value: '£0', label: 'Forever — personal & family' },
       { value: '1 hub', label: 'All workspaces connected' },
-      { value: 'No credit card', label: 'Get started in minutes' },
+      { value: 'No card', label: 'Start free in minutes' },
     ],
     features: [
       {
         icon: ClipboardList,
         title: 'Tasks across every workspace',
         description:
-          'See work, family, and personal tasks in one list from your free home — filter by workspace when you want focus, or keep the full picture.',
+          'Work, family, and personal tasks in one list from your free home — filter by workspace when you need focus.',
       },
       {
         icon: Calendar,
-        title: 'Planner & today view',
+        title: 'Planner and today',
         description:
-          'AI day planning pulls open tasks and calendar from all your spaces. Today view shows your schedule and due items without clutter.',
+          'Today pulls open tasks and calendar from every space you belong to.',
       },
       {
         icon: Home,
-        title: 'Connected workspace overview',
+        title: 'Workspace overview',
         description:
-          'Glance at open tasks and next events per workspace, jump in with one click, and pin any page to your dashboard shortcuts.',
+          'Open tasks and next events per workspace, then jump in. Pin any page to shortcuts.',
       },
       {
         icon: Users,
-        title: 'People & relationships',
+        title: 'People and relationships',
         description:
-          'Remember context for friends, family, and collaborators — follow-ups, birthdays, and notes in one timeline.',
+          'Context for friends, family, and collaborators — follow-ups and notes in one timeline.',
       },
       {
         icon: ShoppingCart,
-        title: 'Family calendar & routines',
+        title: 'Family calendar and routines',
         description:
-          'Share schedules, school events, meal plans, and shopping lists in a family workspace — still visible from your personal home.',
+          'Schedules, school events, meals, and shopping in a family workspace — still visible from personal home.',
       },
     ],
     steps: [
       {
-        title: 'Create your free account',
-        description: 'Sign up in minutes — no credit card, no trial countdown on personal use.',
+        title: 'Start free',
+        description: 'No card. No trial clock on personal use.',
       },
       {
-        title: 'Set up your spaces',
+        title: 'Add your spaces',
         description:
-          'Start with your free personal home, then plug in family, business, or community workspaces — all stay connected.',
+          'Begin with personal home, then plug in family, business, or community — all stay connected.',
       },
       {
-        title: 'Invite family members',
+        title: 'Invite family',
         description:
-          'Share calendars, lists, and tasks. Members join free — only workspace owners manage billing on paid spaces.',
+          'Share calendars and lists. Members join free — only owners bill paid workspaces.',
       },
     ],
     pricingPlans: [freePersonalCard()],
     pricingNote:
-      'Personal and family workspaces are always free. Upgrade only when you add a community, business, or property workspace.',
+      'Personal and family stay free. You pay only when you add community, business, or property — and one workspace price covers the team, not a per-seat tax.',
     faqs: [
       {
         question: 'Is Ozer really free for personal use?',
         answer:
-          'Yes. Your personal command centre and one family workspace are free with no time limit. You only pay if you create a paid workspace type such as business, property, or community.',
+          'Yes. Personal home and one family workspace are free with no time limit. You pay only for paid workspace types such as business, property, or community.',
       },
       {
         question: 'Can my partner and children use Ozer?',
         answer:
-          'Yes. Invite family members to your family workspace. They can view shared calendars, tasks, meal plans, and shopping lists without needing their own subscription.',
+          'Yes. Invite them to the family workspace. Shared calendars, tasks, meals, and lists — no separate subscription per person.',
       },
       {
-        question: 'How is Ozer different from a generic to-do app or CRM?',
+        question: 'How is Ozer different from a to-do app or CRM?',
         answer:
-          'Most CRMs only handle work — Ozer is a Life CRM. Your free personal home connects tasks, planner, shortcuts, and today’s focus across every workspace. Business CRM features live inside the same account, not a separate silo.',
+          'Most CRMs only handle work. Ozer is a Workspace OS: free personal home connects tasks, planner, and today across every workspace. Business tools live in the same account.',
       },
       {
-        question: 'Can I see work tasks from my personal home?',
+        question: 'Can I see work tasks from personal home?',
         answer:
-          'Yes. By default your personal home and task list span every workspace you belong to. You can turn workspace tasks off in settings when you want personal-only focus.',
+          'Yes by default. Turn workspace tasks off in settings when you want personal-only focus.',
       },
       {
-        question: 'Can I use Ozer for freelance work on the free plan?',
+        question: 'Can I freelance on the free plan?',
         answer:
-          'Personal Ozer is for life organisation. When you need clients, invoices, and jobs, create a business workspace — start with free Business Lite or a 14-day trial on Solo.',
+          'Personal is for life organisation. For clients, invoices, and jobs, add a business workspace — free Business Lite or a 14-day Solo trial.',
       },
     ],
     relatedSegments: relatedExcept('personal'),
@@ -267,123 +264,120 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
   work: {
     slug: 'work',
     seo: {
-      title: 'Ozer for Business — Connected CRM Inside Your Workspace OS',
+      title: 'Business CRM in Workspace OS — Ozer',
       description:
-        'Business CRM, jobs, invoices, and client portal that connects to your personal Ozer home — one login, unified tasks and planning. Not another siloed CRM. Free Business Lite or from £29/mo.',
+        'Clients, jobs, and invoices in a business workspace linked to free personal home. Flat price for the whole team from £0–£29 per month.',
       keywords: [
-        'connected business CRM',
         'workspace OS for business',
         'small business CRM UK',
-        'work and personal unified',
-        'trade business software',
-        'solopreneur CRM',
         'agency project management',
-        'CRM not siloed',
+        'freelance CRM UK',
+        'studio client management',
       ],
     },
     hero: {
-      eyebrow: 'Business workspace — connected, not siloed',
-      title: 'A full business CRM that stays',
-      titleAccent: 'connected to your life',
+      eyebrow: 'Business workspace',
+      title: 'Run the studio without',
+      titleAccent: 'seven tools and Zapier',
       subtitle:
-        'Run clients, jobs, and billing in a proper workspace — while your personal home still sees today’s tasks, planner, and shortcuts across work and life. One account, not five apps.',
+        'Ozer’s business workspace answers “where do clients, jobs, and invoices live?” Pipeline, delivery, billing, and portals in one workspace — while personal home still sees today’s tasks. One account. One price for the team.',
     },
     stats: [
-      { value: '£0', label: 'Business Lite — apps & team' },
-      { value: '1 login', label: 'Personal + business together' },
-      { value: 'Connected', label: 'Tasks & planner span workspaces' },
+      { value: '£0', label: 'Business Lite — apps and team' },
+      { value: '1 login', label: 'Personal and business together' },
+      { value: 'Team price', label: 'Not a per-seat tax' },
     ],
     features: [
       {
         icon: Home,
-        title: 'CRM inside your Life CRM',
+        title: 'Business inside the Workspace OS',
         description:
-          'Unlike HubSpot or Pipedrive, Ozer business workspaces plug into your free personal home — unified tasks, today view, and AI planner across work and life.',
+          'Unlike siloed CRMs, business plugs into your free personal home — tasks, today, and planner across work and life.',
       },
       {
         icon: Users,
-        title: 'Clients & pipeline',
+        title: 'Clients and pipeline',
         description:
-          'Track leads, deals, and live clients. Move opportunities through your pipeline with full context.',
+          'Track leads and live clients with full context on the record.',
       },
       {
         icon: ClipboardList,
-        title: 'Jobs & projects',
+        title: 'Jobs and projects',
         description:
-          'Plan work, assign team members, attach notes and files, and message on the job record.',
+          'Plan work, assign people, attach notes and files, and message on the job.',
       },
       {
         icon: FileText,
-        title: 'Invoices, proposals & contracts',
+        title: 'Invoices, proposals, contracts',
         description:
-          'Send professional documents, collect signatures, and keep finance tied to the client and job.',
+          'Send documents, collect signatures, and keep money on the client and job.',
       },
       {
         icon: MessageSquare,
-        title: 'Team & client messaging',
+        title: 'Team and client messaging',
         description:
-          'WhatsApp-style threads for your team and clients, with shared files clients are allowed to view.',
+          'Threads for team and clients, with files clients are allowed to see — not personal WhatsApp.',
       },
       {
         icon: Building2,
         title: 'Client portal',
         description:
-          'Give clients a branded space for proposals, invoices, support tickets, and shared documents.',
+          'Branded space for proposals, invoices, tickets, and shared documents.',
       },
       {
         icon: Wallet,
-        title: 'Finances & SOPs',
+        title: 'Finances and SOPs',
         description:
-          'Track income and costs, document repeatable processes, and onboard staff with checklist playbooks.',
+          'Income and costs next to the work. Playbooks your team actually runs.',
       },
     ],
     steps: [
       {
         title: 'Start free or trial',
         description:
-          'Create Business Lite at £0 for apps and team settings, or start a 14-day trial on Solo, Team, or Scale.',
+          'Business Lite at £0 for apps and team settings, or a 14-day trial on Solo, Team, or Scale.',
       },
       {
-        title: 'Import your clients & jobs',
+        title: 'Add clients and jobs',
         description:
-          'Add clients, open jobs, and connect notes and files — your workspace is ready for day-to-day delivery.',
+          'Open jobs, attach notes and files — ready for day-to-day delivery.',
       },
       {
-        title: 'Invite your team & clients',
+        title: 'Invite team and clients',
         description:
-          'Staff and contractors join the workspace; clients get portal access when you are ready to share work.',
+          'Staff join the workspace; clients get portal access when you share work.',
       },
     ],
     pricingPlans: MARKETING_WORKSPACE_PLANS.filter(
       (p) => p.profile === 'work_design',
     ).map((p) => planToCard(p)),
     pricingNote:
-      'Add-ons such as Rankly (SEO), Feedflow (reviews), Videos, and Signatures (£9/mo) attach per workspace after signup. Annual billing saves about two months.',
+      'Add-ons such as Rankly, Feedflow, Videos, and Signatures (£9/mo) attach per workspace. Annual billing is 16.7% less than paying monthly for twelve months. One workspace price covers the team.',
     faqs: [
       {
         question: 'How is Ozer different from other CRMs?',
         answer:
-          'Traditional CRMs silo work away from the rest of your life. Ozer is a Life CRM — your business workspace connects to a free personal home where tasks, planner, shortcuts, and today’s focus span every workspace. One login, one mental model.',
+          'Most CRMs silo work from the rest of life. Ozer is a Workspace OS: business connects to a free personal home where tasks, planner, and today span every workspace. One login. Data stays in the EU.',
       },
       {
-        question: 'Can I plan my day across business and personal tasks?',
+        question: 'Can I plan across business and personal tasks?',
         answer:
-          'Yes. Ozer Planner and Today view pull from all workspaces you enable. Solopreneurs see client work and personal errands in one AI-generated schedule — then push blocks to Google Calendar.',
+          'Yes. Planner and Today pull from workspaces you enable. Client work and personal errands in one day — then push blocks to Google Calendar if you want.',
       },
       {
-        question: 'What is the difference between Business Lite and Solo?',
+        question: 'What is Business Lite vs Solo?',
         answer:
-          'Business Lite is free and includes apps marketplace access, team settings, and brand basics — ideal if you mainly want add-ons like Signatures or Rankly. Solo adds full CRM modules: clients, jobs, invoices, pipeline, messages, SOPs, and more for one person.',
+          'Business Lite is free: apps marketplace, team settings, brand basics — good if you mainly want add-ons. Solo adds full CRM: clients, jobs, invoices, pipeline, messages, SOPs for one person.',
       },
       {
-        question: 'Do my clients need to pay for Ozer?',
+        question: 'Do clients pay for Ozer?',
         answer:
-          'No. Clients use your client portal or message threads at no cost. Billing stays with the workspace owner.',
+          'No. Portal and message access are free for clients. Billing stays with the workspace owner.',
       },
       {
-        question: 'Can contractors access jobs without seeing finances?',
+        question: 'Can contractors work without seeing finances?',
         answer:
-          'Yes. Role-based access lets contractors work on assigned jobs and tasks without full admin or billing visibility.',
+          'Yes. Roles limit contractors to assigned jobs and tasks without admin or billing.',
       },
       {
         question: 'Is there a free trial?',
@@ -398,9 +392,9 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
   property: {
     slug: 'property',
     seo: {
-      title: 'Ozer for Property — Landlord & Portfolio Management Software',
+      title: 'Property portfolio workspace — Ozer',
       description:
-        'Manage rental properties, tenants, maintenance, and finances in Ozer. From £19/mo for up to 5 properties or £29/mo for portfolios up to 20. 14-day free trial.',
+        'Manage rentals, tenants, maintenance, and finances from £19 per month. Flat price for the whole team. 14-day trial.',
       keywords: [
         'property management software UK',
         'landlord software',
@@ -411,11 +405,11 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
       ],
     },
     hero: {
-      eyebrow: 'Property business',
-      title: 'Portfolio, tenants, and maintenance in',
+      eyebrow: 'Property workspace',
+      title: 'Portfolio, tenants, and repairs in',
       titleAccent: 'one property workspace',
       subtitle:
-        'Whether you manage five doors or twenty, Ozer keeps properties, tenants, repairs, and finances organised — without spreadsheet chaos.',
+        'Ozer property answers “where is this tenancy and repair?” Five doors or twenty — properties, tenants, maintenance, and money without spreadsheet chaos. From £19/mo.',
     },
     stats: [
       { value: '5–20', label: 'Properties per plan tier' },
@@ -511,9 +505,9 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
   community: {
     slug: 'community',
     seo: {
-      title: 'Ozer for Community Groups — Schedule, Tasks & Shared Notes',
+      title: 'Community group workspace — Ozer',
       description:
-        'Organise clubs, homegroups, and volunteer teams with Ozer Community: shared schedule, group tasks, notes, and member directory. £12/mo with 3 members included. 14-day trial.',
+        'Shared schedule, tasks, and notes for clubs and homegroups. £12 per month with three members included. Flat price for the whole team.',
       keywords: [
         'community group software',
         'church homegroup planner',
@@ -525,10 +519,10 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
     },
     hero: {
       eyebrow: 'Community groups',
-      title: 'Coordinate your group with',
-      titleAccent: 'shared schedule & tasks',
+      title: 'Coordinate the group with',
+      titleAccent: 'shared schedule and tasks',
       subtitle:
-        'For clubs, homegroups, societies, and volunteer teams — replace scattered WhatsApp threads and spreadsheets with one calm group workspace.',
+        'Ozer community answers “who is doing what this week?” Clubs, homegroups, and volunteer teams — one workspace instead of WhatsApp threads and spreadsheets. £12/mo, three members included.',
     },
     stats: [
       { value: '£12/mo', label: 'Community plan' },
@@ -568,9 +562,9 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
       },
       {
         icon: MessageSquare,
-        title: 'Works alongside Ozer personal',
+        title: 'Works alongside personal home',
         description:
-          'Leaders keep their personal Life CRM while the group gets its own dedicated workspace.',
+          'Leaders keep their free personal home while the group gets its own workspace.',
       },
     ],
     steps: [

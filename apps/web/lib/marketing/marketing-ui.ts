@@ -16,26 +16,28 @@ export const marketingSectionMuted = 'marketing-section-muted';
 export const marketingBtnPress =
   `transition-[transform,background-color,opacity,border-color] duration-[160ms] ${easeOut} active:scale-[0.97]`;
 
-export const marketingBtnPrimary = `h-11 rounded-full bg-[var(--ozer-accent)] px-6 text-[var(--ozer-plum-950)] hover:bg-[var(--ozer-accent-hover)] hover:text-[var(--ozer-white)] ${marketingBtnPress}`;
+export const marketingBtnPrimary = `h-11 rounded-full bg-[var(--ozer-accent)] px-6 text-[var(--ozer-plum-950)] hover:bg-[var(--ozer-accent-hover)] hover:text-[var(--ozer-white)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ozer-cream-50)] dark:focus-visible:ring-offset-[var(--ozer-plum-900)] ${marketingBtnPress}`;
 
-export const marketingBtnGradient = `h-11 rounded-full bg-gradient-to-r from-[var(--ozer-btn-gradient-from)] to-[var(--ozer-btn-gradient-to)] px-6 text-[var(--ozer-white)] hover:opacity-95 ${marketingBtnPress}`;
+/** Flat primary CTA — alias kept for call sites; no gradient. */
+export const marketingBtnGradient = marketingBtnPrimary;
 
-export const marketingBtnOutline = `h-11 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/70 px-6 text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel-hover)] ${marketingBtnPress}`;
+export const marketingBtnOutline = `h-11 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-6 text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ozer-cream-50)] dark:focus-visible:ring-offset-[var(--ozer-plum-900)] ${marketingBtnPress}`;
 
 export const marketingEyebrow =
   'inline-flex items-center rounded-full border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-4 py-1.5 text-xs font-medium uppercase tracking-[0.14em] text-[var(--ozer-coral-600)]';
 
+/** Accent phrase in headlines — solid Orange Topaze, not a gradient fill. */
 export const marketingHeadlineGradient =
-  'bg-gradient-to-r from-[var(--ozer-coral-400)] to-[var(--ozer-coral-100)] bg-clip-text text-transparent';
+  'text-[var(--ozer-accent)]';
 
 export const marketingCard =
-  'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/80';
+  'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
 
 export const marketingCardHover =
   'transition-[border-color,background-color] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:border-[var(--ozer-accent)]/30 hover:bg-[var(--workspace-shell-panel-hover)]';
 
 export const marketingPanelDeep =
-  'rounded-3xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/85 shadow-[0_30px_100px_rgba(53,30,40,0.12)] dark:shadow-[0_30px_100px_rgba(53,30,40,0.45)] backdrop-blur';
+  'rounded-3xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_12px_40px_var(--ozer-plum-alpha-12)]';
 
 export const marketingPanelInner =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)]';

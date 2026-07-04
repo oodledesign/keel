@@ -73,14 +73,14 @@ export function OzerPricingPage() {
     <div className="space-y-16">
       <section className="text-center">
         <p className={cn('mx-auto max-w-2xl text-lg leading-relaxed', marketingBodyText)}>
-          Start free with personal and family workspaces — your hub for every
-          connected space. Subscribe when you add community, business, or
-          property workspaces. One Ozer account, not a pile of siloed tools.
+          Start free with personal and family — your hub for every workspace.
+          Pay when you add community, business, or property. One price covers the
+          team, not a per-seat tax. One Workspace OS, not a pile of siloed tools.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Button asChild size="lg" className={marketingBtnGradient}>
             <Link href={buildPricingSignupUrl({ profile: 'family' })}>
-              Get free access
+              Start free
               <ArrowRight className="ml-1.5 h-4 w-4" />
             </Link>
           </Button>
@@ -89,7 +89,7 @@ export function OzerPricingPage() {
           </Button>
         </div>
         <p className={cn('mt-4 text-sm', marketingMutedText)}>
-          14-day trial on your first paid workspace · Annual plans save ~2 months
+          14-day trial on your first paid workspace · Annual plans are 16.7% less than 12 × monthly
         </p>
       </section>
 
@@ -160,18 +160,17 @@ export function OzerPricingPage() {
       </PricingSection>
 
       <section className={cn('rounded-2xl border border-[color:var(--workspace-shell-border)] px-6 py-10 text-center', marketingFeatureCard)}>
-        <h2 className="text-xl font-semibold text-[var(--workspace-shell-text)]">Ready to get organised?</h2>
+        <h2 className="text-xl font-semibold text-[var(--workspace-shell-text)]">Ready to run the studio?</h2>
         <p className={cn('mx-auto mt-2 max-w-lg text-sm', marketingBodyText)}>
-          Create your free account, choose your workspaces, and start a trial when you
-          are ready. Invited team members never pay — billing stays with the workspace
-          owner.
+          Start free, choose workspaces, and trial paid plans when you need them.
+          Invited team members never pay — billing stays with the workspace owner.
         </p>
         <Button
           asChild
           className="mt-6 h-11 rounded-full bg-[var(--ozer-accent)] px-6 text-[var(--ozer-plum-950)] hover:bg-[var(--ozer-accent-hover)] hover:text-[var(--ozer-white)]"
           size="lg"
         >
-          <Link href={buildPricingSignupUrl({})}>Create your free account</Link>
+          <Link href={buildPricingSignupUrl({})}>Start free</Link>
         </Button>
       </section>
     </div>
@@ -208,7 +207,7 @@ function BillingIntervalToggle(props: {
           )}
         >
           Annual
-          <span className="ml-1.5 text-xs text-[var(--ozer-accent)]">Save ~17%</span>
+          <span className="ml-1.5 text-xs text-[var(--ozer-accent)]">Save 16.7%</span>
         </button>
       </div>
     </div>
@@ -224,7 +223,7 @@ function FreePlanCard() {
       <FeatureList features={[...MARKETING_FREE_TIER.features]} />
       <div className="mt-6">
         <Button asChild className={cn(marketingBtnOutline, 'w-full')} variant="outline">
-          <Link href={buildPricingSignupUrl({ profile: 'family' })}>Get free access</Link>
+          <Link href={buildPricingSignupUrl({ profile: 'family' })}>Start free</Link>
         </Button>
       </div>
     </article>
@@ -286,7 +285,7 @@ function WorkspacePlanCard(props: {
           variant={plan.highlighted ? 'default' : 'outline'}
         >
           <Link href={signupUrl}>
-            Start 14-day trial
+            Start free
             <ArrowRight className="ml-1.5 h-4 w-4" />
           </Link>
         </Button>
@@ -314,7 +313,7 @@ function AddonPlanCard(props: {
       <FeatureList features={plan.features} compact />
       <div className="mt-6">
         <Button asChild className={cn(marketingBtnOutline, 'w-full')} variant="outline">
-          <Link href={buildPricingSignupUrl({})}>Get started free</Link>
+          <Link href={buildPricingSignupUrl({})}>Start free</Link>
         </Button>
         <p className={cn('mt-2 text-center text-xs', marketingMutedText)}>
           Add-ons attach to a workspace after signup

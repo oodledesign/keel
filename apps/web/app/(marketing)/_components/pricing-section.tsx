@@ -413,7 +413,9 @@ function computeAnnualDiscountPercent() {
       return ((monthlyYearTotal - annualYearTotal) / monthlyYearTotal) * 100;
     });
 
-  return Math.round(Math.max(0, ...discounts));
+  // Truth-check: one decimal place — never round 16.7% up to 17%.
+  const max = Math.max(0, ...discounts);
+  return Math.round(max * 10) / 10;
 }
 
 const ANNUAL_DISCOUNT_PERCENT = computeAnnualDiscountPercent();
@@ -685,7 +687,7 @@ function WorkspaceAssistantBadges({
                       ? 'border-[var(--ozer-accent)]/40 bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]'
                       : isComingSoon
                         ? cn('border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]', t.muted)
-                        : 'border-[var(--ozer-gold-500)]/30 bg-[var(--ozer-gold-500)]/10 text-[var(--ozer-gold-500)]',
+                        : 'border-[var(--ozer-lime-400)]/30 bg-[var(--ozer-lime-400)]/10 text-[var(--ozer-lime-400)]',
                   )}
                 >
                   <Icon className="h-3.5 w-3.5" aria-hidden />
@@ -867,7 +869,7 @@ function TierPicker({
               <div className="flex items-center justify-between gap-2">
                 <span className={cn('font-medium', t.text)}>{tier.label}</span>
                 {'badge' in tier && tier.badge ? (
-                  <span className="rounded-full bg-[var(--ozer-gold-500)]/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--ozer-gold-500)]">
+                  <span className="rounded-full bg-[var(--ozer-lime-400)]/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--ozer-lime-400)]">
                     {tier.badge}
                   </span>
                 ) : null}
@@ -929,7 +931,7 @@ function AddonToggle({
                 'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
                 selected && !disabled
                   ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]'
-                  : 'bg-[var(--ozer-gold-500)]/10 text-[var(--ozer-gold-500)]',
+                  : 'bg-[var(--ozer-lime-400)]/10 text-[var(--ozer-lime-400)]',
               )}
             >
               <Icon className="h-4 w-4" aria-hidden />
@@ -1096,7 +1098,7 @@ function AddonsPanel({
 
       {selected.has('business') ? (
         <p className={cn('flex items-start gap-2 text-xs', t.muted)}>
-          <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--ozer-gold-500)]" aria-hidden />
+          <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--ozer-lime-400)]" aria-hidden />
           Business Lite is free and built for the apps marketplace — pick Lite above if you
           only need Signatures, Rankly, or other add-ons without full CRM features.
         </p>
@@ -1502,11 +1504,11 @@ export default function PricingSection({ tone = 'dark' }: { tone?: PricingTone }
               asChild
               size="lg"
               className={cn(
-                'mt-6 h-11 w-full rounded-full bg-gradient-to-r from-[var(--ozer-btn-gradient-from)] to-[var(--ozer-btn-gradient-to)] text-[var(--ozer-white)] hover:opacity-95',
+                'mt-6 h-11 w-full rounded-full bg-[var(--ozer-accent)] text-[var(--ozer-plum-950)] hover:bg-[var(--ozer-accent-hover)]',
                 ctaGlow && !reducedMotion && 'animate-[ozer-cta-glow_1.2s_ease-out_1]',
               )}
             >
-              <Link href={pathsConfig.auth.signUp}>Start free →</Link>
+              <Link href={pathsConfig.auth.signUp}>Start free</Link>
             </Button>
             <p className={cn('mt-3 text-center text-xs', theme.muted)}>
               No credit card required. Cancel anytime.
@@ -1531,10 +1533,10 @@ export default function PricingSection({ tone = 'dark' }: { tone?: PricingTone }
       <style jsx global>{`
         @keyframes ozer-cta-glow {
           0% {
-            box-shadow: 0 0 0 0 rgba(45, 212, 191, 0.55);
+            box-shadow: 0 0 0 0 var(--ozer-coral-alpha-45);
           }
           100% {
-            box-shadow: 0 0 0 18px rgba(45, 212, 191, 0);
+            box-shadow: 0 0 0 18px transparent;
           }
         }
       `}</style>

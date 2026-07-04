@@ -70,42 +70,42 @@ export type InterconnectedWorkspaceNode = {
 
 export const INTERCONNECTED_WORKSPACES_MARKETING = {
   eyebrow: 'Why Ozer is different',
-  title: 'One OS.',
-  titleAccent: 'Every workspace connected.',
+  title: 'One Workspace OS.',
+  titleAccent: 'Every space connected.',
   subtitle:
-    'Most CRMs lock work in a silo. Ozer links your personal life, business, family, and community spaces — with Email and Meeting Assistants, AI planner, and a second brain that all connect through one calm home.',
+    'A small studio should not need seven tools and Zapier. Ozer links personal, business, family, and community workspaces — with assistants and a planner that share one home.',
   comparison: {
     heading: 'Not another siloed CRM',
-    traditionalLabel: 'Typical CRM',
+    traditionalLabel: 'Typical stack',
     ozerLabel: 'Ozer',
     traditional: [
-      'Work lives in one product; life lives elsewhere',
-      'Separate logins, tabs, and mental models',
+      'Work in one product; life in three others',
+      'Separate logins and mental models',
       'Tasks trapped inside each tool',
       'No shared “today” across work and home',
-      'Add-ons bolted on, never truly unified',
+      'Add-ons bolted on, never truly joined',
     ],
     ozer: [
       'Personal home sees tasks across every workspace',
-      'One login — flip between spaces instantly',
-      'Unified planner, today view, and task list',
-      'Custom shortcuts to any page in any workspace',
-      'Toggle workspace tasks off when you need focus',
+      'One login — switch spaces without context loss',
+      'One planner, today view, and task list',
+      'Shortcuts to any page in any workspace',
+      'Turn workspace tasks off when you need focus',
     ],
   },
   hubLabel: 'Your personal home',
-  hubCaption: 'Today’s focus · Planner · Tasks · Shortcuts',
+  hubCaption: 'Today · Planner · Tasks · Shortcuts',
   workspaceNodes: [
     {
       id: 'work',
       label: 'Business',
-      color: 'var(--ozer-info)',
+      color: 'var(--ozer-sky-100)',
       examples: 'Clients, jobs, invoices',
     },
     {
       id: 'family',
       label: 'Family workspace',
-      color: 'var(--ozer-gold-500)',
+      color: 'var(--ozer-sage-500)',
       examples: 'Calendar, meals, shopping',
     },
     {
@@ -120,57 +120,57 @@ export const INTERCONNECTED_WORKSPACES_MARKETING = {
       icon: ListTodo,
       title: 'All tasks, one list',
       description:
-        'See everything due today across personal life and every workspace — filter by space when you want, or keep the full picture.',
+        'See what is due today across personal life and every workspace — filter by space when you need focus.',
     },
     {
       icon: Mic,
       title: 'Meeting Assistant for Mac',
       description:
-        'Download Ozer Assistant for macOS. Record any call or in-person meeting, transcribe with speaker labels, extract tasks to your list, and sync everything to the right workspace — locally, with no per-minute fees.',
+        'Record any call or room meeting, label speakers, extract tasks, and sync to the right workspace. Audio is processed on your Mac — not kept as a permanent recording.',
     },
     {
       icon: Keyboard,
       title: 'Dictation',
       description:
-        'Press fn anywhere on your Mac and dictate into any app — polished punctuation and grammar, included in the same Ozer Assistant desktop download.',
+        'Press fn on your Mac and speak into any app. Punctuated text, included in the same Assistant download.',
     },
     {
       icon: Sparkles,
-      title: 'Planner & today view',
+      title: 'Planner and today',
       description:
-        'AI day planning pulls from all your open tasks and calendar. Today view shows your schedule and due items without clutter.',
+        'Today pulls open tasks and calendar from every space you belong to.',
     },
     {
       icon: LayoutDashboard,
       title: 'Shortcuts anywhere',
       description:
-        'Pin Rankly, invoices, family calendar, or any page from any workspace to your personal home and mobile bar.',
+        'Pin invoices, Rankly, or the family calendar to your personal home and phone bar.',
     },
     {
       icon: Layers,
       title: 'Workspace overview',
       description:
-        'Glance at open tasks and next events per workspace from personal home — then jump straight in.',
+        'Open tasks and next events per workspace from personal home — then jump in.',
     },
     {
       icon: CalendarDays,
       title: 'Shared calendar context',
       description:
-        'Meetings from work and family events surface together when you plan your day — not buried in separate apps.',
+        'Work meetings and family events surface together when you plan the day.',
     },
     {
       icon: Smartphone,
       title: 'Mobile, still connected',
       description:
-        'Custom bottom-nav shortcuts reach into any workspace from your phone — Home, Menu, and up to three pins you choose.',
+        'Home, Menu, and up to three pins reach any workspace from your phone.',
     },
   ] satisfies InterconnectedBenefit[],
   ctaLine:
-    'Agency work, family, and personal life — all in one account.',
+    'Studio work, family, and personal life — one account.',
 } as const;
 
 export const INTERCONNECTED_PERSONAL_HOOK =
-  'Your free personal home is the hub — business, family, and community workspaces plug in without losing the big picture.';
+  'Your free personal home is the hub — business, family, and community workspaces plug in without losing the picture.';
 
 export const INTERCONNECTED_WORK_HOOK =
   'Run your business workspace inside the same Ozer account as your personal life — tasks and plans stay connected, not copied between apps.';

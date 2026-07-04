@@ -54,7 +54,7 @@ export function BlogPostCard({ post, preloadImage }: BlogPostCardProps) {
             sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
           />
         ) : (
-          <div className="from-muted to-muted/40 text-muted-foreground flex h-full items-end bg-gradient-to-br p-5">
+          <div className="text-muted-foreground flex h-full items-end bg-[var(--ozer-cream-100)] p-5 dark:bg-[var(--ozer-plum-800)]">
             <span className="font-heading text-sm tracking-tight">Ozer Blog</span>
           </div>
         )}

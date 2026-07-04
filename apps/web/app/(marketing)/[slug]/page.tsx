@@ -2,11 +2,12 @@ import { notFound } from 'next/navigation';
 
 import { SegmentLandingPage } from '~/(marketing)/_components/segment-landing-page';
 import {
+  buildSegmentJsonLd,
   buildSegmentMetadata,
-  segmentJsonLdScript,
 } from '~/lib/marketing/segment-landing-seo';
 import { getSegmentLandingConfig } from '~/lib/marketing/segment-landing-pages';
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { JsonLd } from '~/lib/seo/json-ld';
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -38,10 +39,7 @@ async function SegmentMarketingPage({ params }: PageProps) {
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: segmentJsonLdScript(config) }}
-      />
+      <JsonLd data={buildSegmentJsonLd(config)} />
       <SegmentLandingPage config={config} />
     </>
   );

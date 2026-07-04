@@ -33,9 +33,19 @@
 
     --ozer-slate-blue: #41606f;
     --ozer-sky-100: #d7efff;
+    --ozer-sky-200: #cde8fb;
 
-    --ozer-gold-500: #f0c14b;
+    /* Vert Sauge (brand guide) + tints */
+    --ozer-sage-500: #aeb8a0;
+    --ozer-sage-300: #c5cdb8;
+    --ozer-sage-100: #e4e8dc;
+
+    /* Wasabi (brand guide) */
     --ozer-lime-400: #e9f056;
+    --ozer-lime-100: #f7f9c8;
+
+    /* Legacy gold — prefer sage/lime/coral on marketing surfaces */
+    --ozer-gold-500: #f0c14b;
 
     --ozer-white: #ffffff;
     --ozer-black: #000000;

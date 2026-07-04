@@ -9,13 +9,18 @@ import { MarketingFaqsSection } from '~/(marketing)/_components/marketing-faqs';
 import { SitePageHeader } from '~/(marketing)/_components/site-page-header';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
+import { JsonLd } from '~/lib/seo/json-ld';
+import { breadcrumbJsonLd, faqPageJsonLd, schemaGraph } from '~/lib/seo/schema';
 
 export const generateMetadata = async () => {
-  const { t } = await createI18nServerInstance();
-
-  return {
-    title: t('marketing:faq'),
-  };
+  return buildMarketingMetadata({
+    title: 'FAQ on pricing and seats — Ozer',
+    description:
+      'Answers on free plans, flat team pricing, trials, £ billing, EU data, and Mac meeting audio in the Ozer Workspace OS.',
+    path: '/faq',
+    ogType: 'default',
+  });
 };
 
 async function FAQPage() {
@@ -23,58 +28,51 @@ async function FAQPage() {
 
   const faqItems = [
     {
-      question: `Do you offer a free trial?`,
-      answer: `Yes, we offer a 14-day free trial. You can cancel at any time during the trial period and you won't be charged.`,
+      question: `Is there a free plan?`,
+      answer: `Yes. Personal home and one family workspace are free with no card and no time limit. Business Lite is also free if you mainly need apps. Paid workspaces include a 14-day trial on your first paid plan.`,
     },
     {
-      question: `Can I cancel my subscription?`,
-      answer: `You can cancel your subscription at any time. You can do this from your account settings.`,
+      question: `Do I pay per seat?`,
+      answer: `No. One workspace price covers the team. Invited members do not pay — billing stays with the workspace owner.`,
     },
     {
-      question: `Where can I find my invoices?`,
-      answer: `You can find your invoices in your account settings.`,
+      question: `Can I cancel anytime?`,
+      answer: `Yes. Cancel from account settings. You keep access through the period you have already paid for.`,
+    },
+    {
+      question: `Where do I find invoices?`,
+      answer: `In account settings under billing. Paid plans are billed in £ via Stripe.`,
     },
     {
       question: `What payment methods do you accept?`,
-      answer: `We accept all major credit cards and PayPal.`,
+      answer: `Major cards through Stripe. Bank details can also appear on client invoices you send from Ozer.`,
     },
     {
-      question: `Can I upgrade or downgrade my plan?`,
-      answer: `Yes, you can upgrade or downgrade your plan at any time. You can do this from your account settings.`,
+      question: `Where is my data hosted?`,
+      answer: `Ozer is built for EU data residency. Meeting audio on Mac is processed on your machine and is not kept as a permanent recording.`,
     },
     {
-      question: `Do you offer discounts for non-profits?`,
-      answer: `Yes, we offer a 50% discount for non-profits. Please contact us to learn more.`,
+      question: `Do you offer non-profit pricing?`,
+      answer: `Yes — 50% off for eligible non-profits. Contact us and we will set it up.`,
     },
   ];
 
-  const structuredData = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: faqItems.map((item) => {
-      return {
-        '@type': 'Question',
-        name: item.question,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: item.answer,
-        },
-      };
-    }),
-  };
-
   return (
     <>
-      <script
-        key={'ld:json'}
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      <JsonLd
+        data={schemaGraph([
+          faqPageJsonLd(faqItems),
+          breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'FAQ', path: '/faq' },
+          ]),
+        ])}
       />
 
       <div className="marketing-shell flex flex-col space-y-4 xl:space-y-8">
         <SitePageHeader
           title={t('marketing:faq')}
-          subtitle={t('marketing:faqSubtitle')}
+          subtitle="Straight answers on pricing, seats, data, and how Ozer works."
         />
 
         <MarketingFaqsSection
@@ -90,7 +88,7 @@ async function FAQPage() {
               <span>
                 <Trans i18nKey={'marketing:contactFaq'} />
               </span>
-              <ArrowRight className={'ml-2 w-4'} />
+              <ArrowRight className="ml-2 h-4" />
             </Link>
           </Button>
         </div>

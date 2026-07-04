@@ -1,6 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -22,6 +28,7 @@ import {
   DialogFooter,
 } from '@kit/ui/dialog';
 import { Button } from '@kit/ui/button';
+import { Checkbox } from '@kit/ui/checkbox';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { Textarea } from '@kit/ui/textarea';
@@ -33,8 +40,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
+import { cn } from '@kit/ui/utils';
 
-import { Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Loader2, Trash2 } from 'lucide-react';
 
 import type { TasksPageTask } from '../../_lib/server/tasks.loader';
 import {
@@ -42,6 +50,7 @@ import {
   deleteTask,
   loadTaskAssignmentOptions,
   loadTaskAssignmentOptionsForWorkspace,
+  loadTaskForEdit,
   updateTask,
   type TaskAssignmentOption,
   type TaskAssignmentUpdate,
@@ -106,6 +115,139 @@ function assignmentFromSelection(
   return { kind: 'area', id: selected.id };
 }
 
+function SubtaskEditorRow({
+  subtask,
+  disabled,
+  onChange,
+  onRemove,
+}: {
+  subtask: TasksPageTask;
+  disabled?: boolean;
+  onChange: (updated: TasksPageTask) => void;
+  onRemove: (id: string) => void;
+}) {
+  const [title, setTitle] = useState(subtask.title);
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const isDone = subtask.status === 'completed';
+
+  useEffect(() => {
+    if (!editing) {
+      setTitle(subtask.title);
+    }
+  }, [subtask.title, editing]);
+
+  useEffect(() => {
+    if (!editing) return;
+    const el = inputRef.current;
+    if (!el) return;
+    el.focus();
+    el.select();
+  }, [editing]);
+
+  const toggleStatus = useCallback(
+    async (checked: boolean) => {
+      const next = checked ? 'completed' : 'pending';
+      setBusy(true);
+      const result = await updateTask(subtask.id, { status: next });
+      setBusy(false);
+      if (result.success) {
+        onChange({ ...subtask, status: next });
+      }
+    },
+    [onChange, subtask],
+  );
+
+  const saveTitle = useCallback(async () => {
+    setEditing(false);
+    const trimmed = title.trim();
+    if (!trimmed) {
+      setTitle(subtask.title);
+      return;
+    }
+    if (trimmed === subtask.title) {
+      return;
+    }
+    setBusy(true);
+    const result = await updateTask(subtask.id, { title: trimmed });
+    setBusy(false);
+    if (result.success) {
+      onChange({ ...subtask, title: trimmed });
+    } else {
+      setTitle(subtask.title);
+    }
+  }, [onChange, subtask, title]);
+
+  const handleDelete = useCallback(async () => {
+    setBusy(true);
+    const result = await deleteTask(subtask.id);
+    setBusy(false);
+    if (result.success) {
+      onRemove(subtask.id);
+    }
+  }, [onRemove, subtask.id]);
+
+  return (
+    <div className="group flex items-center gap-2 rounded-md py-1 pl-1 pr-0.5 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]/60">
+      <Checkbox
+        checked={isDone}
+        disabled={disabled || busy}
+        onCheckedChange={(value) => {
+          if (value === 'indeterminate') return;
+          void toggleStatus(Boolean(value));
+        }}
+        aria-label={isDone ? 'Mark subtask as not done' : 'Mark subtask as done'}
+        className="h-4 w-4 shrink-0 rounded-full border-[color:var(--workspace-shell-border)] shadow-none data-[state=checked]:border-[var(--ozer-accent)] data-[state=checked]:bg-[var(--ozer-accent-subtle)] data-[state=checked]:text-[var(--ozer-accent)]"
+      />
+      {editing ? (
+        <input
+          ref={inputRef}
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          onBlur={() => void saveTitle()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              void saveTitle();
+            }
+            if (e.key === 'Escape') {
+              e.preventDefault();
+              setTitle(subtask.title);
+              setEditing(false);
+            }
+          }}
+          disabled={busy}
+          className="min-w-0 flex-1 rounded border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 py-1 text-sm text-[var(--workspace-shell-text)] outline-none focus-visible:ring-1 focus-visible:ring-[var(--ozer-accent)]/50"
+        />
+      ) : (
+        <button
+          type="button"
+          disabled={disabled || busy}
+          onClick={() => setEditing(true)}
+          className={cn(
+            'min-w-0 flex-1 truncate text-left text-sm',
+            isDone
+              ? 'text-[var(--workspace-shell-text-muted)] line-through'
+              : 'text-[var(--workspace-shell-text)]',
+          )}
+        >
+          {subtask.title}
+        </button>
+      )}
+      <button
+        type="button"
+        disabled={disabled || busy}
+        onClick={() => void handleDelete()}
+        className="rounded p-1 text-[var(--workspace-shell-text-muted)] opacity-0 transition-opacity hover:text-[#E85D75] focus-visible:opacity-100 group-hover:opacity-100 disabled:opacity-40"
+        aria-label={`Delete subtask ${subtask.title}`}
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
 export function EditTaskDialog({
   task,
   open,
@@ -129,10 +271,25 @@ export function EditTaskDialog({
   const [assignTo, setAssignTo] = useState(initialAssignTo(task));
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [subtaskAdding, setSubtaskAdding] = useState(false);
+  const [subtasks, setSubtasks] = useState<TasksPageTask[]>(task.subtasks ?? []);
+  const [subtasksExpanded, setSubtasksExpanded] = useState(true);
+  const [subtasksLoading, setSubtasksLoading] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   const isWorkspaceMode = Boolean(workspaceAccountId);
   const isRootTask = !task.parentTaskId;
+  const doneSubtaskCount = subtasks.filter((s) => s.status === 'completed').length;
+
+  const refreshSubtasks = useCallback(async () => {
+    if (!isRootTask) return;
+    setSubtasksLoading(true);
+    try {
+      const fresh = await loadTaskForEdit(task.id, workspaceAccountId);
+      setSubtasks(fresh?.subtasks ?? []);
+    } finally {
+      setSubtasksLoading(false);
+    }
+  }, [isRootTask, task.id, workspaceAccountId]);
 
   useEffect(() => {
     if (!open) {
@@ -152,6 +309,16 @@ export function EditTaskDialog({
       }
     })();
   }, [open, workspaceAccountId]);
+
+  useEffect(() => {
+    if (!open || !isRootTask) {
+      return;
+    }
+
+    setSubtasks(task.subtasks ?? []);
+    setSubtasksExpanded(true);
+    void refreshSubtasks();
+  }, [open, isRootTask, task.id, refreshSubtasks]);
 
   useEffect(() => {
     if (open) {
@@ -199,6 +366,7 @@ export function EditTaskDialog({
       }
       setNewSubtaskTitle('');
       onSaved?.();
+      await refreshSubtasks();
       router.refresh();
     } finally {
       setSubtaskAdding(false);
@@ -314,19 +482,73 @@ export function EditTaskDialog({
 
             {isRootTask ? (
               <div className="space-y-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
-                <Label htmlFor="new-subtask" className="text-[var(--workspace-shell-text-muted)]">
-                  Subtasks
-                </Label>
-                {(task.subtasks?.length ?? 0) > 0 ? (
-                  <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                    {(task.subtasks ?? []).filter((s) => s.status === 'completed').length}
-                    /{(task.subtasks ?? []).length} complete
-                  </p>
-                ) : (
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    {subtasks.length > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => setSubtasksExpanded((v) => !v)}
+                        className="rounded p-0.5 text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
+                        aria-expanded={subtasksExpanded}
+                        aria-label={
+                          subtasksExpanded ? 'Collapse subtasks' : 'Expand subtasks'
+                        }
+                      >
+                        {subtasksExpanded ? (
+                          <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4" />
+                        )}
+                      </button>
+                    ) : null}
+                    <Label htmlFor="new-subtask" className="text-[var(--workspace-shell-text-muted)]">
+                      Subtasks
+                    </Label>
+                  </div>
+                  {subtasks.length > 0 ? (
+                    <span className="shrink-0 text-xs tabular-nums text-[var(--workspace-shell-text-muted)]">
+                      {doneSubtaskCount}/{subtasks.length} complete
+                    </span>
+                  ) : null}
+                </div>
+
+                {subtasks.length === 0 ? (
                   <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                     Break this task into smaller steps.
                   </p>
-                )}
+                ) : null}
+
+                {subtasksExpanded && subtasks.length > 0 ? (
+                  <div className="space-y-0.5 rounded-md border border-[color:var(--workspace-shell-border)]/60 bg-[var(--workspace-shell-panel)]/40 p-1.5">
+                    {subtasksLoading ? (
+                      <div className="flex items-center gap-2 px-1 py-2 text-xs text-[var(--workspace-shell-text-muted)]">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Loading subtasks…
+                      </div>
+                    ) : (
+                      subtasks.map((subtask) => (
+                        <SubtaskEditorRow
+                          key={subtask.id}
+                          subtask={subtask}
+                          disabled={isPending || isDeleting || subtaskAdding}
+                          onChange={(updated) => {
+                            setSubtasks((prev) =>
+                              prev.map((s) => (s.id === updated.id ? updated : s)),
+                            );
+                            onSaved?.();
+                            router.refresh();
+                          }}
+                          onRemove={(id) => {
+                            setSubtasks((prev) => prev.filter((s) => s.id !== id));
+                            onSaved?.();
+                            router.refresh();
+                          }}
+                        />
+                      ))
+                    )}
+                  </div>
+                ) : null}
+
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
                   <Input
                     id="new-subtask"

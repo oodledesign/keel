@@ -59,31 +59,23 @@ export async function generateMetadata({
     notFound();
   }
 
-  const { title, publishedAt, description, image } = data.entry;
+  const { title, publishedAt, description } = data.entry;
+  const { buildMarketingMetadata } = await import(
+    '~/lib/seo/marketing-metadata'
+  );
+  const branded =
+    title.includes('— Ozer') || title.includes('| Ozer')
+      ? title
+      : `${title} — Ozer`;
 
-  return Promise.resolve({
-    title,
-    description,
-    openGraph: {
-      title,
-      description,
-      type: 'article',
-      publishedTime: publishedAt,
-      url: data.entry.url,
-      images: image
-        ? [
-            {
-              url: image,
-            },
-          ]
-        : [],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title,
-      description,
-      images: image ? [image] : [],
-    },
+  return buildMarketingMetadata({
+    title: branded.length <= 60 ? branded : `${title.slice(0, 52)} — Ozer`,
+    description:
+      description || `${title} — changelog entry for the Ozer Workspace OS.`,
+    path: `/changelog/${slug}`,
+    ogType: 'default',
+    openGraphType: 'article',
+    publishedTime: publishedAt,
   });
 }
 

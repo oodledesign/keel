@@ -2,13 +2,18 @@ import { SitePageHeader } from '~/(marketing)/_components/site-page-header';
 import { TermsOfServiceContent } from '../_components/legal-content';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
+import { JsonLd } from '~/lib/seo/json-ld';
+import { breadcrumbJsonLd, schemaGraph, webPageJsonLd } from '~/lib/seo/schema';
 
 export async function generateMetadata() {
-  const { t } = await createI18nServerInstance();
-
-  return {
-    title: t('marketing:termsOfService'),
-  };
+  return buildMarketingMetadata({
+    title: 'Terms of service — Ozer',
+    description:
+      'Terms for using Ozer, operated by Oodle Designs Ltd, including subscriptions, AI features, and liability under English law.',
+    path: '/terms-of-service',
+    ogType: 'legal',
+  });
 }
 
 async function TermsOfServicePage() {
@@ -16,6 +21,19 @@ async function TermsOfServicePage() {
 
   return (
     <div>
+      <JsonLd
+        data={schemaGraph([
+          webPageJsonLd({
+            name: 'Terms of service — Ozer',
+            description: 'Terms for using Ozer, operated by Oodle Designs Ltd.',
+            path: '/terms-of-service',
+          }),
+          breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'Terms of service', path: '/terms-of-service' },
+          ]),
+        ])}
+      />
       <SitePageHeader
         title={t(`marketing:termsOfService`)}
         subtitle={t(`marketing:termsOfServiceDescription`)}

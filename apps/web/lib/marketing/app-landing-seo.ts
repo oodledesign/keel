@@ -1,7 +1,14 @@
 import type { Metadata } from 'next';
 
-import appConfig from '~/config/app.config';
-import { getSearchIndexingRobots } from '~/lib/seo/search-indexing';
+import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
+import {
+  absoluteUrl,
+  breadcrumbJsonLd,
+  faqPageJsonLd,
+  schemaGraph,
+  softwareApplicationJsonLd,
+  webPageJsonLd,
+} from '~/lib/seo/schema';
 
 import type { AppLandingConfig } from './app-landing-pages';
 
@@ -10,56 +17,47 @@ export function appCanonicalPath(slug: AppLandingConfig['slug']) {
 }
 
 export function buildAppMetadata(config: AppLandingConfig): Metadata {
-  const url = `${appConfig.url}${appCanonicalPath(config.slug)}`;
-
-  return {
+  return buildMarketingMetadata({
     title: config.seo.title,
     description: config.seo.description,
+    path: appCanonicalPath(config.slug),
+    ogType: 'app',
     keywords: config.seo.keywords,
-    alternates: {
-      canonical: url,
-    },
-    openGraph: {
-      title: config.seo.title,
+  });
+}
+
+export function buildAppJsonLd(config: AppLandingConfig) {
+  const path = appCanonicalPath(config.slug);
+  const pageUrl = absoluteUrl(path);
+
+  return schemaGraph([
+    webPageJsonLd({
+      name: config.seo.title,
       description: config.seo.description,
-      url,
-      siteName: appConfig.name,
-      type: 'website',
-      locale: appConfig.locale,
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: config.seo.title,
+      path,
+    }),
+    softwareApplicationJsonLd({
+      name: `Ozer ${config.name}`,
       description: config.seo.description,
-    },
-    robots: getSearchIndexingRobots(),
-  };
+      url: pageUrl,
+      offers: [
+        {
+          name: config.name,
+          price: config.fromPriceGbp,
+          description: `From £${config.fromPriceGbp} per month per workspace`,
+          url: pageUrl,
+        },
+      ],
+    }),
+    breadcrumbJsonLd([
+      { name: 'Home', path: '/' },
+      { name: 'Apps', path: '/apps' },
+      { name: config.name, path },
+    ]),
+    faqPageJsonLd(config.faqs),
+  ]);
 }
 
 export function appJsonLdScript(config: AppLandingConfig) {
-  const pageUrl = `${appConfig.url}${appCanonicalPath(config.slug)}`;
-
-  const graph = {
-    '@context': 'https://schema.org',
-    '@type': 'SoftwareApplication',
-    name: `${appConfig.name} ${config.name}`,
-    applicationCategory: 'BusinessApplication',
-    operatingSystem: 'Web',
-    description: config.seo.description,
-    url: pageUrl,
-    offers: {
-      '@type': 'Offer',
-      name: config.name,
-      price: config.fromPriceGbp,
-      priceCurrency: 'GBP',
-      url: pageUrl,
-    },
-    provider: {
-      '@type': 'Organization',
-      name: appConfig.name,
-      url: appConfig.url,
-    },
-  };
-
-  return JSON.stringify(graph);
+  return JSON.stringify(buildAppJsonLd(config));
 }

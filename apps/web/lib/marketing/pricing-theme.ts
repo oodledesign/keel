@@ -40,11 +40,11 @@ export function getPricingTheme(tone: PricingTone): PricingTheme {
       muted: 'text-[var(--workspace-shell-text-muted)]',
       card: 'bg-[var(--workspace-shell-panel)]',
       cardSelected:
-        'border-[var(--ozer-accent)]/50 bg-[var(--ozer-accent-subtle)] shadow-[0_12px_40px_var(--ozer-coral-alpha-15)]',
+        'border-[var(--ozer-accent)] bg-[var(--ozer-accent-subtle)] shadow-[0_0_0_1px_var(--ozer-coral-alpha-45)]',
       cardUnselected:
-        'border-[color:var(--workspace-shell-border)] hover:border-[var(--ozer-accent)]/25 hover:shadow-[0_12px_40px_rgba(53,30,40,0.08)]',
+        'border-[color:var(--workspace-shell-border)] hover:border-[var(--ozer-accent)]/25',
       panel:
-        'rounded-3xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 backdrop-blur-sm lg:sticky lg:top-24',
+        'rounded-3xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 lg:sticky lg:top-24',
       panelInner:
         'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)]',
       toggleTrack:
@@ -56,7 +56,7 @@ export function getPricingTheme(tone: PricingTone): PricingTheme {
       tierPanel:
         'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 sm:p-5',
       addonsPanel:
-        'space-y-6 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/90 p-4 sm:p-5',
+        'space-y-6 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 sm:p-5',
       tooltip:
         'max-w-[200px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]',
       lineLabel: 'text-[var(--workspace-shell-text-muted)]',
@@ -66,9 +66,8 @@ export function getPricingTheme(tone: PricingTone): PricingTheme {
 
   return {
     section:
-      'relative overflow-hidden bg-[radial-gradient(circle_at_15%_0%,var(--ozer-coral-alpha-15),transparent_42%),linear-gradient(180deg,var(--ozer-plum-950)_0%,var(--ozer-plum-900)_100%)] pb-24 pt-20 text-[var(--ozer-text-on-dark)] md:pb-32',
-    sectionGlow:
-      'pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_22%)]',
+      'relative overflow-hidden bg-[var(--ozer-plum-900)] pb-24 pt-20 text-[var(--ozer-text-on-dark)] md:pb-32',
+    sectionGlow: 'hidden',
     eyebrow:
       'text-xs font-semibold uppercase tracking-[0.18em] text-[var(--ozer-text-on-dark-muted)]',
     title:
@@ -77,28 +76,28 @@ export function getPricingTheme(tone: PricingTone): PricingTheme {
       'mt-4 text-base leading-relaxed text-[var(--ozer-text-on-dark-muted)] md:text-lg',
     text: 'text-[var(--ozer-text-on-dark)]',
     muted: 'text-[var(--ozer-text-on-dark-muted)]',
-    card: 'bg-[var(--ozer-plum-950)]/60 backdrop-blur-sm',
+    card: 'bg-[var(--ozer-plum-950)]',
     cardSelected:
-      'border-[var(--ozer-accent)]/60 bg-[var(--ozer-accent-subtle)] shadow-[0_12px_40px_var(--ozer-coral-alpha-15)]',
+      'border-[var(--ozer-accent)] bg-[var(--ozer-plum-800)] shadow-[0_0_0_1px_var(--ozer-coral-alpha-45)]',
     cardUnselected:
-      'border-[color:var(--workspace-shell-border)] hover:border-[color:var(--workspace-shell-border)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.35)]',
+      'border-[color:var(--ozer-border-on-dark)] hover:border-[var(--ozer-accent)]/40',
     panel:
-      'rounded-3xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)]/70 p-6 backdrop-blur-sm lg:sticky lg:top-24',
+      'rounded-3xl border border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-plum-950)] p-6 lg:sticky lg:top-24',
     panelInner:
-      'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]',
+      'rounded-2xl border border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-plum-800)]',
     toggleTrack:
-      'inline-flex items-center gap-2 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)]/80 p-1',
-    togglePill: 'bg-[var(--ozer-info)]/80',
+      'inline-flex items-center gap-2 rounded-full border border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-plum-950)] p-1',
+    togglePill: 'bg-[var(--ozer-plum-800)]',
     toggleText: 'text-[var(--ozer-text-on-dark)]',
     toggleTextInactive:
       'text-[var(--ozer-text-on-dark-muted)] hover:text-[var(--ozer-text-on-dark)]',
     tierPanel:
-      'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)]/50 p-4 sm:p-5',
+      'rounded-2xl border border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-plum-950)] p-4 sm:p-5',
     addonsPanel:
-      'space-y-6 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)]/40 p-4 sm:p-5',
+      'space-y-6 rounded-2xl border border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-plum-950)] p-4 sm:p-5',
     tooltip:
-      'max-w-[200px] border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)] text-[var(--ozer-text-on-dark)]',
-    lineLabel: 'text-slate-200',
+      'max-w-[200px] border border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-plum-950)] text-[var(--ozer-text-on-dark)]',
+    lineLabel: 'text-[var(--ozer-text-on-dark-muted)]',
     faqTone: 'dark',
   };
 }

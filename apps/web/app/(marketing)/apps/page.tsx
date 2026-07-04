@@ -18,6 +18,9 @@ import {
   marketingMutedText,
 } from '~/lib/marketing/marketing-ui';
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
+import { JsonLd } from '~/lib/seo/json-ld';
+import { breadcrumbJsonLd, schemaGraph, webPageJsonLd } from '~/lib/seo/schema';
 
 const BUSINESS_LITE_SIGNUP = buildPricingSignupUrl({
   profile: 'work_design',
@@ -25,35 +28,49 @@ const BUSINESS_LITE_SIGNUP = buildPricingSignupUrl({
   planId: 'business-lite-free',
 });
 
-export const metadata = {
-  title: 'Ozer Apps — Signatures, Rankly, Feedflow & Videos',
+export const metadata = buildMarketingMetadata({
+  title: 'Business workspace apps — Ozer',
   description:
-    'Add powerful tools to any Ozer business workspace. Install Signatures, Rankly, Feedflow, and Videos on free Business Lite — pay only for the apps you use.',
-};
+    'Install Signatures, Rankly, Feedflow, or Videos on free Business Lite. Pay per app per workspace — flat price for the whole team.',
+  path: '/apps',
+  ogType: 'app',
+});
 
 function AppsMarketingPage() {
   const apps = listAppLandingSummaries();
 
   return (
     <main className="relative overflow-hidden marketing-shell">
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_22%)]" />
-
+      <JsonLd
+        data={schemaGraph([
+          webPageJsonLd({
+            name: 'Business workspace apps — Ozer',
+            description:
+              'Install Signatures, Rankly, Feedflow, or Videos on free Business Lite.',
+            path: '/apps',
+          }),
+          breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'Apps', path: '/apps' },
+          ]),
+        ])}
+      />
       <section className="relative mx-auto w-full max-w-7xl px-6 pb-20 pt-24 md:pt-28">
         <div className="max-w-3xl space-y-6">
           <span className={marketingEyebrow}>Ozer apps</span>
           <h1 className="font-heading text-4xl font-bold leading-tight text-[var(--workspace-shell-text)] md:text-5xl lg:text-6xl">
-            Add the tools you need to any{' '}
+            Apps for any{' '}
             <span className={marketingHeadlineGradient}>
               business workspace
             </span>
-            .
           </h1>
           <p className={`text-base leading-relaxed md:text-lg ${marketingBodyText}`}>
-            Ozer apps install per workspace — start with free Business Lite, then subscribe to Signatures, Rankly, Feedflow, or Videos when you need them. No bundle bloat.
+            Install per workspace. Start free on Business Lite, then add Signatures,
+            Rankly, Feedflow, or Videos when you need them — priced per workspace, not per seat.
           </p>
           <Button asChild size="lg" className={marketingBtnGradient}>
             <Link href={BUSINESS_LITE_SIGNUP}>
-              Start with free Business Lite
+              Start free
               <ArrowRight className="ml-1.5 h-4 w-4" />
             </Link>
           </Button>
@@ -86,7 +103,7 @@ function AppsMarketingPage() {
                       {app.description}
                     </p>
                     <span className="mt-4 inline-flex items-center text-sm font-medium text-[var(--ozer-accent-muted)]">
-                      Learn more
+                      See app
                       <ArrowRight className="ml-1 h-4 w-4 transition group-hover:translate-x-0.5" />
                     </span>
                   </div>

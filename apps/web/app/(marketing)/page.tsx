@@ -7,58 +7,102 @@ import { Button } from '@kit/ui/button';
 import pathsConfig from '~/config/paths.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import {
+  MARKETING_FREE_TIER,
+  MARKETING_WORKSPACE_PLANS,
+} from '~/lib/billing/pricing-marketing';
+import {
   marketingBtnGradient,
+  marketingBtnOutline,
   marketingFeatureCard,
   marketingSectionMuted,
   marketingShellClass,
 } from '~/lib/marketing/marketing-ui';
 import { cn } from '@kit/ui/utils';
+import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
+import { JsonLd } from '~/lib/seo/json-ld';
+import {
+  absoluteUrl,
+  schemaGraph,
+  softwareApplicationJsonLd,
+} from '~/lib/seo/schema';
+import {
+  formatGbp,
+  getBillingProductPrice,
+} from '~/lib/billing/billing-config-prices';
 
 import { MarketingHomeHero } from './_components/marketing-home-hero';
 import { InterconnectedWorkspacesSection } from './_components/interconnected-workspaces-section';
-import PricingSection from './_components/pricing-section';
 
-// Edited: apps/web/app/(marketing)/page.tsx — hero section (via MarketingHomeHero client child).
-// Stats: removed inline stats grid from this file (was 9 hrs/wk, 2.6x, 94% cards).
-// Task A: Life CRM → OS copy (business segment card).
-
-export const metadata = {
-  title: 'Ozer — The Workspace OS',
+export const metadata = buildMarketingMetadata({
+  title: 'Workspace OS for studios — Ozer',
   description:
-    'Ozer is the workspace OS for freelancers and small agencies — personal, business, property, and community in one account. One home for tasks, planner, and every workspace.',
-};
+    'Ozer is the Workspace OS for freelancers and small agencies. Personal and family stay free; business plans from £0–£29 per month with a flat price for the whole team.',
+  path: '/',
+  ogType: 'default',
+  keywords: [
+    'workspace OS',
+    'freelance CRM UK',
+    'agency software',
+    'small business workspace',
+  ],
+});
 
 const features = [
   {
     icon: Users,
-    title: 'People and relationships in one place',
+    title: 'People on the record',
     description:
-      'Keep context for clients, collaborators, family members, friends, and community contacts.',
+      'Clients, collaborators, family, and community contacts — context stays with the relationship.',
   },
   {
     icon: Calendar,
-    title: 'Plans and routines that stay in sync',
+    title: 'One plan for the day',
     description:
-      'Coordinate appointments, school events, work priorities, and personal plans from one timeline.',
+      'Work priorities and personal plans on one timeline, not three calendars.',
   },
   {
     icon: CreditCard,
-    title: 'Money and admin without the scramble',
+    title: 'Money next to the work',
     description:
-      'Track invoices, bills, subscriptions, and important tasks so life feels more predictable.',
+      'Invoices and outstanding amounts sit on the job — Ozer surfaces what to chase.',
   },
   {
     icon: MessagesSquare,
-    title: 'Conversations that never go missing',
+    title: 'Chat on the project',
     description:
-      'Capture key updates, reminders, and next steps so every conversation leads to action.',
+      'Updates and next steps live on the job record, not in personal WhatsApp.',
   },
 ];
 
 function Home() {
+  const offers = [
+    {
+      name: MARKETING_FREE_TIER.name,
+      price: 0,
+      description: MARKETING_FREE_TIER.description,
+      url: absoluteUrl('/pricing'),
+    },
+    ...MARKETING_WORKSPACE_PLANS.map((plan) => ({
+      name: plan.name,
+      price: plan.monthlyPriceGbp,
+      description: plan.description,
+      url: absoluteUrl('/pricing'),
+    })),
+  ];
+
+  const schema = schemaGraph([
+    softwareApplicationJsonLd({
+      name: 'Ozer',
+      description:
+        'Workspace OS for freelancers and small agencies — personal, business, property, and community in one account.',
+      url: absoluteUrl('/'),
+      offers,
+    }),
+  ]);
+
   return (
     <main className={cn('relative overflow-hidden', marketingShellClass)}>
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_22%)]" />
+      <JsonLd data={schema} />
 
       <section className="relative mx-auto flex w-full max-w-7xl flex-col px-6 pb-14 pt-24 md:pb-20 md:pt-32">
         <MarketingHomeHero />
@@ -66,17 +110,48 @@ function Home() {
 
       <InterconnectedWorkspacesSection />
 
-      <div id="pricing">
-        <PricingSection />
-      </div>
+      <section
+        id="pricing"
+        className="mx-auto w-full max-w-7xl px-6 py-16"
+        aria-labelledby="home-pricing-heading"
+      >
+        <div
+          className={cn(
+            'rounded-2xl border border-[color:var(--workspace-shell-border)] p-8 text-center',
+            marketingFeatureCard,
+          )}
+        >
+          <h2
+            id="home-pricing-heading"
+            className="font-heading text-3xl font-semibold text-[var(--workspace-shell-text)]"
+          >
+            Flat price for the whole team
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-[var(--workspace-shell-text-muted)]">
+            Personal and family free. Business Team{' '}
+            {formatGbp(
+              getBillingProductPrice('keel-business-team')?.monthlyPriceGbp ?? 79,
+            )}{' '}
+            per month — no per-seat maths, no subscription transaction fees.
+          </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <Button asChild className={marketingBtnGradient}>
+              <Link href="/pricing">See pricing</Link>
+            </Button>
+            <Button asChild variant="outline" className={marketingBtnOutline}>
+              <Link href="/pricing/explained">Ozer pricing, explained</Link>
+            </Button>
+          </div>
+        </div>
+      </section>
 
       <section className="relative mx-auto w-full max-w-7xl px-6 pb-24 pt-16 md:pt-24">
         <div className="mb-8">
           <h2 className="font-heading text-3xl font-semibold text-[var(--workspace-shell-text)] md:text-4xl">
-            Everything connects through your personal home.
+            Everything connects through personal home
           </h2>
           <p className="mt-3 max-w-2xl text-[var(--workspace-shell-text-muted)]">
-            Ozer keeps priorities visible across workspaces — what needs action now, what can wait, and what is drifting — without switching apps or losing context.
+            See what needs action across workspaces — without switching apps or losing context.
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
@@ -85,7 +160,7 @@ function Home() {
               key={feature.title}
               className={cn(marketingFeatureCard, 'p-6')}
             >
-              <feature.icon className="h-5 w-5 text-[var(--ozer-accent)]" />
+              <feature.icon className="h-5 w-5 text-[var(--ozer-accent)]" aria-hidden />
               <h3 className="mt-4 font-heading text-xl font-semibold text-[var(--workspace-shell-text)]">
                 {feature.title}
               </h3>
@@ -101,17 +176,17 @@ function Home() {
             {
               href: '/personal',
               title: 'Personal & family',
-              copy: 'Free hub — tasks, planner, and shortcuts across all workspaces.',
+              copy: 'Free hub — tasks and planner across every workspace.',
             },
             {
               href: '/work',
               title: 'Business',
-              copy: 'Client management inside your workspace OS.',
+              copy: 'Clients, jobs, and invoices inside the Workspace OS.',
             },
             {
               href: '/property',
               title: 'Property',
-              copy: 'Tenants, maintenance, and portfolio finances.',
+              copy: 'Tenants, maintenance, and portfolio money.',
             },
             {
               href: '/community',
@@ -134,18 +209,18 @@ function Home() {
       <section className={cn('py-20', marketingSectionMuted)}>
         <div className="mx-auto flex w-full max-w-7xl flex-col items-center gap-4 px-6 text-center">
           <h2 className="font-heading text-3xl font-semibold text-[var(--workspace-shell-text)] md:text-4xl">
-            Build a calmer, more intentional life with Ozer.
+            Run the studio from one home
           </h2>
           <p className="max-w-2xl text-[var(--workspace-shell-text-muted)]">
-            If your current setup feels fragmented, Ozer gives you one source of truth
-            for projects, people, plans, and priorities.
+            If your stack is fragmented, Ozer is one Workspace OS for projects, people,
+            plans, and priorities — without a per-seat tax.
           </p>
           <Button
             asChild
             size="lg"
             className={cn('mt-2', marketingBtnGradient)}
           >
-            <Link href={pathsConfig.auth.signUp}>Create your workspace</Link>
+            <Link href={pathsConfig.auth.signUp}>Start free</Link>
           </Button>
         </div>
       </section>

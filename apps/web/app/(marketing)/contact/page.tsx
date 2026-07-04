@@ -5,13 +5,18 @@ import { SitePageHeader } from '~/(marketing)/_components/site-page-header';
 import { ContactForm } from '~/(marketing)/contact/_components/contact-form';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
+import { JsonLd } from '~/lib/seo/json-ld';
+import { breadcrumbJsonLd, schemaGraph, webPageJsonLd } from '~/lib/seo/schema';
 
 export async function generateMetadata() {
-  const { t } = await createI18nServerInstance();
-
-  return {
-    title: t('marketing:contact'),
-  };
+  return buildMarketingMetadata({
+    title: 'Contact the Ozer team — Ozer',
+    description:
+      'Contact Ozer for product questions, non-profit pricing, or support. We reply from the UK studio.',
+    path: '/contact',
+    ogType: 'default',
+  });
 }
 
 async function ContactPage() {
@@ -19,6 +24,19 @@ async function ContactPage() {
 
   return (
     <div>
+      <JsonLd
+        data={schemaGraph([
+          webPageJsonLd({
+            name: 'Contact the Ozer team — Ozer',
+            description: 'Contact Ozer for product questions or support.',
+            path: '/contact',
+          }),
+          breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'Contact', path: '/contact' },
+          ]),
+        ])}
+      />
       <SitePageHeader
         title={t(`marketing:contact`)}
         subtitle={t(`marketing:contactDescription`)}
@@ -38,9 +56,9 @@ async function ContactPage() {
                 <Trans i18nKey={'marketing:contactHeading'} />
               </Heading>
 
-              <p className={'text-muted-foreground'}>
+              <div className={'text-muted-foreground'}>
                 <Trans i18nKey={'marketing:contactSubheading'} />
-              </p>
+              </div>
             </div>
 
             <ContactForm />

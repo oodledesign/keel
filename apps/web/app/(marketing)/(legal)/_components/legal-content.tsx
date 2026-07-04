@@ -138,3 +138,50 @@ export function TermsOfServiceContent() {
     </article>
   );
 }
+
+export function CookiePolicyContent() {
+  return (
+    <article className={legalProseClass}>
+      <p>
+        <strong>Last updated:</strong> 15 June 2026. Oodle Designs Ltd (&quot;Ozer&quot;) uses
+        cookies and similar technologies on ozer.so and related services. This policy
+        explains what we use and how you can control them.
+      </p>
+
+      <section>
+        <h2>Essential cookies</h2>
+        <p>
+          Required for sign-in, security (including CSRF protection), load balancing, and
+          remembering your cookie preferences. These cannot be switched off if you use the
+          product.
+        </p>
+      </section>
+
+      <section>
+        <h2>Analytics cookies</h2>
+        <p>
+          With your consent we may use analytics cookies to understand how pages are used
+          and improve the product. You can withdraw consent at any time via the cookie
+          banner or your browser settings.
+        </p>
+      </section>
+
+      <section>
+        <h2>Preferences</h2>
+        <p>
+          We may store preferences such as theme (light/dark) and locale so the site
+          remembers your choices between visits.
+        </p>
+      </section>
+
+      <section>
+        <h2>Managing cookies</h2>
+        <p>
+          Most browsers let you block or delete cookies. Blocking essential cookies may
+          prevent sign-in and core features from working. For privacy questions contact{' '}
+          privacy@ozer.so.
+        </p>
+      </section>
+    </article>
+  );
+}

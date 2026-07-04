@@ -4,12 +4,15 @@ import { SiteFooter } from '~/(marketing)/_components/site-footer';
 import { SiteHeader } from '~/(marketing)/_components/site-header';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { getOptionalUserInServerComponent } from '~/lib/server/get-optional-user-in-server-component';
+import { JsonLd } from '~/lib/seo/json-ld';
+import { organizationJsonLd } from '~/lib/seo/schema';
 
 async function SiteLayout(props: React.PropsWithChildren) {
   const user = await getOptionalUserInServerComponent();
 
   return (
     <div className={'flex min-h-[100vh] flex-col'}>
+      <JsonLd data={organizationJsonLd()} />
       <AuthRedirectFromTokens />
       <SiteHeader user={user} />
 

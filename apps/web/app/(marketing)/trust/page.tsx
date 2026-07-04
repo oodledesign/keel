@@ -5,6 +5,9 @@ import { Shield } from 'lucide-react';
 
 import appConfig from '~/config/app.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
+import { JsonLd } from '~/lib/seo/json-ld';
+import { breadcrumbJsonLd, schemaGraph, webPageJsonLd } from '~/lib/seo/schema';
 
 import {
   TrustCenterMobileNav,
@@ -14,11 +17,13 @@ import {
 const mutedLeadClass =
   'text-muted-foreground text-lg leading-relaxed tracking-tight 2xl:text-xl';
 
-export const metadata = {
-  title: 'Trust Center',
+export const metadata = buildMarketingMetadata({
+  title: 'Trust Centre and security — Ozer',
   description:
-    'Security, privacy, and compliance information for Ozer — how we protect your data and operate transparently as an early-stage UK SaaS.',
-};
+    'How Ozer protects workspace data: EU residency, UK GDPR, Stripe payments, and Mac meeting audio that is not kept as a permanent recording.',
+  path: '/trust',
+  ogType: 'legal',
+});
 
 const proseSectionClass = 'scroll-mt-28 space-y-6 border-b border-border/40 pb-12 last:border-b-0';
 const h2Class = 'font-heading text-2xl font-semibold tracking-tight text-foreground';
@@ -36,13 +41,27 @@ function TrustEmail({ href, children }: { href: string; children: React.ReactNod
 function TrustCenterPage() {
   return (
     <div className="border-border/40 border-b">
+      <JsonLd
+        data={schemaGraph([
+          webPageJsonLd({
+            name: 'Trust Centre and security — Ozer',
+            description:
+              'How Ozer protects workspace data: EU residency, UK GDPR, and Mac meeting audio.',
+            path: '/trust',
+          }),
+          breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'Trust Centre', path: '/trust' },
+          ]),
+        ])}
+      />
       <div className="container mx-auto px-4 py-10 xl:py-14">
         <div className="mx-auto flex max-w-3xl flex-col items-center gap-4 text-center">
           <div className="bg-muted/60 text-muted-foreground flex h-12 w-12 items-center justify-center rounded-full">
             <Shield className="h-6 w-6" aria-hidden />
           </div>
           <h1 className="font-heading text-3xl tracking-tighter xl:text-5xl">
-            {appConfig.name} Trust Center
+            {appConfig.name} Trust Centre
           </h1>
           <p className={mutedLeadClass}>
             Security and data protection are foundational to {appConfig.name}. We&apos;re

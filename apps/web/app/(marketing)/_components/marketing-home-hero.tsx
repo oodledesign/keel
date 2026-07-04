@@ -53,7 +53,7 @@ export function MarketingHomeHero() {
     <>
       <div className="mx-auto max-w-[46rem] text-center">
         <motion.span className={marketingEyebrow} {...fadeUpProps(0, 0.38)}>
-          Built for people who do it all
+          Workspace OS
         </motion.span>
 
         <div className="mt-8 space-y-6 md:mt-10">
@@ -61,17 +61,17 @@ export function MarketingHomeHero() {
             className="font-heading text-[2.625rem] font-bold leading-[1.06] tracking-[-0.02em] text-[var(--workspace-shell-text)] md:text-6xl lg:text-[4.5rem]"
             {...fadeUpProps(0.06, 0.42)}
           >
-            The one system built for{' '}
-            <span className={marketingHeadlineGradient}>every part of your life</span>.
+            Run the studio from{' '}
+            <span className={marketingHeadlineGradient}>one home</span>
           </motion.h1>
 
           <motion.p
             className={`mx-auto max-w-[34rem] text-base leading-[1.65] md:text-lg md:leading-[1.7] ${marketingMutedText}`}
             {...fadeUpProps(0.14, 0.38)}
           >
-            Your agency, your family, your personal life — each in its own workspace.
-            One home that sees across all of them, with Meeting Assistant ready at launch
-            and AI planner built in from day one.
+            Ozer is the Workspace OS for freelancers and small agencies. Personal and
+            family stay free. Business, property, and community plug in when you need
+            them — tasks and today still meet in one place.
           </motion.p>
 
           <motion.div
@@ -117,7 +117,7 @@ export function MarketingHomeHero() {
             </Link>
           </Button>
           <Button asChild variant="outline" size="lg" className={marketingBtnOutline}>
-            <Link href="/pricing">View pricing</Link>
+            <Link href="/pricing">See pricing</Link>
           </Button>
         </motion.div>
 

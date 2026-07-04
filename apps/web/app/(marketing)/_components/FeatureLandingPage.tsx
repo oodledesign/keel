@@ -40,12 +40,16 @@ export interface FeatureLandingPageProps {
   eyebrow: string;
   heading: string;
   subheading: string;
+  /** Direct answer for search / answer engines (40–60 words). */
+  answerFirst: string;
   primaryKeyword: string;
   highlights: FeatureHighlight[];
   connectedTo: ConnectedFeature[];
   connectionHeading?: string;
   connectionDescription?: string;
   faqs?: FAQItem[];
+  relatedBlog: { href: string; label: string };
+  relatedComparisons?: Array<{ href: string; label: string }>;
   heroBadge?: string;
   secondaryCta?: {
     label: string;
@@ -60,16 +64,19 @@ export function FeatureLandingPage({
   eyebrow,
   heading,
   subheading,
+  answerFirst,
   primaryKeyword,
   highlights,
   connectedTo,
   connectionHeading = 'Works with the rest of Ozer',
   connectionDescription,
   faqs,
+  relatedBlog,
+  relatedComparisons = [],
   heroBadge,
   secondaryCta,
-  ctaText = 'Get early access',
-  ctaHref = '#early-access',
+  ctaText = 'Start free',
+  ctaHref = '/auth/sign-up',
 }: FeatureLandingPageProps) {
   return (
     <main
@@ -92,8 +99,13 @@ export function FeatureLandingPage({
               {heading}
             </h1>
             <p className={`max-w-2xl text-base leading-relaxed md:text-lg ${marketingBodyText}`}>
-              {subheading}
+              {answerFirst}
             </p>
+            {subheading !== answerFirst ? (
+              <p className={`max-w-2xl text-sm leading-relaxed ${marketingMutedText}`}>
+                {subheading}
+              </p>
+            ) : null}
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -125,7 +137,7 @@ export function FeatureLandingPage({
       <section className="relative mx-auto w-full max-w-7xl px-6 pb-16">
         <div className="mb-10 max-w-2xl">
           <h2 className="font-heading text-3xl font-semibold tracking-tight text-[var(--workspace-shell-text)] md:text-4xl">
-            Everything you need
+            What you get
           </h2>
         </div>
 
@@ -160,13 +172,34 @@ export function FeatureLandingPage({
           </div>
 
           <div className="mt-8 flex flex-wrap gap-3">
-            {connectedTo.map((item) => (
+            {connectedTo.slice(0, 2).map((item) => (
               <Link
                 key={`${item.href}-${item.label}`}
                 href={item.href}
                 className="inline-flex items-center rounded-full border border-[var(--ozer-accent)]/25 bg-[var(--ozer-accent-subtle)] px-4 py-2 text-sm font-medium text-[var(--ozer-coral-600)] transition hover:border-[var(--ozer-accent)]/40 hover:bg-[var(--ozer-accent-subtle)]"
               >
-                {item.label}
+                Related: {item.label}
+              </Link>
+            ))}
+            <Link
+              href="/pricing"
+              className="inline-flex items-center rounded-full border border-[var(--ozer-accent)]/25 bg-[var(--ozer-accent-subtle)] px-4 py-2 text-sm font-medium text-[var(--ozer-coral-600)] transition hover:border-[var(--ozer-accent)]/40 hover:bg-[var(--ozer-accent-subtle)]"
+            >
+              Ozer pricing — flat price for the whole team
+            </Link>
+            <Link
+              href={relatedBlog.href}
+              className="inline-flex items-center rounded-full border border-[var(--ozer-accent)]/25 bg-[var(--ozer-accent-subtle)] px-4 py-2 text-sm font-medium text-[var(--ozer-coral-600)] transition hover:border-[var(--ozer-accent)]/40 hover:bg-[var(--ozer-accent-subtle)]"
+            >
+              {relatedBlog.label}
+            </Link>
+            {relatedComparisons.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="inline-flex items-center rounded-full border border-[var(--ozer-accent)]/25 bg-[var(--ozer-accent-subtle)] px-4 py-2 text-sm font-medium text-[var(--ozer-coral-600)] transition hover:border-[var(--ozer-accent)]/40 hover:bg-[var(--ozer-accent-subtle)]"
+              >
+                {link.label}
               </Link>
             ))}
           </div>
@@ -183,10 +216,11 @@ export function FeatureLandingPage({
       >
         <div className={`${marketingPanelDeep} p-8 text-center md:p-12`}>
           <h2 className="font-heading text-3xl font-semibold tracking-tight text-[var(--workspace-shell-text)]">
-            Ready to see it in action?
+            Run this in your Workspace OS
           </h2>
           <p className={`mx-auto mt-3 max-w-xl text-sm leading-relaxed md:text-base ${marketingBodyText}`}>
-            Join early access and be one of the first agencies running on Ozer.
+            Start free. Personal and family stay free. Pay when you add a paid workspace —
+            one price covers the team.
           </p>
           <Button asChild size="lg" className={`mt-6 ${marketingBtnGradient}`}>
             <Link href={ctaHref}>

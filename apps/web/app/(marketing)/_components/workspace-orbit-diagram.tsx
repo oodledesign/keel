@@ -163,7 +163,7 @@ function OrbitWorkspaceCard({
   return (
     <div
       className={cn(
-        'relative z-10 rounded-xl border border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-cream-50)] text-center shadow-[0_8px_24px_rgba(42,23,32,0.28)] backdrop-blur-sm',
+        'relative z-10 rounded-xl border border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-cream-50)] text-center shadow-[0_8px_24px_var(--ozer-plum-alpha-18)]',
         compact
           ? 'w-full px-1.5 py-2'
           : 'w-[104px] px-2 py-2.5 sm:w-[128px] sm:px-3 sm:py-3 lg:w-[140px]',
@@ -263,8 +263,8 @@ function AssistantLayerCard({
       className={cn(
         'relative z-10 rounded-lg border border-l-2 border-l-[var(--ozer-accent)]/50 text-center',
         isLight
-          ? 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_4px_16px_rgba(53,30,40,0.08)]'
-          : 'border-[color:var(--ozer-border-on-dark)] bg-[color-mix(in_srgb,var(--ozer-plum-900)_95%,var(--ozer-plum-950))] shadow-[0_4px_16px_rgba(42,23,32,0.35)]',
+          ? 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_4px_16px_var(--ozer-plum-alpha-08)]'
+          : 'border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-plum-900)] shadow-[0_4px_16px_var(--ozer-plum-alpha-18)]',
         compact
           ? 'w-full px-1.5 py-2'
           : 'w-[96px] px-2 py-2 sm:w-[118px] sm:px-2.5 sm:py-2.5 lg:w-[132px]',

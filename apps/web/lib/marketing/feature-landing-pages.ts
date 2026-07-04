@@ -5,6 +5,7 @@ import type {
   FAQItem,
   FeatureHighlight,
 } from '~/(marketing)/_components/FeatureLandingPage';
+import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
 
 export type FeatureSlug =
   | 'planner'
@@ -23,12 +24,21 @@ export type FeatureSlug =
   | 'messaging'
   | 'notes';
 
+export type FeatureRelatedLink = {
+  href: string;
+  label: string;
+};
+
 export type FeaturePageConfig = {
   slug: FeatureSlug;
   name: string;
   shortDescription: string;
   indexIcon: string;
   primaryKeyword: string;
+  /** 40–60 word direct answer under the H1 (answer engines / snippets). */
+  answerFirst: string;
+  /** Descriptive-anchor link to a relevant blog entry or index. */
+  relatedBlog: FeatureRelatedLink;
   metadata: {
     title: string;
     description: string;
@@ -36,7 +46,8 @@ export type FeaturePageConfig = {
     canonical: string;
     openGraphTitle: string;
   };
-  jsonLd: Record<string, unknown>;
+  /** @deprecated Prefer shared builders in feature-page-view. */
+  jsonLd?: Record<string, unknown>;
   props: {
     eyebrow: string;
     heading: string;
@@ -118,13 +129,19 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
     slug: 'planner',
     name: 'Planner',
     shortDescription:
-      'A daily plan pulled from your real projects, deadlines, and calendar.',
+      'Today’s work, pulled from real projects and deadlines.',
     indexIcon: 'CalendarDays',
     primaryKeyword: 'daily planner for freelancers',
+  answerFirst:
+    'Ozer planner shows what to work on today by reading your projects, client deadlines, and calendar. It is not a separate to-do list. Tasks stay on the job record and overdue work surfaces early. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+  relatedBlog: {
+    href: '/blog',
+    label: 'Studio notes on planning the day on the Ozer blog',
+  },
     metadata: {
-      title: 'Daily Planner for Freelancers | Ozer',
+      title: 'Today plan from real projects — Ozer',
       description:
-        "Ozer's daily planner shows you exactly what to work on today — pulled from your real projects and client deadlines, not a separate to-do list.",
+        "Ozer's planner shows what to work on today from your projects, client deadlines, and calendar — not a separate to-do list you keep in sync.",
       keywords: [
         'daily planner for freelancers',
         'task planner for agencies',
@@ -132,46 +149,46 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         'freelance task manager',
       ],
       canonical: 'https://ozer.so/features/planner',
-      openGraphTitle: 'Daily Planner for Freelancers | Ozer',
+      openGraphTitle: 'Today plan from real projects — Ozer',
     },
     jsonLd: {
       '@context': 'https://schema.org',
       '@type': 'WebPage',
       name: 'Daily Planner for Freelancers',
       description:
-        "Ozer's daily planner shows you exactly what to work on today — pulled from your real projects and client deadlines.",
+        "Ozer's planner shows what to work on today from your projects, client deadlines, and calendar.",
       url: 'https://ozer.so/features/planner',
       isPartOf: { '@type': 'WebSite', name: 'Ozer', url: 'https://ozer.so' },
     },
     props: {
       eyebrow: 'Ozer Planner',
-      heading: 'The Daily Planner Built for How Freelancers Actually Work',
+      heading: 'Today’s plan from real work',
       subheading:
-        'Not just a task list. A focused view of what to work on today — pulled directly from your active projects, client deadlines, and calendar.',
+        'Ozer’s planner answers “what should I do today?” by reading your projects, deadlines, and calendar. One view. No second to-do app.',
       highlights: [
         {
           icon: 'Sun',
-          title: "Today's focus, always clear",
+          title: 'Today, not a backlog',
           description:
-            'One view of everything that needs attention today. Pulled from your active projects automatically — no manual re-entry, no separate to-do app.',
+            'Everything due or overdue today in one list — from active projects, not a list you maintain by hand.',
         },
         {
           icon: 'FolderKanban',
-          title: 'Tasks from real projects',
+          title: 'Tasks stay on the project',
           description:
-            'Everything in your daily plan comes from actual client work. When you complete a task, it updates the project. Nothing gets out of sync.',
+            'Finish a task and the project updates. Your plan and delivery stay the same record.',
         },
         {
           icon: 'CalendarDays',
-          title: 'Calendar-aware planning',
+          title: 'Meetings block the day',
           description:
-            "Your meetings block time automatically. Ozer plans your workable hours around what's already in your calendar — not on top of it.",
+            'Ozer plans around what’s already in your calendar, not on top of it.',
         },
         {
           icon: 'AlertCircle',
-          title: 'Nothing falls through',
+          title: 'Slippage surfaces early',
           description:
-            "Overdue tasks surface automatically. Deadlines that are slipping get flagged. The plan adapts so you don't have to chase what you missed.",
+            'Overdue work and tight deadlines rise to the top so you chase less.',
         },
       ],
       connectedTo: [
@@ -180,7 +197,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         { label: 'Pipeline', href: '/features/pipeline' },
         { label: 'Notes', href: '/features/notes' },
       ],
-      connectionHeading: 'Planned around your actual work',
+      connectionHeading: 'Planned from work you already have',
       connectionDescription:
         "The planner isn't a standalone to-do list — it reads your projects, deadlines, and calendar and tells you what today should look like.",
       faqs: [
@@ -206,11 +223,17 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
     slug: 'email-assistant',
     name: 'Email Assistant',
     shortDescription:
-      'AI inbox connected to your clients, projects, and action items.',
+      'Inbox replies and tasks, with client context attached.',
     indexIcon: 'Sparkles',
     primaryKeyword: 'AI email assistant for freelancers',
+  answerFirst:
+    'Ozer email assistant links inbox threads to clients and projects, drafts replies with that history, and turns client asks into tasks. Mail stays in Gmail; action lives in Ozer. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+  relatedBlog: {
+    href: '/blog',
+    label: 'Studio notes on client email on the Ozer blog',
+  },
     metadata: {
-      title: 'AI Email Assistant for Freelancers | Ozer',
+      title: 'Client-aware email assistant — Ozer',
       description:
         "Ozer's email assistant connects your inbox to your clients and projects. AI that drafts replies, extracts action items, and gives every email the context it needs.",
       keywords: [
@@ -220,7 +243,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         'AI inbox for freelancers',
       ],
       canonical: 'https://ozer.so/features/email-assistant',
-      openGraphTitle: 'AI Email Assistant for Freelancers | Ozer',
+      openGraphTitle: 'Client-aware email assistant — Ozer',
     },
     jsonLd: {
       '@context': 'https://schema.org',
@@ -235,31 +258,31 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
       eyebrow: 'Ozer Email Assistant',
       heading: "The Email Assistant That Knows Who You're Talking To",
       subheading:
-        'Every email connected to the right client and project. AI that drafts, summarises, and extracts action items — with context that actually matters.',
+        'Ozer’s email assistant answers “how do I handle client email without losing context?” Threads sit on the client and project. Drafts use that history. Asks become tasks.',
       highlights: [
         {
           icon: 'Users',
-          title: 'Client-aware inbox',
+          title: 'Thread meets client record',
           description:
-            'Every thread is tagged to the right client automatically. Open an email and the project, conversation history, and outstanding tasks are already there alongside it.',
+            'Open a message and the project, history, and open tasks are already beside it.',
         },
         {
           icon: 'Sparkles',
-          title: 'AI drafts with context',
+          title: 'Drafts with real context',
           description:
-            "Reply drafts are generated knowing who the client is, what project you're on, and what's been agreed. Less rewriting. More sending.",
+            'Replies know the client, the job, and what you agreed — less rewriting before you send.',
         },
         {
           icon: 'CheckSquare',
-          title: 'Action items extracted',
+          title: 'Asks become tasks',
           description:
-            'When a client asks you to do something, Ozer captures it as a task automatically. Nothing gets buried three screens down in a long thread.',
+            'When a client asks for work, Ozer captures a task so it doesn’t die in the thread.',
         },
         {
           icon: 'Clock',
-          title: 'Full thread history in one place',
+          title: 'History stays with the job',
           description:
-            'Every email conversation with a client lives alongside their project, portal, and invoices. No more switching between apps to find what was said.',
+            'Client email lives with the project, portal, and invoices — not only in Gmail search.',
         },
       ],
       connectedTo: [
@@ -271,7 +294,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
       ],
       connectionHeading: "Email that's part of your workflow",
       connectionDescription:
-        'When an email comes in, Ozer already knows the client, the project, and what\'s outstanding — so you can act on it, not just read it.',
+        'When mail arrives, Ozer already knows the client, the project, and what’s outstanding.',
       faqs: [
         {
           question: 'Does this work with Gmail?',
@@ -295,18 +318,24 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
     slug: 'desktop-assistant',
     name: 'Desktop Assistant',
     shortDescription:
-      'Native Mac app for meeting notes, transcription, tasks, and follow-up automation.',
+      'Mac app: meetings become tasks and follow-ups. Audio stays on your Mac.',
     indexIcon: 'Mic',
     primaryKeyword: 'meeting notes desktop app Mac',
-    heroBadge: 'Native macOS desktop app · Download for Mac',
+  answerFirst:
+    'Ozer Assistant for Mac records meetings, labels speakers, extracts tasks, and drafts follow-ups. Audio is processed on your Mac and is not kept as a permanent recording. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+  relatedBlog: {
+    href: '/blog',
+    label: 'Studio notes on meeting capture on the Ozer blog',
+  },
+    heroBadge: 'Native macOS app · Download for Mac',
     secondaryCta: {
       label: 'Download for Mac',
       href: '#early-access',
     },
     metadata: {
-      title: 'Meeting Notes Desktop App for Mac | Ozer Assistant',
+      title: 'Mac meeting notes to tasks — Ozer',
       description:
-        'Download Ozer Assistant for Mac — records any call or in-person meeting, separates speakers, extracts tasks, drafts follow-up emails, and logs everything to your second brain.',
+        'Ozer Assistant for Mac records meetings, labels speakers, extracts tasks. Audio is processed on your Mac.',
       keywords: [
         'meeting notes desktop app Mac',
         'AI meeting recorder Mac',
@@ -315,7 +344,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         'automatic meeting notes',
       ],
       canonical: 'https://ozer.so/features/desktop-assistant',
-      openGraphTitle: 'Meeting Notes Desktop App for Mac | Ozer Assistant',
+      openGraphTitle: 'Mac meeting notes to tasks — Ozer',
     },
     jsonLd: {
       '@context': 'https://schema.org',
@@ -324,40 +353,40 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
       applicationCategory: 'ProductivityApplication',
       operatingSystem: 'macOS',
       description:
-        'Native macOS desktop app that records any call or in-person meeting, separates speakers, transcribes with AI, extracts tasks, and syncs everything to Ozer.',
+        'Native macOS app that records meetings, separates speakers, extracts tasks, and syncs transcripts to Ozer. Audio is not kept as a permanent file.',
       url: 'https://ozer.so/features/desktop-assistant',
       isPartOf: { '@type': 'WebSite', name: 'Ozer', url: 'https://ozer.so' },
     },
     props: {
       eyebrow: 'Ozer Assistant for Mac',
       heading:
-        'Download the Mac App That Turns Meetings Into Tasks and Follow-Ups',
+        'Meetings become tasks on Mac',
       subheading:
-        'Ozer Assistant is a native macOS desktop download. It records any call or in-room meeting, separates speakers automatically, then turns the conversation into tasks, follow-up emails, and searchable knowledge — without you lifting a finger.',
+        'Ozer’s meeting intelligence answers “what happened on that call?” Assistant records any call or room meeting, labels speakers, extracts tasks, and drafts the follow-up. Audio is processed on your Mac — we do not keep a permanent recording.',
       highlights: [
         {
           icon: 'Mic',
-          title: 'Any call. Any room.',
+          title: 'Any call, any room',
           description:
-            'Works across Zoom, Google Meet, Teams, or any app on your Mac. For in-person meetings, it separates speakers from a single microphone — so you know who said what, even in the room.',
+            'Zoom, Meet, Teams, or the room mic. Speakers are labelled so you know who said what.',
         },
         {
           icon: 'CheckSquare',
-          title: 'Tasks extracted to your list',
+          title: 'Tasks land on the list',
           description:
-            'Action items land in your Ozer task list automatically — linked to the right client and project. Review, edit, or add them to your daily plan without retyping from notes.',
+            'Action items go to Ozer, linked to the client and project. No retyping from notes.',
         },
         {
           icon: 'CalendarDays',
-          title: 'Calendar-connected',
+          title: 'Context before you record',
           description:
-            'Meeting reminders arrive before calls start. Client name, project, and context are autofilled from your calendar before you hit record.',
+            'Reminders and client context come from your calendar before the call starts.',
         },
         {
           icon: 'Zap',
-          title: 'Emails and second brain',
+          title: 'Follow-up drafted',
           description:
-            'When the call ends, a follow-up email is drafted and the full transcript is indexed in your second brain — searchable forever.',
+            'When the call ends, a follow-up email draft and a searchable transcript are ready.',
         },
       ],
       connectedTo: [
@@ -368,9 +397,9 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         { label: 'Second Brain', href: '/features/second-brain' },
         { label: 'Dictation', href: '/features/dictation' },
       ],
-      connectionHeading: 'Not a standalone app — the meeting layer of Ozer',
+      connectionHeading: 'Meeting layer of the Workspace OS',
       connectionDescription:
-        'Ozer Assistant feeds directly into your tasks, projects, inbox, and knowledge base. Every meeting becomes part of your workflow, not a break from it.',
+        'Assistant feeds tasks, projects, inbox, and second brain — meetings are not a break from the system.',
       faqs: [
         {
           question: 'How do I download Ozer Assistant for Mac?',
@@ -404,18 +433,24 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
     slug: 'dictation',
     name: 'Dictation',
     shortDescription:
-      'Speak anywhere on your Mac — polished text with punctuation, instantly.',
+      'Press fn, speak, get clean text in any Mac app.',
     indexIcon: 'Keyboard',
     primaryKeyword: 'voice dictation Mac app',
-    heroBadge: 'Part of Ozer Assistant for Mac',
+  answerFirst:
+    'Ozer dictation is part of Assistant for Mac. Press fn in any text field, speak naturally, and get punctuated text where your cursor is without a separate window. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+  relatedBlog: {
+    href: '/blog',
+    label: 'Studio notes on Mac dictation on the Ozer blog',
+  },
+    heroBadge: 'Included in Ozer Assistant for Mac',
     secondaryCta: {
       label: 'Download for Mac',
       href: '#early-access',
     },
     metadata: {
-      title: 'Voice Dictation for Mac | Ozer Assistant',
+      title: 'Mac dictation with punctuation — Ozer',
       description:
-        'Press fn anywhere on your Mac and dictate into any app. Ozer Assistant turns speech into clean, punctuated text — with grammar that reads like you wrote it.',
+        'Press fn on Mac and dictate into any app. Ozer returns punctuated text as part of Assistant.',
       keywords: [
         'voice dictation Mac app',
         'Mac dictation software',
@@ -424,7 +459,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         'AI dictation punctuation',
       ],
       canonical: 'https://ozer.so/features/dictation',
-      openGraphTitle: 'Voice Dictation for Mac | Ozer Assistant',
+      openGraphTitle: 'Mac dictation with punctuation — Ozer',
     },
     jsonLd: {
       '@context': 'https://schema.org',
@@ -433,39 +468,39 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
       applicationCategory: 'ProductivityApplication',
       operatingSystem: 'macOS',
       description:
-        'Global dictation hotkey for macOS — speak into any text field with automatic punctuation and grammar.',
+        'Global Mac dictation hotkey with punctuation and grammar, included in Ozer Assistant.',
       url: 'https://ozer.so/features/dictation',
       isPartOf: { '@type': 'WebSite', name: 'Ozer', url: 'https://ozer.so' },
     },
     props: {
       eyebrow: 'Ozer Dictation',
-      heading: 'Dictate Into Any App on Your Mac — With Text That Actually Reads Well',
+      heading: 'Dictate into any Mac app',
       subheading:
-        'Part of the Ozer Assistant macOS download. Press fn, speak naturally, and get polished text in whatever field you are focused on — email, notes, proposals, or Slack.',
+        'Ozer dictation answers “how do I type faster without messy speech-to-text?” Press fn, speak naturally, and get punctuated text in the field you are in — Mail, Docs, Slack, or Ozer.',
       highlights: [
         {
           icon: 'Keyboard',
           title: 'Global fn hotkey',
           description:
-            'Works in any app on your Mac. Focus a text field, press fn, and speak. Your words appear where your cursor is — no switching tools or copy-pasting from a separate dictation window.',
+            'Works in any Mac text field. No separate dictation window to copy from.',
         },
         {
           icon: 'Sparkles',
-          title: 'Punctuation and grammar built in',
+          title: 'Punctuation included',
           description:
-            'Not raw speech-to-text. Ozer cleans up punctuation, capitalisation, and sentence structure so the output reads like you typed it carefully.',
+            'Not raw speech-to-text. Sentences read like you typed them carefully.',
         },
         {
           icon: 'Clipboard',
-          title: 'Paste or copy',
+          title: 'Type or copy',
           description:
-            'Dictation can type directly into the focused field, or copy to your clipboard so you paste where you need it.',
+            'Insert at the cursor, or copy to paste where you need it.',
         },
         {
           icon: 'History',
-          title: 'History in Ozer',
+          title: 'Recent snippets in Ozer',
           description:
-            'Recent dictation snippets sync to your Ozer account so you can find and reuse phrasing from earlier in the day.',
+            'Reuse phrasing from earlier in the day without hunting chat logs.',
         },
       ],
       connectedTo: [
@@ -474,9 +509,9 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         { label: 'Notes', href: '/features/notes' },
         { label: 'Second Brain', href: '/features/second-brain' },
       ],
-      connectionHeading: 'Shipped with Ozer Assistant for Mac',
+      connectionHeading: 'Ships with Assistant for Mac',
       connectionDescription:
-        'Dictation is included in the same macOS desktop download as meeting recording — one app for capture, tasks, and typing at the speed of speech.',
+        'Same download as meeting recording — capture, tasks, and typing at speaking speed.',
       faqs: [
         {
           question: 'Is dictation a separate download?',
@@ -500,11 +535,17 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
     slug: 'client-portals',
     name: 'Client Portals',
     shortDescription:
-      'Branded client spaces that stay in sync with your projects.',
+      'Branded client spaces that stay on the project.',
     indexIcon: 'LayoutDashboard',
     primaryKeyword: 'client portal software for agencies',
+  answerFirst:
+    'Ozer client portals give each client a branded space for files, updates, and approvals on the project record inside the Workspace OS. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+  relatedBlog: {
+    href: '/blog',
+    label: 'Studio notes on client portals on the Ozer blog',
+  },
     metadata: {
-      title: 'Client Portal Software for Agencies | Ozer',
+      title: 'Client portals on the project — Ozer',
       description:
         "Give every client a professional portal — without logging into a separate tool. Ozer's client portals live inside your workflow and stay in sync with your projects automatically.",
       keywords: [
@@ -514,7 +555,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         'agency client portal',
       ],
       canonical: 'https://ozer.so/features/client-portals',
-      openGraphTitle: 'Client Portal Software for Agencies | Ozer',
+      openGraphTitle: 'Client portals on the project — Ozer',
     },
     jsonLd: {
       '@context': 'https://schema.org',
@@ -527,33 +568,33 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
     },
     props: {
       eyebrow: 'Ozer Client Portals',
-      heading: 'Client Portals That Live Inside Your Workflow — Not Outside It',
+      heading: 'Portals inside your workflow',
       subheading:
-        'A professional, branded space for every client. No separate login, no manual updating, no tool that lives in a different universe from the rest of your work.',
+        'Ozer client portals answer “how do clients see progress without email chaos?” Each client gets a branded space for files, updates, and sign-off — managed from the same project you already run.',
       highlights: [
         {
           icon: 'LayoutDashboard',
           title: 'One portal per client',
           description:
-            'Every client relationship gets its own clean, professional space. Share files, updates, and deliverables without sending another email attachment.',
+            'Share files and updates without another attachment thread.',
         },
         {
           icon: 'RefreshCw',
-          title: 'In sync with your projects',
+          title: 'Synced with the project',
           description:
-            "What's in the portal reflects what's in your project — automatically. No duplication, no remembering to update two places.",
+            'Portal content follows the project. You do not update two systems.',
         },
         {
           icon: 'CheckCircle',
-          title: 'Approvals and feedback',
+          title: 'Approvals in place',
           description:
-            'Clients can review deliverables, leave feedback, and sign off — all inside the portal. No email chains, no version confusion.',
+            'Clients review and sign off in the portal — fewer version fights.',
         },
         {
           icon: 'Plug',
           title: 'Built in, not bolted on',
           description:
-            "Manage the portal from the same place you manage the project, the invoice, and the email. Because they're all the same thing.",
+            'Portal, project, invoice, and messages share one client record.',
         },
       ],
       connectedTo: [
@@ -588,11 +629,17 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
     slug: 'invoicing',
     name: 'Invoicing',
     shortDescription:
-      'Send invoices from your projects with client details already filled in.',
+      'Raise invoices from the project. Chase what is unpaid.',
     indexIcon: 'FileText',
     primaryKeyword: 'invoicing software for freelancers',
+  answerFirst:
+    'Ozer invoicing raises invoices from the project with client details filled in. Outstanding amounts surface so you can chase payment without a second billing app. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+  relatedBlog: {
+    href: '/blog',
+    label: 'Studio notes on getting paid on the Ozer blog',
+  },
     metadata: {
-      title: 'Invoicing Software for Freelancers | Ozer',
+      title: 'Invoices from the project — Ozer',
       description:
         "Send invoices directly from your project — not from a separate app. Ozer's invoicing knows the client, the work, and what was agreed, because it's connected to everything else.",
       keywords: [
@@ -602,7 +649,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         'invoice management freelancers',
       ],
       canonical: 'https://ozer.so/features/invoicing',
-      openGraphTitle: 'Invoicing Software for Freelancers | Ozer',
+      openGraphTitle: 'Invoices from the project — Ozer',
     },
     jsonLd: {
       '@context': 'https://schema.org',
@@ -615,33 +662,33 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
     },
     props: {
       eyebrow: 'Ozer Invoicing',
-      heading: 'Send Invoices From Inside Your Project. Not From a Different App.',
+      heading: 'Invoices from the project',
       subheading:
         "Invoicing that knows which project it's for, who the client is, and what was agreed — because it's connected to your actual work, not sitting in a separate system.",
       highlights: [
         {
           icon: 'FileText',
-          title: 'One click from project to invoice',
+          title: 'One step from the job',
           description:
-            'Raise an invoice directly from the project it belongs to. The client details, project name, and deliverables are already there.',
+            'Raise an invoice on the project. Client, job name, and lines are ready.',
         },
         {
           icon: 'UserCheck',
-          title: 'No re-entering client details',
+          title: 'Client details once',
           description:
-            'Client information lives in Ozer once. Every invoice, portal, and email pulls from the same record — no copy-pasting the same address into a different tool again.',
+            'Address and contacts live on the client record — every invoice uses them.',
         },
         {
           icon: 'TrendingUp',
-          title: "See what's paid and what's outstanding",
+          title: 'See what is unpaid',
           description:
-            'Outstanding invoices surface against the projects they belong to. Know who owes you what without opening a separate spreadsheet.',
+            'Outstanding invoices sit on the projects they belong to.',
         },
         {
           icon: 'Palette',
-          title: 'Professional, branded invoices',
+          title: 'Branded, professional PDFs',
           description:
-            "Clean invoice templates that reflect the quality of your work. Send something you're proud to put your name on.",
+            'Send invoices you are happy to put your name on.',
         },
       ],
       connectedTo: [
@@ -653,7 +700,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
       connectionHeading:
         "Invoicing that's part of the project, not separate from it",
       connectionDescription:
-        'When a project wraps up, the invoice is one step — not a context switch to a different tool with a blank form.',
+        'When a job wraps, invoicing is one step — not a switch to a blank form elsewhere.',
       faqs: [
         {
           question: 'Can I send recurring invoices?',
@@ -677,11 +724,17 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
     slug: 'second-brain',
     name: 'Second Brain',
     shortDescription:
-      'Searchable knowledge built automatically from your work.',
+      'Ask what you agreed — answers cite meetings and mail.',
     indexIcon: 'Brain',
     primaryKeyword: 'second brain for freelancers',
+  answerFirst:
+    'Ozer second brain indexes meetings, email, notes, and projects. Ask in plain English and get answers with citations back to the source. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+  relatedBlog: {
+    href: '/blog',
+    label: 'Studio notes on searchable knowledge on the Ozer blog',
+  },
     metadata: {
-      title: 'Second Brain for Freelancers | Ozer',
+      title: 'Ask what you agreed — Ozer',
       description:
         "Ozer's second brain automatically indexes every meeting, email, note, and project. Search anything in plain English and get answers with citations back to the source.",
       keywords: [
@@ -692,7 +745,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         'freelance knowledge management',
       ],
       canonical: 'https://ozer.so/features/second-brain',
-      openGraphTitle: 'Second Brain for Freelancers | Ozer',
+      openGraphTitle: 'Ask what you agreed — Ozer',
     },
     jsonLd: {
       '@context': 'https://schema.org',
@@ -705,33 +758,33 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
     },
     props: {
       eyebrow: 'Ozer Second Brain',
-      heading: 'A Second Brain That Builds Itself From Your Work',
+      heading: 'Ask what you agreed',
       subheading:
-        'Every meeting, email, note, and project automatically indexed and searchable. Ask it anything. Get answers — with citations back to exactly where the information came from.',
+        'Ozer’s second brain answers “where did we decide that?” Meetings, email, notes, and projects are indexed as you work. Ask in plain English. Answers cite the source.',
       highlights: [
         {
           icon: 'Brain',
-          title: 'Automatically built',
+          title: 'Builds while you work',
           description:
-            'No manual tagging, importing, or organising. Everything you do in Ozer is indexed as you work — meetings, emails, notes, project decisions. It builds itself.',
+            'No manual import ritual. Ozer indexes as you use the Workspace OS.',
         },
         {
           icon: 'Search',
-          title: 'Ask in plain English',
+          title: 'Plain-English questions',
           description:
-            'Search by topic, client name, decision, or timeframe. Ask "what did we agree on the Thistleleaf rebrand?" and get the answer — not a list of files to dig through.',
+            'Ask about a client or decision — get the answer, not a pile of files.',
         },
         {
           icon: 'Link',
-          title: 'Every answer cites its source',
+          title: 'Every answer cites a source',
           description:
-            'Results link back to the meeting transcript, email thread, or note they came from. You always know where the information originated.',
+            'Jump to the transcript, thread, or note it came from.',
         },
         {
           icon: 'Database',
-          title: 'Gets more useful over time',
+          title: 'Richer over time',
           description:
-            'The longer you use Ozer, the richer your knowledge layer becomes. Your entire professional history — searchable and connected.',
+            'The longer you run Ozer, the more of your history is searchable.',
         },
       ],
       connectedTo: [
@@ -740,9 +793,9 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         { label: 'Notes', href: '/features/notes' },
         { label: 'Projects', href: '/features/project-management' },
       ],
-      connectionHeading: 'Built from everything, not just some things',
+      connectionHeading: 'Built from the whole Workspace OS',
       connectionDescription:
-        'The second brain indexes across all of Ozer — so a search surfaces the relevant email, the meeting where it was discussed, and the project it belongs to, all at once.',
+        'One search can surface the email, the meeting, and the project together.',
       faqs: [
         {
           question: 'Do I need to do anything to set it up?',
@@ -766,11 +819,17 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
     slug: 'messaging',
     name: 'Messaging',
     shortDescription:
-      'Client and team messaging tied to the projects they belong to.',
+      'Client and team chat on the project — not WhatsApp.',
     indexIcon: 'MessageSquare',
     primaryKeyword: 'client messaging software for agencies',
+  answerFirst:
+    'Ozer messaging keeps client and team chat on the project record so approvals do not live in personal WhatsApp. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+  relatedBlog: {
+    href: '/blog',
+    label: 'Studio notes on client chat on the Ozer blog',
+  },
     metadata: {
-      title: 'Client Messaging Software for Agencies | Ozer',
+      title: 'Project chat, not WhatsApp — Ozer',
       description:
         "Client and team messaging that lives inside your projects — not in a separate app, not in WhatsApp. Every conversation connected to the work it's about.",
       keywords: [
@@ -780,7 +839,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         'freelance messaging app',
       ],
       canonical: 'https://ozer.so/features/messaging',
-      openGraphTitle: 'Client Messaging Software for Agencies | Ozer',
+      openGraphTitle: 'Project chat, not WhatsApp — Ozer',
     },
     jsonLd: {
       '@context': 'https://schema.org',
@@ -794,7 +853,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
     props: {
       eyebrow: 'Ozer Messaging',
       heading:
-        'Client Messaging That Belongs in Your Project — Not Your Personal DMs',
+        'Chat on the project record',
       subheading:
         "Direct messaging with clients and your team, tied to the projects they're about. No context-switching, no digging through WhatsApp threads to find what was agreed.",
       highlights: [
@@ -802,25 +861,25 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
           icon: 'MessageSquare',
           title: 'Per-project threads',
           description:
-            "Conversations live next to the work they're about. Open a project and every message, task, file, and invoice is right there — in context.",
+            'Open the job and messages sit with tasks, files, and invoices.',
         },
         {
           icon: 'Users',
-          title: 'Client-facing and internal',
+          title: 'Client and internal channels',
           description:
-            'Separate channels for client communication and internal team notes. Clients see what they should. Your team sees everything.',
+            'Clients see what they should. Your team sees the full thread.',
         },
         {
           icon: 'History',
-          title: 'Full conversation history',
+          title: 'Searchable history',
           description:
-            'Every message in a project is searchable and permanent. No more scrolling through months of WhatsApp to find the approval that was sent in April.',
+            'Find the April approval without scrolling months of personal chat.',
         },
         {
           icon: 'ShieldCheck',
-          title: 'Professional by default',
+          title: 'Work stays professional',
           description:
-            'Keep client communication in a dedicated, professional channel. Your personal phone stays personal.',
+            'Client talk stays in Ozer. Your phone stays personal.',
         },
       ],
       connectedTo: [
@@ -831,7 +890,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
       ],
       connectionHeading: "Messaging that's part of the project record",
       connectionDescription:
-        'Every message is tied to a client and project — so the conversation is always findable, always in context, and never lost in a personal inbox.',
+        'Every thread is tied to a client and project — findable and in context.',
       faqs: [
         {
           question: 'Does this replace email?',
@@ -850,13 +909,19 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
     slug: 'notes',
     name: 'Notes',
     shortDescription:
-      'Project and client notes that stay connected to your work.',
+      'Notes on the client or project they belong to.',
     indexIcon: 'StickyNote',
     primaryKeyword: 'notes app for freelancers',
+  answerFirst:
+    'Ozer notes attach to the client or project they belong to. Meeting notes land from Assistant and stay searchable in second brain. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+  relatedBlog: {
+    href: '/blog',
+    label: 'Studio notes on project notes on the Ozer blog',
+  },
     metadata: {
-      title: 'Notes App for Freelancers | Ozer',
+      title: 'Notes on the job record — Ozer',
       description:
-        'Quick notes, meeting summaries, and ideas — stored in Ozer and connected to the right client or project. Not floating in a separate app.',
+        'Notes attach to clients and projects, sync from meetings, and show up in second brain search.',
       keywords: [
         'notes app for freelancers',
         'project notes software',
@@ -865,14 +930,14 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         'business notes app',
       ],
       canonical: 'https://ozer.so/features/notes',
-      openGraphTitle: 'Notes App for Freelancers | Ozer',
+      openGraphTitle: 'Notes on the job record — Ozer',
     },
     jsonLd: {
       '@context': 'https://schema.org',
       '@type': 'WebPage',
       name: 'Notes App for Freelancers',
       description:
-        'Quick notes, meeting summaries, and ideas — stored in Ozer and connected to the right client or project. Not floating in a separate app.',
+        'Project and client notes connected to work and searchable in Ozer.',
       url: 'https://ozer.so/features/notes',
       isPartOf: { '@type': 'WebSite', name: 'Ozer', url: 'https://ozer.so' },
     },
@@ -880,31 +945,31 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
       eyebrow: 'Ozer Notes',
       heading: "Notes That Live Next to the Work They're About",
       subheading:
-        'Quick capture, meeting summaries, and ideas — stored in Ozer and connected to the right client or project. Not floating somewhere separate.',
+        'Ozer notes answer “where did I write that down?” Capture sits on the client or project. Meeting notes land automatically. Search finds them with everything else.',
       highlights: [
         {
           icon: 'StickyNote',
-          title: 'Attached to projects and clients',
+          title: 'Attached to work',
           description:
-            'Every note belongs to something. Open a client record or project and the relevant notes are right there — not buried in a notes app you have to search separately.',
+            'Open the client or project and the notes are there — not in another app.',
         },
         {
           icon: 'Zap',
-          title: "Quick capture that doesn't break flow",
+          title: 'Quick capture',
           description:
-            'Jot something down in seconds without losing your place. Add it to the right project or client later, or let Ozer suggest where it belongs.',
+            'Jot without losing flow. Assign to a project when you are ready.',
         },
         {
           icon: 'Search',
-          title: 'Searchable via second brain',
+          title: 'Found via second brain',
           description:
-            "Every note is indexed automatically. Ask Ozer a question and it'll surface the relevant notes alongside your emails and meeting transcripts.",
+            'Notes are indexed with mail and meetings.',
         },
         {
           icon: 'Mic',
-          title: 'Synced from meetings',
+          title: 'From meetings',
           description:
-            'Ozer Assistant syncs meeting notes directly into the right project after every call. Notes capture happens automatically — no copy-pasting after the fact.',
+            'Assistant writes meeting notes onto the right project after the call.',
         },
       ],
       connectedTo: [
@@ -914,9 +979,9 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         { label: 'Planner', href: '/features/planner' },
       ],
       connectionHeading:
-        'Notes that are part of the project, not separate from it',
+        'Notes on the project record',
       connectionDescription:
-        'A note about a client meeting that lives in the client record is useful. The same note in a separate app is just more noise.',
+        'A note on the client record is useful. The same note in a separate app is noise.',
       faqs: [
         {
           question: 'Is this a replacement for Notion or Apple Notes?',
@@ -935,13 +1000,19 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
     slug: 'project-management',
     name: 'Project Management',
     shortDescription:
-      'Jobs, phases, timelines, and deliverables — tied to clients and tasks.',
+      'Jobs, phases, and timelines on the client record.',
     indexIcon: 'FolderKanban',
     primaryKeyword: 'project management for freelancers',
+  answerFirst:
+    'Ozer projects run jobs with phases, timelines, and tasks on the client record with contracts and invoices on the same job. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+  relatedBlog: {
+    href: '/blog',
+    label: 'Studio notes on delivery on the Ozer blog',
+  },
     metadata: {
-      title: 'Project Management for Freelancers | Ozer',
+      title: 'Delivery on the client record — Ozer',
       description:
-        'Run client projects with phases, timelines, priorities, and tasks in one place. Table and timeline views, linked to clients, contracts, and invoices.',
+        'Jobs, phases, and timelines linked to clients, contracts, and invoices in one Workspace OS.',
       keywords: [
         'project management for freelancers',
         'agency project management',
@@ -949,46 +1020,46 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         'client project software',
       ],
       canonical: 'https://ozer.so/features/project-management',
-      openGraphTitle: 'Project Management for Freelancers | Ozer',
+      openGraphTitle: 'Delivery on the client record — Ozer',
     },
     jsonLd: {
       '@context': 'https://schema.org',
       '@type': 'WebPage',
       name: 'Project Management for Freelancers',
       description:
-        'Jobs, phases, timelines, and deliverables connected to clients, tasks, and invoices.',
+        'Jobs, phases, and timelines linked to clients, tasks, and invoices.',
       url: 'https://ozer.so/features/project-management',
       isPartOf: { '@type': 'WebSite', name: 'Ozer', url: 'https://ozer.so' },
     },
     props: {
       eyebrow: 'Ozer Projects',
-      heading: 'Project Management That Stays Connected to Everything Else',
+      heading: 'Delivery on the client record',
       subheading:
-        'Track jobs with phases, deadlines, and priorities — in a table or timeline. Every project links to the client, tasks, contracts, files, and invoices it belongs to.',
+        'Ozer projects answer “where is this job?” Phases, deadlines, and tasks live with the client, contracts, and invoices — not in a PM tool that never sees the invoice.',
       highlights: [
         {
           icon: 'FolderKanban',
-          title: 'Table and timeline views',
+          title: 'Table and timeline',
           description:
-            'See all active work in a sortable table or drag-friendly timeline. Filter by client, status, or priority without exporting to a separate PM tool.',
+            'Sort active work or drag the timeline. Filter by client or status.',
         },
         {
           icon: 'Layers',
           title: 'Phases and deliverables',
           description:
-            'Break projects into phases with due dates and task lists. Know what stage each job is in and what ships next.',
+            'Know the stage and what ships next.',
         },
         {
           icon: 'Users',
           title: 'Client context built in',
           description:
-            'Open a project and the client record, messages, portal, and history are right there. No hunting across apps for who this work is for.',
+            'Messages, portal, and history sit on the same job.',
         },
         {
           icon: 'ArrowRight',
-          title: 'From pipeline to delivery',
+          title: 'Won deals become projects',
           description:
-            'Won deals convert into projects automatically. The brief and contact details carry over — you start executing, not re-entering.',
+            'Pipeline wins carry brief and contacts — you start delivery, not data entry.',
         },
       ],
       connectedTo: [
@@ -998,9 +1069,9 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         { label: 'Contracts', href: '/features/contracts' },
         { label: 'Invoicing', href: '/features/invoicing' },
       ],
-      connectionHeading: 'Projects at the centre of your workflow',
+      connectionHeading: 'Projects at the centre',
       connectionDescription:
-        'Tasks, meetings, invoices, and portals all hang off the same project record — so nothing drifts out of sync.',
+        'Tasks, meetings, invoices, and portals hang off one project record.',
       faqs: [
         {
           question: 'How is this different from the pipeline?',
@@ -1019,13 +1090,19 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
     slug: 'tasks',
     name: 'Tasks',
     shortDescription:
-      'Unified task list across workspaces — linked to clients, projects, and your planner.',
+      'One task list across workspaces, linked to real work.',
     indexIcon: 'CheckSquare',
     primaryKeyword: 'task management for freelancers',
+  answerFirst:
+    'Ozer tasks unify personal and client work in one list, link to projects, feed the planner, and receive items from meetings and email. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+  relatedBlog: {
+    href: '/blog',
+    label: 'Studio notes on task lists on the Ozer blog',
+  },
     metadata: {
-      title: 'Task Management for Freelancers | Ozer',
+      title: 'One task list, full context — Ozer',
       description:
-        'One task list across personal life and every workspace. Link tasks to clients and projects, prioritise by due date, and feed your daily planner automatically.',
+        'Unified tasks across workspaces, linked to clients and projects, feeding today’s planner.',
       keywords: [
         'task management for freelancers',
         'agency task list',
@@ -1033,46 +1110,46 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         'client task tracking',
       ],
       canonical: 'https://ozer.so/features/tasks',
-      openGraphTitle: 'Task Management for Freelancers | Ozer',
+      openGraphTitle: 'One task list, full context — Ozer',
     },
     jsonLd: {
       '@context': 'https://schema.org',
       '@type': 'WebPage',
       name: 'Task Management for Freelancers',
       description:
-        'Unified tasks linked to clients, projects, and AI planner.',
+        'Unified tasks linked to clients, projects, and the daily planner.',
       url: 'https://ozer.so/features/tasks',
       isPartOf: { '@type': 'WebSite', name: 'Ozer', url: 'https://ozer.so' },
     },
     props: {
       eyebrow: 'Ozer Tasks',
-      heading: 'One Task List for Every Workspace — Without Losing Context',
+      heading: 'One list, full context',
       subheading:
-        'See work and life tasks in one place, or filter by workspace. Every task can link to a client, project, or area — and flows straight into your daily planner.',
+        'Ozer tasks answer “what is open across my life and clients?” One list across workspaces, or filter to one. Tasks link to clients and projects and feed today’s planner.',
       highlights: [
         {
           icon: 'CheckSquare',
           title: 'Cross-workspace list',
           description:
-            'Personal, business, family, and community tasks in one view — or scoped to a single workspace when you need focus.',
+            'Personal and client work in one view — or scoped when you need focus.',
         },
         {
           icon: 'Users',
-          title: 'Client and project links',
+          title: 'Linked to clients and jobs',
           description:
-            'Assign tasks to a client or project so they appear in the right job record, not as orphan to-dos in a generic list.',
+            'Tasks appear on the project, not as orphans.',
         },
         {
           icon: 'CalendarDays',
           title: 'Feeds the planner',
           description:
-            'Open tasks with due dates surface in the AI planner automatically. Plan your day from real work, not a duplicate list.',
+            'Due work surfaces in today automatically.',
         },
         {
           icon: 'Sparkles',
-          title: 'Created from meetings and email',
+          title: 'From meetings and email',
           description:
-            'Ozer Assistant and Email Assistant extract action items into tasks — review once, then they live in your list until done.',
+            'Extracted action items land here for review.',
         },
       ],
       connectedTo: [
@@ -1081,9 +1158,9 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         { label: 'Desktop Assistant', href: '/features/desktop-assistant' },
         { label: 'Email Assistant', href: '/features/email-assistant' },
       ],
-      connectionHeading: 'Tasks that know what they belong to',
+      connectionHeading: 'Tasks that know their home',
       connectionDescription:
-        'A task linked to a project updates the project. A task in your planner comes from the same list. One source of truth.',
+        'A task on a project updates the project. The planner reads the same list.',
       faqs: [
         {
           question: 'Can I use tasks without project management?',
@@ -1102,13 +1179,19 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
     slug: 'contracts',
     name: 'Contracts',
     shortDescription:
-      'Send, sign, and track client contracts — linked to projects and clients.',
+      'Send and track contracts on the client and job.',
     indexIcon: 'FileSignature',
     primaryKeyword: 'contract management for freelancers',
+  answerFirst:
+    'Ozer contracts send agreements for signature and track status on the client and project without a separate e-sign product. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+  relatedBlog: {
+    href: '/blog',
+    label: 'Studio notes on contracts on the Ozer blog',
+  },
     metadata: {
-      title: 'Contract Management for Freelancers | Ozer',
+      title: 'Contracts on the job — Ozer',
       description:
-        'Create client contracts, send for signature, and track status — connected to the client and project they belong to. No separate e-sign tool required.',
+        'Send and track client contracts on the client and project — no separate e-sign tool.',
       keywords: [
         'contract management for freelancers',
         'freelance contract software',
@@ -1116,7 +1199,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         'agency contracts',
       ],
       canonical: 'https://ozer.so/features/contracts',
-      openGraphTitle: 'Contract Management for Freelancers | Ozer',
+      openGraphTitle: 'Contracts on the job — Ozer',
     },
     jsonLd: {
       '@context': 'https://schema.org',
@@ -1129,33 +1212,33 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
     },
     props: {
       eyebrow: 'Ozer Contracts',
-      heading: 'Client Contracts That Live Inside Your Project — Not in Another App',
+      heading: 'Contracts on the job',
       subheading:
-        'Draft agreements, send them for signature, and track who has signed — all connected to the client record and the project they govern.',
+        'Ozer contracts answer “has this been signed?” Draft, send, and track status on the client and project — without a separate e-sign product.',
       highlights: [
         {
           icon: 'FileSignature',
           title: 'Send and collect signatures',
           description:
-            'Clients sign via a secure portal link. You see sent, viewed, and signed status without chasing PDFs over email.',
+            'Secure link, clear status: sent, viewed, signed.',
         },
         {
           icon: 'Users',
           title: 'Tied to the client',
           description:
-            'Every contract belongs to a client record. Open the relationship and see every agreement alongside invoices and messages.',
+            'Every agreement sits on the relationship record.',
         },
         {
           icon: 'FolderKanban',
           title: 'Linked to projects',
           description:
-            'Attach contracts to the jobs they cover. When work starts, the signed terms are already in context.',
+            'Signed terms sit on the job before work starts.',
         },
         {
           icon: 'CreditCard',
-          title: 'Payment plans optional',
+          title: 'Payment milestones optional',
           description:
-            'Structure contracts with totals and payment milestones that align with how you invoice downstream.',
+            'Align totals with how you invoice later.',
         },
       ],
       connectedTo: [
@@ -1164,9 +1247,9 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         { label: 'Invoicing', href: '/features/invoicing' },
         { label: 'Pipeline', href: '/features/pipeline' },
       ],
-      connectionHeading: 'Signed terms before the work begins',
+      connectionHeading: 'Signed terms before delivery',
       connectionDescription:
-        'Win the deal, send the contract, start the project — all in one system without copying client details into a separate e-sign tool.',
+        'Win the deal, send the contract, start the project — one system.',
       faqs: [
         {
           question: 'Do clients need an Ozer account to sign?',
@@ -1185,13 +1268,19 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
     slug: 'sops',
     name: 'SOPs',
     shortDescription:
-      'Playbooks and checklists your team runs every month or project.',
+      'Playbooks your team runs — not PDFs nobody opens.',
     indexIcon: 'ListChecks',
     primaryKeyword: 'SOP software for agencies',
+  answerFirst:
+    'Ozer SOPs turn processes into playbooks you run as checklists with assignees and history inside the Workspace OS. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+  relatedBlog: {
+    href: '/blog',
+    label: 'Studio notes on playbooks on the Ozer blog',
+  },
     metadata: {
-      title: 'SOPs & Playbooks for Agencies | Ozer',
+      title: 'Playbooks you actually run — Ozer',
       description:
-        'Document repeatable processes as playbooks, then run them as checklists each month or project. AI import, assignees, and run history built in.',
+        'Turn processes into checklists with assignees and history inside the Workspace OS.',
       keywords: [
         'SOP software for agencies',
         'agency playbooks',
@@ -1199,46 +1288,46 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         'agency checklists',
       ],
       canonical: 'https://ozer.so/features/sops',
-      openGraphTitle: 'SOPs & Playbooks for Agencies | Ozer',
+      openGraphTitle: 'Playbooks you actually run — Ozer',
     },
     jsonLd: {
       '@context': 'https://schema.org',
       '@type': 'WebPage',
       name: 'SOPs & Playbooks for Agencies',
       description:
-        'Document processes once, run them as checklists with assignees and history.',
+        'Playbooks run as checklists with assignees and history.',
       url: 'https://ozer.so/features/sops',
       isPartOf: { '@type': 'WebSite', name: 'Ozer', url: 'https://ozer.so' },
     },
     props: {
       eyebrow: 'Ozer SOPs',
-      heading: 'Playbooks Your Team Actually Runs — Not PDFs That Gather Dust',
+      heading: 'Playbooks you actually run',
       subheading:
-        'Document a process once as a playbook, then launch it as a checklist run each month, week, or project. Assign steps, track completion, and keep a history of every run.',
+        'Ozer SOPs answer “how do we do this the same way every time?” Document a process once, run it as a checklist each month or project, assign steps, and keep history.',
       highlights: [
         {
           icon: 'ListChecks',
           title: 'Playbook library',
           description:
-            'Organise SOPs by category — onboarding, monthly close, campaign launch, or anything repeatable. One source of truth for how your agency works.',
+            'Onboarding, monthly close, launch — one place for how you work.',
         },
         {
           icon: 'RefreshCw',
-          title: 'Recurring and per-project runs',
+          title: 'Recurring or per project',
           description:
-            'Schedule monthly or weekly runs, or attach a checklist to a specific project kickoff. The right steps at the right time.',
+            'Schedule runs or attach a checklist to a kickoff.',
         },
         {
           icon: 'Users',
           title: 'Assignees per step',
           description:
-            'Hand each checklist item to a team member. Everyone knows what they own without a separate project management spreadsheet.',
+            'Everyone knows what they own.',
         },
         {
           icon: 'Sparkles',
-          title: 'AI import from docs',
+          title: 'Import from existing docs',
           description:
-            'Paste an existing process doc and Ozer structures it into steps — faster than building checklists from scratch.',
+            'Paste a process doc and Ozer structures the steps.',
         },
       ],
       connectedTo: [
@@ -1247,9 +1336,9 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         { label: 'Planner', href: '/features/planner' },
         { label: 'Second Brain', href: '/features/second-brain' },
       ],
-      connectionHeading: 'Process knowledge that connects to delivery',
+      connectionHeading: 'Process next to delivery',
       connectionDescription:
-        'SOPs suggested in the planner, linked to projects, and searchable in your second brain — not trapped in a folder nobody opens.',
+        'Playbooks surface in planning and stay searchable — not in a forgotten folder.',
       faqs: [
         {
           question: 'Can I run the same playbook multiple times?',
@@ -1268,13 +1357,19 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
     slug: 'pipeline',
     name: 'Pipeline',
     shortDescription:
-      'Track leads and proposals — win a deal and it becomes a project.',
+      'Leads to projects — win once, never re-enter.',
     indexIcon: 'Kanban',
     primaryKeyword: 'CRM pipeline for freelancers',
+  answerFirst:
+    'Ozer pipeline tracks leads and proposals. When you win, the deal becomes a project with context intact and no re-entry. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+  relatedBlog: {
+    href: '/blog',
+    label: 'Studio notes on pipeline on the Ozer blog',
+  },
     metadata: {
-      title: 'CRM Pipeline for Freelancers | Ozer',
+      title: 'Win once, deliver once — Ozer',
       description:
-        'Track leads, manage proposals, and convert prospects — and when you win the deal, it becomes a project automatically. No re-entering anything.',
+        'Track leads and proposals; a win becomes a project with context intact — no re-entry.',
       keywords: [
         'CRM pipeline for freelancers',
         'agency CRM software',
@@ -1283,46 +1378,46 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         'agency pipeline tool',
       ],
       canonical: 'https://ozer.so/features/pipeline',
-      openGraphTitle: 'CRM Pipeline for Freelancers | Ozer',
+      openGraphTitle: 'Win once, deliver once — Ozer',
     },
     jsonLd: {
       '@context': 'https://schema.org',
       '@type': 'WebPage',
       name: 'CRM Pipeline for Freelancers',
       description:
-        'Track leads, manage proposals, and convert prospects — and when you win the deal, it becomes a project automatically. No re-entering anything.',
+        'Track leads and proposals; wins become projects automatically.',
       url: 'https://ozer.so/features/pipeline',
       isPartOf: { '@type': 'WebSite', name: 'Ozer', url: 'https://ozer.so' },
     },
     props: {
       eyebrow: 'Ozer Pipeline',
-      heading: 'A CRM Pipeline for Freelancers Who Actually Win Business',
+      heading: 'Win once, deliver once',
       subheading:
-        'Track leads, manage proposals, and move opportunities forward — and when you win, the deal converts directly into a project. No starting from scratch.',
+        'Ozer pipeline answers “where is this lead?” Track opportunities and proposals. When you win, the deal becomes a project with context intact — no re-entry into a delivery tool.',
       highlights: [
         {
           icon: 'Kanban',
-          title: 'Visual pipeline at a glance',
+          title: 'Pipeline at a glance',
           description:
-            "See every opportunity from first contact to signed — in one board. Know exactly what's active, what's stalled, and what needs a nudge.",
+            'See what is active, stalled, or needs a nudge.',
         },
         {
           icon: 'FileSignature',
           title: 'Proposal tracking',
           description:
-            'Know when a prospect has viewed your proposal. Follow up with confidence — not blind guessing.',
+            'Know when a prospect has viewed the proposal.',
         },
         {
           icon: 'ArrowRight',
-          title: 'Win → Project, automatically',
+          title: 'Win becomes a project',
           description:
-            'Close a deal and it converts into a project with one click. The client record, brief, and context carry straight over. Nothing to re-enter.',
+            'Client, brief, and context carry over in one step.',
         },
         {
           icon: 'Clock',
-          title: 'Client history from day one',
+          title: 'History from first contact',
           description:
-            'The relationship record starts the moment a lead enters your pipeline. By the time you kick off, you already have full context.',
+            'The relationship record starts when the lead enters.',
         },
       ],
       connectedTo: [
@@ -1331,9 +1426,9 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         { label: 'Email Assistant', href: '/features/email-assistant' },
         { label: 'Clients', href: '/features/client-portals' },
       ],
-      connectionHeading: 'Where client relationships begin',
+      connectionHeading: 'Where relationships begin',
       connectionDescription:
-        'The pipeline is the start of the Ozer client lifecycle — lead becomes client, client becomes project, project generates invoice. All connected.',
+        'Lead becomes client, client becomes project, project becomes invoice — connected.',
       faqs: [
         {
           question: 'Is this a full CRM?',
@@ -1352,14 +1447,20 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
     slug: 'finances',
     name: 'Finances',
     shortDescription:
-      'Revenue, cash flow, and project profitability — with optional FreeAgent sync.',
+      'What you earned, what is owed — optional FreeAgent sync.',
     indexIcon: 'BarChart3',
     primaryKeyword: 'freelance finance management',
-    heroBadge: 'FreeAgent integration available',
+  answerFirst:
+    'Ozer finances shows revenue, outstanding invoices, and project profitability in pounds, with optional FreeAgent sync for UK books. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+  relatedBlog: {
+    href: '/blog',
+    label: 'Studio notes on studio finances on the Ozer blog',
+  },
+    heroBadge: 'FreeAgent sync for UK books',
     metadata: {
-      title: 'Freelance Finance Management | Ozer',
+      title: 'Money next to the work — Ozer',
       description:
-        'See your real financial health — revenue, outstanding invoices, bank transactions, and project profitability. Connect FreeAgent to sync categories and explanations automatically.',
+        'Revenue, outstanding invoices, and project profitability in £, with optional FreeAgent sync.',
       keywords: [
         'freelance finance management',
         'agency financial dashboard',
@@ -1368,58 +1469,46 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         'income tracker for freelancers',
       ],
       canonical: 'https://ozer.so/features/finances',
-      openGraphTitle: 'Freelance Finance Management | Ozer',
+      openGraphTitle: 'Money next to the work — Ozer',
     },
     jsonLd: {
       '@context': 'https://schema.org',
       '@type': 'WebPage',
       name: 'Freelance Finance Management',
       description:
-        'Revenue, outstanding invoices, and project profitability connected to your work — with FreeAgent bank sync for UK freelancers.',
+        'Revenue, outstanding invoices, and project profitability with optional FreeAgent sync.',
       url: 'https://ozer.so/features/finances',
       isPartOf: { '@type': 'WebSite', name: 'Ozer', url: 'https://ozer.so' },
     },
     props: {
       eyebrow: 'Ozer Finances',
-      heading: 'Operational Finance Connected to Your Projects — and FreeAgent',
+      heading: 'Money next to the work',
       subheading:
-        'Revenue, outstanding invoices, and project profitability in one view. Connect FreeAgent to pull bank transactions and categories into Ozer so your operational dashboard stays in sync with your books.',
+        'Ozer finances answers “what am I owed?” Revenue, outstanding invoices, and project profitability in one view. Optional FreeAgent sync keeps the operational picture aligned with your UK books.',
       highlights: [
         {
           icon: 'BarChart3',
           title: 'Revenue at a glance',
           description:
-            "What you've earned, what's outstanding, and what's forecast — in one dashboard. No opening a spreadsheet to do the maths yourself.",
+            'Earned, outstanding, and forecast — without a spreadsheet ritual.',
         },
         {
           icon: 'PieChart',
           title: 'Per-project profitability',
           description:
-            'Know which clients and projects are actually worth your time. See the revenue and time invested per project side by side.',
+            'See which clients pay for the time you spend.',
         },
         {
           icon: 'RefreshCw',
           title: 'FreeAgent bank sync',
           description:
-            'Connect your FreeAgent account to import bank transactions and category explanations. Ozer keeps your finance view aligned with what your accountant sees.',
-        },
-        {
-          icon: 'Link',
-          title: 'Secure OAuth connection',
-          description:
-            'Authorise Ozer to read your FreeAgent company data. Tokens refresh automatically — no manual re-auth unless you disconnect.',
-        },
-        {
-          icon: 'FolderKanban',
-          title: 'Categories mapped to Ozer',
-          description:
-            'FreeAgent chart-of-accounts categories sync into Ozer so AI categorisation and reporting speak the same language as your books.',
+            'Import transactions and categories so ops and books stay aligned.',
         },
         {
           icon: 'AlertTriangle',
-          title: 'Outstanding payments, surfaced',
+          title: 'Unpaid invoices surface',
           description:
-            "Invoices that haven't been paid don't stay hidden. Ozer surfaces what's overdue so you can chase it — without building a chasing system yourself.",
+            'Ozer shows what is overdue so you can chase it.',
         },
       ],
       connectedTo: [
@@ -1427,9 +1516,9 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         { label: 'Projects', href: '/features/project-management' },
         { label: 'Pipeline', href: '/features/pipeline' },
       ],
-      connectionHeading: 'Finances built from your real work',
+      connectionHeading: 'Numbers from real work',
       connectionDescription:
-        'Every number traces back to a project, client, or invoice — and with FreeAgent connected, bank activity flows in automatically.',
+        'Every figure traces to a project, client, or invoice — and FreeAgent can feed bank activity in.',
       faqs: [
         {
           question: 'Does Ozer replace FreeAgent or my accountant?',
@@ -1478,33 +1567,11 @@ export function buildFeaturePageMetadata(slug: FeatureSlug): Metadata {
   const config = getFeaturePageConfig(slug);
   const { metadata } = config;
 
-  return {
+  return buildMarketingMetadata({
     title: metadata.title,
     description: metadata.description,
+    path: `/features/${slug}`,
+    ogType: 'feature',
     keywords: metadata.keywords,
-    alternates: {
-      canonical: metadata.canonical,
-    },
-    openGraph: {
-      title: metadata.openGraphTitle,
-      description: metadata.description,
-      url: metadata.canonical,
-      type: 'website',
-    },
-  };
-}
-
-export function buildFeatureFaqJsonLd(faqs: FAQItem[]) {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: faqs.map((faq) => ({
-      '@type': 'Question',
-      name: faq.question,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: faq.answer,
-      },
-    })),
-  };
+  });
 }

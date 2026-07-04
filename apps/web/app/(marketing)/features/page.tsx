@@ -1,7 +1,5 @@
 import Link from 'next/link';
 
-import type { Metadata } from 'next';
-
 import { ArrowRight } from 'lucide-react';
 
 import { listFeaturePageConfigs } from '~/lib/marketing/feature-landing-pages';
@@ -13,56 +11,56 @@ import {
   marketingIconWell,
   marketingMutedText,
 } from '~/lib/marketing/marketing-ui';
+import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
+import { JsonLd } from '~/lib/seo/json-ld';
+import {
+  absoluteUrl,
+  breadcrumbJsonLd,
+  schemaGraph,
+  softwareApplicationJsonLd,
+} from '~/lib/seo/schema';
 
 import { FeatureCoverPreview } from '../_components/feature-cover-previews';
 import { FeatureLandingIcon } from '../_components/feature-landing-icon';
 
-const FEATURES_INDEX_JSON_LD = {
-  '@context': 'https://schema.org',
-  '@type': 'SoftwareApplication',
-  name: 'Ozer',
-  applicationCategory: 'BusinessApplication',
-  operatingSystem: 'Web, macOS',
-  url: 'https://ozer.so',
-  description: 'Business operating system for freelancers and agencies',
-  offers: {
-    '@type': 'Offer',
-    availability: 'https://schema.org/ComingSoon',
-  },
-};
-
-export const metadata: Metadata = {
-  title: 'Features | Ozer — Business OS for Freelancers and Agencies',
+export const metadata = buildMarketingMetadata({
+  title: 'Workspace OS features — Ozer',
   description:
-    'One connected system for everything in your agency — planning, email, client portals, invoicing, meeting notes, pipeline, and more.',
-  alternates: {
-    canonical: 'https://ozer.so/features',
-  },
-};
+    'Planner, pipeline, invoices, meetings, and portals in one Workspace OS. Built for freelancers and small agencies — not seven tools and Zapier.',
+  path: '/features',
+  ogType: 'feature',
+});
 
 export default function FeaturesIndexPage() {
   const features = listFeaturePageConfigs();
 
   return (
     <main className="relative overflow-hidden marketing-shell">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(FEATURES_INDEX_JSON_LD),
-        }}
+      <JsonLd
+        data={schemaGraph([
+          softwareApplicationJsonLd({
+            name: 'Ozer',
+            description:
+              'Workspace OS features for freelancers and small agencies.',
+            url: absoluteUrl('/features'),
+            offers: [{ name: 'Personal & Family', price: 0 }],
+          }),
+          breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'Features', path: '/features' },
+          ]),
+        ])}
       />
-
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_22%)]" />
 
       <section className="relative mx-auto w-full max-w-7xl px-6 pb-20 pt-24 md:pt-28">
         <div className="max-w-3xl space-y-5">
           <span className={marketingEyebrow}>Ozer Features</span>
           <h1 className="font-heading text-4xl font-bold leading-tight text-[var(--workspace-shell-text)] md:text-5xl lg:text-6xl">
-            Everything You Need. All in One Place.
+            The Workspace OS, feature by feature
           </h1>
           <p className={`text-base leading-relaxed md:text-lg ${marketingBodyText}`}>
-            Ozer replaces the pile of disconnected tools with one system where
-            everything knows about everything else.
+            Planner, pipeline, invoices, meetings, and more — one system so a
+            small studio does not need seven tools and Zapier.
           </p>
         </div>
 
@@ -97,7 +95,7 @@ export default function FeaturesIndexPage() {
                   {feature.shortDescription}
                 </p>
                 <span className="mt-4 inline-flex items-center text-sm font-medium text-[var(--ozer-coral-600)] dark:text-[var(--ozer-coral-400)]">
-                  Learn more
+                  See {feature.name}
                   <ArrowRight className="ml-1.5 h-4 w-4 transition group-hover:translate-x-0.5" />
                 </span>
               </div>

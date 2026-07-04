@@ -8,6 +8,7 @@ import { Separator } from '@kit/ui/separator';
 import { cn } from '@kit/ui/utils';
 
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
 
 // local imports
 import { DocsCards } from '../_components/docs-cards';
@@ -33,11 +34,19 @@ export const generateMetadata = async ({ params }: DocumentationPageProps) => {
   }
 
   const { title, description } = page;
+  const branded =
+    title.includes('— Ozer') || title.includes('| Ozer')
+      ? title
+      : `${title} — Ozer`;
 
-  return {
-    title,
-    description,
-  };
+  return buildMarketingMetadata({
+    title: branded.length <= 60 ? branded : `${title.slice(0, 52)} — Ozer`,
+    description:
+      description ||
+      `${title} — documentation for the Ozer Workspace OS.`,
+    path: `/docs/${slug}`,
+    ogType: 'default',
+  });
 };
 
 async function DocumentationPage({ params }: DocumentationPageProps) {

@@ -12,6 +12,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
 import { Button } from '@kit/ui/button';
 
 import { getBlogPost } from '~/lib/blog';
+import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
+import { JsonLd } from '~/lib/seo/json-ld';
+import {
+  articleJsonLd,
+  breadcrumbJsonLd,
+  schemaGraph,
+} from '~/lib/seo/schema';
 
 type BlogPostPageProps = {
   params: Promise<{ slug: string }>;
@@ -39,42 +46,26 @@ function normalizePictureUrl(url: string | null | undefined) {
   );
 }
 
-function buildSchemaJson(post: NonNullable<Awaited<ReturnType<typeof getBlogPost>>>) {
-  const author = {
-    '@type': 'Person',
-    name: post.author_name,
-    ...(post.author_url ? { url: post.author_url } : {}),
-    ...(post.author_avatar_url ? { image: post.author_avatar_url } : {}),
-    ...(post.author_bio ? { description: post.author_bio } : {}),
-  };
+function titleWithBrand(title: string): string {
+  if (title.includes('— Ozer') || title.includes('| Ozer')) return title;
+  const next = `${title} — Ozer`;
+  return next.length <= 60 ? next : `${title.slice(0, 52).trimEnd()} — Ozer`;
+}
 
-  const base = post.schema_json
-    ? { ...post.schema_json }
-    : {
-        '@context': 'https://schema.org',
-        '@type': 'BlogPosting',
-        headline: post.title,
-        description: post.meta_description ?? post.excerpt ?? undefined,
-      };
-
-  return {
-    ...base,
-    author: {
-      ...(typeof base.author === 'object' && base.author !== null ? base.author : {}),
-      ...author,
-    },
-    ...(post.published_at ? { datePublished: post.published_at } : {}),
-    dateModified: post.updated_at,
-    ...(post.featured_image_url
-      ? {
-          image: {
-            '@type': 'ImageObject',
-            url: post.featured_image_url,
-            ...(post.featured_image_alt ? { caption: post.featured_image_alt } : {}),
-          },
-        }
-      : {}),
-  };
+function inBriefSentences(post: {
+  excerpt: string | null;
+  meta_description: string | null;
+  title: string;
+}): [string, string, string] {
+  const primary =
+    post.excerpt?.trim() ||
+    post.meta_description?.trim() ||
+    `${post.title} is a studio note on the Ozer blog.`;
+  return [
+    primary.replace(/\s+/g, ' ').slice(0, 200),
+    'Written for freelancers and small agencies running delivery work.',
+    'Published on the Ozer Workspace OS blog.',
+  ];
 }
 
 export async function generateMetadata({
@@ -92,31 +83,26 @@ export async function generateMetadata({
     ...(post.secondary_keywords ?? []),
   ].filter(Boolean) as string[];
 
-  return {
-    title: post.title,
-    description: post.meta_description ?? undefined,
+  const title = titleWithBrand(post.og_title ?? post.title);
+  const description =
+    post.meta_description ??
+    post.excerpt ??
+    `${post.title} — notes from the Ozer studio.`;
+
+  const path = post.canonical_url?.startsWith('http')
+    ? new URL(post.canonical_url).pathname
+    : `/blog/${slug}`;
+
+  return buildMarketingMetadata({
+    title,
+    description,
+    path,
+    ogType: 'blog',
     keywords,
-    openGraph: {
-      title: post.og_title ?? post.title,
-      description: post.og_description ?? post.meta_description ?? undefined,
-      url: post.canonical_url ?? undefined,
-      type: 'article',
-      publishedTime: post.published_at ?? undefined,
-      authors: post.author_url ? [post.author_url] : undefined,
-      ...(post.featured_image_url
-        ? { images: [{ url: post.featured_image_url, alt: post.featured_image_alt ?? post.title }] }
-        : {}),
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: post.og_title ?? post.title,
-      description: post.og_description ?? post.meta_description ?? undefined,
-      ...(post.featured_image_url ? { images: [post.featured_image_url] } : {}),
-    },
-    alternates: {
-      canonical: post.canonical_url ?? undefined,
-    },
-  };
+    openGraphType: 'article',
+    publishedTime: post.published_at ?? undefined,
+    authors: ['Dan Potter'],
+  });
 }
 
 export default async function BlogPostPage({ params }: BlogPostPageProps) {
@@ -127,15 +113,30 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     notFound();
   }
 
-  const schemaJson = buildSchemaJson(post);
   const avatarUrl = normalizePictureUrl(post.author_avatar_url);
+  const path = `/blog/${slug}`;
+  const [brief1, brief2, brief3] = inBriefSentences(post);
+
+  const schema = schemaGraph([
+    articleJsonLd({
+      headline: post.title,
+      description: post.meta_description ?? post.excerpt ?? undefined,
+      path,
+      datePublished: post.published_at,
+      dateModified: post.updated_at,
+      imageUrl: post.featured_image_url,
+      authorName: 'Dan Potter',
+    }),
+    breadcrumbJsonLd([
+      { name: 'Home', path: '/' },
+      { name: 'Blog', path: '/blog' },
+      { name: post.title, path },
+    ]),
+  ]);
 
   return (
     <article className="container mx-auto max-w-3xl px-4 py-10 xl:py-14">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaJson) }}
-      />
+      <JsonLd data={schema} />
 
       <header className="border-border/40 mb-10 border-b pb-8">
         {post.featured_image_url ? (
@@ -168,6 +169,17 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
             </>
           ) : null}
         </div>
+
+        <aside className="border-border/40 bg-muted/20 mt-6 rounded-lg border p-4">
+          <h2 className="text-sm font-semibold tracking-wide uppercase">
+            In brief
+          </h2>
+          <ol className="text-muted-foreground mt-2 list-decimal space-y-1 pl-5 text-sm leading-relaxed">
+            <li>{brief1}</li>
+            <li>{brief2}</li>
+            <li>{brief3}</li>
+          </ol>
+        </aside>
       </header>
 
       {post.content ? (
@@ -179,7 +191,9 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
       <aside className="border-border/40 bg-muted/20 mt-12 rounded-xl border p-6">
         <div className="flex items-start gap-4">
           <Avatar className="h-14 w-14">
-            {avatarUrl ? <AvatarImage src={avatarUrl} alt={post.author_name} /> : null}
+            {avatarUrl ? (
+              <AvatarImage src={avatarUrl} alt={post.author_name} />
+            ) : null}
             <AvatarFallback className="text-base uppercase">
               {post.author_name.slice(0, 1)}
             </AvatarFallback>
@@ -216,19 +230,19 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           href="/blog"
           className="text-muted-foreground hover:text-foreground text-sm transition-colors"
         >
-          ← Back to Blog
+          ← Back to blog
         </Link>
 
         <div className="bg-muted/30 rounded-lg border border-border/40 p-6">
           <h2 className="font-heading text-xl font-semibold tracking-tight">
-            Ready to simplify your freelance business?
+            Run the studio from one home
           </h2>
           <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-            Ozer connects client work, email, invoicing, and meeting notes in one
-            system built for solo agencies and small studios.
+            Ozer is the Workspace OS for freelancers and small agencies — flat price
+            for the whole team.
           </p>
           <Button asChild className="mt-4">
-            <Link href="/">Get early access</Link>
+            <Link href="/auth/sign-up">Start free</Link>
           </Button>
         </div>
       </footer>
