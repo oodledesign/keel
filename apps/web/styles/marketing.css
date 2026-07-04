@@ -6,13 +6,11 @@
 
 @layer utilities {
   .marketing-shell {
-    --marketing-hero-fade-color: var(--ozer-cream-50);
     color: var(--ozer-text-on-light);
     background: var(--ozer-cream-50);
   }
 
   .dark .marketing-shell {
-    --marketing-hero-fade-color: var(--ozer-plum-900);
     color: var(--ozer-text-on-dark);
     background: var(--ozer-plum-900);
   }
@@ -71,98 +69,6 @@
     background: var(--ozer-plum-800);
   }
 
-  .marketing-hero-chip {
-    @apply rounded-full border px-3.5 py-1.5 text-xs font-medium uppercase tracking-[0.08em];
-    border-color: var(--ozer-border-on-light);
-    background: var(--ozer-cream-100);
-    color: var(--ozer-text-on-light-muted);
-    transition:
-      border-color 180ms cubic-bezier(0.23, 1, 0.32, 1),
-      background-color 180ms cubic-bezier(0.23, 1, 0.32, 1),
-      color 180ms cubic-bezier(0.23, 1, 0.32, 1);
-  }
-
-  .dark .marketing-hero-chip {
-    border-color: var(--ozer-border-on-dark);
-    background: var(--ozer-plum-800);
-    color: var(--ozer-text-on-dark-muted);
-  }
-
-  @media (hover: hover) and (pointer: fine) {
-    .marketing-hero-chip:hover {
-      border-color: color-mix(in srgb, var(--ozer-accent) 35%, transparent);
-      background: var(--ozer-coral-50);
-      color: var(--ozer-text-on-light);
-    }
-
-    .dark .marketing-hero-chip:hover {
-      background: var(--ozer-plum-700);
-      color: var(--ozer-text-on-dark);
-    }
-  }
-
-  .marketing-hero-chip:focus-visible {
-    outline: 2px solid var(--ozer-accent);
-    outline-offset: 2px;
-  }
-
-  .marketing-hero-fade-left {
-    pointer-events: none;
-    position: absolute;
-    inset-block: 0;
-    left: 0;
-    z-index: 10;
-    width: 4rem;
-    background: linear-gradient(
-      to right,
-      var(--marketing-hero-fade-color),
-      transparent
-    );
-  }
-
-  .marketing-hero-fade-right {
-    pointer-events: none;
-    position: absolute;
-    inset-block: 0;
-    right: 0;
-    z-index: 10;
-    width: 4rem;
-    background: linear-gradient(
-      to left,
-      var(--marketing-hero-fade-color),
-      transparent
-    );
-  }
-
-  @media (min-width: 640px) {
-    .marketing-hero-fade-left,
-    .marketing-hero-fade-right {
-      width: 7rem;
-    }
-  }
-
-  .marketing-hero-marquee-track {
-    display: flex;
-    width: max-content;
-    gap: 1rem;
-    padding-inline: 1.5rem;
-    animation: marketing-hero-marquee 52s linear infinite;
-    will-change: transform;
-  }
-
-  .marketing-hero-marquee-track[data-paused='true'] {
-    animation-play-state: paused;
-  }
-}
-
-@keyframes marketing-hero-marquee {
-  from {
-    transform: translateX(0);
-  }
-
-  to {
-    transform: translateX(-50%);
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -172,9 +78,5 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-  }
-
-  .marketing-hero-marquee-track {
-    animation: none !important;
   }
 }

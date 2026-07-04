@@ -104,7 +104,8 @@ function Home() {
     <main className={cn('relative overflow-hidden', marketingShellClass)}>
       <JsonLd data={schema} />
 
-      <section className="relative mx-auto flex w-full max-w-7xl flex-col px-6 pb-14 pt-24 md:pb-20 md:pt-32">
+      {/* Tighter top padding so the connection map peeks above the fold */}
+      <section className="relative mx-auto flex w-full max-w-7xl flex-col px-6 pb-14 pt-14 md:pb-20 md:pt-20">
         <MarketingHomeHero />
       </section>
 
