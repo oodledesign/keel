@@ -31,7 +31,7 @@ const BUSINESS_LITE_SIGNUP = buildPricingSignupUrl({
 export const metadata = buildMarketingMetadata({
   title: 'Business workspace apps — Ozer',
   description:
-    'Install Signatures, Rankly, Feedflow, or Videos on free Business Lite. Pay per app per workspace — flat price for the whole team.',
+    'Install Signatures on free Business Lite. Flat mailbox tiers by workspace, never per person.',
   path: '/apps',
   ogType: 'app',
 });
@@ -46,7 +46,7 @@ function AppsMarketingPage() {
           webPageJsonLd({
             name: 'Business workspace apps — Ozer',
             description:
-              'Install Signatures, Rankly, Feedflow, or Videos on free Business Lite.',
+              'Install Signatures on free Business Lite.',
             path: '/apps',
           }),
           breadcrumbJsonLd([
@@ -65,8 +65,8 @@ function AppsMarketingPage() {
             </span>
           </h1>
           <p className={`text-base leading-relaxed md:text-lg ${marketingBodyText}`}>
-            Install per workspace. Start free on Business Lite, then add Signatures,
-            Rankly, Feedflow, or Videos when you need them — priced per workspace, not per seat.
+            Install on a workspace. Start free on Business Lite, then add Signatures
+            when you need it — flat mailbox tiers by workspace, never per person.
           </p>
           <Button asChild size="lg" className={marketingBtnGradient}>
             <Link href={BUSINESS_LITE_SIGNUP}>

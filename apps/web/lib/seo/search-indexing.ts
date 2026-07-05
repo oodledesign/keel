@@ -2,12 +2,12 @@ import type { Metadata } from 'next';
 import type { NextResponse } from 'next/server';
 
 /**
- * Public search indexing is blocked unless ALLOW_SEARCH_INDEXING=true.
+ * Public search indexing is blocked unless NEXT_PUBLIC_SITE_INDEXABLE=true.
  * Unset and explicit "false" both keep the site out of Google — use false
  * in Vercel now so you only need to flip to true at launch.
  */
 export function isSearchIndexingAllowed(): boolean {
-  return process.env.ALLOW_SEARCH_INDEXING === 'true';
+  return process.env.NEXT_PUBLIC_SITE_INDEXABLE === 'true';
 }
 
 const BLOCKED_ROBOTS: Metadata['robots'] = {

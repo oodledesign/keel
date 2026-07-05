@@ -17,6 +17,7 @@ export type KeelPlanLimits = {
   maxMembers: number | null;
   maxProperties: number | null;
   maxVideos: number | null;
+  maxMailboxes?: number | null;
 };
 
 export type KeelPlanDefinition = {
@@ -161,11 +162,51 @@ const PROPERTY: KeelPlanDefinition[] = [
 const ADDONS: KeelPlanDefinition[] = [
   {
     productId: 'keel-addon-signatures',
-    planId: 'signatures-monthly',
-    stripePriceId: KEEL_STRIPE_PRICES.addon_signatures_monthly,
+    planId: 'signatures-starter-monthly',
+    stripePriceId: KEEL_STRIPE_PRICES.addon_signatures_starter_monthly,
     family: 'addon_signatures',
     entitlementKey: 'addon_signatures',
-    limits: { maxMembers: null, maxProperties: null, maxVideos: null },
+    limits: { maxMembers: null, maxProperties: null, maxVideos: null, maxMailboxes: 10 },
+  },
+  {
+    productId: 'keel-addon-signatures',
+    planId: 'signatures-starter-yearly',
+    stripePriceId: KEEL_STRIPE_PRICES.addon_signatures_starter_yearly,
+    family: 'addon_signatures',
+    entitlementKey: 'addon_signatures',
+    limits: { maxMembers: null, maxProperties: null, maxVideos: null, maxMailboxes: 10 },
+  },
+  {
+    productId: 'keel-addon-signatures',
+    planId: 'signatures-team-monthly',
+    stripePriceId: KEEL_STRIPE_PRICES.addon_signatures_team_monthly,
+    family: 'addon_signatures',
+    entitlementKey: 'addon_signatures',
+    limits: { maxMembers: null, maxProperties: null, maxVideos: null, maxMailboxes: 50 },
+  },
+  {
+    productId: 'keel-addon-signatures',
+    planId: 'signatures-team-yearly',
+    stripePriceId: KEEL_STRIPE_PRICES.addon_signatures_team_yearly,
+    family: 'addon_signatures',
+    entitlementKey: 'addon_signatures',
+    limits: { maxMembers: null, maxProperties: null, maxVideos: null, maxMailboxes: 50 },
+  },
+  {
+    productId: 'keel-addon-signatures',
+    planId: 'signatures-office-monthly',
+    stripePriceId: KEEL_STRIPE_PRICES.addon_signatures_office_monthly,
+    family: 'addon_signatures',
+    entitlementKey: 'addon_signatures',
+    limits: { maxMembers: null, maxProperties: null, maxVideos: null, maxMailboxes: 150 },
+  },
+  {
+    productId: 'keel-addon-signatures',
+    planId: 'signatures-office-yearly',
+    stripePriceId: KEEL_STRIPE_PRICES.addon_signatures_office_yearly,
+    family: 'addon_signatures',
+    entitlementKey: 'addon_signatures',
+    limits: { maxMembers: null, maxProperties: null, maxVideos: null, maxMailboxes: 150 },
   },
   {
     productId: 'keel-addon-rankly',
@@ -342,7 +383,8 @@ export const KEEL_ADDON_CATALOG: Array<{
     key: 'addon_signatures',
     productId: 'keel-addon-signatures',
     name: 'Signatures',
-    description: 'Branded email signatures with Microsoft 365 and Google Workspace.',
+    description:
+      'Flat tiers for branded email signatures with Microsoft 365 and Google Workspace.',
     fromPriceGbp: 9,
   },
   {

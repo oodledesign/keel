@@ -44,7 +44,8 @@ export function buildAppJsonLd(config: AppLandingConfig) {
         {
           name: config.name,
           price: config.fromPriceGbp,
-          description: `From £${config.fromPriceGbp} per month per workspace`,
+          description:
+            config.hero.priceBadge ?? `From £${config.fromPriceGbp} per month`,
           url: pageUrl,
         },
       ],

@@ -19,6 +19,7 @@ import {
   REPLACED_STACK,
 } from '~/lib/marketing/pricing-content';
 import { MarketingFaqsSection } from '~/(marketing)/_components/marketing-faqs';
+import { PlanRecommender } from './plan-recommender';
 import {
   marketingBodyText,
   marketingBtnGradient,
@@ -144,14 +145,11 @@ export function PricingConversion() {
           })}
         </div>
         <p className={cn('mt-4 text-center text-sm', marketingMutedText)}>
-          Personal and family workspaces are free forever. Community and property tiers are
-          listed on{' '}
-          <Link href="/pricing/explained" className="underline underline-offset-2">
-            Ozer pricing, explained
-          </Link>
-          .
+          Personal and family workspaces are free forever.
         </p>
       </section>
+
+      <PlanRecommender />
 
       {/* What this replaces */}
       <section

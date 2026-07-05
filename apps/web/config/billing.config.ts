@@ -60,7 +60,8 @@ export default createBillingSchema({
     {
       id: 'keel-business-lite',
       name: 'Business Lite',
-      description: 'Free apps workspace — install Signatures, Rankly, and other add-ons',
+      description:
+        'Free apps workspace — install Signatures and future add-ons',
       currency: KEEL_BILLING_CURRENCY,
       plans: [
         {
@@ -335,28 +336,100 @@ export default createBillingSchema({
     {
       id: 'keel-addon-signatures',
       name: 'Signatures',
-      description: 'Branded email signatures for Microsoft 365 and Google Workspace',
+      description:
+        'Flat-tier branded email signatures for Microsoft 365 and Google Workspace',
       currency: KEEL_BILLING_CURRENCY,
       plans: [
         {
-          id: 'signatures-monthly',
-          name: 'Signatures Monthly',
+          id: 'signatures-starter-monthly',
+          name: 'Signatures Starter Monthly',
           paymentType: 'recurring',
           interval: 'month',
           lineItems: [
             {
-              id: KEEL_STRIPE_PRICES.addon_signatures_monthly,
-              name: 'Signatures',
+              id: KEEL_STRIPE_PRICES.addon_signatures_starter_monthly,
+              name: 'Signatures Starter',
               cost: 9,
+              type: 'flat',
+            },
+          ],
+        },
+        {
+          id: 'signatures-starter-yearly',
+          name: 'Signatures Starter Annual',
+          paymentType: 'recurring',
+          interval: 'year',
+          lineItems: [
+            {
+              id: KEEL_STRIPE_PRICES.addon_signatures_starter_yearly,
+              name: 'Signatures Starter',
+              cost: 90,
+              type: 'flat',
+            },
+          ],
+        },
+        {
+          id: 'signatures-team-monthly',
+          name: 'Signatures Team Monthly',
+          paymentType: 'recurring',
+          interval: 'month',
+          lineItems: [
+            {
+              id: KEEL_STRIPE_PRICES.addon_signatures_team_monthly,
+              name: 'Signatures Team',
+              cost: 19,
+              type: 'flat',
+            },
+          ],
+        },
+        {
+          id: 'signatures-team-yearly',
+          name: 'Signatures Team Annual',
+          paymentType: 'recurring',
+          interval: 'year',
+          lineItems: [
+            {
+              id: KEEL_STRIPE_PRICES.addon_signatures_team_yearly,
+              name: 'Signatures Team',
+              cost: 190,
+              type: 'flat',
+            },
+          ],
+        },
+        {
+          id: 'signatures-office-monthly',
+          name: 'Signatures Office Monthly',
+          paymentType: 'recurring',
+          interval: 'month',
+          lineItems: [
+            {
+              id: KEEL_STRIPE_PRICES.addon_signatures_office_monthly,
+              name: 'Signatures Office',
+              cost: 39,
+              type: 'flat',
+            },
+          ],
+        },
+        {
+          id: 'signatures-office-yearly',
+          name: 'Signatures Office Annual',
+          paymentType: 'recurring',
+          interval: 'year',
+          lineItems: [
+            {
+              id: KEEL_STRIPE_PRICES.addon_signatures_office_yearly,
+              name: 'Signatures Office',
+              cost: 390,
               type: 'flat',
             },
           ],
         },
       ],
       features: [
-        'Staff directory sync',
-        'Template library',
-        'Push to mailboxes',
+        'Unlimited templates',
+        'Microsoft 365 & Google Workspace deployment',
+        'Per-staff personalisation',
+        'Campaign banners',
       ],
     },
     {

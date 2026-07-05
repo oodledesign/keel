@@ -360,6 +360,20 @@ async function getRedirects() {
   ];
 
   // Legacy marketing pages still disabled; segment landings, pricing, contact, FAQ, and legal stay public.
+  const comingSoonRedirects = [
+    '/property',
+    '/property/:path*',
+    '/community',
+    '/community/:path*',
+    '/apps/rankly',
+    '/apps/feedflow',
+    '/apps/videos',
+  ].map((source) => ({
+    source,
+    destination: '/#coming-soon',
+    permanent: false,
+  }));
+
   const marketingRedirects = [
     '/docs',
     '/docs/:path*',
@@ -445,6 +459,7 @@ async function getRedirects() {
       destination: '/features/finances',
       permanent: true,
     },
+    ...comingSoonRedirects,
     ...marketingRedirects,
   ];
 }

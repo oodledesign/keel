@@ -6,15 +6,11 @@ import type { LucideIcon } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   Brain,
-  Briefcase,
-  Building2,
   CalendarDays,
   Check,
   Contact,
   CreditCard,
   FolderKanban,
-  Heart,
-  Home,
   Kanban,
   LayoutDashboard,
   ListChecks,
@@ -23,7 +19,6 @@ import {
   Search,
   Sparkles,
   StickyNote,
-  Users,
 } from 'lucide-react';
 
 import { cn } from '@kit/ui/utils';
@@ -31,23 +26,11 @@ import { cn } from '@kit/ui/utils';
 import { marketingHeroEase } from '~/lib/marketing/marketing-ui';
 
 /* ──────────────────────────────────────────────────────────────
- * Map data — workspaces (top row) and features (second row)
- * feed the dashboard screen below via SVG connection lines.
+ * Map data — launch-scope capabilities feed the dashboard screen below
+ * via SVG connection lines.
  * All coordinates are percentages of the desktop map container
  * so the HTML nodes and the SVG line layer stay aligned.
  * ────────────────────────────────────────────────────────────── */
-
-type WorkspaceNodeDef = {
-  id: string;
-  label: string;
-  caption: string;
-  icon: LucideIcon;
-  color: string;
-  /** Horizontal centre, % of map width */
-  x: number;
-  /** Where its line meets the screen's top edge, % of map width */
-  target: number;
-};
 
 type FeatureNodeDef = {
   id: string;
@@ -58,54 +41,6 @@ type FeatureNodeDef = {
   /** Staggered sub-row (0 = upper, 1 = lower) for an organic map feel */
   row: 0 | 1;
 };
-
-const WORKSPACE_NODES: readonly WorkspaceNodeDef[] = [
-  {
-    id: 'family',
-    label: 'Family',
-    caption: 'Free',
-    icon: Heart,
-    color: 'var(--ozer-sage-500)',
-    x: 14,
-    target: 36,
-  },
-  {
-    id: 'business',
-    label: 'Business',
-    caption: 'Plugs in',
-    icon: Briefcase,
-    color: 'var(--ozer-sky-200)',
-    x: 32,
-    target: 43,
-  },
-  {
-    id: 'personal',
-    label: 'Personal',
-    caption: 'Free hub',
-    icon: Home,
-    color: 'var(--ozer-accent)',
-    x: 50,
-    target: 50,
-  },
-  {
-    id: 'property',
-    label: 'Property',
-    caption: 'Plugs in',
-    icon: Building2,
-    color: 'var(--ozer-lime-400)',
-    x: 68,
-    target: 57,
-  },
-  {
-    id: 'community',
-    label: 'Community',
-    caption: 'Plugs in',
-    icon: Users,
-    color: 'var(--ozer-info)',
-    x: 86,
-    target: 64,
-  },
-] as const;
 
 const FEATURE_NODES: readonly FeatureNodeDef[] = [
   { id: 'clients', label: 'Clients', icon: Contact, x: 8, target: 16, row: 0 },
@@ -128,21 +63,13 @@ const FEATURE_NODES: readonly FeatureNodeDef[] = [
  * nodes and to the screen's top edge at any width.
  */
 const VB_W = 1144;
-const REGION_H = 264;
-/** y where lines leave the workspace cards */
-const WORKSPACE_LINE_START = 88;
+const REGION_H = 168;
 /** top offsets for the two staggered feature-chip sub-rows */
-const CHIP_ROW_TOP = [112, 146] as const;
+const CHIP_ROW_TOP = [8, 44] as const;
 /** y where lines leave each chip sub-row (chip height ≈ 30px) */
-const CHIP_LINE_START = [144, 178] as const;
+const CHIP_LINE_START = [40, 76] as const;
 
 const toX = (percent: number) => (percent / 100) * VB_W;
-
-function workspacePath(node: WorkspaceNodeDef) {
-  const x = toX(node.x);
-  const t = toX(node.target);
-  return `M ${x} ${WORKSPACE_LINE_START} C ${x} 160, ${t} ${REGION_H - 55}, ${t} ${REGION_H}`;
-}
 
 function featurePath(node: FeatureNodeDef) {
   const x = toX(node.x);
@@ -209,36 +136,6 @@ function ConnectionLines({
         );
       })}
 
-      {WORKSPACE_NODES.map((node, index) => {
-        const d = workspacePath(node);
-        return (
-          <g key={node.id}>
-            <motion.path
-              d={d}
-              fill="none"
-              stroke={node.color}
-              strokeOpacity="0.55"
-              strokeWidth="1.5"
-              vectorEffect="non-scaling-stroke"
-              {...draw(0.35 + index * 0.08, 0.8)}
-            />
-            {live ? (
-              <circle
-                r="4"
-                fill={node.color}
-                style={{ filter: 'drop-shadow(0 0 2px var(--ozer-coral-alpha-45))' }}
-              >
-                <animateMotion
-                  dur="4.5s"
-                  repeatCount="indefinite"
-                  begin={`${1.2 + index * 0.9}s`}
-                  path={d}
-                />
-              </circle>
-            ) : null}
-          </g>
-        );
-      })}
     </svg>
   );
 }
@@ -246,38 +143,6 @@ function ConnectionLines({
 /* ──────────────────────────────────────────────────────────────
  * Nodes
  * ────────────────────────────────────────────────────────────── */
-
-function WorkspaceNodeCard({ node }: { node: WorkspaceNodeDef }) {
-  const Icon = node.icon;
-  const isHub = node.id === 'personal';
-
-  return (
-    <div
-      className={cn(
-        'flex w-[104px] flex-col items-center rounded-xl border px-2 py-2.5 text-center lg:w-[120px]',
-        'bg-[var(--workspace-shell-panel)]',
-        isHub
-          ? 'border-[var(--ozer-accent)] shadow-[0_0_18px_var(--ozer-coral-alpha-15)]'
-          : 'border-[color:var(--workspace-shell-border)] shadow-[0_8px_24px_var(--ozer-plum-alpha-12)]',
-      )}
-    >
-      <span
-        className="flex h-8 w-8 items-center justify-center rounded-lg"
-        style={{
-          backgroundColor: `color-mix(in srgb, ${node.color} 22%, transparent)`,
-        }}
-      >
-        <Icon className="h-4 w-4" style={{ color: node.color }} aria-hidden />
-      </span>
-      <p className="mt-1.5 text-xs font-bold text-[var(--workspace-shell-text)]">
-        {node.label}
-      </p>
-      <p className="text-[10px] text-[var(--workspace-shell-text-muted)]">
-        {node.caption}
-      </p>
-    </div>
-  );
-}
 
 function FeatureNodeChip({ node }: { node: FeatureNodeDef }) {
   const Icon = node.icon;
@@ -309,7 +174,6 @@ const SIDEBAR_SPACES = [
   { label: 'Personal', color: 'var(--ozer-accent)' },
   { label: 'Business', color: 'var(--ozer-sky-200)' },
   { label: 'Family', color: 'var(--ozer-sage-500)' },
-  { label: 'Community', color: 'var(--ozer-info)' },
 ] as const;
 
 const PLANNER_BLOCKS = [
@@ -329,8 +193,8 @@ const PLANNER_BLOCKS = [
   },
   {
     time: '14:00',
-    text: 'Volunteer rota review',
-    tag: 'Community',
+    text: 'Invoice follow-up',
+    tag: 'Business',
     bg: 'var(--ozer-sky-100)',
     dot: 'var(--ozer-info)',
   },
@@ -614,23 +478,9 @@ function DesktopConnectionMap({
 
   return (
     <div className="mx-auto w-full max-w-[71.5rem]" aria-hidden>
-      {/* Connector region — nodes + lines above the screen */}
+      {/* Connector region — launch capabilities + lines above the screen */}
       <div className="relative" style={{ height: REGION_H }}>
         <ConnectionLines animate={animate} live={live} />
-
-        {/* Workspace nodes */}
-        {WORKSPACE_NODES.map((node, index) => (
-          <motion.div
-            key={node.id}
-            className="absolute top-0 z-10 -translate-x-1/2"
-            style={{ left: `${node.x}%` }}
-            {...nodeReveal(0.1 + index * 0.06)}
-          >
-            <motion.div {...float(index * 0.7)}>
-              <WorkspaceNodeCard node={node} />
-            </motion.div>
-          </motion.div>
-        ))}
 
         {/* Feature chips — two staggered sub-rows */}
         {FEATURE_NODES.map((node, index) => (
@@ -708,24 +558,7 @@ function MobileConnectionMap({
 }) {
   return (
     <div>
-      <div className="flex flex-wrap justify-center gap-2" aria-hidden>
-        {WORKSPACE_NODES.map((node) => (
-          <div
-            key={node.id}
-            className="flex items-center gap-1.5 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-2.5 py-1.5"
-          >
-            <span
-              className="h-1.5 w-1.5 rounded-full"
-              style={{ backgroundColor: node.color }}
-            />
-            <span className="text-[11px] font-semibold text-[var(--workspace-shell-text)]">
-              {node.label}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-2 flex flex-wrap justify-center gap-1.5" aria-hidden>
+      <div className="flex flex-wrap justify-center gap-1.5" aria-hidden>
         {FEATURE_NODES.map((node) => (
           <FeatureNodeChip key={node.id} node={node} />
         ))}
@@ -765,7 +598,7 @@ export function MarketingHeroConnectionMap() {
     <div
       className="relative mt-12 md:mt-16"
       role="img"
-      aria-label="Map of Ozer workspaces — personal, family, business, property, and community — and features such as the planner, invoicing, and notes, all connected to one dashboard."
+      aria-label="Map of Ozer launch capabilities — clients, projects, invoicing, pipeline, email, planner, meetings, notes, and second brain — all connected to one dashboard."
     >
       <div className="md:hidden">
         <MobileConnectionMap animate={animate} live={live} />

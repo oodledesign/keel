@@ -91,6 +91,9 @@ export async function syncKeelPlanFromSubscription(
           productId: plan.productId,
           planId: plan.planId,
           family: plan.family,
+          limits: {
+            maxMailboxes: plan.limits.maxMailboxes ?? null,
+          },
         },
         updated_at: new Date().toISOString(),
       },

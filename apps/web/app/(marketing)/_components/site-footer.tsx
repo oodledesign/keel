@@ -11,8 +11,8 @@ export function SiteFooter() {
       logo={<AppLogo className="w-[85px] md:w-[95px]" />}
       description={
         <p>
-          Ozer is the Workspace OS for freelancers and small agencies — personal,
-          business, family, and community. One price covers the team. Data in the EU.
+          Ozer is the Workspace OS for freelancers and small agencies — your studio,
+          your life, one home. Flat pricing, data in the EU.
         </p>
       }
       copyright={
@@ -30,8 +30,7 @@ export function SiteFooter() {
           links: [
             { href: '/personal', label: 'Personal & family' },
             { href: '/work', label: 'Business' },
-            { href: '/property', label: 'Property' },
-            { href: '/community', label: 'Community' },
+            { href: '/#coming-soon', label: 'Coming soon' },
           ],
         },
         {

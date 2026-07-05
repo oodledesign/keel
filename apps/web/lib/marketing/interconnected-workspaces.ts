@@ -73,7 +73,7 @@ export const INTERCONNECTED_WORKSPACES_MARKETING = {
   title: 'One Workspace OS.',
   titleAccent: 'Every space connected.',
   subtitle:
-    'A small studio should not need seven tools and Zapier. Ozer links personal, business, family, and community workspaces — with assistants and a planner that share one home.',
+    'A small studio should not need seven tools and Zapier. Ozer links studio work, personal life, and family workspaces — with assistants and a planner that share one home.',
   comparison: {
     heading: 'Not another siloed CRM',
     traditionalLabel: 'Typical stack',
@@ -108,12 +108,6 @@ export const INTERCONNECTED_WORKSPACES_MARKETING = {
       color: 'var(--ozer-sage-500)',
       examples: 'Calendar, meals, shopping',
     },
-    {
-      id: 'community',
-      label: 'Community',
-      color: 'var(--ozer-accent)',
-      examples: 'Events, volunteers',
-    },
   ] satisfies InterconnectedWorkspaceNode[],
   benefits: [
     {
@@ -144,7 +138,7 @@ export const INTERCONNECTED_WORKSPACES_MARKETING = {
       icon: LayoutDashboard,
       title: 'Shortcuts anywhere',
       description:
-        'Pin invoices, Rankly, or the family calendar to your personal home and phone bar.',
+        'Pin invoices, a client, or the family calendar to your personal home and phone bar.',
     },
     {
       icon: Layers,
@@ -170,7 +164,7 @@ export const INTERCONNECTED_WORKSPACES_MARKETING = {
 } as const;
 
 export const INTERCONNECTED_PERSONAL_HOOK =
-  'Your free personal home is the hub — business, family, and community workspaces plug in without losing the picture.';
+  'Your free personal home is the hub — business and family workspaces connect without losing the picture.';
 
 export const INTERCONNECTED_WORK_HOOK =
   'Run your business workspace inside the same Ozer account as your personal life — tasks and plans stay connected, not copied between apps.';

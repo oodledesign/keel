@@ -20,7 +20,6 @@ import {
   planIdForInterval,
 } from '~/lib/billing/pricing-marketing';
 import { getSegmentPricingComparison } from '~/lib/marketing/pricing-comparison';
-import type { SegmentSlug } from '~/lib/marketing/segment-landing-pages';
 import {
   marketingBodyText,
   marketingBtnGradient,
@@ -33,35 +32,16 @@ import {
 import { PricingComparisonTable } from '../../_components/pricing-comparison-table';
 import { InterconnectedWorkspacesSection } from '../../_components/interconnected-workspaces-section';
 
-type WorkspaceCategory = 'community' | 'business' | 'property';
-
-const CATEGORY_LABELS: Record<WorkspaceCategory, string> = {
-  community: 'Community',
-  business: 'Business',
-  property: 'Property',
-};
-
-const CATEGORY_SEGMENT: Record<WorkspaceCategory, SegmentSlug> = {
-  community: 'community',
-  business: 'work',
-  property: 'property',
-};
-
 export function OzerPricingPage() {
   const [interval, setInterval] = useState<BillingInterval>('month');
-  const [category, setCategory] = useState<WorkspaceCategory>('business');
 
   const workspacePlans = useMemo(() => {
-    return MARKETING_WORKSPACE_PLANS.filter((plan) => {
-      if (category === 'community') return plan.profile === 'community';
-      if (category === 'property') return plan.profile === 'work_property';
-      return plan.profile === 'work_design';
-    });
-  }, [category]);
+    return MARKETING_WORKSPACE_PLANS.filter((plan) => plan.profile === 'work_design');
+  }, []);
 
   const pricingComparison = useMemo(
-    () => getSegmentPricingComparison(CATEGORY_SEGMENT[category]),
-    [category],
+    () => getSegmentPricingComparison('work'),
+    [],
   );
 
   const personalComparison = useMemo(
@@ -74,8 +54,8 @@ export function OzerPricingPage() {
       <section className="text-center">
         <p className={cn('mx-auto max-w-2xl text-lg leading-relaxed', marketingBodyText)}>
           Start free with personal and family — your hub for every workspace.
-          Pay when you add community, business, or property. One price covers the
-          team, not a per-seat tax. One Workspace OS, not a pile of siloed tools.
+          Pay when you add Ozer Business. One price covers the team, not a per-seat
+          tax. One Workspace OS, not a pile of siloed tools.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Button asChild size="lg" className={marketingBtnGradient}>
@@ -117,26 +97,8 @@ export function OzerPricingPage() {
 
       <PricingSection
         title="Workspace plans"
-        subtitle="Pick a category, then choose the tier when you create that workspace"
+        subtitle="Choose the Ozer Business tier when you create your workspace"
       >
-        <div className="mb-6 flex flex-wrap justify-center gap-2">
-          {(Object.keys(CATEGORY_LABELS) as WorkspaceCategory[]).map((key) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setCategory(key)}
-              className={cn(
-                'rounded-full px-4 py-2 text-sm font-medium transition',
-                category === key
-                  ? 'bg-[var(--ozer-accent)] text-[var(--ozer-plum-950)]'
-                  : cn(marketingBtnOutline, 'h-auto px-4 py-2'),
-              )}
-            >
-              {CATEGORY_LABELS[key]}
-            </button>
-          ))}
-        </div>
-
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {workspacePlans.map((plan) => (
             <WorkspacePlanCard key={plan.productId} plan={plan} interval={interval} />
@@ -150,7 +112,7 @@ export function OzerPricingPage() {
 
       <PricingSection
         title="Add-ons"
-        subtitle="Optional modules billed separately per workspace. Videos includes private/public sharing, public links, branded players, and embeds for Webflow, WordPress, and any site."
+        subtitle="Optional modules billed separately for each workspace."
       >
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {MARKETING_ADDON_PLANS.map((plan) => (
@@ -244,6 +206,14 @@ function WorkspacePlanCard(props: {
     planId,
     interval,
   });
+  const features =
+    plan.productId === 'keel-business-lite'
+      ? plan.features.map((feature) =>
+          feature === 'Apps marketplace access'
+            ? 'Apps marketplace — install Signatures and future add-ons'
+            : feature,
+        )
+      : plan.features;
 
   return (
     <article
@@ -272,7 +242,7 @@ function WorkspacePlanCard(props: {
           {formatGbp(Math.round(plan.yearlyPriceGbp / 12))}/mo billed annually
         </p>
       ) : null}
-      <FeatureList features={plan.features} />
+      <FeatureList features={features} />
       <div className="mt-6 space-y-2">
         <Button
           asChild
@@ -301,15 +271,23 @@ function AddonPlanCard(props: {
   plan: (typeof MARKETING_ADDON_PLANS)[number];
 }) {
   const { plan } = props;
+  const isSignatures = plan.productId === 'keel-addon-signatures';
 
   return (
     <article className={cn('flex h-full flex-col rounded-2xl border border-[color:var(--workspace-shell-border)] p-6 text-[var(--workspace-shell-text)]', marketingFeatureCard)}>
       <h3 className="text-lg font-semibold">{plan.name}</h3>
       <p className={cn('mt-1 text-sm', marketingMutedText)}>{plan.description}</p>
       <p className="mt-4 text-2xl font-bold tracking-tight">
+        {isSignatures ? 'From ' : null}
         {formatGbp(plan.monthlyPriceGbp)}
         <span className={cn('text-base font-normal', marketingMutedText)}>/mo</span>
       </p>
+      {isSignatures ? (
+        <p className={cn('mt-1 text-xs', marketingMutedText)}>
+          Starter, Team, and Office mailbox bands — flat by workspace, never per
+          person.
+        </p>
+      ) : null}
       <FeatureList features={plan.features} compact />
       <div className="mt-6">
         <Button asChild className={cn(marketingBtnOutline, 'w-full')} variant="outline">

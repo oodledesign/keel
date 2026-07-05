@@ -20,6 +20,7 @@ export type MarketingWorkspacePlan = {
   monthlyPriceGbp: number;
   yearlyPriceGbp: number;
   features: string[];
+  maxTeamMembers: number | null;
   highlighted?: boolean;
   badge?: string;
 };
@@ -65,17 +66,13 @@ export const MARKETING_WORKSPACE_PLANS: MarketingWorkspacePlan[] =
     monthlyPriceGbp: plan.monthlyPriceGbp,
     yearlyPriceGbp: plan.yearlyPriceGbp ?? plan.monthlyPriceGbp * 12,
     features: plan.features,
+    maxTeamMembers: plan.maxTeamMembers,
     highlighted: plan.highlighted,
     badge: plan.badge,
   }));
 
 const ADDON_PRODUCT_IDS = [
-  'keel-addon-rankly',
-  'keel-addon-feedflow',
-  'keel-addon-videos-starter',
-  'keel-addon-videos-growth',
-  'keel-addon-videos-pro',
-  'keel-addon-videos-studio',
+  'keel-addon-signatures',
 ] as const;
 
 /** Derived from billing.config.ts. */

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { Calendar, CreditCard, MessagesSquare, Users } from 'lucide-react';
+import { Calendar, Check, CreditCard, MessagesSquare, Users, X } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 
@@ -31,12 +31,13 @@ import {
 } from '~/lib/billing/billing-config-prices';
 
 import { MarketingHomeHero } from './_components/marketing-home-hero';
-import { InterconnectedWorkspacesSection } from './_components/interconnected-workspaces-section';
+import { ComingSoon } from './_components/coming-soon';
+import { INTERCONNECTED_WORKSPACES_MARKETING } from '~/lib/marketing/interconnected-workspaces';
 
 export const metadata = buildMarketingMetadata({
   title: 'Workspace OS for studios — Ozer',
   description:
-    'Ozer is the Workspace OS for freelancers and small agencies. Personal and family stay free; business plans from £0–£29 per month with a flat price for the whole team.',
+    'Ozer is the Workspace OS for freelancers and small studios. Clients, projects, invoices, pipeline, and your plan for the day in one place from £29 per month.',
   path: '/',
   ogType: 'default',
   keywords: [
@@ -52,7 +53,7 @@ const features = [
     icon: Users,
     title: 'People on the record',
     description:
-      'Clients, collaborators, family, and community contacts — context stays with the relationship.',
+      'Clients, collaborators, and family contacts — context stays with the relationship.',
   },
   {
     icon: Calendar,
@@ -94,7 +95,7 @@ function Home() {
     softwareApplicationJsonLd({
       name: 'Ozer',
       description:
-        'Workspace OS for freelancers and small agencies — personal, business, property, and community in one account.',
+        'Workspace OS for freelancers and small studios — clients, projects, invoices, pipeline, and your plan for the day in one place.',
       url: absoluteUrl('/'),
       offers,
     }),
@@ -109,50 +110,44 @@ function Home() {
         <MarketingHomeHero />
       </section>
 
-      <InterconnectedWorkspacesSection />
-
       <section
-        id="pricing"
-        className="mx-auto w-full max-w-7xl px-6 py-16"
-        aria-labelledby="home-pricing-heading"
+        className="relative mx-auto w-full max-w-7xl px-6 py-16"
+        aria-labelledby="comparison-heading"
       >
-        <div
-          className={cn(
-            'rounded-2xl border border-[color:var(--workspace-shell-border)] p-8 text-center',
-            marketingFeatureCard,
-          )}
-        >
+        <div className={cn(marketingFeatureCard, 'rounded-3xl p-6 md:p-10')}>
           <h2
-            id="home-pricing-heading"
-            className="font-heading text-3xl font-semibold text-[var(--workspace-shell-text)]"
+            id="comparison-heading"
+            className="text-center font-heading text-3xl font-semibold text-[var(--workspace-shell-text)]"
           >
-            Flat price for the whole team
+            {INTERCONNECTED_WORKSPACES_MARKETING.comparison.heading}
           </h2>
-          <p className="mx-auto mt-3 max-w-xl text-[var(--workspace-shell-text-muted)]">
-            Personal and family free. Business Team{' '}
-            {formatGbp(
-              getBillingProductPrice('keel-business-team')?.monthlyPriceGbp ?? 79,
-            )}{' '}
-            per month — no per-seat maths, no subscription transaction fees.
-          </p>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <Button asChild className={marketingBtnGradient}>
-              <Link href="/pricing">See pricing</Link>
-            </Button>
-            <Button asChild variant="outline" className={marketingBtnOutline}>
-              <Link href="/pricing/explained">Ozer pricing, explained</Link>
-            </Button>
+          <div className="mt-8 grid gap-6 md:grid-cols-2">
+            <ComparisonColumn
+              label={INTERCONNECTED_WORKSPACES_MARKETING.comparison.traditionalLabel}
+              items={INTERCONNECTED_WORKSPACES_MARKETING.comparison.traditional}
+              tone="muted"
+            />
+            <ComparisonColumn
+              label={INTERCONNECTED_WORKSPACES_MARKETING.comparison.ozerLabel}
+              items={INTERCONNECTED_WORKSPACES_MARKETING.comparison.ozer}
+              tone="ozer"
+            />
           </div>
+          <p className="mt-8 text-center text-sm font-medium text-[var(--workspace-shell-text-muted)] md:text-base">
+            Studio work, family, and personal life — one account.
+          </p>
         </div>
       </section>
 
       <section className="relative mx-auto w-full max-w-7xl px-6 pb-24 pt-16 md:pt-24">
         <div className="mb-8">
           <h2 className="font-heading text-3xl font-semibold text-[var(--workspace-shell-text)] md:text-4xl">
-            Everything connects through personal home
+            Your life connects too — free forever
           </h2>
           <p className="mt-3 max-w-2xl text-[var(--workspace-shell-text-muted)]">
-            See what needs action across workspaces — without switching apps or losing context.
+            Every other tool stops at the office door. Ozer&apos;s personal and family
+            workspaces are free forever, and they share one planner and one today
+            view with your studio — school runs and client calls on the same timeline.
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
@@ -172,7 +167,7 @@ function Home() {
           ))}
         </div>
 
-        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-12 grid gap-4 md:grid-cols-2">
           {[
             {
               href: '/personal',
@@ -183,16 +178,6 @@ function Home() {
               href: '/work',
               title: 'Business',
               copy: 'Clients, jobs, and invoices inside the Workspace OS.',
-            },
-            {
-              href: '/property',
-              title: 'Property',
-              copy: 'Tenants, maintenance, and portfolio money.',
-            },
-            {
-              href: '/community',
-              title: 'Community',
-              copy: 'Schedules and tasks for clubs and homegroups.',
             },
           ].map((item) => (
             <Link
@@ -207,14 +192,52 @@ function Home() {
         </div>
       </section>
 
+      <section
+        id="pricing"
+        className="mx-auto w-full max-w-7xl px-6 py-16"
+        aria-labelledby="home-pricing-heading"
+      >
+        <div
+          className={cn(
+            'rounded-2xl border border-[color:var(--workspace-shell-border)] p-8 text-center',
+            marketingFeatureCard,
+          )}
+        >
+          <h2
+            id="home-pricing-heading"
+            className="font-heading text-3xl font-semibold text-[var(--workspace-shell-text)]"
+          >
+            Flat price for the whole team
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-[var(--workspace-shell-text-muted)]">
+            From {formatGbp(getBillingProductPrice('keel-business-solo')?.monthlyPriceGbp ?? 29)}
+            /month for solo freelancers. {formatGbp(
+              getBillingProductPrice('keel-business-team')?.monthlyPriceGbp ?? 79,
+            )}
+            /month flat for a team of five — no per-seat maths, no transaction fees
+            on your subscription.
+          </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <Button asChild className={marketingBtnGradient}>
+              <Link href="/pricing">See pricing</Link>
+            </Button>
+            <Button asChild variant="outline" className={marketingBtnOutline}>
+              <Link href="/pricing/explained">Ozer pricing, explained</Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      <ComingSoon />
+
       <section className={cn('py-20', marketingSectionMuted)}>
         <div className="mx-auto flex w-full max-w-7xl flex-col items-center gap-4 px-6 text-center">
           <h2 className="font-heading text-3xl font-semibold text-[var(--workspace-shell-text)] md:text-4xl">
             Run the studio from one home
           </h2>
           <p className="max-w-2xl text-[var(--workspace-shell-text-muted)]">
-            If your stack is fragmented, Ozer is one Workspace OS for projects, people,
-            plans, and priorities — without a per-seat tax.
+            If your stack is fragmented, Ozer brings projects, people, plans, and
+            priorities into one calm workspace.
           </p>
           <Button
             asChild
@@ -226,6 +249,52 @@ function Home() {
         </div>
       </section>
     </main>
+  );
+}
+
+function ComparisonColumn({
+  label,
+  items,
+  tone,
+}: {
+  label: string;
+  items: readonly string[];
+  tone: 'muted' | 'ozer';
+}) {
+  const isOzer = tone === 'ozer';
+
+  return (
+    <div
+      className={cn(
+        'rounded-2xl border p-5 md:p-6',
+        isOzer
+          ? 'border-[var(--ozer-accent)]/35 bg-[var(--ozer-accent-subtle)]'
+          : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]',
+      )}
+    >
+      <p
+        className={cn(
+          'text-sm font-semibold uppercase tracking-wide',
+          isOzer ? 'text-[var(--ozer-coral-600)]' : 'text-[var(--ozer-plum-700)]',
+        )}
+      >
+        {label}
+      </p>
+      <ul className="mt-4 space-y-3">
+        {items.map((item) => (
+          <li key={item} className="flex gap-2.5 text-sm leading-relaxed">
+            {isOzer ? (
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]" aria-hidden />
+            ) : (
+              <X className="mt-0.5 h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]" aria-hidden />
+            )}
+            <span className={isOzer ? 'text-[var(--ozer-text-on-light)]' : 'text-[var(--ozer-text-on-light-muted)]'}>
+              {item}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

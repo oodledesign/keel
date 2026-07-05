@@ -166,10 +166,40 @@ const CATALOG = [
     productName: 'Keel Signatures',
     prices: [
       {
-        envKey: 'STRIPE_PRICE_ADDON_SIGNATURES_MONTHLY',
-        lookupKey: 'keel.addon.signatures.monthly',
+        envKey: 'STRIPE_PRICE_ADDON_SIGNATURES_STARTER_MONTHLY',
+        lookupKey: 'keel.addon.signatures.starter.monthly',
         amount: 900,
         interval: 'month',
+      },
+      {
+        envKey: 'STRIPE_PRICE_ADDON_SIGNATURES_STARTER_YEARLY',
+        lookupKey: 'keel.addon.signatures.starter.yearly',
+        amount: 9000,
+        interval: 'year',
+      },
+      {
+        envKey: 'STRIPE_PRICE_ADDON_SIGNATURES_TEAM_MONTHLY',
+        lookupKey: 'keel.addon.signatures.team.monthly',
+        amount: 1900,
+        interval: 'month',
+      },
+      {
+        envKey: 'STRIPE_PRICE_ADDON_SIGNATURES_TEAM_YEARLY',
+        lookupKey: 'keel.addon.signatures.team.yearly',
+        amount: 19000,
+        interval: 'year',
+      },
+      {
+        envKey: 'STRIPE_PRICE_ADDON_SIGNATURES_OFFICE_MONTHLY',
+        lookupKey: 'keel.addon.signatures.office.monthly',
+        amount: 3900,
+        interval: 'month',
+      },
+      {
+        envKey: 'STRIPE_PRICE_ADDON_SIGNATURES_OFFICE_YEARLY',
+        lookupKey: 'keel.addon.signatures.office.yearly',
+        amount: 39000,
+        interval: 'year',
       },
     ],
   },

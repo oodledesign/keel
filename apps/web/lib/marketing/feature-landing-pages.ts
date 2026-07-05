@@ -1141,7 +1141,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         },
         {
           icon: 'CalendarDays',
-          title: 'Feeds the planner',
+          title: 'Powers the planner',
           description:
             'Due work surfaces in today automatically.',
         },

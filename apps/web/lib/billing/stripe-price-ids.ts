@@ -60,9 +60,29 @@ export const KEEL_STRIPE_PRICES = {
     'STRIPE_PRICE_PROPERTY_PORTFOLIO_YEARLY',
     'price_keel_property_portfolio_yearly',
   ),
-  addon_signatures_monthly: price(
-    'STRIPE_PRICE_ADDON_SIGNATURES_MONTHLY',
-    'price_keel_addon_signatures_monthly',
+  addon_signatures_starter_monthly: price(
+    'STRIPE_PRICE_ADDON_SIGNATURES_STARTER_MONTHLY',
+    'price_keel_addon_signatures_starter_monthly',
+  ),
+  addon_signatures_starter_yearly: price(
+    'STRIPE_PRICE_ADDON_SIGNATURES_STARTER_YEARLY',
+    'price_keel_addon_signatures_starter_yearly',
+  ),
+  addon_signatures_team_monthly: price(
+    'STRIPE_PRICE_ADDON_SIGNATURES_TEAM_MONTHLY',
+    'price_keel_addon_signatures_team_monthly',
+  ),
+  addon_signatures_team_yearly: price(
+    'STRIPE_PRICE_ADDON_SIGNATURES_TEAM_YEARLY',
+    'price_keel_addon_signatures_team_yearly',
+  ),
+  addon_signatures_office_monthly: price(
+    'STRIPE_PRICE_ADDON_SIGNATURES_OFFICE_MONTHLY',
+    'price_keel_addon_signatures_office_monthly',
+  ),
+  addon_signatures_office_yearly: price(
+    'STRIPE_PRICE_ADDON_SIGNATURES_OFFICE_YEARLY',
+    'price_keel_addon_signatures_office_yearly',
   ),
   addon_rankly_monthly: price(
     'STRIPE_PRICE_ADDON_RANKLY_MONTHLY',

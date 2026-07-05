@@ -60,9 +60,9 @@ const QUICK_PLANS = [
     planId: 'property-starter-monthly',
   },
   {
-    label: 'Signatures add-on',
+    label: 'Signatures Starter add-on',
     productId: 'keel-addon-signatures',
-    planId: 'signatures-monthly',
+    planId: 'signatures-starter-monthly',
   },
   {
     label: 'Rankly add-on',

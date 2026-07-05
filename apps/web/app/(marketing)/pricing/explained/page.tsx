@@ -5,8 +5,6 @@ import {
   formatGbp,
   getBillingProductPrice,
   listBusinessWorkspacePrices,
-  listCommunityPrices,
-  listPropertyPrices,
 } from '~/lib/billing/billing-config-prices';
 import {
   annualCostForTeamSize,
@@ -40,7 +38,7 @@ const FAQS = () => {
   return [
     {
       question: 'How much does Ozer cost per month?',
-      answer: `Personal and family are free. Business Lite is ${formatGbp(lite?.monthlyPriceGbp ?? 0)} per month. Business Solo is ${formatGbp(solo?.monthlyPriceGbp ?? 29)} per month. Business Team is ${formatGbp(team?.monthlyPriceGbp ?? 79)} per month. Business Scale is ${formatGbp(scale?.monthlyPriceGbp ?? 149)} per month. Community and property tiers are listed below.`,
+      answer: `Personal and family are free. Business Lite is ${formatGbp(lite?.monthlyPriceGbp ?? 0)} per month. Business Solo is ${formatGbp(solo?.monthlyPriceGbp ?? 29)} per month. Business Team is ${formatGbp(team?.monthlyPriceGbp ?? 79)} per month. Business Scale is ${formatGbp(scale?.monthlyPriceGbp ?? 149)} per month. Personal and family workspaces are free forever.`,
     },
     {
       question: 'Does Ozer charge per user?',
@@ -83,8 +81,6 @@ function PricingExplainedPage() {
   const four = annualCostForTeamSize(4);
   const ten = annualCostForTeamSize(10);
   const business = listBusinessWorkspacePrices();
-  const community = listCommunityPrices();
-  const property = listPropertyPrices();
   const faqs = FAQS();
 
   const answerFirst = `Ozer costs ${formatGbp(0)} per month for personal and family workspaces. Business Lite is ${formatGbp(business.find((p) => p.productId === 'keel-business-lite')?.monthlyPriceGbp ?? 0)} per month. Business Solo is ${formatGbp(solo.monthlyGbp)} per month for one member. Business Team is ${formatGbp(four.monthlyGbp)} per month for up to five members. Business Scale is ${formatGbp(ten.monthlyGbp)} per month for up to fifteen members. Prices are flat for the whole team, in pounds, with no per-user charge and no Ozer cut on invoices.`;
@@ -164,7 +160,7 @@ function PricingExplainedPage() {
             <li>
               {MARKETING_FREE_TIER.name}: {formatGbp(0)} per month
             </li>
-            {[...community, ...business, ...property].map((plan) => (
+            {business.map((plan) => (
               <li key={plan.productId}>
                 {plan.productName}: {formatGbp(plan.monthlyPriceGbp)} per month
                 {plan.yearlyPriceGbp != null
@@ -178,6 +174,13 @@ function PricingExplainedPage() {
               </li>
             ))}
           </ul>
+          <p className={cn('mt-4 text-sm', marketingBodyText)}>
+            More workspace types are coming. See{' '}
+            <Link href="/#coming-soon" className="underline underline-offset-2">
+              Growing with you
+            </Link>
+            {' '}for what is in development.
+          </p>
         </section>
 
         {faqs.map((faq) => (

@@ -17,8 +17,6 @@ export async function generateStaticParams() {
   return [
     { slug: 'personal' },
     { slug: 'work' },
-    { slug: 'property' },
-    { slug: 'community' },
   ];
 }
 

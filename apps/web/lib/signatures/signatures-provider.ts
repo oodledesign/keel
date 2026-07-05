@@ -5,6 +5,8 @@ import {
   pushSignatureToGoogleStaff,
   syncStaffFromGoogleWorkspace,
 } from './google-workspace';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+import { findPlanByProductAndPlanId } from '~/lib/billing/keel-plan-catalog';
 import {
   getSignaturesSupabaseClient,
   pushAllSignatures as pushAllMicrosoftSignatures,
@@ -13,6 +15,10 @@ import {
 } from './graph';
 
 export type SignaturesMailProvider = 'google' | 'microsoft' | null;
+
+export type SignaturesTierWarning = {
+  warning?: string;
+};
 
 export async function getSignaturesMailProvider(
   accountId: string,
@@ -57,7 +63,7 @@ export async function syncStaffForAccount(
 
 export async function pushSignatureToStaff(
   staffId: string,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string } & SignaturesTierWarning> {
   const db = getSignaturesSupabaseClient();
   const { data: staff } = await db
     .from('staff')
@@ -69,13 +75,17 @@ export async function pushSignatureToStaff(
     return { success: false, error: 'Staff not found' };
   }
 
-  const provider = await getSignaturesMailProvider(staff.account_id as string);
+  const accountId = staff.account_id as string;
+  const provider = await getSignaturesMailProvider(accountId);
+  const warning = await loadSignatureTierWarning(accountId);
 
   if (provider === 'google') {
-    return pushSignatureToGoogleStaff(staffId);
+    const result = await pushSignatureToGoogleStaff(staffId);
+    return { ...result, warning };
   }
   if (provider === 'microsoft') {
-    return pushMicrosoftSignature(staffId);
+    const result = await pushMicrosoftSignature(staffId);
+    return { ...result, warning };
   }
 
   return { success: false, error: 'No mail provider connected for this workspace' };
@@ -84,11 +94,15 @@ export async function pushSignatureToStaff(
 export async function pushAllSignatures(
   accountId: string,
   pushedBy: string,
-): Promise<{ total: number; succeeded: number; failed: number }> {
+): Promise<
+  { total: number; succeeded: number; failed: number } & SignaturesTierWarning
+> {
   const provider = await getSignaturesMailProvider(accountId);
+  const warning = await loadSignatureTierWarning(accountId);
 
   if (provider === 'microsoft') {
-    return pushAllMicrosoftSignatures(accountId, pushedBy);
+    const summary = await pushAllMicrosoftSignatures(accountId, pushedBy);
+    return { ...summary, warning };
   }
 
   const db = getSignaturesSupabaseClient();
@@ -101,7 +115,7 @@ export async function pushAllSignatures(
     throw new Error(error.message);
   }
 
-  const ids = (rows ?? []).map((r) => r.id as string);
+  const ids = ((rows ?? []) as Array<{ id: string }>).map((row) => row.id);
   let succeeded = 0;
   let failed = 0;
 
@@ -118,5 +132,68 @@ export async function pushAllSignatures(
     }
   }
 
-  return { total: ids.length, succeeded, failed };
+  return { total: ids.length, succeeded, failed, warning };
+}
+
+async function loadSignatureTierWarning(
+  accountId: string,
+): Promise<string | undefined> {
+  const mailboxCount = await countSignatureMailboxes(accountId);
+  const maxMailboxes = await loadSignatureMailboxLimit(accountId);
+
+  if (!maxMailboxes || mailboxCount <= maxMailboxes) {
+    return undefined;
+  }
+
+  return `This workspace has ${mailboxCount} mailboxes, above the current Signatures tier limit of ${maxMailboxes}. Deployment will continue, but prompt the workspace owner to move up before the next billing cycle.`;
+}
+
+async function countSignatureMailboxes(accountId: string): Promise<number> {
+  const db = getSignaturesSupabaseClient();
+  const { count, error } = await db
+    .from('staff')
+    .select('id', { count: 'exact', head: true })
+    .eq('account_id', accountId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return count ?? 0;
+}
+
+async function loadSignatureMailboxLimit(
+  accountId: string,
+): Promise<number | null> {
+  const admin = getSupabaseServerAdminClient();
+  const { data, error } = await admin
+    .from('account_entitlements')
+    .select('metadata')
+    .eq('account_id', accountId)
+    .eq('entitlement_key', 'addon_signatures')
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const metadata = data?.metadata as
+    | {
+        productId?: string;
+        planId?: string;
+        limits?: { maxMailboxes?: number | null };
+      }
+    | null
+    | undefined;
+
+  if (typeof metadata?.limits?.maxMailboxes === 'number') {
+    return metadata.limits.maxMailboxes;
+  }
+
+  if (!metadata?.productId || !metadata.planId) {
+    return null;
+  }
+
+  const plan = findPlanByProductAndPlanId(metadata.productId, metadata.planId);
+  return plan?.limits.maxMailboxes ?? null;
 }

@@ -21,6 +21,15 @@ export type BillingPlanPrice = {
   maxTeamMembers: number | null;
 };
 
+export type BillingProductPlanPrice = {
+  productId: string;
+  productName: string;
+  planId: string;
+  planName: string;
+  interval: 'month' | 'year';
+  priceGbp: number;
+};
+
 function lineCost(plan: {
   lineItems: Array<{ cost: number; type: string }>;
 }): number {
@@ -79,6 +88,28 @@ export function getBillingProductPrice(
   productId: string,
 ): BillingPlanPrice | null {
   return productPrices(productId);
+}
+
+export function listBillingProductPlanPrices(
+  productId: string,
+): BillingProductPlanPrice[] {
+  const product = billingConfig.products.find((p) => p.id === productId);
+  if (!product) return [];
+
+  return product.plans.flatMap((plan) => {
+    if (plan.interval !== 'month' && plan.interval !== 'year') {
+      return [];
+    }
+
+    return {
+      productId: product.id,
+      productName: product.name,
+      planId: plan.id,
+      planName: plan.name,
+      interval: plan.interval,
+      priceGbp: lineCost(plan),
+    };
+  });
 }
 
 export function listBusinessWorkspacePrices(): BillingPlanPrice[] {

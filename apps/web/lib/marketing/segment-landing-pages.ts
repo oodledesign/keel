@@ -10,7 +10,6 @@ import {
   ShoppingCart,
   Users,
   Wallet,
-  Wrench,
 } from 'lucide-react';
 
 import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
@@ -20,7 +19,7 @@ import {
   type MarketingWorkspacePlan,
 } from '~/lib/billing/pricing-marketing';
 
-export type SegmentSlug = 'personal' | 'work' | 'property' | 'community';
+export type SegmentSlug = 'personal' | 'work';
 
 export type SegmentFeature = {
   icon: LucideIcon;
@@ -112,13 +111,11 @@ function freePersonalCard(): SegmentPricingCard {
   };
 }
 
-const ALL_SEGMENTS: SegmentSlug[] = ['personal', 'work', 'property', 'community'];
+const LAUNCH_SEGMENTS: SegmentSlug[] = ['personal', 'work'];
 
 const SEGMENT_ICONS: Record<SegmentSlug, LucideIcon> = {
   personal: Home,
   work: Briefcase,
-  property: Building2,
-  community: Users,
 };
 
 function relatedExcept(current: SegmentSlug) {
@@ -134,17 +131,9 @@ function relatedExcept(current: SegmentSlug) {
       label: 'Business workspace',
       description: 'Clients, jobs, and invoices inside the Workspace OS.',
     },
-    property: {
-      label: 'Property management',
-      description: 'Tenants, maintenance, and portfolio money in one place.',
-    },
-    community: {
-      label: 'Community groups',
-      description: 'Schedules, tasks, and notes for clubs and homegroups.',
-    },
   };
 
-  return ALL_SEGMENTS.filter((slug) => slug !== current).map((slug) => ({
+  return LAUNCH_SEGMENTS.filter((slug) => slug !== current).map((slug) => ({
     slug,
     icon: SEGMENT_ICONS[slug],
     ...map[slug],
@@ -352,7 +341,7 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
       (p) => p.profile === 'work_design',
     ).map((p) => planToCard(p)),
     pricingNote:
-      'Add-ons such as Rankly, Feedflow, Videos, and Signatures (£9/mo) attach per workspace. Annual billing is 16.7% less than paying monthly for twelve months. One workspace price covers the team.',
+      'Signatures uses flat mailbox tiers from £9/mo on each workspace. Annual billing is 16.7% less than paying monthly for twelve months. One workspace price covers the team.',
     faqs: [
       {
         question: 'How is Ozer different from other CRMs?',
@@ -388,232 +377,6 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
     relatedSegments: relatedExcept('work'),
     signupProfile: 'work_design',
   },
-
-  property: {
-    slug: 'property',
-    seo: {
-      title: 'Property portfolio workspace — Ozer',
-      description:
-        'Manage rentals, tenants, maintenance, and finances from £19 per month. Flat price for the whole team. 14-day trial.',
-      keywords: [
-        'property management software UK',
-        'landlord software',
-        'tenant management app',
-        'rental portfolio tracker',
-        'maintenance requests landlords',
-        'property finances software',
-      ],
-    },
-    hero: {
-      eyebrow: 'Property workspace',
-      title: 'Portfolio, tenants, and repairs in',
-      titleAccent: 'one property workspace',
-      subtitle:
-        'Ozer property answers “where is this tenancy and repair?” Five doors or twenty — properties, tenants, maintenance, and money without spreadsheet chaos. From £19/mo.',
-    },
-    stats: [
-      { value: '5–20', label: 'Properties per plan tier' },
-      { value: '14 days', label: 'Free trial' },
-      { value: 'UK £', label: 'Pricing in GBP' },
-    ],
-    features: [
-      {
-        icon: Building2,
-        title: 'Property register',
-        description:
-          'Centralise addresses, units, keys, and documents for every property in your portfolio.',
-      },
-      {
-        icon: Users,
-        title: 'Tenants & contacts',
-        description:
-          'Store tenant details, lease context, and communication history linked to each property.',
-      },
-      {
-        icon: Wrench,
-        title: 'Maintenance & jobs',
-        description:
-          'Log repairs, track status, and assign work so nothing falls through between tenancies.',
-      },
-      {
-        icon: Wallet,
-        title: 'Property finances',
-        description:
-          'Monitor income, costs, and cash flow at portfolio level with clear property attribution.',
-      },
-      {
-        icon: FileText,
-        title: 'Docs & compliance notes',
-        description:
-          'Keep certificates, inspections, and correspondence attached to the right property or tenant.',
-      },
-      {
-        icon: ClipboardList,
-        title: 'Tasks & reminders',
-        description:
-          'Schedule gas checks, rent reviews, and viewings with tasks tied to properties.',
-      },
-    ],
-    steps: [
-      {
-        title: 'Start your 14-day trial',
-        description:
-          'Choose Property Starter (up to 5 properties) or Portfolio (up to 20) — cancel anytime during trial.',
-      },
-      {
-        title: 'Add properties & tenants',
-        description:
-          'Build your register and link active tenancies so maintenance and finances stay in context.',
-      },
-      {
-        title: 'Run day-to-day from the dashboard',
-        description:
-          'See open maintenance, upcoming tasks, and portfolio health at a glance.',
-      },
-    ],
-    pricingPlans: MARKETING_WORKSPACE_PLANS.filter(
-      (p) => p.profile === 'work_property',
-    ).map((p) => planToCard(p)),
-    pricingNote:
-      'Need more than 20 properties? Contact us for Scale pricing. All plans billed per property workspace.',
-    faqs: [
-      {
-        question: 'Who is Ozer property software for?',
-        answer:
-          'Ozer suits private landlords, small letting agents, and portfolio holders who want properties, tenants, maintenance, and finances in one system — not enterprise block management.',
-      },
-      {
-        question: 'How many properties can I manage?',
-        answer:
-          'Property Starter supports up to 5 properties for £19/mo. Property Portfolio supports up to 20 properties for £29/mo. Contact us if you need a higher limit.',
-      },
-      {
-        question: 'Can I track maintenance requests?',
-        answer:
-          'Yes. Log issues as maintenance jobs, assign them, and keep a history per property for handovers and compliance.',
-      },
-      {
-        question: 'Does Ozer replace accounting software?',
-        answer:
-          'Ozer tracks property-level finances and cash flow. Many landlords still use Xero or FreeAgent for statutory accounts — Ozer focuses on operational property management.',
-      },
-    ],
-    relatedSegments: relatedExcept('property'),
-    signupProfile: 'work_property',
-  },
-
-  community: {
-    slug: 'community',
-    seo: {
-      title: 'Community group workspace — Ozer',
-      description:
-        'Shared schedule, tasks, and notes for clubs and homegroups. £12 per month with three members included. Flat price for the whole team.',
-      keywords: [
-        'community group software',
-        'church homegroup planner',
-        'club management app',
-        'volunteer team schedule',
-        'small community organisation tools',
-        'group task management UK',
-      ],
-    },
-    hero: {
-      eyebrow: 'Community groups',
-      title: 'Coordinate the group with',
-      titleAccent: 'shared schedule and tasks',
-      subtitle:
-        'Ozer community answers “who is doing what this week?” Clubs, homegroups, and volunteer teams — one workspace instead of WhatsApp threads and spreadsheets. £12/mo, three members included.',
-    },
-    stats: [
-      { value: '£12/mo', label: 'Community plan' },
-      { value: '3', label: 'Members included' },
-      { value: '14 days', label: 'Free trial' },
-    ],
-    features: [
-      {
-        icon: Calendar,
-        title: 'Shared schedule & events',
-        description:
-          'Publish meetings, services, and socials so everyone knows what is happening and when.',
-      },
-      {
-        icon: ClipboardList,
-        title: 'Group tasks',
-        description:
-          'Assign rota items, prep work, and follow-ups with clear ownership across members.',
-      },
-      {
-        icon: FileText,
-        title: 'Shared notes',
-        description:
-          'Keep agendas, study notes, and resources where the whole group can access them.',
-      },
-      {
-        icon: Users,
-        title: 'Members directory',
-        description:
-          'Manage who is in the group and what they help with — without a separate contact spreadsheet.',
-      },
-      {
-        icon: Home,
-        title: 'Group dashboard',
-        description:
-          'Leaders see upcoming events, open tasks, and recent notes from one home screen.',
-      },
-      {
-        icon: MessageSquare,
-        title: 'Works alongside personal home',
-        description:
-          'Leaders keep their free personal home while the group gets its own workspace.',
-      },
-    ],
-    steps: [
-      {
-        title: 'Create a community workspace',
-        description:
-          'Start a 14-day trial on the Community plan — £12/mo after trial, 3 members included.',
-      },
-      {
-        title: 'Add your schedule & rota',
-        description:
-          'Post recurring events and task lists so members know how to serve and participate.',
-      },
-      {
-        title: 'Invite members',
-        description:
-          'Send invites to leaders and participants. Additional members can be added as you grow.',
-      },
-    ],
-    pricingPlans: MARKETING_WORKSPACE_PLANS.filter(
-      (p) => p.profile === 'community',
-    ).map((p) => planToCard(p)),
-    pricingNote:
-      'Community billing is per workspace. Personal Ozer accounts remain free for members who only need their own Life CRM.',
-    faqs: [
-      {
-        question: 'What types of groups use Ozer Community?',
-        answer:
-          'Homegroups, sports clubs, hobby societies, PTAs, and volunteer teams use Ozer to coordinate schedules, tasks, and shared notes without enterprise church or club software complexity.',
-      },
-      {
-        question: 'How much does Ozer Community cost?',
-        answer:
-          'The Community plan is £12 per month (or £120 annually) and includes 3 members. Start with a 14-day free trial when you create the workspace.',
-      },
-      {
-        question: 'Do group members need their own subscription?',
-        answer:
-          'Invited members join your community workspace without paying. They can also use a free personal Ozer account for their own tasks and planner.',
-      },
-      {
-        question: 'Can we share documents and meeting notes?',
-        answer:
-          'Yes. Use shared notes to store agendas, study material, and files. Leaders control what is visible inside the group workspace.',
-      },
-    ],
-    relatedSegments: relatedExcept('community'),
-    signupProfile: 'community',
-  },
 };
 
 export function getSegmentLandingConfig(slug: string): SegmentLandingConfig | null {
@@ -626,27 +389,21 @@ export function getSegmentLandingConfig(slug: string): SegmentLandingConfig | nu
 const WORKSPACE_NAV_PATHS: Record<SegmentSlug, string> = {
   personal: '/personal',
   work: '/work',
-  property: '/property',
-  community: '/community',
 };
 
 const WORKSPACE_NAV_LABELS: Record<SegmentSlug, string> = {
   personal: 'Personal',
   work: 'Business',
-  property: 'Property',
-  community: 'Community',
 };
 
 const WORKSPACE_NAV_DESCRIPTIONS: Record<SegmentSlug, string> = {
   personal:
     'Free hub — tasks and planner connected across every workspace.',
-  work: 'Full CRM that plugs into your Life CRM — not a separate silo.',
-  property: 'Tenants, maintenance, and portfolio finances in one place.',
-  community: 'Schedules, tasks, and notes for clubs and homegroups.',
+  work: 'Clients, projects, invoices, and pipeline for freelancers and studios.',
 };
 
 export function getMarketingWorkspaceNavLinks() {
-  return ALL_SEGMENTS.map((slug) => ({
+  return LAUNCH_SEGMENTS.map((slug) => ({
     slug,
     label: WORKSPACE_NAV_LABELS[slug],
     path: WORKSPACE_NAV_PATHS[slug],

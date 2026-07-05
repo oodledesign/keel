@@ -1,20 +1,9 @@
 import type { LucideIcon } from 'lucide-react';
-import {
-  BarChart3,
-  Gauge,
-  Globe,
-  Link2,
-  Lock,
-  MessageSquareText,
-  PenLine,
-  Share2,
-  Sparkles,
-  Video,
-} from 'lucide-react';
+import { Globe, PenLine, Share2 } from 'lucide-react';
 
 import type { SegmentFeature, SegmentFaq } from '~/lib/marketing/segment-landing-pages';
 
-export type AppSlug = 'signatures' | 'rankly' | 'feedflow' | 'videos';
+export type AppSlug = 'signatures';
 
 export type AppLandingConfig = {
   slug: AppSlug;
@@ -33,18 +22,39 @@ export type AppLandingConfig = {
     title: string;
     titleAccent: string;
     subtitle: string;
+    priceBadge?: string;
+    primaryCtaLabel?: string;
+    secondaryCta?: {
+      label: string;
+      href: string;
+    };
+  };
+  pricing?: {
+    heading: string;
+    body: string;
+    tiers: Array<{
+      name: string;
+      mailboxes: string;
+      monthlyPlanId: string;
+      annualPlanId: string;
+    }>;
+    included: string[];
+    contactLine: string;
+    comparisonLine: string;
+  };
+  pain?: {
+    heading: string;
+    cards: Array<{
+      title: string;
+      description: string;
+    }>;
   };
   features: SegmentFeature[];
   steps: Array<{ title: string; description: string }>;
   faqs: SegmentFaq[];
 };
 
-export const APP_LANDING_SLUGS: AppSlug[] = [
-  'signatures',
-  'rankly',
-  'feedflow',
-  'videos',
-];
+export const APP_LANDING_SLUGS: AppSlug[] = ['signatures'];
 
 export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
   signatures: {
@@ -53,11 +63,11 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
     icon: PenLine,
     fromPriceGbp: 9,
     productId: 'keel-addon-signatures',
-    planId: 'signatures-monthly',
+    planId: 'signatures-starter-monthly',
     seo: {
       title: 'Team email signatures — Ozer',
       description:
-        'Deploy on-brand signatures to Microsoft 365 and Google Workspace from £9 per month per workspace. Flat price for the whole team.',
+        'Deploy on-brand signatures to Microsoft 365 and Google Workspace with flat tiers from £9 per month. Priced by workspace, never per person.',
       keywords: [
         'email signature manager',
         'Microsoft 365 email signatures',
@@ -67,11 +77,72 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
       ],
     },
     hero: {
-      eyebrow: 'Ozer app',
-      title: 'On-brand signatures for',
-      titleAccent: 'the whole team',
+      eyebrow: 'Ozer app — Signatures',
+      title: 'Every mailbox on brand.',
+      titleAccent: 'No per-seat tax',
       subtitle:
-        'Ozer Signatures answers “how do we keep every mailbox on brand?” Templates and staff profiles, deployed to Microsoft 365 or Google Workspace — from £9/mo per workspace, not a per-seat tax.',
+        'Design one signature template, connect Microsoft 365 or Google Workspace, and roll it out to the whole team in minutes. Update the banner once — every mailbox follows. Flat tiers from £9/month — priced by workspace, never per person.',
+      priceBadge: 'Flat tiers from £9/mo',
+      primaryCtaLabel: 'Start free with Business Lite',
+      secondaryCta: {
+        label: 'Book a setup call',
+        href: 'mailto:info@ozer.so?subject=Signatures%20setup%20call',
+      },
+    },
+    pricing: {
+      heading: 'Flat tiers for every mailbox',
+      body:
+        'Pick the mailbox band for this workspace. One workspace equals one brand; additional brands run on additional free Business Lite workspaces with their own Signatures subscription.',
+      tiers: [
+        {
+          name: 'Starter',
+          mailboxes: 'Up to 10 mailboxes',
+          monthlyPlanId: 'signatures-starter-monthly',
+          annualPlanId: 'signatures-starter-yearly',
+        },
+        {
+          name: 'Team',
+          mailboxes: 'Up to 50 mailboxes',
+          monthlyPlanId: 'signatures-team-monthly',
+          annualPlanId: 'signatures-team-yearly',
+        },
+        {
+          name: 'Office',
+          mailboxes: 'Up to 150 mailboxes',
+          monthlyPlanId: 'signatures-office-monthly',
+          annualPlanId: 'signatures-office-yearly',
+        },
+      ],
+      included: [
+        'Unlimited templates',
+        'Microsoft 365 & Google Workspace deployment',
+        'Per-staff personalisation',
+        'Campaign banners',
+      ],
+      contactLine:
+        "More than 150 mailboxes? Book a setup call and we'll sort a price.",
+      comparisonLine:
+        'A 50-person office typically pays £85–100/month with per-seat tools. Ozer Signatures Team is £19 flat.',
+    },
+    pain: {
+      heading: 'The signature problem every office has',
+      cards: [
+        {
+          title: 'Copy-paste chaos',
+          description:
+            'Everyone builds their own signature in Outlook. Half are off-brand, a third have the old phone number.',
+        },
+        {
+          title: 'The banner nobody updates',
+          description:
+            'Marketing wants a campaign banner in every signature. IT wants to never think about it again.',
+        },
+        {
+          title: 'Per-seat pricing that stings',
+          description:
+            'Incumbent tools charge per mailbox, per month. Ozer Signatures uses flat workspace tiers.',
+        },
+      ],
     },
     features: [
       {
@@ -101,7 +172,8 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
       },
       {
         title: 'Subscribe to Signatures',
-        description: 'Add the Signatures app from billing for £9/mo on that workspace.',
+        description:
+          'Choose Starter, Team, or Office from billing. Each tier is flat for the workspace.',
       },
       {
         title: 'Connect & deploy',
@@ -113,7 +185,7 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
       {
         question: 'Do I need a paid Ozer business plan?',
         answer:
-          'No. Signatures works on free Business Lite. You only pay for the Signatures add-on (£9/mo per workspace).',
+          'No. Signatures works on free Business Lite. You only pay for the Signatures tier you choose for that workspace.',
       },
       {
         question: 'Which email providers are supported?',
@@ -121,305 +193,29 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
           'Signatures integrates with Microsoft 365 and Google Workspace for centralised deployment.',
       },
       {
+        question: 'How does this compare to Exclaimer or CodeTwo?',
+        answer:
+          'Same job — centrally managed signatures deployed to Microsoft 365 or Google Workspace — without per-mailbox pricing. Choose a flat workspace tier by mailbox band, then deploy unlimited signatures inside that tier.',
+      },
+      {
+        question: 'What happens if we grow past our mailbox band?',
+        answer:
+          "You'll get a prompt to move up a tier — nothing breaks, signatures keep deploying, and the new price applies from your next billing cycle.",
+      },
+      {
+        question: 'What counts as a mailbox?',
+        answer:
+          "Any directory user a signature is deployed to. Shared mailboxes and aliases that receive a signature count; unlicensed or disabled accounts don't.",
+      },
+      {
+        question: 'Can you set it up for us?',
+        answer:
+          "Yes — book a setup call and we'll connect your directory, build your first template, and deploy it with you.",
+      },
+      {
         question: 'Can I use Signatures on multiple brands?',
         answer:
           'Each Ozer workspace is billed separately. Create a workspace per brand or client if you need isolated signature sets.',
-      },
-    ],
-  },
-
-  rankly: {
-    slug: 'rankly',
-    name: 'Rankly',
-    icon: BarChart3,
-    fromPriceGbp: 36,
-    productId: 'keel-addon-rankly',
-    planId: 'rankly-monthly',
-    seo: {
-      title: 'SEO ranks and PageSpeed — Ozer',
-      description:
-        'Rank tracking, scheduled PageSpeed, and SEO audits in your business workspace from £36 per month. Flat price for the whole team.',
-      keywords: [
-        'SEO rank tracker UK',
-        'keyword rank tracking software',
-        'PageSpeed Insights monitoring',
-        'PageSpeed schedule alerts',
-        'SEO AI insights',
-        'backlink analysis tool',
-        'SEO content briefs',
-        'site explorer SEO tool',
-      ],
-    },
-    hero: {
-      eyebrow: 'Ozer app',
-      title: 'Rankings, PageSpeed, and',
-      titleAccent: 'SEO work in one workspace',
-      subtitle:
-        'Ozer Rankly answers “where do we track client SEO?” Rank tracking, scheduled PageSpeed, drop alerts, and audits in the same business workspace as the jobs — £36/mo per workspace.',
-    },
-    features: [
-      {
-        icon: BarChart3,
-        title: 'Rank tracking',
-        description:
-          'Monitor keyword positions over time with project-level dashboards and alerts when rankings move.',
-      },
-      {
-        icon: Gauge,
-        title: 'PageSpeed Insights',
-        description:
-          'Run Google PageSpeed Insights on your key pages, schedule scans (daily, weekly, or monthly), and get notified when performance scores drop.',
-      },
-      {
-        icon: Sparkles,
-        title: 'AI insights',
-        description:
-          'AI-powered SEO audits surface scored recommendations, competitor context, and fix suggestions your team can act on.',
-      },
-      {
-        icon: Globe,
-        title: 'Site explorer & crawler',
-        description:
-          'Understand site structure, indexable pages, and technical issues without leaving Ozer.',
-      },
-      {
-        icon: PenLine,
-        title: 'Content briefs & clusters',
-        description:
-          'Turn keyword research into actionable briefs and topic clusters your team can execute on.',
-      },
-      {
-        icon: Link2,
-        title: 'Backlinks',
-        description:
-          'Backlink profile analysis is coming soon — track referring domains and authority alongside your other SEO metrics.',
-      },
-    ],
-    steps: [
-      {
-        title: 'Start with Business Lite',
-        description: 'Create a free apps workspace — Rankly installs as an add-on when you are ready.',
-      },
-      {
-        title: 'Add Rankly (£36/mo)',
-        description: 'Subscribe from workspace billing. One Rankly subscription covers that workspace.',
-      },
-      {
-        title: 'Create SEO projects',
-        description:
-          'Add domains, track keywords, run PageSpeed, and share briefs with your delivery team.',
-      },
-    ],
-    faqs: [
-      {
-        question: 'Is Rankly per workspace or per user?',
-        answer:
-          'Rankly is billed per Ozer workspace (£36/mo). Team members on that workspace can access projects according to their role.',
-      },
-      {
-        question: 'Does Rankly include PageSpeed monitoring?',
-        answer:
-          'Yes. Rankly runs Google PageSpeed Insights on your tracked pages. Set a refresh schedule (daily, weekly, or monthly) and get notified when scores drop so you can fix regressions quickly.',
-      },
-      {
-        question: 'What are AI insights in Rankly?',
-        answer:
-          'AI insights are SEO audit reports that score your site, highlight issues, and suggest fixes — with competitor and backlink context where available.',
-      },
-      {
-        question: 'When will backlink analysis be available?',
-        answer:
-          'Backlink analysis is on the Rankly roadmap and coming soon. Existing audits already surface backlink counts from available data sources today.',
-      },
-      {
-        question: 'Can agencies use Rankly for multiple clients?',
-        answer:
-          'Yes. Create separate projects within a workspace, or use multiple workspaces for strict client separation.',
-      },
-    ],
-  },
-
-  feedflow: {
-    slug: 'feedflow',
-    name: 'Feedflow',
-    icon: MessageSquareText,
-    fromPriceGbp: 9,
-    productId: 'keel-addon-feedflow',
-    planId: 'feedflow-monthly',
-    seo: {
-      title: 'Reviews and social widgets — Ozer',
-      description:
-        'Collect reviews, embed widgets, and manage social accounts from £9 per month per workspace. Flat price for the whole team.',
-      keywords: [
-        'review widget software',
-        'Google reviews embed',
-        'social media publishing tool',
-        'customer review management UK',
-        'review aggregation widget',
-      ],
-    },
-    hero: {
-      eyebrow: 'Ozer app',
-      title: 'Reviews and social in',
-      titleAccent: 'the same workspace',
-      subtitle:
-        'Ozer Feedflow answers “where do we show reviews?” Widgets and social accounts in the business workspace — not another marketing login.',
-    },
-    features: [
-      {
-        icon: MessageSquareText,
-        title: 'Review widgets',
-        description:
-          'Embed polished review carousels and badges that pull from the sources your customers trust.',
-      },
-      {
-        icon: Share2,
-        title: 'Social accounts',
-        description:
-          'Connect accounts and manage publishing workflows alongside your brand workspace.',
-      },
-      {
-        icon: Video,
-        title: 'Video snippets',
-        description:
-          'Highlight short video testimonials and social clips where they drive the most impact.',
-      },
-    ],
-    steps: [
-      {
-        title: 'Open a Business Lite workspace',
-        description: 'Free to create — Feedflow is an optional add-on when you need reviews and social tools.',
-      },
-      {
-        title: 'Subscribe to Feedflow',
-        description: 'Enable the app from billing for £9/mo on your workspace.',
-      },
-      {
-        title: 'Connect sources & embed',
-        description: 'Link review platforms and social accounts, then drop widgets on your site.',
-      },
-    ],
-    faqs: [
-      {
-        question: 'Which review platforms does Feedflow support?',
-        answer:
-          'Feedflow focuses on aggregating and displaying reviews via embeddable widgets. Connect the sources available in your workspace setup flow.',
-      },
-      {
-        question: 'Can I use Feedflow on client sites?',
-        answer:
-          'Yes. Each workspace can power widgets for that brand. Agencies often use one workspace per client.',
-      },
-      {
-        question: 'Is Feedflow included in Business Solo?',
-        answer:
-          'No — Feedflow is a separate add-on (£9/mo). Business Solo includes full CRM modules; apps are optional extras.',
-      },
-    ],
-  },
-
-  videos: {
-    slug: 'videos',
-    name: 'Videos',
-    icon: Video,
-    fromPriceGbp: 5,
-    productId: 'keel-addon-videos-starter',
-    planId: 'videos-starter-monthly',
-    seo: {
-      title: 'Hosted video library — Ozer',
-      description:
-        'Host and embed client videos with branded players from £5 per month per workspace. Flat price for the whole team.',
-      keywords: [
-        'hosted video embed',
-        'video hosting for business',
-        'custom video player',
-        'website video library',
-        'video marketing embed UK',
-        'Webflow video embed',
-        'WordPress video hosting',
-        'private public video hosting',
-      ],
-    },
-    hero: {
-      eyebrow: 'Ozer app',
-      title: 'Host and embed video',
-      titleAccent: 'with your brand',
-      subtitle:
-        'Ozer Videos answers “where do client videos live?” Private library or shareable links, branded players, embeds for Webflow, WordPress, or any site — in the same workspace as the job.',
-    },
-    features: [
-      {
-        icon: Lock,
-        title: 'Private & public videos',
-        description:
-          'Keep internal clips workspace-only, or enable public sharing when you want a link anyone can watch — no Ozer login required.',
-      },
-      {
-        icon: Share2,
-        title: 'Public watch links',
-        description:
-          'Generate a dedicated public page per video. Copy the link for email, social, or proposals alongside your embeds.',
-      },
-      {
-        icon: PenLine,
-        title: 'Custom branded players',
-        description:
-          'Save reusable player presets — colours, controls, autoplay, and branding — so every embed looks like your site, not a generic host.',
-      },
-      {
-        icon: Globe,
-        title: 'Embed anywhere',
-        description:
-          'Iframe, HTML5, and JavaScript embed codes plus Webflow-specific instructions. Works on WordPress, Squarespace, custom sites, and client portals.',
-      },
-      {
-        icon: Video,
-        title: 'Hosted library',
-        description:
-          'Upload sales demos, testimonials, and training clips once. Organise in folders and manage everything from your workspace.',
-      },
-    ],
-    steps: [
-      {
-        title: 'Create Business Lite',
-        description: 'Start free, then pick a Videos tier when you are ready to upload.',
-      },
-      {
-        title: 'Choose a Videos plan',
-        description:
-          'Starter (5 videos, £5/mo), Growth (20, £12/mo), Pro (49, £29/mo), or Studio (100, £47/mo).',
-      },
-      {
-        title: 'Upload & embed',
-        description:
-          'Set private or public sharing, pick a branded preset, then copy embed code or a public link for Webflow, WordPress, or any page.',
-      },
-    ],
-    faqs: [
-      {
-        question: 'How many videos can I host?',
-        answer:
-          'Starter includes up to 5 videos (£5/mo). Upgrade tiers add 20, 49, or 100 videos per workspace.',
-      },
-      {
-        question: 'Can I embed videos on Webflow or WordPress?',
-        answer:
-          'Yes. Every video includes iframe, HTML5, and JavaScript embed codes. Webflow-specific copy-paste instructions are built in — WordPress and other CMS platforms work with the standard iframe embed.',
-      },
-      {
-        question: 'What is the difference between private and public videos?',
-        answer:
-          'Private videos are only accessible via embed codes you place on authorised sites, or when signed into your workspace. Public videos get a shareable watch link you can send to anyone — ideal for sales demos, testimonials, or marketing pages.',
-      },
-      {
-        question: 'Can I change tiers later?',
-        answer:
-          'Yes. Upgrade or downgrade from workspace billing as your library grows.',
-      },
-      {
-        question: 'Is Videos the same as Feedflow video snippets?',
-        answer:
-          'Videos is full hosted video with private/public controls, public links, branded players, and site embeds. Feedflow video snippets focus on short social and review clips — many teams use both.',
       },
     ],
   },
@@ -429,12 +225,14 @@ export function getAppLandingConfig(slug: string): AppLandingConfig | null {
   if (!APP_LANDING_SLUGS.includes(slug as AppSlug)) {
     return null;
   }
+
   return APP_LANDING_PAGES[slug as AppSlug];
 }
 
 export function listAppLandingSummaries() {
   return APP_LANDING_SLUGS.map((slug) => {
     const config = APP_LANDING_PAGES[slug];
+
     return {
       slug: config.slug,
       name: config.name,
