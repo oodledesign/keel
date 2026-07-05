@@ -403,6 +403,10 @@ function SignaturePricingSection({ config }: { config: AppLandingConfig }) {
         <p className={`mt-3 text-sm ${marketingMutedText}`}>
           {pricing.comparisonLine}
         </p>
+        <p className={`mt-3 text-sm font-medium ${marketingBodyText}`}>
+          Your price is locked for as long as you subscribe — founding customers
+          keep founding rates.
+        </p>
       </div>
     </section>
   );

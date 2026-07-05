@@ -3,12 +3,12 @@
  * Render with <JsonLd data={...} /> — never hand-paste script tags.
  */
 
-import appConfig from '~/config/app.config';
 import { brandAssets } from '~/config/brand.config';
+import { getMarketingSiteOrigin } from '~/lib/app-host-routing';
 
 export type JsonLd = Record<string, unknown>;
 
-const SITE_URL = () => appConfig.url.replace(/\/$/, '');
+const SITE_URL = () => getMarketingSiteOrigin().replace(/\/$/, '');
 
 export function absoluteUrl(path = '/'): string {
   const base = SITE_URL();

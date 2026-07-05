@@ -210,4 +210,4 @@ export function trialLabel(plan: BillingPlanPrice): string {
   return `${days}-day free trial on your first paid workspace.`;
 }
 
-export const PRICING_LAST_VERIFIED = '2026-07-04';
+export const PRICING_LAST_VERIFIED = '4 July 2026';

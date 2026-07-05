@@ -11,14 +11,16 @@ async function SiteLayout(props: React.PropsWithChildren) {
   const user = await getOptionalUserInServerComponent();
 
   return (
-    <div className={'flex min-h-[100vh] flex-col'}>
-      <JsonLd data={organizationJsonLd()} />
-      <AuthRedirectFromTokens />
-      <SiteHeader user={user} />
+    <div className="marketing-grain min-h-[100vh]">
+      <div className="flex min-h-[100vh] flex-col">
+        <JsonLd data={organizationJsonLd()} />
+        <AuthRedirectFromTokens />
+        <SiteHeader user={user} />
 
-      {props.children}
+        {props.children}
 
-      <SiteFooter />
+        <SiteFooter />
+      </div>
     </div>
   );
 }

@@ -74,8 +74,7 @@ export function PricingConversion() {
           {philosophyLine()}
         </p>
         <p className={cn('mt-2 text-sm', marketingMutedText)}>
-          Prices last verified {PRICING_LAST_VERIFIED}. Read from billing config — not a
-          database.
+          Prices last verified {PRICING_LAST_VERIFIED}.
         </p>
       </section>
 

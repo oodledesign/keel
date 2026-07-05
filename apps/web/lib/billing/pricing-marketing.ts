@@ -75,6 +75,21 @@ const ADDON_PRODUCT_IDS = [
   'keel-addon-signatures',
 ] as const;
 
+const PRODUCT_URL_ALIASES = {
+  'keel-business-lite': 'business-lite',
+  'keel-business-solo': 'business-solo',
+  'keel-business-team': 'business-team',
+  'keel-business-scale': 'business-scale',
+  'keel-addon-signatures': 'signatures',
+} as const;
+
+const PRODUCT_ID_BY_URL_ALIAS = new Map(
+  Object.entries(PRODUCT_URL_ALIASES).map(([productId, alias]) => [
+    alias,
+    productId,
+  ]),
+);
+
 /** Derived from billing.config.ts. */
 export const MARKETING_ADDON_PLANS: MarketingAddonPlan[] = ADDON_PRODUCT_IDS.map(
   (productId) => {
@@ -125,7 +140,9 @@ export function buildSetupPath(params: {
 }) {
   const search = new URLSearchParams();
   if (params.profile) search.set('profile', params.profile);
-  if (params.productId) search.set('product', params.productId);
+  if (params.productId) {
+    search.set('product', publicProductSlug(params.productId));
+  }
   if (params.planId) search.set('plan', params.planId);
   if (params.interval) search.set('interval', params.interval);
 
@@ -179,7 +196,7 @@ export type WorkspaceSetupBillingIntent = {
 
 export function parseSetupIntent(searchParams: URLSearchParams): SetupIntent {
   const profile = searchParams.get('profile') as WorkspaceProfile | null;
-  const productId = searchParams.get('product')?.trim() || undefined;
+  const productId = internalProductId(searchParams.get('product'));
   const planId = searchParams.get('plan')?.trim() || undefined;
   const intervalRaw = searchParams.get('interval');
   const interval: BillingInterval =
@@ -197,6 +214,19 @@ export function parseSetupIntent(searchParams: URLSearchParams): SetupIntent {
     planId,
     interval,
   };
+}
+
+export function publicProductSlug(productId: string) {
+  return PRODUCT_URL_ALIASES[
+    productId as keyof typeof PRODUCT_URL_ALIASES
+  ] ?? productId;
+}
+
+export function internalProductId(product: string | null | undefined) {
+  const value = product?.trim();
+  if (!value) return undefined;
+
+  return PRODUCT_ID_BY_URL_ALIAS.get(value) ?? value;
 }
 
 export function safeNextPath(next: string | undefined) {

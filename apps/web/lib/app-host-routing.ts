@@ -103,12 +103,32 @@ export function getAppSiteOrigin(): string {
   return 'http://localhost:3000';
 }
 
-const DEFAULT_MARKETING_SITE_ORIGIN = 'http://localhost:3000';
+const DEFAULT_MARKETING_SITE_ORIGIN =
+  process.env.NODE_ENV === 'production'
+    ? 'https://www.ozer.so'
+    : 'http://localhost:3000';
 
 export function getMarketingSiteOrigin(): string {
+  const explicitMarketing =
+    process.env.NEXT_PUBLIC_MARKETING_SITE_URL?.replace(/\/+$/, '');
+
+  if (explicitMarketing) {
+    return explicitMarketing;
+  }
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, '');
+
+  if (siteUrl) {
+    const siteHost = hostFromOrigin(siteUrl);
+
+    if (siteHost?.startsWith('app.')) {
+      return `https://www.${siteHost.slice(4)}`;
+    }
+
+    return siteUrl;
+  }
+
   return (
-    process.env.NEXT_PUBLIC_MARKETING_SITE_URL?.replace(/\/+$/, '') ??
-    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, '') ??
     DEFAULT_MARKETING_SITE_ORIGIN
   );
 }
