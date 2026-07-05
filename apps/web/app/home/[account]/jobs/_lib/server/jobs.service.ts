@@ -359,12 +359,18 @@ class JobsService {
 
     const { data, error } = await this.db
       .from(PROJECT_ASSIGNMENTS_TABLE)
-      .select('*')
+      .select('user_id, role_on_project')
+      .eq('account_id', params.accountId)
       .eq('project_id', params.jobId)
-      .order('created_at', { ascending: false });
+      .order('user_id', { ascending: true });
 
     if (error) this.throwErr(error);
-    return data ?? [];
+    return (data ?? []).map(
+      (row: { user_id: string; role_on_project: string | null }) => ({
+        user_id: row.user_id,
+        role_on_job: row.role_on_project,
+      }),
+    );
   }
 
   async addJobAssignment(input: AddJobAssignmentInput) {

@@ -37,6 +37,7 @@ import {
   getClientPortalStatus,
   getJobHistory,
 } from '../_lib/server/server-actions';
+import { ClientFinancePanel } from './client-finance-panel';
 import { ClientContactsBlock } from './client-contacts-block';
 import { ClientImageUploader } from './client-image-uploader';
 import { ClientForm } from './client-form';
@@ -90,7 +91,15 @@ type PortalStatus = {
   isMember: boolean;
 };
 
-type DetailTab = 'activity' | 'contacts' | 'projects' | 'invoices' | 'meetings' | 'notes' | 'tasks';
+type DetailTab =
+  | 'overview'
+  | 'contacts'
+  | 'projects'
+  | 'invoices'
+  | 'finance'
+  | 'meetings'
+  | 'notes'
+  | 'tasks';
 
 type ClientJobSummary = {
   id: string;
@@ -129,6 +138,26 @@ function formatCreatedDate(createdAt: string) {
     month: 'long',
     year: 'numeric',
   });
+}
+
+function OverviewMetric({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Calendar;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/60 px-3 py-2.5">
+      <p className="flex items-center gap-1.5 text-xs text-[var(--workspace-shell-text-muted)]">
+        <Icon className="h-3.5 w-3.5 shrink-0" />
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-medium text-[var(--workspace-shell-text)]">{value}</p>
+    </div>
+  );
 }
 
 export function ClientDetailSidebar({
@@ -178,7 +207,7 @@ export function ClientDetailSidebar({
 }) {
   const [client, setClient] = useState<Client | null>(null);
   const [jobs, setJobs] = useState<ClientJobSummary[]>([]);
-  const [activeTab, setActiveTab] = useState<DetailTab>('activity');
+  const [activeTab, setActiveTab] = useState<DetailTab>('overview');
   const [loading, setLoading] = useState(true);
   const [showEditForm, setShowEditForm] = useState(false);
   const [portalStatus, setPortalStatus] = useState<PortalStatus | null>(null);
@@ -237,10 +266,11 @@ export function ClientDetailSidebar({
 
     return (
       [
-        ['activity', 'Activity'],
+        ['overview', 'Overview'],
         ...(client.client_type === 'business' ? [['contacts', 'Contacts']] : []),
         ['projects', 'Projects'],
         ['invoices', 'Invoices'],
+        ['finance', 'Finance'],
         ['meetings', 'Meetings'],
         ['notes', 'Notes'],
         ['tasks', 'Tasks'],
@@ -366,40 +396,155 @@ export function ClientDetailSidebar({
       );
     }
 
-    if (activeTab === 'activity') {
+    if (activeTab === 'overview') {
       return (
-        <div className="space-y-3">
-          <div className="flex gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--ozer-accent-subtle)]" />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-[var(--workspace-shell-text)]">New client</p>
-              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                {displayName} added on {formatCreatedDate(client.created_at)}
-              </p>
+        <div className="space-y-5">
+          <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 md:p-6">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
+              {canEditClients ? (
+                <ClientImageUploader
+                  accountId={accountId}
+                  clientId={client.id}
+                  displayName={displayName}
+                  pictureUrl={client.picture_url}
+                  onUpdated={fetchClient}
+                />
+              ) : (
+                <ProfileAvatar
+                  displayName={displayName}
+                  pictureUrl={client.picture_url}
+                  className="mx-0 h-24 w-24 shrink-0 rounded-xl md:h-28 md:w-28"
+                  fallbackClassName="rounded-xl bg-[var(--workspace-shell-panel-hover)] text-2xl text-[var(--workspace-shell-text)]"
+                />
+              )}
+
+              <div className="min-w-0 flex-1">
+                {subtitle ? (
+                  <p className="flex items-center gap-1.5 text-sm text-[var(--workspace-shell-text-muted)]">
+                    <Building2 className="h-4 w-4 shrink-0" />
+                    {subtitle}
+                  </p>
+                ) : null}
+
+                <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                  <OverviewMetric
+                    icon={Calendar}
+                    label="Client since"
+                    value={formatCreatedDate(client.created_at)}
+                  />
+                  <OverviewMetric
+                    icon={Building2}
+                    label="Active projects"
+                    value={String(activeJobsCount)}
+                  />
+                  <OverviewMetric
+                    icon={Building2}
+                    label="Total project value"
+                    value={formatPence(totalValuePence)}
+                  />
+                </div>
+
+                {client.email ? (
+                  <p className="mt-4 text-sm text-[var(--workspace-shell-text-muted)]">
+                    <Mail className="mr-1.5 inline h-4 w-4 align-text-bottom" />
+                    {client.email}
+                  </p>
+                ) : null}
+                {client.phone ? (
+                  <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
+                    <Phone className="mr-1.5 inline h-4 w-4 align-text-bottom" />
+                    {client.phone}
+                  </p>
+                ) : null}
+                {address ? (
+                  <p className="mt-2 flex items-start gap-1.5 text-sm text-[var(--workspace-shell-text-muted)]">
+                    <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+                    {address}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="mt-5 border-t border-[color:var(--workspace-shell-border)] pt-5">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-sm font-medium text-[var(--workspace-shell-text)]">Projects</h2>
+                <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+                  {jobsCount} total · {formatPence(totalValuePence)}
+                </span>
+              </div>
+
+              {jobs.length === 0 ? (
+                <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">No projects yet.</p>
+              ) : (
+                <ul className="mt-3 divide-y divide-[color:var(--workspace-shell-border)]">
+                  {jobs.map((job) => (
+                    <li key={job.id}>
+                      <Link
+                        href={`${jobDetailBase}${job.id}`}
+                        className="flex items-center justify-between gap-3 py-3 transition hover:text-[var(--ozer-accent-muted)]"
+                      >
+                        <span className="truncate text-sm text-[var(--workspace-shell-text)]">
+                          {job.title ?? 'Untitled project'}
+                        </span>
+                        <span className="shrink-0 text-xs capitalize text-[var(--workspace-shell-text-muted)]">
+                          {job.status.replace(/_/g, ' ')}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
 
-          {!isContractorView && client.email && portalStatus ? (
-            <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 text-sm">
-              <p className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
-                Portal access
-              </p>
-              <p className="mt-1 text-[var(--workspace-shell-text)]">
-                {portalStatus.status === 'active' && 'Active in portal'}
-                {portalStatus.status === 'invited' && 'Invite sent'}
-                {portalStatus.status === 'expired' && 'Invite expired'}
-                {portalStatus.status === 'not_invited' && 'Not invited'}
-              </p>
-              <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-                Last login:{' '}
-                {portalStatus.lastLogin
-                  ? new Date(portalStatus.lastLogin).toLocaleString('en-GB')
-                  : 'Never'}
-              </p>
-            </div>
+          {ranklyEnabled ? (
+            <ClientRanklyBlock
+              accountSlug={accountSlug}
+              accountId={accountId}
+              clientId={client.id}
+              project={ranklyProject}
+              importSeed={ranklyImportSeed}
+              clientImportOptions={ranklyClientImportOptions}
+            />
           ) : null}
 
-          <p className="text-xs text-[var(--workspace-shell-text-muted)]">No other activity yet.</p>
+          <div className="space-y-3">
+            <h2 className="text-sm font-medium text-[var(--workspace-shell-text)]">Recent activity</h2>
+            <div className="flex gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--ozer-accent-subtle)]" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-[var(--workspace-shell-text)]">New client</p>
+                <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                  {displayName} added on {formatCreatedDate(client.created_at)}
+                </p>
+              </div>
+            </div>
+
+            {client.email && portalStatus ? (
+              <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 text-sm">
+                <p className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+                  Portal access
+                </p>
+                <p className="mt-1 text-[var(--workspace-shell-text)]">
+                  {portalStatus.status === 'active' && 'Active in portal'}
+                  {portalStatus.status === 'invited' && 'Invite sent'}
+                  {portalStatus.status === 'expired' && 'Invite expired'}
+                  {portalStatus.status === 'not_invited' && 'Not invited'}
+                </p>
+                <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+                  Last login:{' '}
+                  {portalStatus.lastLogin
+                    ? new Date(portalStatus.lastLogin).toLocaleString('en-GB')
+                    : 'Never'}
+                </p>
+              </div>
+            ) : null}
+
+            <p className="flex items-center gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
+              <Eye className="h-4 w-4 shrink-0" />
+              {formatLastUpdated(client.updated_at)}
+            </p>
+          </div>
         </div>
       );
     }
@@ -429,6 +574,16 @@ export function ClientDetailSidebar({
         <ClientInvoicesBlock
           accountSlug={accountSlug}
           accountId={accountId}
+          clientId={client.id}
+        />
+      );
+    }
+
+    if (activeTab === 'finance') {
+      return (
+        <ClientFinancePanel
+          accountId={accountId}
+          accountSlug={accountSlug}
           clientId={client.id}
         />
       );
@@ -511,198 +666,107 @@ export function ClientDetailSidebar({
           />
         </div>
       ) : (
-        <>
-          <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 md:p-6">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
-              {canEditClients ? (
-                <ClientImageUploader
-                  accountId={accountId}
-                  clientId={client.id}
-                  displayName={displayName}
-                  pictureUrl={client.picture_url}
-                  onUpdated={fetchClient}
-                />
-              ) : (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="shrink-0 border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-3 md:px-5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
                 <ProfileAvatar
                   displayName={displayName}
                   pictureUrl={client.picture_url}
-                  className="h-24 w-24 shrink-0 rounded-xl md:h-28 md:w-28"
-                  fallbackClassName="rounded-xl bg-[var(--workspace-shell-panel-hover)] text-2xl text-[var(--workspace-shell-text)]"
+                  className="mx-0 h-9 w-9 shrink-0 rounded-lg"
+                  fallbackClassName="rounded-lg bg-[var(--workspace-shell-panel-hover)] text-sm text-[var(--workspace-shell-text)]"
                 />
-              )}
-
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h1 className="text-2xl font-semibold text-[var(--workspace-shell-text)]">{displayName}</h1>
-                      {client.phone ? (
-                        <a
-                          href={`tel:${client.phone}`}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] transition hover:border-[var(--ozer-accent)]/40 hover:text-[var(--ozer-accent-muted)]"
-                          aria-label="Call client"
-                        >
-                          <Phone className="h-4 w-4" />
-                        </a>
-                      ) : null}
-                      {client.email ? (
-                        <a
-                          href={`mailto:${client.email}`}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] transition hover:border-[var(--ozer-accent)]/40 hover:text-[var(--ozer-accent-muted)]"
-                          aria-label="Email client"
-                        >
-                          <Mail className="h-4 w-4" />
-                        </a>
-                      ) : null}
-                    </div>
-
-                    {subtitle ? (
-                      <p className="mt-1 flex items-center gap-1.5 text-sm text-[var(--workspace-shell-text-muted)]">
-                        <Building2 className="h-4 w-4 shrink-0" />
-                        {subtitle}
-                      </p>
-                    ) : null}
-
-                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--workspace-shell-text-muted)]">
-                      <span className="inline-flex items-center gap-1.5">
-                        <Calendar className="h-4 w-4" />
-                        Client since {formatCreatedDate(client.created_at)}
-                      </span>
-                      {activeJobsCount > 0 ? (
-                        <span>{activeJobsCount} active projects</span>
-                      ) : null}
-                    </div>
-
-                    {client.email ? (
-                      <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">{client.email}</p>
-                    ) : null}
-                    {client.phone ? (
-                      <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">{client.phone}</p>
-                    ) : null}
-                    {address ? (
-                      <p className="mt-2 flex items-start gap-1.5 text-sm text-[var(--workspace-shell-text-muted)]">
-                        <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-                        {address}
-                      </p>
-                    ) : null}
-                  </div>
-
-                  {canEditClients ? (
-                    <div className="flex shrink-0 items-center gap-2 self-start">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
-                        onClick={() => setShowEditForm(true)}
-                      >
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Edit
-                      </Button>
-
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-9 w-9 border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
-                            aria-label="Client actions"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          className="w-48 border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] text-[var(--workspace-shell-text)]"
-                        >
-                          <DropdownMenuItem
-                            className="cursor-pointer focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
-                            onClick={handleArchive}
-                          >
-                            <Archive className="mr-2 h-4 w-4" />
-                            Archive
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="cursor-pointer focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
-                            onClick={handleViewAsClient}
-                          >
-                            <ExternalLink className="mr-2 h-4 w-4" />
-                            View as client
-                          </DropdownMenuItem>
-                          {client.email ? (
-                            <>
-                              <DropdownMenuSeparator className="bg-[var(--workspace-shell-sidebar-accent)]" />
-                              <DropdownMenuItem
-                                className="cursor-pointer focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
-                                onClick={handleInviteToPortal}
-                              >
-                                <Mail className="mr-2 h-4 w-4" />
-                                Invite to portal
-                              </DropdownMenuItem>
-                            </>
-                          ) : null}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+                <div className="min-w-0">
+                  <h1 className="truncate text-lg font-semibold text-[var(--workspace-shell-text)]">
+                    {displayName}
+                  </h1>
+                  {subtitle ? (
+                    <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">{subtitle}</p>
                   ) : null}
                 </div>
-
-                {!isContractorView ? (
-                  <div className="mt-5 border-t border-[color:var(--workspace-shell-border)] pt-5">
-                    <div className="flex items-center justify-between gap-3">
-                      <h2 className="text-sm font-medium text-[var(--workspace-shell-text)]">Projects</h2>
-                      <span className="text-xs text-[var(--workspace-shell-text-muted)]">
-                        {jobsCount} total · {formatPence(totalValuePence)}
-                      </span>
-                    </div>
-
-                    {jobs.length === 0 ? (
-                      <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">No projects yet.</p>
-                    ) : (
-                      <ul className="mt-3 divide-y divide-white/[0.06]">
-                        {jobs.slice(0, 5).map((job) => (
-                          <li key={job.id}>
-                            <Link
-                              href={`${jobDetailBase}${job.id}`}
-                              className="flex items-center justify-between gap-3 py-3 transition hover:text-[var(--ozer-accent-muted)]"
-                            >
-                              <span className="truncate text-sm text-[var(--workspace-shell-text)]">
-                                {job.title ?? 'Untitled project'}
-                              </span>
-                              <span className="shrink-0 text-xs capitalize text-[var(--workspace-shell-text-muted)]">
-                                {job.status.replace(/_/g, ' ')}
-                              </span>
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                ) : null}
               </div>
-            </div>
-          </div>
 
-          {ranklyEnabled ? (
-            <div className="mt-4">
-              <ClientRanklyBlock
-                accountSlug={accountSlug}
-                accountId={accountId}
-                clientId={client.id}
-                project={ranklyProject}
-                importSeed={ranklyImportSeed}
-                clientImportOptions={ranklyClientImportOptions}
-              />
-            </div>
-          ) : null}
+              {canEditClients ? (
+                <div className="flex shrink-0 items-center gap-2">
+                  {client.phone ? (
+                    <a
+                      href={`tel:${client.phone}`}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] transition hover:border-[var(--ozer-accent)]/40 hover:text-[var(--ozer-accent-muted)]"
+                      aria-label="Call client"
+                    >
+                      <Phone className="h-4 w-4" />
+                    </a>
+                  ) : null}
+                  {client.email ? (
+                    <a
+                      href={`mailto:${client.email}`}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] transition hover:border-[var(--ozer-accent)]/40 hover:text-[var(--ozer-accent-muted)]"
+                      aria-label="Email client"
+                    >
+                      <Mail className="h-4 w-4" />
+                    </a>
+                  ) : null}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                    onClick={() => setShowEditForm(true)}
+                  >
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit
+                  </Button>
 
-          <div className="mt-4 flex items-center justify-center gap-2 border-y border-[color:var(--workspace-shell-border)] py-2.5 text-sm text-[var(--workspace-shell-text-muted)]">
-            <Eye className="h-4 w-4 shrink-0" />
-            <span>{formatLastUpdated(client.updated_at)}</span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9 border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                        aria-label="Client actions"
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      className="w-48 border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] text-[var(--workspace-shell-text)]"
+                    >
+                      <DropdownMenuItem
+                        className="cursor-pointer focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
+                        onClick={handleArchive}
+                      >
+                        <Archive className="mr-2 h-4 w-4" />
+                        Archive
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="cursor-pointer focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
+                        onClick={handleViewAsClient}
+                      >
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        View as client
+                      </DropdownMenuItem>
+                      {client.email ? (
+                        <>
+                          <DropdownMenuSeparator className="bg-[var(--workspace-shell-sidebar-accent)]" />
+                          <DropdownMenuItem
+                            className="cursor-pointer focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
+                            onClick={handleInviteToPortal}
+                          >
+                            <Mail className="mr-2 h-4 w-4" />
+                            Invite to portal
+                          </DropdownMenuItem>
+                        </>
+                      ) : null}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              ) : null}
+            </div>
           </div>
 
           {!isContractorView ? (
             <>
-              <div className="mt-4 overflow-x-auto border-b border-[color:var(--workspace-shell-border)]">
+              <div className="shrink-0 overflow-x-auto border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 md:px-5">
                 <div className="flex min-w-max gap-1">
                   {tabItems.map(({ key, label, meta }) => (
                     <button
@@ -712,29 +776,31 @@ export function ClientDetailSidebar({
                       className={cn(
                         'border-b-2 px-4 py-3 text-left transition-colors',
                         activeTab === key
-                          ? 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)]'
-                          : 'border-transparent text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text-muted)]',
+                          ? 'border-[var(--ozer-accent)] text-[var(--workspace-shell-text)]'
+                          : 'border-transparent text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
                       )}
                     >
                       <span className="block text-sm font-medium">{label}</span>
                       {meta ? (
-                        <span className="mt-0.5 block text-xs text-[var(--workspace-shell-text-muted)]">{meta}</span>
+                        <span className="mt-0.5 block text-xs text-[var(--workspace-shell-text-muted)]">
+                          {meta}
+                        </span>
                       ) : null}
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="mt-4 min-h-0 flex-1 overflow-y-auto pb-6">
+              <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 md:px-5 md:py-5">
                 {renderTabContent()}
               </div>
             </>
           ) : (
-            <div className="mt-4 min-h-0 flex-1 overflow-y-auto pb-6">
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 md:px-5 md:py-5">
               {renderTabContent()}
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );

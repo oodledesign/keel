@@ -62,6 +62,7 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
+import { cn } from '@kit/ui/utils';
 import pathsConfig from '~/config/paths.config';
 import { MessageBodyText } from '~/lib/messages/message-body-text';
 
@@ -84,8 +85,6 @@ import {
 
 import { SearchableMultiSelect } from './searchable-multi-select';
 
-const WA_INCOMING = '#202c33';
-const WA_OUTGOING = '#005c4b';
 const FAV_STORAGE_KEY = 'keel:favourite-chat-ids';
 
 type PendingAttachment = {
@@ -212,26 +211,26 @@ function threadCategory(thread: MessageThreadListItem): {
     if (hasClientParticipant && memberCount <= 2) {
       return {
         label: 'Job private',
-        badgeClassName: 'border-[#57C87F]/40 bg-[#57C87F]/15 text-[#C7E9D0]',
+        badgeClassName: 'border-[#57C87F]/40 bg-[#57C87F]/15 text-emerald-800 dark:text-[#C7E9D0]',
       };
     }
 
     return {
       label: 'Job',
-      badgeClassName: 'border-[#57C87F]/40 bg-[#57C87F]/15 text-[#97D9AA]',
+      badgeClassName: 'border-[#57C87F]/40 bg-[#57C87F]/15 text-emerald-800 dark:text-[#97D9AA]',
     };
   }
 
   if (hasClientParticipant) {
     return {
       label: 'Client',
-      badgeClassName: 'border-[#39AEB3]/45 bg-[#39AEB3]/15 text-[#7DBCBD]',
+      badgeClassName: 'border-[#39AEB3]/45 bg-[#39AEB3]/15 text-teal-800 dark:text-[#7DBCBD]',
     };
   }
 
   return {
     label: 'Internal',
-    badgeClassName: 'border-[#8D6BA5]/45 bg-[#8D6BA5]/15 text-[#DDD3E9]',
+    badgeClassName: 'border-[#8D6BA5]/45 bg-[#8D6BA5]/15 text-purple-800 dark:text-[#DDD3E9]',
   };
 }
 
@@ -868,8 +867,9 @@ export function MessagesPageContent(props: Props) {
   }
 
   const chatSurfaceStyle: CSSProperties = {
-    backgroundColor: '#0b141a',
-    backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0)`,
+    backgroundColor: 'var(--workspace-shell-canvas)',
+    backgroundImage:
+      'radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--workspace-shell-text) 4%, transparent) 1px, transparent 0)',
     backgroundSize: '24px 24px',
   };
   const canSend = Boolean(
@@ -901,7 +901,7 @@ export function MessagesPageContent(props: Props) {
               value={listSearch}
               onChange={(e) => setListSearch(e.target.value)}
               placeholder="Search or start new chat"
-              className="h-9 border-[color:var(--workspace-shell-border)] bg-black/25 pl-9 text-sm placeholder:text-[var(--workspace-shell-text-muted)]"
+              className="h-9 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] pl-9 text-sm placeholder:text-[var(--workspace-shell-text-muted)]"
             />
           </div>
         </div>
@@ -929,7 +929,7 @@ export function MessagesPageContent(props: Props) {
                   }`}
                 >
                   <Avatar className="h-12 w-12 shrink-0">
-                    <AvatarFallback className="bg-tw-surface-700 text-sm font-medium text-[var(--workspace-shell-text)]">
+                    <AvatarFallback className="bg-[var(--workspace-shell-sidebar-accent)] text-sm font-medium text-[var(--workspace-shell-text)]">
                       {initials}
                     </AvatarFallback>
                   </Avatar>
@@ -968,11 +968,11 @@ export function MessagesPageContent(props: Props) {
 
       {/* Main conversation */}
       <section className="flex min-h-[50vh] min-w-0 flex-1 flex-col md:min-h-0">
-        <header className="flex flex-wrap items-center gap-3 border-b border-[color:var(--workspace-shell-border)] bg-[#1f2c34] px-4 py-2.5">
+        <header className="flex flex-wrap items-center gap-3 border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-2.5">
           {selectedThread ? (
             <>
               <Avatar className="h-10 w-10 shrink-0 md:hidden">
-                <AvatarFallback className="bg-tw-surface-600 text-sm text-[var(--workspace-shell-text)]">
+                <AvatarFallback className="bg-[var(--workspace-shell-sidebar-accent)] text-sm text-[var(--workspace-shell-text)]">
                   {senderInitials(threadPrimaryTitle(selectedThread, jobTitleById))}
                 </AvatarFallback>
               </Avatar>
@@ -1051,8 +1051,8 @@ export function MessagesPageContent(props: Props) {
           <div className="absolute inset-0" style={chatSurfaceStyle} aria-hidden />
           <div className="relative z-[1] flex min-h-0 flex-1 flex-col">
             {selectedThread ? (
-              <div className="border-b border-[color:var(--workspace-shell-border)] bg-[#0f1a22] px-4 py-2">
-                <p className="text-xs text-[#AAB4C8]">
+              <div className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-2">
+                <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                   {threadReadAccessSummary(selectedThread, props.userId)}
                 </p>
               </div>
@@ -1075,7 +1075,7 @@ export function MessagesPageContent(props: Props) {
                   <Button
                     variant="secondary"
                     size="sm"
-                    className="bg-black/40 text-[var(--workspace-shell-text)] hover:bg-black/50"
+                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel-hover)]"
                     onClick={() => void onLoadOlderMessages()}
                   >
                     Load older messages
@@ -1103,7 +1103,7 @@ export function MessagesPageContent(props: Props) {
                       <Fragment key={message.id}>
                         {showDaySeparator ? (
                           <div className="flex justify-center py-3">
-                            <span className="rounded-full bg-[#18242c]/95 px-3 py-1 text-[11px] font-medium text-[#AAB4C8] shadow-sm ring-1 ring-white/5">
+                            <span className="rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 py-1 text-[11px] font-medium text-[var(--workspace-shell-text-muted)] shadow-sm">
                               {formatMessageDaySeparator(message.created_at)}
                             </span>
                           </div>
@@ -1118,7 +1118,7 @@ export function MessagesPageContent(props: Props) {
                             src={message.sender_avatar_url ?? undefined}
                             alt={label}
                           />
-                          <AvatarFallback className="bg-tw-surface-700 text-[10px] font-medium text-[var(--workspace-shell-text)]">
+                          <AvatarFallback className="bg-[var(--workspace-shell-sidebar-accent)] text-[10px] font-medium text-[var(--workspace-shell-text)]">
                             {initials}
                           </AvatarFallback>
                         </Avatar>
@@ -1143,14 +1143,12 @@ export function MessagesPageContent(props: Props) {
                             </span>
                           ) : null}
                           <div
-                            className={`rounded-lg px-2 py-1.5 pr-2 pb-1 text-sm shadow-sm ${
+                            className={cn(
+                              'rounded-lg px-2 py-1.5 pr-2 pb-1 text-sm shadow-sm text-[var(--workspace-shell-text)]',
                               isOwn
-                                ? 'rounded-br-none text-[var(--workspace-shell-text)]'
-                                : 'rounded-bl-none text-[var(--workspace-shell-text)]'
-                            }`}
-                            style={{
-                              backgroundColor: isOwn ? WA_OUTGOING : WA_INCOMING,
-                            }}
+                                ? 'rounded-br-none bg-[var(--ozer-accent-subtle)]'
+                                : 'rounded-bl-none bg-[var(--workspace-shell-sidebar-accent)]',
+                            )}
                           >
                             {message.image_url ? (
                               <img
@@ -1164,8 +1162,8 @@ export function MessagesPageContent(props: Props) {
                                 text={message.body}
                                 linkClassName={
                                   isOwn
-                                    ? 'text-emerald-50 hover:text-[var(--workspace-shell-text)]'
-                                    : 'text-sky-200 hover:text-sky-100'
+                                    ? 'text-[var(--workspace-shell-accent-text)] hover:text-[var(--ozer-accent)]'
+                                    : 'text-[var(--workspace-shell-accent-text)] hover:text-[var(--ozer-accent)]'
                                 }
                               />
                             ) : null}
@@ -1181,11 +1179,7 @@ export function MessagesPageContent(props: Props) {
                                         href={attachment.href}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className={`flex items-center gap-2 text-sm underline-offset-2 hover:underline ${
-                                          isOwn
-                                            ? 'text-emerald-50'
-                                            : 'text-sky-200'
-                                        }`}
+                                        className="flex items-center gap-2 text-sm text-[var(--workspace-shell-accent-text)] underline-offset-2 hover:text-[var(--ozer-accent)] hover:underline"
                                       >
                                         <FileText className="h-4 w-4 shrink-0" />
                                         <span className="truncate">
@@ -1210,9 +1204,7 @@ export function MessagesPageContent(props: Props) {
                               </div>
                             ) : null}
                             <div
-                              className={`mt-0.5 flex items-end justify-end gap-1 text-[11px] ${
-                                isOwn ? 'text-emerald-100/80' : 'text-[var(--workspace-shell-text-muted)]'
-                              }`}
+                              className={`mt-0.5 flex items-end justify-end gap-1 text-[11px] text-[var(--workspace-shell-text-muted)]`}
                             >
                               <span>{formatMessageTime(message.created_at)}</span>
                             </div>
@@ -1265,7 +1257,7 @@ export function MessagesPageContent(props: Props) {
             </div>
 
             {/* Composer — pill bar */}
-            <div className="relative z-[1] border-t border-[color:var(--workspace-shell-border)] bg-[#1f2c34] px-3 py-2 md:px-4">
+            <div className="relative z-[1] border-t border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 py-2 md:px-4">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -1293,7 +1285,7 @@ export function MessagesPageContent(props: Props) {
                   {pendingAttachments.map((attachment) => (
                     <div
                       key={`${attachment.type}-${attachment.id}`}
-                      className="flex items-center gap-1 rounded-full border border-[color:var(--workspace-shell-border)] bg-black/25 px-2 py-1 text-xs text-[var(--workspace-shell-text)]"
+                      className="flex items-center gap-1 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] px-2 py-1 text-xs text-[var(--workspace-shell-text)]"
                     >
                       <FileText className="h-3.5 w-3.5" />
                       <span className="max-w-[12rem] truncate">
@@ -1312,7 +1304,7 @@ export function MessagesPageContent(props: Props) {
                 </div>
               ) : null}
               {pendingImagePreviewUrl ? (
-                <div className="mb-2 flex items-start gap-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/25 p-2">
+                <div className="mb-2 flex items-start gap-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] p-2">
                   <img
                     src={pendingImagePreviewUrl}
                     alt="Attachment preview"
@@ -1370,7 +1362,7 @@ export function MessagesPageContent(props: Props) {
                   }
                   disabled={!selectedThreadId}
                   rows={1}
-                  className="max-h-32 min-h-10 flex-1 resize-none rounded-3xl border-[color:var(--workspace-shell-border)] bg-[#2a3942] py-2.5 pr-3 pl-4 text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus-visible:ring-[var(--brand-green-500)]"
+                  className="max-h-32 min-h-10 flex-1 resize-none rounded-3xl border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] py-2.5 pr-3 pl-4 text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus-visible:ring-[var(--ozer-accent)]"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
@@ -1400,7 +1392,7 @@ export function MessagesPageContent(props: Props) {
       </section>
 
       <Dialog open={attachDialogOpen} onOpenChange={setAttachDialogOpen}>
-        <DialogContent className="max-h-[80vh] overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[#1f2c34] text-[var(--workspace-shell-text)] sm:max-w-md">
+        <DialogContent className="max-h-[80vh] overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Link note or file</DialogTitle>
           </DialogHeader>
@@ -1457,7 +1449,7 @@ export function MessagesPageContent(props: Props) {
       </Dialog>
 
       <Dialog open={newChatOpen} onOpenChange={setNewChatOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[#1f2c34] text-[var(--workspace-shell-text)] sm:max-w-md">
+        <DialogContent className="max-h-[90vh] overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>New chat</DialogTitle>
           </DialogHeader>
@@ -1468,7 +1460,7 @@ export function MessagesPageContent(props: Props) {
                 value={threadType}
                 onValueChange={(v) => setThreadType(v as 'direct' | 'group' | 'job')}
               >
-                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-black/30">
+                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1487,7 +1479,7 @@ export function MessagesPageContent(props: Props) {
                 value={threadTitle}
                 onChange={(e) => setThreadTitle(e.target.value)}
                 placeholder="Chat name"
-                className="border-[color:var(--workspace-shell-border)] bg-black/30"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]"
               />
             </div>
             {threadType === 'job' ? (
@@ -1495,7 +1487,7 @@ export function MessagesPageContent(props: Props) {
                 <Label className="text-[var(--workspace-shell-text-muted)]">Job</Label>
                 {props.jobOptions.length > 0 ? (
                   <Select value={jobId || undefined} onValueChange={setJobId}>
-                    <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-black/30">
+                    <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]">
                       <SelectValue placeholder="Select a job" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1511,7 +1503,7 @@ export function MessagesPageContent(props: Props) {
                     value={jobId}
                     onChange={(e) => setJobId(e.target.value)}
                     placeholder="Job ID"
-                    className="border-[color:var(--workspace-shell-border)] bg-black/30"
+                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]"
                   />
                 )}
               </div>
@@ -1558,7 +1550,7 @@ export function MessagesPageContent(props: Props) {
         </DialogContent>
       </Dialog>
       <Dialog open={linkJobOpen} onOpenChange={setLinkJobOpen}>
-        <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[#1f2c34] text-[var(--workspace-shell-text)] sm:max-w-md">
+        <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Link chat to job</DialogTitle>
           </DialogHeader>
@@ -1567,7 +1559,7 @@ export function MessagesPageContent(props: Props) {
               Linking makes this chat appear in that job&apos;s Messages tab for participants.
             </p>
             <Select value={linkJobId || undefined} onValueChange={setLinkJobId}>
-              <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-black/30">
+              <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]">
                 <SelectValue placeholder="Select a job" />
               </SelectTrigger>
               <SelectContent>

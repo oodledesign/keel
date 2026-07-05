@@ -5,10 +5,12 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { htmlToMarkdown } from '~/lib/markdown';
 
 import { splitIntoChunks } from './chunking';
+import { brainChunksNeedRefresh } from './brain-index-refresh';
 import {
   buildMeetingTranscriptIndexText,
   loadMeetingTranscriptEnrichmentByIds,
   meetingTranscriptIndexUpdatedAt,
+  type MeetingTranscriptEnrichment,
 } from './meeting-transcript-index';
 import {
   buildBrainSourceUrl,
@@ -69,6 +71,87 @@ function transcriptClientName(
     [row.first_name, row.last_name].filter(Boolean).join(' ').trim() ||
     row.name?.trim() ||
     null
+  );
+}
+
+function mapMeetingTranscriptRowToIndexable(
+  row: {
+    id: string;
+    title: string | null;
+    content: string | null;
+    updated_at: string;
+    client_id: string | null;
+    meeting_date: string | null;
+    clients: Parameters<typeof transcriptClientName>[0];
+  },
+  accountId: string,
+  accountSlug: string,
+  enrichment?: MeetingTranscriptEnrichment,
+): IndexableRecord | null {
+  const content = (row.content as string | null)?.trim();
+  const title = ((row.title as string) || 'Meeting transcript').trim();
+  const clientName = transcriptClientName(row.clients);
+  const meetingDate = (row.meeting_date as string | null) ?? null;
+  const hasSummary = Boolean(enrichment?.summaryText?.trim());
+  const hasActionItems = Boolean(enrichment?.actionItems?.length);
+
+  if (!content && !hasSummary && !hasActionItems) {
+    return null;
+  }
+
+  return {
+    sourceType: 'transcript',
+    sourceId: row.id,
+    accountId,
+    accountSlug,
+    title,
+    text: buildMeetingTranscriptIndexText({
+      title,
+      content:
+        content ||
+        '(Transcript text not stored — see summary and action items below.)',
+      meetingDate,
+      clientName,
+      summaryText: enrichment?.summaryText ?? null,
+      attendeeEmails: enrichment?.attendeeEmails ?? [],
+      actionItems: enrichment?.actionItems ?? [],
+    }),
+    updatedAt: meetingTranscriptIndexUpdatedAt(row.updated_at, enrichment),
+    clientId: row.client_id,
+    meetingDate,
+  };
+}
+
+async function loadTranscriptIndexable(
+  admin: AdminClient,
+  accountId: string,
+  accountSlug: string,
+  sourceId: string,
+): Promise<IndexableRecord | null> {
+  const { data: row } = await admin
+    .from('meeting_transcripts')
+    .select(
+      'id, title, content, updated_at, client_id, meeting_date, clients(display_name, company_name, first_name, last_name, name)',
+    )
+    .eq('account_id', accountId)
+    .eq('id', sourceId)
+    .maybeSingle();
+
+  if (!row) {
+    return null;
+  }
+
+  const enrichmentByTranscriptId = await loadMeetingTranscriptEnrichmentByIds(
+    admin,
+    accountId,
+    [sourceId],
+  );
+
+  return mapMeetingTranscriptRowToIndexable(
+    row as Parameters<typeof mapMeetingTranscriptRowToIndexable>[0],
+    accountId,
+    accountSlug,
+    enrichmentByTranscriptId.get(sourceId),
   );
 }
 
@@ -229,41 +312,15 @@ export async function loadAccountIndexables(
   );
 
   for (const row of transcriptRows) {
-    const content = (row.content as string)?.trim();
-    const title = ((row.title as string) || 'Meeting transcript').trim();
-    const clientName = transcriptClientName(
-      row.clients as Parameters<typeof transcriptClientName>[0],
-    );
-    const meetingDate = (row.meeting_date as string | null) ?? null;
-    const transcriptId = row.id as string;
-    const enrichment = enrichmentByTranscriptId.get(transcriptId);
-    const hasSummary = Boolean(enrichment?.summaryText?.trim());
-    const hasActionItems = Boolean(enrichment?.actionItems?.length);
-
-    if (!content && !hasSummary && !hasActionItems) continue;
-
-    records.push({
-      sourceType: 'transcript',
-      sourceId: transcriptId,
+    const mapped = mapMeetingTranscriptRowToIndexable(
+      row as Parameters<typeof mapMeetingTranscriptRowToIndexable>[0],
       accountId,
       accountSlug,
-      title,
-      text: buildMeetingTranscriptIndexText({
-        title,
-        content: content || '(Transcript text not stored — see summary and action items below.)',
-        meetingDate,
-        clientName,
-        summaryText: enrichment?.summaryText ?? null,
-        attendeeEmails: enrichment?.attendeeEmails ?? [],
-        actionItems: enrichment?.actionItems ?? [],
-      }),
-      updatedAt: meetingTranscriptIndexUpdatedAt(
-        row.updated_at as string,
-        enrichment,
-      ),
-      clientId: (row.client_id as string | null) ?? null,
-      meetingDate,
-    });
+      enrichmentByTranscriptId.get(row.id as string),
+    );
+    if (mapped) {
+      records.push(mapped);
+    }
   }
 
   const { data: proposals } = await admin
@@ -321,6 +378,10 @@ export async function loadIndexableSource(
       jobId: (row.job_id as string | null) ?? null,
       clientId: (row.client_id as string | null) ?? null,
     };
+  }
+
+  if (sourceType === 'transcript') {
+    return loadTranscriptIndexable(admin, accountId, accountSlug, sourceId);
   }
 
   const records = await loadAccountIndexables(admin, accountId);
@@ -392,6 +453,19 @@ async function upsertRecordChunks(
   admin: AdminClient,
   record: IndexableRecord,
 ) {
+  const fresh = await loadIndexableSource(
+    admin,
+    record.accountId,
+    record.sourceType,
+    record.sourceId,
+  );
+
+  if (!fresh) {
+    await admin.from('brain_chunks').delete().eq('source_id', record.sourceId);
+    return 0;
+  }
+
+  record = fresh;
   const chunks = splitIntoChunks(record.text);
   if (chunks.length === 0) {
     await admin.from('brain_chunks').delete().eq('source_id', record.sourceId);
@@ -404,19 +478,18 @@ async function upsertRecordChunks(
     .eq('source_id', record.sourceId)
     .order('chunk_index', { ascending: true });
 
-  const sourceUpdatedMs = new Date(record.updatedAt).getTime();
-  const needsReembed =
-    !existingRows?.length ||
-    existingRows.some((row) => {
-      if (!row.embedding) return true;
-      const indexedAt = row.indexed_at as string | null;
-      if (!indexedAt) return true;
-      return new Date(indexedAt).getTime() < sourceUpdatedMs;
-    }) ||
-    existingRows.length !== chunks.length;
+  const needsReembed = brainChunksNeedRefresh({
+    sourceUpdatedAt: record.updatedAt,
+    existingRows: existingRows ?? [],
+    chunkCount: chunks.length,
+  });
+
+  if (!needsReembed) {
+    return existingRows?.length ?? 0;
+  }
 
   let embeddings: number[][] = [];
-  if (needsReembed && isVoyageConfigured()) {
+  if (isVoyageConfigured()) {
     embeddings = await embedTexts(chunks);
   }
 

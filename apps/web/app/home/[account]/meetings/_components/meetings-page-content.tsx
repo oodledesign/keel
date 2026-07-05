@@ -64,6 +64,7 @@ export function MeetingsPageContent({
   const [title, setTitle] = useState('');
   const [meetingDate, setMeetingDate] = useState(todayIsoDate());
   const [clientId, setClientId] = useState('');
+  const [jobId, setJobId] = useState('');
   const [content, setContent] = useState('');
 
   useEffect(() => {
@@ -76,14 +77,19 @@ export function MeetingsPageContent({
     }
 
     const clientFromQuery = searchParams.get('clientId');
+    const jobFromQuery = searchParams.get('jobId');
     if (clientFromQuery) {
       setClientId(clientFromQuery);
+    }
+    if (jobFromQuery) {
+      setJobId(jobFromQuery);
     }
     setShowForm(true);
 
     const nextParams = new URLSearchParams(searchParams.toString());
     nextParams.delete('create');
     nextParams.delete('clientId');
+    nextParams.delete('jobId');
     const nextPath = nextParams.toString()
       ? `${pathsConfig.app.accountMeetings.replace('[account]', accountSlug)}?${nextParams.toString()}`
       : pathsConfig.app.accountMeetings.replace('[account]', accountSlug);
@@ -102,6 +108,7 @@ export function MeetingsPageContent({
     setTitle('');
     setMeetingDate(todayIsoDate());
     setClientId('');
+    setJobId('');
     setContent('');
     setShowForm(false);
   }, []);
@@ -123,6 +130,7 @@ export function MeetingsPageContent({
           accountId,
           accountSlug,
           clientId,
+          jobId: jobId || undefined,
           title: title.trim() || 'Meeting transcript',
           content: content.trim(),
           meetingDate: meetingDate || null,

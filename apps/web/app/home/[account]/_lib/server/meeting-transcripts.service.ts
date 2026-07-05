@@ -28,6 +28,7 @@ export type MeetingTranscript = {
   accountId: string;
   clientId: string | null;
   dealId: string | null;
+  projectId: string | null;
   title: string;
   content: string;
   speakerSegments: TranscriptSegment[];
@@ -51,6 +52,7 @@ type MeetingTranscriptRow = {
   account_id: string;
   client_id?: string | null;
   deal_id?: string | null;
+  project_id?: string | null;
   title?: string | null;
   content?: string | null;
   speaker_segments?: unknown;
@@ -88,6 +90,7 @@ function mapMeetingTranscript(row: MeetingTranscriptRow): MeetingTranscript {
     accountId: row.account_id,
     clientId: row.client_id ?? null,
     dealId: row.deal_id ?? null,
+    projectId: row.project_id ?? null,
     title: row.title?.trim() || 'Meeting transcript',
     content,
     speakerSegments: resolveTranscriptSegments({
@@ -275,6 +278,24 @@ class MeetingTranscriptsService {
     if (!data) throw new Error('Deal not found in this workspace');
   }
 
+  private async assertProjectInAccount(accountId: string, projectId: string) {
+    const { data, error } = await this.db
+      .from('projects')
+      .select('id, client_id, project_type')
+      .eq('account_id', accountId)
+      .eq('id', projectId)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error('Project not found in this workspace');
+    const projectType = (data as { project_type?: string | null }).project_type;
+    if (projectType && projectType !== 'delivery') {
+      throw new Error('Only delivery projects can be linked to meetings');
+    }
+
+    return data as { id: string; client_id: string | null };
+  }
+
   private async ensureUserAndPermission(
     accountId: string,
     permission: 'clients.view' | 'clients.edit',
@@ -422,10 +443,54 @@ class MeetingTranscriptsService {
     return ((data ?? []) as MeetingTranscriptRow[]).map(mapMeetingTranscript);
   }
 
+  async listForProject(input: {
+    accountId: string;
+    projectId: string;
+  }): Promise<MeetingTranscript[]> {
+    await this.ensureUserAndPermission(input.accountId, 'clients.view');
+
+    const project = await this.assertProjectInAccount(
+      input.accountId,
+      input.projectId,
+    );
+    const projectClientId = project.client_id;
+
+    let query = this.db
+      .from('meeting_transcripts')
+      .select('*')
+      .eq('account_id', input.accountId);
+
+    if (projectClientId) {
+      query = query.or(
+        `project_id.eq.${input.projectId},and(project_id.is.null,client_id.eq.${projectClientId})`,
+      );
+    } else {
+      query = query.eq('project_id', input.projectId);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
+
+    if (error) throw new Error(error.message);
+    return ((data ?? []) as MeetingTranscriptRow[]).map(mapMeetingTranscript);
+  }
+
+  /** @deprecated Use listForProject — kept for API param name jobId. */
+  async listForJob(input: {
+    accountId: string;
+    jobId: string;
+  }): Promise<MeetingTranscript[]> {
+    return this.listForProject({
+      accountId: input.accountId,
+      projectId: input.jobId,
+    });
+  }
+
   async create(input: {
     accountId: string;
     clientId?: string | null;
     dealId?: string | null;
+    jobId?: string | null;
+    projectId?: string | null;
     title?: string;
     content: string;
     source?: 'paste' | 'upload';
@@ -439,8 +504,23 @@ class MeetingTranscriptsService {
 
     const clientId = input.clientId?.trim() || null;
     const dealId = input.dealId?.trim() || null;
+    const projectId = (input.projectId ?? input.jobId)?.trim() || null;
     if (!clientId && !dealId) {
       throw new Error('A client or deal is required');
+    }
+
+    if (projectId) {
+      const project = await this.assertProjectInAccount(input.accountId, projectId);
+      if (clientId && project.client_id && project.client_id !== clientId) {
+        throw new Error('Client does not match this project');
+      }
+    }
+
+    if (clientId) {
+      await this.assertClientInAccount(input.accountId, clientId);
+    }
+    if (dealId) {
+      await this.assertDealInAccount(input.accountId, dealId);
     }
 
     const content = input.content.trim();
@@ -453,6 +533,7 @@ class MeetingTranscriptsService {
         account_id: input.accountId,
         client_id: clientId,
         deal_id: dealId,
+        project_id: projectId,
         title: input.title?.trim() || 'Meeting transcript',
         // Content MUST be a Markdown string — see lib/markdown.ts contract.
         content,

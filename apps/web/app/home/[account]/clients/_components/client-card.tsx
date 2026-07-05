@@ -81,7 +81,7 @@ export function ClientCard({
       <ProfileAvatar
         displayName={display_name ?? 'Unnamed client'}
         pictureUrl={picture_url ?? null}
-        className="h-7 w-7 shrink-0"
+        className="mx-0 h-7 w-7 shrink-0"
         fallbackClassName="bg-[var(--workspace-shell-panel-hover)] text-xs text-[var(--workspace-shell-text)]"
       />
       <div className="min-w-0">

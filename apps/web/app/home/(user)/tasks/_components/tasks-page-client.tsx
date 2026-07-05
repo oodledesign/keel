@@ -114,14 +114,14 @@ const STATUS_LABEL: Record<TaskStatus, string> = STATUS_COLUMNS.reduce(
   {} as Record<TaskStatus, string>,
 );
 
-/** List row: expand · done · title · due (icon + label) · client (avatar + name) · priority */
+/** List row: done · title (+ subtask expand) · due · client · priority */
 function taskListRowGridClass() {
   return cn(
     'grid items-center gap-x-2 px-2 py-2.5 sm:gap-x-3 sm:px-4',
-    // Mobile: expand · checkbox · title · date + client · priority
-    'grid-cols-[1.25rem_1.5rem_minmax(0,1fr)_auto_1.25rem]',
+    // Mobile: checkbox · title · date + client · priority
+    'grid-cols-[1.5rem_minmax(0,1fr)_auto_1.25rem]',
     // Desktop: separate due date and client columns
-    'sm:grid-cols-[1.25rem_1.5rem_minmax(0,1fr)_minmax(5.5rem,7.5rem)_minmax(6rem,10rem)_1.75rem]',
+    'sm:grid-cols-[1.5rem_minmax(0,1fr)_minmax(5.5rem,7.5rem)_minmax(6rem,10rem)_1.75rem]',
   );
 }
 
@@ -795,6 +795,26 @@ const toolbarIconButtonClass =
 const dropdownContentClass =
   'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] shadow-lg';
 
+const dropdownSubTriggerClass =
+  'text-[var(--workspace-shell-text)] focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)] data-[state=open]:bg-[var(--workspace-shell-sidebar-accent)] data-[state=open]:text-[var(--workspace-shell-text)]';
+
+const dropdownRadioItemClass =
+  'text-[var(--workspace-shell-text)] focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]';
+
+function useFilterSubmenuInline() {
+  const [inline, setInline] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 767px)');
+    const update = () => setInline(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  return inline;
+}
+
 function TasksFilterMenu(props: {
   dueDateFilter: DueDateFilter;
   onDueDateFilterChange: (value: DueDateFilter) => void;
@@ -816,6 +836,7 @@ function TasksFilterMenu(props: {
   onStatusFilterChange: (value: 'active' | 'completed') => void;
   showStatusFilter: boolean;
 }) {
+  const inlineSubmenus = useFilterSubmenuInline();
   const hasActiveFilters =
     props.dueDateFilter !== 'all' ||
     props.clientFilter !== 'all' ||
@@ -875,7 +896,7 @@ function TasksFilterMenu(props: {
             <DropdownMenuRadioItem
               key={value}
               value={value}
-              className="focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
+              className={dropdownRadioItemClass}
             >
               {label}
             </DropdownMenuRadioItem>
@@ -894,13 +915,13 @@ function TasksFilterMenu(props: {
             >
               <DropdownMenuRadioItem
                 value="active"
-                className="focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
+                className={dropdownRadioItemClass}
               >
                 Active
               </DropdownMenuRadioItem>
               <DropdownMenuRadioItem
                 value="completed"
-                className="focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
+                className={dropdownRadioItemClass}
               >
                 Completed
               </DropdownMenuRadioItem>
@@ -922,7 +943,7 @@ function TasksFilterMenu(props: {
                 <DropdownMenuRadioItem
                   key={value}
                   value={value}
-                  className="capitalize focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
+                  className={cn('capitalize', dropdownRadioItemClass)}
                 >
                   {value}
                 </DropdownMenuRadioItem>
@@ -934,25 +955,19 @@ function TasksFilterMenu(props: {
         {props.showWorkspaceFilter && props.workspaceFilterOptions.length > 0 ? (
           <>
             <DropdownMenuSeparator className="bg-[var(--workspace-shell-sidebar-accent)]" />
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger className="focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]">
-                Workspace · {workspaceLabel}
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className={dropdownContentClass}>
+            {inlineSubmenus ? (
+              <>
+                <DropdownMenuLabel className="text-xs text-[var(--workspace-shell-text-muted)]">
+                  Workspace · {workspaceLabel}
+                </DropdownMenuLabel>
                 <DropdownMenuRadioGroup
                   value={props.workspaceFilter}
                   onValueChange={props.onWorkspaceFilterChange}
                 >
-                  <DropdownMenuRadioItem
-                    value="all"
-                    className="focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
-                  >
+                  <DropdownMenuRadioItem value="all" className={dropdownRadioItemClass}>
                     All workspaces
                   </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem
-                    value="personal"
-                    className="focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
-                  >
+                  <DropdownMenuRadioItem value="personal" className={dropdownRadioItemClass}>
                     Personal only
                   </DropdownMenuRadioItem>
                   {props.workspaceFilterOptions.map((ws) =>
@@ -960,54 +975,114 @@ function TasksFilterMenu(props: {
                       <DropdownMenuRadioItem
                         key={ws.slug}
                         value={ws.slug}
-                        className="focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
+                        className={dropdownRadioItemClass}
                       >
                         {ws.name}
                       </DropdownMenuRadioItem>
                     ) : null,
                   )}
                 </DropdownMenuRadioGroup>
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
+              </>
+            ) : (
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className={dropdownSubTriggerClass}>
+                  Workspace · {workspaceLabel}
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent
+                  className={cn(dropdownContentClass, 'max-h-72')}
+                  side="left"
+                  collisionPadding={16}
+                >
+                  <DropdownMenuRadioGroup
+                    value={props.workspaceFilter}
+                    onValueChange={props.onWorkspaceFilterChange}
+                  >
+                    <DropdownMenuRadioItem value="all" className={dropdownRadioItemClass}>
+                      All workspaces
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="personal" className={dropdownRadioItemClass}>
+                      Personal only
+                    </DropdownMenuRadioItem>
+                    {props.workspaceFilterOptions.map((ws) =>
+                      ws.slug ? (
+                        <DropdownMenuRadioItem
+                          key={ws.slug}
+                          value={ws.slug}
+                          className={dropdownRadioItemClass}
+                        >
+                          {ws.name}
+                        </DropdownMenuRadioItem>
+                      ) : null,
+                    )}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            )}
           </>
         ) : null}
 
         {props.clientOptions.length > 0 ? (
           <>
             <DropdownMenuSeparator className="bg-[var(--workspace-shell-sidebar-accent)]" />
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger className="focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]">
-                Client · {clientLabel}
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className={dropdownContentClass}>
+            {inlineSubmenus ? (
+              <>
+                <DropdownMenuLabel className="text-xs text-[var(--workspace-shell-text-muted)]">
+                  Client · {clientLabel}
+                </DropdownMenuLabel>
                 <DropdownMenuRadioGroup
                   value={props.clientFilter}
                   onValueChange={props.onClientFilterChange}
                 >
-                  <DropdownMenuRadioItem
-                    value="all"
-                    className="focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
-                  >
+                  <DropdownMenuRadioItem value="all" className={dropdownRadioItemClass}>
                     All clients
                   </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem
-                    value="__none__"
-                    className="focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
-                  >
+                  <DropdownMenuRadioItem value="__none__" className={dropdownRadioItemClass}>
                     No client
                   </DropdownMenuRadioItem>
                   {props.clientOptions.map(([id, name]) => (
                     <DropdownMenuRadioItem
                       key={id}
                       value={id}
-                      className="focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
+                      className={dropdownRadioItemClass}
                     >
                       {name}
                     </DropdownMenuRadioItem>
                   ))}
                 </DropdownMenuRadioGroup>
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
+              </>
+            ) : (
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className={dropdownSubTriggerClass}>
+                  Client · {clientLabel}
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent
+                  className={cn(dropdownContentClass, 'max-h-72 w-56')}
+                  side="left"
+                  collisionPadding={16}
+                >
+                  <DropdownMenuRadioGroup
+                    value={props.clientFilter}
+                    onValueChange={props.onClientFilterChange}
+                  >
+                    <DropdownMenuRadioItem value="all" className={dropdownRadioItemClass}>
+                      All clients
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="__none__" className={dropdownRadioItemClass}>
+                      No client
+                    </DropdownMenuRadioItem>
+                    {props.clientOptions.map(([id, name]) => (
+                      <DropdownMenuRadioItem
+                        key={id}
+                        value={id}
+                        className={dropdownRadioItemClass}
+                      >
+                        {name}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            )}
           </>
         ) : null}
       </DropdownMenuContent>
@@ -1742,31 +1817,7 @@ function TaskRow({
           'relative cursor-pointer border-b border-[color:var(--workspace-shell-border)] transition-colors',
         )}
       >
-        <div className="flex justify-center" data-task-row-action>
-          {showExpandToggle ? (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleSubtasks?.();
-              }}
-              className="rounded p-0.5 text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
-              aria-expanded={subtasksExpanded}
-              aria-label={
-                subtasksExpanded ? 'Collapse subtasks' : 'Expand subtasks'
-              }
-            >
-              {subtasksExpanded ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ChevronRight className="h-4 w-4" />
-              )}
-            </button>
-          ) : (
-            <span className="inline-block w-3 shrink-0" aria-hidden />
-          )}
-        </div>
-        <div className="flex justify-center pt-0.5" data-task-row-action>
+        <div className="flex justify-start pt-0.5" data-task-row-action>
           <Checkbox
             checked={isDone}
             disabled={isPending}
@@ -1787,12 +1838,34 @@ function TaskRow({
             readOnly
           />
           {isRoot && subCount > 0 ? (
-            <span
-              className="mt-0.5 block text-[10px] font-normal tabular-nums text-[var(--workspace-shell-text-muted)]"
-              title="Subtasks completed / total"
-            >
-              {doneSubCount}/{subCount}
-            </span>
+            <div className="mt-0.5 flex items-center gap-0.5">
+              <span
+                className="text-[10px] font-normal tabular-nums text-[var(--workspace-shell-text-muted)]"
+                title="Subtasks completed / total"
+              >
+                {doneSubCount}/{subCount}
+              </span>
+              {showExpandToggle ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleSubtasks?.();
+                  }}
+                  className="rounded p-0.5 text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
+                  aria-expanded={subtasksExpanded}
+                  aria-label={
+                    subtasksExpanded ? 'Collapse subtasks' : 'Expand subtasks'
+                  }
+                >
+                  {subtasksExpanded ? (
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              ) : null}
+            </div>
           ) : null}
         </div>
         <div className="sm:hidden">

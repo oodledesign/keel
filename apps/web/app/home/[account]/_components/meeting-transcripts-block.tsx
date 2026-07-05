@@ -39,6 +39,7 @@ export function MeetingTranscriptsBlock({
   accountSlug,
   clientId,
   dealId,
+  jobId,
   canEdit,
   variant = 'default',
 }: {
@@ -46,6 +47,7 @@ export function MeetingTranscriptsBlock({
   accountSlug: string;
   clientId?: string;
   dealId?: string;
+  jobId?: string;
   canEdit: boolean;
   /** List-only layout for client detail — no inline create form. */
   variant?: 'default' | 'list';
@@ -61,9 +63,12 @@ export function MeetingTranscriptsBlock({
     '[account]',
     accountSlug,
   );
-  const newMeetingHref = clientId
-    ? `${meetingsPath}?clientId=${encodeURIComponent(clientId)}&create=1`
-    : `${meetingsPath}?create=1`;
+  const newMeetingHref = (() => {
+    const params = new URLSearchParams({ create: '1' });
+    if (clientId) params.set('clientId', clientId);
+    if (jobId) params.set('jobId', jobId);
+    return `${meetingsPath}?${params.toString()}`;
+  })();
   const meetingDetailPath = (id: string) =>
     pathsConfig.app.accountMeetingDetail
       .replace('[account]', accountSlug)
@@ -76,6 +81,7 @@ export function MeetingTranscriptsBlock({
         accountId,
         clientId,
         dealId,
+        jobId,
       });
       setRows(
         (data ?? []).map((row) => ({
@@ -92,7 +98,7 @@ export function MeetingTranscriptsBlock({
     } finally {
       setLoading(false);
     }
-  }, [accountId, clientId, dealId]);
+  }, [accountId, clientId, dealId, jobId]);
 
   useEffect(() => {
     void load();
@@ -110,6 +116,7 @@ export function MeetingTranscriptsBlock({
           accountSlug,
           clientId,
           dealId,
+          jobId,
           title: title.trim() || 'Meeting transcript',
           content: content.trim(),
           meetingDate: meetingDate || null,

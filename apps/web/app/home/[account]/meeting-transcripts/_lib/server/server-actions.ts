@@ -15,6 +15,7 @@ const ListSchema = z.object({
   accountId: z.string().uuid(),
   clientId: z.string().uuid().optional(),
   dealId: z.string().uuid().optional(),
+  jobId: z.string().uuid().optional(),
 });
 
 const CreateSchema = z.object({
@@ -22,6 +23,7 @@ const CreateSchema = z.object({
   accountSlug: z.string().min(1).max(200).optional(),
   clientId: z.string().uuid().optional(),
   dealId: z.string().uuid().optional(),
+  jobId: z.string().uuid().optional(),
   title: z.string().min(1),
   content: z.string().min(1),
   source: z.enum(['paste', 'upload']).optional(),
@@ -127,6 +129,12 @@ export const listMeetingTranscripts = enhanceAction(
         clientId: input.clientId,
       });
     }
+    if (input.jobId) {
+      return service.listForJob({
+        accountId: input.accountId,
+        jobId: input.jobId,
+      });
+    }
     if (input.dealId) {
       return service.listForDeal({
         accountId: input.accountId,
@@ -153,6 +161,7 @@ export const createMeetingTranscript = enhanceAction(
       accountId: input.accountId,
       clientId: input.clientId,
       dealId: input.dealId,
+      jobId: input.jobId,
       title: input.title,
       content: input.content,
       source: input.source ?? 'paste',

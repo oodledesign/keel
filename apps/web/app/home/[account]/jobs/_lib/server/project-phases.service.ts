@@ -564,11 +564,11 @@ class ProjectPhasesService {
     const memberById = new Map(members.map((m) => [m.user_id, m]));
 
     const assignees: JobBoardAssignee[] = (assignments ?? []).map(
-      (a: { user_id: string; role_on_job: string | null }) => {
+      (a: { user_id: string; role_on_project: string | null }) => {
         const member = memberById.get(a.user_id);
         return {
           user_id: a.user_id,
-          role_on_job: a.role_on_job,
+          role_on_job: a.role_on_project,
           name: member?.name ?? null,
           email: member?.email ?? null,
           picture_url: member?.picture_url ?? null,

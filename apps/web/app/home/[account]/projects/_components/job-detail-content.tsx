@@ -8,11 +8,11 @@ import {
   FileText,
   LayoutGrid,
   MessageSquare,
+  Mic,
   Pencil,
   UserPlus,
   Users,
   Wallet,
-  Briefcase,
   ClipboardList,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -20,6 +20,7 @@ import Link from 'next/link';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import { ProfileAvatar } from '@kit/ui/profile-avatar';
 import {
   Select,
   SelectContent,
@@ -50,7 +51,7 @@ import type {
   NoteListItem,
 } from '../../_lib/workspace-content/types';
 
-import { JobEventsTabContent } from './job-events-tab';
+import { MeetingTranscriptsBlock } from '../../_components/meeting-transcripts-block';
 import { JobScheduleTabContent } from './job-schedule-tab';
 import { JobProjectWorkspace } from './job-project/job-project-workspace';
 import { ProjectFinancePanel } from './project-finance-panel';
@@ -161,7 +162,7 @@ export function JobDetailContent({
 
   const [assignments, setAssignments] = useState<{ user_id: string; role_on_job: string | null }[]>([]);
   const [loadingAssignments, setLoadingAssignments] = useState(true);
-  const [members, setMembers] = useState<{ user_id: string; name: string | null; email: string | null }[]>([]);
+  const [members, setMembers] = useState<{ user_id: string; name: string | null; email: string | null; picture_url?: string | null }[]>([]);
   const [selectedMemberId, setSelectedMemberId] = useState('');
   const [assignRole, setAssignRole] = useState('');
   const [assigning, setAssigning] = useState(false);
@@ -219,14 +220,14 @@ export function JobDetailContent({
   }, [accountId, jobId]);
 
   useEffect(() => {
-    if (!accountSlug || !canEditJobs) return;
+    if (!accountSlug) return;
     listAccountMembers({ accountSlug })
       .then((raw: unknown) => {
         const list = Array.isArray(raw) ? raw : [];
-        setMembers(list as { user_id: string; name: string | null; email: string | null }[]);
+        setMembers(list as { user_id: string; name: string | null; email: string | null; picture_url?: string | null }[]);
       })
       .catch(() => setMembers([]));
-  }, [accountSlug, canEditJobs]);
+  }, [accountSlug]);
 
   useEffect(() => {
     refreshNotes();
@@ -319,7 +320,7 @@ export function JobDetailContent({
               {PRIORITY_LABELS[job.priority] ?? job.priority}
             </span>
           </div>
-          <div className="mt-1.5 flex flex-wrap gap-x-4 text-xs text-[var(--workspace-shell-text-muted)]">
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[var(--workspace-shell-text-muted)]">
             <span>Due {formatDueDate(job.due_date)}</span>
             {!isContractorView && (
               <span>Value {formatValue(job.value_pence)}</span>
@@ -327,11 +328,40 @@ export function JobDetailContent({
             {client && (
               <span>
                 Client{' '}
-                <Link href={clientsPath} className="text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]">
+                <Link href={`${clientsPath}/${client.id}`} className="text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]">
                   {client.display_name ?? 'Client'}
                 </Link>
               </span>
             )}
+            <span className="inline-flex flex-wrap items-center gap-1.5">
+              {loadingAssignments ? (
+                <span>Team …</span>
+              ) : assignments.length === 0 ? (
+                <span>No team assigned</span>
+              ) : (
+                <>
+                  <span>Team</span>
+                  {assignments.map((a) => {
+                    const member = members.find((m) => m.user_id === a.user_id);
+                    const label = member?.name || member?.email || a.user_id.slice(0, 8);
+                    return (
+                      <span
+                        key={a.user_id}
+                        className="inline-flex items-center gap-1 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/60 py-0.5 pl-0.5 pr-2"
+                        title={a.role_on_job ? `${a.role_on_job}: ${label}` : label}
+                      >
+                        <ProfileAvatar
+                          displayName={label}
+                          pictureUrl={member?.picture_url}
+                          className="h-5 w-5"
+                        />
+                        <span className="max-w-[96px] truncate">{label}</span>
+                      </span>
+                    );
+                  })}
+                </>
+              )}
+            </span>
           </div>
         </div>
         {canEditJobs && (
@@ -385,11 +415,11 @@ export function JobDetailContent({
             Messages
           </TabsTrigger>
           <TabsTrigger
-            value="visits"
+            value="meetings"
             className="gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
           >
-            <Briefcase className="h-3.5 w-3.5" />
-            Visits
+            <Mic className="h-3.5 w-3.5" />
+            Meetings
           </TabsTrigger>
           {!isContractorView && (
             <TabsTrigger
@@ -406,12 +436,12 @@ export function JobDetailContent({
               className="gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
             >
               <FileText className="h-3.5 w-3.5" />
-              Docs
+              Notes and files
             </TabsTrigger>
           )}
         </TabsList>
 
-        <TabsContent value="project" className="mt-0 min-h-0 flex-1 overflow-auto p-4 md:p-5">
+        <TabsContent value="project" className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden p-4 md:p-5">
           <JobProjectWorkspace
             accountSlug={accountSlug}
             accountId={accountId}
@@ -428,6 +458,7 @@ export function JobDetailContent({
             client={client ? { id: client.id, display_name: client.display_name } : null}
             canEditJobs={canEditJobs}
             isContractorView={isContractorView}
+            onAssignmentsChange={refreshAssignments}
           />
         </TabsContent>
 
@@ -632,13 +663,15 @@ export function JobDetailContent({
               </Button>
         </TabsContent>
 
-        <TabsContent value="visits" className="mt-0 flex-1 overflow-auto p-4 md:p-5">
-              <JobEventsTabContent
-                accountSlug={accountSlug}
-                accountId={accountId}
-                jobId={jobId}
-                canEditJobs={canEditJobs}
-              />
+        <TabsContent value="meetings" className="mt-0 flex-1 overflow-auto p-4 md:p-5">
+          <MeetingTranscriptsBlock
+            accountId={accountId}
+            accountSlug={accountSlug}
+            clientId={client?.id}
+            jobId={jobId}
+            canEdit={canEditJobs}
+            variant="list"
+          />
         </TabsContent>
 
         {!isContractorView && (

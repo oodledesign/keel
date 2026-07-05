@@ -67,7 +67,7 @@ export function ProjectsKanbanView({
                     key={item.id}
                     href={detailPath(item.id)}
                     className={cn(
-                      'block rounded-lg border border-[color:var(--workspace-shell-border)] bg-[#111827] p-3 transition-colors hover:border-[var(--ozer-accent)]/30 hover:bg-[var(--workspace-shell-sidebar-accent)]',
+                      'block rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-3 transition-colors hover:border-[var(--ozer-accent)]/30 hover:bg-[var(--workspace-shell-panel-hover)]',
                     )}
                   >
                     <div className="mb-1 flex items-center gap-2">

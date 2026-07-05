@@ -216,7 +216,7 @@ export function AddDealDialog({
           Add to pipeline
         </button>
       </DialogTrigger>
-      <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[#0F1923] text-[var(--workspace-shell-text)] sm:max-w-md">
+      <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add to pipeline</DialogTitle>
           <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
@@ -232,7 +232,7 @@ export function AddDealDialog({
               className={cn(
                 'flex-1 rounded-lg px-3 py-1.5 font-medium transition-colors',
                 mode === 'lead'
-                  ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                  ? 'bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] shadow-sm'
                   : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
               )}
             >
@@ -244,7 +244,7 @@ export function AddDealDialog({
               className={cn(
                 'flex-1 rounded-lg px-3 py-1.5 font-medium transition-colors',
                 mode === 'client'
-                  ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                  ? 'bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] shadow-sm'
                   : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
               )}
             >
@@ -275,7 +275,7 @@ export function AddDealDialog({
                   id="contactName"
                   name="contactName"
                   placeholder="Jane Smith"
-                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
                 />
               </div>
               <div className="space-y-2">
@@ -286,7 +286,7 @@ export function AddDealDialog({
                   id="companyName"
                   name="companyName"
                   placeholder="Acme Ltd"
-                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
                 />
               </div>
             </div>
@@ -297,10 +297,10 @@ export function AddDealDialog({
               <div className="space-y-2">
                 <Label className="text-[var(--workspace-shell-text-muted)]">Workspace *</Label>
                 <Select value={businessId} onValueChange={setBusinessId}>
-                  <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
+                  <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
                     <SelectValue placeholder="Select workspace" />
                   </SelectTrigger>
-                  <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
+                  <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
                     {businesses.map((biz) => (
                       <SelectItem key={biz.id} value={biz.id}>
                         <span className="flex items-center gap-2">
@@ -321,10 +321,10 @@ export function AddDealDialog({
             <div className="space-y-2">
               <Label className="text-[var(--workspace-shell-text-muted)]">Stage</Label>
               <Select value={stage} onValueChange={setStage}>
-                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
+                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
+                <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
                   {STAGES.map((s) => (
                     <SelectItem key={s.key} value={s.key}>
                       {s.label}
@@ -346,7 +346,7 @@ export function AddDealDialog({
               min="0"
               step="1"
               placeholder="5000"
-              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
             />
           </div>
 
@@ -359,7 +359,7 @@ export function AddDealDialog({
                 id="nextAction"
                 name="nextAction"
                 placeholder="Short description"
-                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
               />
             </div>
             <div className="space-y-2">
@@ -370,7 +370,7 @@ export function AddDealDialog({
                 id="nextActionDate"
                 name="nextActionDate"
                 type="date"
-                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
               />
             </div>
           </div>

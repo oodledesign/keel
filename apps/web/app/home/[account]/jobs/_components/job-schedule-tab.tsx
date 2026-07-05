@@ -298,7 +298,7 @@ export function JobScheduleTabContent({
               >
                 <Link href={jobEditPath ?? '#'}>
                   <Pencil className="mr-1.5 h-4 w-4" />
-                  Edit (Visits tab)
+                  Edit (Schedule tab)
                 </Link>
               </Button>
             )}

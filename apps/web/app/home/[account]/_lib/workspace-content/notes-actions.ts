@@ -92,6 +92,7 @@ export const saveWorkspaceNoteAction = enhanceAction(
         .eq('id', data.noteId)
         .eq('account_id', data.accountId);
       if (error) throw error;
+      queueBrainIndexSource(data.accountId, 'note', data.noteId);
       return { noteId: data.noteId };
     }
 
