@@ -151,7 +151,7 @@ export async function loadBrainSourcePreview(
       const { data } = await client
         .from('meeting_transcripts')
         .select(
-          'title, content, updated_at, meeting_date, client_id, clients(display_name, company_name, first_name, last_name, name)',
+          'title, content, updated_at, meeting_date, client_id, clients(display_name, company_name, first_name, last_name)',
         )
         .eq('id', sourceId)
         .eq('account_id', accountId)
@@ -188,7 +188,6 @@ export async function loadBrainSourcePreview(
           .filter(Boolean)
           .join(' ')
           .trim() ||
-        clientRecord?.name?.trim() ||
         null;
 
       const title = ((data.title as string) || 'Meeting transcript').trim();

@@ -114,7 +114,7 @@ export const getBrainKnowledgeStats = enhanceAction(
 export const reindexBrainAccount = enhanceAction(
   async (input) => {
     const admin = getSupabaseServerAdminClient();
-    const result = await indexAccount(admin, input.accountId);
+    const result = await indexAccount(admin, input.accountId, { force: true });
     revalidatePath(
       pathsConfig.app.accountBrainKnowledge.replace('[account]', input.accountSlug),
     );

@@ -48,7 +48,9 @@ export const POST = enhanceRouteHandler(
     }
 
     const admin = getSupabaseServerAdminClient();
-    const result = await indexAccount(admin, parsed.data.accountId);
+    const result = await indexAccount(admin, parsed.data.accountId, {
+      force: true,
+    });
 
     revalidatePath(
       pathsConfig.app.accountBrainKnowledge.replace(

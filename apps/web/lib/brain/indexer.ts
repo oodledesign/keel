@@ -45,6 +45,9 @@ async function loadAccountSlug(admin: AdminClient, accountId: string) {
   return (data?.slug as string | undefined) ?? accountId;
 }
 
+const MEETING_TRANSCRIPT_CLIENT_SELECT =
+  'clients(display_name, company_name, first_name, last_name)';
+
 function transcriptClientName(
   client:
     | {
@@ -52,14 +55,12 @@ function transcriptClientName(
         company_name?: string | null;
         first_name?: string | null;
         last_name?: string | null;
-        name?: string | null;
       }
     | {
         display_name?: string | null;
         company_name?: string | null;
         first_name?: string | null;
         last_name?: string | null;
-        name?: string | null;
       }[]
     | null,
 ): string | null {
@@ -69,7 +70,6 @@ function transcriptClientName(
     row.display_name?.trim() ||
     row.company_name?.trim() ||
     [row.first_name, row.last_name].filter(Boolean).join(' ').trim() ||
-    row.name?.trim() ||
     null
   );
 }
@@ -128,14 +128,18 @@ async function loadTranscriptIndexable(
   accountSlug: string,
   sourceId: string,
 ): Promise<IndexableRecord | null> {
-  const { data: row } = await admin
+  const { data: row, error } = await admin
     .from('meeting_transcripts')
     .select(
-      'id, title, content, updated_at, client_id, meeting_date, clients(display_name, company_name, first_name, last_name, name)',
+      `id, title, content, updated_at, client_id, meeting_date, ${MEETING_TRANSCRIPT_CLIENT_SELECT}`,
     )
     .eq('account_id', accountId)
     .eq('id', sourceId)
     .maybeSingle();
+
+  if (error) {
+    throw new Error(`meeting_transcripts: ${error.message}`);
+  }
 
   if (!row) {
     return null;
@@ -227,12 +231,13 @@ export async function loadAccountIndexables(
     });
   }
 
-  const { data: jobs } = await admin
-    .from('jobs')
+  const { data: projects } = await admin
+    .from('projects')
     .select('id, title, description, updated_at, client_id')
-    .eq('account_id', accountId);
+    .eq('account_id', accountId)
+    .eq('project_type', 'delivery');
 
-  for (const row of jobs ?? []) {
+  for (const row of projects ?? []) {
     const title = (row.title as string)?.trim() || 'Job';
     const description = (row.description as string | null)?.trim() ?? '';
     const text = description ? `# ${title}\n\n${description}` : title;
@@ -249,36 +254,36 @@ export async function loadAccountIndexables(
     });
   }
 
-  const { data: jobNotes } = await admin
-    .from('job_notes')
-    .select('id, note, updated_at, job_id, jobs(title, client_id)')
+  const { data: deliveryNotes } = await admin
+    .from('project_delivery_notes')
+    .select('id, note, updated_at, project_id, projects(title, client_id)')
     .eq('account_id', accountId);
 
-  for (const row of jobNotes ?? []) {
+  for (const row of deliveryNotes ?? []) {
     const note = (row.note as string)?.trim();
     if (!note) continue;
-    const job = row.jobs as
+    const project = row.projects as
       | { title?: string | null; client_id?: string | null }
       | { title?: string | null; client_id?: string | null }[]
       | null;
-    const jobRow = Array.isArray(job) ? job[0] : job;
-    const jobTitle = jobRow?.title?.trim() || 'Job';
+    const projectRow = Array.isArray(project) ? project[0] : project;
+    const projectTitle = projectRow?.title?.trim() || 'Project';
     records.push({
       sourceType: 'job_note',
       sourceId: row.id as string,
       accountId,
       accountSlug,
-      title: `Note on: ${jobTitle}`,
+      title: `Note on: ${projectTitle}`,
       text: note,
       updatedAt: row.updated_at as string,
-      jobId: row.job_id as string,
-      clientId: jobRow?.client_id ?? null,
+      jobId: row.project_id as string,
+      clientId: projectRow?.client_id ?? null,
     });
   }
 
   const { data: phases } = await admin
     .from('project_phases')
-    .select('id, name, description, updated_at, job_id')
+    .select('id, name, description, updated_at, project_id')
     .eq('account_id', accountId);
 
   for (const row of phases ?? []) {
@@ -292,17 +297,21 @@ export async function loadAccountIndexables(
       title: `${(row.name as string).trim()} (phase)`,
       text: description,
       updatedAt: row.updated_at as string,
-      jobId: row.job_id as string,
-      phaseJobId: row.job_id as string,
+      jobId: row.project_id as string,
+      phaseJobId: row.project_id as string,
     });
   }
 
-  const { data: transcripts } = await admin
+  const { data: transcripts, error: transcriptsError } = await admin
     .from('meeting_transcripts')
     .select(
-      'id, title, content, updated_at, client_id, meeting_date, clients(display_name, company_name, first_name, last_name, name)',
+      `id, title, content, updated_at, client_id, meeting_date, ${MEETING_TRANSCRIPT_CLIENT_SELECT}`,
     )
     .eq('account_id', accountId);
+
+  if (transcriptsError) {
+    throw new Error(`meeting_transcripts: ${transcriptsError.message}`);
+  }
 
   const transcriptRows = transcripts ?? [];
   const enrichmentByTranscriptId = await loadMeetingTranscriptEnrichmentByIds(
@@ -452,6 +461,7 @@ function buildMetadata(record: IndexableRecord): BrainChunkMetadata {
 async function upsertRecordChunks(
   admin: AdminClient,
   record: IndexableRecord,
+  forceReindex = false,
 ) {
   const fresh = await loadIndexableSource(
     admin,
@@ -484,7 +494,7 @@ async function upsertRecordChunks(
     chunkCount: chunks.length,
   });
 
-  if (!needsReembed) {
+  if (!needsReembed && !forceReindex) {
     return existingRows?.length ?? 0;
   }
 
@@ -554,11 +564,15 @@ export async function indexSource(
     return { deleted: true as const };
   }
 
-  const chunkCount = await upsertRecordChunks(admin, record);
+  const chunkCount = await upsertRecordChunks(admin, record, false);
   return { chunkCount };
 }
 
-export async function indexAccount(admin: AdminClient, accountId: string) {
+export async function indexAccount(
+  admin: AdminClient,
+  accountId: string,
+  options?: { force?: boolean },
+) {
   if (!isVoyageConfigured()) {
     return {
       indexed: 0,
@@ -580,9 +594,11 @@ export async function indexAccount(admin: AdminClient, accountId: string) {
     `[brain] indexing account ${accountId}: ${records.length} sources`,
   );
 
+  const forceReindex = options?.force ?? false;
+
   for (const record of records) {
     try {
-      chunkTotal += await upsertRecordChunks(admin, record);
+      chunkTotal += await upsertRecordChunks(admin, record, forceReindex);
       indexed += 1;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -656,8 +672,8 @@ export async function listActiveAccountIds(admin: AdminClient) {
   const tables = [
     'notes',
     'docs',
-    'jobs',
-    'job_notes',
+    'projects',
+    'project_delivery_notes',
     'meeting_transcripts',
     'proposals',
     'project_phases',
