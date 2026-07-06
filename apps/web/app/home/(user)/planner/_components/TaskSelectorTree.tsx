@@ -31,6 +31,7 @@ import { cn } from '@kit/ui/utils';
 import { updateTask } from '~/home/(user)/_lib/actions/task-actions';
 import { AddTaskDialog } from '~/home/(user)/_components/dashboard/add-task-dialog';
 import { EditTaskDialog } from '~/home/(user)/tasks/_components/edit-task-dialog';
+import { plannerTaskToPageTask } from '~/lib/planner/planner-task-to-page-task';
 import { PlannerClientPill } from './planner-client-pill';
 import type {
   PlannerProjectNode,
