@@ -1,5 +1,5 @@
 {
-  "name": "@kit/keel-mcp",
+  "name": "@kit/tasks",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -11,20 +11,16 @@
   },
   "prettier": "@kit/prettier-config",
   "exports": {
-    ".": "./src/index.ts"
+    "./create-task": "./src/create-task.ts"
   },
   "dependencies": {
-    "@kit/tasks": "workspace:*",
-    "@modelcontextprotocol/sdk": "1.26.0",
-    "@supabase/supabase-js": "catalog:",
-    "jose": "^6.0.11",
-    "zod": "catalog:"
+    "@kit/supabase": "workspace:*"
   },
   "devDependencies": {
     "@kit/eslint-config": "workspace:*",
     "@kit/prettier-config": "workspace:*",
     "@kit/tsconfig": "workspace:*",
-    "@types/node": "catalog:",
+    "@supabase/supabase-js": "catalog:",
     "typescript": "^5.9.3"
   }
 }

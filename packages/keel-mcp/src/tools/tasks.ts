@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { createTaskForUser } from '@kit/tasks/create-task';
+
 import type { KeelMcpToolRegistrar } from './types';
 import {
   assertSupabaseOk,
@@ -7,8 +9,14 @@ import {
   toolJson,
 } from './shared';
 
-const taskStatusSchema = z.enum(['todo', 'in_progress', 'done']);
-const taskPrioritySchema = z.enum(['low', 'medium', 'high']);
+const taskStatusSchema = z.enum([
+  'todo',
+  'in_progress',
+  'client_review',
+  'done',
+  'cancelled',
+]);
+const taskPrioritySchema = z.enum(['low', 'medium', 'high', 'urgent']);
 
 const listTasksSchema = z.object({
   status: taskStatusSchema.optional(),
@@ -74,7 +82,6 @@ export const registerTaskTools: KeelMcpToolRegistrar = (server, context) => {
         .select(
           'id, title, status, priority, due_date, project_id, area_id',
         )
-        .eq('user_id', userId)
         .order('due_date', { ascending: true, nullsFirst: false })
         .limit(input.limit);
 
@@ -102,44 +109,30 @@ export const registerTaskTools: KeelMcpToolRegistrar = (server, context) => {
       inputSchema: createTaskSchema,
     },
     async (input) => {
-      const insertRow = pickDefined({
+      const result = await createTaskForUser(supabase, userId, {
         title: input.title,
         status: input.status,
         priority: input.priority,
-        due_date: input.due_date ?? null,
-        project_id: input.project_id ?? null,
-        area_id: input.area_id ?? null,
-        notes: input.notes?.trim() || null,
-        user_id: userId,
+        dueDate: input.due_date,
+        projectId: input.project_id,
+        areaId: input.area_id,
+        notes: input.notes,
         source: 'mcp',
       });
 
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
       const { data, error } = await supabase
         .from('tasks')
-        .insert(insertRow)
         .select(
           'id, title, status, priority, due_date, project_id, area_id',
         )
+        .eq('id', result.id)
         .single();
 
-      if (error?.message?.includes('source')) {
-        const { source: _source, ...withoutSource } = insertRow as Record<
-          string,
-          unknown
-        > & { source?: string };
-        void _source;
-        const retry = await supabase
-          .from('tasks')
-          .insert(withoutSource)
-          .select(
-            'id, title, status, priority, due_date, project_id, area_id',
-          )
-          .single();
-        assertSupabaseOk(retry.data, retry.error, 'create task');
-        return toolJson({ task: mapTask(retry.data as TaskRow) });
-      }
-
-      assertSupabaseOk(data, error, 'create task');
+      assertSupabaseOk(data, error, 'load created task');
       return toolJson({ task: mapTask(data as TaskRow) });
     },
   );
@@ -168,7 +161,6 @@ export const registerTaskTools: KeelMcpToolRegistrar = (server, context) => {
         .from('tasks')
         .update(updates)
         .eq('id', input.id)
-        .eq('user_id', userId)
         .select(
           'id, title, status, priority, due_date, project_id, area_id',
         )

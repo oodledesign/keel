@@ -101,6 +101,7 @@ export function BusinessDashboardMobile({
             data={revenueTrendData}
             variant="grouped"
             surface="workspace"
+            compact
           />
           <HapticLink
             href={financesHref}

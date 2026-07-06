@@ -114,10 +114,13 @@ export function FinanceTrendBarChart({
   data,
   variant = 'stacked',
   surface = 'default',
+  compact = false,
 }: {
   data: MonthlyFinancePoint[];
   variant?: 'stacked' | 'grouped';
   surface?: 'default' | 'workspace';
+  /** Shorter dashboard embed — fills parent height instead of fixed 18rem. */
+  compact?: boolean;
 }) {
   const isWorkspaceSurface = surface === 'workspace';
   const axisTickFill = isWorkspaceSurface ? WORKSPACE_CHART_TICK : '#8FA1BC';
@@ -128,6 +131,10 @@ export function FinanceTrendBarChart({
   const cursorFill = isWorkspaceSurface
     ? 'color-mix(in srgb, var(--ozer-accent) 8%, transparent)'
     : 'rgba(255,255,255,0.035)';
+  const chartShellClass = compact ? 'h-full min-h-0' : 'h-72';
+  const chartMargin = compact
+    ? { top: 4, right: 4, left: -12, bottom: 0 }
+    : undefined;
   if (!data.length) {
     return (
       <p className="flex h-72 items-center justify-center text-sm text-violet-200/60">
@@ -138,24 +145,28 @@ export function FinanceTrendBarChart({
 
   if (variant === 'grouped') {
     return (
-      <div className="h-72">
+      <div className={chartShellClass}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} barCategoryGap="20%">
+          <BarChart data={data} barCategoryGap="20%" margin={chartMargin}>
             <CartesianGrid vertical={false} stroke={gridStroke} />
             <XAxis
               dataKey="month"
               tickLine={false}
               axisLine={false}
-              tick={{ fill: axisTickFill, fontSize: 12 }}
+              tick={{ fill: axisTickFill, fontSize: compact ? 11 : 12 }}
             />
             <YAxis
               tickLine={false}
               axisLine={false}
-              tick={{ fill: axisTickFill, fontSize: 11 }}
+              domain={[0, 'auto']}
+              tick={{ fill: axisTickFill, fontSize: compact ? 10 : 11 }}
               tickFormatter={(v) => `£${Math.round(v / 1000)}k`}
+              width={compact ? 36 : 60}
             />
             <Tooltip cursor={{ fill: cursorFill }} content={<FinanceGroupedTooltip />} />
-            <Legend wrapperStyle={{ fontSize: 12, color: legendColor }} />
+            {!compact ? (
+              <Legend wrapperStyle={{ fontSize: 12, color: legendColor }} />
+            ) : null}
             <Bar
               dataKey="income"
               name="Income"

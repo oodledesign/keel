@@ -1,18 +1,31 @@
-import { timingSafeEqual } from 'node:crypto';
+import { createRemoteJWKSet, jwtVerify } from 'jose';
 
 import type { McpRequestContext } from './context';
-import { getKeelMcpSupabaseAdmin } from './supabase';
+import {
+  getOAuthProtectedResourceMetadataUrl,
+  SUPABASE_JWKS_URL,
+} from './config';
+import { createKeelMcpSupabaseClient } from './supabase';
 
 export type AuthResult =
   | { ok: true; context: McpRequestContext }
   | { ok: false; response: Response };
 
+type VerifiedMcpToken = {
+  sub: string;
+  clientId: string | null;
+};
+
+const jwks = createRemoteJWKSet(new URL(SUPABASE_JWKS_URL));
+
 function unauthorized(message = 'Unauthorized'): Response {
+  const resourceMetadata = getOAuthProtectedResourceMetadataUrl();
+
   return new Response(JSON.stringify({ error: message }), {
     status: 401,
     headers: {
       'Content-Type': 'application/json',
-      'WWW-Authenticate': 'Bearer realm="keel-mcp"',
+      'WWW-Authenticate': `Bearer resource_metadata="${resourceMetadata}"`,
     },
   });
 }
@@ -27,27 +40,22 @@ function extractBearerToken(request: Request): string | null {
   return match?.[1]?.trim() ?? null;
 }
 
-function tokenMatches(candidate: string, stored: string): boolean {
-  const left = Buffer.from(candidate);
-  const right = Buffer.from(stored);
+async function verifyAccessToken(token: string): Promise<VerifiedMcpToken> {
+  const { payload } = await jwtVerify(token, jwks);
 
-  if (left.length !== right.length) {
-    return false;
+  const sub = typeof payload.sub === 'string' ? payload.sub : null;
+  if (!sub) {
+    throw new Error('Token is missing subject');
   }
 
-  return timingSafeEqual(left, right);
-}
+  const clientId =
+    typeof payload.client_id === 'string'
+      ? payload.client_id
+      : typeof payload.azp === 'string'
+        ? payload.azp
+        : null;
 
-function normalizeApiKeys(value: unknown): string[] {
-  if (Array.isArray(value)) {
-    return value.filter((entry): entry is string => typeof entry === 'string');
-  }
-
-  if (typeof value === 'string' && value.trim()) {
-    return [value.trim()];
-  }
-
-  return [];
+  return { sub, clientId };
 }
 
 export async function authenticateMcpRequest(
@@ -59,73 +67,20 @@ export async function authenticateMcpRequest(
     return { ok: false, response: unauthorized('Missing Bearer token') };
   }
 
-  const supabase = getKeelMcpSupabaseAdmin();
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .select('id, api_keys')
-    .contains('api_keys', [token])
-    .maybeSingle();
+  try {
+    const verified = await verifyAccessToken(token);
 
-  if (error) {
-    // Fall back to in-memory scan when contains() isn't supported for the column type.
-    if (error.code === '42883' || error.message.includes('operator does not exist')) {
-      return authenticateMcpRequestByScan(request, token, supabase);
-    }
-
-    console.error('[keel-mcp] Failed to validate API key:', error.message);
     return {
-      ok: false,
-      response: unauthorized('Invalid API key'),
+      ok: true,
+      context: {
+        userId: verified.sub,
+        clientId: verified.clientId,
+        accessToken: token,
+        supabase: createKeelMcpSupabaseClient(token),
+      },
     };
+  } catch (error) {
+    console.error('[keel-mcp] Failed to validate OAuth access token:', error);
+    return { ok: false, response: unauthorized('Invalid or expired token') };
   }
-
-  if (!profile?.id) {
-    return { ok: false, response: unauthorized('Invalid API key') };
-  }
-
-  return {
-    ok: true,
-    context: {
-      userId: profile.id as string,
-      supabase,
-    },
-  };
-}
-
-async function authenticateMcpRequestByScan(
-  request: Request,
-  token: string,
-  supabase: ReturnType<typeof getKeelMcpSupabaseAdmin>,
-): Promise<AuthResult> {
-  void request;
-
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id, api_keys')
-    .not('api_keys', 'is', null);
-
-  if (error) {
-    console.error('[keel-mcp] Failed to validate API key:', error.message);
-    return {
-      ok: false,
-      response: unauthorized('Invalid API key'),
-    };
-  }
-
-  const profile = (data ?? []).find((row) => {
-    const keys = normalizeApiKeys((row as { api_keys?: unknown }).api_keys);
-    return keys.some((stored) => tokenMatches(token, stored));
-  });
-
-  if (!profile?.id) {
-    return { ok: false, response: unauthorized('Invalid API key') };
-  }
-
-  return {
-    ok: true,
-    context: {
-      userId: profile.id as string,
-      supabase,
-    },
-  };
 }

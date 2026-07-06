@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 
+import { createTaskForUser } from '@kit/tasks/create-task';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
@@ -93,97 +94,31 @@ export async function createTask(input: CreateTaskInput) {
   const client = getSupabaseServerClient();
   const user = await requireUserInServerComponent();
 
-  let projectId = input.projectId || null;
-  let clientId = input.clientId || null;
-  let areaId = input.areaId || null;
-  let accountId = input.accountId || null;
-
-  if (input.parentTaskId) {
-    if (input.parentTaskContext) {
-      const p = input.parentTaskContext;
-      projectId = projectId ?? p.projectId ?? null;
-      clientId = clientId ?? p.clientId ?? null;
-      areaId = areaId ?? p.areaId ?? null;
-      accountId = accountId ?? p.accountId ?? null;
-      if (!accountId && p.jobId) {
-        accountId = await resolveTaskAccountId(client, { jobId: p.jobId });
-      }
-    } else {
-      const { data: parent, error: pe } = await client
-        .from('tasks')
-        .select('user_id, project_id, client_id, area_id, account_id, job_id')
-        .eq('id', input.parentTaskId)
-        .maybeSingle();
-
-      if (pe || !parent) {
-        return {
-          success: false,
-          error: 'Parent task not found',
-          id: null,
-        };
-      }
-      const p = parent as {
-        project_id: string | null;
-        client_id: string | null;
-        area_id: string | null;
-        account_id: string | null;
-        job_id: string | null;
-      };
-      projectId = projectId ?? p.project_id;
-      clientId = clientId ?? p.client_id;
-      areaId = areaId ?? p.area_id;
-      accountId = accountId ?? p.account_id;
-      if (!accountId && p.job_id) {
-        accountId = await resolveTaskAccountId(client, { jobId: p.job_id });
-      }
-    }
-  }
-
-  accountId =
-    accountId ??
-    (await resolveTaskAccountId(client, {
-      projectId,
-      clientId,
-    }));
-
-  const insertRow: Record<string, unknown> = {
+  const result = await createTaskForUser(client, user.id, {
     title: input.title,
-    priority: normalizeTaskPriorityForDb(input.priority),
-    due_date: input.dueDate || null,
-    project_id: projectId,
-    area_id: areaId,
-    client_id: clientId,
-    account_id: accountId,
-    user_id: user.id,
-    status: 'todo',
-  };
+    priority: normalizeTaskPriorityForDb(input.priority) as
+      | 'low'
+      | 'medium'
+      | 'high'
+      | 'urgent',
+    dueDate: input.dueDate,
+    projectId: input.projectId,
+    areaId: input.areaId,
+    clientId: input.clientId,
+    parentTaskId: input.parentTaskId,
+    parentTaskContext: input.parentTaskContext,
+    accountId: input.accountId,
+    notes: input.notes,
+  });
 
-  if (input.parentTaskId) {
-    insertRow.parent_task_id = input.parentTaskId;
-  }
-  if (input.notes?.trim()) {
-    insertRow.notes = input.notes.trim();
-  }
-
-  const { data, error } = await client
-    .from('tasks')
-    .insert(insertRow)
-    .select('id')
-    .single();
-
-  if (error) {
-    const msg =
-      error.message?.includes("'client_id'") &&
-      error.message?.toLowerCase().includes('schema cache')
-        ? "Tasks table is missing the client_id column. Run migrations (e.g. pnpm supabase:web:reset or supabase db push from apps/web) then pnpm --filter web supabase:typegen."
-        : error.message;
-    return { success: false, error: msg, id: null };
+  if (!result.success) {
+    return { success: false, error: result.error, id: null };
   }
 
   revalidatePath('/home', 'layout');
   revalidatePath('/home/tasks');
   revalidatePath('/app/tasks');
-  return { success: true, error: null, id: data.id as string };
+  return { success: true, error: null, id: result.id };
 }
 
 function uiStatusToDb(

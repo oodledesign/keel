@@ -89,6 +89,7 @@
     "@kit/policies": "workspace:*",
     "@kit/shared": "workspace:*",
     "@kit/supabase": "workspace:*",
+    "@kit/tasks": "workspace:*",
     "@kit/team-accounts": "workspace:*",
     "@kit/ui": "workspace:*",
     "@makerkit/data-loader-supabase-core": "^0.0.10",

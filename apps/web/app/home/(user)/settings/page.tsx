@@ -11,6 +11,7 @@ import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
+import { ConnectToClaudeSettingsSection } from './_components/connect-to-claude-settings-section';
 import { KeelUsePreferencesSection } from './_components/keel-use-preferences-section';
 import { PersonalApiTokensSection } from './_components/personal-api-tokens-section';
 import { PersonalDashboardShortcutsSection } from './_components/personal-dashboard-shortcuts-section';
@@ -77,6 +78,9 @@ function PersonalAccountSettingsPage() {
           <Suspense fallback={<p className="text-sm text-[var(--workspace-shell-text-muted)]">Loading…</p>}>
             <PersonalIntegrationsSettingsSection />
           </Suspense>
+          <div className="mt-4">
+            <ConnectToClaudeSettingsSection />
+          </div>
         </div>
 
         <div className="mt-6 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
