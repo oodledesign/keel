@@ -125,7 +125,7 @@ export async function uploadActivityBlocks(params: {
 
   if (!privacy.tracking_enabled) {
     throw new Error(
-      'Activity tracking is disabled for this workspace. Enable it in privacy settings first.',
+      'Activity tracking is disabled for this workspace. Enable it under Workspace settings → Activity tracking.',
     );
   }
 

@@ -47,6 +47,14 @@ export function buildWorkspaceSettingsNav(input: {
       href: settingsPath(pathsConfig.app.accountFocusSettings, accountSlug),
       icon: 'calendar-off',
     },
+    {
+      id: 'activity',
+      label: 'Activity tracking',
+      href: settingsPath(
+        pathsConfig.app.accountActivityPrivacySettings,
+        accountSlug,
+      ),
+    },
   ];
 
   if (isBusinessProfile(workspaceProfile)) {
