@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { KeelMcpToolRegistrar } from './types';
+import type { OzerMcpToolRegistrar } from './types';
 import {
   assertSupabaseOk,
   dealDisplayName,
@@ -77,7 +77,7 @@ async function loadAccessibleDeal(
   return data as PipelineDealRow;
 }
 
-export const registerPipelineTools: KeelMcpToolRegistrar = (server, context) => {
+export const registerPipelineTools: OzerMcpToolRegistrar = (server, context) => {
   const { supabase, userId } = context;
 
   server.registerTool(

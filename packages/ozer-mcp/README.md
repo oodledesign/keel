@@ -1,4 +1,4 @@
-# @kit/keel-mcp
+# @kit/ozer-mcp
 
 Ozer MCP server package — Streamable HTTP transport with Supabase OAuth 2.1 and RLS-scoped database access.
 
@@ -14,7 +14,7 @@ OAuth consent UI: `/oauth/consent` with decision POST at `/api/oauth/decision`
 
 ```typescript
 // apps/web/app/api/mcp/route.ts
-import { handleMcpRequest } from '@kit/keel-mcp';
+import { handleMcpRequest } from '@kit/ozer-mcp';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -47,5 +47,5 @@ npx @modelcontextprotocol/inspector
 Point at `https://app.ozer.so/api/mcp` (or `http://localhost:3000/api/mcp` locally) and use Quick OAuth Flow against Supabase.
 
 ```bash
-pnpm --filter @kit/keel-mcp typecheck
+pnpm --filter @kit/ozer-mcp typecheck
 ```

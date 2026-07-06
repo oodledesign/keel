@@ -5,7 +5,7 @@ import {
   getOAuthProtectedResourceMetadataUrl,
   SUPABASE_JWKS_URL,
 } from './config';
-import { createKeelMcpSupabaseClient } from './supabase';
+import { createOzerMcpSupabaseClient } from './supabase';
 
 export type AuthResult =
   | { ok: true; context: McpRequestContext }
@@ -76,11 +76,11 @@ export async function authenticateMcpRequest(
         userId: verified.sub,
         clientId: verified.clientId,
         accessToken: token,
-        supabase: createKeelMcpSupabaseClient(token),
+        supabase: createOzerMcpSupabaseClient(token),
       },
     };
   } catch (error) {
-    console.error('[keel-mcp] Failed to validate OAuth access token:', error);
+    console.error('[ozer-mcp] Failed to validate OAuth access token:', error);
     return { ok: false, response: unauthorized('Invalid or expired token') };
   }
 }

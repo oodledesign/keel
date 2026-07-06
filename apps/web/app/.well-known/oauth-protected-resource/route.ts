@@ -1,7 +1,7 @@
 import {
   getMcpResourceUrl,
   SUPABASE_OAUTH_AS_DISCOVERY_URL,
-} from '@kit/keel-mcp';
+} from '@kit/ozer-mcp';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

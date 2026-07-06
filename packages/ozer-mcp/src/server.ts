@@ -1,15 +1,15 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp';
 
 import type { McpRequestContext } from './context';
-import { keelMcpTools } from './tools/index';
+import { ozerMcpTools } from './tools/index';
 
-export function createKeelMcpServer(context: McpRequestContext): McpServer {
+export function createOzerMcpServer(context: McpRequestContext): McpServer {
   const server = new McpServer({
-    name: 'keel-mcp',
+    name: 'ozer-mcp',
     version: '0.1.0',
   });
 
-  for (const registerTool of keelMcpTools) {
+  for (const registerTool of ozerMcpTools) {
     registerTool(server, context);
   }
 

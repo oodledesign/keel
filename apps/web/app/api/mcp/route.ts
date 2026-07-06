@@ -1,4 +1,4 @@
-import { handleMcpRequest } from '@kit/keel-mcp';
+import { handleMcpRequest } from '@kit/ozer-mcp';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

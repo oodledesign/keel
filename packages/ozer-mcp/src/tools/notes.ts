@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { KeelMcpToolRegistrar } from './types';
+import type { OzerMcpToolRegistrar } from './types';
 import {
   assertAccountAccess,
   assertClientOrgAccess,
@@ -98,7 +98,7 @@ async function resolveNoteAccountId(
   return accountId;
 }
 
-export const registerNoteTools: KeelMcpToolRegistrar = (server, context) => {
+export const registerNoteTools: OzerMcpToolRegistrar = (server, context) => {
   const { supabase, userId } = context;
 
   server.registerTool(

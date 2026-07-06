@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { getMcpResourceUrl } from '@kit/keel-mcp';
+import { getMcpResourceUrl } from '@kit/ozer-mcp';
 
 import { ConnectToClaudeCard } from './connect-to-claude-card';
 

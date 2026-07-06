@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { KeelMcpToolRegistrar } from './types';
+import type { OzerMcpToolRegistrar } from './types';
 import {
   assertClientOrgAccess,
   assertSupabaseOk,
@@ -76,7 +76,7 @@ function mapDeal(row: PipelineDealRow, clientOrgId: string) {
   };
 }
 
-export const registerClientTools: KeelMcpToolRegistrar = (server, context) => {
+export const registerClientTools: OzerMcpToolRegistrar = (server, context) => {
   const { supabase, userId } = context;
 
   server.registerTool(

@@ -1,7 +1,7 @@
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 
 import { authenticateMcpRequest } from './auth';
-import { createKeelMcpServer } from './server';
+import { createOzerMcpServer } from './server';
 
 export async function handleMcpRequest(request: Request): Promise<Response> {
   const auth = await authenticateMcpRequest(request);
@@ -12,7 +12,7 @@ export async function handleMcpRequest(request: Request): Promise<Response> {
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
   });
-  const server = createKeelMcpServer(auth.context);
+  const server = createOzerMcpServer(auth.context);
 
   await server.connect(transport);
 
@@ -29,7 +29,7 @@ export async function handleMcpRequest(request: Request): Promise<Response> {
 
     return await transport.handleRequest(request, { parsedBody });
   } catch (error) {
-    console.error('[keel-mcp] Failed to handle MCP request:', error);
+    console.error('[ozer-mcp] Failed to handle MCP request:', error);
     return new Response('Error handling MCP request', { status: 500 });
   } finally {
     await server.close();

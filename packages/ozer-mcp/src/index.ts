@@ -8,7 +8,7 @@ export {
   SUPABASE_OAUTH_AS_DISCOVERY_URL,
 } from './config';
 export { handleMcpRequest } from './handler';
-export { createKeelMcpServer } from './server';
-export { createKeelMcpSupabaseClient } from './supabase';
-export { keelMcpTools } from './tools/index';
-export type { KeelMcpToolRegistrar } from './tools/types';
+export { createOzerMcpServer } from './server';
+export { createOzerMcpSupabaseClient } from './supabase';
+export { ozerMcpTools } from './tools/index';
+export type { OzerMcpToolRegistrar } from './tools/types';

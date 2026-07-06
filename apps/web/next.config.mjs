@@ -14,7 +14,7 @@ const INTERNAL_PACKAGES = [
   '@kit/shared',
   '@kit/supabase',
   '@kit/i18n',
-  '@kit/keel-mcp',
+  '@kit/ozer-mcp',
   '@kit/tasks',
   '@kit/mailers',
   '@kit/billing-gateway',

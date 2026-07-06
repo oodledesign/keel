@@ -2,7 +2,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { getSupabaseAnonKey, getSupabaseUrl } from './config';
 
-export function createKeelMcpSupabaseClient(
+export function createOzerMcpSupabaseClient(
   accessToken: string,
 ): SupabaseClient {
   const url = getSupabaseUrl();
@@ -10,7 +10,7 @@ export function createKeelMcpSupabaseClient(
 
   if (!url || !anonKey) {
     throw new Error(
-      'Keel MCP requires SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) and NEXT_PUBLIC_SUPABASE_PUBLIC_KEY (or NEXT_PUBLIC_SUPABASE_ANON_KEY).',
+      'Ozer MCP requires SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) and NEXT_PUBLIC_SUPABASE_PUBLIC_KEY (or NEXT_PUBLIC_SUPABASE_ANON_KEY).',
     );
   }
 

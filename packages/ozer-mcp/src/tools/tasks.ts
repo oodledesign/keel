@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import { createTaskForUser } from '@kit/tasks/create-task';
 
-import type { KeelMcpToolRegistrar } from './types';
+import type { OzerMcpToolRegistrar } from './types';
 import {
   assertSupabaseOk,
   pickDefined,
@@ -66,7 +66,7 @@ function mapTask(row: TaskRow) {
   };
 }
 
-export const registerTaskTools: KeelMcpToolRegistrar = (server, context) => {
+export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
   const { supabase, userId } = context;
 
   server.registerTool(

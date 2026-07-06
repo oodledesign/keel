@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { KeelMcpToolRegistrar } from './types';
+import type { OzerMcpToolRegistrar } from './types';
 import {
   assertAccountAccess,
   assertSupabaseOk,
@@ -64,7 +64,7 @@ function mapTask(row: TaskRow) {
 
 const PROJECT_SELECT = 'id, name, status, business_id, account_id';
 
-export const registerProjectTools: KeelMcpToolRegistrar = (server, context) => {
+export const registerProjectTools: OzerMcpToolRegistrar = (server, context) => {
   const { supabase, userId } = context;
 
   server.registerTool(
