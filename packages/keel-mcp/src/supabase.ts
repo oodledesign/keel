@@ -10,7 +10,7 @@ export function createKeelMcpSupabaseClient(
 
   if (!url || !anonKey) {
     throw new Error(
-      'Keel MCP requires SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) and NEXT_PUBLIC_SUPABASE_ANON_KEY.',
+      'Keel MCP requires SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) and NEXT_PUBLIC_SUPABASE_PUBLIC_KEY (or NEXT_PUBLIC_SUPABASE_ANON_KEY).',
     );
   }
 

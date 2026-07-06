@@ -35,6 +35,7 @@ export function getSupabaseUrl(): string {
 
 export function getSupabaseAnonKey(): string {
   return (
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLIC_KEY?.trim() ??
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ??
     process.env.SUPABASE_ANON_KEY?.trim() ??
     ''
