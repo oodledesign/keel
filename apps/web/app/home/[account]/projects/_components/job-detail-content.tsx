@@ -16,6 +16,7 @@ import {
   ClipboardList,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -158,6 +159,8 @@ export function JobDetailContent({
   defaultLink: LinkValue;
 }) {
   const jobsPath = pathsConfig.app.accountJobs.replace('[account]', accountSlug);
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get('tab') ?? 'project';
   const clientsPath = pathsConfig.app.accountClients.replace('[account]', accountSlug);
 
   const [assignments, setAssignments] = useState<{ user_id: string; role_on_job: string | null }[]>([]);
@@ -377,7 +380,7 @@ export function JobDetailContent({
         )}
       </div>
 
-      <Tabs defaultValue="project" className="flex min-h-0 flex-1 flex-col">
+      <Tabs defaultValue={initialTab} key={initialTab} className="flex min-h-0 flex-1 flex-col">
         <TabsList className="h-auto shrink-0 justify-start gap-0 rounded-none border-b border-[color:var(--workspace-shell-border)] bg-transparent px-2 md:px-3">
           <TabsTrigger
             value="project"

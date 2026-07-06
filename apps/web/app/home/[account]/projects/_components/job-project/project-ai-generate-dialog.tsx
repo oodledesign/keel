@@ -23,6 +23,21 @@ import { toast } from '@kit/ui/sonner';
 import pathsConfig from '~/config/paths.config';
 import { saveWorkspaceNoteAction } from '~/home/[account]/_lib/workspace-content/notes-actions';
 
+function projectDetailUrl(
+  accountSlug: string,
+  jobId: string,
+  options?: { tab?: string; docId?: string },
+) {
+  const path = pathsConfig.app.accountJobDetail
+    .replace('[account]', accountSlug)
+    .replace('[id]', jobId);
+  const params = new URLSearchParams();
+  if (options?.tab) params.set('tab', options.tab);
+  if (options?.docId) params.set('doc', options.docId);
+  const query = params.toString();
+  return query ? `${path}?${query}` : path;
+}
+
 import {
   applyProjectPhasePlan,
   generateProjectContent,
@@ -258,13 +273,15 @@ export function ProjectAiGenerateDialog({
         | { mode: 'phase_page'; content: string };
 
       if (payload.mode === 'brief') {
-        toast.success('Project brief created');
+        toast.success('Project brief created — opening in Notes and files');
         onOpenChange(false);
         router.push(
-          pathsConfig.app.accountDocDetail
-            .replace('[account]', accountSlug)
-            .replace('[docId]', payload.docId),
+          projectDetailUrl(accountSlug, jobId, {
+            tab: 'docs',
+            docId: payload.docId,
+          }),
         );
+        router.refresh();
         return;
       }
 
@@ -406,6 +423,21 @@ export function ProjectAiGenerateDialog({
                   </label>
                 ))}
               </div>
+              {mode === 'brief' ? (
+                <p className="text-xs leading-relaxed text-[var(--workspace-shell-text-muted)]">
+                  Creates a structured project brief in Notes and files. Use{' '}
+                  <span className="font-medium text-[var(--workspace-shell-text)]">
+                    Phase plan
+                  </span>{' '}
+                  if you want AI to propose phases and tasks on the project board.
+                </p>
+              ) : null}
+              {mode === 'phase_plan' ? (
+                <p className="text-xs leading-relaxed text-[var(--workspace-shell-text-muted)]">
+                  Proposes phases and tasks for review before adding them to this
+                  project.
+                </p>
+              ) : null}
             </div>
 
             {loadingSources ? (

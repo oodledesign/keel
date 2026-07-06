@@ -16,6 +16,7 @@ import {
   ClipboardList,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -54,6 +55,7 @@ import type {
 import { MeetingTranscriptsBlock } from '../../_components/meeting-transcripts-block';
 import { JobScheduleTabContent } from './job-schedule-tab';
 import { JobProjectWorkspace } from './job-project/job-project-workspace';
+import { ProjectFinancePanel } from './project-finance-panel';
 
 type Job = {
   id: string;
@@ -157,6 +159,8 @@ export function JobDetailContent({
   defaultLink: LinkValue;
 }) {
   const jobsPath = pathsConfig.app.accountJobs.replace('[account]', accountSlug);
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get('tab') ?? 'project';
   const clientsPath = pathsConfig.app.accountClients.replace('[account]', accountSlug);
 
   const [assignments, setAssignments] = useState<{ user_id: string; role_on_job: string | null }[]>([]);
@@ -376,7 +380,7 @@ export function JobDetailContent({
         )}
       </div>
 
-      <Tabs defaultValue="project" className="flex min-h-0 flex-1 flex-col">
+      <Tabs defaultValue={initialTab} key={initialTab} className="flex min-h-0 flex-1 flex-col">
         <TabsList className="h-auto shrink-0 justify-start gap-0 rounded-none border-b border-[color:var(--workspace-shell-border)] bg-transparent px-2 md:px-3">
           <TabsTrigger
             value="project"
@@ -675,17 +679,11 @@ export function JobDetailContent({
 
         {!isContractorView && (
           <TabsContent value="finance" className="mt-0 flex-1 overflow-auto p-4 md:p-5">
-                <dl className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <dt className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">Value</dt>
-                    <dd className="mt-0.5 text-[var(--workspace-shell-text)]">{formatValue(job.value_pence)}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">Cost</dt>
-                    <dd className="mt-0.5 text-[var(--workspace-shell-text)]">{formatValue(job.cost_pence)}</dd>
-                  </div>
-                </dl>
-                <p className="mt-4 text-sm text-[var(--workspace-shell-text-muted)]">Invoices and more finance features coming soon.</p>
+            <ProjectFinancePanel
+              accountId={accountId}
+              accountSlug={accountSlug}
+              projectId={jobId}
+            />
           </TabsContent>
         )}
 

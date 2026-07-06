@@ -198,7 +198,14 @@ export function WorkspaceNotesPage({
     if (searchParams.get('new') === '1') {
       openNewNote();
     }
-  }, [searchParams]);
+    const docId = searchParams.get('doc');
+    if (docId) {
+      const doc = docs.find((item) => item.id === docId);
+      if (doc) {
+        setEditingFile(doc);
+      }
+    }
+  }, [searchParams, docs]);
 
   useEffect(() => setNotes(initialNotes), [initialNotes]);
   useEffect(() => setDocs(initialDocs), [initialDocs]);
