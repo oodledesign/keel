@@ -517,43 +517,96 @@ class ProjectPhasesService {
 
     const job = await this.verifyJob(input.accountId, input.jobId);
 
-    let client: Record<string, unknown> | null = null;
-    if (job.client_id) {
-      const { data: clientRow, error: clientErr } = await this.db
-        .from('clients')
-        .select('id, display_name, email, phone, company_name')
-        .eq('id', job.client_id as string)
+    const clientPromise = job.client_id
+      ? this.db
+          .from('clients')
+          .select('id, display_name, email, phone, company_name')
+          .eq('id', job.client_id as string)
+          .eq('account_id', input.accountId)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null });
+
+    const [
+      { data: clientRow, error: clientErr },
+      { data: assignments },
+      { data: membersRpc, error: membersErr },
+      { data: phaseRows, error: phaseErr },
+      { data: tasks, error: tasksErr },
+    ] = await Promise.all([
+      clientPromise,
+      this.db
+        .from('project_assignments')
+        .select('user_id, role_on_project')
         .eq('account_id', input.accountId)
-        .maybeSingle();
-      if (clientErr) this.throwErr(clientErr);
-      client = (clientRow as Record<string, unknown> | null) ?? null;
+        .eq('project_id', input.jobId),
+      this.client.rpc('get_account_members', {
+        account_slug: input.accountSlug,
+      }),
+      this.db
+        .from('project_phases')
+        .select('*')
+        .eq('account_id', input.accountId)
+        .eq('project_id', input.jobId)
+        .order('sort_order', { ascending: true }),
+      this.db
+        .from('tasks')
+        .select(
+          'id, title, status, priority, due_date, sort_order, phase_id, project_id, user_id',
+        )
+        .eq('project_id', input.jobId)
+        .order('sort_order', { ascending: true, nullsFirst: false })
+        .order('created_at', { ascending: true }),
+    ]);
+
+    if (clientErr) this.throwErr(clientErr);
+    if (membersErr) this.throwErr(membersErr);
+    if (phaseErr) this.throwErr(phaseErr);
+    if (tasksErr) this.throwErr(tasksErr);
+
+    const client = (clientRow as Record<string, unknown> | null) ?? null;
+    const phaseIds = ((phaseRows ?? []) as Array<Record<string, unknown>>).map(
+      (p) => p.id as string,
+    );
+
+    const [{ data: docs }, { data: notes }] = await Promise.all([
+      phaseIds.length > 0
+        ? this.db
+            .from('docs')
+            .select('id, phase_id')
+            .eq('account_id', input.accountId)
+            .eq('project_id', input.jobId)
+            .eq('doc_type', 'phase_page')
+            .in('phase_id', phaseIds)
+        : Promise.resolve({ data: [] }),
+      phaseIds.length > 0
+        ? this.db
+            .from('notes')
+            .select('phase_id')
+            .eq('account_id', input.accountId)
+            .in('phase_id', phaseIds)
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    const pageDocByPhase = new Map<string, string>();
+    for (const doc of docs ?? []) {
+      if (doc.phase_id) pageDocByPhase.set(doc.phase_id, doc.id);
     }
 
-    const [{ data: assignments }, { data: membersRpc, error: membersErr }, phases, { data: tasks }] =
-      await Promise.all([
-        this.db
-          .from('project_assignments')
-          .select('user_id, role_on_project')
-          .eq('account_id', input.accountId)
-          .eq('project_id', input.jobId),
-        this.client.rpc('get_account_members', {
-          account_slug: input.accountSlug,
-        }),
-        this.listPhasesForJob({
-          accountId: input.accountId,
-          jobId: input.jobId,
-        }),
-        this.db
-          .from('tasks')
-          .select(
-            'id, title, status, priority, due_date, sort_order, phase_id, project_id, user_id',
-          )
-          .eq('project_id', input.jobId)
-          .order('sort_order', { ascending: true, nullsFirst: false })
-          .order('created_at', { ascending: true }),
-      ]);
+    const noteCountByPhase = new Map<string, number>();
+    for (const note of notes ?? []) {
+      if (!note.phase_id) continue;
+      noteCountByPhase.set(
+        note.phase_id,
+        (noteCountByPhase.get(note.phase_id) ?? 0) + 1,
+      );
+    }
 
-    if (membersErr) this.throwErr(membersErr);
+    const phases = this.buildPhaseListItems(
+      (phaseRows ?? []) as Array<Record<string, unknown>>,
+      (tasks ?? []) as Array<{ phase_id: string | null; status: string }>,
+      pageDocByPhase,
+      noteCountByPhase,
+    );
 
     const members = (membersRpc ?? []) as Array<{
       user_id: string;
@@ -597,6 +650,7 @@ class ProjectPhasesService {
       job,
       client,
       assignees,
+      members,
       phases,
       tasksByPhase,
       valuePence: (job.value_pence as number | null) ?? null,

@@ -58,7 +58,10 @@ async function JobPhasePage({ params }: JobPhasePageProps) {
   }
 
   const phaseRow = detail.phase as Record<string, unknown>;
-  if (phaseRow.job_id !== jobId) notFound();
+  const phaseProjectId =
+    (phaseRow.project_id as string | undefined) ??
+    (phaseRow.job_id as string | undefined);
+  if (phaseProjectId !== jobId) notFound();
 
   const phase: PhaseRecord = {
     id: phaseRow.id as string,

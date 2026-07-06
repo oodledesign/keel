@@ -443,6 +443,42 @@ class ProjectAiService {
     const user = await this.ensureUserAndJobsEdit(input.accountId);
     const ctx = await this.getJobContext(input.accountId, input.jobId);
 
+    const [{ data: existingPhases }, { data: existingTasks }] = await Promise.all([
+      this.db
+        .from('project_phases')
+        .select('id, name')
+        .eq('account_id', input.accountId)
+        .eq('project_id', input.jobId),
+      this.db
+        .from('tasks')
+        .select('phase_id')
+        .eq('project_id', input.jobId),
+    ]);
+
+    const taskCountByPhase = new Map<string, number>();
+    for (const task of existingTasks ?? []) {
+      if (!task.phase_id) continue;
+      taskCountByPhase.set(
+        task.phase_id,
+        (taskCountByPhase.get(task.phase_id) ?? 0) + 1,
+      );
+    }
+
+    const emptyPlaceholderPhaseIds = (existingPhases ?? [])
+      .filter((phase) => {
+        const name = ((phase.name as string) ?? '').trim();
+        return name === 'New phase' && !(taskCountByPhase.get(phase.id as string) ?? 0);
+      })
+      .map((phase) => phase.id as string);
+
+    if (emptyPlaceholderPhaseIds.length > 0) {
+      const { error: cleanupErr } = await this.db
+        .from('project_phases')
+        .delete()
+        .in('id', emptyPlaceholderPhaseIds);
+      if (cleanupErr) this.throwErr(cleanupErr);
+    }
+
     const { data: maxRow } = await this.db
       .from('project_phases')
       .select('sort_order')
@@ -485,19 +521,24 @@ class ProjectAiService {
         planSummaryLines.push(phaseInput.description.trim());
       }
 
-      for (const taskInput of phaseInput.tasks ?? []) {
-        const { error: taskErr } = await this.db.from('tasks').insert({
-          title: taskInput.title.trim(),
-          status: 'todo',
-          priority: taskInput.priority ?? 'medium',
-          due_date: taskInput.due_date || null,
-          user_id: user.id,
-          account_id: input.accountId,
-          project_id: input.jobId,
-          phase_id: phaseId,
-          client_id: ctx.clientId,
-        });
+      const taskRows = (phaseInput.tasks ?? []).map((taskInput) => ({
+        title: taskInput.title.trim(),
+        status: 'todo' as const,
+        priority: taskInput.priority ?? 'medium',
+        due_date: taskInput.due_date || null,
+        user_id: user.id,
+        account_id: input.accountId,
+        project_id: input.jobId,
+        phase_id: phaseId,
+        client_id: ctx.clientId,
+      }));
+
+      if (taskRows.length > 0) {
+        const { error: taskErr } = await this.db.from('tasks').insert(taskRows);
         if (taskErr) this.throwErr(taskErr);
+      }
+
+      for (const taskInput of phaseInput.tasks ?? []) {
         planSummaryLines.push(`- ${taskInput.title.trim()}`);
       }
 

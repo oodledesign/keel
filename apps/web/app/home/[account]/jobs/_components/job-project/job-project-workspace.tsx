@@ -45,7 +45,6 @@ import {
   addJobAssignment,
   applyPhaseTemplate,
   createPhase,
-  listAccountMembers,
   listJobBoard,
   listPhaseTemplates,
 } from '../../_lib/server/server-actions';
@@ -135,10 +134,13 @@ export function JobProjectWorkspace({
         accountSlug,
         jobId,
       });
-      setBoard(data as JobBoardResult);
+      const nextBoard = data as JobBoardResult;
+      setBoard(nextBoard);
+      setMembers(nextBoard.members ?? []);
     } catch (err) {
       toast.error(getErrorMessage(err));
       setBoard(null);
+      setMembers([]);
     } finally {
       setBoardLoading(false);
     }
@@ -149,19 +151,14 @@ export function JobProjectWorkspace({
   }, [loadBoard]);
 
   useEffect(() => {
-    listAccountMembers({ accountSlug })
-      .then((raw: unknown) => {
-        setMembers(Array.isArray(raw) ? (raw as typeof members) : []);
-      })
-      .catch(() => setMembers([]));
-  }, [accountSlug]);
+    if (!canEditJobs || boardLoading || !board || board.phases.length > 0) {
+      return;
+    }
 
-  useEffect(() => {
-    if (!canEditJobs) return;
     void listPhaseTemplates({ accountId })
       .then((rows) => setPhaseTemplates(rows as PhaseTemplateListItem[]))
       .catch(() => setPhaseTemplates([]));
-  }, [accountId, canEditJobs]);
+  }, [accountId, board, boardLoading, canEditJobs]);
 
   const handleAddPhase = useCallback(() => {
     setAddingPhase(true);

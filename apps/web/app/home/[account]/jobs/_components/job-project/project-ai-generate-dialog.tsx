@@ -4,7 +4,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { Loader2, Plus, Sparkles } from 'lucide-react';
+import {
+  FilePenLine,
+  FileText,
+  LayoutGrid,
+  Loader2,
+  Plus,
+  Sparkles,
+  type LucideIcon,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Checkbox } from '@kit/ui/checkbox';
@@ -19,6 +27,7 @@ import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 import { saveWorkspaceNoteAction } from '~/home/[account]/_lib/workspace-content/notes-actions';
@@ -106,6 +115,69 @@ type PlanReviewState = {
   plan: PhasePlan;
   contextRefs: ProjectSourceRef[];
 };
+
+const MODE_META: Record<
+  Exclude<ProjectGenerateMode, 'phase_page'>,
+  { icon: LucideIcon; heading: string; description: string }
+> = {
+  brief: {
+    icon: FileText,
+    heading: 'Project brief',
+    description: 'Structured doc saved to Notes and files.',
+  },
+  phase_plan: {
+    icon: LayoutGrid,
+    heading: 'Phase plan',
+    description: 'Phases, tasks and timelines on the board.',
+  },
+};
+
+function GenerationModeCard({
+  icon: Icon,
+  heading,
+  description,
+  selected,
+  onSelect,
+  className,
+}: {
+  icon: LucideIcon;
+  heading: string;
+  description: string;
+  selected: boolean;
+  onSelect: () => void;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={cn(
+        'flex aspect-square flex-col items-start rounded-xl border p-4 text-left transition-colors',
+        selected
+          ? 'border-[var(--ozer-accent)] bg-[var(--ozer-accent-subtle)]'
+          : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] hover:border-[color:var(--workspace-shell-border)]',
+        className,
+      )}
+    >
+      <div
+        className={cn(
+          'flex h-10 w-10 items-center justify-center rounded-lg',
+          selected
+            ? 'bg-[var(--ozer-accent)] text-[var(--ozer-white)] shadow-sm'
+            : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]',
+        )}
+      >
+        <Icon className="h-5 w-5" strokeWidth={selected ? 2.25 : 2} />
+      </div>
+      <span className="mt-3 text-sm font-medium text-[var(--workspace-shell-text)]">
+        {heading}
+      </span>
+      <span className="mt-1 text-[11px] leading-snug text-[var(--workspace-shell-text-muted)]">
+        {description}
+      </span>
+    </button>
+  );
+}
 
 export function ProjectAiGenerateDialog({
   open,
@@ -334,11 +406,10 @@ export function ProjectAiGenerateDialog({
     }
   };
 
-  const modeLabels: Record<ProjectGenerateMode, string> = {
-    brief: 'Project brief',
-    phase_plan: 'Phase plan',
-    phase_page: phaseName ? `Fill “${phaseName}” page` : 'Fill phase page',
-  };
+  const primaryModes = modes.filter(
+    (m): m is 'brief' | 'phase_plan' => m === 'brief' || m === 'phase_plan',
+  );
+  const showPhasePageMode = modes.includes('phase_page');
 
   return (
     <>
@@ -405,24 +476,36 @@ export function ProjectAiGenerateDialog({
         ) : (
           <>
             <div className="space-y-3">
-              <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Generation mode</Label>
-              <div className="flex flex-col gap-2">
-                {modes.map((m) => (
-                  <label
-                    key={m}
-                    className="flex cursor-pointer items-center gap-2 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2 hover:bg-[var(--workspace-control-surface)]/50"
-                  >
-                    <input
-                      type="radio"
-                      name="ai-mode"
-                      checked={mode === m}
-                      onChange={() => setMode(m)}
-                      className="accent-[var(--ozer-accent)]"
-                    />
-                    <span className="text-sm">{modeLabels[m]}</span>
-                  </label>
-                ))}
-              </div>
+              <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                What do you want to create?
+              </Label>
+              {primaryModes.length > 0 ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {primaryModes.map((m) => {
+                    const meta = MODE_META[m];
+                    return (
+                      <GenerationModeCard
+                        key={m}
+                        icon={meta.icon}
+                        heading={meta.heading}
+                        description={meta.description}
+                        selected={mode === m}
+                        onSelect={() => setMode(m)}
+                      />
+                    );
+                  })}
+                </div>
+              ) : null}
+              {showPhasePageMode ? (
+                <GenerationModeCard
+                  icon={FilePenLine}
+                  heading={phaseName ? `Fill “${phaseName}” page` : 'Fill phase page'}
+                  description="Generate this phase page from your selected sources."
+                  selected={mode === 'phase_page'}
+                  onSelect={() => setMode('phase_page')}
+                  className="aspect-auto min-h-[5.5rem] w-full"
+                />
+              ) : null}
             </div>
 
             {loadingSources ? (

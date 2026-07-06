@@ -276,15 +276,16 @@ function SortablePhaseColumn(props: {
   onAddTask: (phaseId: string | null, title: string) => void;
   addingTask: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isSorting } =
     useSortable({ id: props.phase.id, disabled: !props.canEditJobs });
 
   return (
     <div
       ref={setNodeRef}
       style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
+        transform:
+          isSorting && transform ? CSS.Transform.toString(transform) : undefined,
+        transition: isSorting ? transition : undefined,
         opacity: isDragging ? 0.5 : 1,
       }}
       className="flex shrink-0 items-start gap-1"
@@ -573,7 +574,7 @@ export function JobProjectBoard({
           items={phases.map((p) => p.id)}
           strategy={horizontalListSortingStrategy}
         >
-          <div className="flex gap-3 overflow-x-auto pb-4 pt-1">
+          <div className="flex w-max max-w-full gap-3 overflow-x-auto pb-4 pt-1">
             {phases.map((phase) => (
               <SortablePhaseColumn
                 key={phase.id}

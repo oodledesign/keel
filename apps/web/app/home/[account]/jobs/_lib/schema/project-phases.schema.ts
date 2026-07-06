@@ -245,6 +245,12 @@ export type JobBoardResult = {
   job: Record<string, unknown>;
   client: Record<string, unknown> | null;
   assignees: JobBoardAssignee[];
+  members: Array<{
+    user_id: string;
+    name: string | null;
+    email: string | null;
+    picture_url?: string | null;
+  }>;
   phases: PhaseListItem[];
   tasksByPhase: Record<string, JobBoardTask[]>;
   valuePence: number | null;
