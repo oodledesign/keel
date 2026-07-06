@@ -45,6 +45,7 @@ import {
 import { getErrorMessage } from '../_lib/error-message';
 
 import { ContextWorkspaceNotes } from '../../_components/workspace-content/context-workspace-notes';
+import { loadJobWorkspaceContentAction } from '../../_lib/workspace-content/notes-files-actions';
 import type { LinkValue } from '../../_components/workspace-content/link-to-select';
 import type {
   DocListItem,
@@ -161,16 +162,28 @@ export function JobDetailContent({
   const jobsPath = pathsConfig.app.accountJobs.replace('[account]', accountSlug);
   const searchParams = useSearchParams();
   const initialTab = searchParams.get('tab') ?? 'project';
+  const [activeTab, setActiveTab] = useState(initialTab);
   const clientsPath = pathsConfig.app.accountClients.replace('[account]', accountSlug);
 
+  const [docsContent, setDocsContent] = useState({
+    notes: workspaceNotes,
+    docs: workspaceDocs,
+    notesTableAvailable,
+    docsTableAvailable,
+    linkOptions,
+    defaultLink,
+    loaded: workspaceNotes.length > 0 || workspaceDocs.length > 0,
+    loading: false,
+  });
+
   const [assignments, setAssignments] = useState<{ user_id: string; role_on_job: string | null }[]>([]);
-  const [loadingAssignments, setLoadingAssignments] = useState(true);
+  const [loadingAssignments, setLoadingAssignments] = useState(false);
   const [members, setMembers] = useState<{ user_id: string; name: string | null; email: string | null; picture_url?: string | null }[]>([]);
   const [selectedMemberId, setSelectedMemberId] = useState('');
   const [assignRole, setAssignRole] = useState('');
   const [assigning, setAssigning] = useState(false);
   const [notes, setNotes] = useState<JobNote[]>([]);
-  const [notesLoading, setNotesLoading] = useState(true);
+  const [notesLoading, setNotesLoading] = useState(false);
   const [newNote, setNewNote] = useState('');
   const [addingNote, setAddingNote] = useState(false);
 
@@ -203,6 +216,44 @@ export function JobDetailContent({
   }, [accountId, jobId]);
 
   useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab) setActiveTab(tab);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (activeTab !== 'docs' || docsContent.loaded || docsContent.loading) {
+      return;
+    }
+
+    setDocsContent((current) => ({ ...current, loading: true }));
+    void loadJobWorkspaceContentAction({
+      accountId,
+      accountSlug,
+      jobId,
+    })
+      .then((data) => {
+        setDocsContent({
+          notes: data.notes,
+          docs: data.docs,
+          notesTableAvailable: data.notesTableAvailable,
+          docsTableAvailable: data.docsTableAvailable,
+          linkOptions: data.linkOptions,
+          defaultLink: data.defaultLink,
+          loaded: true,
+          loading: false,
+        });
+      })
+      .catch(() => {
+        toast.error('Failed to load notes and files');
+        setDocsContent((current) => ({ ...current, loading: false }));
+      });
+  }, [accountId, accountSlug, activeTab, docsContent.loaded, docsContent.loading, jobId]);
+
+  useEffect(() => {
+    if (activeTab !== 'team' && activeTab !== 'overview') {
+      return;
+    }
+
     if (!accountId || !jobId) return;
     setLoadingAssignments(true);
     listJobAssignments({ accountId, jobId })
@@ -220,9 +271,13 @@ export function JobDetailContent({
         setAssignments([]);
       })
       .finally(() => setLoadingAssignments(false));
-  }, [accountId, jobId]);
+  }, [accountId, activeTab, jobId]);
 
   useEffect(() => {
+    if (activeTab !== 'team') {
+      return;
+    }
+
     if (!accountSlug) return;
     listAccountMembers({ accountSlug })
       .then((raw: unknown) => {
@@ -230,11 +285,15 @@ export function JobDetailContent({
         setMembers(list as { user_id: string; name: string | null; email: string | null; picture_url?: string | null }[]);
       })
       .catch(() => setMembers([]));
-  }, [accountSlug]);
+  }, [accountSlug, activeTab]);
 
   useEffect(() => {
+    if (activeTab !== 'overview') {
+      return;
+    }
+
     refreshNotes();
-  }, [refreshNotes]);
+  }, [activeTab, refreshNotes]);
 
   const handleAssign = async () => {
     if (!selectedMemberId) return;
@@ -380,46 +439,51 @@ export function JobDetailContent({
         )}
       </div>
 
-      <Tabs defaultValue={initialTab} key={initialTab} className="flex min-h-0 flex-1 flex-col">
-        <TabsList className="h-auto shrink-0 justify-start gap-0 rounded-none border-b border-[color:var(--workspace-shell-border)] bg-transparent px-2 md:px-3">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="flex min-h-0 flex-1 flex-col"
+      >
+        <div className="shrink-0 overflow-x-auto border-b border-[color:var(--workspace-shell-border)]">
+          <TabsList className="inline-flex h-auto w-max min-w-full justify-start gap-0 rounded-none border-0 bg-transparent px-2 md:px-3">
           <TabsTrigger
             value="project"
-            className="gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
+            className="shrink-0 gap-1.5 whitespace-nowrap rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
           >
             <LayoutGrid className="h-3.5 w-3.5" />
             Project
           </TabsTrigger>
           <TabsTrigger
             value="overview"
-            className="gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
+            className="shrink-0 gap-1.5 whitespace-nowrap rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
           >
             <ClipboardList className="h-3.5 w-3.5" />
             Overview
           </TabsTrigger>
           <TabsTrigger
             value="schedule"
-            className="gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
+            className="shrink-0 gap-1.5 whitespace-nowrap rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
           >
             <Calendar className="h-3.5 w-3.5" />
             Schedule
           </TabsTrigger>
           <TabsTrigger
             value="team"
-            className="gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
+            className="shrink-0 gap-1.5 whitespace-nowrap rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
           >
             <Users className="h-3.5 w-3.5" />
             Team
           </TabsTrigger>
           <TabsTrigger
             value="messages"
-            className="gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
+            className="shrink-0 gap-1.5 whitespace-nowrap rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
           >
             <MessageSquare className="h-3.5 w-3.5" />
             Messages
           </TabsTrigger>
           <TabsTrigger
             value="meetings"
-            className="gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
+            className="shrink-0 gap-1.5 whitespace-nowrap rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
           >
             <Mic className="h-3.5 w-3.5" />
             Meetings
@@ -427,7 +491,7 @@ export function JobDetailContent({
           {!isContractorView && (
             <TabsTrigger
               value="finance"
-              className="gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
+              className="shrink-0 gap-1.5 whitespace-nowrap rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
             >
               <Wallet className="h-3.5 w-3.5" />
               Finance
@@ -436,13 +500,14 @@ export function JobDetailContent({
           {!isContractorView && (
             <TabsTrigger
               value="docs"
-              className="gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
+              className="shrink-0 gap-1.5 whitespace-nowrap rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs data-[state=active]:border-[#0073ea] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
             >
               <FileText className="h-3.5 w-3.5" />
               Notes and files
             </TabsTrigger>
           )}
         </TabsList>
+        </div>
 
         <TabsContent value="project" className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden p-4 md:p-5">
           <JobProjectWorkspace
@@ -693,17 +758,23 @@ export function JobDetailContent({
                   <h3 className="mb-3 text-sm font-medium text-[var(--workspace-shell-text-muted)]">
                     Notes and files
                   </h3>
-                  <ContextWorkspaceNotes
-                    accountId={accountId}
-                    accountSlug={accountSlug}
-                    notes={workspaceNotes}
-                    docs={workspaceDocs}
-                    tableAvailable={notesTableAvailable}
-                    docsTableAvailable={docsTableAvailable}
-                    linkOptions={linkOptions}
-                    defaultLink={defaultLink}
-                    canEdit={canEditJobs}
-                  />
+                  {docsContent.loading ? (
+                    <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                      Loading notes and files…
+                    </p>
+                  ) : (
+                    <ContextWorkspaceNotes
+                      accountId={accountId}
+                      accountSlug={accountSlug}
+                      notes={docsContent.notes}
+                      docs={docsContent.docs}
+                      tableAvailable={docsContent.notesTableAvailable}
+                      docsTableAvailable={docsContent.docsTableAvailable}
+                      linkOptions={docsContent.linkOptions}
+                      defaultLink={docsContent.defaultLink}
+                      canEdit={canEditJobs}
+                    />
+                  )}
                 </section>
           </TabsContent>
         )}

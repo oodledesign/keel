@@ -17,7 +17,6 @@ import {
 } from '@dnd-kit/core';
 import {
   SortableContext,
-  horizontalListSortingStrategy,
   useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
@@ -33,7 +32,6 @@ import pathsConfig from '~/config/paths.config';
 import {
   createJobTask,
   moveTask,
-  reorderPhases,
 } from '../../_lib/server/server-actions';
 import { getErrorMessage } from '../../_lib/error-message';
 import type {
@@ -195,6 +193,7 @@ function PhaseColumn({
         {phase ? (
           <Link
             href={phasePath(accountSlug, jobId, phase.id)}
+            prefetch={false}
             className="group block"
           >
             <div className="flex items-start justify-between gap-2">
@@ -276,34 +275,7 @@ function SortablePhaseColumn(props: {
   onAddTask: (phaseId: string | null, title: string) => void;
   addingTask: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isSorting } =
-    useSortable({ id: props.phase.id, disabled: !props.canEditJobs });
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={{
-        transform:
-          isSorting && transform ? CSS.Transform.toString(transform) : undefined,
-        transition: isSorting ? transition : undefined,
-        opacity: isDragging ? 0.5 : 1,
-      }}
-      className="flex shrink-0 items-start gap-1"
-    >
-      {props.canEditJobs && (
-        <button
-          type="button"
-          className="mt-4 cursor-grab text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text-muted)] active:cursor-grabbing"
-          {...attributes}
-          {...listeners}
-          aria-label="Drag to reorder phase"
-        >
-          <GripVertical className="h-4 w-4" />
-        </button>
-      )}
-      <PhaseColumn {...props} />
-    </div>
-  );
+  return <PhaseColumn {...props} />;
 }
 
 export function JobProjectBoard({
@@ -390,28 +362,6 @@ export function JobProjectBoard({
       const activeTaskRow = allTasks.find((t) => t.id === activeId);
 
       if (!activeTaskRow) {
-        const activePhaseIndex = phases.findIndex((p) => p.id === activeId);
-        const overPhaseIndex = phases.findIndex((p) => p.id === String(over.id));
-        if (activePhaseIndex >= 0 && overPhaseIndex >= 0 && activePhaseIndex !== overPhaseIndex) {
-          const reordered = [...phases];
-          const [moved] = reordered.splice(activePhaseIndex, 1);
-          if (!moved) return;
-          reordered.splice(overPhaseIndex, 0, moved);
-          onBoardChange({ ...board, phases: reordered });
-          startTransition(async () => {
-            try {
-              await reorderPhases({
-                accountId,
-                accountSlug,
-                jobId,
-                orderedPhaseIds: reordered.map((p) => p.id),
-              });
-            } catch (err) {
-              toast.error(getErrorMessage(err));
-              onBoardChange(board);
-            }
-          });
-        }
         return;
       }
 
@@ -570,11 +520,7 @@ export function JobProjectBoard({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <SortableContext
-          items={phases.map((p) => p.id)}
-          strategy={horizontalListSortingStrategy}
-        >
-          <div className="flex w-max max-w-full gap-3 overflow-x-auto pb-4 pt-1">
+        <div className="flex w-max gap-3 overflow-x-auto pb-4 pt-1">
             {phases.map((phase) => (
               <SortablePhaseColumn
                 key={phase.id}
@@ -601,7 +547,6 @@ export function JobProjectBoard({
               />
             )}
           </div>
-        </SortableContext>
 
         <DragOverlay dropAnimation={null}>
           {activeTask ? (

@@ -229,6 +229,7 @@ function PhaseGroup({
           {phase ? (
             <Link
               href={phasePath(accountSlug, jobId, phase.id)}
+              prefetch={false}
               className="text-sm font-semibold text-[var(--workspace-shell-text)] hover:underline"
               onClick={(e) => e.stopPropagation()}
             >

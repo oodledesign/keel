@@ -22,6 +22,7 @@ import { JobDetailContent } from '../_components/job-detail-content';
 
 interface ProjectDetailPageProps {
   params: Promise<{ account: string; id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }
 
 export const generateMetadata = async ({ params }: ProjectDetailPageProps) => {
@@ -41,8 +42,13 @@ export const generateMetadata = async ({ params }: ProjectDetailPageProps) => {
   return { title };
 };
 
-async function ProjectDetailPage({ params }: ProjectDetailPageProps) {
+async function ProjectDetailPage({
+  params,
+  searchParams,
+}: ProjectDetailPageProps) {
   const { account: accountSlug, id } = await params;
+  const { tab } = await searchParams;
+  const initialTab = tab ?? 'project';
   const workspace = await loadTeamWorkspace(accountSlug);
   redirectIfSpaceNotIn(workspace, accountSlug, BUSINESS_WORKSPACE_SPACE_TYPES);
   if (!isWorkModuleEnabled(workspace.moduleSettings, 'jobs')) {
@@ -121,12 +127,27 @@ async function ProjectDetailPage({ params }: ProjectDetailPageProps) {
     jobClient = data;
   }
 
-  const workspaceContent = await loadContextWorkspaceContent({
-    accountId,
-    spaceType: (workspace.account as { space_type?: string }).space_type,
-    businessType: workspace.businessType,
-    scope: { jobId: id },
-  });
+  const workspaceContent = initialTab === 'docs'
+    ? await loadContextWorkspaceContent({
+        accountId,
+        spaceType: (workspace.account as { space_type?: string }).space_type,
+        businessType: workspace.businessType,
+        scope: { jobId: id },
+      })
+    : {
+        notes: [],
+        docs: [],
+        notesTableAvailable: true,
+        docsTableAvailable: true,
+        linkOptions: {
+          projects: [],
+          jobs: [],
+          clients: [],
+          properties: [],
+          tasks: [],
+        },
+        defaultLink: { type: 'job' as const, id },
+      };
 
   return (
     <PageBody className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)] px-3 py-3 md:px-4 md:py-4">

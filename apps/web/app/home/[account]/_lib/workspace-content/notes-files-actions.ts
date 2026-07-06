@@ -88,6 +88,32 @@ export const listNotesAndFilesForContextAction = enhanceAction(
   },
 );
 
+export const loadJobWorkspaceContentAction = enhanceAction(
+  async (data) => {
+    const { loadContextWorkspaceContent } = await import(
+      '../../_lib/workspace-content/context-loader'
+    );
+    const { loadTeamWorkspace } = await import(
+      '../../_lib/server/team-account-workspace.loader'
+    );
+    const workspace = await loadTeamWorkspace(data.accountSlug);
+
+    return loadContextWorkspaceContent({
+      accountId: data.accountId,
+      spaceType: (workspace.account as { space_type?: string }).space_type,
+      businessType: workspace.businessType,
+      scope: { jobId: data.jobId },
+    });
+  },
+  {
+    schema: z.object({
+      accountId: z.string().uuid(),
+      accountSlug: z.string().min(1),
+      jobId: z.string().uuid(),
+    }),
+  },
+);
+
 export const loadNotesAndFilesContentAction = enhanceAction(
   async (data) => {
     const client = await import('@kit/supabase/server-client').then((m) =>

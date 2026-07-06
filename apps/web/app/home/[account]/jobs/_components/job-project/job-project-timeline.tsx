@@ -133,6 +133,7 @@ function PhaseBar({
       <div className="relative h-10" onPointerMove={onPointerMove} onPointerUp={onPointerUp}>
         <Link
           href={phasePath(accountSlug, jobId, phase.id)}
+          prefetch={false}
           className="absolute top-1/2 z-10 -translate-x-1/2 -translate-y-1/2"
           style={{ left: `${leftPct}%` }}
           title={phase.name}
@@ -182,6 +183,7 @@ function PhaseBar({
       </div>
       <Link
         href={phasePath(accountSlug, jobId, phase.id)}
+        prefetch={false}
         className="absolute top-full mt-1 truncate text-[11px] text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
         style={{
           left: `${Math.max(0, leftPct)}%`,
@@ -298,6 +300,7 @@ export function JobProjectTimeline({
               <div className="pt-1">
                 <Link
                   href={phasePath(accountSlug, jobId, phase.id)}
+                  prefetch={false}
                   className="text-sm font-medium text-[var(--workspace-shell-text)] hover:underline"
                 >
                   {phase.name}
