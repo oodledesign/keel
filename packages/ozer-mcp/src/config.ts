@@ -25,6 +25,10 @@ export function getOAuthProtectedResourceMetadataUrl(): string {
   return `${getMcpAppOrigin()}/.well-known/oauth-protected-resource`;
 }
 
+export function getMcpConnectorIconUrl(): string {
+  return `${getMcpAppOrigin()}/brand/ozer-connector-icon.svg`;
+}
+
 export function getSupabaseUrl(): string {
   return (
     process.env.SUPABASE_URL?.trim() ??

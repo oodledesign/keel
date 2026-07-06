@@ -10,6 +10,7 @@ export async function GET() {
   return Response.json(
     {
       resource: getMcpResourceUrl(),
+      resource_name: 'Ozer',
       authorization_servers: [SUPABASE_OAUTH_AS_DISCOVERY_URL],
     },
     {

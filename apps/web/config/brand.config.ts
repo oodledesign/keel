@@ -12,6 +12,8 @@ export const brandAssets = {
   wordmarkOnDark: '/brand/ozer-wordmark-on-dark.svg',
   /** App favicon (plum tile + coral mark) */
   favicon: '/favicon.svg',
+  /** Connector / OAuth branding (coral mark on cream) */
+  connectorIcon: '/brand/ozer-connector-icon.svg',
 } as const;
 
 export const brandConfig = {

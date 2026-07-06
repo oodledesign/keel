@@ -1,7 +1,11 @@
 'use client';
 
+import Image from 'next/image';
+
 import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
+
+import { brandAssets } from '~/config/brand.config';
 
 type Props = {
   authorizationId: string;
@@ -34,9 +38,14 @@ export function OAuthConsentCard({
   return (
     <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-8 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
       <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--ozer-accent)] text-sm font-bold text-white">
-          O
-        </div>
+        <Image
+          src={brandAssets.connectorIcon}
+          alt=""
+          width={44}
+          height={44}
+          className="h-11 w-11 shrink-0 rounded-full"
+          aria-hidden
+        />
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
             Authorise access

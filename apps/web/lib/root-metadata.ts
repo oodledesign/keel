@@ -29,9 +29,10 @@ export const generateRootMetadata = (): Metadata => ({
   icons: {
     icon: [
       { url: brandAssets.favicon, type: 'image/svg+xml' },
+      { url: brandAssets.connectorIcon, type: 'image/svg+xml', sizes: 'any' },
       { url: brandConfig.logos.icon.light, type: 'image/svg+xml', sizes: 'any' },
     ],
-    apple: brandConfig.logos.icon.light,
+    apple: brandAssets.connectorIcon,
   },
 });
 

@@ -2,6 +2,7 @@ export type { McpRequestContext } from './context';
 export { authenticateMcpRequest } from './auth';
 export {
   getMcpAppOrigin,
+  getMcpConnectorIconUrl,
   getMcpResourceUrl,
   getOAuthProtectedResourceMetadataUrl,
   SUPABASE_AUTH_SERVER,
