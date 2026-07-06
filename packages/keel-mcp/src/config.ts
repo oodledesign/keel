@@ -1,7 +1,11 @@
-const SUPABASE_PROJECT_AUTH_BASE =
-  'https://igewpbdkvvhclfprteca.supabase.co/auth/v1';
+const SUPABASE_PROJECT_ORIGIN = 'https://igewpbdkvvhclfprteca.supabase.co';
+
+const SUPABASE_PROJECT_AUTH_BASE = `${SUPABASE_PROJECT_ORIGIN}/auth/v1`;
 
 export const SUPABASE_AUTH_SERVER = SUPABASE_PROJECT_AUTH_BASE;
+
+/** Non-standard AS metadata path used by Supabase OAuth 2.1 Server. */
+export const SUPABASE_OAUTH_AS_DISCOVERY_URL = `${SUPABASE_PROJECT_ORIGIN}/.well-known/oauth-authorization-server/auth/v1`;
 
 export const SUPABASE_JWKS_URL = `${SUPABASE_PROJECT_AUTH_BASE}/.well-known/jwks.json`;
 

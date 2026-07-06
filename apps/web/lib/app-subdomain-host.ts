@@ -42,6 +42,13 @@ export function isAppHostStaticPath(pathname: string): boolean {
   );
 }
 
+/** OAuth / MCP discovery and consent — must stay on app.ozer.so without redirecting to /app. */
+export function isAppHostOAuthPublicPath(pathname: string): boolean {
+  return (
+    pathname.startsWith('/.well-known/') || pathname.startsWith('/oauth/')
+  );
+}
+
 const MARKETING_ROUTE_PREFIXES = [
   '/personal',
   '/work',
@@ -152,7 +159,11 @@ export function resolveAppSubdomainRedirect(url: URL): string | null {
   const { pathname, search } = url;
 
   if (onAppHost) {
-    if (isAppRoute(pathname) || isAppHostStaticPath(pathname)) {
+    if (
+      isAppRoute(pathname) ||
+      isAppHostStaticPath(pathname) ||
+      isAppHostOAuthPublicPath(pathname)
+    ) {
       return null;
     }
 

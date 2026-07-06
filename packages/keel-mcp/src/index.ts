@@ -5,6 +5,7 @@ export {
   getMcpResourceUrl,
   getOAuthProtectedResourceMetadataUrl,
   SUPABASE_AUTH_SERVER,
+  SUPABASE_OAUTH_AS_DISCOVERY_URL,
 } from './config';
 export { handleMcpRequest } from './handler';
 export { createKeelMcpServer } from './server';

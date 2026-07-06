@@ -49,6 +49,23 @@ describe('resolveAppSubdomainRedirect', () => {
     ).toBeNull();
   });
 
+  it('serves OAuth discovery and consent paths on the app host', () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://app.ozer.so');
+    vi.stubEnv('NEXT_PUBLIC_MARKETING_SITE_URL', 'https://www.ozer.so');
+
+    expect(
+      resolveAppSubdomainRedirect(
+        new URL('https://app.ozer.so/.well-known/oauth-protected-resource'),
+      ),
+    ).toBeNull();
+
+    expect(
+      resolveAppSubdomainRedirect(
+        new URL('https://app.ozer.so/oauth/consent?authorization_id=test'),
+      ),
+    ).toBeNull();
+  });
+
   it('locks app host even when env vars only list www marketing', () => {
     vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://www.ozer.so');
