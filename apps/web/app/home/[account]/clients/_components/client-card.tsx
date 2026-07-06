@@ -38,17 +38,29 @@ function formatLastActivity(updatedAt: string): string {
   return `${Math.floor(diffDays / 30)}mo ago`;
 }
 
+export function ClientListTableColGroup() {
+  return (
+    <colgroup>
+      <col />
+      <col className="w-28" />
+      <col className="w-20" />
+      <col className="w-20" />
+      <col className="w-24" />
+    </colgroup>
+  );
+}
+
 export function ClientListTableHeader() {
   return (
     <thead>
       <tr className="border-b border-[color:var(--workspace-shell-border)] text-left text-[11px] font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
         <th className="px-3 py-2 font-medium md:px-4">Client</th>
-        <th className="hidden w-[120px] px-2 py-2 font-medium sm:table-cell">
+        <th className="hidden w-28 px-2 py-2 font-medium sm:table-cell">
           Last activity
         </th>
-        <th className="w-[88px] px-2 py-2 text-right font-medium">Projects</th>
-        <th className="w-[88px] px-2 py-2 text-right font-medium">Due tasks</th>
-        <th className="w-[96px] px-2 py-2 md:pr-4" aria-label="Actions" />
+        <th className="w-20 px-2 py-2 text-right font-medium">Projects</th>
+        <th className="w-20 px-2 py-2 text-right font-medium">Due tasks</th>
+        <th className="w-24 px-2 py-2 md:pr-4" aria-label="Actions" />
       </tr>
     </thead>
   );

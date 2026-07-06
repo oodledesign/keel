@@ -30,7 +30,7 @@ import pathsConfig from '~/config/paths.config';
 import { listAccountMembers } from '../../jobs/_lib/server/server-actions';
 import type { ClientOverviewItem } from '../_lib/clients-overview.types';
 import { listClientsOverview } from '../_lib/server/server-actions';
-import { ClientCard, ClientListTableHeader } from './client-card';
+import { ClientCard, ClientListTableColGroup, ClientListTableHeader } from './client-card';
 import { ClientDetailDrawer } from './client-detail-drawer';
 import { ClientOverviewCard } from './client-overview-card';
 
@@ -502,7 +502,8 @@ export function ClientsPageContent({
             </div>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40">
-              <table className="w-full min-w-[640px] border-collapse text-sm">
+              <table className="w-full table-fixed border-collapse text-sm">
+                <ClientListTableColGroup />
                 <ClientListTableHeader />
                 <tbody>
                   {displayedClients.map((client) => (

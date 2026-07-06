@@ -59,7 +59,7 @@ export function ClientOverviewCard({
           <ProfileAvatar
             displayName={client.displayName}
             pictureUrl={client.pictureUrl}
-            className="h-12 w-12 rounded-full"
+            className="mx-0 h-12 w-12 rounded-full"
             fallbackClassName="rounded-full bg-[var(--workspace-shell-panel-hover)] text-lg text-[var(--workspace-shell-text)]"
           />
         </Link>
@@ -185,7 +185,7 @@ export function ClientOverviewCard({
             {client.teamMembers.map((member) => (
               <ProfileAvatar
                 key={member.userId}
-                className="h-8 w-8 border-2 border-[var(--workspace-shell-panel)]"
+                className="mx-0 h-8 w-8 border-2 border-[var(--workspace-shell-panel)]"
                 displayName={member.name ?? 'Member'}
                 pictureUrl={member.pictureUrl}
               />

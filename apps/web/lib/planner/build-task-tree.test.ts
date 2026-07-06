@@ -4,6 +4,7 @@ import type { TasksPageTask } from '~/home/(user)/_lib/server/tasks.loader';
 
 import {
   plannerTaskAssignmentLabel,
+  plannerTaskMetaWithoutClient,
   plannerTaskSubtitle,
   toPlannerTask,
 } from './build-task-tree';
@@ -55,6 +56,9 @@ describe('planner task labels', () => {
 
     expect(plannerTaskAssignmentLabel(plannerTask)).toBe(
       'Bracketts · Website refresh',
+    );
+    expect(plannerTaskMetaWithoutClient(plannerTask)).toBe(
+      'Oodle · Website refresh',
     );
   });
 });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import Link from 'next/link';
 
@@ -10,8 +10,10 @@ import {
   Calendar,
   Eye,
   ExternalLink,
+  FileText,
   Mail,
   MapPin,
+  Mic,
   MoreHorizontal,
   Pencil,
   Phone,
@@ -36,6 +38,7 @@ import {
   getClient,
   getClientPortalStatus,
   getJobHistory,
+  listNotes,
 } from '../_lib/server/server-actions';
 import { ClientFinancePanel } from './client-finance-panel';
 import { ClientContactsBlock } from './client-contacts-block';
@@ -45,6 +48,8 @@ import { ClientInvoicesBlock } from './client-invoices-block';
 import { ClientJobHistoryBlock } from './client-job-history-block';
 import { ContextWorkspaceNotes } from '../../_components/workspace-content/context-workspace-notes';
 import { MeetingTranscriptsBlock } from '../../_components/meeting-transcripts-block';
+import { listMeetingTranscripts } from '../../meeting-transcripts/_lib/server/server-actions';
+import { meetingDisplayDate } from '../../meetings/_lib/format-meeting-date';
 import type { LinkValue } from '../../_components/workspace-content/link-to-select';
 import type {
   DocListItem,
@@ -109,6 +114,58 @@ type ClientJobSummary = {
   created_at: string;
   updated_at: string;
 };
+
+type ClientNotePreview = {
+  id: string;
+  note: string;
+  created_at: string;
+};
+
+type ClientMeetingPreview = {
+  id: string;
+  title: string;
+  meetingDate: string | null;
+  createdAt: string;
+};
+
+function formatNotePreview(note: string, maxLength = 120) {
+  const trimmed = note.trim().replace(/\s+/g, ' ');
+  if (trimmed.length <= maxLength) return trimmed;
+  return `${trimmed.slice(0, maxLength).trim()}…`;
+}
+
+function OverviewPreviewPanel({
+  title,
+  icon: Icon,
+  viewAllLabel,
+  onViewAll,
+  children,
+}: {
+  title: string;
+  icon: typeof Mic;
+  viewAllLabel: string;
+  onViewAll: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h3 className="flex items-center gap-2 text-sm font-medium text-[var(--workspace-shell-text)]">
+          <Icon className="h-4 w-4 text-[var(--ozer-accent-muted)]" />
+          {title}
+        </h3>
+        <button
+          type="button"
+          onClick={onViewAll}
+          className="text-xs font-medium text-[var(--ozer-accent-muted)] hover:underline"
+        >
+          {viewAllLabel}
+        </button>
+      </div>
+      {children}
+    </section>
+  );
+}
 
 function formatPence(pence: number) {
   return new Intl.NumberFormat('en-GB', {
@@ -211,14 +268,36 @@ export function ClientDetailSidebar({
   const [loading, setLoading] = useState(true);
   const [showEditForm, setShowEditForm] = useState(false);
   const [portalStatus, setPortalStatus] = useState<PortalStatus | null>(null);
+  const [overviewClientNotes, setOverviewClientNotes] = useState<ClientNotePreview[]>([]);
+  const [overviewMeetings, setOverviewMeetings] = useState<ClientMeetingPreview[]>([]);
 
   const fetchClient = useCallback(async () => {
     setLoading(true);
     try {
       const data = (await getClient({ accountId, clientId })) as unknown as Client;
       setClient(data);
-      const jobHistory = await getJobHistory({ accountId, clientId });
+      const [jobHistory, notesData, meetingsData] = await Promise.all([
+        getJobHistory({ accountId, clientId }),
+        listNotes({ accountId, clientId }).catch(() => []),
+        listMeetingTranscripts({ accountId, clientId }).catch(() => []),
+      ]);
       setJobs(Array.isArray(jobHistory) ? (jobHistory as ClientJobSummary[]) : []);
+      setOverviewClientNotes((notesData ?? []) as ClientNotePreview[]);
+      setOverviewMeetings(
+        (meetingsData ?? []).map(
+          (meeting: {
+            id: string;
+            title: string;
+            meetingDate: string | null;
+            createdAt: string;
+          }) => ({
+            id: meeting.id,
+            title: meeting.title,
+            meetingDate: meeting.meetingDate,
+            createdAt: meeting.createdAt,
+          }),
+        ),
+      );
 
       if (data.email) {
         try {
@@ -237,6 +316,8 @@ export function ClientDetailSidebar({
       toast.error(e instanceof Error ? e.message : 'Failed to load client');
       setClient(null);
       setPortalStatus(null);
+      setOverviewClientNotes([]);
+      setOverviewMeetings([]);
     } finally {
       setLoading(false);
     }
@@ -258,6 +339,46 @@ export function ClientDetailSidebar({
   const jobDetailBase = pathsConfig.app.accountJobDetail
     .replace('[account]', accountSlug)
     .replace('[id]', '');
+
+  const meetingDetailBase = pathsConfig.app.accountMeetingDetail
+    .replace('[account]', accountSlug)
+    .replace('[transcriptId]', '');
+
+  const recentNotesPreview = useMemo(() => {
+    if (workspaceNotes?.length) {
+      return [...workspaceNotes]
+        .sort((a, b) =>
+          (b.updatedAt || b.createdAt).localeCompare(a.updatedAt || a.createdAt),
+        )
+        .slice(0, 3)
+        .map((note) => ({
+          id: note.id,
+          title: note.title,
+          preview: formatNotePreview(note.content || note.title),
+          date: note.updatedAt || note.createdAt,
+        }));
+    }
+
+    return overviewClientNotes.slice(0, 3).map((note) => ({
+      id: note.id,
+      title: null as string | null,
+      preview: formatNotePreview(note.note),
+      date: note.created_at,
+    }));
+  }, [overviewClientNotes, workspaceNotes]);
+
+  const recentMeetingsPreview = useMemo(() => {
+    return [...overviewMeetings]
+      .sort((a, b) => {
+        const aKey = a.meetingDate ?? a.createdAt.slice(0, 10);
+        const bKey = b.meetingDate ?? b.createdAt.slice(0, 10);
+        if (aKey !== bKey) {
+          return bKey.localeCompare(aKey);
+        }
+        return b.createdAt.localeCompare(a.createdAt);
+      })
+      .slice(0, 3);
+  }, [overviewMeetings]);
 
   const tabItems = useMemo(() => {
     if (!client || isContractorView) {
@@ -508,18 +629,82 @@ export function ClientDetailSidebar({
             />
           ) : null}
 
-          <div className="space-y-3">
-            <h2 className="text-sm font-medium text-[var(--workspace-shell-text)]">Recent activity</h2>
-            <div className="flex gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--ozer-accent-subtle)]" />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-[var(--workspace-shell-text)]">New client</p>
-                <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                  {displayName} added on {formatCreatedDate(client.created_at)}
-                </p>
-              </div>
-            </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <OverviewPreviewPanel
+              title="Recent meetings"
+              icon={Mic}
+              viewAllLabel="View all"
+              onViewAll={() => setActiveTab('meetings')}
+            >
+              {recentMeetingsPreview.length === 0 ? (
+                <p className="text-sm text-[var(--workspace-shell-text-muted)]">No meetings yet.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {recentMeetingsPreview.map((meeting) => (
+                    <li key={meeting.id}>
+                      <Link
+                        href={`${meetingDetailBase}${meeting.id}`}
+                        className="block rounded-md px-1 py-1 transition hover:bg-[var(--workspace-shell-panel-hover)]"
+                      >
+                        <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)] hover:text-[var(--ozer-accent-muted)]">
+                          {meeting.title}
+                        </p>
+                        <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
+                          {meetingDisplayDate(meeting.meetingDate, meeting.createdAt)}
+                        </p>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </OverviewPreviewPanel>
 
+            <OverviewPreviewPanel
+              title="Recent notes"
+              icon={FileText}
+              viewAllLabel="View all"
+              onViewAll={() => setActiveTab('notes')}
+            >
+              {recentNotesPreview.length === 0 ? (
+                <p className="text-sm text-[var(--workspace-shell-text-muted)]">No notes yet.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {recentNotesPreview.map((note) => (
+                    <li key={note.id}>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('notes')}
+                        className="block w-full rounded-md px-1 py-1 text-left transition hover:bg-[var(--workspace-shell-panel-hover)]"
+                      >
+                        {note.title ? (
+                          <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+                            {note.title}
+                          </p>
+                        ) : null}
+                        <p
+                          className={cn(
+                            'text-sm text-[var(--workspace-shell-text-muted)]',
+                            note.title ? 'mt-0.5 line-clamp-2 text-xs' : 'line-clamp-2',
+                          )}
+                        >
+                          {note.preview}
+                        </p>
+                        <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+                          {new Date(note.date).toLocaleDateString('en-GB', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </p>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </OverviewPreviewPanel>
+          </div>
+
+          <div className="space-y-3">
             {client.email && portalStatus ? (
               <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 text-sm">
                 <p className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">

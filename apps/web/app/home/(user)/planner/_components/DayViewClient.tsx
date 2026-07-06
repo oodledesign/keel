@@ -53,7 +53,8 @@ import { useRouter } from 'next/navigation';
 
 import { EditTaskDialog } from '~/home/(user)/tasks/_components/edit-task-dialog';
 import { plannerTaskToPageTask } from '~/lib/planner/planner-task-to-page-task';
-import { plannerTaskSubtitle } from '~/lib/planner/build-task-tree';
+import { plannerTaskMetaWithoutClient } from '~/lib/planner/build-task-tree';
+import { PlannerClientPill } from './planner-client-pill';
 import { DayScheduleEditor } from './DayScheduleEditor';
 import { PlannerSyncCalendarButton } from './planner-push-to-calendar-button';
 import { PlannerRemindersToggle } from './PlannerRemindersToggle';
@@ -716,7 +717,8 @@ function TaskRow({
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const done = task.status === 'completed';
-  const subtitle = plannerTaskSubtitle(task);
+  const clientName = task.clientName?.trim();
+  const metaLabel = plannerTaskMetaWithoutClient(task);
   const pageTask = plannerTaskToPageTask(task);
 
   return (
@@ -752,10 +754,17 @@ function TaskRow({
           >
             {task.title}
           </p>
-          {subtitle ? (
-            <p className="mt-0.5 text-xs text-[var(--workspace-shell-text)]/45">
-              {subtitle}
-            </p>
+          {clientName || metaLabel ? (
+            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+              {clientName ? (
+                <PlannerClientPill name={clientName} color={task.accentColor} />
+              ) : null}
+              {metaLabel ? (
+                <span className="text-xs text-[var(--workspace-shell-text)]/45">
+                  {metaLabel}
+                </span>
+              ) : null}
+            </div>
           ) : null}
           {task.notes?.trim() ? (
             <p className="mt-1 line-clamp-2 text-xs text-[var(--workspace-shell-text)]/35">

@@ -93,6 +93,23 @@ export function plannerTaskSubtitle(task: PlannerTask): string {
   return parts.join(' · ');
 }
 
+export function plannerTaskMetaWithoutClient(task: PlannerTask): string {
+  const parts: string[] = [];
+  const workspace = task.workspace.trim();
+  const client = task.clientName?.trim();
+  const project = task.project?.trim();
+
+  if (workspace && workspace !== 'Personal' && workspace !== client) {
+    parts.push(workspace);
+  }
+
+  if (project && !isGenericProjectName(project) && project !== client) {
+    parts.push(project);
+  }
+
+  return parts.join(' · ');
+}
+
 export function plannerTaskAssignmentLabel(task: PlannerTask): string | null {
   const client = task.clientName?.trim();
   const project = task.project?.trim();

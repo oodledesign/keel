@@ -25,13 +25,10 @@ export const workspaceSidebarClassName = [
   '[&_[data-sidebar=menu-button]:hover]:bg-[var(--workspace-shell-sidebar-accent)]',
   '[&_[data-sidebar=menu-button]:hover]:text-[var(--workspace-shell-nav-text-hover)]',
   '[&_[data-sidebar=menu-button][data-active=true]]:border-0',
-  '[&_[data-sidebar=menu-button][data-active=true]]:bg-gradient-to-r',
-  '[&_[data-sidebar=menu-button][data-active=true]]:from-[var(--ozer-gradient-active-from)]',
-  '[&_[data-sidebar=menu-button][data-active=true]]:to-[var(--ozer-gradient-active-to)]',
+  '[&_[data-sidebar=menu-button][data-active=true]]:bg-[var(--ozer-accent)]',
   '[&_[data-sidebar=menu-button][data-active=true]]:text-[var(--ozer-white)]',
-  '[&_[data-sidebar=menu-sub-button][data-active=true]]:bg-gradient-to-r',
-  '[&_[data-sidebar=menu-sub-button][data-active=true]]:from-[var(--ozer-gradient-active-from)]',
-  '[&_[data-sidebar=menu-sub-button][data-active=true]]:to-[var(--ozer-gradient-active-to)]',
+  '[&_[data-sidebar=menu-sub-button][data-active=true]]:bg-[var(--ozer-accent)]',
+  '[&_[data-sidebar=menu-sub-button][data-active=true]]:text-[var(--ozer-white)]',
 ].join(' ');
 
 export const workspacePageCanvasClassName =

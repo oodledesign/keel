@@ -31,7 +31,7 @@ import { cn } from '@kit/ui/utils';
 import { updateTask } from '~/home/(user)/_lib/actions/task-actions';
 import { AddTaskDialog } from '~/home/(user)/_components/dashboard/add-task-dialog';
 import { EditTaskDialog } from '~/home/(user)/tasks/_components/edit-task-dialog';
-import { plannerTaskToPageTask } from '~/lib/planner/planner-task-to-page-task';
+import { PlannerClientPill } from './planner-client-pill';
 import type {
   PlannerProjectNode,
   PlannerScope,
@@ -389,7 +389,7 @@ function TaskRow({
           <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <span className="leading-snug text-[var(--workspace-shell-text)]/90">{task.title}</span>
             {clientName ? (
-              <span className="text-xs text-[var(--workspace-shell-text-muted)]">{clientName}</span>
+              <PlannerClientPill name={clientName} color={task.accentColor} />
             ) : null}
           </span>
           <span className="mt-1 flex flex-wrap items-center gap-1.5">
