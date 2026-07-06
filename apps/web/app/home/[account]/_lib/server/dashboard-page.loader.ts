@@ -10,7 +10,7 @@ import pathsConfig from '~/config/paths.config';
 import { PROJECT_PRIMARY_CLIENT_EMBED } from '~/lib/projects/delivery-project-db';
 import { aggregateTransactionsByMonth } from '~/lib/date-range/analytics-date-range';
 import { accumulateFinanceTotals } from '~/lib/finance/transaction-totals';
-import { displayTitle } from '../workspace-content/context-resolve';
+import { displayTitle, resolveNoteContext } from '../workspace-content/context-resolve';
 import { toIsoDateString } from '../../../_lib/due-date-ymd';
 
 import { loadTeamWorkspace } from './team-account-workspace.loader';
@@ -82,6 +82,7 @@ export type DashboardNoteSummary = {
   title: string;
   excerpt: string;
   updatedAt: string;
+  clientName: string | null;
 };
 
 export type DashboardTaskSummary = {
@@ -288,7 +289,9 @@ async function loadDashboardPageDataImpl(
       .eq('project_type', 'delivery'),
     client
       .from('notes')
-      .select('id, title, content, updated_at')
+      .select(
+        'id, title, content, updated_at, client_id, client_org_id, clients(display_name)',
+      )
       .eq('account_id', accountId)
       .order('updated_at', { ascending: false })
       .limit(8),
@@ -454,11 +457,13 @@ async function loadDashboardPageDataImpl(
         const titleRaw = (row.title as string | null) ?? '';
         const title = displayTitle(titleRaw, content);
         const plain = content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        const context = resolveNoteContext(row as Parameters<typeof resolveNoteContext>[0]);
         return {
           id: row.id as string,
           title,
           excerpt: plain.slice(0, 120) || 'No content yet',
           updatedAt: row.updated_at as string,
+          clientName: context?.type === 'client' ? context.label : null,
         };
       });
 

@@ -4,14 +4,16 @@ import { useEffect, useState } from 'react';
 
 import Link from 'next/link';
 
-import { X } from 'lucide-react';
+import { ArrowUpRight, X } from 'lucide-react';
 
-import { dismissNotice, isNoticeDismissed } from '~/lib/dismissible-notice';
-import type { ResolvedShortcut } from '~/lib/dashboard-shortcuts/types';
-import { HapticLink } from '~/components/haptic-link';
-import { ArrowUpRight } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
 import { cn } from '@kit/ui/utils';
+
+import { HapticLink } from '~/components/haptic-link';
+import { MobileNavTabIcon } from '~/components/workspace-shell/mobile-nav-tab-icon';
+import { dismissNotice, isNoticeDismissed } from '~/lib/dismissible-notice';
+import type { ResolvedShortcut } from '~/lib/dashboard-shortcuts/types';
+import { coerceMobileNavIconKey } from '~/lib/mobile-nav/nav-icon-keys';
 
 type Props = {
   shortcuts: ResolvedShortcut[];
@@ -98,7 +100,13 @@ export function DashboardShortcutsBar({
                       {shortcut.avatarFallback}
                     </AvatarFallback>
                   </Avatar>
-                ) : null}
+                ) : (
+                  <MobileNavTabIcon
+                    iconKey={coerceMobileNavIconKey(shortcut.iconKey) ?? 'workspace'}
+                    href={shortcut.href}
+                    className="h-4 w-4 text-[var(--ozer-accent)]"
+                  />
+                )}
                 <span className="truncate">{label}</span>
                 <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text-muted)] group-hover:text-[var(--ozer-accent-muted)]" />
               </HapticLink>

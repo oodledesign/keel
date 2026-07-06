@@ -357,17 +357,24 @@ function RecentNoteCard(props: { note: PersonalRecentNote }) {
       href={href}
       className={`${panelClass} w-[calc(50%-0.375rem)] shrink-0 snap-start p-3 transition-transform active:scale-[0.98] md:w-auto`}
     >
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/8 text-[var(--ozer-accent-muted)]">
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]">
           <StickyNote className="h-3.5 w-3.5" />
         </div>
-        <span className="inline-flex min-w-0 items-center gap-1.5 truncate text-[10px] text-[var(--workspace-shell-text)]/50">
-          <span
-            className="h-1.5 w-1.5 shrink-0 rounded-full"
-            style={{ backgroundColor: props.note.workspaceColor }}
-          />
-          {props.note.workspaceName}
-        </span>
+        <div className="flex min-w-0 flex-col items-end gap-1">
+          {props.note.clientName ? (
+            <span className="max-w-full truncate rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[10px] font-medium text-[var(--workspace-shell-text-muted)]">
+              {props.note.clientName}
+            </span>
+          ) : null}
+          <span className="inline-flex min-w-0 items-center gap-1.5 truncate text-[10px] text-[var(--workspace-shell-text)]/50">
+            <span
+              className="h-1.5 w-1.5 shrink-0 rounded-full"
+              style={{ backgroundColor: props.note.workspaceColor }}
+            />
+            {props.note.workspaceName}
+          </span>
+        </div>
       </div>
       <p className="line-clamp-2 text-sm font-medium text-[var(--workspace-shell-text)]">
         {props.note.title}

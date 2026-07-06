@@ -16,7 +16,7 @@ import {
   type WorkspaceAccountRow,
 } from '~/home/_lib/server/workspace-scope';
 import { normalizeSpaceType } from '~/home/[account]/_lib/server/account-modules';
-import { displayTitle } from '~/home/[account]/_lib/workspace-content/context-resolve';
+import { displayTitle, resolveNoteContext } from '~/home/[account]/_lib/workspace-content/context-resolve';
 import { workspaceColorForSpaceType } from '~/home/(user)/_lib/workspace-accent';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
@@ -83,6 +83,7 @@ export type PersonalRecentNote = {
   workspaceName: string;
   workspaceSlug: string;
   workspaceColor: string;
+  clientName: string | null;
   isPersonal?: boolean;
 };
 
@@ -508,7 +509,9 @@ async function loadRecentNotesAcrossWorkspaces(
 
   const { data, error } = await client
     .from('notes')
-    .select('id, title, content, updated_at, account_id')
+    .select(
+      'id, title, content, updated_at, account_id, client_id, client_org_id, clients(display_name)',
+    )
     .in('account_id', accountIds)
     .order('updated_at', { ascending: false })
     .limit(12);
@@ -532,6 +535,9 @@ async function loadRecentNotesAcrossWorkspaces(
     content: string | null;
     updated_at: string;
     account_id: string;
+    client_id?: string | null;
+    client_org_id?: string | null;
+    clients?: { display_name?: string | null } | null;
   };
 
   return ((data ?? []) as NoteRow[]).map((row) => {
@@ -545,6 +551,7 @@ async function loadRecentNotesAcrossWorkspaces(
       .trim();
     const spaceType = normalizeSpaceType(workspace?.space_type ?? null);
     const isPersonal = workspace?.is_personal_account === true;
+    const context = resolveNoteContext(row as Parameters<typeof resolveNoteContext>[0]);
 
     return {
       id: row.id,
@@ -558,6 +565,7 @@ async function loadRecentNotesAcrossWorkspaces(
       workspaceColor: isPersonal
         ? '#FFE3DA'
         : workspaceColorForSpaceType(spaceType),
+      clientName: context?.type === 'client' ? context.label : null,
       isPersonal,
     };
   });

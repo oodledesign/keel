@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronRight, StickyNote } from 'lucide-react';
+import { ChevronRight, StickyNote, ArrowUpRight } from 'lucide-react';
 
 import { cn } from '@kit/ui/utils';
 
@@ -63,6 +63,7 @@ export function BusinessDashboardMobile({
 
   const tasksHref = pathsConfig.app.accountTasks.replace('[account]', accountSlug);
   const notesHref = pathsConfig.app.accountNotes.replace('[account]', accountSlug);
+  const financesHref = pathsConfig.app.accountFinances.replace('[account]', accountSlug);
   const noteDetailPath = (id: string) =>
     pathsConfig.app.accountNoteDetail
       .replace('[account]', accountSlug)
@@ -95,8 +96,19 @@ export function BusinessDashboardMobile({
             <p>{metrics.hoursLogged}h logged</p>
           </div>
         </div>
-        <div className="mt-3 h-36">
-          <FinanceTrendBarChart data={revenueTrendData} variant="grouped" />
+        <div className="relative mt-3 h-36">
+          <FinanceTrendBarChart
+            data={revenueTrendData}
+            variant="grouped"
+            surface="workspace"
+          />
+          <HapticLink
+            href={financesHref}
+            aria-label="Open finances"
+            className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text-muted)] shadow-sm transition-colors hover:border-[var(--ozer-accent)]/35 hover:text-[var(--ozer-accent)]"
+          >
+            <ArrowUpRight className="h-4 w-4" />
+          </HapticLink>
         </div>
       </section>
 
@@ -165,8 +177,15 @@ export function BusinessDashboardMobile({
                   'w-[calc(50%-0.375rem)] shrink-0 snap-start p-3 transition-transform active:scale-[0.98] md:w-56 lg:w-64',
                 )}
               >
-                <div className="mb-2 flex h-7 w-7 items-center justify-center rounded-lg bg-white/8 text-[var(--ozer-accent-muted)]">
-                  <StickyNote className="h-3.5 w-3.5" />
+                <div className="mb-2 flex items-start justify-between gap-2">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]">
+                    <StickyNote className="h-3.5 w-3.5" />
+                  </div>
+                  {note.clientName ? (
+                    <span className="max-w-[55%] truncate rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[10px] font-medium text-[var(--workspace-shell-text-muted)]">
+                      {note.clientName}
+                    </span>
+                  ) : null}
                 </div>
                 <p className="line-clamp-2 text-sm font-medium text-[var(--workspace-shell-text)]">
                   {note.title}

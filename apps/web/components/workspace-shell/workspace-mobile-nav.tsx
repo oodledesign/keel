@@ -275,6 +275,7 @@ export function WorkspaceMobileBottomNav({
                   iconKey={tab.iconKey}
                   href={tab.path}
                   homePath={homePath}
+                  active={active}
                   avatarUrl={tab.avatarUrl}
                   avatarColor={tab.avatarColor}
                   avatarFallback={tab.avatarFallback}

@@ -31,13 +31,16 @@ function formatCurrency(value: number): string {
 }
 
 const tooltipStyle = {
-  backgroundColor: '#0B1524',
-  border: '1px solid rgba(255,255,255,0.08)',
+  backgroundColor: 'var(--workspace-shell-panel)',
+  border: '1px solid var(--workspace-shell-border)',
   borderRadius: 12,
   fontSize: 12,
-  color: '#F7F9FC',
-  boxShadow: '0 12px 30px rgba(2, 8, 23, 0.35)',
+  color: 'var(--workspace-shell-text)',
+  boxShadow: '0 12px 30px rgba(15, 23, 42, 0.12)',
 };
+
+const WORKSPACE_CHART_TICK = 'var(--workspace-shell-text-muted)';
+const WORKSPACE_CHART_GRID = 'color-mix(in srgb, var(--workspace-shell-border) 70%, transparent)';
 
 const GROUPED_INCOME_COLOR = '#FF5C34';
 const GROUPED_EXPENSES_COLOR = '#94A3B8';
@@ -61,7 +64,7 @@ function FinanceGroupedTooltip({
   }
 
   return (
-    <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[#0B1524] px-3 py-2.5 text-xs shadow-lg">
+    <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 py-2.5 text-xs shadow-lg">
       <p className="mb-2 font-medium text-[var(--workspace-shell-text)]">{label}</p>
       <div className="space-y-1.5">
         <div className="flex items-center justify-between gap-6">
@@ -110,10 +113,21 @@ function seriesLabel(name: string) {
 export function FinanceTrendBarChart({
   data,
   variant = 'stacked',
+  surface = 'default',
 }: {
   data: MonthlyFinancePoint[];
   variant?: 'stacked' | 'grouped';
+  surface?: 'default' | 'workspace';
 }) {
+  const isWorkspaceSurface = surface === 'workspace';
+  const axisTickFill = isWorkspaceSurface ? WORKSPACE_CHART_TICK : '#8FA1BC';
+  const gridStroke = isWorkspaceSurface ? WORKSPACE_CHART_GRID : 'rgba(255,255,255,0.05)';
+  const legendColor = isWorkspaceSurface
+    ? 'var(--workspace-shell-text-muted)'
+    : '#D7DEEE';
+  const cursorFill = isWorkspaceSurface
+    ? 'color-mix(in srgb, var(--ozer-accent) 8%, transparent)'
+    : 'rgba(255,255,255,0.035)';
   if (!data.length) {
     return (
       <p className="flex h-72 items-center justify-center text-sm text-violet-200/60">
@@ -127,24 +141,21 @@ export function FinanceTrendBarChart({
       <div className="h-72">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} barCategoryGap="20%">
-            <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.05)" />
+            <CartesianGrid vertical={false} stroke={gridStroke} />
             <XAxis
               dataKey="month"
               tickLine={false}
               axisLine={false}
-              tick={{ fill: '#8FA1BC', fontSize: 12 }}
+              tick={{ fill: axisTickFill, fontSize: 12 }}
             />
             <YAxis
               tickLine={false}
               axisLine={false}
-              tick={{ fill: '#8FA1BC', fontSize: 11 }}
+              tick={{ fill: axisTickFill, fontSize: 11 }}
               tickFormatter={(v) => `£${Math.round(v / 1000)}k`}
             />
-            <Tooltip
-              cursor={{ fill: 'rgba(255,255,255,0.035)' }}
-              content={<FinanceGroupedTooltip />}
-            />
-            <Legend wrapperStyle={{ fontSize: 12, color: '#D7DEEE' }} />
+            <Tooltip cursor={{ fill: cursorFill }} content={<FinanceGroupedTooltip />} />
+            <Legend wrapperStyle={{ fontSize: 12, color: legendColor }} />
             <Bar
               dataKey="income"
               name="Income"

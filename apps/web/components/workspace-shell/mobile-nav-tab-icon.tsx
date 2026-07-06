@@ -3,6 +3,7 @@
 import {
   BarChart3,
   Briefcase,
+  Building2,
   Calendar,
   CalendarClock,
   CalendarDays,
@@ -14,18 +15,22 @@ import {
   Home,
   Kanban,
   LayoutDashboard,
-  LayoutGrid,
   LifeBuoy,
   ListChecks,
   Mail,
+  Megaphone,
   MessageSquare,
   MessageSquareText,
   Mic,
   PenLine,
+  Puzzle,
+  ScrollText,
   Share2,
+  ShoppingCart,
   Sparkles,
   StickyNote,
   Users,
+  Video,
   Wallet,
   type LucideIcon,
 } from 'lucide-react';
@@ -35,6 +40,7 @@ import { cn } from '@kit/ui/utils';
 import {
   coerceMobileNavIconKey,
   resolveMobileNavIconKey,
+  resolveNavIconKey,
   type MobileNavIconKey,
 } from '~/lib/mobile-nav/nav-icon-keys';
 
@@ -53,23 +59,23 @@ const ICON_BY_KEY: Record<MobileNavIconKey, LucideIcon> = {
   websites: Globe,
   support: LifeBuoy,
   invoices: FileText,
-  proposals: PenLine,
+  proposals: ScrollText,
   contracts: FileSignature,
   notes: StickyNote,
   brain: Sparkles,
   sops: ListChecks,
   messages: MessageSquare,
   finances: Wallet,
-  videos: LayoutGrid,
+  videos: Video,
   rankly: BarChart3,
   signatures: PenLine,
-  feedflow: Share2,
+  feedflow: Megaphone,
   reviews: MessageSquareText,
   social: Share2,
-  apps: LayoutGrid,
-  properties: Briefcase,
+  apps: Puzzle,
+  properties: Building2,
   calendar: Calendar,
-  shopping: LayoutGrid,
+  shopping: ShoppingCart,
   meal: CalendarDays,
   workspace: LayoutDashboard,
 };
@@ -81,6 +87,7 @@ type MobileNavTabIconProps = {
   avatarUrl?: string | null;
   avatarColor?: string;
   avatarFallback?: string;
+  active?: boolean;
   className?: string;
 };
 
@@ -91,14 +98,21 @@ export function MobileNavTabIcon({
   avatarUrl,
   avatarColor,
   avatarFallback,
+  active = false,
   className,
 }: MobileNavTabIconProps) {
+  const storedKey = coerceMobileNavIconKey(iconKey);
+  const pathKey = href != null ? resolveNavIconKey(href) : null;
   const resolvedKey =
-    href != null
-      ? resolveMobileNavIconKey(href, { homePath, preferredKey: iconKey })
-      : coerceMobileNavIconKey(iconKey) ?? 'workspace';
+    storedKey && storedKey !== 'workspace'
+      ? storedKey
+      : pathKey && pathKey !== 'workspace'
+        ? pathKey
+        : href != null
+          ? resolveMobileNavIconKey(href, { homePath, preferredKey: iconKey })
+          : storedKey ?? 'workspace';
 
-  if (avatarUrl) {
+  if (avatarUrl && resolvedKey === 'workspace') {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
@@ -113,7 +127,8 @@ export function MobileNavTabIcon({
     return (
       <span
         className={cn(
-          'flex h-[21px] w-[21px] items-center justify-center rounded-full text-[10px] font-semibold text-[var(--workspace-shell-text)]',
+          'flex h-[21px] w-[21px] items-center justify-center rounded-full text-[10px] font-semibold',
+          active ? 'text-current' : 'text-[var(--workspace-shell-text)]',
           className,
         )}
         style={{ backgroundColor: avatarColor ?? '#334155' }}
@@ -124,5 +139,13 @@ export function MobileNavTabIcon({
   }
 
   const Icon = ICON_BY_KEY[resolvedKey];
-  return <Icon className={cn('h-[21px] w-[21px]', className)} />;
+  return (
+    <Icon
+      className={cn(
+        'h-[21px] w-[21px]',
+        active ? 'text-current' : 'text-[var(--ozer-accent)]',
+        className,
+      )}
+    />
+  );
 }
