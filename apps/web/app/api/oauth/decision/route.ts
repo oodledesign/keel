@@ -46,5 +46,7 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.redirect(result.data.redirect_url);
+  // OAuth 2.1 expects 302/303 so the browser follows with GET. Next.js defaults
+  // to 307, which preserves POST — Claude's callback only accepts GET.
+  return NextResponse.redirect(result.data.redirect_url, 303);
 }
