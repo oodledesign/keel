@@ -69,14 +69,15 @@ class ProjectAiService {
 
   private async getJobContext(accountId: string, jobId: string) {
     const { data, error } = await this.db
-      .from('jobs')
+      .from('projects')
       .select('id, title, client_id, account_id')
       .eq('id', jobId)
       .eq('account_id', accountId)
+      .eq('project_type', 'delivery')
       .maybeSingle();
 
     if (error) this.throwErr(error);
-    if (!data) throw new Error('Job not found');
+    if (!data) throw new Error('Project not found');
 
     let clientName: string | null = null;
     if (data.client_id) {
@@ -152,17 +153,17 @@ class ProjectAiService {
 
     let notesQuery = this.db
       .from('notes')
-      .select('id, title, content, updated_at, job_id, client_id')
+      .select('id, title, content, updated_at, project_id, client_id')
       .eq('account_id', input.accountId)
       .order('updated_at', { ascending: false })
       .limit(50);
 
     if (ctx.clientId) {
       notesQuery = notesQuery.or(
-        `job_id.eq.${input.jobId},client_id.eq.${ctx.clientId}`,
+        `project_id.eq.${input.jobId},client_id.eq.${ctx.clientId}`,
       );
     } else {
-      notesQuery = notesQuery.eq('job_id', input.jobId);
+      notesQuery = notesQuery.eq('project_id', input.jobId);
     }
 
     const { data: noteRows, error: notesErr } = await notesQuery;
@@ -173,7 +174,7 @@ class ProjectAiService {
         id: row.id,
         type: 'note',
         title: (row.title as string) || 'Note',
-        subtitle: row.job_id === input.jobId ? 'On this job' : 'Client',
+        subtitle: row.project_id === input.jobId ? 'On this project' : 'Client',
         preview: ((row.content as string) ?? '').slice(0, 160),
         date: row.updated_at as string,
       });
@@ -181,7 +182,7 @@ class ProjectAiService {
 
     let docsQuery = this.db
       .from('docs')
-      .select('id, title, content, kind, updated_at, job_id, client_id, doc_type')
+      .select('id, title, content, kind, updated_at, project_id, client_id, doc_type')
       .eq('account_id', input.accountId)
       .neq('doc_type', 'phase_page')
       .order('updated_at', { ascending: false })
@@ -189,10 +190,10 @@ class ProjectAiService {
 
     if (ctx.clientId) {
       docsQuery = docsQuery.or(
-        `job_id.eq.${input.jobId},client_id.eq.${ctx.clientId}`,
+        `project_id.eq.${input.jobId},client_id.eq.${ctx.clientId}`,
       );
     } else {
-      docsQuery = docsQuery.eq('job_id', input.jobId);
+      docsQuery = docsQuery.eq('project_id', input.jobId);
     }
 
     const { data: docRows, error: docsErr } = await docsQuery;
@@ -322,7 +323,7 @@ class ProjectAiService {
         .from('docs')
         .insert({
           account_id: input.accountId,
-          job_id: input.jobId,
+          project_id: input.jobId,
           title: `Project brief — ${ctx.jobTitle}`,
           content,
           kind: 'written',
@@ -370,10 +371,10 @@ class ProjectAiService {
     const phaseId = input.phaseId!;
     const { data: phase, error: phaseErr } = await this.db
       .from('project_phases')
-      .select('id, name, job_id')
+      .select('id, name, project_id')
       .eq('id', phaseId)
       .eq('account_id', input.accountId)
-      .eq('job_id', input.jobId)
+      .eq('project_id', input.jobId)
       .maybeSingle();
 
     if (phaseErr) this.throwErr(phaseErr);
@@ -413,7 +414,7 @@ class ProjectAiService {
         .from('docs')
         .insert({
           account_id: input.accountId,
-          job_id: input.jobId,
+          project_id: input.jobId,
           phase_id: phaseId,
           title: phase.name,
           content,
@@ -446,7 +447,7 @@ class ProjectAiService {
       .from('project_phases')
       .select('sort_order')
       .eq('account_id', input.accountId)
-      .eq('job_id', input.jobId)
+      .eq('project_id', input.jobId)
       .order('sort_order', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -460,7 +461,7 @@ class ProjectAiService {
         .from('project_phases')
         .insert({
           account_id: input.accountId,
-          job_id: input.jobId,
+          project_id: input.jobId,
           name: phaseInput.name.trim(),
           description: phaseInput.description?.trim() || null,
           status: 'not_started',
@@ -492,7 +493,7 @@ class ProjectAiService {
           due_date: taskInput.due_date || null,
           user_id: user.id,
           account_id: input.accountId,
-          job_id: input.jobId,
+          project_id: input.jobId,
           phase_id: phaseId,
           client_id: ctx.clientId,
         });
@@ -506,7 +507,7 @@ class ProjectAiService {
     if (input.contextRefs?.length) {
       const { error: auditErr } = await this.db.from('docs').insert({
         account_id: input.accountId,
-        job_id: input.jobId,
+        project_id: input.jobId,
         title: `Phase plan — ${ctx.jobTitle}`,
         content: planSummaryLines.join('\n').trim(),
         kind: 'written',

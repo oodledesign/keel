@@ -48,7 +48,7 @@ export function SopRunAssigneeSelect({
         >
           <SelectValue placeholder="Unassigned" />
         </SelectTrigger>
-        <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
+        <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
           <SelectItem value="__unassigned__">Unassigned</SelectItem>
           {members.map((member) => (
             <SelectItem key={member.user_id} value={member.user_id}>

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { Loader2, Sparkles } from 'lucide-react';
+import { Loader2, Plus, Sparkles } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Checkbox } from '@kit/ui/checkbox';
@@ -15,11 +15,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@kit/ui/dialog';
+import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
+import { saveWorkspaceNoteAction } from '~/home/[account]/_lib/workspace-content/notes-actions';
 
 import {
   applyProjectPhasePlan,
@@ -130,6 +132,10 @@ export function ProjectAiGenerateDialog({
   const [applying, setApplying] = useState(false);
   const [planReview, setPlanReview] = useState<PlanReviewState | null>(null);
   const [rawDraft, setRawDraft] = useState<string | null>(null);
+  const [noteDialogOpen, setNoteDialogOpen] = useState(false);
+  const [noteTitle, setNoteTitle] = useState('');
+  const [noteContent, setNoteContent] = useState('');
+  const [savingNote, setSavingNote] = useState(false);
 
   const allItems = useMemo(() => {
     if (!sources) return [];
@@ -168,6 +174,9 @@ export function ProjectAiGenerateDialog({
     if (!open) return;
     setPlanReview(null);
     setRawDraft(null);
+    setNoteDialogOpen(false);
+    setNoteTitle('');
+    setNoteContent('');
     setMode(defaultMode);
     setSelected(new Set());
     void loadSources();
@@ -186,6 +195,40 @@ export function ProjectAiGenerateDialog({
       else next.delete(key);
       return next;
     });
+  };
+
+  const handleSaveNote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const content = noteContent.trim();
+    if (!content) {
+      toast.error('Note content is required');
+      return;
+    }
+
+    setSavingNote(true);
+    try {
+      const { noteId } = await saveWorkspaceNoteAction({
+        accountId,
+        accountSlug,
+        title: noteTitle.trim() || undefined,
+        content,
+        category: 'idea',
+        link: { type: 'project', id: jobId },
+      });
+
+      toast.success('Project note added');
+      setNoteDialogOpen(false);
+      setNoteTitle('');
+      setNoteContent('');
+
+      const data = await listProjectAiSources({ accountId, jobId });
+      setSources(data as ProjectAiSourcesResult);
+      setSelected(new Set([`note:${noteId}`]));
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setSavingNote(false);
+    }
   };
 
   const handleGenerate = async () => {
@@ -281,6 +324,7 @@ export function ProjectAiGenerateDialog({
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-lg">
         <DialogHeader>
@@ -389,6 +433,18 @@ export function ProjectAiGenerateDialog({
                   selected={selected}
                   onToggle={toggleSource}
                 />
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)]"
+                    onClick={() => setNoteDialogOpen(true)}
+                  >
+                    <Plus className="mr-1.5 h-3.5 w-3.5" />
+                    Add project note
+                  </Button>
+                </div>
                 <SourceGroup
                   label="Documents"
                   items={sources?.docs ?? []}
@@ -396,10 +452,22 @@ export function ProjectAiGenerateDialog({
                   onToggle={toggleSource}
                 />
                 {allItems.length === 0 && (
-                  <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-                    No sources found for this job yet. Add notes, docs,
-                    transcripts, or proposals linked to the client or job.
-                  </p>
+                  <div className="space-y-3 rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/40 p-4">
+                    <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                      No sources found for this project yet. Add a note with
+                      scope, goals, or client context — then select it below to
+                      generate a brief or phase plan.
+                    </p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
+                      onClick={() => setNoteDialogOpen(true)}
+                    >
+                      <Plus className="mr-1.5 h-3.5 w-3.5" />
+                      Add project note
+                    </Button>
+                  </div>
                 )}
               </div>
             )}
@@ -447,5 +515,59 @@ export function ProjectAiGenerateDialog({
         )}
       </DialogContent>
     </Dialog>
+
+      <Dialog open={noteDialogOpen} onOpenChange={setNoteDialogOpen}>
+        <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add project note</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSaveNote} className="space-y-3">
+            <div>
+              <Label htmlFor="ai-note-title" className="text-[var(--workspace-shell-text-muted)]">
+                Title (optional)
+              </Label>
+              <Input
+                id="ai-note-title"
+                value={noteTitle}
+                onChange={(e) => setNoteTitle(e.target.value)}
+                placeholder="Discovery call summary"
+                className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
+              />
+            </div>
+            <div>
+              <Label htmlFor="ai-note-content" className="text-[var(--workspace-shell-text-muted)]">
+                Note *
+              </Label>
+              <Textarea
+                id="ai-note-content"
+                value={noteContent}
+                onChange={(e) => setNoteContent(e.target.value)}
+                rows={6}
+                placeholder="Goals, deliverables, constraints, or anything the AI should use as context…"
+                className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
+                autoFocus
+              />
+            </div>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                type="button"
+                variant="outline"
+                className="border-[color:var(--workspace-shell-border)]"
+                onClick={() => setNoteDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={savingNote || !noteContent.trim()}
+                className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
+              >
+                {savingNote ? 'Saving…' : 'Save note'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

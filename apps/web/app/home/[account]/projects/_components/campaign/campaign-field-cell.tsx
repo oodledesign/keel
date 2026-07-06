@@ -69,7 +69,7 @@ export function CampaignFieldCell({
           <SelectTrigger className="h-8 border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]">
             <SelectValue placeholder="—" />
           </SelectTrigger>
-          <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
+          <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
             {(field.options.choices ?? []).map((choice) => (
               <SelectItem key={choice} value={choice}>
                 {choice}
@@ -87,7 +87,7 @@ export function CampaignFieldCell({
           <SelectTrigger className="h-8 border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]">
             <SelectValue placeholder="Select client" />
           </SelectTrigger>
-          <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
+          <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
             {linkOptions.clients.map((client) => (
               <SelectItem key={client.id} value={client.id}>
                 {client.name}
@@ -105,7 +105,7 @@ export function CampaignFieldCell({
           <SelectTrigger className="h-8 border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]">
             <SelectValue placeholder="Select project" />
           </SelectTrigger>
-          <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
+          <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
             {linkOptions.projects.map((project) => (
               <SelectItem key={project.id} value={project.id}>
                 {project.name}

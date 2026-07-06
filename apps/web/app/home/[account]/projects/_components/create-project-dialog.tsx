@@ -28,6 +28,10 @@ import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
+import {
+  workspaceSelectContentClass,
+  workspaceSelectItemClass,
+} from '~/lib/workspace-ui';
 import { WEBSITE_REVAMP_CAMPAIGN_FIELDS } from '~/lib/campaign-projects/website-revamp-template';
 import {
   PROJECT_TYPE_META,
@@ -220,19 +224,19 @@ export function CreateProjectDialog({
                       className={cn(
                         'flex flex-col items-start rounded-xl border p-3 text-left transition-colors',
                         selected
-                          ? 'border-[var(--ozer-accent)]/50 bg-[var(--ozer-accent-subtle)]'
+                          ? 'border-[var(--ozer-accent)] bg-[var(--ozer-accent-subtle)]'
                           : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] hover:border-[color:var(--workspace-shell-border)]',
                       )}
                     >
                       <div
                         className={cn(
-                          'mb-2 flex h-8 w-8 items-center justify-center rounded-lg',
+                          'mb-2 flex h-9 w-9 items-center justify-center rounded-lg',
                           selected
-                            ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]'
+                            ? 'bg-[var(--ozer-accent)] text-[var(--ozer-white)] shadow-sm'
                             : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]',
                         )}
                       >
-                        <Icon className="h-4 w-4" />
+                        <Icon className="h-5 w-5" strokeWidth={selected ? 2.25 : 2} />
                       </div>
                       <span className="text-sm font-medium text-[var(--workspace-shell-text)]">{meta.label}</span>
                       <span className="mt-0.5 text-[11px] leading-snug text-[var(--workspace-shell-text-muted)]">
@@ -308,12 +312,12 @@ export function CreateProjectDialog({
                     <SelectTrigger className={fieldClass}>
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="in_progress">In progress</SelectItem>
-                      <SelectItem value="on_hold">On hold</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                    <SelectContent className={workspaceSelectContentClass}>
+                      <SelectItem value="pending" className={workspaceSelectItemClass}>Pending</SelectItem>
+                      <SelectItem value="in_progress" className={workspaceSelectItemClass}>In progress</SelectItem>
+                      <SelectItem value="on_hold" className={workspaceSelectItemClass}>On hold</SelectItem>
+                      <SelectItem value="completed" className={workspaceSelectItemClass}>Completed</SelectItem>
+                      <SelectItem value="cancelled" className={workspaceSelectItemClass}>Cancelled</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -323,11 +327,11 @@ export function CreateProjectDialog({
                     <SelectTrigger className={fieldClass}>
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="urgent">Urgent</SelectItem>
+                    <SelectContent className={workspaceSelectContentClass}>
+                      <SelectItem value="low" className={workspaceSelectItemClass}>Low</SelectItem>
+                      <SelectItem value="medium" className={workspaceSelectItemClass}>Medium</SelectItem>
+                      <SelectItem value="high" className={workspaceSelectItemClass}>High</SelectItem>
+                      <SelectItem value="urgent" className={workspaceSelectItemClass}>Urgent</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -376,11 +380,11 @@ export function CreateProjectDialog({
                   <SelectTrigger className={fieldClass}>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
-                    <SelectItem value="blank">
+                  <SelectContent className={workspaceSelectContentClass}>
+                    <SelectItem value="blank" className={workspaceSelectItemClass}>
                       Blank — add your own columns later
                     </SelectItem>
-                    <SelectItem value="website_revamp">
+                    <SelectItem value="website_revamp" className={workspaceSelectItemClass}>
                       Website revamp — outreach & pricing columns
                     </SelectItem>
                   </SelectContent>

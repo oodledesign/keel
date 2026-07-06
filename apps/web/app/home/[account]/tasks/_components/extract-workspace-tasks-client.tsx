@@ -383,7 +383,7 @@ export function ExtractWorkspaceTasksClient({
                           <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                             <SelectValue placeholder="Project or client" />
                           </SelectTrigger>
-                          <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
+                          <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
                             <SelectItem value="__none__">Choose…</SelectItem>
                             {projects.map((p) => (
                               <SelectItem key={p.id} value={`p:${p.id}`}>
@@ -435,7 +435,7 @@ export function ExtractWorkspaceTasksClient({
                           <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
+                          <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
                             {(['low', 'medium', 'high', 'urgent'] as const).map((p) => (
                               <SelectItem key={p} value={p}>
                                 {p}
@@ -573,7 +573,7 @@ export function ExtractWorkspaceTasksClient({
                               <SelectTrigger className="w-32 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs text-[var(--workspace-shell-text)]">
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
+                              <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
                                 {(['low', 'medium', 'high', 'urgent'] as const).map(
                                   (p) => (
                                     <SelectItem key={p} value={p}>

@@ -268,7 +268,7 @@ export function CampaignManageColumnsDialog({
                 <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
+                <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
                   {PROJECT_FIELD_TYPES.map((type) => (
                     <SelectItem key={type} value={type}>
                       {PROJECT_FIELD_TYPE_LABELS[type]}

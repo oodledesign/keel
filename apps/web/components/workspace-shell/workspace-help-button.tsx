@@ -34,7 +34,7 @@ export function WorkspaceHelpButton({
         className={cn(
           triggerBaseClass,
           variant === 'inline'
-            ? 'h-12 w-12 bg-[#1A2535]/98 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl'
+            ? 'h-12 w-12 bg-[var(--workspace-shell-panel)]/98 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl'
             : 'fixed bottom-6 right-4 z-[35] hidden h-11 w-11 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_8px_24px_rgba(0,0,0,0.35)] lg:flex',
           className,
         )}

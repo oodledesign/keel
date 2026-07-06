@@ -184,7 +184,7 @@ export function CampaignsListClient({
                 <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
+                <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
                   <SelectItem value="blank">Blank (add your own columns)</SelectItem>
                   <SelectItem value="website_revamp">Website revamp campaign</SelectItem>
                 </SelectContent>

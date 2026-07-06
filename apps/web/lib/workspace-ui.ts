@@ -54,3 +54,10 @@ export const workspacePanelBorder =
 export const workspaceSubtleFill = 'bg-[var(--workspace-shell-sidebar-accent)]';
 
 export const workspaceOnAccentText = 'text-[var(--ozer-white)]';
+
+/** Radix Select / dropdown menus — theme-aware panel surface */
+export const workspaceSelectContentClass =
+  'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]';
+
+export const workspaceSelectItemClass =
+  'text-[var(--workspace-shell-text)] focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]';

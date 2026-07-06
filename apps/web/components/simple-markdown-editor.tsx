@@ -194,7 +194,7 @@ export function SimpleMarkdownEditor({
 
       {selectionToolbar.visible && !readOnly ? (
         <div
-          className="fixed z-50 flex items-center gap-0.5 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[#1A2535] p-1 shadow-lg"
+          className="fixed z-50 flex items-center gap-0.5 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-1 shadow-lg"
           style={{ top: selectionToolbar.top, left: selectionToolbar.left }}
         >
           <button

@@ -213,7 +213,7 @@ export function MeetingsPageContent({
                 >
                   <SelectValue placeholder="Select client" />
                 </SelectTrigger>
-                <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[#1A2535] text-[var(--workspace-shell-text)]">
+                <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
                   {clients.map((client) => (
                     <SelectItem key={client.id} value={client.id}>
                       {client.name}
