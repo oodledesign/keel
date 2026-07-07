@@ -6,6 +6,17 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { assertWorkspaceMember } from './assert-workspace-member';
 import { generateKeelApiToken, hashKeelApiToken } from './token';
 import type { ApiTokenListItem, ValidatedApiToken } from './types';
+import { isTransientSupabaseError } from '~/lib/supabase/transient-errors';
+
+export class ApiTokenAuthError extends Error {
+  readonly transient: boolean;
+
+  constructor(message: string, transient: boolean) {
+    super(message);
+    this.name = 'ApiTokenAuthError';
+    this.transient = transient;
+  }
+}
 
 const TOKEN_LIST_COLUMNS =
   'id, name, created_at, last_used_at, expires_at, revoked_at';
@@ -128,7 +139,14 @@ export async function validateApiTokenForAuth(
     .is('revoked_at', null)
     .maybeSingle();
 
-  if (error || !data) {
+  if (error) {
+    throw new ApiTokenAuthError(
+      error.message,
+      isTransientSupabaseError(error),
+    );
+  }
+
+  if (!data) {
     return null;
   }
 

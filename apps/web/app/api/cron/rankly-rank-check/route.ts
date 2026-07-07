@@ -2,6 +2,7 @@ import { type NextRequest } from 'next/server';
 
 import { loadProjectsDueForRankCheck } from '~/lib/rank-tracking/db';
 import { triggerRankCheckRun } from '~/lib/rank-tracking/trigger-run';
+import { CRON_KILL_SWITCH, cronSkippedResponse, isCronDisabled } from '~/lib/cron/cron-guards';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
@@ -19,6 +20,10 @@ function authorizeCron(request: NextRequest): boolean {
 export async function GET(request: NextRequest) {
   if (!authorizeCron(request)) {
     return jsonErr('UNAUTHORIZED', 'Invalid cron secret', 401);
+  }
+
+  if (isCronDisabled(CRON_KILL_SWITCH.RANKLY)) {
+    return cronSkippedResponse('rankly-rank-check disabled');
   }
 
   try {

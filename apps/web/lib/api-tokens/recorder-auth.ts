@@ -3,6 +3,7 @@ import 'server-only';
 import { NextResponse } from 'next/server';
 
 import {
+  ApiTokenAuthError,
   touchApiTokenLastUsed,
   validateApiTokenForAuth,
 } from '~/lib/api-tokens/api-tokens.service';
@@ -11,6 +12,16 @@ import type { ValidatedApiToken } from '~/lib/api-tokens/types';
 
 export function recorderUnauthorized() {
   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+}
+
+export function recorderServiceUnavailable(message?: string) {
+  return NextResponse.json(
+    { error: message ?? 'Service temporarily unavailable' },
+    {
+      status: 503,
+      headers: { 'Retry-After': '30' },
+    },
+  );
 }
 
 function parseBearerToken(request: Request) {
@@ -30,14 +41,26 @@ export async function authenticateRecorderRequest(
     return recorderUnauthorized();
   }
 
-  const token = await validateApiTokenForAuth(rawToken);
-  if (!token) {
-    return recorderUnauthorized();
-  }
+  try {
+    const token = await validateApiTokenForAuth(rawToken);
+    if (!token) {
+      return recorderUnauthorized();
+    }
 
-  if (options?.touchLastUsed) {
-    touchApiTokenLastUsed(token.id);
-  }
+    if (options?.touchLastUsed) {
+      touchApiTokenLastUsed(token.id);
+    }
 
-  return token;
+    return token;
+  } catch (error) {
+    if (error instanceof ApiTokenAuthError) {
+      if (error.transient) {
+        return recorderServiceUnavailable(error.message);
+      }
+      console.error('[recorder-auth] token validation failed:', error.message);
+      return recorderUnauthorized();
+    }
+
+    throw error;
+  }
 }

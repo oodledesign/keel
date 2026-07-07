@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
-import { authenticateRecorderRequest } from '~/lib/api-tokens/recorder-auth';
+import { authenticateRecorderRequest, recorderServiceUnavailable } from '~/lib/api-tokens/recorder-auth';
 import { getRecorderCalendarEvent } from '~/lib/integrations/google-calendar/events';
 
 export const runtime = 'nodejs';
@@ -51,12 +51,15 @@ export async function GET(request: Request) {
       user_email: userData?.user?.email?.trim() || null,
     });
   } catch (err) {
+    const message =
+      err instanceof Error ? err.message : 'Could not load calendar event';
+    const isTimeout = message.includes('timeout') || message.includes('Timeout');
     return NextResponse.json(
+      { error: message },
       {
-        error:
-          err instanceof Error ? err.message : 'Could not load calendar event',
+        status: isTimeout ? 503 : 502,
+        headers: isTimeout ? { 'Retry-After': '30' } : undefined,
       },
-      { status: 502 },
     );
   }
 }

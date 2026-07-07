@@ -1,14 +1,17 @@
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { syncMailbox } from '@kit/gmail';
+import { CRON_KILL_SWITCH, cronSkippedResponse, isCronDisabled } from '~/lib/cron/cron-guards';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { authorizeCron } from '~/lib/email-assistant/cron-auth';
 import { runEmailAssistantPipeline } from '~/lib/email-assistant/post-sync-pipeline';
 import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
 
 export const runtime = 'nodejs';
-export const maxDuration = 300;
+export const maxDuration = 120;
 export const dynamic = 'force-dynamic';
+
+const DEFAULT_GMAIL_SYNC_BATCH_SIZE = 8;
 
 type SyncResultRow = {
   userId: string;
@@ -28,9 +31,15 @@ async function syncUserMailbox(userId: string) {
 
 async function syncAllConnectedUsers() {
   const admin = getSupabaseServerAdminClient();
+  const batchSize = Math.max(
+    1,
+    Number(process.env.GMAIL_SYNC_BATCH_SIZE ?? DEFAULT_GMAIL_SYNC_BATCH_SIZE),
+  );
   const { data, error } = await admin
     .from('google_connections')
-    .select('user_id');
+    .select('user_id')
+    .order('user_id', { ascending: true })
+    .limit(batchSize);
 
   if (error) {
     throw new Error(error.message);
@@ -63,10 +72,14 @@ async function syncAllConnectedUsers() {
   return results;
 }
 
-/** Cron: sync all connected Gmail accounts. */
+/** Cron: sync connected Gmail accounts (batched per invocation). */
 export async function GET(request: Request) {
   if (!authorizeCron(request)) {
     return jsonErr('UNAUTHORIZED', 'Invalid cron secret', 401);
+  }
+
+  if (isCronDisabled(CRON_KILL_SWITCH.GMAIL_SYNC)) {
+    return cronSkippedResponse('gmail-sync disabled');
   }
 
   const results = await syncAllConnectedUsers();

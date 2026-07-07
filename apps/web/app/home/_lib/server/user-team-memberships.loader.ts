@@ -6,6 +6,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { isTransientSupabaseError } from '~/lib/supabase/transient-errors';
+
 export type UserTeamMembershipAccount = {
   id: string;
   name: string | null;
@@ -35,6 +37,9 @@ export const loadUserTeamMemberships = cache(
       .eq('user_id', userId);
 
     if (error) {
+      if (isTransientSupabaseError(error)) {
+        throw new Error(error.message);
+      }
       console.error('[user-team-memberships] load:', error.message);
       return [];
     }

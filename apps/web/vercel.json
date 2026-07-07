@@ -16,11 +16,11 @@
     },
     {
       "path": "/api/cron/rankly-rank-check-worker",
-      "schedule": "*/5 * * * *"
+      "schedule": "*/30 * * * *"
     },
     {
       "path": "/api/cron/rankly-site-crawl-worker",
-      "schedule": "*/2 * * * *"
+      "schedule": "*/30 * * * *"
     },
     {
       "path": "/api/cron/rankly-pagespeed",
@@ -48,7 +48,7 @@
     },
     {
       "path": "/api/cron/planner-reminders",
-      "schedule": "*/5 * * * *"
+      "schedule": "*/15 * * * *"
     },
     {
       "path": "/api/cron/project-phase-due-reminders",
@@ -60,7 +60,7 @@
     },
     {
       "path": "/api/gmail/sync",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 */2 * * *"
     },
     {
       "path": "/api/ai/batch/submit",

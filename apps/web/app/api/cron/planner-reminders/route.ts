@@ -1,6 +1,7 @@
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { runPlannerRemindersDispatch } from '~/lib/planner/planner-reminders-dispatch';
+import { CRON_KILL_SWITCH, cronSkippedResponse, isCronDisabled } from '~/lib/cron/cron-guards';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 
 export const runtime = 'nodejs';
@@ -16,6 +17,10 @@ function authorizeCron(request: Request): boolean {
 export async function GET(request: Request) {
   if (!authorizeCron(request)) {
     return jsonErr('UNAUTHORIZED', 'Invalid cron secret', 401);
+  }
+
+  if (isCronDisabled(CRON_KILL_SWITCH.PLANNER_REMINDERS)) {
+    return cronSkippedResponse('planner-reminders disabled');
   }
 
   const admin = getSupabaseServerAdminClient();
