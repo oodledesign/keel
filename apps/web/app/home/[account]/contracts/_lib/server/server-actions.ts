@@ -98,7 +98,7 @@ export const markContractReadByTokenAction = enhanceAction(
     await markContractReadByToken(input.token);
     return { ok: true };
   },
-  { schema: GetContractForPortalSchema },
+  { schema: GetContractForPortalSchema, auth: false, verifyEmail: false },
 );
 
 export const signContractRecipientByTokenAction = enhanceAction(
@@ -110,5 +110,5 @@ export const signContractRecipientByTokenAction = enhanceAction(
       recipient_signature_type: input.recipient_signature_type,
       recipient_signature_data: input.recipient_signature_data,
     }),
-  { schema: SignRecipientSchema },
+  { schema: SignRecipientSchema, auth: false, verifyEmail: false },
 );

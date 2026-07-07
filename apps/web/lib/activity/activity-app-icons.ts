@@ -51,6 +51,10 @@ function faviconUrl(host: string) {
   return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=32`;
 }
 
+export function faviconUrlForDomain(domain: string) {
+  return faviconUrl(domain.trim());
+}
+
 function appInitial(appName: string) {
   const trimmed = appName.trim();
   if (!trimmed) {

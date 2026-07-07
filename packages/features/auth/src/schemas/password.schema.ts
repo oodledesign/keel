@@ -5,12 +5,11 @@ import { z } from 'zod';
  * These are the requirements for the password when signing up or changing the password
  */
 const requirements = {
-  minLength: 8,
+  minLength: 12,
   maxLength: 99,
-  specialChars:
-    process.env.NEXT_PUBLIC_PASSWORD_REQUIRE_SPECIAL_CHARS === 'true',
-  numbers: process.env.NEXT_PUBLIC_PASSWORD_REQUIRE_NUMBERS === 'true',
-  uppercase: process.env.NEXT_PUBLIC_PASSWORD_REQUIRE_UPPERCASE === 'true',
+  specialChars: true,
+  numbers: true,
+  uppercase: true,
 };
 
 /**

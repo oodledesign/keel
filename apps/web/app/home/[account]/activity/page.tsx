@@ -50,7 +50,11 @@ async function ActivityPage({ params, searchParams }: ActivityPageProps) {
 
   const data = await loadActivityPageData(
     accountSlug,
-    readSearchParam(query.range),
+    {
+      from: readSearchParam(query.from),
+      to: readSearchParam(query.to),
+      range: readSearchParam(query.range),
+    },
     readSearchParam(query.view),
   );
 

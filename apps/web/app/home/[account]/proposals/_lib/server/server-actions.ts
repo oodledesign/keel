@@ -110,20 +110,20 @@ export const getProposalTabCountsAction = enhanceAction(
 
 export const markProposalReadByTokenAction = enhanceAction(
   async (input) => markProposalReadByToken(input.token),
-  { schema: GetProposalForPortalSchema },
+  { schema: GetProposalForPortalSchema, auth: false, verifyEmail: false },
 );
 
 export const addProposalCommentByTokenAction = enhanceAction(
   async (input) => addProposalCommentByToken(input),
-  { schema: AddProposalCommentByTokenSchema },
+  { schema: AddProposalCommentByTokenSchema, auth: false, verifyEmail: false },
 );
 
 export const approveProposalByTokenAction = enhanceAction(
   async (input) => approveProposalByToken(input),
-  { schema: ApproveProposalByTokenSchema },
+  { schema: ApproveProposalByTokenSchema, auth: false, verifyEmail: false },
 );
 
 export const declineProposalByTokenAction = enhanceAction(
   async (input) => declineProposalByToken(input),
-  { schema: DeclineProposalByTokenSchema },
+  { schema: DeclineProposalByTokenSchema, auth: false, verifyEmail: false },
 );

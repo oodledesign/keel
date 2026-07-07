@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 
+import { requireUser } from '@kit/supabase/require-user';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
@@ -109,6 +110,12 @@ export async function GET(request: Request) {
 
   if (invoiceId) {
     const client = getSupabaseServerClient();
+    const auth = await requireUser(client);
+
+    if (!auth.data) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { data: invoice, error: invError } = await client
       .from('invoices')
       .select('*')

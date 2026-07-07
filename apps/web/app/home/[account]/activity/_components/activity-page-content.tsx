@@ -18,7 +18,6 @@ import {
   Settings2,
 } from 'lucide-react';
 
-import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
 import {
   Popover,
@@ -45,6 +44,8 @@ import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
+import { AnalyticsDateRangePicker } from '~/components/date-range/analytics-date-range-picker';
+import type { DateRangeSelection } from '~/lib/date-range/analytics-date-range';
 import {
   excludeActivityBlockAction,
   updateActivityBlockAction,
@@ -55,10 +56,9 @@ import {
   blockContextLabel,
   parseActivityAppContext,
 } from '~/lib/activity/activity-app-context';
+import { faviconUrlForDomain } from '~/lib/activity/activity-app-icons';
 import {
   blockPageTitle,
-  blockStatusLabel,
-  blockStatusText,
   blockUrlLabel,
   formatDuration,
   formatTimeRange,
@@ -70,7 +70,6 @@ import {
   type ActivityAppGroup,
   type ActivityBlockListRow,
   type ActivityDayGroup,
-  type ActivityRangeKey,
   type ActivitySortDir,
   type ActivitySortKey,
 } from '~/lib/activity/activity-history';
@@ -81,23 +80,66 @@ type Props = {
   data: ActivityPageData;
 };
 
-const RANGE_OPTIONS: Array<{ value: ActivityRangeKey; label: string }> = [
-  { value: 'today', label: 'Today' },
-  { value: '7d', label: 'Last 7 days' },
-  { value: '30d', label: 'Last 30 days' },
-];
-
-function statusBadgeClass(status: ReturnType<typeof blockStatusLabel>) {
-  switch (status) {
-    case 'confirmed':
-      return 'border-emerald-600/25 bg-emerald-500/15 text-emerald-900 dark:text-emerald-200';
-    case 'suggested':
-      return 'border-sky-600/25 bg-sky-500/15 text-sky-900 dark:text-sky-200';
-    case 'excluded':
-      return 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]';
-    default:
-      return 'border-amber-600/25 bg-amber-500/15 text-amber-950 dark:text-amber-100';
+function domainFromUrl(url: string): string | null {
+  try {
+    return new URL(url).hostname.replace(/^www\./i, '');
+  } catch {
+    return null;
   }
+}
+
+function ActivityUrlCell({ block }: { block: ActivityBlockListRow }) {
+  const urlLabel = blockUrlLabel(block);
+
+  if (!urlLabel) {
+    return <span className="text-xs text-[var(--workspace-shell-text-muted)]">—</span>;
+  }
+
+  const domain =
+    block.domain?.trim() ||
+    (block.url?.trim() ? domainFromUrl(block.url.trim()) : null);
+  const faviconSrc = domain ? faviconUrlForDomain(domain) : null;
+
+  const content = (
+    <>
+      {faviconSrc ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={faviconSrc}
+          alt=""
+          width={14}
+          height={14}
+          className="h-3.5 w-3.5 shrink-0 rounded-sm object-cover"
+          loading="lazy"
+          decoding="async"
+        />
+      ) : null}
+      <span className="truncate">{urlLabel}</span>
+    </>
+  );
+
+  if (block.url) {
+    return (
+      <a
+        href={block.url}
+        target="_blank"
+        rel="noreferrer"
+        className="flex min-w-0 items-center gap-1.5 truncate text-xs text-sky-700 underline-offset-2 hover:underline dark:text-sky-300"
+        title={urlLabel}
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <span
+      className="flex min-w-0 items-center gap-1.5 truncate text-xs text-[var(--workspace-shell-text-muted)]"
+      title={urlLabel}
+    >
+      {content}
+    </span>
+  );
 }
 
 function AppNameCell({
@@ -188,9 +230,15 @@ function ActivityAssignmentDisplay({
   return (
     <div className="min-w-0">
       <span
-        className="block truncate text-xs font-medium text-[var(--workspace-shell-text)]"
+        className="flex items-center gap-1 truncate text-xs font-medium text-[var(--workspace-shell-text)]"
         title={block.clientName ?? undefined}
       >
+        {block.isConfirmed ? (
+          <Check
+            className="h-3 w-3 shrink-0 text-emerald-600 dark:text-emerald-400"
+            aria-label="Confirmed"
+          />
+        ) : null}
         {block.clientName ?? 'No client'}
       </span>
       <span
@@ -205,14 +253,47 @@ function ActivityAssignmentDisplay({
 
 function buildActivityUrl(
   accountSlug: string,
-  params: { range: ActivityRangeKey; view: 'mine' | 'team' },
+  params: { from: string; to: string; view: 'mine' | 'team' },
 ) {
   const search = new URLSearchParams({
-    range: params.range,
+    from: params.from,
+    to: params.to,
     view: params.view,
   });
 
   return `${workAccountPath(pathsConfig.app.accountActivity, accountSlug)}?${search.toString()}`;
+}
+
+function AppGroupNameCell({
+  appGroup,
+  representativeBlock,
+}: {
+  appGroup: ActivityAppGroup;
+  representativeBlock: ActivityBlockListRow;
+}) {
+  const primaryLabel = appGroup.domainLabel ?? appGroup.appName;
+
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <ActivityAppIcon block={representativeBlock} />
+      <div className="min-w-0">
+        <span
+          className="block truncate text-xs font-medium text-[var(--workspace-shell-text)]"
+          title={primaryLabel}
+        >
+          {primaryLabel}
+        </span>
+        {appGroup.domainLabel ? (
+          <span
+            className="block truncate text-[10px] text-[var(--workspace-shell-text-muted)]"
+            title={appGroup.appName}
+          >
+            {appGroup.appName}
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
 }
 
 function AppItemCell({ block }: { block: ActivityBlockListRow }) {
@@ -431,9 +512,7 @@ function ActivityBlockTableRow({
   accountSlug: string;
   onUpdated: (block: ActivityBlockListRow) => void;
 }) {
-  const status = blockStatusLabel(block);
   const pageTitle = blockContextLabel(block);
-  const urlLabel = blockUrlLabel(block);
   const rawTitle = block.windowTitle.trim() || blockPageTitle(block);
 
   return (
@@ -475,28 +554,7 @@ function ActivityBlockTableRow({
         </span>
       </TableCell>
       <TableCell className="max-w-[16rem] px-3 py-2 align-top">
-        {urlLabel ? (
-          block.url ? (
-            <a
-              href={block.url}
-              target="_blank"
-              rel="noreferrer"
-              className="block truncate text-xs text-sky-700 underline-offset-2 hover:underline dark:text-sky-300"
-              title={urlLabel}
-            >
-              {urlLabel}
-            </a>
-          ) : (
-            <span
-              className="block truncate text-xs text-[var(--workspace-shell-text-muted)]"
-              title={urlLabel}
-            >
-              {urlLabel}
-            </span>
-          )
-        ) : (
-          <span className="text-xs text-[var(--workspace-shell-text-muted)]">—</span>
-        )}
+        <ActivityUrlCell block={block} />
       </TableCell>
       {showMember ? (
         <TableCell className="max-w-[8rem] px-3 py-2 align-top">
@@ -518,14 +576,6 @@ function ActivityBlockTableRow({
           accountSlug={accountSlug}
           onUpdated={onUpdated}
         />
-      </TableCell>
-      <TableCell className="px-3 py-2 align-top">
-        <Badge
-          variant="outline"
-          className={cn('text-[10px] font-medium', statusBadgeClass(status))}
-        >
-          {blockStatusText(status)}
-        </Badge>
       </TableCell>
     </TableRow>
   );
@@ -595,13 +645,10 @@ function ActivityAppGroupRows({
             ) : (
               <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text-muted)]" />
             )}
-            <ActivityAppIcon block={representativeBlock} />
-            <span
-              className="truncate text-xs font-medium text-[var(--workspace-shell-text)]"
-              title={appGroup.appName}
-            >
-              {appGroup.appName}
-            </span>
+            <AppGroupNameCell
+              appGroup={appGroup}
+              representativeBlock={representativeBlock}
+            />
           </button>
         </TableCell>
         <TableCell className="whitespace-nowrap px-3 py-2 align-top text-xs font-semibold text-[var(--workspace-shell-text)]">
@@ -611,7 +658,7 @@ function ActivityAppGroupRows({
           {sessionLabel}
         </TableCell>
         <TableCell
-          colSpan={showMember ? 7 : 6}
+          colSpan={showMember ? 6 : 5}
           className="px-3 py-2 align-top text-xs text-[var(--workspace-shell-text-muted)]"
         >
           Click to {expanded ? 'collapse' : 'expand'} individual sessions
@@ -727,7 +774,6 @@ function ActivityDayTable({
                 <TableHead className="h-9 px-3 text-xs">Member</TableHead>
               ) : null}
               <TableHead className="h-9 px-3 text-xs">Assignment</TableHead>
-              <TableHead className="h-9 px-3 text-xs">Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -789,18 +835,27 @@ export function ActivityPageContent({ data }: Props) {
     router.refresh();
   }
 
-  function navigate(next: { range?: ActivityRangeKey; view?: 'mine' | 'team' }) {
+  function navigate(next: {
+    from?: string;
+    to?: string;
+    view?: 'mine' | 'team';
+  }) {
     router.push(
       buildActivityUrl(data.accountSlug, {
-        range: next.range ?? data.range,
+        from: next.from ?? data.dateFrom,
+        to: next.to ?? data.dateTo,
         view: next.view ?? data.view,
       }),
     );
   }
 
+  function onDateRangeApply(from: string, to: string, _selection: DateRangeSelection) {
+    navigate({ from, to });
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="grid gap-3 sm:grid-cols-3">
+    <div className="space-y-6 pb-6">
+      <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
           <p className="text-sm text-[var(--workspace-shell-text-muted)]">Today</p>
           <p className="mt-1 text-2xl font-semibold text-[var(--workspace-shell-text)]">
@@ -813,12 +868,6 @@ export function ActivityPageContent({ data }: Props) {
           </p>
           <p className="mt-1 text-2xl font-semibold text-[var(--workspace-shell-text)]">
             {formatDuration(activeDuration)}
-          </p>
-        </div>
-        <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
-          <p className="text-sm text-[var(--workspace-shell-text-muted)]">Blocks</p>
-          <p className="mt-1 text-2xl font-semibold text-[var(--workspace-shell-text)]">
-            {rows.length}
           </p>
         </div>
       </div>
@@ -839,20 +888,11 @@ export function ActivityPageContent({ data }: Props) {
         </Tabs>
 
         <div className="flex flex-wrap items-center gap-2">
-          {RANGE_OPTIONS.map((option) => (
-            <Button
-              key={option.value}
-              type="button"
-              size="sm"
-              variant={data.range === option.value ? 'default' : 'outline'}
-              className={
-                data.range === option.value ? 'keel-gradient-btn' : undefined
-              }
-              onClick={() => navigate({ range: option.value })}
-            >
-              {option.label}
-            </Button>
-          ))}
+          <AnalyticsDateRangePicker
+            fromIso={data.dateFrom}
+            toIso={data.dateTo}
+            onApply={onDateRangeApply}
+          />
           <Button asChild type="button" size="sm" variant="outline">
             <Link href={settingsPath}>
               <Settings2 className="mr-2 h-4 w-4" />
@@ -895,7 +935,7 @@ export function ActivityPageContent({ data }: Props) {
           </p>
         </div>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-5 pb-4">
           {dayGroups.map((group) => (
             <ActivityDayTable
               key={group.dayKey}

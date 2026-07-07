@@ -8,11 +8,9 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { createClientsService } from '~/home/[account]/clients/_lib/server/clients.service';
 import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
 import {
-  parseActivityRange,
   parseActivityView,
-  resolveRangeStart,
+  resolveActivityDateRange,
   type ActivityBlockListRow,
-  type ActivityRangeKey,
 } from '~/lib/activity/activity-history';
 import { getActivitySupabaseClient } from '~/lib/activity/activity-supabase';
 
@@ -150,7 +148,8 @@ export type ActivityPageData = {
   accountId: string;
   accountSlug: string;
   userId: string;
-  range: ActivityRangeKey;
+  dateFrom: string;
+  dateTo: string;
   view: 'mine' | 'team';
   trackingEnabled: boolean;
   canViewTeamActivity: boolean;
@@ -164,7 +163,11 @@ export const loadActivityPageData = cache(loadActivityPageDataImpl);
 
 async function loadActivityPageDataImpl(
   accountSlug: string,
-  rangeInput?: string | null,
+  dateInput?: {
+    from?: string | null;
+    to?: string | null;
+    range?: string | null;
+  },
   viewInput?: string | null,
 ): Promise<ActivityPageData> {
   const workspace = await loadTeamWorkspace(accountSlug);
@@ -174,9 +177,12 @@ async function loadActivityPageDataImpl(
   const activityClient = getActivitySupabaseClient();
   const teamAccountsApi = createTeamAccountsApi(client);
 
-  const range = parseActivityRange(rangeInput);
+  const dateRange = resolveActivityDateRange({
+    from: dateInput?.from,
+    to: dateInput?.to,
+    range: dateInput?.range,
+  });
   const view = parseActivityView(viewInput);
-  const rangeStart = resolveRangeStart(range).toISOString();
 
   const blocksSelect = `
         id,
@@ -203,7 +209,8 @@ async function loadActivityPageDataImpl(
       .from('activity_blocks')
       .select(blocksSelect)
       .eq('account_id', accountId)
-      .gte('started_at', rangeStart)
+      .gte('started_at', dateRange.rangeStart)
+      .lte('started_at', dateRange.rangeEnd)
       .order('started_at', { ascending: false })
       .limit(ACTIVITY_BLOCK_LIMIT);
 
@@ -277,7 +284,8 @@ async function loadActivityPageDataImpl(
     accountId,
     accountSlug,
     userId,
-    range,
+    dateFrom: dateRange.dateFrom,
+    dateTo: dateRange.dateTo,
     view: effectiveView,
     trackingEnabled:
       (privacyResult.data?.tracking_enabled as boolean | undefined) ?? false,

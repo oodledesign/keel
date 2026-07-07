@@ -99,7 +99,7 @@ export const createInvoiceCheckoutSessionByToken = enhanceAction(
     createInvoiceCheckoutByToken(input.token, {
       payDepositOnly: input.pay_deposit_only,
     }),
-  { schema: CreateInvoiceCheckoutSessionByTokenSchema },
+  { schema: CreateInvoiceCheckoutSessionByTokenSchema, auth: false, verifyEmail: false },
 );
 
 export const getInvoicePortalLink = enhanceAction(

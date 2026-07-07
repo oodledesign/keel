@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { rateLimitApiRequest } from '~/lib/rate-limit/api-rate-limit';
+
 export const dynamic = 'force-dynamic';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -51,6 +53,15 @@ function normaliseInterests(input: unknown): LaunchInterest[] {
 }
 
 export async function POST(request: Request) {
+  const limited = rateLimitApiRequest(request, {
+    scope: 'launch-interest',
+    limit: 10,
+  });
+
+  if (limited) {
+    return limited;
+  }
+
   const body = (await request.json().catch(() => null)) as {
     email?: unknown;
     interests?: unknown;

@@ -2,28 +2,48 @@ import type { SignInWithPasswordCredentials } from '@supabase/supabase-js';
 
 import { useMutation } from '@tanstack/react-query';
 
-import { useSupabase } from './use-supabase';
-
 export function useSignInWithEmailPassword() {
-  const client = useSupabase();
   const mutationKey = ['auth', 'sign-in-with-email-password'];
 
   const mutationFn = async (credentials: SignInWithPasswordCredentials) => {
-    const response = await client.auth.signInWithPassword(credentials);
-
-    if (response.error) {
-      throw response.error.message;
+    if (!('email' in credentials) || typeof credentials.email !== 'string') {
+      throw new Error('invalid_credentials');
     }
 
-    const user = response.data?.user;
+    const response = await fetch('/api/auth/sign-in', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: credentials.email,
+        password: credentials.password,
+        captchaToken: credentials.options?.captchaToken,
+      }),
+    });
+
+    const payload = (await response.json().catch(() => null)) as {
+      error?: string;
+      user?: {
+        id?: string;
+        identities?: Array<{ id: string }>;
+      } | null;
+      session?: unknown;
+    } | null;
+
+    if (!response.ok || !payload) {
+      throw payload?.error ?? 'invalid_credentials';
+    }
+
+    const user = payload.user;
     const identities = user?.identities ?? [];
 
-    // if the user has no identities, it means that the email is taken
     if (identities.length === 0) {
       throw new Error('User already registered');
     }
 
-    return response.data;
+    return {
+      user: payload.user,
+      session: payload.session,
+    };
   };
 
   return useMutation({ mutationKey, mutationFn });

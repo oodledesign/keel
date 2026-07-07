@@ -1,8 +1,10 @@
 import {
+  endOfDay,
   format,
   isToday,
   isYesterday,
   parseISO,
+  startOfDay,
 } from 'date-fns';
 
 export type ActivityRangeKey = 'today' | '7d' | '30d';
@@ -44,9 +46,38 @@ export type ActivityDayGroup = {
 export type ActivityAppGroup = {
   appKey: string;
   appName: string;
+  domainLabel: string | null;
   blocks: ActivityBlockListRow[];
   totalDurationSeconds: number;
 };
+
+export type ActivityDateRange = {
+  dateFrom: string;
+  dateTo: string;
+  rangeStart: string;
+  rangeEnd: string;
+};
+
+const BROWSER_BUNDLE_FRAGMENTS = [
+  'chrome',
+  'safari',
+  'firefox',
+  'brave',
+  'edgemac',
+  'arc',
+  'browser',
+];
+
+export function isBrowserActivityBlock(
+  block: Pick<ActivityBlockListRow, 'appName' | 'bundleId'>,
+): boolean {
+  const bundle = block.bundleId.trim().toLowerCase();
+  const appName = block.appName.trim().toLowerCase();
+
+  return BROWSER_BUNDLE_FRAGMENTS.some(
+    (fragment) => bundle.includes(fragment) || appName.includes(fragment),
+  );
+}
 
 export type ActivitySortKey = 'app' | 'duration' | 'time';
 export type ActivitySortDir = 'asc' | 'desc';
@@ -84,10 +115,13 @@ export function sortActivityAppGroups(
   return [...groups]
     .sort((left, right) => {
       switch (sortKey) {
-        case 'app':
-          return factor * left.appName.localeCompare(right.appName, undefined, {
+        case 'app': {
+          const leftLabel = left.domainLabel ?? left.appName;
+          const rightLabel = right.domainLabel ?? right.appName;
+          return factor * leftLabel.localeCompare(rightLabel, undefined, {
             sensitivity: 'base',
           });
+        }
         case 'duration':
           return factor * (left.totalDurationSeconds - right.totalDurationSeconds);
         case 'time': {
@@ -117,6 +151,46 @@ export function parseActivityView(
   value: string | null | undefined,
 ): 'mine' | 'team' {
   return value === 'team' ? 'team' : 'mine';
+}
+
+export function resolveActivityDateRange(
+  input: {
+    from?: string | null;
+    to?: string | null;
+    range?: string | null;
+  },
+  now = new Date(),
+): ActivityDateRange {
+  const fromParam = input.from?.trim();
+  const toParam = input.to?.trim();
+
+  if (
+    fromParam &&
+    toParam &&
+    /^\d{4}-\d{2}-\d{2}$/.test(fromParam) &&
+    /^\d{4}-\d{2}-\d{2}$/.test(toParam)
+  ) {
+    const from = startOfDay(parseISO(fromParam));
+    const to = endOfDay(parseISO(toParam));
+
+    return {
+      dateFrom: fromParam,
+      dateTo: toParam,
+      rangeStart: from.toISOString(),
+      rangeEnd: to.toISOString(),
+    };
+  }
+
+  const range = parseActivityRange(input.range);
+  const from = resolveRangeStart(range, now);
+  const to = endOfDay(now);
+
+  return {
+    dateFrom: format(from, 'yyyy-MM-dd'),
+    dateTo: format(to, 'yyyy-MM-dd'),
+    rangeStart: from.toISOString(),
+    rangeEnd: to.toISOString(),
+  };
 }
 
 export function resolveRangeStart(
@@ -241,11 +315,25 @@ export function sumTodayActiveDuration(
 
 export function activityAppGroupKey(block: ActivityBlockListRow): string {
   const bundleId = block.bundleId.trim();
-  if (bundleId) {
-    return bundleId;
+  const baseKey = bundleId || block.appName.trim().toLowerCase();
+
+  if (isBrowserActivityBlock(block)) {
+    const domain = block.domain?.trim().toLowerCase();
+    if (domain) {
+      return `${baseKey}|${domain}`;
+    }
   }
 
-  return block.appName.trim().toLowerCase();
+  return baseKey;
+}
+
+function domainLabelFromAppKey(appKey: string): string | null {
+  const separatorIndex = appKey.indexOf('|');
+  if (separatorIndex === -1) {
+    return null;
+  }
+
+  return appKey.slice(separatorIndex + 1);
 }
 
 export function groupBlocksByApp(
@@ -273,7 +361,8 @@ export function groupBlocksByApp(
 
       return {
         appKey,
-        appName: appNames.get(appKey) ?? appKey,
+        appName: appNames.get(appKey) ?? sortedBlocks[0]?.appName ?? appKey,
+        domainLabel: domainLabelFromAppKey(appKey),
         blocks: sortedBlocks,
         totalDurationSeconds: sumActiveDuration(sortedBlocks),
       };

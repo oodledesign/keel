@@ -9,6 +9,7 @@ import {
   groupBlocksByApp,
   groupBlocksByDay,
   parseActivityRange,
+  resolveActivityDateRange,
   resolveRangeStart,
   sortActivityAppGroups,
   sumActiveDuration,
@@ -59,6 +60,7 @@ describe('activity history helpers', () => {
         startedAt: '2026-07-07T10:00:00.000Z',
         appName: 'Google Chrome',
         bundleId: 'com.google.Chrome',
+        domain: null,
         durationSeconds: 300,
       }),
       makeBlock({
@@ -66,6 +68,7 @@ describe('activity history helpers', () => {
         startedAt: '2026-07-07T11:00:00.000Z',
         appName: 'Google Chrome',
         bundleId: 'com.google.Chrome',
+        domain: null,
         durationSeconds: 600,
       }),
       makeBlock({
@@ -84,6 +87,43 @@ describe('activity history helpers', () => {
     expect(groups[1]?.blocks).toHaveLength(2);
     expect(groups[1]?.totalDurationSeconds).toBe(900);
     expect(activityAppGroupKey(groups[1]!.blocks[0]!)).toBe('com.google.Chrome');
+  });
+
+  it('groups browser blocks by domain when domain data is present', () => {
+    const groups = groupBlocksByApp([
+      makeBlock({
+        id: 'a',
+        startedAt: '2026-07-07T10:00:00.000Z',
+        appName: 'Google Chrome',
+        bundleId: 'com.google.Chrome',
+        domain: 'github.com',
+        durationSeconds: 300,
+      }),
+      makeBlock({
+        id: 'b',
+        startedAt: '2026-07-07T11:00:00.000Z',
+        appName: 'Google Chrome',
+        bundleId: 'com.google.Chrome',
+        domain: 'linear.app',
+        durationSeconds: 600,
+      }),
+      makeBlock({
+        id: 'c',
+        startedAt: '2026-07-07T12:00:00.000Z',
+        appName: 'Google Chrome',
+        bundleId: 'com.google.Chrome',
+        domain: 'github.com',
+        durationSeconds: 120,
+      }),
+    ]);
+
+    expect(groups).toHaveLength(2);
+    expect(groups.find((group) => group.domainLabel === 'linear.app')?.blocks).toHaveLength(
+      1,
+    );
+    expect(groups.find((group) => group.domainLabel === 'github.com')?.blocks).toHaveLength(
+      2,
+    );
   });
 
   it('groups blocks by day with Today label', () => {
@@ -171,6 +211,19 @@ describe('activity history helpers', () => {
     expect(todayStart.getMinutes()).toBe(0);
     expect(todayStart.getDate()).toBe(now.getDate());
     expect(resolveRangeStart('7d', now).getTime()).toBeLessThan(now.getTime());
+  });
+
+  it('resolves explicit from/to date ranges', () => {
+    const range = resolveActivityDateRange(
+      { from: '2026-07-01', to: '2026-07-07' },
+      new Date('2026-07-07T15:00:00.000Z'),
+    );
+
+    expect(range.dateFrom).toBe('2026-07-01');
+    expect(range.dateTo).toBe('2026-07-07');
+    expect(new Date(range.rangeStart).getTime()).toBeLessThanOrEqual(
+      new Date(range.rangeEnd).getTime(),
+    );
   });
 
   it('sorts app groups by selected column', () => {

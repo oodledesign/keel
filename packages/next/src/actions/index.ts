@@ -18,6 +18,7 @@ export function enhanceAction<
   Response,
   Config extends {
     auth?: boolean;
+    verifyEmail?: boolean;
     captcha?: boolean;
     schema?: z.ZodType<
       Config['captcha'] extends true ? Args & { captchaToken: string } : Args,
@@ -37,6 +38,7 @@ export function enhanceAction<
     type UserParam = Config['auth'] extends false ? undefined : JWTUserData;
 
     const requireAuth = config.auth ?? true;
+    const verifyEmail = config.verifyEmail ?? requireAuth;
     let user: UserParam = undefined as UserParam;
 
     // validate the schema passed in the config if it exists
@@ -70,7 +72,9 @@ export function enhanceAction<
     // verify the user is authenticated if required
     if (requireAuth) {
       // verify the user is authenticated if required
-      const auth = await requireUser(getSupabaseServerClient());
+      const auth = await requireUser(getSupabaseServerClient(), {
+        verifyEmail,
+      });
 
       // If the user is not authenticated, redirect to the specified URL.
       if (!auth.data) {

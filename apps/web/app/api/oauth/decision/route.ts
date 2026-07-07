@@ -1,11 +1,19 @@
 import { NextResponse } from 'next/server';
 
+import { requireUser } from '@kit/supabase/require-user';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
+  const supabase = getSupabaseServerClient();
+  const auth = await requireUser(supabase);
+
+  if (!auth.data) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   let formData: FormData;
 
   try {
@@ -27,8 +35,6 @@ export async function POST(request: Request) {
   if (decision !== 'approve' && decision !== 'deny') {
     return NextResponse.json({ error: 'Invalid decision' }, { status: 400 });
   }
-
-  const supabase = getSupabaseServerClient();
 
   const result =
     decision === 'approve'

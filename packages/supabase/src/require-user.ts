@@ -4,6 +4,7 @@ import { checkRequiresMultiFactorAuthentication } from './check-requires-mfa';
 import { JWTUserData } from './types';
 
 const MULTI_FACTOR_AUTH_VERIFY_PATH = '/auth/verify';
+const VERIFY_EMAIL_PATH = '/auth/verify-email';
 const SIGN_IN_PATH = '/auth/sign-in';
 
 /**
@@ -39,6 +40,7 @@ export async function requireUser(
   client: SupabaseClient,
   options?: {
     verifyMfa?: boolean;
+    verifyEmail?: boolean;
     next?: string;
   },
 ): Promise<
@@ -69,7 +71,19 @@ export async function requireUser(
     };
   }
 
-  const { verifyMfa = true } = options ?? {};
+  const { verifyMfa = true, verifyEmail = false } = options ?? {};
+
+  if (verifyEmail) {
+    const { data: userData, error: userError } = await client.auth.getUser();
+
+    if (userError || !userData.user?.email_confirmed_at) {
+      return {
+        data: null,
+        error: new EmailNotVerifiedError(),
+        redirectTo: getRedirectTo(VERIFY_EMAIL_PATH, options?.next),
+      };
+    }
+  }
 
   if (verifyMfa) {
     const requiresMfa = await checkRequiresMultiFactorAuthentication(client);
@@ -112,6 +126,12 @@ class AuthenticationError extends Error {
 export class MultiFactorAuthError extends Error {
   constructor() {
     super(`Multi-factor authentication required`);
+  }
+}
+
+export class EmailNotVerifiedError extends Error {
+  constructor() {
+    super(`Email verification required`);
   }
 }
 

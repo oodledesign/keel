@@ -84,6 +84,10 @@ export function PasswordSignUpForm({
                   <PasswordInput {...field} />
                 </FormControl>
 
+                <FormDescription>
+                  <Trans i18nKey={'auth:errors.minPasswordLength'} />
+                </FormDescription>
+
                 <FormMessage />
               </FormItem>
             )}

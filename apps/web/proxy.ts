@@ -283,6 +283,15 @@ async function personalAppAuthHandler(req: NextRequest, res: NextResponse) {
   }
 
   if (
+    !user.email_confirmed_at &&
+    next !== pathsConfig.auth.verifyEmail
+  ) {
+    return NextResponse.redirect(
+      new URL(pathsConfig.auth.verifyEmail, origin).href,
+    );
+  }
+
+  if (
     isPersonalDashboardRoot(next) &&
     !isExplicitPersonalHomeRequest(req.nextUrl.searchParams)
   ) {
@@ -332,8 +341,9 @@ async function getPatterns() {
         }
 
         const isVerifyMfa = pathname === pathsConfig.auth.verifyMfa;
+        const isVerifyEmail = pathname === pathsConfig.auth.verifyEmail;
 
-        if (!isVerifyMfa) {
+        if (!isVerifyMfa && !isVerifyEmail) {
           const nextParam = req.nextUrl.searchParams.get('next');
           const client = createMiddlewareClient(req, res);
 

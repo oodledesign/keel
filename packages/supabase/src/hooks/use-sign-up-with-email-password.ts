@@ -1,7 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
 
-import { useSupabase } from './use-supabase';
-
 interface Credentials {
   email: string;
   password: string;
@@ -25,42 +23,49 @@ export class WeakPasswordError extends Error {
 }
 
 export function useSignUpWithEmailAndPassword() {
-  const client = useSupabase();
   const mutationKey = ['auth', 'sign-up-with-email-password'];
 
   const mutationFn = async (params: Credentials) => {
     const { emailRedirectTo, captchaToken, ...credentials } = params;
 
-    const response = await client.auth.signUp({
-      ...credentials,
-      options: {
+    const response = await fetch('/api/auth/sign-up', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...credentials,
         emailRedirectTo,
         captchaToken,
-      },
+      }),
     });
 
-    if (response.error) {
-      // Handle weak password errors specially (AuthWeakPasswordError from Supabase)
-      if (response.error.code === 'weak_password') {
-        const errorObj = response.error as unknown as {
-          reasons?: WeakPasswordReason[];
-        };
+    const payload = (await response.json().catch(() => null)) as {
+      error?: string;
+      reasons?: WeakPasswordReason[];
+      user?: {
+        identities?: Array<{ id: string }>;
+      } | null;
+      session?: unknown;
+    } | null;
 
-        throw new WeakPasswordError(errorObj.reasons ?? []);
+    if (!response.ok || !payload) {
+      if (payload?.error === 'weak_password') {
+        throw new WeakPasswordError(payload.reasons ?? []);
       }
 
-      throw response.error.message;
+      throw payload?.error ?? 'sign_up_failed';
     }
 
-    const user = response.data?.user;
+    const user = payload.user;
     const identities = user?.identities ?? [];
 
-    // if the user has no identities, it means that the email is taken
     if (identities.length === 0) {
       throw new Error('User already registered');
     }
 
-    return response.data;
+    return {
+      user: payload.user,
+      session: payload.session,
+    };
   };
 
   return useMutation({

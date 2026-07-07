@@ -63,17 +63,14 @@ export function getSupabaseAuthCookieDomain(): string | undefined {
   return inferSharedCookieDomain();
 }
 
-export function getSupabaseAuthCookieOptions(): CookieOptions | undefined {
+export function getSupabaseAuthCookieOptions(): CookieOptions {
   const domain = getSupabaseAuthCookieDomain();
 
-  if (!domain) {
-    return undefined;
-  }
-
   return {
-    domain,
+    ...(domain ? { domain } : {}),
     path: '/',
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
   };
 }

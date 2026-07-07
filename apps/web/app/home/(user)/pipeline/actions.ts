@@ -48,6 +48,7 @@ export async function moveDealToStage(
   newStage: string,
   options?: { accountSlug?: string | null },
 ) {
+  await requireUserInServerComponent();
   const client = getSupabaseServerClient();
 
   const { error } = await client
@@ -130,6 +131,7 @@ export type UpdateDealInput = {
 };
 
 export async function updateDeal(dealId: string, input: UpdateDealInput) {
+  await requireUserInServerComponent();
   const client = getSupabaseServerClient();
 
   const updates: Record<string, unknown> = {};
