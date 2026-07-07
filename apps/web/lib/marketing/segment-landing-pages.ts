@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import {
+  Activity,
   Briefcase,
   Building2,
   Calendar,
@@ -255,7 +256,7 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
     seo: {
       title: 'Business CRM in Workspace OS — Ozer',
       description:
-        'Clients, jobs, and invoices in a business workspace linked to free personal home. Flat price for the whole team from £0–£29 per month.',
+        'Clients, jobs, invoices, activity tracking, and pipeline in a business workspace linked to free personal home. Flat price for the whole team from £0–£29 per month.',
       keywords: [
         'workspace OS for business',
         'small business CRM UK',
@@ -269,7 +270,7 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
       title: 'Run the studio without',
       titleAccent: 'seven tools and Zapier',
       subtitle:
-        'Ozer’s business workspace answers “where do clients, jobs, and invoices live?” Pipeline, delivery, billing, and portals in one workspace — while personal home still sees today’s tasks. One account. One price for the team.',
+        'Ozer’s business workspace answers “where do clients, jobs, and invoices live?” Pipeline, delivery, billing, activity tracking, and portals in one workspace — while personal home still sees today’s tasks. One account. One price for the team.',
     },
     stats: [
       { value: '£0', label: 'Business Lite — apps and team' },
@@ -294,6 +295,12 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
         title: 'Jobs and projects',
         description:
           'Plan work, assign people, attach notes and files, and message on the job.',
+      },
+      {
+        icon: Activity,
+        title: 'Activity tracking',
+        description:
+          'Keel Assistant captures app and website sessions on your Mac. Review by day, group by domain, and assign blocks to clients and projects.',
       },
       {
         icon: FileText,

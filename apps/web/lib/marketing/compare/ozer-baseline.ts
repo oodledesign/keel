@@ -35,7 +35,7 @@ export const OZER_TEAM_OF_FOUR = {
     'Stripe card fees on client invoices only (no platform cut on subscription)',
   ),
   meetingIntelligence: ozerSourced(
-    'Mac Assistant: on-device processing; audio not kept as a permanent recording',
+    'Mac Assistant: meetings, dictation, and desktop activity tracking; on-device processing; audio not kept as a permanent recording',
   ),
   emailIntegration: ozerSourced('Gmail-connected email assistant in the Workspace OS'),
   clientPortal: ozerSourced('Branded client portals on the project record'),

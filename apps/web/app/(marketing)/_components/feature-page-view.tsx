@@ -41,6 +41,10 @@ const FEATURE_COMPARE_LINKS: Partial<
   'desktop-assistant': [
     { href: '/compare/hellobonsai', label: 'Hello Bonsai vs Ozer' },
   ],
+  activity: [
+    { href: '/compare/hellobonsai', label: 'Hello Bonsai vs Ozer' },
+    { href: '/compare/productive-io', label: 'Productive.io vs Ozer' },
+  ],
 };
 
 export function FeaturePageView({ slug }: { slug: FeatureSlug }) {

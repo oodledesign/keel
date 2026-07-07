@@ -8,6 +8,7 @@ export type StackTool = {
     | 'CRM'
     | 'Scheduling'
     | 'Meeting notes'
+    | 'Time tracking'
     | 'Email'
     | 'Client portal';
   name: string;
@@ -57,6 +58,14 @@ export const STACK_TOOLS: StackTool[] = [
     defaultMonthlyGbp: 20,
     perSeat: false,
     defaultSeats: 1,
+  },
+  {
+    id: 'time-tracking',
+    category: 'Time tracking',
+    name: 'Automatic time tracking',
+    defaultMonthlyGbp: 12,
+    perSeat: true,
+    defaultSeats: 4,
   },
   {
     id: 'email',

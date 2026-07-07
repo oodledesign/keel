@@ -2,6 +2,7 @@
 // Task B: Meeting Assistant benefit card (marketing features grid).
 import type { LucideIcon } from 'lucide-react';
 import {
+  Activity,
   CalendarDays,
   Keyboard,
   Layers,
@@ -59,6 +60,7 @@ export type InterconnectedBenefit = {
   icon: LucideIcon;
   title: string;
   description: string;
+  href?: string;
 };
 
 export type InterconnectedWorkspaceNode = {
@@ -89,12 +91,13 @@ export const INTERCONNECTED_WORKSPACES_MARKETING = {
       'Personal home sees tasks across every workspace',
       'One login — switch spaces without context loss',
       'One planner, today view, and task list',
+      'Activity on your Mac — assigned to clients and projects',
       'Shortcuts to any page in any workspace',
       'Turn workspace tasks off when you need focus',
     ],
   },
   hubLabel: 'Your personal home',
-  hubCaption: 'Today · Planner · Tasks · Shortcuts',
+  hubCaption: 'Today · Planner · Tasks · Activity · Shortcuts',
   workspaceNodes: [
     {
       id: 'work',
@@ -121,12 +124,21 @@ export const INTERCONNECTED_WORKSPACES_MARKETING = {
       title: 'Meeting Assistant for Mac',
       description:
         'Record any call or room meeting, label speakers, extract tasks, and sync to the right workspace. Audio is processed on your Mac — not kept as a permanent recording.',
+      href: '/features/desktop-assistant',
     },
     {
       icon: Keyboard,
       title: 'Dictation',
       description:
         'Press fn on your Mac and speak into any app. Punctuated text, included in the same Assistant download.',
+      href: '/features/dictation',
+    },
+    {
+      icon: Activity,
+      title: 'Activity tracking',
+      description:
+        'Keel Assistant captures app and website sessions on your Mac — assign time to clients and projects from one activity view.',
+      href: '/features/activity',
     },
     {
       icon: Sparkles,

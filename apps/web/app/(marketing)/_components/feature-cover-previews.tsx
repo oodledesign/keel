@@ -17,6 +17,7 @@ import {
   Mail,
   MessageSquare,
   Mic,
+  Monitor,
   RefreshCw,
   Search,
   Sparkles,
@@ -73,6 +74,8 @@ function renderCover(slug: FeatureSlug, compact: boolean) {
       return <DesktopAssistantCover compact={compact} />;
     case 'dictation':
       return <DictationCover compact={compact} />;
+    case 'activity':
+      return <ActivityCover compact={compact} />;
     case 'client-portals':
       return <ClientPortalsCover compact={compact} />;
     case 'invoicing':
@@ -263,6 +266,87 @@ function DictationCover({ compact }: { compact: boolean }) {
           >
             {tag}
           </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ActivityCover({ compact }: { compact: boolean }) {
+  return (
+    <div className="flex h-full flex-col rounded-[1.25rem] border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-950)] p-4">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Monitor className="h-4 w-4 text-[var(--ozer-coral-400)]" />
+          <p className={cn('font-semibold text-[var(--ozer-text-on-dark)]', compact ? 'text-xs' : 'text-sm')}>
+            Activity
+          </p>
+        </div>
+        <span className="flex items-center gap-1 rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[9px] text-[var(--ozer-text-on-dark-muted)]">
+          <CalendarDays className="h-2.5 w-2.5" aria-hidden />
+          Mon 30 Jun – Today
+        </span>
+      </div>
+      <div className="mt-2 flex gap-2">
+        <div className="flex-1 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 py-1.5">
+          <p className="text-[9px] text-[var(--ozer-text-on-dark-muted)]">Today</p>
+          <p className="text-[11px] font-semibold text-[var(--ozer-text-on-dark)]">2h 18m</p>
+        </div>
+        <div className="flex-1 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 py-1.5">
+          <p className="text-[9px] text-[var(--ozer-text-on-dark-muted)]">Selected range</p>
+          <p className="text-[11px] font-semibold text-[var(--ozer-text-on-dark)]">14h 06m</p>
+        </div>
+      </div>
+      <div className="mt-3 space-y-1.5">
+        {[
+          {
+            app: 'Figma',
+            detail: 'Acme homepage',
+            duration: '1h 40m',
+            client: 'Acme Studio',
+            sessions: null,
+          },
+          {
+            app: 'github.com',
+            detail: '3 sessions grouped',
+            duration: '52m',
+            client: 'Acme Studio',
+            sessions: 3,
+          },
+          {
+            app: 'Cursor',
+            detail: 'Portal API',
+            duration: '38m',
+            client: 'Unassigned',
+            sessions: null,
+          },
+        ].map((row) => (
+          <div
+            key={row.app}
+            className="flex items-center gap-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-2"
+          >
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[var(--ozer-plum-800)] text-[9px] font-bold text-[var(--ozer-coral-400)]">
+              {row.app.slice(0, 1).toUpperCase()}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <p className={cn('truncate font-medium text-[var(--ozer-text-on-dark)]', compact ? 'text-[10px]' : 'text-[11px]')}>
+                  {row.app}
+                </p>
+                {row.sessions ? (
+                  <span className="shrink-0 rounded-full bg-[var(--ozer-plum-800)] px-1.5 py-px text-[8px] text-[var(--ozer-text-on-dark-muted)]">
+                    {row.sessions} sessions
+                  </span>
+                ) : null}
+              </div>
+              <p className="truncate text-[9px] text-[var(--ozer-text-on-dark-muted)]">
+                {row.client} · {row.detail}
+              </p>
+            </div>
+            <span className="shrink-0 text-[10px] font-medium text-[var(--ozer-text-on-dark)]/80">
+              {row.duration}
+            </span>
+          </div>
         ))}
       </div>
     </div>

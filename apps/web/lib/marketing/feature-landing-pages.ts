@@ -12,6 +12,7 @@ export type FeatureSlug =
   | 'email-assistant'
   | 'desktop-assistant'
   | 'dictation'
+  | 'activity'
   | 'pipeline'
   | 'project-management'
   | 'tasks'
@@ -70,6 +71,7 @@ export const FEATURE_INDEX_ORDER: FeatureSlug[] = [
   'email-assistant',
   'desktop-assistant',
   'dictation',
+  'activity',
   'pipeline',
   'project-management',
   'tasks',
@@ -118,6 +120,7 @@ export const FEATURE_NAV_GROUPS = [
       { label: 'Email Assistant', href: '/features/email-assistant' },
       { label: 'Desktop Assistant', href: '/features/desktop-assistant' },
       { label: 'Dictation', href: '/features/dictation' },
+      { label: 'Activity tracking', href: '/features/activity' },
       { label: 'Second Brain', href: '/features/second-brain' },
       { label: 'Notes', href: '/features/notes' },
     ],
@@ -318,7 +321,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
     slug: 'desktop-assistant',
     name: 'Desktop Assistant',
     shortDescription:
-      'Mac app: meetings become tasks and follow-ups. Audio stays on your Mac.',
+      'Mac app: meetings, dictation, and activity tracking — tasks and follow-ups without a separate stack.',
     indexIcon: 'Mic',
     primaryKeyword: 'meeting notes desktop app Mac',
   answerFirst:
@@ -396,6 +399,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         { label: 'Email Assistant', href: '/features/email-assistant' },
         { label: 'Second Brain', href: '/features/second-brain' },
         { label: 'Dictation', href: '/features/dictation' },
+        { label: 'Activity', href: '/features/activity' },
       ],
       connectionHeading: 'Meeting layer of the Workspace OS',
       connectionDescription:
@@ -505,6 +509,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
       ],
       connectedTo: [
         { label: 'Desktop Assistant', href: '/features/desktop-assistant' },
+        { label: 'Activity', href: '/features/activity' },
         { label: 'Email Assistant', href: '/features/email-assistant' },
         { label: 'Notes', href: '/features/notes' },
         { label: 'Second Brain', href: '/features/second-brain' },
@@ -527,6 +532,113 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
           question: 'Can I see past dictation snippets?',
           answer:
             'Yes. Recent dictation history syncs to your Ozer personal settings so you can copy or reference earlier snippets.',
+        },
+      ],
+    },
+  },
+  activity: {
+    slug: 'activity',
+    name: 'Activity tracking',
+    shortDescription:
+      'See where studio time goes — assign blocks to clients and projects.',
+    indexIcon: 'Activity',
+    primaryKeyword: 'automatic time tracking for freelancers',
+    answerFirst:
+      'Ozer activity tracking captures desktop app and website usage from Keel Assistant, groups sessions by app and domain, and lets you assign time to clients and projects. Privacy controls stay per workspace. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+    relatedBlog: {
+      href: '/blog',
+      label: 'Studio notes on time tracking on the Ozer blog',
+    },
+    heroBadge: 'Included in Ozer Assistant for Mac',
+    secondaryCta: {
+      label: 'Download for Mac',
+      href: '#early-access',
+    },
+    metadata: {
+      title: 'Desktop activity assigned to projects — Ozer',
+      description:
+        'Keel Assistant captures app and website activity on your Mac. Review sessions, assign to clients and projects, and see where studio time actually went.',
+      keywords: [
+        'automatic time tracking for freelancers',
+        'desktop activity tracking Mac',
+        'agency time tracking software',
+        'client project time allocation',
+        'freelance time tracking UK',
+      ],
+      canonical: 'https://ozer.so/features/activity',
+      openGraphTitle: 'Desktop activity assigned to projects — Ozer',
+    },
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareApplication',
+      name: 'Ozer Activity Tracking',
+      applicationCategory: 'ProductivityApplication',
+      operatingSystem: 'macOS',
+      description:
+        'Automatic desktop activity capture from Keel Assistant with assignment to clients and projects inside Ozer.',
+      url: 'https://ozer.so/features/activity',
+      isPartOf: { '@type': 'WebSite', name: 'Ozer', url: 'https://ozer.so' },
+    },
+    props: {
+      eyebrow: 'Ozer Activity',
+      heading: 'Know where studio time went',
+      subheading:
+        'Ozer activity answers “what was I actually working on?” Keel Assistant captures app and website sessions on your Mac. Review by day, group by site, and assign blocks to the client or project they belong to — without a separate timer app.',
+      highlights: [
+        {
+          icon: 'Monitor',
+          title: 'Apps and websites captured',
+          description:
+            'Chrome, Figma, Cursor, Mail — sessions include domains and URLs when available.',
+        },
+        {
+          icon: 'Users',
+          title: 'Assign to client or project',
+          description:
+            'Confirm or adjust suggestions inline. Excluded time stays out of reports.',
+        },
+        {
+          icon: 'Layers',
+          title: 'Grouped by app and site',
+          description:
+            'Multiple sessions on github.com roll up together. Expand when you need detail.',
+        },
+        {
+          icon: 'ShieldCheck',
+          title: 'Privacy you control',
+          description:
+            'Turn tracking off per workspace. Sensitive apps can stay excluded from capture.',
+        },
+      ],
+      connectedTo: [
+        { label: 'Desktop Assistant', href: '/features/desktop-assistant' },
+        { label: 'Projects', href: '/features/project-management' },
+        { label: 'Finances', href: '/features/finances' },
+        { label: 'Planner', href: '/features/planner' },
+      ],
+      connectionHeading: 'Time data on the project record',
+      connectionDescription:
+        'Activity blocks sit beside delivery and billing — so “how long did this take?” is answerable from the same system you run the job in.',
+      faqs: [
+        {
+          question: 'Do I need Keel Assistant installed?',
+          answer:
+            'Yes. Activity is captured by Ozer Assistant for Mac and synced to your workspace. Install the desktop app, enable tracking in workspace settings, and upload from the menu bar.',
+        },
+        {
+          question: 'Is everything on my Mac recorded?',
+          answer:
+            'Only foreground app activity you choose to track for that workspace. You can disable tracking entirely or exclude specific apps from settings.',
+        },
+        {
+          question: 'Can my team see each other’s activity?',
+          answer:
+            'Members with permission can view team activity in the workspace. Your personal sessions stay on “My activity” unless you share a team view.',
+        },
+        {
+          question: 'Does this replace invoicing or timesheets?',
+          answer:
+            'It informs them. Activity gives an honest picture of where time went so you can assign work to clients and projects — then raise invoices from the same job record.',
         },
       ],
     },
@@ -695,6 +807,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         { label: 'Projects', href: '/features/project-management' },
         { label: 'Clients', href: '/features/pipeline' },
         { label: 'Finances', href: '/features/finances' },
+        { label: 'Activity', href: '/features/activity' },
         { label: 'Client Portals', href: '/features/client-portals' },
       ],
       connectionHeading:
@@ -1068,6 +1181,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         { label: 'Planner', href: '/features/planner' },
         { label: 'Contracts', href: '/features/contracts' },
         { label: 'Invoicing', href: '/features/invoicing' },
+        { label: 'Activity', href: '/features/activity' },
       ],
       connectionHeading: 'Projects at the centre',
       connectionDescription:
@@ -1514,6 +1628,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
       connectedTo: [
         { label: 'Invoicing', href: '/features/invoicing' },
         { label: 'Projects', href: '/features/project-management' },
+        { label: 'Activity', href: '/features/activity' },
         { label: 'Pipeline', href: '/features/pipeline' },
       ],
       connectionHeading: 'Numbers from real work',

@@ -182,15 +182,17 @@ function BenefitCard({
   const Icon = benefit.icon;
   const isLight = tone === 'light';
 
-  return (
-    <article
-      className={cn(
-        'flex h-full flex-col rounded-2xl border p-4 md:p-5',
-        isLight
-          ? 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]'
-          : 'border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-plum-800)]',
-      )}
-    >
+  const className = cn(
+    'flex h-full flex-col rounded-2xl border p-4 md:p-5',
+    isLight
+      ? 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]'
+      : 'border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-plum-800)]',
+    benefit.href &&
+      'transition-[border-color,background-color] duration-200 hover:border-[var(--ozer-accent)]/35',
+  );
+
+  const content = (
+    <>
       <Icon className="h-5 w-5 shrink-0 text-[var(--ozer-accent)]" aria-hidden />
       <h3
         className={cn(
@@ -212,8 +214,18 @@ function BenefitCard({
       >
         {benefit.description}
       </p>
-    </article>
+    </>
   );
+
+  if (benefit.href) {
+    return (
+      <Link href={benefit.href} className={className}>
+        {content}
+      </Link>
+    );
+  }
+
+  return <article className={className}>{content}</article>;
 }
 
 function ComparisonColumn({

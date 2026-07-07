@@ -36,6 +36,9 @@ export function SiteFooter() {
         {
           heading: <Trans i18nKey="marketing:product" />,
           links: [
+            { href: '/features', label: 'Features' },
+            { href: '/features/activity', label: 'Activity tracking' },
+            { href: '/features/desktop-assistant', label: 'Assistant for Mac' },
             { href: '/apps', label: 'Apps' },
             { href: '/pricing', label: <Trans i18nKey="marketing:pricing" /> },
             { href: '/faq', label: 'FAQ' },

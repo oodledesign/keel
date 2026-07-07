@@ -210,7 +210,8 @@ export const honeybookComparison: ComparisonConfig = {
     { href: '/features/pipeline', label: 'Ozer pipeline' },
     { href: '/features/invoicing', label: 'Ozer invoicing' },
     { href: '/features/client-portals', label: 'Ozer client portals' },
-    { href: '/features/desktop-assistant', label: 'Ozer meeting Assistant for Mac' },
+    { href: '/features/desktop-assistant', label: 'Ozer Assistant for Mac' },
+    { href: '/features/activity', label: 'Ozer activity tracking' },
     { href: '/pricing', label: 'Ozer pricing' },
   ],
 };

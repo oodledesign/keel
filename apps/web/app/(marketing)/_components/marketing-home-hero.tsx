@@ -58,9 +58,9 @@ export function MarketingHomeHero() {
             className={`mx-auto max-w-[34rem] text-base leading-[1.65] md:text-lg md:leading-[1.7] ${marketingMutedText}`}
             {...fadeUpProps(0.14, 0.38)}
           >
-            Clients, projects, invoices, pipeline and your plan for the day — one
-            place, one login. From £29/month flat, with no per-seat maths and no
-            transaction fees.
+            Clients, projects, invoices, pipeline, activity tracking, and your plan
+            for the day — one place, one login. From £29/month flat, with no
+            per-seat maths and no transaction fees.
           </motion.p>
         </div>
 

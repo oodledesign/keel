@@ -26,7 +26,7 @@ import { FeatureLandingIcon } from '../_components/feature-landing-icon';
 export const metadata = buildMarketingMetadata({
   title: 'Workspace OS features — Ozer',
   description:
-    'Planner, pipeline, invoices, meetings, and portals in one Workspace OS. Built for freelancers and small agencies — not seven tools and Zapier.',
+    'Planner, pipeline, invoices, activity tracking, meetings, and portals in one Workspace OS. Built for freelancers and small agencies — not seven tools and Zapier.',
   path: '/features',
   ogType: 'feature',
 });
@@ -59,8 +59,8 @@ export default function FeaturesIndexPage() {
             The Workspace OS, feature by feature
           </h1>
           <p className={`text-base leading-relaxed md:text-lg ${marketingBodyText}`}>
-            Planner, pipeline, invoices, meetings, and more — one system so a
-            small studio does not need seven tools and Zapier.
+            Planner, pipeline, invoices, activity tracking, meetings, and more — one
+            system so a small studio does not need seven tools and Zapier.
           </p>
         </div>
 

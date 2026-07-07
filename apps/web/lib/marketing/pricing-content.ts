@@ -24,6 +24,7 @@ export const REPLACED_STACK: ReplacedTool[] = [
   { category: 'Invoicing', typicalMonthlyGbp: 20, note: 'standalone invoicing SaaS' },
   { category: 'Client portal', typicalMonthlyGbp: 29, note: 'portal or client-flow tool' },
   { category: 'Meeting notes', typicalMonthlyGbp: 20, note: 'AI meeting note subscription' },
+  { category: 'Time tracking', typicalMonthlyGbp: 12, note: 'automatic desktop time tracker per seat' },
   { category: 'Scheduling / tasks', typicalMonthlyGbp: 12, note: 'shared task or calendar layer' },
 ];
 

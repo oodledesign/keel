@@ -1,10 +1,12 @@
 'use client';
 
+import Link from 'next/link';
 import { useSyncExternalStore } from 'react';
 import type { LucideIcon } from 'lucide-react';
 
 import { motion, useReducedMotion } from 'framer-motion';
 import {
+  Activity,
   Brain,
   CalendarDays,
   Check,
@@ -15,7 +17,6 @@ import {
   LayoutDashboard,
   ListChecks,
   Mail,
-  Mic,
   Search,
   Sparkles,
   StickyNote,
@@ -36,6 +37,7 @@ type FeatureNodeDef = {
   id: string;
   label: string;
   icon: LucideIcon;
+  href: string;
   x: number;
   target: number;
   /** Staggered sub-row (0 = upper, 1 = lower) for an organic map feel */
@@ -43,15 +45,15 @@ type FeatureNodeDef = {
 };
 
 const FEATURE_NODES: readonly FeatureNodeDef[] = [
-  { id: 'clients', label: 'Clients', icon: Contact, x: 8, target: 16, row: 0 },
-  { id: 'projects', label: 'Projects', icon: FolderKanban, x: 18.5, target: 24, row: 1 },
-  { id: 'invoicing', label: 'Invoicing', icon: CreditCard, x: 29, target: 31, row: 0 },
-  { id: 'email', label: 'Email', icon: Mail, x: 39.5, target: 40, row: 1 },
-  { id: 'planner', label: 'Planner', icon: Sparkles, x: 50, target: 50, row: 0 },
-  { id: 'second-brain', label: 'Second Brain', icon: Brain, x: 60.5, target: 60, row: 1 },
-  { id: 'meetings', label: 'Meetings', icon: Mic, x: 71, target: 69, row: 0 },
-  { id: 'notes', label: 'Notes', icon: StickyNote, x: 81.5, target: 76, row: 1 },
-  { id: 'pipeline', label: 'Pipeline', icon: Kanban, x: 92, target: 84, row: 0 },
+  { id: 'clients', label: 'Clients', icon: Contact, href: '/features/pipeline', x: 8, target: 16, row: 0 },
+  { id: 'projects', label: 'Projects', icon: FolderKanban, href: '/features/project-management', x: 18.5, target: 24, row: 1 },
+  { id: 'invoicing', label: 'Invoicing', icon: CreditCard, href: '/features/invoicing', x: 29, target: 31, row: 0 },
+  { id: 'email', label: 'Email', icon: Mail, href: '/features/email-assistant', x: 39.5, target: 40, row: 1 },
+  { id: 'planner', label: 'Planner', icon: Sparkles, href: '/features/planner', x: 50, target: 50, row: 0 },
+  { id: 'second-brain', label: 'Second Brain', icon: Brain, href: '/features/second-brain', x: 60.5, target: 60, row: 1 },
+  { id: 'activity', label: 'Activity', icon: Activity, href: '/features/activity', x: 71, target: 69, row: 0 },
+  { id: 'notes', label: 'Notes', icon: StickyNote, href: '/features/notes', x: 81.5, target: 76, row: 1 },
+  { id: 'pipeline', label: 'Pipeline', icon: Kanban, href: '/features/pipeline', x: 92, target: 84, row: 0 },
 ] as const;
 
 /**
@@ -148,12 +150,15 @@ function FeatureNodeChip({ node }: { node: FeatureNodeDef }) {
   const Icon = node.icon;
 
   return (
-    <div className="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-2.5 py-1.5 shadow-[0_4px_14px_var(--ozer-plum-alpha-08)]">
+    <Link
+      href={node.href}
+      className="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-2.5 py-1.5 shadow-[0_4px_14px_var(--ozer-plum-alpha-08)] transition-[border-color,background-color] duration-200 hover:border-[var(--ozer-accent)]/35 hover:bg-[var(--workspace-shell-sidebar-accent)]"
+    >
       <Icon className="h-3 w-3 text-[var(--ozer-accent)]" aria-hidden />
       <span className="text-[10px] font-semibold text-[var(--workspace-shell-text)] lg:text-[11px]">
         {node.label}
       </span>
-    </div>
+    </Link>
   );
 }
 
@@ -166,6 +171,7 @@ const SIDEBAR_NAV = [
   { label: 'Today', icon: LayoutDashboard, active: true },
   { label: 'Planner', icon: CalendarDays, active: false },
   { label: 'Tasks', icon: ListChecks, active: false },
+  { label: 'Activity', icon: Activity, active: false },
   { label: 'Notes', icon: StickyNote, active: false },
   { label: 'Finances', icon: CreditCard, active: false },
 ] as const;
@@ -598,7 +604,7 @@ export function MarketingHeroConnectionMap() {
     <div
       className="relative mt-12 md:mt-16"
       role="img"
-      aria-label="Map of Ozer launch capabilities — clients, projects, invoicing, pipeline, email, planner, meetings, notes, and second brain — all connected to one dashboard."
+      aria-label="Map of Ozer launch capabilities — clients, projects, invoicing, pipeline, email, planner, activity, notes, and second brain — all connected to one dashboard."
     >
       <div className="md:hidden">
         <MobileConnectionMap animate={animate} live={live} />

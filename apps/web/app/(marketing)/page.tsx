@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { Calendar, Check, CreditCard, MessagesSquare, Users, X } from 'lucide-react';
+import { Activity, Calendar, CreditCard, MessagesSquare, Users } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 
@@ -32,12 +32,12 @@ import {
 
 import { MarketingHomeHero } from './_components/marketing-home-hero';
 import { ComingSoon } from './_components/coming-soon';
-import { INTERCONNECTED_WORKSPACES_MARKETING } from '~/lib/marketing/interconnected-workspaces';
+import { InterconnectedWorkspacesSection } from './_components/interconnected-workspaces-section';
 
 export const metadata = buildMarketingMetadata({
   title: 'Workspace OS for studios — Ozer',
   description:
-    'Ozer is the Workspace OS for freelancers and small studios. Clients, projects, invoices, pipeline, and your plan for the day in one place from £29 per month.',
+    'Ozer is the Workspace OS for freelancers and small studios. Clients, projects, invoices, pipeline, activity tracking, and your plan for the day in one place from £29 per month.',
   path: '/',
   ogType: 'default',
   keywords: [
@@ -73,6 +73,13 @@ const features = [
     description:
       'Updates and next steps live on the job record, not in personal WhatsApp.',
   },
+  {
+    icon: Activity,
+    title: 'Activity on your Mac',
+    description:
+      'Keel Assistant captures app and website sessions — assign time to clients and projects from one view.',
+    href: '/features/activity',
+  },
 ];
 
 function Home() {
@@ -95,7 +102,7 @@ function Home() {
     softwareApplicationJsonLd({
       name: 'Ozer',
       description:
-        'Workspace OS for freelancers and small studios — clients, projects, invoices, pipeline, and your plan for the day in one place.',
+        'Workspace OS for freelancers and small studios — clients, projects, invoices, pipeline, activity tracking, and your plan for the day in one place.',
       url: absoluteUrl('/'),
       offers,
     }),
@@ -110,34 +117,7 @@ function Home() {
         <MarketingHomeHero />
       </section>
 
-      <section
-        className="relative mx-auto w-full max-w-7xl px-6 py-16"
-        aria-labelledby="comparison-heading"
-      >
-        <div className={cn(marketingFeatureCard, 'rounded-3xl p-6 md:p-10')}>
-          <h2
-            id="comparison-heading"
-            className="text-center font-heading text-3xl font-semibold text-[var(--workspace-shell-text)]"
-          >
-            {INTERCONNECTED_WORKSPACES_MARKETING.comparison.heading}
-          </h2>
-          <div className="mt-8 grid gap-6 md:grid-cols-2">
-            <ComparisonColumn
-              label={INTERCONNECTED_WORKSPACES_MARKETING.comparison.traditionalLabel}
-              items={INTERCONNECTED_WORKSPACES_MARKETING.comparison.traditional}
-              tone="muted"
-            />
-            <ComparisonColumn
-              label={INTERCONNECTED_WORKSPACES_MARKETING.comparison.ozerLabel}
-              items={INTERCONNECTED_WORKSPACES_MARKETING.comparison.ozer}
-              tone="ozer"
-            />
-          </div>
-          <p className="mt-8 text-center text-sm font-medium text-[var(--workspace-shell-text-muted)] md:text-base">
-            Studio work, family, and personal life — one account.
-          </p>
-        </div>
-      </section>
+      <InterconnectedWorkspacesSection tone="light" />
 
       <section className="relative mx-auto w-full max-w-7xl px-6 pb-24 pt-16 md:pt-24">
         <div className="mb-8">
@@ -150,21 +130,41 @@ function Home() {
             view with your studio — school runs and client calls on the same timeline.
           </p>
         </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          {features.map((feature) => (
-            <article
-              key={feature.title}
-              className={cn(marketingFeatureCard, 'p-6')}
-            >
-              <feature.icon className="h-5 w-5 text-[var(--ozer-accent)]" aria-hidden />
-              <h3 className="mt-4 font-heading text-xl font-semibold text-[var(--workspace-shell-text)]">
-                {feature.title}
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-[var(--workspace-shell-text-muted)]">
-                {feature.description}
-              </p>
-            </article>
-          ))}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {features.map((feature) => {
+            const card = (
+              <>
+                <feature.icon className="h-5 w-5 text-[var(--ozer-accent)]" aria-hidden />
+                <h3 className="mt-4 font-heading text-xl font-semibold text-[var(--workspace-shell-text)]">
+                  {feature.title}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-[var(--workspace-shell-text-muted)]">
+                  {feature.description}
+                </p>
+              </>
+            );
+
+            if ('href' in feature && feature.href) {
+              return (
+                <Link
+                  key={feature.title}
+                  href={feature.href}
+                  className={cn(
+                    marketingFeatureCard,
+                    'block p-6 transition-[border-color] duration-200 hover:border-[var(--ozer-accent)]/25',
+                  )}
+                >
+                  {card}
+                </Link>
+              );
+            }
+
+            return (
+              <article key={feature.title} className={cn(marketingFeatureCard, 'p-6')}>
+                {card}
+              </article>
+            );
+          })}
         </div>
 
         <div className="mt-12 grid gap-4 md:grid-cols-2">
@@ -249,52 +249,6 @@ function Home() {
         </div>
       </section>
     </main>
-  );
-}
-
-function ComparisonColumn({
-  label,
-  items,
-  tone,
-}: {
-  label: string;
-  items: readonly string[];
-  tone: 'muted' | 'ozer';
-}) {
-  const isOzer = tone === 'ozer';
-
-  return (
-    <div
-      className={cn(
-        'rounded-2xl border p-5 md:p-6',
-        isOzer
-          ? 'border-[var(--ozer-accent)]/35 bg-[var(--ozer-accent-subtle)]'
-          : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]',
-      )}
-    >
-      <p
-        className={cn(
-          'text-sm font-semibold uppercase tracking-wide',
-          isOzer ? 'text-[var(--ozer-coral-600)]' : 'text-[var(--ozer-plum-700)]',
-        )}
-      >
-        {label}
-      </p>
-      <ul className="mt-4 space-y-3">
-        {items.map((item) => (
-          <li key={item} className="flex gap-2.5 text-sm leading-relaxed">
-            {isOzer ? (
-              <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]" aria-hidden />
-            ) : (
-              <X className="mt-0.5 h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]" aria-hidden />
-            )}
-            <span className={isOzer ? 'text-[var(--ozer-text-on-light)]' : 'text-[var(--ozer-text-on-light-muted)]'}>
-              {item}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
   );
 }
 
