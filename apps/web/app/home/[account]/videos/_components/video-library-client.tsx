@@ -4,6 +4,8 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import dynamic from 'next/dynamic';
+
 import { Grid3X3, List, Plus, Search, SlidersHorizontal } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
@@ -29,10 +31,14 @@ import type {
 } from '~/lib/videos/types';
 
 import { FolderSidebar } from './folder-sidebar';
-import { UploadModal } from './upload-modal';
 import { VideoCard } from './video-card';
 import { VideoListRow } from './video-list-row';
 import { VideoPreviewDialog } from './video-preview-dialog';
+
+const UploadModal = dynamic(
+  () => import('./upload-modal').then((mod) => mod.UploadModal),
+  { ssr: false },
+);
 
 function folderBreadcrumb(
   folderId: string | null,

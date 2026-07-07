@@ -11,6 +11,8 @@ import {
 
 import { useRouter } from 'next/navigation';
 
+import dynamic from 'next/dynamic';
+
 import {
   AlertTriangle,
   ArrowDown,
@@ -26,19 +28,6 @@ import {
   SlidersHorizontal,
   Users,
 } from 'lucide-react';
-
-import {
-  DndContext,
-  DragOverlay,
-  PointerSensor,
-  closestCorners,
-  useDraggable,
-  useDroppable,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-  type DragStartEvent,
-} from '@dnd-kit/core';
 
 import { Button } from '@kit/ui/button';
 import { Avatar, AvatarFallback } from '@kit/ui/avatar';
@@ -62,8 +51,18 @@ import { compareYmd, parseDueDateParts, toIsoDateString } from '../../../_lib/du
 import type { TasksPageTask } from '../../_lib/server/tasks.loader';
 import { updateTask } from '../../_lib/actions/task-actions';
 import { AddTaskDialog } from '../../_components/dashboard/add-task-dialog';
-import { EditTaskDialog } from './edit-task-dialog';
 import { InlineAddTaskRow } from './inline-add-task-row';
+import { InlineTaskTitle } from './tasks-inline-task-title';
+
+const EditTaskDialog = dynamic(
+  () => import('./edit-task-dialog').then((mod) => mod.EditTaskDialog),
+  { ssr: false },
+);
+
+const TasksKanbanBoard = dynamic(
+  () => import('./tasks-kanban-board').then((mod) => mod.TasksKanbanBoard),
+  { ssr: false },
+);
 
 type TaskStatus = TasksPageTask['status'];
 
@@ -1166,7 +1165,6 @@ export function TasksPageClient({
   includeWorkspaceTasks = true,
   initialWorkspaceFilter = 'all',
 }: Props) {
-  const router = useRouter();
   const [tasks, setTasks] = useState<TasksPageTask[]>(initialTasks);
   const [view, setView] = useState<TaskViewMode>('list');
   const [filter, setFilter] = useState<'all' | 'work' | 'life'>(() =>
@@ -1185,10 +1183,6 @@ export function TasksPageClient({
   const [clientFilter, setClientFilter] = useState<string>('all');
   const [dueDateFilter, setDueDateFilter] = useState<DueDateFilter>('all');
   const [search, setSearch] = useState('');
-  const [activeDragTask, setActiveDragTask] = useState<TasksPageTask | null>(
-    null,
-  );
-  const [, startTransition] = useTransition();
 
   const [expandedRootTaskIds, setExpandedRootTaskIds] = useState<Set<string>>(
     () => new Set(),
@@ -1371,10 +1365,6 @@ export function TasksPageClient({
     [tasks],
   );
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-  );
-
   const handleStatusChanged = useCallback(
     (taskId: string, nextStatus: TaskStatus) => {
       setTasks((prev) =>
@@ -1418,53 +1408,6 @@ export function TasksPageClient({
       handleTitleChanged,
       handleDueDateChanged,
     ],
-  );
-
-  const onDragStart = useCallback(
-    (event: DragStartEvent) => {
-      const id = String(event.active.id);
-      const found = tasks.find((t) => t.id === id);
-      setActiveDragTask(found ?? null);
-    },
-    [tasks],
-  );
-
-  const onDragEnd = useCallback(
-    (event: DragEndEvent) => {
-      setActiveDragTask(null);
-      const { active, over } = event;
-      if (!over) return;
-
-      const taskId = String(active.id);
-      const overId = String(over.id);
-      const overStatus = (over.data.current as { status?: TaskStatus } | null)
-        ?.status;
-      let newStatus: TaskStatus | null = null;
-      if (overStatus) {
-        newStatus = overStatus;
-      } else if (overId.startsWith('status-')) {
-        newStatus = overId.replace('status-', '') as TaskStatus;
-      } else {
-        const target = tasks.find((t) => t.id === overId);
-        if (target) newStatus = target.status;
-      }
-      if (!newStatus) return;
-
-      const current = tasks.find((t) => t.id === taskId);
-      if (!current || current.status === newStatus) return;
-
-      const previousStatus = current.status;
-      handleStatusChanged(taskId, newStatus);
-      startTransition(async () => {
-        const result = await updateTask(taskId, { status: newStatus! });
-        if (!result.success) {
-          handleStatusChanged(taskId, previousStatus);
-        } else {
-          router.refresh();
-        }
-      });
-    },
-    [tasks, handleStatusChanged, router],
   );
 
   const headerSubtitle = (() => {
@@ -1575,154 +1518,20 @@ export function TasksPageClient({
           )}
         </>
       ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCorners}
-          onDragStart={onDragStart}
-          onDragEnd={onDragEnd}
-        >
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {STATUS_COLUMNS.map((col) => (
-              <BoardColumn
-                key={col.key}
-                column={col}
-                tasks={(tasksByStatus.get(col.key) ?? []).filter(
-                  (t) => !t.parentTaskId,
-                )}
-                today={todayKey}
-                workspaceAccountId={workspaceAccountId}
-                onTitleChanged={handleTitleChanged}
-              />
-            ))}
-          </div>
-
-          <DragOverlay dropAnimation={null}>
-            {activeDragTask ? (
-              <BoardCard
-                task={activeDragTask}
-                today={todayKey}
-                workspaceAccountId={workspaceAccountId}
-                onTitleChanged={handleTitleChanged}
-                isOverlay
-              />
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+        <TasksKanbanBoard
+          tasksByStatus={tasksByStatus}
+          flatTasks={filteredForBoard}
+          today={todayKey}
+          workspaceAccountId={workspaceAccountId}
+          onTitleChanged={handleTitleChanged}
+          onStatusChanged={handleStatusChanged}
+        />
       )}
     </div>
   );
 }
 
 // ─── List row ───────────────────────────────────────────────────────
-
-function InlineTaskTitle({
-  taskId,
-  title,
-  isDone,
-  onTitleChanged,
-  isolatePointer,
-  readOnly,
-}: {
-  taskId: string;
-  title: string;
-  isDone: boolean;
-  onTitleChanged?: (taskId: string, title: string) => void;
-  /** Stops dnd-kit drag sensors on this control (board cards). */
-  isolatePointer?: boolean;
-  readOnly?: boolean;
-}) {
-  const router = useRouter();
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(title);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (!editing) setDraft(title);
-  }, [title, editing]);
-
-  useEffect(() => {
-    if (!editing) return;
-    const el = inputRef.current;
-    if (!el) return;
-    el.focus();
-    el.select();
-  }, [editing]);
-
-  const save = useCallback(() => {
-    if (readOnly) return;
-    setEditing(false);
-    const trimmed = draft.trim();
-    if (!trimmed) {
-      setDraft(title);
-      return;
-    }
-    if (trimmed === title) return;
-    const prev = title;
-    onTitleChanged?.(taskId, trimmed);
-    void (async () => {
-      const result = await updateTask(taskId, { title: trimmed });
-      if (!result.success) {
-        onTitleChanged?.(taskId, prev);
-      }
-      router.refresh();
-    })();
-  }, [draft, onTitleChanged, readOnly, router, taskId, title]);
-
-  const cancel = useCallback(() => {
-    setDraft(title);
-    setEditing(false);
-  }, [title]);
-
-  if (readOnly) {
-    return (
-      <p
-        className={`truncate text-[13px] font-medium leading-snug ${
-          isDone ? 'text-[var(--workspace-shell-text-muted)] line-through' : 'text-[var(--workspace-shell-text)]'
-        }`}
-      >
-        {title}
-      </p>
-    );
-  }
-
-  if (editing) {
-    return (
-      <input
-        ref={inputRef}
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onPointerDown={(e) => isolatePointer && e.stopPropagation()}
-        onClick={(e) => isolatePointer && e.stopPropagation()}
-        onBlur={save}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            save();
-          } else if (e.key === 'Escape') {
-            e.preventDefault();
-            cancel();
-          }
-        }}
-        className="w-full rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 py-1 text-sm font-medium leading-snug text-[var(--workspace-shell-text)] shadow-none outline-none focus-visible:ring-1 focus-visible:ring-white/25"
-        aria-label="Task title"
-      />
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={() => setEditing(true)}
-      onPointerDown={(e) => isolatePointer && e.stopPropagation()}
-      className={`w-full min-w-0 rounded-sm text-left text-sm font-medium leading-snug transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-white/30 ${
-        isDone ? 'text-[var(--workspace-shell-text-muted)] line-through' : 'text-[var(--workspace-shell-text)]'
-      }`}
-      aria-label="Edit title"
-    >
-      {title}
-    </button>
-  );
-}
 
 function TaskRow({
   task,
@@ -1920,178 +1729,6 @@ function TaskRow({
         workspaceAccountId={workspaceAccountId}
       />
     </div>
-  );
-}
-
-// ─── Board column / card ────────────────────────────────────────────
-
-function BoardColumn({
-  column,
-  tasks,
-  today,
-  workspaceAccountId,
-  onTitleChanged,
-}: {
-  column: (typeof STATUS_COLUMNS)[number];
-  tasks: TasksPageTask[];
-  today: string;
-  workspaceAccountId?: string;
-  onTitleChanged: (taskId: string, title: string) => void;
-}) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: `status-${column.key}`,
-    data: { status: column.key },
-  });
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={`flex min-h-[200px] flex-col rounded-2xl border border-[color:var(--workspace-shell-border)] transition-colors ${
-        isOver ? 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]' : 'bg-[var(--workspace-shell-panel)]'
-      }`}
-    >
-      <div
-        className="flex items-center justify-between rounded-t-2xl px-4 py-3"
-        style={{ backgroundColor: column.tint }}
-      >
-        <div className="flex items-center gap-2">
-          <span
-            className="inline-block h-2 w-2 rounded-full"
-            style={{ backgroundColor: column.dot }}
-          />
-          <span className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-            {column.label}
-          </span>
-        </div>
-        <span className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
-          {tasks.length}
-        </span>
-      </div>
-      <div className="flex flex-1 flex-col gap-2 p-3">
-        {tasks.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-3 py-8 text-center text-xs text-[var(--workspace-shell-text-muted)]">
-            Drop tasks here
-          </div>
-        ) : (
-          tasks.map((t) => (
-            <BoardCard
-              key={t.id}
-              task={t}
-              today={today}
-              workspaceAccountId={workspaceAccountId}
-              onTitleChanged={onTitleChanged}
-            />
-          ))
-        )}
-      </div>
-    </div>
-  );
-}
-
-function BoardCard({
-  task,
-  today,
-  workspaceAccountId,
-  onTitleChanged,
-  isOverlay = false,
-}: {
-  task: TasksPageTask;
-  today: string;
-  workspaceAccountId?: string;
-  onTitleChanged?: (taskId: string, title: string) => void;
-  isOverlay?: boolean;
-}) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({ id: task.id });
-  const [editOpen, setEditOpen] = useState(false);
-
-  const overdue = isOverdue(task, today);
-  const priorityCfg = priorityConfig[task.priority];
-  const isDone = task.status === 'completed';
-  const subCount = task.subtasks?.length ?? 0;
-  const doneSubCount =
-    task.subtasks?.filter((s) => s.status === 'completed').length ?? 0;
-
-  const style: React.CSSProperties = transform
-    ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-      }
-    : {};
-
-  const baseClass = overdue
-    ? 'rounded-xl border border-rose-400/30 border-l-[3px] border-l-rose-500 bg-rose-500/[0.08]'
-    : 'rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)]';
-  const interactClass = isOverlay
-    ? 'shadow-[0_18px_48px_rgba(4,10,24,0.45)]'
-    : isDragging
-      ? 'opacity-40'
-      : 'hover:border-[color:var(--workspace-shell-border)]';
-
-  return (
-    <>
-      <div
-        ref={setNodeRef}
-        style={style}
-        {...attributes}
-        {...listeners}
-        onClick={() => {
-          if (!isOverlay) setEditOpen(true);
-        }}
-        className={`group cursor-grab touch-none p-3 text-left transition-colors active:cursor-grabbing ${baseClass} ${interactClass}`}
-      >
-        <div className="min-w-0">
-          <InlineTaskTitle
-            taskId={task.id}
-            title={task.title}
-            isDone={isDone}
-            onTitleChanged={onTitleChanged}
-            isolatePointer
-            readOnly={isOverlay}
-          />
-        </div>
-
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--workspace-shell-text-muted)]">
-          {overdue && <OverduePill dueDate={task.dueDate} compact />}
-          {task.clientName && (
-            <span className="rounded bg-[var(--workspace-shell-sidebar-accent)] px-1.5 py-0.5 font-medium text-[var(--workspace-shell-text-muted)]">
-              {task.clientName}
-            </span>
-          )}
-          {(task.projectName || task.areaLabel) && (
-            <span className="flex items-center gap-1">
-              {task.accentColor && (
-                <span
-                  className="inline-block h-1.5 w-1.5 rounded-full"
-                  style={{ backgroundColor: task.accentColor }}
-                />
-              )}
-              {task.projectName ?? task.areaLabel}
-            </span>
-          )}
-          {!overdue && task.dueDateLabel && <span>{task.dueDateLabel}</span>}
-          {task.priority !== 'low' && task.priority !== 'medium' && (
-            <span className={`flex items-center gap-0.5 font-medium ${priorityCfg.className}`}>
-              {task.priority === 'urgent' && <Flame className="h-3 w-3" />}
-              {priorityCfg.label}
-            </span>
-          )}
-          {subCount > 0 && (
-            <span className="rounded bg-[var(--workspace-shell-sidebar-accent)] px-1.5 py-0.5 text-[var(--workspace-shell-text-muted)]">
-              {doneSubCount}/{subCount} complete
-            </span>
-          )}
-        </div>
-      </div>
-
-      {!isOverlay && (
-        <EditTaskDialog
-          task={task}
-          open={editOpen}
-          onOpenChange={setEditOpen}
-          workspaceAccountId={workspaceAccountId}
-        />
-      )}
-    </>
   );
 }
 

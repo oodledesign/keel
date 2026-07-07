@@ -113,30 +113,64 @@ export async function canAccessPaidWorkspace(
   accountId: string,
   profile: WorkspaceProfile,
 ): Promise<boolean> {
-  if (await isSuperAdmin(client)) {
-    return true;
-  }
-
   const required = requiredEntitlementForProfile(profile);
   if (!required) {
     return true;
   }
 
-  if (await isAccountBillingExempt(client, accountId)) {
+  const now = new Date().toISOString();
+
+  const [
+    superAdmin,
+    billingExempt,
+    entitlement,
+    businessLiteEntitlement,
+    subscription,
+  ] = await Promise.all([
+    isSuperAdmin(client),
+    isAccountBillingExempt(client, accountId),
+    client
+      .from('account_entitlements')
+      .select('id')
+      .eq('account_id', accountId)
+      .eq('entitlement_key', required)
+      .or(`expires_at.is.null,expires_at.gt.${now}`)
+      .maybeSingle(),
+    profile === 'work_design'
+      ? client
+          .from('account_entitlements')
+          .select('id')
+          .eq('account_id', accountId)
+          .eq('entitlement_key', 'workspace_business_lite')
+          .or(`expires_at.is.null,expires_at.gt.${now}`)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    client
+      .from('subscriptions')
+      .select('status')
+      .eq('account_id', accountId)
+      .maybeSingle(),
+  ]);
+
+  if (superAdmin || billingExempt) {
     return true;
   }
 
-  if (await hasEntitlement(client, accountId, required)) {
+  if (entitlement.data) {
     return true;
   }
 
-  if (profile === 'work_design') {
-    if (await hasEntitlement(client, accountId, 'workspace_business_lite')) {
-      return true;
-    }
+  if (profile === 'work_design' && businessLiteEntitlement.data) {
+    return true;
   }
 
-  return hasActiveWorkspaceSubscription(client, accountId);
+  if (subscription.error || !subscription.data) {
+    return false;
+  }
+
+  return ACTIVE_SUB_STATUSES.has(
+    String((subscription.data as { status?: string }).status ?? ''),
+  );
 }
 
 export async function canUseAddon(

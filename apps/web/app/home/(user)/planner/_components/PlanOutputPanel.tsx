@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 
+import dynamic from 'next/dynamic';
+
 import Link from 'next/link';
 
 import { Loader2, RefreshCcw } from 'lucide-react';
@@ -14,8 +16,12 @@ import { toLocalDateYmd } from '~/lib/planner/plan-storage';
 
 import { DayScheduleEditor } from './DayScheduleEditor';
 import { PlannerSyncCalendarButton } from './planner-push-to-calendar-button';
-import { PlanOutputRenderer } from './PlanOutputRenderer';
 import type { PlanningMode } from './planner-types';
+
+const PlanOutputRenderer = dynamic(
+  () => import('./PlanOutputRenderer').then((mod) => mod.PlanOutputRenderer),
+  { ssr: false },
+);
 
 type Props = {
   mode: PlanningMode;

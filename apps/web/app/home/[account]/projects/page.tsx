@@ -11,6 +11,7 @@ import {
 } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import { loadJobsPageData } from './_lib/server/jobs-page.loader';
+import { loadJobsPageInitialData } from './_lib/server/jobs-page-initial.loader';
 import { JobsPageContent } from './_components/jobs-page-content';
 
 interface JobsPageProps {
@@ -55,6 +56,10 @@ async function JobsPage({ params }: JobsPageProps) {
     isContractorView,
   } = await loadJobsPageData(accountSlug);
 
+  const initialData = canViewJobs
+    ? await loadJobsPageInitialData(accountSlug, accountId)
+    : null;
+
   const isProperty = spaceType === 'property';
 
   return (
@@ -67,6 +72,9 @@ async function JobsPage({ params }: JobsPageProps) {
           canEditJobs={canEditJobs}
           isContractorView={isContractorView}
           uiVariant={isProperty ? 'maintenance' : 'projects'}
+          initialJobs={initialData?.jobs as never}
+          initialCampaigns={initialData?.campaigns}
+          initialMembers={initialData?.members}
         />
       </PageBody>
     </>

@@ -7,6 +7,12 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { getDbForWorkspaceTaskAssignmentOptions } from '~/home/_lib/server/workspace-scope';
+
+/** Cap task payloads for faster SSR and hydration. */
+export const TASK_LIST_LIMIT = 300;
+
+const TASK_SELECT =
+  'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, notes, calendar_schedule_status';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import { parseDueDateParts, toIsoDateString } from '../../../_lib/due-date-ymd';
@@ -413,19 +419,6 @@ async function enrichTaskRows(
     ),
   ] as string[];
 
-  const clientsResult =
-    clientIds.length > 0
-      ? await rowDb
-          .from('clients')
-          .select('id, display_name, first_name, last_name, account_id')
-          .in('id', clientIds)
-      : { data: [] as ClientEnrichment[] };
-
-  const clients = new Map<string, ClientEnrichment>();
-  for (const c of (clientsResult.data ?? []) as ClientEnrichment[]) {
-    clients.set(c.id, c);
-  }
-
   const accountIdSet = new Set<string>();
   for (const p of projects.values()) {
     if (p.account_id) {
@@ -436,11 +429,6 @@ async function enrichTaskRows(
       accountIdSet.add(bizAccountId);
     }
   }
-  for (const c of clients.values()) {
-    if (c.account_id) {
-      accountIdSet.add(c.account_id);
-    }
-  }
   for (const row of rows) {
     if (row.account_id) {
       accountIdSet.add(row.account_id);
@@ -448,24 +436,30 @@ async function enrichTaskRows(
   }
   const uniqueAccountIds = [...accountIdSet];
 
+  const [clientsResult, accountsResult] = await Promise.all([
+    clientIds.length > 0
+      ? rowDb
+          .from('clients')
+          .select('id, display_name, first_name, last_name, account_id')
+          .in('id', clientIds)
+      : Promise.resolve({ data: [] as ClientEnrichment[] }),
+    uniqueAccountIds.length > 0
+      ? rowDb
+          .from('accounts')
+          .select('id, name, slug, space_type')
+          .in('id', uniqueAccountIds)
+      : Promise.resolve({ data: [] as AccountWorkspaceRow[] }),
+  ]);
+
+  const clients = new Map<string, ClientEnrichment>();
+  for (const c of (clientsResult.data ?? []) as ClientEnrichment[]) {
+    clients.set(c.id, c);
+  }
+
   const accountsById = new Map<string, AccountWorkspaceRow>();
-  if (uniqueAccountIds.length > 0) {
-    const { data: accountRows, error: accountsErr } = await rowDb
-      .from('accounts')
-      .select('id, name, slug, space_type')
-      .in('id', uniqueAccountIds);
-
-    if (accountsErr) {
-      console.error(
-        '[tasks.loader] enrichTaskRows accounts:',
-        accountsErr.message,
-      );
-    }
-
-    for (const r of (accountRows ?? []) as AccountWorkspaceRow[]) {
-      if (r.id) {
-        accountsById.set(r.id, r);
-      }
+  for (const r of (accountsResult.data ?? []) as AccountWorkspaceRow[]) {
+    if (r.id) {
+      accountsById.set(r.id, r);
     }
   }
 
@@ -562,11 +556,10 @@ export const loadTasksForUser = cache(async (): Promise<TasksPageTask[]> => {
 
   const { data, error } = await client
     .from('tasks')
-    .select(
-      'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, notes, calendar_schedule_status',
-    )
+    .select(TASK_SELECT)
     .eq('user_id', user.id)
-    .order('due_date', { ascending: true, nullsLast: true });
+    .order('due_date', { ascending: true, nullsLast: true })
+    .limit(TASK_LIST_LIMIT);
 
   if (error) {
     console.error('[tasks.loader] loadTasksForUser error:', error.message);
@@ -584,12 +577,11 @@ export const loadTasksForClient = cache(
 
     const { data, error } = await client
       .from('tasks')
-      .select(
-        'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, notes, calendar_schedule_status',
-      )
+      .select(TASK_SELECT)
       .eq('user_id', user.id)
       .eq('client_id', clientId)
-      .order('due_date', { ascending: true, nullsLast: true });
+      .order('due_date', { ascending: true, nullsLast: true })
+      .limit(TASK_LIST_LIMIT);
 
     if (error) {
       console.error('[tasks.loader] loadTasksForClient error:', error.message);
@@ -639,11 +631,10 @@ export const loadTasksForTeamAccount = cache(
     if (projectIds.length === 0 && clientIds.length === 0) {
       const { data: accountOnlyData, error: accountOnlyError } = await userClient
         .from('tasks')
-        .select(
-          'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, notes, calendar_schedule_status',
-        )
+        .select(TASK_SELECT)
         .eq('account_id', accountId)
-        .order('due_date', { ascending: true, nullsLast: true });
+        .order('due_date', { ascending: true, nullsLast: true })
+        .limit(TASK_LIST_LIMIT);
 
       if (accountOnlyError) {
         console.error(
@@ -663,9 +654,7 @@ export const loadTasksForTeamAccount = cache(
       );
     }
 
-    let query = userClient.from('tasks').select(
-      'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, notes, calendar_schedule_status',
-    );
+    let query = userClient.from('tasks').select(TASK_SELECT);
 
     const filters: string[] = [`account_id.eq.${accountId}`];
     if (projectIds.length > 0) {
@@ -677,10 +666,12 @@ export const loadTasksForTeamAccount = cache(
 
     query = query.or(filters.join(','));
 
-    const { data, error } = await query.order('due_date', {
-      ascending: true,
-      nullsLast: true,
-    });
+    const { data, error } = await query
+      .order('due_date', {
+        ascending: true,
+        nullsLast: true,
+      })
+      .limit(TASK_LIST_LIMIT);
 
     if (error) {
       console.error(

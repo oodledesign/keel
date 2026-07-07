@@ -7,6 +7,7 @@ import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access
 import { isWorkModuleEnabled } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import { loadInvoicesPageData } from './_lib/server/invoices-page.loader';
+import { loadInvoicesPageInitialData } from './_lib/server/invoices-page-initial.loader';
 import { InvoicesPageContent } from './_components/invoices-page-content';
 
 interface InvoicesPageProps {
@@ -38,6 +39,8 @@ async function InvoicesPage({ params }: InvoicesPageProps) {
   const { accountId, canViewInvoices, canEditInvoices, canManageInvoiceStatus } =
     await loadInvoicesPageData(accountSlug);
 
+  const initialData = await loadInvoicesPageInitialData(accountId);
+
   return (
     <>
       <TeamAccountLayoutPageHeader
@@ -53,6 +56,11 @@ async function InvoicesPage({ params }: InvoicesPageProps) {
           canViewInvoices={canViewInvoices}
           canEditInvoices={canEditInvoices}
           canManageInvoiceStatus={canManageInvoiceStatus}
+          initialInvoices={initialData.invoices as never}
+          initialTotal={initialData.total}
+          initialCounts={initialData.counts}
+          initialSummary={initialData.summary}
+          initialClients={initialData.clients}
         />
       </PageBody>
     </>

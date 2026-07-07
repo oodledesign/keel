@@ -13,13 +13,11 @@ import { getTeamAccountSidebarConfig } from '~/config/team-account-navigation.co
 import type { WorkNavCounts } from '~/config/work-account-navigation.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
-// local imports
 import { TeamWorkspaceTopBarClient } from '~/components/workspace-shell/team-workspace-top-bar-client';
 
 import { TeamAccountLayoutSidebar } from './_components/team-account-layout-sidebar';
 import { TeamWorkspaceMobileChrome } from './_components/team-workspace-mobile-chrome';
 import { flattenTeamNavLinks } from './_lib/flatten-team-nav-links';
-import { loadWorkspaceMobileNavShortcuts } from '~/lib/dashboard-shortcuts/load-shortcuts';
 import { resolveMobileBottomNavTabs } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
 import pathsConfig from '~/config/paths.config';
 import { TeamAccountNavigationMenu } from './_components/team-account-navigation-menu';
@@ -29,19 +27,24 @@ import { buildWorkspaceShellMetadata } from '~/lib/seo/app-shell-metadata';
 import { spaceTypeFromProfile } from './_lib/workspace-profile';
 import { enforceWorkspaceBilling } from './_lib/server/workspace-billing-guard';
 import { WorkspaceFocusProviderShell } from '~/components/workspace-shell/workspace-focus-provider-shell';
-import { serializeWorkspaceFocusMap } from '~/lib/workspace-focus/serialize-focus-map';
+import type { WorkspaceFocusInput } from '~/lib/workspace-focus';
 import { loadWorkspaceSwitcherAccounts } from '../_lib/server/workspace-switcher.loader';
-import { loadWorkspaceFocusSettingsMap } from '~/lib/workspace-focus/load-workspace-focus-settings';
-import { loadWorkNavCounts } from './_lib/server/work-nav-counts.loader';
+import { loadTeamWorkspaceShellAdornments } from './_lib/server/team-workspace-shell-adornments.loader';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 import {
   userRequiresWorkspaceSetup,
   workspaceSetupPath,
 } from '~/lib/server/workspace-setup-guard';
+import { TeamWorkspaceShellAdornmentsSuspense } from './_components/team-workspace-shell-adornments-suspense';
 
 type TeamWorkspaceLayoutProps = React.PropsWithChildren<{
   params: Promise<{ account: string }>;
 }>;
+
+type LayoutState = {
+  open: boolean;
+  style: 'sidebar' | 'header' | 'custom';
+};
 
 export const dynamic = 'force-dynamic';
 
@@ -59,17 +62,27 @@ function TeamWorkspaceLayout({ children, params }: TeamWorkspaceLayoutProps) {
   const state = use(getLayoutState(account));
 
   if (state.style === 'sidebar') {
-    return <SidebarLayout account={account}>{children}</SidebarLayout>;
+    return (
+      <SidebarLayout account={account} layoutState={state}>
+        {children}
+      </SidebarLayout>
+    );
   }
 
-  return <HeaderLayout account={account}>{children}</HeaderLayout>;
+  return (
+    <HeaderLayout account={account} layoutState={state}>
+      {children}
+    </HeaderLayout>
+  );
 }
 
 async function SidebarLayout({
   account,
+  layoutState,
   children,
 }: React.PropsWithChildren<{
   account: string;
+  layoutState: LayoutState;
 }>) {
   const user = await requireUserInServerComponent();
   if (await userRequiresWorkspaceSetup(user.id)) {
@@ -78,9 +91,8 @@ async function SidebarLayout({
 
   const client = (await import('@kit/supabase/server-client')).getSupabaseServerClient();
 
-  const [data, state, switcherAccounts] = await Promise.all([
+  const [data, switcherAccounts] = await Promise.all([
     loadTeamWorkspace(account),
-    getLayoutState(account),
     loadWorkspaceSwitcherAccounts(client, user.id),
     enforceWorkspaceBilling(account),
   ]);
@@ -90,18 +102,11 @@ async function SidebarLayout({
   }
 
   const accountId = data.account.id;
-
-  const [navCounts, mobileNavShortcuts] = await Promise.all([
-    loadWorkNavCounts(client, accountId, data.moduleSettings).catch((error) => {
-      console.error('[team-workspace] loadWorkNavCounts:', error);
-      return {} as WorkNavCounts;
-    }),
-    loadWorkspaceMobileNavShortcuts(client, user.id, accountId, account),
-  ]);
-
   const workspaceProfile = data.workspaceProfile;
-  const accounts =
-    switcherAccounts.length > 0 ? switcherAccounts : [];
+  const accounts = switcherAccounts.length > 0 ? switcherAccounts : [];
+  const focusAccountIds = [
+    ...new Set([accountId, ...accounts.map((row) => row.id)]),
+  ];
 
   const accountAccess = data.account as {
     permissions?: string[] | null;
@@ -109,34 +114,121 @@ async function SidebarLayout({
     company_role?: string | null;
   };
 
+  const access = getTeamAccountAccess(accountAccess);
+  const homePath = pathsConfig.app.accountHome.replace('[account]', account);
+
+  return (
+    <TeamAccountWorkspaceContextProvider value={data}>
+      <TeamWorkspaceShellAdornmentsSuspense
+        client={client}
+        userId={user.id}
+        accountId={accountId}
+        accountSlug={account}
+        moduleSettings={data.moduleSettings}
+        focusAccountIds={focusAccountIds}
+        fallback={
+          <TeamWorkspaceSidebarShell
+            account={account}
+            accountId={accountId}
+            user={data.user}
+            accounts={accounts}
+            moduleSettings={data.moduleSettings}
+            workspaceProfile={workspaceProfile}
+            accountAccess={accountAccess}
+            navCounts={{}}
+            mobileNavShortcuts={[]}
+            focusSettingsByAccountId={{}}
+            layoutState={layoutState}
+            showNewMenu={access.canUseQuickCreate}
+            homePath={homePath}
+          >
+            <TeamWorkspaceTopBarClient accountSlug={account} />
+            {children}
+          </TeamWorkspaceSidebarShell>
+        }
+      >
+        {(adornments) => (
+          <TeamWorkspaceSidebarShell
+            account={account}
+            accountId={accountId}
+            user={data.user}
+            accounts={accounts}
+            moduleSettings={data.moduleSettings}
+            workspaceProfile={workspaceProfile}
+            accountAccess={accountAccess}
+            navCounts={adornments.navCounts}
+            mobileNavShortcuts={adornments.mobileNavShortcuts}
+            focusSettingsByAccountId={adornments.focusSettingsByAccountId}
+            layoutState={layoutState}
+            showNewMenu={access.canUseQuickCreate}
+            homePath={homePath}
+          >
+            <TeamWorkspaceTopBarClient accountSlug={account} />
+            {children}
+          </TeamWorkspaceSidebarShell>
+        )}
+      </TeamWorkspaceShellAdornmentsSuspense>
+    </TeamAccountWorkspaceContextProvider>
+  );
+}
+
+function TeamWorkspaceSidebarShell({
+  account,
+  accountId,
+  user,
+  accounts,
+  moduleSettings,
+  workspaceProfile,
+  accountAccess,
+  navCounts,
+  mobileNavShortcuts,
+  focusSettingsByAccountId,
+  layoutState,
+  showNewMenu,
+  homePath,
+  children,
+}: {
+  account: string;
+  accountId: string;
+  user: React.ComponentProps<typeof TeamAccountLayoutSidebar>['user'];
+  accounts: React.ComponentProps<typeof TeamAccountLayoutSidebar>['accounts'];
+  moduleSettings: Record<string, boolean>;
+  workspaceProfile: React.ComponentProps<typeof TeamAccountLayoutSidebar>['workspaceProfile'];
+  accountAccess: {
+    permissions?: string[] | null;
+    role?: string | null;
+    company_role?: string | null;
+  };
+  navCounts: WorkNavCounts;
+  mobileNavShortcuts: Awaited<
+    ReturnType<typeof loadTeamWorkspaceShellAdornments>
+  >['mobileNavShortcuts'];
+  focusSettingsByAccountId: Record<string, WorkspaceFocusInput>;
+  layoutState: LayoutState;
+  showNewMenu: boolean;
+  homePath: string;
+  children: React.ReactNode;
+}) {
   const mobileNavLinks = flattenTeamNavLinks(
     getTeamAccountSidebarConfig(
       account,
       accountAccess,
-      data.moduleSettings,
+      moduleSettings,
       workspaceProfile,
       navCounts,
     ),
   );
 
-  const homePath = pathsConfig.app.accountHome.replace('[account]', account);
   const bottomNavTabs = resolveMobileBottomNavTabs({
     homePath,
     shortcuts: mobileNavShortcuts,
   });
 
-  const access = getTeamAccountAccess(accountAccess);
-  const focusAccountIds = [
-    ...new Set([accountId, ...accounts.map((row) => row.id)]),
-  ];
-  const focusSettingsByAccountId = serializeWorkspaceFocusMap(
-    await loadWorkspaceFocusSettingsMap(client, user.id, focusAccountIds),
-  );
-
   return (
-    <TeamAccountWorkspaceContextProvider value={data}>
-      <WorkspaceFocusProviderShell settingsByAccountId={focusSettingsByAccountId}>
-        <SidebarProvider defaultOpen={state.open}>
+    <WorkspaceFocusProviderShell
+      settingsByAccountId={focusSettingsByAccountId}
+    >
+      <SidebarProvider defaultOpen={layoutState.open}>
         <Page
           style={'sidebar'}
           contentContainerClassName="mx-auto flex h-svh min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)]"
@@ -144,10 +236,10 @@ async function SidebarLayout({
           <PageNavigation>
             <TeamAccountLayoutSidebar
               account={account}
-              accountId={data.account.id}
+              accountId={accountId}
               accounts={accounts}
-              user={data.user}
-              moduleSettings={data.moduleSettings}
+              user={user}
+              moduleSettings={moduleSettings}
               workspaceProfile={workspaceProfile}
               navCounts={navCounts}
               accountAccess={accountAccess}
@@ -158,29 +250,29 @@ async function SidebarLayout({
 
           <TeamWorkspaceMobileChrome
             account={account}
-            accountId={data.account.id}
-            user={data.user}
+            accountId={accountId}
+            user={user}
             accounts={accounts}
             navLinks={mobileNavLinks}
             bottomNavTabs={bottomNavTabs}
             spaceType={spaceTypeFromProfile(workspaceProfile)}
-            showNewMenu={access.canUseQuickCreate}
+            showNewMenu={showNewMenu}
           >
-            <TeamWorkspaceTopBarClient accountSlug={account} />
             {children}
           </TeamWorkspaceMobileChrome>
         </Page>
       </SidebarProvider>
-      </WorkspaceFocusProviderShell>
-    </TeamAccountWorkspaceContextProvider>
+    </WorkspaceFocusProviderShell>
   );
 }
 
 async function HeaderLayout({
   account,
+  layoutState,
   children,
 }: React.PropsWithChildren<{
   account: string;
+  layoutState: LayoutState;
 }>) {
   const user = await requireUserInServerComponent();
   if (await userRequiresWorkspaceSetup(user.id)) {
@@ -201,14 +293,9 @@ async function HeaderLayout({
   const accountId = data.account.id;
   const workspaceProfile = data.workspaceProfile;
   const accounts = switcherAccounts;
-
-  const [navCounts, mobileNavShortcuts] = await Promise.all([
-    loadWorkNavCounts(client, accountId, data.moduleSettings).catch((error) => {
-      console.error('[team-workspace] loadWorkNavCounts:', error);
-      return {} as WorkNavCounts;
-    }),
-    loadWorkspaceMobileNavShortcuts(client, user.id, accountId, account),
-  ]);
+  const focusAccountIds = [
+    ...new Set([accountId, ...accounts.map((row) => row.id)]),
+  ];
 
   const accountAccess = data.account as {
     permissions?: string[] | null;
@@ -216,59 +303,64 @@ async function HeaderLayout({
     company_role?: string | null;
   };
 
+  const access = getTeamAccountAccess(accountAccess);
+  const homePath = pathsConfig.app.accountHome.replace('[account]', account);
+
+  const adornments = await loadTeamWorkspaceShellAdornments({
+    client,
+    userId: user.id,
+    accountId,
+    accountSlug: account,
+    moduleSettings: data.moduleSettings,
+    focusAccountIds,
+  });
+
   const mobileNavLinks = flattenTeamNavLinks(
     getTeamAccountSidebarConfig(
       account,
       accountAccess,
       data.moduleSettings,
       workspaceProfile,
-      navCounts,
+      adornments.navCounts,
     ),
   );
 
-  const homePath = pathsConfig.app.accountHome.replace('[account]', account);
   const bottomNavTabs = resolveMobileBottomNavTabs({
     homePath,
-    shortcuts: mobileNavShortcuts,
+    shortcuts: adornments.mobileNavShortcuts,
   });
-
-  const access = getTeamAccountAccess(accountAccess);
-  const focusAccountIds = [
-    ...new Set([accountId, ...accounts.map((row) => row.id)]),
-  ];
-  const focusSettingsByAccountId = serializeWorkspaceFocusMap(
-    await loadWorkspaceFocusSettingsMap(client, user.id, focusAccountIds),
-  );
 
   return (
     <TeamAccountWorkspaceContextProvider value={data}>
-      <WorkspaceFocusProviderShell settingsByAccountId={focusSettingsByAccountId}>
+      <WorkspaceFocusProviderShell
+        settingsByAccountId={adornments.focusSettingsByAccountId}
+      >
         <Page style={'header'}>
-        <PageNavigation>
-          <TeamAccountNavigationMenu workspace={data} />
-        </PageNavigation>
+          <PageNavigation>
+            <TeamAccountNavigationMenu workspace={data} />
+          </PageNavigation>
 
-        <PageMobileNavigation className="hidden lg:px-0" />
+          <PageMobileNavigation className="hidden lg:px-0" />
 
-        <TeamWorkspaceMobileChrome
-          account={account}
-          accountId={data.account.id}
-          user={data.user}
-          accounts={accounts}
-          navLinks={mobileNavLinks}
-          bottomNavTabs={bottomNavTabs}
-          spaceType={spaceTypeFromProfile(workspaceProfile)}
-          showNewMenu={access.canUseQuickCreate}
-        >
-          {children}
-        </TeamWorkspaceMobileChrome>
-      </Page>
+          <TeamWorkspaceMobileChrome
+            account={account}
+            accountId={accountId}
+            user={data.user}
+            accounts={accounts}
+            navLinks={mobileNavLinks}
+            bottomNavTabs={bottomNavTabs}
+            spaceType={spaceTypeFromProfile(workspaceProfile)}
+            showNewMenu={access.canUseQuickCreate}
+          >
+            {children}
+          </TeamWorkspaceMobileChrome>
+        </Page>
       </WorkspaceFocusProviderShell>
     </TeamAccountWorkspaceContextProvider>
   );
 }
 
-async function getLayoutState(account: string) {
+async function getLayoutState(account: string): Promise<LayoutState> {
   const cookieStore = await cookies();
   const config = getTeamAccountSidebarConfig(account);
 

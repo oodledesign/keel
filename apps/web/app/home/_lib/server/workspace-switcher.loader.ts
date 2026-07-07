@@ -2,6 +2,7 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { loadUserTeamMemberships } from '~/home/_lib/server/user-team-memberships.loader';
 import {
   resolveWorkspaceProfile,
   workspaceTypeLabel,
@@ -27,61 +28,9 @@ export async function loadWorkspaceSwitcherAccounts(
   client: SupabaseClient,
   userId: string,
 ): Promise<WorkspaceSwitcherAccount[]> {
-  const { data, error } = await client
-    .from('accounts_memberships')
-    .select(
-      'account:accounts!inner(id, name, slug, space_type, picture_url, created_at, is_personal_account)',
-    )
-    .eq('user_id', userId);
-
-  if (error) {
-    console.error('[workspace-switcher] load:', error.message);
-    return [];
-  }
-
-  type Row = {
-    account:
-      | {
-          id: string;
-          name: string | null;
-          slug: string | null;
-          space_type: string | null;
-          picture_url: string | null;
-          created_at: string | null;
-          is_personal_account: boolean | null;
-        }
-      | Array<{
-          id: string;
-          name: string | null;
-          slug: string | null;
-          space_type: string | null;
-          picture_url: string | null;
-          created_at: string | null;
-          is_personal_account: boolean | null;
-        }>
-      | null;
-  };
-
-  const teamAccounts: Array<{
-    id: string;
-    name: string | null;
-    slug: string | null;
-    space_type: string | null;
-    picture_url: string | null;
-    created_at: string | null;
-  }> = [];
-
-  for (const row of (data ?? []) as Row[]) {
-    const acc = Array.isArray(row.account) ? row.account[0] : row.account;
-    if (!acc?.id || acc.is_personal_account || !acc.slug) continue;
-    teamAccounts.push(acc);
-  }
-
-  teamAccounts.sort((a, b) => {
-    const aTime = a.created_at ?? '';
-    const bTime = b.created_at ?? '';
-    return aTime.localeCompare(bTime);
-  });
+  const teamAccounts = (await loadUserTeamMemberships(userId, client)).filter(
+    (acc) => acc.slug,
+  );
 
   const accountIds = teamAccounts.map((a) => a.id);
   const businessTypeByAccount = new Map<string, string>();

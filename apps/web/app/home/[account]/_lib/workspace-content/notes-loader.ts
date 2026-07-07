@@ -74,6 +74,8 @@ export type NotesQueryScope = {
   taskId?: string;
 };
 
+const NOTES_LIST_LIMIT = 100;
+
 export async function loadAccountNotes(
   accountId: string,
   scope?: NotesQueryScope,
@@ -96,7 +98,7 @@ export async function loadAccountNotes(
   if (scope?.propertyId) query = query.eq('property_id', scope.propertyId);
   if (scope?.taskId) query = query.eq('task_id', scope.taskId);
 
-  const { data, error } = await query;
+  const { data, error } = await query.limit(NOTES_LIST_LIMIT);
 
   if (error && !isTableMissing(error)) {
     throw error;

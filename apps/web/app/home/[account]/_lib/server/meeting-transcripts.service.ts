@@ -83,6 +83,9 @@ function normalizeCalendarAttendees(value: unknown): MeetingCalendarAttendee[] {
   return attendees;
 }
 
+const MEETING_TRANSCRIPT_LIST_SELECT =
+  'id, account_id, client_id, deal_id, project_id, title, source, file_path, meeting_date, created_by, created_at, updated_at, speaker_segments, speaker_mappings, calendar_attendees, clients(display_name, company_name, first_name, last_name), pipeline_deals(name, contact_name, company_name)';
+
 function mapMeetingTranscript(row: MeetingTranscriptRow): MeetingTranscript {
   const content = row.content ?? '';
   return {
@@ -187,10 +190,16 @@ function mapMeetingTranscriptListItem(
   const deal = normalizeEmbeddedRow(row.pipeline_deals ?? null);
 
   return {
-    ...mapMeetingTranscript(row),
+    ...mapMeetingTranscript({ ...row, content: row.content ?? '' }),
     clientName: clientDisplayName(client),
     dealTitle: pipelineDealTitle(deal),
   };
+}
+
+function mapMeetingTranscriptListRow(
+  row: Parameters<typeof mapMeetingTranscriptListItem>[0],
+): MeetingTranscriptListItem {
+  return mapMeetingTranscriptListItem({ ...row, content: '' });
 }
 
 export function createMeetingTranscriptsService(
@@ -343,17 +352,15 @@ class MeetingTranscriptsService {
 
     const { data, error } = await this.db
       .from('meeting_transcripts')
-      .select(
-        '*, clients(display_name, company_name, first_name, last_name), pipeline_deals(name, contact_name, company_name)',
-      )
+      .select(MEETING_TRANSCRIPT_LIST_SELECT)
       .eq('account_id', input.accountId)
       .order('created_at', { ascending: false });
 
     if (error) throw new Error(error.message);
 
     const items = ((data ?? []) as MeetingTranscriptRow[]).map((row) =>
-      mapMeetingTranscriptListItem(
-        row as Parameters<typeof mapMeetingTranscriptListItem>[0],
+      mapMeetingTranscriptListRow(
+        row as Parameters<typeof mapMeetingTranscriptListRow>[0],
       ),
     );
 
@@ -836,8 +843,8 @@ class MeetingTranscriptsService {
       if (error) throw new Error(error.message);
 
       const resolvedUserIds = (data ?? [])
-        .map((row) => (row as { user_id?: string }).user_id)
-        .filter((userId): userId is string => Boolean(userId));
+        .map((row: { user_id?: string }) => row.user_id)
+        .filter((userId: string | undefined): userId is string => Boolean(userId));
 
       if (resolvedUserIds.length > 0) {
         const { data: personalAccounts, error: accountsError } = await this.db
@@ -849,8 +856,10 @@ class MeetingTranscriptsService {
 
         for (const userId of resolvedUserIds) {
           const account = (personalAccounts ?? []).find(
-            (row) => (row as { id?: string }).id === userId,
-          ) as { id?: string; name?: string | null; email?: string | null } | undefined;
+            (row: { id?: string }) => row.id === userId,
+          ) as
+            | { id?: string; name?: string | null; email?: string | null }
+            | undefined;
 
           members.push({
             userId,

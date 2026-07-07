@@ -16,6 +16,8 @@ import {
 } from '~/lib/activity/activity-history';
 import { getActivitySupabaseClient } from '~/lib/activity/activity-supabase';
 
+export const ACTIVITY_BLOCK_LIMIT = 150;
+
 export type ActivityProjectOption = {
   id: string;
   name: string;
@@ -176,12 +178,50 @@ async function loadActivityPageDataImpl(
   const view = parseActivityView(viewInput);
   const rangeStart = resolveRangeStart(range).toISOString();
 
+  const blocksSelect = `
+        id,
+        user_id,
+        app_name,
+        bundle_id,
+        domain,
+        url,
+        window_title,
+        started_at,
+        ended_at,
+        duration_seconds,
+        project_id,
+        client_id,
+        confidence_score,
+        is_confirmed,
+        is_excluded,
+        projects:project_id ( id, name, title ),
+        clients:client_id ( id, display_name )
+      `;
+
+  const fetchActivityBlocks = (filterUserId?: string) => {
+    let query = activityClient
+      .from('activity_blocks')
+      .select(blocksSelect)
+      .eq('account_id', accountId)
+      .gte('started_at', rangeStart)
+      .order('started_at', { ascending: false })
+      .limit(ACTIVITY_BLOCK_LIMIT);
+
+    if (filterUserId) {
+      query = query.eq('user_id', filterUserId);
+    }
+
+    return query;
+  };
+
   const [
     privacyResult,
     canViewTeamActivity,
     membersResult,
     projectsResult,
     clientsResult,
+    mineBlocksResult,
+    teamBlocksResult,
   ] = await Promise.all([
     activityClient
       .from('activity_privacy_settings')
@@ -206,53 +246,32 @@ async function loadActivityPageDataImpl(
       page: 1,
       pageSize: 100,
     }),
+    fetchActivityBlocks(userId),
+    view === 'team'
+      ? fetchActivityBlocks()
+      : Promise.resolve({ data: null, error: null }),
   ]);
 
   if (membersResult.error) {
     throw new Error(membersResult.error.message);
   }
 
+  if (mineBlocksResult.error) {
+    throw new Error(mineBlocksResult.error.message);
+  }
+
+  if (teamBlocksResult.error) {
+    throw new Error(teamBlocksResult.error.message);
+  }
+
   const memberNames = mapMemberNames((membersResult.data ?? []) as MemberRow[]);
   const effectiveView =
     view === 'team' && canViewTeamActivity ? 'team' : 'mine';
 
-  let blocksQuery = activityClient
-    .from('activity_blocks')
-    .select(
-      `
-        id,
-        user_id,
-        app_name,
-        bundle_id,
-        domain,
-        url,
-        window_title,
-        started_at,
-        ended_at,
-        duration_seconds,
-        project_id,
-        client_id,
-        confidence_score,
-        is_confirmed,
-        is_excluded,
-        projects:project_id ( id, name, title ),
-        clients:client_id ( id, display_name )
-      `,
-    )
-    .eq('account_id', accountId)
-    .gte('started_at', rangeStart)
-    .order('started_at', { ascending: false })
-    .limit(500);
-
-  if (effectiveView === 'mine') {
-    blocksQuery = blocksQuery.eq('user_id', userId);
-  }
-
-  const { data: blockRows, error: blocksError } = await blocksQuery;
-
-  if (blocksError) {
-    throw new Error(blocksError.message);
-  }
+  const blockRows =
+    effectiveView === 'team'
+      ? (teamBlocksResult.data ?? [])
+      : (mineBlocksResult.data ?? []);
 
   return {
     accountId,
@@ -264,10 +283,17 @@ async function loadActivityPageDataImpl(
       (privacyResult.data?.tracking_enabled as boolean | undefined) ?? false,
     canViewTeamActivity,
     canEdit: effectiveView === 'mine',
-    blocks: ((blockRows ?? []) as ActivityBlockRow[]).map((row) =>
+    blocks: ((blockRows ?? []) as unknown as ActivityBlockRow[]).map((row) =>
       mapBlockRow(row, memberNames),
     ),
-    projects: mapProjectOptions(projectsResult.data ?? []),
+    projects: mapProjectOptions(
+      (projectsResult.data ?? []) as unknown as Array<{
+        id: string;
+        name: string | null;
+        title: string | null;
+        project_type?: string | null;
+      }>,
+    ),
     clients: mapClientOptions(clientsResult.data ?? []),
   };
 }

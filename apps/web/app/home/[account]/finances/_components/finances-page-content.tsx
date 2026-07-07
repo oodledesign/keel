@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
+import dynamic from 'next/dynamic';
+
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
@@ -38,12 +40,24 @@ import {
   DEFAULT_DATE_RANGE,
   type DateRangeSelection,
 } from '~/components/date-range/analytics-date-range-picker';
-import {
-  FinanceNetLineChart,
-  FinanceTrendBarChart,
-} from '~/components/finance/finance-charts';
 import { resolveAnalyticsDateRange } from '~/lib/date-range/analytics-date-range';
 import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
+
+const FinanceNetLineChart = dynamic(
+  () =>
+    import('~/components/finance/finance-charts').then(
+      (mod) => mod.FinanceNetLineChart,
+    ),
+  { ssr: false },
+);
+
+const FinanceTrendBarChart = dynamic(
+  () =>
+    import('~/components/finance/finance-charts').then(
+      (mod) => mod.FinanceTrendBarChart,
+    ),
+  { ssr: false },
+);
 
 import {
   applySuggestedCategoriesAction,

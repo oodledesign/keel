@@ -2,9 +2,11 @@ import 'server-only';
 
 import { cache } from 'react';
 
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 import pathsConfig from '~/config/paths.config';
+import { loadUserTeamMemberships } from '~/home/_lib/server/user-team-memberships.loader';
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 /**
  * True when the user still needs the initial /setup flow.
@@ -14,43 +16,17 @@ import pathsConfig from '~/config/paths.config';
 export const userRequiresWorkspaceSetup = cache(
   async (userId: string): Promise<boolean> => {
     const client = getSupabaseServerClient();
-
-    const { data, error } = await client
-      .from('accounts_memberships')
-      .select(
-        'onboarding_completed, account:accounts!inner(id, is_personal_account)',
-      )
-      .eq('user_id', userId);
-
-    if (error) {
-      console.error('[workspace-setup-guard]', error.message);
-      return false;
-    }
-
-    const rows = (data ?? []) as Array<{
-      onboarding_completed?: boolean | null;
-      account: { id: string; is_personal_account: boolean | null } | null;
-    }>;
-
-    const teamMemberships = rows.filter(
-      (r) => r.account && r.account.is_personal_account !== true,
-    );
+    const teamMemberships = await loadUserTeamMemberships(userId, client);
 
     if (teamMemberships.length === 0) {
       return true;
     }
 
-    if (teamMemberships.some((r) => r.onboarding_completed === true)) {
+    if (teamMemberships.some((row) => row.onboarding_completed === true)) {
       return false;
     }
 
-    const teamAccountIds = teamMemberships
-      .map((r) => r.account?.id)
-      .filter((id): id is string => Boolean(id));
-
-    if (teamAccountIds.length === 0) {
-      return true;
-    }
+    const teamAccountIds = teamMemberships.map((row) => row.id);
 
     const now = new Date().toISOString();
     const [{ data: entitled }, { data: billingExempt }] = await Promise.all([
@@ -79,7 +55,6 @@ export const userRequiresWorkspaceSetup = cache(
       return false;
     }
 
-    // Workspaces created before onboarding_completed was wired still have businesses.
     const { data: businessRow, error: businessError } = await client
       .from('businesses')
       .select('id')

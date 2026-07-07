@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   CalendarDays,
@@ -42,6 +42,9 @@ export function JobsPageContent({
   canEditJobs,
   isContractorView,
   uiVariant = 'projects',
+  initialJobs,
+  initialCampaigns,
+  initialMembers,
 }: {
   accountSlug: string;
   accountId: string;
@@ -49,6 +52,14 @@ export function JobsPageContent({
   canEditJobs: boolean;
   isContractorView: boolean;
   uiVariant?: 'projects' | 'maintenance';
+  initialJobs?: JobsPmRow[];
+  initialCampaigns?: Array<{ id: string; name: string; clientCount?: number }>;
+  initialMembers?: Array<{
+    user_id: string;
+    name: string | null;
+    email: string | null;
+    picture_url?: string | null;
+  }>;
 }) {
   const copy =
     uiVariant === 'maintenance'
@@ -65,11 +76,12 @@ export function JobsPageContent({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [jobs, setJobs] = useState<JobsPmRow[]>([]);
+  const [jobs, setJobs] = useState<JobsPmRow[]>(initialJobs ?? []);
   const [campaigns, setCampaigns] = useState<
     Array<{ id: string; name: string; clientCount?: number }>
-  >([]);
-  const [loading, setLoading] = useState(true);
+  >(initialCampaigns ?? []);
+  const [loading, setLoading] = useState(initialJobs === undefined);
+  const skipInitialFetchRef = useRef(initialJobs !== undefined);
   const [view, setView] = useState<PageView>(
     searchParams.get('view') === 'kanban' ? 'kanban' : 'table',
   );
@@ -94,7 +106,7 @@ export function JobsPageContent({
       email: string | null;
       picture_url?: string | null;
     }[]
-  >([]);
+  >(initialMembers ?? []);
 
   const openCreateDialog = useCallback((type: 'delivery' | 'campaign' = 'delivery') => {
     setCreateDialogType(type);
@@ -193,8 +205,18 @@ export function JobsPageContent({
   }, [accountId, searchDebounced, priorityFilter, typeFilter]);
 
   useEffect(() => {
+    if (
+      skipInitialFetchRef.current &&
+      !searchDebounced &&
+      !priorityFilter &&
+      typeFilter === 'all'
+    ) {
+      skipInitialFetchRef.current = false;
+      return;
+    }
+
     void fetchJobs();
-  }, [fetchJobs]);
+  }, [fetchJobs, priorityFilter, searchDebounced, typeFilter]);
 
   useEffect(() => {
     const t = setTimeout(() => setSearchDebounced(search), 300);
@@ -202,12 +224,16 @@ export function JobsPageContent({
   }, [search]);
 
   useEffect(() => {
+    if (initialMembers !== undefined) {
+      return;
+    }
+
     listAccountMembers({ accountSlug })
       .then((raw: unknown) => {
         setMembers(Array.isArray(raw) ? (raw as typeof members) : []);
       })
       .catch(() => setMembers([]));
-  }, [accountSlug]);
+  }, [accountSlug, initialMembers]);
 
   useEffect(() => {
     if (!canEditJobs || searchParams.get('create') !== 'job') {

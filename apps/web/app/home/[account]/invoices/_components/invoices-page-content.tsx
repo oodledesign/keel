@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -33,6 +33,7 @@ import {
   listRecurringSeriesAction,
   updateRecurringSeriesStatusAction,
 } from '../_lib/server/server-actions';
+import type { ListInvoicesInput } from '../_lib/schema/invoices.schema';
 import { InvoiceRowMenu } from './invoice-row-menu';
 import { InvoiceStatusBadge } from './invoice-status-badge';
 import { InvoicesIncomeSummary } from './invoices-income-summary';
@@ -67,31 +68,53 @@ export function InvoicesPageContent({
   canViewInvoices,
   canEditInvoices,
   canManageInvoiceStatus,
+  initialInvoices,
+  initialTotal,
+  initialCounts,
+  initialSummary,
+  initialClients,
 }: {
   accountSlug: string;
   accountId: string;
   canViewInvoices: boolean;
   canEditInvoices: boolean;
   canManageInvoiceStatus: boolean;
+  initialInvoices?: InvoiceRow[];
+  initialTotal?: number;
+  initialCounts?: {
+    draft: number;
+    unpaid: number;
+    all: number;
+    recurring: number;
+  };
+  initialSummary?: Awaited<ReturnType<typeof getInvoiceSummaryAction>> | null;
+  initialClients?: { id: string; display_name: string | null }[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<TabKey>('unpaid');
-  const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceRow[]>(initialInvoices ?? []);
   const [recurring, setRecurring] = useState<Array<Record<string, unknown>>>([]);
-  const [total, setTotal] = useState(0);
-  const [counts, setCounts] = useState({ draft: 0, unpaid: 0, all: 0, recurring: 0 });
-  const [summary, setSummary] = useState<Awaited<ReturnType<typeof getInvoiceSummaryAction>> | null>(null);
+  const [total, setTotal] = useState(initialTotal ?? 0);
+  const [counts, setCounts] = useState(
+    initialCounts ?? { draft: 0, unpaid: 0, all: 0, recurring: 0 },
+  );
+  const [summary, setSummary] = useState<
+    Awaited<ReturnType<typeof getInvoiceSummaryAction>> | null
+  >(initialSummary ?? null);
   const [summaryPeriod, setSummaryPeriod] = useState<'month_to_date' | 'last_30_days' | 'last_90_days'>('month_to_date');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(initialInvoices === undefined);
+  const skipInitialFetchRef = useRef(initialInvoices !== undefined);
   const [search, setSearch] = useState('');
   const [searchDebounced, setSearchDebounced] = useState('');
   const [page, setPage] = useState(1);
   const [clientFilter, setClientFilter] = useState('');
   const [creating, setCreating] = useState(false);
   const [createSheetOpen, setCreateSheetOpen] = useState(false);
-  const [clientOptions, setClientOptions] = useState<{ id: string; display_name: string | null }[]>([]);
+  const [clientOptions, setClientOptions] = useState<
+    { id: string; display_name: string | null }[]
+  >(initialClients ?? []);
   const [clientsLoading, setClientsLoading] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState('');
   const pageSize = 20;
@@ -106,6 +129,10 @@ export function InvoicesPageContent({
   }, [accountId]);
 
   useEffect(() => {
+    if (initialClients !== undefined) {
+      return;
+    }
+
     if (!accountId) return;
     listClients({ accountId, page: 1, pageSize: 100 })
       .then((result) => {
@@ -118,7 +145,7 @@ export function InvoicesPageContent({
         setClientOptions((list ?? []) as { id: string; display_name: string | null }[]);
       })
       .catch(() => setClientOptions([]));
-  }, [accountId]);
+  }, [accountId, initialClients]);
 
   const fetchSummary = useCallback(async () => {
     try {
@@ -146,7 +173,7 @@ export function InvoicesPageContent({
 
     setLoading(true);
     try {
-      const statusMap: Record<TabKey, string | undefined> = {
+      const statusMap: Record<TabKey, ListInvoicesInput['status'] | undefined> = {
         unpaid: 'unpaid',
         draft: 'draft',
         all: 'all',
@@ -156,6 +183,7 @@ export function InvoicesPageContent({
         accountId,
         page,
         pageSize,
+        includeArchived: false,
         query: searchDebounced || undefined,
         status: statusMap[tab],
         clientId: clientFilter || undefined,
@@ -174,13 +202,28 @@ export function InvoicesPageContent({
   }, [accountId, clientFilter, page, pageSize, searchDebounced, tab]);
 
   useEffect(() => {
+    if (
+      skipInitialFetchRef.current &&
+      tab === 'unpaid' &&
+      page === 1 &&
+      !searchDebounced &&
+      !clientFilter
+    ) {
+      skipInitialFetchRef.current = false;
+      return;
+    }
+
     void fetchInvoices();
     void fetchCounts();
-  }, [fetchInvoices, fetchCounts]);
+  }, [fetchInvoices, fetchCounts, tab, page, searchDebounced, clientFilter]);
 
   useEffect(() => {
+    if (skipInitialFetchRef.current && summaryPeriod === 'month_to_date' && initialSummary) {
+      return;
+    }
+
     void fetchSummary();
-  }, [fetchSummary]);
+  }, [fetchSummary, initialSummary, summaryPeriod]);
 
   useEffect(() => {
     const t = setTimeout(() => setSearchDebounced(search), 300);

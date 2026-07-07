@@ -1,5 +1,7 @@
 'use client';
 
+import dynamic from 'next/dynamic';
+
 import Link from 'next/link';
 
 import type {
@@ -7,7 +9,11 @@ import type {
   PagespeedSnapshot,
 } from '~/lib/pagespeed/types';
 
-import { PagespeedHistoryChart } from './pagespeed-history-chart';
+const PagespeedHistoryChart = dynamic(
+  () =>
+    import('./pagespeed-history-chart').then((mod) => mod.PagespeedHistoryChart),
+  { ssr: false },
+);
 import { PagespeedRecommendations } from './pagespeed-recommendations';
 
 function scoreTone(score: number | null | undefined): string {

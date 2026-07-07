@@ -1,4 +1,4 @@
-import { use } from 'react';
+import { Suspense, use } from 'react';
 
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -12,7 +12,6 @@ import { SidebarProvider } from '@kit/ui/shadcn-sidebar';
 
 import { AppLogo } from '~/components/app-logo';
 import { WorkspaceFocusProviderShell } from '~/components/workspace-shell/workspace-focus-provider-shell';
-import { serializeWorkspaceFocusMap } from '~/lib/workspace-focus/serialize-focus-map';
 import { WorkspaceTopBar } from '~/components/workspace-shell/workspace-top-bar';
 import pathsConfig from '~/config/paths.config';
 import { getExplicitPersonalHomePath } from '~/lib/dashboard-shortcuts/personal-home-url';
@@ -31,25 +30,34 @@ import {
   buildPersonalHomeNavRoutes,
   parsePersonalAccountNavigationConfig,
 } from '~/config/personal-account-navigation.config';
-import { loadPersonalMobileNavShortcuts } from '~/lib/dashboard-shortcuts/load-shortcuts';
 import { enrichPersonalShortcutsWithWorkspaceAvatars } from '~/lib/dashboard-shortcuts/enrich-workspace-shortcut-avatars';
+import type { WorkspaceAccountRow } from '~/home/_lib/server/workspace-scope';
 import { resolveMobileBottomNavTabs } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
 import { loadWorkspaceSwitcherAccounts } from '~/home/_lib/server/workspace-switcher.loader';
 import { loadWorkspaceFocusSettingsMap } from '~/lib/workspace-focus/load-workspace-focus-settings';
+import { serializeWorkspaceFocusMap } from '~/lib/workspace-focus/serialize-focus-map';
+import type { WorkspaceFocusInput } from '~/lib/workspace-focus';
+import { loadPersonalMobileNavShortcuts } from '~/lib/dashboard-shortcuts/load-shortcuts';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 import { buildPersonalShellMetadata } from '~/lib/seo/app-shell-metadata';
 import {
   userRequiresWorkspaceSetup,
   workspaceSetupPath,
 } from '~/lib/server/workspace-setup-guard';
+import { PersonalHomeShellAdornmentsSuspense } from './_components/personal-home-shell-adornments-suspense';
 
 export const generateMetadata = async () => buildPersonalShellMetadata();
+
+type LayoutState = {
+  open: boolean;
+  style: 'sidebar' | 'header' | 'custom';
+};
 
 function UserHomeLayout({ children }: React.PropsWithChildren) {
   const state = use(getLayoutState());
 
   if (state.style === 'sidebar') {
-    return <SidebarLayout>{children}</SidebarLayout>;
+    return <SidebarLayout layoutState={state}>{children}</SidebarLayout>;
   }
 
   return <HeaderLayout>{children}</HeaderLayout>;
@@ -57,7 +65,10 @@ function UserHomeLayout({ children }: React.PropsWithChildren) {
 
 export default withI18n(UserHomeLayout);
 
-async function SidebarLayout({ children }: React.PropsWithChildren) {
+async function SidebarLayout({
+  children,
+  layoutState,
+}: React.PropsWithChildren<{ layoutState: LayoutState }>) {
   const user = await requireUserInServerComponent();
   if (await userRequiresWorkspaceSetup(user.id)) {
     redirect(workspaceSetupPath());
@@ -70,16 +81,15 @@ async function SidebarLayout({ children }: React.PropsWithChildren) {
   let switcherAccounts: Awaited<
     ReturnType<typeof loadWorkspaceSwitcherAccounts>
   > = [];
-  let state: Awaited<ReturnType<typeof getLayoutState>>;
   let client: Awaited<
     ReturnType<(typeof import('@kit/supabase/server-client'))['getSupabaseServerClient']>
   > | null = null;
+
   try {
     client = (await import('@kit/supabase/server-client')).getSupabaseServerClient();
-    [workspace, sharedWorkspaces, state, switcherAccounts] = await Promise.all([
+    [workspace, sharedWorkspaces, switcherAccounts] = await Promise.all([
       loadUserWorkspace(),
       loadPersonalSidebarWorkspaces(),
-      getLayoutState(),
       loadWorkspaceSwitcherAccounts(client, user.id),
     ]);
   } catch (e) {
@@ -87,12 +97,11 @@ async function SidebarLayout({ children }: React.PropsWithChildren) {
     workspace = null;
     sharedWorkspaces = [];
     switcherAccounts = [];
-    state = await getLayoutState();
   }
 
   if (!workspace) {
     return (
-      <SidebarProvider defaultOpen={state!.open}>
+      <SidebarProvider defaultOpen={layoutState.open}>
         <Page style={'sidebar'}>{children}</Page>
       </SidebarProvider>
     );
@@ -101,75 +110,111 @@ async function SidebarLayout({ children }: React.PropsWithChildren) {
   const personalNavLinks = flattenPersonalNavLinks(
     parsePersonalAccountNavigationConfig(buildPersonalHomeNavRoutes()),
   );
-  const mobileNavShortcuts = client
-    ? enrichPersonalShortcutsWithWorkspaceAvatars(
-        await loadPersonalMobileNavShortcuts(client, user.id),
-        sharedWorkspaces,
-      )
-    : [];
-  const bottomNavTabs = resolveMobileBottomNavTabs({
-    homePath: getExplicitPersonalHomePath(),
-    shortcuts: mobileNavShortcuts,
-  });
-
   const focusAccountIds = [
     ...new Set([
-      ...sharedWorkspaces.map((workspace) => workspace.id),
+      ...sharedWorkspaces.map((workspaceRow) => workspaceRow.id),
       ...switcherAccounts.map((account) => account.id),
     ]),
   ];
-  const focusSettingsByAccountId = client
-    ? serializeWorkspaceFocusMap(
-        await loadWorkspaceFocusSettingsMap(client, user.id, focusAccountIds),
-      )
-    : {};
+  const workspaceForShell = workspace;
+  const shortcutWorkspaceRows: WorkspaceAccountRow[] = sharedWorkspaces.map(
+    (row) => ({
+      id: row.id,
+      name: row.label,
+      slug: row.slug,
+      space_type: row.spaceType ?? null,
+      is_personal_account: false,
+      picture_url: row.pictureUrl ?? null,
+    }),
+  );
+
+  const renderShell = (params: {
+    mobileNavShortcuts: Awaited<ReturnType<typeof loadPersonalMobileNavShortcuts>>;
+    focusSettingsByAccountId: Record<string, WorkspaceFocusInput>;
+  }) => {
+    const bottomNavTabs = resolveMobileBottomNavTabs({
+      homePath: getExplicitPersonalHomePath(),
+      shortcuts: enrichPersonalShortcutsWithWorkspaceAvatars(
+        params.mobileNavShortcuts,
+        shortcutWorkspaceRows,
+      ),
+    });
+
+    return (
+      <WorkspaceFocusProviderShell
+        settingsByAccountId={params.focusSettingsByAccountId}
+      >
+        <SidebarProvider defaultOpen={layoutState.open}>
+          <Page
+            style={'sidebar'}
+            contentContainerClassName="mx-auto flex h-svh min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)]"
+          >
+            <PageNavigation>
+              <HomeSidebar
+                workspace={workspaceForShell}
+                sharedWorkspaces={sharedWorkspaces}
+                switcherAccounts={switcherAccounts}
+              />
+            </PageNavigation>
+
+            <PageMobileNavigation className="hidden" />
+
+            <PersonalHomeMobileChrome
+              workspace={workspaceForShell}
+              navLinks={personalNavLinks}
+              bottomNavTabs={bottomNavTabs}
+              switcherAccounts={switcherAccounts}
+            >
+              <div className="hidden lg:block">
+                <WorkspaceTopBar
+                  variant="personal"
+                  userId={workspaceForShell.user.id}
+                  user={workspaceForShell.user}
+                  account={
+                    workspaceForShell.workspace
+                      ? {
+                          id: workspaceForShell.workspace.id,
+                          name: workspaceForShell.workspace.name,
+                          picture_url: workspaceForShell.workspace.picture_url,
+                        }
+                      : undefined
+                  }
+                  accountId={workspaceForShell.workspace?.id ?? undefined}
+                />
+              </div>
+              {children}
+            </PersonalHomeMobileChrome>
+          </Page>
+        </SidebarProvider>
+      </WorkspaceFocusProviderShell>
+    );
+  };
+
+  if (!client) {
+    return renderShell({
+      mobileNavShortcuts: [],
+      focusSettingsByAccountId: {},
+    });
+  }
 
   return (
     <UserWorkspaceContextProvider value={workspace}>
-      <WorkspaceFocusProviderShell settingsByAccountId={focusSettingsByAccountId}>
-        <SidebarProvider defaultOpen={state.open}>
-        <Page
-          style={'sidebar'}
-          contentContainerClassName="mx-auto flex h-svh min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)]"
-        >
-          <PageNavigation>
-            <HomeSidebar
-              workspace={workspace}
-              sharedWorkspaces={sharedWorkspaces}
-              switcherAccounts={switcherAccounts}
-            />
-          </PageNavigation>
-
-          <PageMobileNavigation className="hidden" />
-
-          <PersonalHomeMobileChrome
-            workspace={workspace}
-            navLinks={personalNavLinks}
-            bottomNavTabs={bottomNavTabs}
-            switcherAccounts={switcherAccounts}
-          >
-            <div className="hidden lg:block">
-              <WorkspaceTopBar
-                variant="personal"
-                userId={workspace.user.id}
-                user={workspace.user}
-                account={
-                  workspace.workspace
-                    ? {
-                        id: workspace.workspace.id,
-                        name: workspace.workspace.name,
-                        picture_url: workspace.workspace.picture_url,
-                      }
-                    : undefined
-                }
-                accountId={workspace.workspace?.id}
-              />
-            </div>
-            {children}
-          </PersonalHomeMobileChrome>
-        </Page>
-      </SidebarProvider>
-      </WorkspaceFocusProviderShell>
+      <PersonalHomeShellAdornmentsSuspense
+        client={client}
+        userId={user.id}
+        focusAccountIds={focusAccountIds}
+        fallback={renderShell({
+          mobileNavShortcuts: [],
+          focusSettingsByAccountId: {},
+        })}
+      >
+        {(adornments) =>
+          renderShell({
+            mobileNavShortcuts: adornments.mobileNavShortcuts,
+            focusSettingsByAccountId: adornments.focusSettingsByAccountId,
+          })
+        }
+      </PersonalHomeShellAdornmentsSuspense>
     </UserWorkspaceContextProvider>
   );
 }

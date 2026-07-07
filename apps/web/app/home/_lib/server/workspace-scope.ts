@@ -1,9 +1,14 @@
 import 'server-only';
 
+import { cache } from 'react';
+
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+
+import { loadUserTeamMemberships } from '~/home/_lib/server/user-team-memberships.loader';
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 export type WorkspaceAccountRow = {
   id: string;
@@ -17,39 +22,21 @@ export type WorkspaceAccountRow = {
 /**
  * Non-personal accounts the user belongs to (all space types).
  */
-export async function loadUserWorkspaceAccounts(
-  client: SupabaseClient,
-  userId: string,
-): Promise<WorkspaceAccountRow[]> {
-  const { data, error } = await client
-    .from('accounts_memberships')
-    .select(
-      'account:accounts!inner(id, name, slug, space_type, is_personal_account, picture_url)',
-    )
-    .eq('user_id', userId);
-
-  if (error) {
-    console.error('[workspace-scope] loadUserWorkspaceAccounts:', error.message);
-    return [];
-  }
-
-  const rows = (data ?? []) as Array<{
-    account: WorkspaceAccountRow | WorkspaceAccountRow[] | null;
-  }>;
-
-  const out: WorkspaceAccountRow[] = [];
-  const seen = new Set<string>();
-
-  for (const row of rows) {
-    const acc = Array.isArray(row.account) ? row.account[0] : row.account;
-    if (!acc?.id || acc.is_personal_account) continue;
-    if (seen.has(acc.id)) continue;
-    seen.add(acc.id);
-    out.push(acc);
-  }
-
-  return out;
-}
+export const loadUserWorkspaceAccounts = cache(
+  async (
+    client: SupabaseClient,
+    userId: string,
+  ): Promise<WorkspaceAccountRow[]> => {
+    return (await loadUserTeamMemberships(userId, client)).map((row) => ({
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      space_type: row.space_type,
+      is_personal_account: row.is_personal_account,
+      picture_url: row.picture_url,
+    }));
+  },
+);
 
 export async function loadTeamAccountIdsForUser(
   client: SupabaseClient,
