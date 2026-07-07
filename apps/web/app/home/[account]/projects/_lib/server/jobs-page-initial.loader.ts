@@ -2,8 +2,8 @@ import 'server-only';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { createCampaignProjectsService } from './campaign/server/campaign-projects.service';
-import { createJobsService } from './server/jobs.service';
+import { createCampaignProjectsService } from '../campaign/server/campaign-projects.service';
+import { createJobsService } from './jobs.service';
 
 export type JobsPageInitialData = {
   jobs: unknown[];

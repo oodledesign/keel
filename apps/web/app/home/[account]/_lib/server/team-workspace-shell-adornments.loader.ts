@@ -7,7 +7,7 @@ import { loadWorkspaceMobileNavShortcuts } from '~/lib/dashboard-shortcuts/load-
 import { serializeWorkspaceFocusMap } from '~/lib/workspace-focus/serialize-focus-map';
 import { loadWorkspaceFocusSettingsMap } from '~/lib/workspace-focus/load-workspace-focus-settings';
 
-import { loadWorkNavCounts } from '../_lib/server/work-nav-counts.loader';
+import { loadWorkNavCounts } from './work-nav-counts.loader';
 
 export type TeamWorkspaceShellAdornments = {
   navCounts: WorkNavCounts;
