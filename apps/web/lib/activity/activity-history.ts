@@ -370,6 +370,132 @@ export function groupBlocksByApp(
     .sort((left, right) => right.totalDurationSeconds - left.totalDurationSeconds);
 }
 
+export type ActivityReportRow = {
+  id: string;
+  label: string;
+  durationSeconds: number;
+  blockCount: number;
+};
+
+export const ACTIVITY_REPORT_UNASSIGNED = '__unassigned__';
+
+const UNASSIGNED_REPORT_ID = ACTIVITY_REPORT_UNASSIGNED;
+
+export function filterActivityBlocksForReport(
+  blocks: ActivityBlockListRow[],
+  filters: {
+    clientId?: string | null;
+    projectId?: string | null;
+    memberId?: string | null;
+    appKey?: string | null;
+  },
+): ActivityBlockListRow[] {
+  return blocks.filter((block) => {
+    if (block.isExcluded) {
+      return false;
+    }
+
+    if (filters.clientId) {
+      if (filters.clientId === UNASSIGNED_REPORT_ID) {
+        if (block.clientId) return false;
+      } else if (block.clientId !== filters.clientId) {
+        return false;
+      }
+    }
+
+    if (filters.projectId) {
+      if (filters.projectId === UNASSIGNED_REPORT_ID) {
+        if (block.projectId) return false;
+      } else if (block.projectId !== filters.projectId) {
+        return false;
+      }
+    }
+
+    if (filters.memberId && block.userId !== filters.memberId) {
+      return false;
+    }
+
+    if (filters.appKey && activityAppGroupKey(block) !== filters.appKey) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+function aggregateByKey(
+  blocks: ActivityBlockListRow[],
+  keyForBlock: (block: ActivityBlockListRow) => {
+    id: string;
+    label: string;
+  },
+): ActivityReportRow[] {
+  const totals = new Map<string, ActivityReportRow>();
+
+  for (const block of blocks) {
+    const { id, label } = keyForBlock(block);
+    const existing = totals.get(id);
+
+    if (existing) {
+      existing.durationSeconds += block.durationSeconds;
+      existing.blockCount += 1;
+      continue;
+    }
+
+    totals.set(id, {
+      id,
+      label,
+      durationSeconds: block.durationSeconds,
+      blockCount: 1,
+    });
+  }
+
+  return [...totals.values()].sort(
+    (left, right) => right.durationSeconds - left.durationSeconds,
+  );
+}
+
+export function aggregateActivityByClient(
+  blocks: ActivityBlockListRow[],
+): ActivityReportRow[] {
+  return aggregateByKey(blocks, (block) => ({
+    id: block.clientId ?? UNASSIGNED_REPORT_ID,
+    label: block.clientName?.trim() || 'Unassigned',
+  }));
+}
+
+export function aggregateActivityByProject(
+  blocks: ActivityBlockListRow[],
+): ActivityReportRow[] {
+  return aggregateByKey(blocks, (block) => ({
+    id: block.projectId ?? UNASSIGNED_REPORT_ID,
+    label: block.projectName?.trim() || 'Unassigned',
+  }));
+}
+
+export function aggregateActivityByMember(
+  blocks: ActivityBlockListRow[],
+): ActivityReportRow[] {
+  return aggregateByKey(blocks, (block) => ({
+    id: block.userId,
+    label: block.userName?.trim() || block.userId.slice(0, 8),
+  }));
+}
+
+export function aggregateActivityByApp(
+  blocks: ActivityBlockListRow[],
+): ActivityReportRow[] {
+  return aggregateByKey(blocks, (block) => {
+    const appKey = activityAppGroupKey(block);
+    const domainLabel = domainLabelFromAppKey(appKey);
+
+    return {
+      id: appKey,
+      label: domainLabel ?? block.appName,
+    };
+  });
+}
+
 export function groupBlocksByDay(
   blocks: ActivityBlockListRow[],
   now = new Date(),

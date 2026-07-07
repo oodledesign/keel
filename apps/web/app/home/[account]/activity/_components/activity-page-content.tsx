@@ -11,6 +11,7 @@ import {
   ArrowUp,
   ArrowUpDown,
   Ban,
+  BarChart3,
   Check,
   ChevronDown,
   ChevronRight,
@@ -19,6 +20,7 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { Checkbox } from '@kit/ui/checkbox';
 import {
   Popover,
   PopoverContent,
@@ -47,6 +49,8 @@ import pathsConfig from '~/config/paths.config';
 import { AnalyticsDateRangePicker } from '~/components/date-range/analytics-date-range-picker';
 import type { DateRangeSelection } from '~/lib/date-range/analytics-date-range';
 import {
+  bulkExcludeActivityBlocksAction,
+  bulkUpdateActivityBlocksAction,
   excludeActivityBlockAction,
   updateActivityBlockAction,
 } from '~/home/[account]/activity/_lib/server/activity-blocks-actions';
@@ -495,6 +499,9 @@ function ActivityBlockTableRow({
   showMember,
   showApp = true,
   nested = false,
+  selectable = false,
+  selected = false,
+  onSelectedChange,
   projects,
   clients,
   accountId,
@@ -506,6 +513,9 @@ function ActivityBlockTableRow({
   showMember: boolean;
   showApp?: boolean;
   nested?: boolean;
+  selectable?: boolean;
+  selected?: boolean;
+  onSelectedChange?: (blockId: string, selected: boolean) => void;
   projects: ActivityPageData['projects'];
   clients: ActivityPageData['clients'];
   accountId: string;
@@ -521,8 +531,20 @@ function ActivityBlockTableRow({
         'border-[color:var(--workspace-shell-border)] text-sm',
         nested && 'bg-[var(--workspace-control-surface)]/20',
         block.isExcluded && 'opacity-50',
+        selected && 'bg-[var(--ozer-accent-subtle)]/30',
       )}
     >
+      {selectable ? (
+        <TableCell className="w-10 px-3 py-2 align-top">
+          <Checkbox
+            checked={selected}
+            onCheckedChange={(checked) =>
+              onSelectedChange?.(block.id, checked === true)
+            }
+            aria-label={`Select ${rawTitle}`}
+          />
+        </TableCell>
+      ) : null}
       {showApp ? (
         <TableCell
           className={cn(
@@ -587,6 +609,10 @@ function ActivityAppGroupRows({
   onToggle,
   canEdit,
   showMember,
+  selectable,
+  selectedBlockIds,
+  onSelectedChange,
+  onGroupSelectedChange,
   projects,
   clients,
   accountId,
@@ -598,6 +624,10 @@ function ActivityAppGroupRows({
   onToggle: () => void;
   canEdit: boolean;
   showMember: boolean;
+  selectable: boolean;
+  selectedBlockIds: Set<string>;
+  onSelectedChange: (blockId: string, selected: boolean) => void;
+  onGroupSelectedChange: (blockIds: string[], selected: boolean) => void;
   projects: ActivityPageData['projects'];
   clients: ActivityPageData['clients'];
   accountId: string;
@@ -606,14 +636,26 @@ function ActivityAppGroupRows({
 }) {
   const sessionLabel = `${appGroup.blocks.length} session${appGroup.blocks.length === 1 ? '' : 's'}`;
   const isSingleBlock = appGroup.blocks.length === 1;
+  const selectableBlocks = appGroup.blocks.filter((block) => !block.isExcluded);
+  const selectedCount = selectableBlocks.filter((block) =>
+    selectedBlockIds.has(block.id),
+  ).length;
+  const groupChecked =
+    selectableBlocks.length > 0 && selectedCount === selectableBlocks.length;
+  const groupIndeterminate =
+    selectedCount > 0 && selectedCount < selectableBlocks.length;
 
   if (isSingleBlock) {
+    const block = appGroup.blocks[0]!;
     return (
       <ActivityBlockTableRow
-        block={appGroup.blocks[0]!}
+        block={block}
         canEdit={canEdit}
         showMember={showMember}
         showApp
+        selectable={selectable && !block.isExcluded}
+        selected={selectedBlockIds.has(block.id)}
+        onSelectedChange={onSelectedChange}
         projects={projects}
         clients={clients}
         accountId={accountId}
@@ -631,6 +673,21 @@ function ActivityAppGroupRows({
         className="cursor-pointer border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/40 hover:bg-[var(--workspace-control-surface)]/40"
         onClick={onToggle}
       >
+        {selectable ? (
+          <TableCell className="w-10 px-3 py-2 align-top">
+            <Checkbox
+              checked={groupIndeterminate ? 'indeterminate' : groupChecked}
+              onCheckedChange={(checked) =>
+                onGroupSelectedChange(
+                  selectableBlocks.map((block) => block.id),
+                  checked === true,
+                )
+              }
+              onClick={(event) => event.stopPropagation()}
+              aria-label={`Select all ${appGroup.domainLabel ?? appGroup.appName} sessions`}
+            />
+          </TableCell>
+        ) : null}
         <TableCell className="max-w-[9rem] px-3 py-2 align-top">
           <button
             type="button"
@@ -658,7 +715,7 @@ function ActivityAppGroupRows({
           {sessionLabel}
         </TableCell>
         <TableCell
-          colSpan={showMember ? 6 : 5}
+          colSpan={showMember ? (selectable ? 7 : 6) : selectable ? 6 : 5}
           className="px-3 py-2 align-top text-xs text-[var(--workspace-shell-text-muted)]"
         >
           Click to {expanded ? 'collapse' : 'expand'} individual sessions
@@ -673,6 +730,9 @@ function ActivityAppGroupRows({
               showMember={showMember}
               showApp
               nested
+              selectable={selectable && !block.isExcluded}
+              selected={selectedBlockIds.has(block.id)}
+              onSelectedChange={onSelectedChange}
               projects={projects}
               clients={clients}
               accountId={accountId}
@@ -689,6 +749,10 @@ function ActivityDayTable({
   group,
   canEdit,
   showMember,
+  selectable,
+  selectedBlockIds,
+  onSelectedChange,
+  onGroupSelectedChange,
   projects,
   clients,
   accountId,
@@ -701,6 +765,10 @@ function ActivityDayTable({
   group: ActivityDayGroup;
   canEdit: boolean;
   showMember: boolean;
+  selectable: boolean;
+  selectedBlockIds: Set<string>;
+  onSelectedChange: (blockId: string, selected: boolean) => void;
+  onGroupSelectedChange: (blockIds: string[], selected: boolean) => void;
   projects: ActivityPageData['projects'];
   clients: ActivityPageData['clients'];
   accountId: string;
@@ -715,6 +783,14 @@ function ActivityDayTable({
     [group.blocks, sortDir, sortKey],
   );
   const [expandedApps, setExpandedApps] = useState<Set<string>>(() => new Set());
+  const selectableBlocks = group.blocks.filter((block) => !block.isExcluded);
+  const selectedCount = selectableBlocks.filter((block) =>
+    selectedBlockIds.has(block.id),
+  ).length;
+  const allSelected =
+    selectableBlocks.length > 0 && selectedCount === selectableBlocks.length;
+  const someSelected =
+    selectedCount > 0 && selectedCount < selectableBlocks.length;
 
   function toggleApp(appKey: string) {
     setExpandedApps((current) => {
@@ -745,6 +821,20 @@ function ActivityDayTable({
         <Table>
           <TableHeader className="bg-[var(--workspace-shell-sidebar-accent)]">
             <TableRow className="border-[color:var(--workspace-shell-border)] hover:bg-transparent">
+              {selectable ? (
+                <TableHead className="h-9 w-10 px-3">
+                  <Checkbox
+                    checked={someSelected ? 'indeterminate' : allSelected}
+                    onCheckedChange={(checked) =>
+                      onGroupSelectedChange(
+                        selectableBlocks.map((block) => block.id),
+                        checked === true,
+                      )
+                    }
+                    aria-label={`Select all activity on ${group.label}`}
+                  />
+                </TableHead>
+              ) : null}
               <SortableTableHead
                 label="App"
                 sortKey="app"
@@ -785,6 +875,10 @@ function ActivityDayTable({
                 onToggle={() => toggleApp(appGroup.appKey)}
                 canEdit={canEdit}
                 showMember={showMember}
+                selectable={selectable}
+                selectedBlockIds={selectedBlockIds}
+                onSelectedChange={onSelectedChange}
+                onGroupSelectedChange={onGroupSelectedChange}
                 projects={projects}
                 clients={clients}
                 accountId={accountId}
@@ -799,15 +893,184 @@ function ActivityDayTable({
   );
 }
 
+function ActivityBulkActionBar({
+  blockIds,
+  projects,
+  clients,
+  accountId,
+  accountSlug,
+  onClearSelection,
+  onUpdatedBlocks,
+}: {
+  blockIds: string[];
+  projects: ActivityPageData['projects'];
+  clients: ActivityPageData['clients'];
+  accountId: string;
+  accountSlug: string;
+  onClearSelection: () => void;
+  onUpdatedBlocks: (
+    blockIds: string[],
+    update: {
+      projectId?: string | null;
+      clientId?: string | null;
+      isConfirmed?: boolean;
+      isExcluded?: boolean;
+    },
+  ) => void;
+}) {
+  const [pending, startTransition] = useTransition();
+  const [projectId, setProjectId] = useState('none');
+  const [clientId, setClientId] = useState('none');
+
+  function runBulkAction(
+    action: () => Promise<{ success: boolean; error?: string }>,
+    update: {
+      projectId?: string | null;
+      clientId?: string | null;
+      isConfirmed?: boolean;
+      isExcluded?: boolean;
+    },
+  ) {
+    startTransition(async () => {
+      const result = await action();
+
+      if (!result.success) {
+        toast.error(result.error ?? 'Update failed');
+        return;
+      }
+
+      toast.success(
+        `Updated ${blockIds.length} activity block${blockIds.length === 1 ? '' : 's'}`,
+      );
+      onUpdatedBlocks(blockIds, update);
+      onClearSelection();
+      setProjectId('none');
+      setClientId('none');
+    });
+  }
+
+  return (
+    <div className="sticky bottom-4 z-20 mx-auto flex max-w-4xl flex-wrap items-center gap-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/95 p-3 shadow-[0_8px_32px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+      <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+        {blockIds.length} selected
+      </p>
+      <Select value={clientId} onValueChange={setClientId} disabled={pending}>
+        <SelectTrigger className="h-9 w-[10rem] bg-[var(--workspace-control-surface)] text-xs">
+          <SelectValue placeholder="Client" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none">No client</SelectItem>
+          {clients.map((client) => (
+            <SelectItem key={client.id} value={client.id}>
+              {client.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={projectId} onValueChange={setProjectId} disabled={pending}>
+        <SelectTrigger className="h-9 w-[10rem] bg-[var(--workspace-control-surface)] text-xs">
+          <SelectValue placeholder="Project" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none">No project</SelectItem>
+          {projects.map((project) => (
+            <SelectItem key={project.id} value={project.id}>
+              {project.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Button
+        type="button"
+        size="sm"
+        className="keel-gradient-btn"
+        disabled={pending}
+        onClick={() =>
+          runBulkAction(
+            () =>
+              bulkUpdateActivityBlocksAction({
+                accountId,
+                accountSlug,
+                blockIds,
+                projectId: projectId === 'none' ? null : projectId,
+                clientId: clientId === 'none' ? null : clientId,
+                isConfirmed: true,
+              }),
+            {
+              projectId: projectId === 'none' ? null : projectId,
+              clientId: clientId === 'none' ? null : clientId,
+              isConfirmed: true,
+            },
+          )
+        }
+      >
+        {pending ? (
+          <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <Check className="mr-1.5 h-3.5 w-3.5" />
+        )}
+        Assign & confirm
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        disabled={pending}
+        onClick={() =>
+          runBulkAction(
+            () =>
+              bulkExcludeActivityBlocksAction({
+                accountId,
+                accountSlug,
+                blockIds,
+              }),
+            { isExcluded: true },
+          )
+        }
+      >
+        <Ban className="mr-1.5 h-3.5 w-3.5" />
+        Exclude
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant="ghost"
+        disabled={pending}
+        onClick={onClearSelection}
+      >
+        Clear
+      </Button>
+    </div>
+  );
+}
+
 export function ActivityPageContent({ data }: Props) {
   const router = useRouter();
   const [rows, setRows] = useState(data.blocks);
+  const [selectedBlockIds, setSelectedBlockIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [sortKey, setSortKey] = useState<ActivitySortKey>('duration');
   const [sortDir, setSortDir] = useState<ActivitySortDir>('desc');
 
   useEffect(() => {
     setRows(data.blocks);
+    setSelectedBlockIds(new Set());
   }, [data.blocks]);
+
+  const selectable = data.canEdit;
+  const selectedIds = useMemo(
+    () => [...selectedBlockIds],
+    [selectedBlockIds],
+  );
+  const reportsPath = `${workAccountPath(
+    pathsConfig.app.accountActivityReports,
+    data.accountSlug,
+  )}?${new URLSearchParams({
+    from: data.dateFrom,
+    to: data.dateTo,
+    view: data.view,
+  }).toString()}`;
 
   function handleSort(nextKey: ActivitySortKey) {
     if (sortKey === nextKey) {
@@ -831,6 +1094,86 @@ export function ActivityPageContent({ data }: Props) {
   function updateBlock(updated: ActivityBlockListRow) {
     setRows((current) =>
       current.map((row) => (row.id === updated.id ? updated : row)),
+    );
+    router.refresh();
+  }
+
+  function updateSelectedBlock(blockId: string, selected: boolean) {
+    setSelectedBlockIds((current) => {
+      const next = new Set(current);
+
+      if (selected) {
+        next.add(blockId);
+      } else {
+        next.delete(blockId);
+      }
+
+      return next;
+    });
+  }
+
+  function updateSelectedBlocks(blockIds: string[], selected: boolean) {
+    setSelectedBlockIds((current) => {
+      const next = new Set(current);
+
+      for (const blockId of blockIds) {
+        if (selected) {
+          next.add(blockId);
+        } else {
+          next.delete(blockId);
+        }
+      }
+
+      return next;
+    });
+  }
+
+  function updateBulkBlocks(
+    blockIds: string[],
+    update: {
+      projectId?: string | null;
+      clientId?: string | null;
+      isConfirmed?: boolean;
+      isExcluded?: boolean;
+    },
+  ) {
+    const projectName =
+      update.projectId == null
+        ? null
+        : (data.projects.find((project) => project.id === update.projectId)
+            ?.name ?? null);
+    const clientName =
+      update.clientId == null
+        ? null
+        : (data.clients.find((client) => client.id === update.clientId)?.name ??
+          null);
+
+    setRows((current) =>
+      current.map((row) => {
+        if (!blockIds.includes(row.id)) {
+          return row;
+        }
+
+        return {
+          ...row,
+          projectId:
+            update.projectId !== undefined ? update.projectId : row.projectId,
+          clientId:
+            update.clientId !== undefined ? update.clientId : row.clientId,
+          projectName:
+            update.projectId !== undefined ? projectName : row.projectName,
+          clientName:
+            update.clientId !== undefined ? clientName : row.clientName,
+          isConfirmed:
+            update.isConfirmed !== undefined
+              ? update.isConfirmed
+              : row.isConfirmed,
+          isExcluded:
+            update.isExcluded !== undefined
+              ? update.isExcluded
+              : row.isExcluded,
+        };
+      }),
     );
     router.refresh();
   }
@@ -894,6 +1237,12 @@ export function ActivityPageContent({ data }: Props) {
             onApply={onDateRangeApply}
           />
           <Button asChild type="button" size="sm" variant="outline">
+            <Link href={reportsPath}>
+              <BarChart3 className="mr-2 h-4 w-4" />
+              Reports
+            </Link>
+          </Button>
+          <Button asChild type="button" size="sm" variant="outline">
             <Link href={settingsPath}>
               <Settings2 className="mr-2 h-4 w-4" />
               Settings
@@ -942,6 +1291,10 @@ export function ActivityPageContent({ data }: Props) {
               group={group}
               canEdit={data.canEdit}
               showMember={data.view === 'team'}
+              selectable={selectable}
+              selectedBlockIds={selectedBlockIds}
+              onSelectedChange={updateSelectedBlock}
+              onGroupSelectedChange={updateSelectedBlocks}
               projects={data.projects}
               clients={data.clients}
               accountId={data.accountId}
@@ -952,6 +1305,17 @@ export function ActivityPageContent({ data }: Props) {
               onUpdated={updateBlock}
             />
           ))}
+          {selectable && selectedIds.length > 0 ? (
+            <ActivityBulkActionBar
+              blockIds={selectedIds}
+              projects={data.projects}
+              clients={data.clients}
+              accountId={data.accountId}
+              accountSlug={data.accountSlug}
+              onClearSelection={() => setSelectedBlockIds(new Set())}
+              onUpdatedBlocks={updateBulkBlocks}
+            />
+          ) : null}
         </div>
       )}
     </div>

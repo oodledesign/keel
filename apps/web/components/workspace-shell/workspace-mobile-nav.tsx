@@ -73,7 +73,7 @@ export function WorkspaceMobileMenu({
       <div
         className={cn(
           'fixed inset-0 z-[100] bg-[#060a12]/92 backdrop-blur-md transition-opacity duration-200 lg:hidden',
-          open ? 'opacity-100' : 'opacity-0',
+          open ? 'opacity-100' : 'pointer-events-none opacity-0',
         )}
         aria-hidden
         onClick={close}
@@ -235,7 +235,7 @@ export function WorkspaceMobileBottomNav({
   return (
     <nav
       className={cn(
-        'pointer-events-none fixed inset-x-0 bottom-0 z-40 grid grid-cols-[1fr_auto_1fr] items-center lg:hidden',
+        'pointer-events-none fixed inset-x-0 bottom-0 z-50 grid grid-cols-[1fr_auto_1fr] items-center lg:hidden',
         MOBILE_FLOATING_CHROME_PX,
         MOBILE_FLOATING_CHROME_PB,
       )}

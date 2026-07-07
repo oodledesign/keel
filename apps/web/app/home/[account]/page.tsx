@@ -9,7 +9,6 @@ import { isBusinessLiteWorkspace } from '~/lib/billing/is-business-lite-workspac
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { BusinessLiteDashboard } from './_components/business-lite-dashboard';
-import { BusinessDashboardSkeleton } from './_components/business-dashboard-skeleton';
 import { DashboardPageContent } from './_components/dashboard-page-content';
 import { FamilyDashboard } from './_components/family-dashboard';
 import { HomegroupDashboard } from './_components/homegroup-dashboard';
@@ -183,20 +182,6 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
     );
   }
 
-  return (
-    <Suspense fallback={<BusinessDashboardSkeleton />}>
-      <BusinessDashboardSection account={account} accountId={accountId} />
-    </Suspense>
-  );
-}
-
-async function BusinessDashboardSection({
-  account,
-  accountId,
-}: {
-  account: string;
-  accountId: string;
-}) {
   const data = await loadDashboardPageData(account);
 
   const businessShortcutsBar = (

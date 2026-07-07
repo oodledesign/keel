@@ -21,9 +21,28 @@ type ExcludeActivityBlockInput = {
   blockId: string;
 };
 
-async function revalidateActivityPage(accountSlug: string) {
+type BulkUpdateActivityBlocksInput = {
+  accountId: string;
+  accountSlug: string;
+  blockIds: string[];
+  projectId?: string | null;
+  clientId?: string | null;
+  isConfirmed?: boolean;
+};
+
+type BulkExcludeActivityBlocksInput = {
+  accountId: string;
+  accountSlug: string;
+  blockIds: string[];
+};
+
+async function revalidateActivityPaths(accountSlug: string) {
   revalidatePath(
     workAccountPath(pathsConfig.app.accountActivity, accountSlug),
+    'page',
+  );
+  revalidatePath(
+    workAccountPath(pathsConfig.app.accountActivityReports, accountSlug),
     'page',
   );
 }
@@ -103,7 +122,7 @@ export async function updateActivityBlockAction(
     return { success: false, error: error.message };
   }
 
-  await revalidateActivityPage(input.accountSlug);
+  await revalidateActivityPaths(input.accountSlug);
   return { success: true };
 }
 
@@ -122,7 +141,81 @@ export async function excludeActivityBlockAction(
     return { success: false, error: error.message };
   }
 
-  await revalidateActivityPage(input.accountSlug);
+  await revalidateActivityPaths(input.accountSlug);
+  return { success: true };
+}
+
+export async function bulkUpdateActivityBlocksAction(
+  input: BulkUpdateActivityBlocksInput,
+): Promise<{ success: boolean; error?: string }> {
+  const blockIds = [...new Set(input.blockIds.map((id) => id.trim()).filter(Boolean))];
+
+  if (blockIds.length === 0) {
+    return { success: false, error: 'No activity blocks selected' };
+  }
+
+  if (input.projectId) {
+    await assertProjectBelongsToAccount(input.projectId, input.accountId);
+  }
+
+  if (input.clientId) {
+    await assertClientBelongsToAccount(input.clientId, input.accountId);
+  }
+
+  const payload: Record<string, unknown> = {};
+
+  if (input.projectId !== undefined) {
+    payload.project_id = input.projectId;
+  }
+
+  if (input.clientId !== undefined) {
+    payload.client_id = input.clientId;
+  }
+
+  if (input.isConfirmed !== undefined) {
+    payload.is_confirmed = input.isConfirmed;
+  }
+
+  if (Object.keys(payload).length === 0) {
+    return { success: false, error: 'Nothing to update' };
+  }
+
+  const client = getActivitySupabaseClient();
+  const { error } = await client
+    .from('activity_blocks')
+    .update(payload)
+    .in('id', blockIds)
+    .eq('account_id', input.accountId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  await revalidateActivityPaths(input.accountSlug);
+  return { success: true };
+}
+
+export async function bulkExcludeActivityBlocksAction(
+  input: BulkExcludeActivityBlocksInput,
+): Promise<{ success: boolean; error?: string }> {
+  const blockIds = [...new Set(input.blockIds.map((id) => id.trim()).filter(Boolean))];
+
+  if (blockIds.length === 0) {
+    return { success: false, error: 'No activity blocks selected' };
+  }
+
+  const client = getActivitySupabaseClient();
+  const { error } = await client
+    .from('activity_blocks')
+    .update({ is_excluded: true })
+    .in('id', blockIds)
+    .eq('account_id', input.accountId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  await revalidateActivityPaths(input.accountSlug);
   return { success: true };
 }
 
