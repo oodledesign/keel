@@ -1,4 +1,5 @@
 import {
+  Activity,
   BarChart3,
   Briefcase,
   Calendar,
@@ -212,6 +213,15 @@ export function buildWorkSpaceNavChildren(
             path: createPath(pathsConfig.app.accountMeetings, account),
             Icon: <Mic className={iconClasses} />,
             description: 'Meeting transcripts and AI task extraction.',
+          }
+        : null,
+    activity: () =>
+      access.canViewDashboard
+        ? {
+            label: 'Activity',
+            path: createPath(pathsConfig.app.accountActivity, account),
+            Icon: <Activity className={iconClasses} />,
+            description: 'Desktop activity captured by KeelAssistant.',
           }
         : null,
     websites: () =>

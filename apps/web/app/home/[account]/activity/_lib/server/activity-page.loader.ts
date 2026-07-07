@@ -1,0 +1,272 @@
+import 'server-only';
+
+import { cache } from 'react';
+
+import { createTeamAccountsApi } from '@kit/team-accounts/api';
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
+
+import { createClientsService } from '~/home/[account]/clients/_lib/server/clients.service';
+import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
+import {
+  parseActivityRange,
+  parseActivityView,
+  resolveRangeStart,
+  type ActivityBlockListRow,
+  type ActivityRangeKey,
+} from '~/lib/activity/activity-history';
+import { getActivitySupabaseClient } from '~/lib/activity/activity-supabase';
+
+export type ActivityProjectOption = {
+  id: string;
+  name: string;
+};
+
+export type ActivityClientOption = {
+  id: string;
+  name: string;
+};
+
+type ActivityBlockRow = {
+  id: string;
+  user_id: string;
+  app_name: string;
+  bundle_id: string;
+  domain: string | null;
+  url: string | null;
+  window_title: string;
+  started_at: string;
+  ended_at: string;
+  duration_seconds: number;
+  project_id: string | null;
+  client_id: string | null;
+  confidence_score: number | null;
+  is_confirmed: boolean;
+  is_excluded: boolean;
+  projects?: { id: string; name: string | null; title: string | null } | null;
+  clients?: { id: string; display_name: string | null } | null;
+};
+
+type MemberRow = {
+  user_id?: string;
+  name?: string | null;
+  email?: string | null;
+};
+
+function projectLabel(project: ActivityBlockRow['projects']): string | null {
+  if (!project) {
+    return null;
+  }
+
+  return project.title?.trim() || project.name?.trim() || null;
+}
+
+function clientLabel(client: ActivityBlockRow['clients']): string | null {
+  if (!client) {
+    return null;
+  }
+
+  return client.display_name?.trim() || null;
+}
+
+function mapMemberNames(rows: MemberRow[]): Map<string, string> {
+  const names = new Map<string, string>();
+
+  for (const row of rows) {
+    const userId = row.user_id?.trim();
+    if (!userId) continue;
+
+    const label = row.name?.trim() || row.email?.trim() || userId.slice(0, 8);
+    names.set(userId, label);
+  }
+
+  return names;
+}
+
+function mapBlockRow(
+  row: ActivityBlockRow,
+  memberNames: Map<string, string>,
+): ActivityBlockListRow {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    userName: memberNames.get(row.user_id) ?? null,
+    appName: row.app_name,
+    bundleId: row.bundle_id,
+    domain: row.domain,
+    windowTitle: row.window_title,
+    startedAt: row.started_at,
+    endedAt: row.ended_at,
+    durationSeconds: row.duration_seconds,
+    projectId: row.project_id,
+    projectName: projectLabel(row.projects),
+    clientId: row.client_id,
+    clientName: clientLabel(row.clients),
+    confidenceScore:
+      row.confidence_score == null ? null : Number(row.confidence_score),
+    isConfirmed: row.is_confirmed,
+    isExcluded: row.is_excluded,
+  };
+}
+
+function mapProjectOptions(
+  rows: Array<{
+    id: string;
+    name: string | null;
+    title: string | null;
+    project_type?: string | null;
+  }>,
+): ActivityProjectOption[] {
+  return rows
+    .filter((row) => row.project_type === 'delivery')
+    .map((row) => ({
+      id: row.id,
+      name: row.title?.trim() || row.name?.trim() || 'Untitled project',
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function mapClientOptions(
+  rows: Array<{
+    id: string;
+    display_name?: string | null;
+    company_name?: string | null;
+  }>,
+): ActivityClientOption[] {
+  return rows
+    .map((row) => ({
+      id: row.id,
+      name:
+        row.display_name?.trim() ||
+        row.company_name?.trim() ||
+        'Unnamed client',
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export type ActivityPageData = {
+  accountId: string;
+  accountSlug: string;
+  userId: string;
+  range: ActivityRangeKey;
+  view: 'mine' | 'team';
+  trackingEnabled: boolean;
+  canViewTeamActivity: boolean;
+  canEdit: boolean;
+  blocks: ActivityBlockListRow[];
+  projects: ActivityProjectOption[];
+  clients: ActivityClientOption[];
+};
+
+export const loadActivityPageData = cache(loadActivityPageDataImpl);
+
+async function loadActivityPageDataImpl(
+  accountSlug: string,
+  rangeInput?: string | null,
+  viewInput?: string | null,
+): Promise<ActivityPageData> {
+  const workspace = await loadTeamWorkspace(accountSlug);
+  const accountId = workspace.account.id as string;
+  const userId = workspace.user.id;
+  const client = getSupabaseServerClient();
+  const activityClient = getActivitySupabaseClient();
+  const teamAccountsApi = createTeamAccountsApi(client);
+
+  const range = parseActivityRange(rangeInput);
+  const view = parseActivityView(viewInput);
+  const rangeStart = resolveRangeStart(range).toISOString();
+
+  const [
+    privacyResult,
+    canViewTeamActivity,
+    membersResult,
+    projectsResult,
+    clientsResult,
+  ] = await Promise.all([
+    activityClient
+      .from('activity_privacy_settings')
+      .select('tracking_enabled')
+      .eq('account_id', accountId)
+      .eq('user_id', userId)
+      .maybeSingle(),
+    teamAccountsApi.hasPermission({
+      accountId,
+      userId,
+      permission: 'activity.view_team' as never,
+    }),
+    client.rpc('get_account_members', { account_slug: accountSlug }),
+    client
+      .from('projects')
+      .select('id, name, title, project_type')
+      .eq('account_id', accountId)
+      .order('name', { ascending: true })
+      .limit(200),
+    createClientsService(client).listClients({
+      accountId,
+      page: 1,
+      pageSize: 100,
+    }),
+  ]);
+
+  if (membersResult.error) {
+    throw new Error(membersResult.error.message);
+  }
+
+  const memberNames = mapMemberNames((membersResult.data ?? []) as MemberRow[]);
+  const effectiveView =
+    view === 'team' && canViewTeamActivity ? 'team' : 'mine';
+
+  let blocksQuery = activityClient
+    .from('activity_blocks')
+    .select(
+      `
+        id,
+        user_id,
+        app_name,
+        bundle_id,
+        domain,
+        url,
+        window_title,
+        started_at,
+        ended_at,
+        duration_seconds,
+        project_id,
+        client_id,
+        confidence_score,
+        is_confirmed,
+        is_excluded,
+        projects:project_id ( id, name, title ),
+        clients:client_id ( id, display_name )
+      `,
+    )
+    .eq('account_id', accountId)
+    .gte('started_at', rangeStart)
+    .order('started_at', { ascending: false })
+    .limit(500);
+
+  if (effectiveView === 'mine') {
+    blocksQuery = blocksQuery.eq('user_id', userId);
+  }
+
+  const { data: blockRows, error: blocksError } = await blocksQuery;
+
+  if (blocksError) {
+    throw new Error(blocksError.message);
+  }
+
+  return {
+    accountId,
+    accountSlug,
+    userId,
+    range,
+    view: effectiveView,
+    trackingEnabled:
+      (privacyResult.data?.tracking_enabled as boolean | undefined) ?? false,
+    canViewTeamActivity,
+    canEdit: effectiveView === 'mine',
+    blocks: ((blockRows ?? []) as ActivityBlockRow[]).map((row) =>
+      mapBlockRow(row, memberNames),
+    ),
+    projects: mapProjectOptions(projectsResult.data ?? []),
+    clients: mapClientOptions(clientsResult.data ?? []),
+  };
+}
