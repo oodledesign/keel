@@ -5,8 +5,8 @@ import pathsConfig from '~/config/paths.config';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
-import { PersonalApiTokensSection } from './_components/personal-api-tokens-section';
-import { PersonalSettingsPanel } from './_components/personal-settings-panel';
+import { PersonalApiTokensSection } from '../_components/personal-api-tokens-section';
+import { PersonalSettingsPanel } from '../_components/personal-settings-panel';
 
 export const generateMetadata = async () => {
   const i18n = await createI18nServerInstance();

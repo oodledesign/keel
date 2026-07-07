@@ -6,7 +6,7 @@ type RawNoteRow = {
   client_id?: string | null;
   property_id?: string | null;
   task_id?: string | null;
-  projects?: { name?: string | null } | null;
+  projects?: { name?: string | null; title?: string | null } | null;
   client_orgs?: { name?: string | null } | null;
   clients?: { display_name?: string | null } | null;
   properties?: { name?: string | null } | null;
@@ -29,6 +29,21 @@ export function previewContent(content: string, max = 100): string {
 
 export function docContentPreview(content: string | null, max = 100): string {
   return previewContent(content ?? '', max);
+}
+
+export function resolveNoteAssignmentLabels(row: RawNoteRow): {
+  clientName: string | null;
+  projectName: string | null;
+} {
+  const clientName =
+    row.client_orgs?.name?.trim() || row.clients?.display_name?.trim() || null;
+  const projectLabel =
+    row.projects?.title?.trim() || row.projects?.name?.trim() || null;
+
+  return {
+    clientName: clientName || null,
+    projectName: row.project_id && projectLabel ? projectLabel : null,
+  };
 }
 
 export function resolveNoteContext(row: RawNoteRow): NoteContextLink | null {

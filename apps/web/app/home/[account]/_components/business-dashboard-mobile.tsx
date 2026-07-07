@@ -6,6 +6,7 @@ import { cn } from '@kit/ui/utils';
 
 import { HapticLink } from '~/components/haptic-link';
 import { workspaceDashboardMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
+import { NoteAssignmentLabels } from './note-assignment-labels';
 import type {
   DashboardFinanceMonth,
   DashboardMetrics,
@@ -182,11 +183,10 @@ export function BusinessDashboardMobile({
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]">
                     <StickyNote className="h-3.5 w-3.5" />
                   </div>
-                  {note.clientName ? (
-                    <span className="max-w-[55%] truncate rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[10px] font-medium text-[var(--workspace-shell-text-muted)]">
-                      {note.clientName}
-                    </span>
-                  ) : null}
+                  <NoteAssignmentLabels
+                    clientName={note.clientName}
+                    projectName={note.projectName}
+                  />
                 </div>
                 <p className="line-clamp-2 text-sm font-medium text-[var(--workspace-shell-text)]">
                   {note.title}

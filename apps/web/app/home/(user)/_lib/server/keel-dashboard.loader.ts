@@ -16,7 +16,7 @@ import {
   type WorkspaceAccountRow,
 } from '~/home/_lib/server/workspace-scope';
 import { normalizeSpaceType } from '~/home/[account]/_lib/server/account-modules';
-import { displayTitle, resolveNoteContext } from '~/home/[account]/_lib/workspace-content/context-resolve';
+import { displayTitle, resolveNoteAssignmentLabels } from '~/home/[account]/_lib/workspace-content/context-resolve';
 import { workspaceColorForSpaceType } from '~/home/(user)/_lib/workspace-accent';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
@@ -84,6 +84,7 @@ export type PersonalRecentNote = {
   workspaceSlug: string;
   workspaceColor: string;
   clientName: string | null;
+  projectName: string | null;
   isPersonal?: boolean;
 };
 
@@ -510,7 +511,7 @@ async function loadRecentNotesAcrossWorkspaces(
   const { data, error } = await client
     .from('notes')
     .select(
-      'id, title, content, updated_at, account_id, client_id, client_org_id, clients(display_name)',
+      'id, title, content, updated_at, account_id, client_id, client_org_id, project_id, clients(display_name), client_orgs(name), projects(name, title)',
     )
     .in('account_id', accountIds)
     .order('updated_at', { ascending: false })
@@ -537,7 +538,10 @@ async function loadRecentNotesAcrossWorkspaces(
     account_id: string;
     client_id?: string | null;
     client_org_id?: string | null;
+    project_id?: string | null;
     clients?: { display_name?: string | null } | null;
+    client_orgs?: { name?: string | null } | null;
+    projects?: { name?: string | null; title?: string | null } | null;
   };
 
   return ((data ?? []) as NoteRow[]).map((row) => {
@@ -551,7 +555,9 @@ async function loadRecentNotesAcrossWorkspaces(
       .trim();
     const spaceType = normalizeSpaceType(workspace?.space_type ?? null);
     const isPersonal = workspace?.is_personal_account === true;
-    const context = resolveNoteContext(row as Parameters<typeof resolveNoteContext>[0]);
+    const assignment = resolveNoteAssignmentLabels(
+      row as Parameters<typeof resolveNoteAssignmentLabels>[0],
+    );
 
     return {
       id: row.id,
@@ -565,7 +571,8 @@ async function loadRecentNotesAcrossWorkspaces(
       workspaceColor: isPersonal
         ? '#FFE3DA'
         : workspaceColorForSpaceType(spaceType),
-      clientName: context?.type === 'client' ? context.label : null,
+      clientName: assignment.clientName,
+      projectName: assignment.projectName,
       isPersonal,
     };
   });

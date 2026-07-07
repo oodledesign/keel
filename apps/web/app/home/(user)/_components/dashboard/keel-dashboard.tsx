@@ -9,10 +9,11 @@ import { ArrowRight, Cake, CalendarClock, MessageSquare, StickyNote, Users } fro
 import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
 import { Button } from '@kit/ui/button';
 
-import pathsConfig from '~/config/paths.config';
+import { NoteAssignmentLabels } from '~/home/[account]/_components/note-assignment-labels';
 import { buildBrainChatUrl } from '~/lib/brain/build-brain-chat-url';
 
 import { DashboardShortcutsBar } from '~/components/dashboard-shortcuts/dashboard-shortcuts-bar';
+import pathsConfig from '~/config/paths.config';
 
 import type {
   KeelDashboardData,
@@ -362,11 +363,10 @@ function RecentNoteCard(props: { note: PersonalRecentNote }) {
           <StickyNote className="h-3.5 w-3.5" />
         </div>
         <div className="flex min-w-0 flex-col items-end gap-1">
-          {props.note.clientName ? (
-            <span className="max-w-full truncate rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[10px] font-medium text-[var(--workspace-shell-text-muted)]">
-              {props.note.clientName}
-            </span>
-          ) : null}
+          <NoteAssignmentLabels
+            clientName={props.note.clientName}
+            projectName={props.note.projectName}
+          />
           <span className="inline-flex min-w-0 items-center gap-1.5 truncate text-[10px] text-[var(--workspace-shell-text)]/50">
             <span
               className="h-1.5 w-1.5 shrink-0 rounded-full"
