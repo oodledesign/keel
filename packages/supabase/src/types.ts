@@ -9,6 +9,7 @@ export type JWTUserData = {
   aal: `aal1` | `aal2`;
   email: string;
   phone: string;
+  email_confirmed_at: string | null;
   app_metadata: Record<string, unknown>;
   user_metadata: Record<string, unknown>;
   id: string;

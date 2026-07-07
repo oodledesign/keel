@@ -90,6 +90,7 @@ function mapSessionUser(user: User): JWTUserData {
     aal: 'aal1',
     email: user.email ?? '',
     phone: user.phone ?? '',
+    email_confirmed_at: user.email_confirmed_at ?? null,
     app_metadata: user.app_metadata ?? {},
     user_metadata: user.user_metadata ?? {},
     id: user.id,
