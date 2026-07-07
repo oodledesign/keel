@@ -5,10 +5,22 @@ import { useEffect, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import { Activity, Ban, Check, Loader2, Settings2 } from 'lucide-react';
+import {
+  Activity,
+  Ban,
+  Check,
+  Loader2,
+  MoreHorizontal,
+  Settings2,
+} from 'lucide-react';
 
 import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@kit/ui/popover';
 import {
   Select,
   SelectContent,
@@ -16,6 +28,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@kit/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@kit/ui/tabs';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
@@ -28,15 +48,17 @@ import {
 import type { ActivityPageData } from '~/home/[account]/activity/_lib/server/activity-page.loader';
 import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
 import {
-  blockPrimaryLabel,
+  blockPageTitle,
   blockStatusLabel,
   blockStatusText,
+  blockUrlLabel,
   formatDuration,
   formatTimeRange,
   groupBlocksByDay,
   sumActiveDuration,
   sumTodayActiveDuration,
   type ActivityBlockListRow,
+  type ActivityDayGroup,
   type ActivityRangeKey,
 } from '~/lib/activity/activity-history';
 
@@ -75,14 +97,17 @@ function buildActivityUrl(
   return `${workAccountPath(pathsConfig.app.accountActivity, accountSlug)}?${search.toString()}`;
 }
 
-function ActivityBlockRow({
+function assignmentLabel(block: ActivityBlockListRow): string {
+  return [block.projectName, block.clientName].filter(Boolean).join(' · ') || '—';
+}
+
+function ActivityBlockActions({
   block,
   canEdit,
   projects,
   clients,
   accountId,
   accountSlug,
-  showMember,
   onUpdated,
 }: {
   block: ActivityBlockListRow;
@@ -91,13 +116,11 @@ function ActivityBlockRow({
   clients: ActivityPageData['clients'];
   accountId: string;
   accountSlug: string;
-  showMember: boolean;
   onUpdated: (block: ActivityBlockListRow) => void;
 }) {
   const [pending, startTransition] = useTransition();
   const [projectId, setProjectId] = useState(block.projectId ?? 'none');
   const [clientId, setClientId] = useState(block.clientId ?? 'none');
-  const status = blockStatusLabel(block);
 
   function runAction(
     action: () => Promise<{ success: boolean; error?: string }>,
@@ -116,142 +139,271 @@ function ActivityBlockRow({
     });
   }
 
+  if (!canEdit || block.isExcluded) {
+    return null;
+  }
+
   return (
-    <div
-      className={cn(
-        'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4',
-        block.isExcluded && 'opacity-60',
-      )}
-    >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="font-medium text-[var(--workspace-shell-text)]">
-              {block.appName}
-            </p>
-            <Badge variant="outline" className={statusBadgeClass(status)}>
-              {blockStatusText(status)}
-            </Badge>
-          </div>
-          <p className="truncate text-sm text-[var(--workspace-shell-text-muted)]">
-            {blockPrimaryLabel(block)}
-          </p>
-          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-            {formatTimeRange(block.startedAt, block.endedAt)} ·{' '}
-            {formatDuration(block.durationSeconds)}
-            {showMember && block.userName ? ` · ${block.userName}` : null}
-          </p>
-          {(block.projectName || block.clientName) && (
-            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              {[block.projectName, block.clientName].filter(Boolean).join(' · ')}
-            </p>
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 shrink-0"
+          disabled={pending}
+        >
+          {pending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <MoreHorizontal className="h-4 w-4" />
           )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72 space-y-3 p-3">
+        <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+          Assign block
+        </p>
+        <div className="space-y-2">
+          <Select value={projectId} onValueChange={setProjectId} disabled={pending}>
+            <SelectTrigger className="h-8 bg-[var(--workspace-control-surface)] text-xs">
+              <SelectValue placeholder="Project" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No project</SelectItem>
+              {projects.map((project) => (
+                <SelectItem key={project.id} value={project.id}>
+                  {project.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={clientId} onValueChange={setClientId} disabled={pending}>
+            <SelectTrigger className="h-8 bg-[var(--workspace-control-surface)] text-xs">
+              <SelectValue placeholder="Client" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No client</SelectItem>
+              {clients.map((client) => (
+                <SelectItem key={client.id} value={client.id}>
+                  {client.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-      </div>
-
-      {canEdit && !block.isExcluded ? (
-        <div className="mt-4 flex flex-wrap items-end gap-3">
-          <div className="min-w-[10rem] flex-1">
-            <p className="mb-1 text-xs text-[var(--workspace-shell-text-muted)]">
-              Project
-            </p>
-            <Select value={projectId} onValueChange={setProjectId} disabled={pending}>
-              <SelectTrigger className="bg-[var(--workspace-control-surface)]">
-                <SelectValue placeholder="No project" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No project</SelectItem>
-                {projects.map((project) => (
-                  <SelectItem key={project.id} value={project.id}>
-                    {project.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="min-w-[10rem] flex-1">
-            <p className="mb-1 text-xs text-[var(--workspace-shell-text-muted)]">
-              Client
-            </p>
-            <Select value={clientId} onValueChange={setClientId} disabled={pending}>
-              <SelectTrigger className="bg-[var(--workspace-control-surface)]">
-                <SelectValue placeholder="No client" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No client</SelectItem>
-                {clients.map((client) => (
-                  <SelectItem key={client.id} value={client.id}>
-                    {client.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size="sm"
-              disabled={pending}
-              className="keel-gradient-btn"
-              onClick={() =>
-                runAction(
-                  () =>
-                    updateActivityBlockAction({
-                      accountId,
-                      accountSlug,
-                      blockId: block.id,
-                      projectId: projectId === 'none' ? null : projectId,
-                      clientId: clientId === 'none' ? null : clientId,
-                      isConfirmed: true,
-                    }),
-                  {
-                    ...block,
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            size="sm"
+            className="keel-gradient-btn flex-1"
+            disabled={pending}
+            onClick={() =>
+              runAction(
+                () =>
+                  updateActivityBlockAction({
+                    accountId,
+                    accountSlug,
+                    blockId: block.id,
                     projectId: projectId === 'none' ? null : projectId,
                     clientId: clientId === 'none' ? null : clientId,
-                    projectName:
-                      projects.find((project) => project.id === projectId)?.name ??
-                      null,
-                    clientName:
-                      clients.find((client) => client.id === clientId)?.name ?? null,
                     isConfirmed: true,
-                  },
-                )
-              }
-            >
-              {pending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Check className="mr-2 h-4 w-4" />
-              )}
-              Confirm
-            </Button>
-
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={pending}
-              onClick={() =>
-                runAction(
-                  () =>
-                    excludeActivityBlockAction({
-                      accountId,
-                      accountSlug,
-                      blockId: block.id,
-                    }),
-                  { ...block, isExcluded: true },
-                )
-              }
-            >
-              <Ban className="mr-2 h-4 w-4" />
-              Exclude
-            </Button>
-          </div>
+                  }),
+                {
+                  ...block,
+                  projectId: projectId === 'none' ? null : projectId,
+                  clientId: clientId === 'none' ? null : clientId,
+                  projectName:
+                    projects.find((project) => project.id === projectId)?.name ??
+                    null,
+                  clientName:
+                    clients.find((client) => client.id === clientId)?.name ?? null,
+                  isConfirmed: true,
+                },
+              )
+            }
+          >
+            <Check className="mr-1.5 h-3.5 w-3.5" />
+            Confirm
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={pending}
+            onClick={() =>
+              runAction(
+                () =>
+                  excludeActivityBlockAction({
+                    accountId,
+                    accountSlug,
+                    blockId: block.id,
+                  }),
+                { ...block, isExcluded: true },
+              )
+            }
+          >
+            <Ban className="h-3.5 w-3.5" />
+          </Button>
         </div>
-      ) : null}
-    </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function ActivityDayTable({
+  group,
+  canEdit,
+  showMember,
+  projects,
+  clients,
+  accountId,
+  accountSlug,
+  onUpdated,
+}: {
+  group: ActivityDayGroup;
+  canEdit: boolean;
+  showMember: boolean;
+  projects: ActivityPageData['projects'];
+  clients: ActivityPageData['clients'];
+  accountId: string;
+  accountSlug: string;
+  onUpdated: (block: ActivityBlockListRow) => void;
+}) {
+  return (
+    <section className="space-y-2">
+      <div className="flex items-center justify-between gap-2 px-1">
+        <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+          {group.label}
+        </h2>
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+          {formatDuration(group.totalDurationSeconds)}
+        </p>
+      </div>
+
+      <div className="overflow-x-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+        <Table>
+          <TableHeader className="bg-[var(--workspace-shell-sidebar-accent)]">
+            <TableRow className="border-[color:var(--workspace-shell-border)] hover:bg-transparent">
+              <TableHead className="h-9 px-3 text-xs">Time</TableHead>
+              <TableHead className="h-9 px-3 text-xs">Dur</TableHead>
+              <TableHead className="h-9 px-3 text-xs">App</TableHead>
+              <TableHead className="h-9 px-3 text-xs">Page</TableHead>
+              <TableHead className="h-9 px-3 text-xs">URL / domain</TableHead>
+              {showMember ? (
+                <TableHead className="h-9 px-3 text-xs">Member</TableHead>
+              ) : null}
+              <TableHead className="h-9 px-3 text-xs">Assignment</TableHead>
+              <TableHead className="h-9 px-3 text-xs">Status</TableHead>
+              <TableHead className="h-9 w-10 px-2 text-xs" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {group.blocks.map((block) => {
+              const status = blockStatusLabel(block);
+              const pageTitle = blockPageTitle(block);
+              const urlLabel = blockUrlLabel(block);
+
+              return (
+                <TableRow
+                  key={block.id}
+                  className={cn(
+                    'border-[color:var(--workspace-shell-border)] text-sm',
+                    block.isExcluded && 'opacity-50',
+                  )}
+                >
+                  <TableCell className="whitespace-nowrap px-3 py-2 align-top text-xs text-[var(--workspace-shell-text-muted)]">
+                    {formatTimeRange(block.startedAt, block.endedAt)}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap px-3 py-2 align-top text-xs font-medium text-[var(--workspace-shell-text)]">
+                    {formatDuration(block.durationSeconds)}
+                  </TableCell>
+                  <TableCell className="max-w-[7rem] px-3 py-2 align-top">
+                    <span
+                      className="block truncate text-xs text-[var(--workspace-shell-text)]"
+                      title={block.appName}
+                    >
+                      {block.appName}
+                    </span>
+                  </TableCell>
+                  <TableCell className="max-w-[14rem] px-3 py-2 align-top">
+                    <span
+                      className="block truncate text-xs text-[var(--workspace-shell-text)]"
+                      title={pageTitle}
+                    >
+                      {pageTitle}
+                    </span>
+                  </TableCell>
+                  <TableCell className="max-w-[16rem] px-3 py-2 align-top">
+                    {urlLabel ? (
+                      block.url ? (
+                        <a
+                          href={block.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block truncate text-xs text-sky-300 hover:underline"
+                          title={urlLabel}
+                        >
+                          {urlLabel}
+                        </a>
+                      ) : (
+                        <span
+                          className="block truncate text-xs text-[var(--workspace-shell-text-muted)]"
+                          title={urlLabel}
+                        >
+                          {urlLabel}
+                        </span>
+                      )
+                    ) : (
+                      <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+                        —
+                      </span>
+                    )}
+                  </TableCell>
+                  {showMember ? (
+                    <TableCell className="max-w-[8rem] px-3 py-2 align-top">
+                      <span
+                        className="block truncate text-xs text-[var(--workspace-shell-text-muted)]"
+                        title={block.userName ?? undefined}
+                      >
+                        {block.userName ?? '—'}
+                      </span>
+                    </TableCell>
+                  ) : null}
+                  <TableCell className="max-w-[10rem] px-3 py-2 align-top">
+                    <span
+                      className="block truncate text-xs text-[var(--workspace-shell-text-muted)]"
+                      title={assignmentLabel(block)}
+                    >
+                      {assignmentLabel(block)}
+                    </span>
+                  </TableCell>
+                  <TableCell className="px-3 py-2 align-top">
+                    <Badge
+                      variant="outline"
+                      className={cn('text-[10px] font-normal', statusBadgeClass(status))}
+                    >
+                      {blockStatusText(status)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="px-2 py-2 align-top">
+                    <ActivityBlockActions
+                      block={block}
+                      canEdit={canEdit}
+                      projects={projects}
+                      clients={clients}
+                      accountId={accountId}
+                      accountSlug={accountSlug}
+                      onUpdated={onUpdated}
+                    />
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+    </section>
   );
 }
 
@@ -292,9 +444,7 @@ export function ActivityPageContent({ data }: Props) {
     <div className="space-y-6">
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
-          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-            Today
-          </p>
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">Today</p>
           <p className="mt-1 text-2xl font-semibold text-[var(--workspace-shell-text)]">
             {formatDuration(todayDuration)}
           </p>
@@ -308,9 +458,7 @@ export function ActivityPageContent({ data }: Props) {
           </p>
         </div>
         <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
-          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-            Blocks
-          </p>
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">Blocks</p>
           <p className="mt-1 text-2xl font-semibold text-[var(--workspace-shell-text)]">
             {rows.length}
           </p>
@@ -389,33 +537,19 @@ export function ActivityPageContent({ data }: Props) {
           </p>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-5">
           {dayGroups.map((group) => (
-            <section key={group.dayKey} className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">
-                  {group.label}
-                </h2>
-                <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-                  {formatDuration(group.totalDurationSeconds)}
-                </p>
-              </div>
-              <div className="space-y-3">
-                {group.blocks.map((block) => (
-                  <ActivityBlockRow
-                    key={block.id}
-                    block={block}
-                    canEdit={data.canEdit}
-                    projects={data.projects}
-                    clients={data.clients}
-                    accountId={data.accountId}
-                    accountSlug={data.accountSlug}
-                    showMember={data.view === 'team'}
-                    onUpdated={updateBlock}
-                  />
-                ))}
-              </div>
-            </section>
+            <ActivityDayTable
+              key={group.dayKey}
+              group={group}
+              canEdit={data.canEdit}
+              showMember={data.view === 'team'}
+              projects={data.projects}
+              clients={data.clients}
+              accountId={data.accountId}
+              accountSlug={data.accountSlug}
+              onUpdated={updateBlock}
+            />
           ))}
         </div>
       )}

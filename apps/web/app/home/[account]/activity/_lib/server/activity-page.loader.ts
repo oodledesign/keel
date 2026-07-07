@@ -93,6 +93,7 @@ function mapBlockRow(
     appName: row.app_name,
     bundleId: row.bundle_id,
     domain: row.domain,
+    url: row.url,
     windowTitle: row.window_title,
     startedAt: row.started_at,
     endedAt: row.ended_at,

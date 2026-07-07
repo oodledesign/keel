@@ -20,6 +20,7 @@ export type ActivityBlockListRow = {
   appName: string;
   bundleId: string;
   domain: string | null;
+  url: string | null;
   windowTitle: string;
   startedAt: string;
   endedAt: string;
@@ -119,6 +120,31 @@ export function blockStatusText(status: ActivityBlockStatus): string {
     default:
       return 'Unassigned';
   }
+}
+
+export function blockPageTitle(block: ActivityBlockListRow): string {
+  const title = block.windowTitle.trim();
+  if (title) {
+    return title;
+  }
+
+  if (block.domain) {
+    return block.domain;
+  }
+
+  return block.appName;
+}
+
+export function blockUrlLabel(block: ActivityBlockListRow): string | null {
+  if (block.url?.trim()) {
+    return block.url.trim();
+  }
+
+  if (block.domain?.trim()) {
+    return block.domain.trim();
+  }
+
+  return null;
 }
 
 export function blockPrimaryLabel(block: ActivityBlockListRow): string {

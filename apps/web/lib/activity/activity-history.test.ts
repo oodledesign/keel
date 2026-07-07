@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  blockPageTitle,
   blockStatusLabel,
+  blockUrlLabel,
   formatDuration,
   groupBlocksByDay,
   parseActivityRange,
@@ -19,6 +21,7 @@ function makeBlock(
     appName: 'Safari',
     bundleId: 'com.apple.Safari',
     domain: 'github.com',
+    url: null,
     windowTitle: 'Pull requests',
     endedAt: overrides.startedAt.replace('T10:', 'T10:05:'),
     durationSeconds: 300,
@@ -65,6 +68,27 @@ describe('activity history helpers', () => {
     expect(groups).toHaveLength(2);
     expect(groups[0]?.label).toBe('Today');
     expect(groups[1]?.label).toBe('Yesterday');
+  });
+
+  it('derives page title and url labels', () => {
+    expect(
+      blockPageTitle(
+        makeBlock({
+          id: 'a',
+          startedAt: '2026-07-07T10:00:00.000Z',
+          windowTitle: 'Inbox - Gmail',
+        }),
+      ),
+    ).toBe('Inbox - Gmail');
+    expect(
+      blockUrlLabel(
+        makeBlock({
+          id: 'b',
+          startedAt: '2026-07-07T10:00:00.000Z',
+          url: 'https://mail.google.com/mail/u/0/#inbox',
+        }),
+      ),
+    ).toBe('https://mail.google.com/mail/u/0/#inbox');
   });
 
   it('derives block status labels', () => {
