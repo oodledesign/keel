@@ -15,7 +15,7 @@ export const RECORDER_LIMITS = {
     maxDurationSecondsPerMonth: 45 * 60,
   },
   standard: {
-    maxDurationSecondsPerMonth: 10 * 60 * 60,
+    maxDurationSecondsPerMonth: 5 * 60 * 60,
   },
 } as const satisfies Record<
   RecorderAccessTier,
@@ -23,6 +23,7 @@ export const RECORDER_LIMITS = {
 >;
 
 const FULL_PAID_ENTITLEMENTS = [
+  'workspace_business_lite',
   'workspace_business',
   'workspace_community',
   'workspace_property',

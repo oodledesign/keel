@@ -124,8 +124,9 @@ export function ApiTokensSettingsCard({
           </p>
           {usageSummary.tier === 'limited' ? (
             <p className="mt-2 text-xs">
-              Personal and Business Lite include 45 minutes per month. Paid
-              Business, Community, or Property workspaces include 10 hours.
+              Personal accounts without a paid workspace include 45 minutes per
+              month. Business Lite, Business, Community, and Property workspaces
+              include 5 hours.
             </p>
           ) : null}
         </div>
