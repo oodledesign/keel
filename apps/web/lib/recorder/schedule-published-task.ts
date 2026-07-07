@@ -13,6 +13,8 @@ import {
   findFreeSlotBeforeDueDate,
   loadAccountTaskAutomationSettings,
 } from '~/lib/recorder/task-automation-settings';
+import { loadWorkspaceSchedulingSettingsForUser } from '~/lib/workspace-focus/load-workspace-focus-settings';
+import { getWorkWindowForYmd } from '~/lib/workspace-focus';
 
 export type SchedulePublishedTaskInput = {
   accountId: string;
@@ -54,25 +56,28 @@ export async function findFreeSlotBeforeDueDateForTask(
     return { status: 'skipped', reason: 'no_due_date' };
   }
 
-  const settings = await loadAccountTaskAutomationSettings(admin, input.accountId);
+  const [settings, scheduling] = await Promise.all([
+    loadAccountTaskAutomationSettings(admin, input.accountId),
+    loadWorkspaceSchedulingSettingsForUser(
+      admin,
+      input.accountId,
+      input.assigneeUserId,
+    ),
+  ]);
 
   if (!settings.autoScheduleOnCalendar) {
     return { status: 'skipped', reason: 'auto_schedule_disabled' };
   }
 
+  const dueYmd = input.dueDate.trim();
+  const dueWindow = getWorkWindowForYmd(dueYmd, scheduling);
+  if (!dueWindow) {
+    return { status: 'failed', reason: 'invalid_due_date' };
+  }
+
   const now = new Date();
-  const dueParts = input.dueDate.trim().split('-').map(Number);
-  const dueDay = new Date(dueParts[0]!, dueParts[1]! - 1, dueParts[2]!);
   const searchStart = now.toISOString();
-  const searchEnd = new Date(
-    dueDay.getFullYear(),
-    dueDay.getMonth(),
-    dueDay.getDate(),
-    23,
-    59,
-    59,
-    999,
-  ).toISOString();
+  const searchEnd = new Date(dueWindow.endMs).toISOString();
 
   const busyIso = await listBusyIntervalsForScheduling(admin, {
     userId: input.assigneeUserId,
@@ -82,10 +87,12 @@ export async function findFreeSlotBeforeDueDateForTask(
   });
 
   const slot = findFreeSlotBeforeDueDate({
-    dueDateYmd: input.dueDate.trim(),
+    dueDateYmd: dueYmd,
     leadTimeMinutes: settings.calendarLeadTimeMinutes,
-    workingHoursStart: settings.workingHoursStart,
-    workingHoursEnd: settings.workingHoursEnd,
+    workingHoursStart: scheduling.work_start_time,
+    workingHoursEnd: scheduling.work_end_time,
+    workDays: scheduling.work_days,
+    timezone: scheduling.timezone,
     busyIntervals: busyIntervalsFromIso(busyIso),
   });
 

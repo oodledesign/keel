@@ -26,7 +26,11 @@ import {
 const PULL_THRESHOLD = 72;
 const MAX_PULL = 112;
 const REFRESH_HOLD = 48;
-const REFRESH_COOLDOWN_MS = 3000;
+const REFRESH_COOLDOWN_MS = 5000;
+
+/** Survives PullToRefresh remounts during layout Suspense/refresh cycles. */
+let lastGlobalRefreshAt = 0;
+let globalRefreshInFlight = false;
 
 type PullToRefreshProps = {
   children: ReactNode;
@@ -46,7 +50,6 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
   const pullingRef = useRef(false);
   const pullDistanceRef = useRef(0);
   const refreshingRef = useRef(false);
-  const lastRefreshAtRef = useRef(0);
 
   const [pullDistance, setPullDistanceState] = useState(0);
   const [refreshing, setRefreshingState] = useState(false);
@@ -71,21 +74,23 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
   const contentOffset = refreshing ? REFRESH_HOLD : pullDistance;
 
   const handleRefresh = useCallback(() => {
-    if (refreshingRef.current) return;
+    if (refreshingRef.current || globalRefreshInFlight) return;
 
     const now = Date.now();
-    if (now - lastRefreshAtRef.current < REFRESH_COOLDOWN_MS) {
+    if (now - lastGlobalRefreshAt < REFRESH_COOLDOWN_MS) {
       setPullDistance(0);
       return;
     }
 
-    lastRefreshAtRef.current = now;
+    lastGlobalRefreshAt = now;
+    globalRefreshInFlight = true;
     setRefreshing(true);
     setPullDistance(REFRESH_HOLD);
     triggerHapticFeedback(10);
     router.refresh();
 
     window.setTimeout(() => {
+      globalRefreshInFlight = false;
       setRefreshing(false);
       setPullDistance(0);
     }, 700);

@@ -2,7 +2,11 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { WorkspaceFocusInput } from '~/lib/workspace-focus';
+import type {
+  WorkspaceFocusInput,
+  WorkspaceSchedulingSettings,
+} from '~/lib/workspace-focus';
+import { resolveWorkspaceSchedulingSettings } from '~/lib/workspace-focus';
 
 const FOCUS_SETTINGS_COLUMNS =
   'account_id, silence_outside_hours, work_days, work_start_time, work_end_time, timezone, holiday_mode_enabled, holiday_mode_label, holiday_mode_until, ooo_enabled, ooo_trigger, ooo_message, ooo_holiday_message, ooo_sender_name, ooo_cc_email, ooo_include_return_date';
@@ -76,4 +80,18 @@ export async function loadWorkspaceFocusSettingsForAccount(
 ): Promise<WorkspaceFocusInput | null> {
   const map = await loadWorkspaceFocusSettingsMap(client, userId, [accountId]);
   return map.get(accountId) ?? null;
+}
+
+export async function loadWorkspaceSchedulingSettingsForUser(
+  client: SupabaseClient,
+  accountId: string,
+  userId: string,
+): Promise<WorkspaceSchedulingSettings> {
+  const settings = await loadWorkspaceFocusSettingsForAccount(
+    client,
+    userId,
+    accountId,
+  );
+
+  return resolveWorkspaceSchedulingSettings(settings);
 }

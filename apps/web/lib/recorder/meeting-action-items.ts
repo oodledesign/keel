@@ -13,6 +13,8 @@ import {
   extractMeetingActionItems,
   type MeetingExtractedActionItem,
 } from '~/lib/recorder/meeting-action-items-extract';
+import { snapDueDateYmd } from '~/lib/workspace-focus';
+import { loadWorkspaceSchedulingSettingsForUser } from '~/lib/workspace-focus/load-workspace-focus-settings';
 
 export type MeetingActionItemJobInput = {
   meetingTranscriptId: string;
@@ -80,13 +82,16 @@ function mapExtractedItemToRow(
   input: MeetingActionItemJobInput,
   members: Awaited<ReturnType<typeof loadAccountMembersForExtraction>>,
   recorderEmail: string,
+  scheduling: Awaited<ReturnType<typeof loadWorkspaceSchedulingSettingsForUser>>,
 ) {
   return {
     meeting_transcript_id: input.meetingTranscriptId,
     account_id: input.accountId,
     suggested_title: item.suggestedTitle,
     suggested_description: item.suggestedDescription,
-    suggested_due_date: item.suggestedDueDate,
+    suggested_due_date: item.suggestedDueDate
+      ? snapDueDateYmd(item.suggestedDueDate, scheduling)
+      : null,
     source_excerpt: item.sourceExcerpt,
     assignee_confidence: item.assigneeConfidence,
     suggested_assignee_id: resolveSuggestedAssigneeId(
@@ -115,6 +120,11 @@ export async function extractAndPersistMeetingActionItems(
   }
 
   const members = await loadAccountMembersForExtraction(admin, input.accountId);
+  const scheduling = await loadWorkspaceSchedulingSettingsForUser(
+    admin,
+    input.accountId,
+    input.createdByUserId,
+  );
 
   const extracted = await extractMeetingActionItems({
     title: input.title,
@@ -143,7 +153,7 @@ export async function extractAndPersistMeetingActionItems(
   }
 
   const rows = filtered.map((item) =>
-    mapExtractedItemToRow(item, input, members, recorder.email),
+    mapExtractedItemToRow(item, input, members, recorder.email, scheduling),
   );
 
   const { error } = await admin.from('meeting_action_items').insert(rows);

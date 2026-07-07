@@ -35,7 +35,6 @@ import {
   userRequiresWorkspaceSetup,
   workspaceSetupPath,
 } from '~/lib/server/workspace-setup-guard';
-import { TeamWorkspaceShellAdornmentsSuspense } from './_components/team-workspace-shell-adornments-suspense';
 
 type TeamWorkspaceLayoutProps = React.PropsWithChildren<{
   params: Promise<{ account: string }>;
@@ -116,58 +115,35 @@ async function SidebarLayout({
 
   const access = getTeamAccountAccess(accountAccess);
   const homePath = pathsConfig.app.accountHome.replace('[account]', account);
+  const adornments = await loadTeamWorkspaceShellAdornments({
+    client,
+    userId: user.id,
+    accountId,
+    accountSlug: account,
+    moduleSettings: data.moduleSettings,
+    focusAccountIds,
+  });
 
   return (
     <TeamAccountWorkspaceContextProvider value={data}>
-      <TeamWorkspaceShellAdornmentsSuspense
-        client={client}
-        userId={user.id}
+      <TeamWorkspaceSidebarShell
+        account={account}
         accountId={accountId}
-        accountSlug={account}
+        user={data.user}
+        accounts={accounts}
         moduleSettings={data.moduleSettings}
-        focusAccountIds={focusAccountIds}
-        fallback={
-          <TeamWorkspaceSidebarShell
-            account={account}
-            accountId={accountId}
-            user={data.user}
-            accounts={accounts}
-            moduleSettings={data.moduleSettings}
-            workspaceProfile={workspaceProfile}
-            accountAccess={accountAccess}
-            navCounts={{}}
-            mobileNavShortcuts={[]}
-            focusSettingsByAccountId={{}}
-            layoutState={layoutState}
-            showNewMenu={access.canUseQuickCreate}
-            homePath={homePath}
-          >
-            <TeamWorkspaceTopBarClient accountSlug={account} />
-            {children}
-          </TeamWorkspaceSidebarShell>
-        }
+        workspaceProfile={workspaceProfile}
+        accountAccess={accountAccess}
+        navCounts={adornments.navCounts}
+        mobileNavShortcuts={adornments.mobileNavShortcuts}
+        focusSettingsByAccountId={adornments.focusSettingsByAccountId}
+        layoutState={layoutState}
+        showNewMenu={access.canUseQuickCreate}
+        homePath={homePath}
       >
-        {(adornments) => (
-          <TeamWorkspaceSidebarShell
-            account={account}
-            accountId={accountId}
-            user={data.user}
-            accounts={accounts}
-            moduleSettings={data.moduleSettings}
-            workspaceProfile={workspaceProfile}
-            accountAccess={accountAccess}
-            navCounts={adornments.navCounts}
-            mobileNavShortcuts={adornments.mobileNavShortcuts}
-            focusSettingsByAccountId={adornments.focusSettingsByAccountId}
-            layoutState={layoutState}
-            showNewMenu={access.canUseQuickCreate}
-            homePath={homePath}
-          >
-            <TeamWorkspaceTopBarClient accountSlug={account} />
-            {children}
-          </TeamWorkspaceSidebarShell>
-        )}
-      </TeamWorkspaceShellAdornmentsSuspense>
+        <TeamWorkspaceTopBarClient accountSlug={account} />
+        {children}
+      </TeamWorkspaceSidebarShell>
     </TeamAccountWorkspaceContextProvider>
   );
 }

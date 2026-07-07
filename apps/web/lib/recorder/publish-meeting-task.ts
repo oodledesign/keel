@@ -2,7 +2,11 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+
 import { schedulePublishedTaskIfEnabled } from '~/lib/recorder/schedule-published-task';
+import { snapDueDateYmd } from '~/lib/workspace-focus';
+import { loadWorkspaceSchedulingSettingsForUser } from '~/lib/workspace-focus/load-workspace-focus-settings';
 
 export {
   HIGH_CONFIDENCE_ASSIGNEE_THRESHOLD,
@@ -123,6 +127,13 @@ export async function publishMeetingTaskToPlanner(
 
   await assertAssigneeIsMember(client, input.accountId, assigneeId);
 
+  const admin = getSupabaseServerAdminClient();
+  const scheduling = await loadWorkspaceSchedulingSettingsForUser(
+    admin,
+    input.accountId,
+    assigneeId,
+  );
+
   const title = input.title?.trim() || item.suggested_title.trim();
   if (!title) {
     throw new Error('Task title is required');
@@ -132,8 +143,12 @@ export async function publishMeetingTaskToPlanner(
     input.description !== undefined
       ? input.description
       : item.suggested_description;
-  const dueDate =
-    input.dueDate !== undefined ? input.dueDate : item.suggested_due_date;
+  const dueDateWasExplicit = input.dueDate !== undefined;
+  let dueDate =
+    dueDateWasExplicit ? input.dueDate : item.suggested_due_date;
+  if (dueDate && !dueDateWasExplicit) {
+    dueDate = snapDueDateYmd(dueDate, scheduling);
+  }
 
   const transcript = item.meeting_transcripts;
   const clientId = transcript?.client_id ?? null;

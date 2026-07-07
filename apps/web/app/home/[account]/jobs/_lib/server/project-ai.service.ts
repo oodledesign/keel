@@ -12,6 +12,8 @@ import {
   type ProjectSourceBlock,
 } from '~/lib/ai/project-content-generate';
 import { Database } from '~/lib/database.types';
+import { adjustPhasePlanDates } from '~/lib/workspace-focus';
+import { loadWorkspaceSchedulingSettingsForUser } from '~/lib/workspace-focus/load-workspace-focus-settings';
 
 import type {
   ApplyProjectPhasePlanInput,
@@ -361,9 +363,17 @@ class ProjectAiService {
         };
       }
 
+      const scheduling = await loadWorkspaceSchedulingSettingsForUser(
+        this.db,
+        input.accountId,
+        user.id,
+      );
+
       return {
         mode: 'phase_plan' as const,
-        plan: result.plan,
+        plan: {
+          phases: adjustPhasePlanDates(result.plan.phases, scheduling),
+        },
         contextRefs,
       };
     }
@@ -442,6 +452,12 @@ class ProjectAiService {
   async applyProjectPhasePlan(input: ApplyProjectPhasePlanInput) {
     const user = await this.ensureUserAndJobsEdit(input.accountId);
     const ctx = await this.getJobContext(input.accountId, input.jobId);
+    const scheduling = await loadWorkspaceSchedulingSettingsForUser(
+      this.db,
+      input.accountId,
+      user.id,
+    );
+    const phases = adjustPhasePlanDates(input.phases, scheduling);
 
     const [{ data: existingPhases }, { data: existingTasks }] = await Promise.all([
       this.db
@@ -492,7 +508,7 @@ class ProjectAiService {
 
     const planSummaryLines: string[] = [];
 
-    for (const [index, phaseInput] of input.phases.entries()) {
+    for (const [index, phaseInput] of phases.entries()) {
       const { data: phase, error: phaseErr } = await this.db
         .from('project_phases')
         .insert({

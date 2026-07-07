@@ -3,6 +3,11 @@ import { isNoteEditorRoute } from './is-note-editor-route';
 
 const MOBILE_MAX_WIDTH = 1023;
 
+/** Workspace dashboard home, e.g. /app/oodle — disable pull-to-refresh to avoid refresh loops. */
+export function isWorkspaceDashboardHome(pathname: string): boolean {
+  return /^\/app\/[^/]+\/?$/.test(pathname);
+}
+
 let currentPathname =
   typeof window !== 'undefined' ? window.location.pathname : '';
 
@@ -42,6 +47,10 @@ export function isPullToRefreshEnabled(): boolean {
   }
 
   if (isNoteEditorRoute(currentPathname)) {
+    return false;
+  }
+
+  if (isWorkspaceDashboardHome(currentPathname)) {
     return false;
   }
 

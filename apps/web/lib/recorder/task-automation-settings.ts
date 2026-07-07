@@ -2,6 +2,14 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import {
+  getWorkWindowForYmd,
+  isWorkingDayYmd,
+  iterateYmdRange,
+  type WorkspaceSchedulingSettings,
+  ymdFromMs,
+} from '~/lib/workspace-focus';
+
 export type AccountTaskAutomationSettings = {
   accountId: string;
   meetingTasksMode: 'auto_publish' | 'requires_moderation';
@@ -120,6 +128,8 @@ export type FindFreeSlotInput = {
   leadTimeMinutes: number;
   workingHoursStart: string;
   workingHoursEnd: string;
+  workDays?: number[];
+  timezone?: string;
   slotDurationMinutes?: number;
   busyIntervals: BusyInterval[];
 };
@@ -129,31 +139,19 @@ export type FreeSlotResult = {
   end: Date;
 } | null;
 
-function startOfLocalDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
-}
-
-function withLocalTime(date: Date, minutesFromMidnight: number): Date {
-  const hours = Math.floor(minutesFromMidnight / 60);
-  const minutes = minutesFromMidnight % 60;
-  return new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
-    hours,
-    minutes,
-    0,
-    0,
-  );
-}
-
 function overlaps(aStart: number, aEnd: number, bStart: number, bEnd: number): boolean {
   return aStart < bEnd && bStart < aEnd;
 }
 
-function isWeekend(date: Date): boolean {
-  const day = date.getDay();
-  return day === 0 || day === 6;
+function resolveSlotSchedulingSettings(
+  input: FindFreeSlotInput,
+): WorkspaceSchedulingSettings {
+  return {
+    work_days: input.workDays ?? [1, 2, 3, 4, 5],
+    work_start_time: input.workingHoursStart,
+    work_end_time: input.workingHoursEnd,
+    timezone: input.timezone ?? 'Europe/London',
+  };
 }
 
 export function findFreeSlotBeforeDueDate(
@@ -163,6 +161,7 @@ export function findFreeSlotBeforeDueDate(
   const slotDurationMinutes = input.slotDurationMinutes ?? 30;
   const slotDurationMs = slotDurationMinutes * 60 * 1000;
   const leadTimeMs = input.leadTimeMinutes * 60 * 1000;
+  const scheduling = resolveSlotSchedulingSettings(input);
   const workStartMinutes = parseTimeToMinutes(input.workingHoursStart);
   const workEndMinutes = parseTimeToMinutes(input.workingHoursEnd);
 
@@ -170,36 +169,36 @@ export function findFreeSlotBeforeDueDate(
     return null;
   }
 
-  const dueParts = input.dueDateYmd.split('-').map(Number);
-  if (dueParts.length !== 3 || dueParts.some((part) => Number.isNaN(part))) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.dueDateYmd)) {
     return null;
   }
 
-  const dueDay = new Date(dueParts[0]!, dueParts[1]! - 1, dueParts[2]!, 23, 59, 59, 999);
-  const latestEndMs = dueDay.getTime() - leadTimeMs;
+  const dueWindow = getWorkWindowForYmd(input.dueDateYmd, scheduling);
+  if (!dueWindow) {
+    return null;
+  }
+
+  const latestEndMs = dueWindow.endMs - leadTimeMs;
   if (latestEndMs <= nowMs) {
     return null;
   }
 
-  const dueIsWeekend = isWeekend(dueDay);
-  const searchStartDay = startOfLocalDay(new Date(nowMs));
-  const searchEndDay = startOfLocalDay(dueDay);
+  const startYmd = ymdFromMs(nowMs, scheduling.timezone);
+  const dayRange = iterateYmdRange(startYmd, input.dueDateYmd);
 
-  for (
-    let day = new Date(searchStartDay);
-    day.getTime() <= searchEndDay.getTime();
-    day.setDate(day.getDate() + 1)
-  ) {
-    const dayDate = new Date(day);
-    if (isWeekend(dayDate) && !dueIsWeekend) {
+  for (const dayYmd of dayRange) {
+    if (!isWorkingDayYmd(dayYmd, scheduling)) {
       continue;
     }
 
-    const dayWorkStart = withLocalTime(dayDate, workStartMinutes);
-    const dayWorkEnd = withLocalTime(dayDate, workEndMinutes);
-    let cursorStartMs = Math.max(dayWorkStart.getTime(), nowMs);
+    const window = getWorkWindowForYmd(dayYmd, scheduling);
+    if (!window) {
+      continue;
+    }
 
-    while (cursorStartMs + slotDurationMs <= dayWorkEnd.getTime()) {
+    let cursorStartMs = Math.max(window.startMs, nowMs);
+
+    while (cursorStartMs + slotDurationMs <= window.endMs) {
       const slotStartMs = cursorStartMs;
       const slotEndMs = cursorStartMs + slotDurationMs;
 

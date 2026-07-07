@@ -360,6 +360,206 @@ function computeStatus(
   };
 }
 
+export type WorkspaceSchedulingSettings = Pick<
+  WorkspaceFocusInput,
+  'work_days' | 'work_start_time' | 'work_end_time' | 'timezone'
+>;
+
+export const DEFAULT_WORKSPACE_SCHEDULING: WorkspaceSchedulingSettings = {
+  work_days: [1, 2, 3, 4, 5],
+  work_start_time: '09:00',
+  work_end_time: '17:30',
+  timezone: 'Europe/London',
+};
+
+export function resolveWorkspaceSchedulingSettings(
+  settings: WorkspaceFocusInput | null | undefined,
+): WorkspaceSchedulingSettings {
+  if (!settings) {
+    return DEFAULT_WORKSPACE_SCHEDULING;
+  }
+
+  return {
+    work_days:
+      settings.work_days.length > 0
+        ? settings.work_days
+        : DEFAULT_WORKSPACE_SCHEDULING.work_days,
+    work_start_time:
+      settings.work_start_time || DEFAULT_WORKSPACE_SCHEDULING.work_start_time,
+    work_end_time:
+      settings.work_end_time || DEFAULT_WORKSPACE_SCHEDULING.work_end_time,
+    timezone: settings.timezone || DEFAULT_WORKSPACE_SCHEDULING.timezone,
+  };
+}
+
+export function ymdFromMs(ms: number, timezone: string): string {
+  const parts = getZonedParts(new Date(ms), timezone);
+  const month = String(parts.month).padStart(2, '0');
+  const day = String(parts.day).padStart(2, '0');
+  return `${parts.year}-${month}-${day}`;
+}
+
+export function addDaysToYmd(ymd: string, days: number): string {
+  const parts = ymd.split('-').map(Number);
+  if (parts.length !== 3 || parts.some((part) => Number.isNaN(part))) {
+    return ymd;
+  }
+
+  const date = new Date(Date.UTC(parts[0]!, parts[1]! - 1, parts[2]!));
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+export function compareYmd(a: string, b: string): number {
+  return a.localeCompare(b);
+}
+
+export function getWeekdayForYmd(
+  ymd: string,
+  timezone: string,
+): number | null {
+  const parts = ymd.split('-').map(Number);
+  if (parts.length !== 3 || parts.some((part) => Number.isNaN(part))) {
+    return null;
+  }
+
+  const probe = makeZonedDateTime(
+    parts[0]!,
+    parts[1]!,
+    parts[2]!,
+    '12:00',
+    timezone,
+  );
+
+  return getZonedParts(probe, timezone).weekday;
+}
+
+export function isWorkingDayYmd(
+  ymd: string,
+  settings: WorkspaceSchedulingSettings,
+): boolean {
+  const weekday = getWeekdayForYmd(ymd, settings.timezone);
+  if (weekday === null) {
+    return false;
+  }
+
+  return settings.work_days.includes(weekday);
+}
+
+export function getWorkWindowForYmd(
+  ymd: string,
+  settings: WorkspaceSchedulingSettings,
+): { startMs: number; endMs: number } | null {
+  const parts = ymd.split('-').map(Number);
+  if (parts.length !== 3 || parts.some((part) => Number.isNaN(part))) {
+    return null;
+  }
+
+  const start = makeZonedDateTime(
+    parts[0]!,
+    parts[1]!,
+    parts[2]!,
+    settings.work_start_time,
+    settings.timezone,
+  );
+  const end = makeZonedDateTime(
+    parts[0]!,
+    parts[1]!,
+    parts[2]!,
+    settings.work_end_time,
+    settings.timezone,
+  );
+
+  return { startMs: start.getTime(), endMs: end.getTime() };
+}
+
+export function iterateYmdRange(fromYmd: string, toYmd: string): string[] {
+  if (compareYmd(fromYmd, toYmd) > 0) {
+    return [];
+  }
+
+  const days: string[] = [];
+  let current = fromYmd;
+
+  while (compareYmd(current, toYmd) <= 0) {
+    days.push(current);
+    current = addDaysToYmd(current, 1);
+    if (days.length > 366) {
+      break;
+    }
+  }
+
+  return days;
+}
+
+export function snapDueDateYmd(
+  ymd: string,
+  settings: WorkspaceSchedulingSettings,
+): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
+    return ymd;
+  }
+
+  if (isWorkingDayYmd(ymd, settings)) {
+    return ymd;
+  }
+
+  for (let offset = 1; offset <= 7; offset += 1) {
+    const candidate = addDaysToYmd(ymd, -offset);
+    if (isWorkingDayYmd(candidate, settings)) {
+      return candidate;
+    }
+  }
+
+  return ymd;
+}
+
+export function snapStartDateYmd(
+  ymd: string,
+  settings: WorkspaceSchedulingSettings,
+): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
+    return ymd;
+  }
+
+  if (isWorkingDayYmd(ymd, settings)) {
+    return ymd;
+  }
+
+  for (let offset = 1; offset <= 7; offset += 1) {
+    const candidate = addDaysToYmd(ymd, offset);
+    if (isWorkingDayYmd(candidate, settings)) {
+      return candidate;
+    }
+  }
+
+  return ymd;
+}
+
+export function adjustPhasePlanDates<
+  T extends {
+    start_date?: string | null;
+    due_date?: string | null;
+    tasks?: Array<{ due_date?: string | null }>;
+  },
+>(phases: T[], settings: WorkspaceSchedulingSettings): T[] {
+  return phases.map((phase) => ({
+    ...phase,
+    start_date: phase.start_date
+      ? snapStartDateYmd(phase.start_date, settings)
+      : phase.start_date,
+    due_date: phase.due_date
+      ? snapDueDateYmd(phase.due_date, settings)
+      : phase.due_date,
+    tasks: phase.tasks?.map((task) => ({
+      ...task,
+      due_date: task.due_date
+        ? snapDueDateYmd(task.due_date, settings)
+        : task.due_date,
+    })),
+  }));
+}
+
 export function computeWorkspaceFocusState(
   settings: WorkspaceFocusInput | null,
   now: Date,
