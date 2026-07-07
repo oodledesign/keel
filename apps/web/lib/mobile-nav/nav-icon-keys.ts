@@ -3,6 +3,7 @@ import {
   navHrefPathname,
   normalizeAppHref,
 } from '~/lib/dashboard-shortcuts/personal-home-url';
+import { isReservedWorkspaceUrlSegment } from '@kit/shared/workspace-url';
 
 /** Serializable icon keys for mobile bottom nav (resolved client-side). */
 export type MobileNavIconKey =
@@ -137,6 +138,36 @@ function normalizeNavPath(path: string): string {
   return navHrefPathname(path);
 }
 
+type WorkspaceRouteParts = {
+  moduleKey?: string;
+  subPath: string[];
+};
+
+/** Parse `/app/{slug}/…` and legacy `/app/work/{slug}/…` workspace module paths. */
+function parseWorkspaceRouteParts(normalized: string): WorkspaceRouteParts | null {
+  const parts = normalized.split('/').filter(Boolean);
+  if (parts[0] !== 'app') return null;
+
+  let moduleIndex = 2;
+
+  // Legacy: /app/work/{slug}/{module}/…
+  if (parts[1] === 'work' && parts.length >= 4) {
+    moduleIndex = 3;
+  } else if (parts.length < 3) {
+    return null;
+  } else if (isReservedWorkspaceUrlSegment(parts[1]!)) {
+    return null;
+  }
+
+  const moduleKey = parts[moduleIndex]?.split('?')[0];
+  if (!moduleKey) return null;
+
+  return {
+    moduleKey,
+    subPath: parts.slice(moduleIndex + 1),
+  };
+}
+
 export function resolveMobileNavIconKey(
   path: string,
   options?: { homePath?: string; preferredKey?: string },
@@ -184,20 +215,14 @@ export function resolveNavIconKey(path: string): MobileNavIconKey {
     return 'planner';
   }
 
-  if (
-    parts.length >= 4 &&
-    parts[2] === 'planner' &&
-    parts[3] === 'day'
-  ) {
-    return 'today';
-  }
-
-  if (
-    parts.length >= 4 &&
-    parts[2] === 'planner' &&
-    parts[3] === 'plan'
-  ) {
-    return 'planner';
+  const workspaceRoute = parseWorkspaceRouteParts(normalized);
+  if (workspaceRoute?.moduleKey === 'planner') {
+    if (workspaceRoute.subPath[0] === 'day') {
+      return 'today';
+    }
+    if (workspaceRoute.subPath[0] === 'plan') {
+      return 'planner';
+    }
   }
 
   if (normalized === normalizeNavPath(pathsConfig.app.personalEmailAssistant)) {
@@ -211,9 +236,8 @@ export function resolveNavIconKey(path: string): MobileNavIconKey {
     return 'workspace';
   }
 
-  if (parts.length >= 3) {
-    const moduleKey = parts[2]!.split('?')[0]!;
-    const workspace = WORKSPACE_SEGMENT_KEYS[moduleKey];
+  if (workspaceRoute?.moduleKey) {
+    const workspace = WORKSPACE_SEGMENT_KEYS[workspaceRoute.moduleKey];
     if (workspace) return workspace;
   }
 

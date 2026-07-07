@@ -52,5 +52,13 @@ export function normalizeAppHref(href: string): string {
     return `${pathsConfig.app.home}/${path.slice('/home/'.length)}${suffix}`;
   }
 
+  // Legacy workspace URLs used `/app/work/{slug}/…` before canonical `/app/{slug}/…`.
+  const legacyWorkMatch = path.match(/^\/app\/work\/([^/]+)(\/.*)?$/);
+  if (legacyWorkMatch) {
+    const slug = legacyWorkMatch[1];
+    const rest = legacyWorkMatch[2] ?? '';
+    return `/app/${slug}${rest}${suffix}`;
+  }
+
   return trimmed;
 }

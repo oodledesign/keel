@@ -184,11 +184,7 @@ async function loadDashboardPageDataImpl(
 
   const [
     activeJobsResult,
-    activeProjectsCountResult,
-    completedJobsCountResult,
-    inProgressJobsCountResult,
-    pendingJobsCountResult,
-    overdueJobsCountResult,
+    projectStatusResult,
     clientsCountResult,
     teamMembersResult,
     recentInvoicesResult,
@@ -196,8 +192,8 @@ async function loadDashboardPageDataImpl(
     hoursJobsResult,
     financeMonthResult,
     financeTrendResult,
-    projectsResult,
     notesResult,
+    upcomingTasksResult,
   ] = await Promise.all([
     client
       .from('projects')
@@ -215,35 +211,9 @@ async function loadDashboardPageDataImpl(
       .range(0, 4),
     client
       .from('projects')
-      .select('id', { count: 'exact', head: true })
+      .select('status, due_date')
       .eq('account_id', accountId)
-      .eq('project_type', 'delivery')
-      .in('status', ['pending', 'in_progress']),
-    client
-      .from('projects')
-      .select('id', { count: 'exact', head: true })
-      .eq('account_id', accountId)
-      .eq('project_type', 'delivery')
-      .eq('status', 'completed'),
-    client
-      .from('projects')
-      .select('id', { count: 'exact', head: true })
-      .eq('account_id', accountId)
-      .eq('project_type', 'delivery')
-      .eq('status', 'in_progress'),
-    client
-      .from('projects')
-      .select('id', { count: 'exact', head: true })
-      .eq('account_id', accountId)
-      .eq('project_type', 'delivery')
-      .eq('status', 'pending'),
-    client
-      .from('projects')
-      .select('id', { count: 'exact', head: true })
-      .eq('account_id', accountId)
-      .eq('project_type', 'delivery')
-      .lt('due_date', todayIso)
-      .not('status', 'in', '("completed","cancelled")'),
+      .eq('project_type', 'delivery'),
     client
       .from('clients')
       .select('id', { count: 'exact', head: true })
@@ -284,11 +254,6 @@ async function loadDashboardPageDataImpl(
       .gte('transaction_date', financeTrendStartIso)
       .order('transaction_date', { ascending: true }),
     client
-      .from('projects')
-      .select('id, name, title')
-      .eq('account_id', accountId)
-      .eq('project_type', 'delivery'),
-    client
       .from('notes')
       .select(
         'id, title, content, updated_at, client_id, client_org_id, project_id, clients(display_name), client_orgs(name), projects(name, title)',
@@ -296,6 +261,16 @@ async function loadDashboardPageDataImpl(
       .eq('account_id', accountId)
       .order('updated_at', { ascending: false })
       .limit(8),
+    client
+      .from('tasks')
+      .select(
+        'id, title, status, due_date, project_id, client_id, projects(name, title), clients(display_name, first_name, last_name)',
+      )
+      .eq('account_id', accountId)
+      .is('parent_task_id', null)
+      .not('status', 'eq', 'done')
+      .order('due_date', { ascending: true, nullsFirst: false })
+      .limit(4),
   ]);
 
   const jobsUnavailable = isTableMissingFromApi(activeJobsResult.error);
@@ -322,9 +297,23 @@ async function loadDashboardPageDataImpl(
     );
   }
 
-  const activeProjectsCount = jobsUnavailable
-    ? 0
-    : (activeProjectsCountResult.count ?? 0);
+  const projectStatusSummary = jobsUnavailable
+    ? {
+        completed: 0,
+        inProgress: 0,
+        pending: 0,
+        overdue: 0,
+        activeProjects: 0,
+      }
+    : summarizeProjectStatuses(
+        (projectStatusResult.data ?? []) as Array<{
+          status: string;
+          due_date: string | null;
+        }>,
+        todayIso,
+      );
+
+  const activeProjectsCount = projectStatusSummary.activeProjects;
   const activeJobsList: DashboardJobSummary[] = (
     jobsUnavailable ? [] : (activeJobsResult.data ?? [])
   ).map((row: any) => ({
@@ -336,19 +325,12 @@ async function loadDashboardPageDataImpl(
     dueDate: (row.due_date as string | null) ?? null,
   }));
 
-  const completed = jobsUnavailable
-    ? 0
-    : (completedJobsCountResult.count ?? 0);
-  const inProgress = jobsUnavailable
-    ? 0
-    : (inProgressJobsCountResult.count ?? 0);
-  const pending = jobsUnavailable
-    ? 0
-    : (pendingJobsCountResult.count ?? 0);
-  const overdue = jobsUnavailable
-    ? 0
-    : (overdueJobsCountResult.count ?? 0);
-  const totalClients = clientsCountResult.count ?? 0;
+  const statusSummary: DashboardStatusSummary = {
+    completed: projectStatusSummary.completed,
+    inProgress: projectStatusSummary.inProgress,
+    pending: projectStatusSummary.pending,
+    overdue: projectStatusSummary.overdue,
+  };
 
   const totalRevenuePence = invoicesUnavailable
     ? 0
@@ -398,6 +380,8 @@ async function loadDashboardPageDataImpl(
           10,
       ) / 10;
 
+  const totalClients = clientsCountResult.count ?? 0;
+
   const metrics: DashboardMetrics = {
     totalRevenuePence,
     financeIncomePence,
@@ -407,13 +391,6 @@ async function loadDashboardPageDataImpl(
     activeProjects: activeProjectsCount,
     totalClients,
     hoursLogged,
-  };
-
-  const statusSummary: DashboardStatusSummary = {
-    completed,
-    inProgress,
-    pending,
-    overdue,
   };
 
   const orderedRoles: string[] = [
@@ -471,64 +448,18 @@ async function loadDashboardPageDataImpl(
         };
       });
 
-  const projectRows = (projectsResult.data ?? []) as Array<{
-    id: string;
-    name?: string | null;
-    title?: string | null;
-  }>;
-  const projectIds = projectRows.map((p) => p.id);
-  const projectNameMap = new Map(
-    projectRows.map((p) => [
-      p.id,
-      p.title?.trim() || p.name?.trim() || 'Project',
-    ]),
-  );
-
-  const { data: clientRowsForTasks } = await client
-    .from('clients')
-    .select('id, display_name, first_name, last_name')
-    .eq('account_id', accountId);
-  const clientIds = (clientRowsForTasks ?? []).map((c) => c.id as string);
-  const clientNameMap = new Map(
-    (clientRowsForTasks ?? []).map((c) => [
-      c.id as string,
-      (c.display_name as string | null) ??
-        ([c.first_name, c.last_name].filter(Boolean).join(' ') || 'Client'),
-    ]),
-  );
-
-  let upcomingTasks: DashboardTaskSummary[] = [];
-  const taskScopeFilters: string[] = [`account_id.eq.${accountId}`];
-  if (projectIds.length > 0) {
-    taskScopeFilters.push(`project_id.in.(${projectIds.join(',')})`);
-  }
-  if (clientIds.length > 0) {
-    taskScopeFilters.push(`client_id.in.(${clientIds.join(',')})`);
-  }
-
-  const { data: taskRows, error: tasksError } = await client
-    .from('tasks')
-    .select('id, title, status, due_date, project_id, client_id')
-    .or(taskScopeFilters.join(','))
-    .is('parent_task_id', null)
-    .not('status', 'eq', 'done')
-    .order('due_date', { ascending: true, nullsFirst: false })
-    .limit(4);
+  const { data: taskRows, error: tasksError } = upcomingTasksResult;
 
   if (!isTableMissingFromApi(tasksError) && tasksError) {
     throw tasksError;
   }
 
-  upcomingTasks = (taskRows ?? []).map((t) => ({
+  const upcomingTasks: DashboardTaskSummary[] = (taskRows ?? []).map((t) => ({
     id: t.id as string,
     title: (t.title as string | null) ?? 'Untitled task',
     dueDate: toIsoDateString(t.due_date as string | null | undefined),
     status: (t.status as string | null) ?? 'todo',
-    projectName: t.project_id
-      ? (projectNameMap.get(t.project_id as string) ?? null)
-      : t.client_id
-        ? (clientNameMap.get(t.client_id as string) ?? null)
-        : null,
+    projectName: resolveTaskContextName(t),
   }));
 
   const accountName =
@@ -553,5 +484,81 @@ async function loadDashboardPageDataImpl(
       role: m.role,
     })),
   };
+}
+
+function summarizeProjectStatuses(
+  rows: Array<{ status: string; due_date: string | null }>,
+  todayIso: string,
+): DashboardStatusSummary & { activeProjects: number } {
+  let completed = 0;
+  let inProgress = 0;
+  let pending = 0;
+  let overdue = 0;
+
+  for (const row of rows) {
+    const status = (row.status ?? 'pending').toLowerCase();
+
+    if (status === 'completed') {
+      completed += 1;
+    } else if (status === 'in_progress') {
+      inProgress += 1;
+    } else if (status === 'pending') {
+      pending += 1;
+    }
+
+    if (
+      row.due_date &&
+      row.due_date < todayIso &&
+      status !== 'completed' &&
+      status !== 'cancelled'
+    ) {
+      overdue += 1;
+    }
+  }
+
+  return {
+    completed,
+    inProgress,
+    pending,
+    overdue,
+    activeProjects: inProgress + pending,
+  };
+}
+
+function resolveTaskContextName(task: {
+  projects?:
+    | { name?: string | null; title?: string | null }
+    | Array<{ name?: string | null; title?: string | null }>
+    | null;
+  clients?:
+    | {
+        display_name?: string | null;
+        first_name?: string | null;
+        last_name?: string | null;
+      }
+    | Array<{
+        display_name?: string | null;
+        first_name?: string | null;
+        last_name?: string | null;
+      }>
+    | null;
+}): string | null {
+  const project = Array.isArray(task.projects)
+    ? task.projects[0]
+    : task.projects;
+  if (project) {
+    return project.title?.trim() || project.name?.trim() || 'Project';
+  }
+
+  const client = Array.isArray(task.clients) ? task.clients[0] : task.clients;
+  if (client) {
+    return (
+      client.display_name?.trim() ||
+      [client.first_name, client.last_name].filter(Boolean).join(' ') ||
+      'Client'
+    );
+  }
+
+  return null;
 }
 

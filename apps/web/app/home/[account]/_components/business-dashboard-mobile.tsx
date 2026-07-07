@@ -1,5 +1,7 @@
 'use client';
 
+import dynamic from 'next/dynamic';
+
 import { ChevronRight, StickyNote, ArrowUpRight } from 'lucide-react';
 
 import { cn } from '@kit/ui/utils';
@@ -14,8 +16,20 @@ import type {
   DashboardTaskSummary,
 } from '../_lib/server/dashboard-page.loader';
 import { DashboardTaskDetailTrigger } from '~/components/dashboard/dashboard-task-detail-trigger';
-import { FinanceTrendBarChart } from '~/components/finance/finance-charts';
 import pathsConfig from '~/config/paths.config';
+
+const FinanceTrendBarChart = dynamic(
+  () =>
+    import('~/components/finance/finance-charts').then(
+      (mod) => mod.FinanceTrendBarChart,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full animate-pulse rounded-xl bg-[var(--workspace-shell-sidebar-accent)]" />
+    ),
+  },
+);
 
 const panelClass =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
