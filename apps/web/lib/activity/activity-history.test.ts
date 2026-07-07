@@ -10,6 +10,7 @@ import {
   groupBlocksByDay,
   parseActivityRange,
   resolveRangeStart,
+  sortActivityAppGroups,
   sumActiveDuration,
   type ActivityBlockListRow,
 } from '~/lib/activity/activity-history';
@@ -170,5 +171,33 @@ describe('activity history helpers', () => {
     expect(todayStart.getMinutes()).toBe(0);
     expect(todayStart.getDate()).toBe(now.getDate());
     expect(resolveRangeStart('7d', now).getTime()).toBeLessThan(now.getTime());
+  });
+
+  it('sorts app groups by selected column', () => {
+    const groups = sortActivityAppGroups(
+      groupBlocksByApp([
+        makeBlock({
+          id: 'a',
+          startedAt: '2026-07-07T10:00:00.000Z',
+          appName: 'Cursor',
+          bundleId: 'com.todesktop.cursor',
+          durationSeconds: 120,
+        }),
+        makeBlock({
+          id: 'b',
+          startedAt: '2026-07-07T11:00:00.000Z',
+          appName: 'Google Chrome',
+          bundleId: 'com.google.Chrome',
+          durationSeconds: 300,
+        }),
+      ]),
+      'app',
+      'asc',
+    );
+
+    expect(groups.map((group) => group.appName)).toEqual([
+      'Cursor',
+      'Google Chrome',
+    ]);
   });
 });

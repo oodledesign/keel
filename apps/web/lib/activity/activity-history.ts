@@ -48,6 +48,63 @@ export type ActivityAppGroup = {
   totalDurationSeconds: number;
 };
 
+export type ActivitySortKey = 'app' | 'duration' | 'time';
+export type ActivitySortDir = 'asc' | 'desc';
+
+export function sortActivityBlocks(
+  blocks: ActivityBlockListRow[],
+  sortKey: ActivitySortKey,
+  sortDir: ActivitySortDir,
+): ActivityBlockListRow[] {
+  const factor = sortDir === 'asc' ? 1 : -1;
+
+  return [...blocks].sort((left, right) => {
+    switch (sortKey) {
+      case 'app':
+        return factor * left.appName.localeCompare(right.appName, undefined, {
+          sensitivity: 'base',
+        });
+      case 'duration':
+        return factor * (left.durationSeconds - right.durationSeconds);
+      case 'time':
+        return factor * left.startedAt.localeCompare(right.startedAt);
+      default:
+        return 0;
+    }
+  });
+}
+
+export function sortActivityAppGroups(
+  groups: ActivityAppGroup[],
+  sortKey: ActivitySortKey,
+  sortDir: ActivitySortDir,
+): ActivityAppGroup[] {
+  const factor = sortDir === 'asc' ? 1 : -1;
+
+  return [...groups]
+    .sort((left, right) => {
+      switch (sortKey) {
+        case 'app':
+          return factor * left.appName.localeCompare(right.appName, undefined, {
+            sensitivity: 'base',
+          });
+        case 'duration':
+          return factor * (left.totalDurationSeconds - right.totalDurationSeconds);
+        case 'time': {
+          const leftTime = left.blocks[0]?.startedAt ?? '';
+          const rightTime = right.blocks[0]?.startedAt ?? '';
+          return factor * leftTime.localeCompare(rightTime);
+        }
+        default:
+          return 0;
+      }
+    })
+    .map((group) => ({
+      ...group,
+      blocks: sortActivityBlocks(group.blocks, sortKey, sortDir),
+    }));
+}
+
 export function parseActivityRange(value: string | null | undefined): ActivityRangeKey {
   if (value === 'today' || value === '30d') {
     return value;

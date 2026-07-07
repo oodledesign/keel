@@ -7,12 +7,14 @@ import { useRouter } from 'next/navigation';
 
 import {
   Activity,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   Ban,
   Check,
   ChevronDown,
   ChevronRight,
   Loader2,
-  MoreHorizontal,
   Settings2,
 } from 'lucide-react';
 
@@ -62,13 +64,18 @@ import {
   formatTimeRange,
   groupBlocksByApp,
   groupBlocksByDay,
+  sortActivityAppGroups,
   sumActiveDuration,
   sumTodayActiveDuration,
   type ActivityAppGroup,
   type ActivityBlockListRow,
   type ActivityDayGroup,
   type ActivityRangeKey,
+  type ActivitySortDir,
+  type ActivitySortKey,
 } from '~/lib/activity/activity-history';
+
+import { ActivityAppIcon } from './activity-app-icon';
 
 type Props = {
   data: ActivityPageData;
@@ -83,14 +90,117 @@ const RANGE_OPTIONS: Array<{ value: ActivityRangeKey; label: string }> = [
 function statusBadgeClass(status: ReturnType<typeof blockStatusLabel>) {
   switch (status) {
     case 'confirmed':
-      return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200';
+      return 'border-emerald-600/25 bg-emerald-500/15 text-emerald-900 dark:text-emerald-200';
     case 'suggested':
-      return 'border-sky-500/30 bg-sky-500/10 text-sky-200';
+      return 'border-sky-600/25 bg-sky-500/15 text-sky-900 dark:text-sky-200';
     case 'excluded':
       return 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]';
     default:
-      return 'border-amber-500/30 bg-amber-500/10 text-amber-100';
+      return 'border-amber-600/25 bg-amber-500/15 text-amber-950 dark:text-amber-100';
   }
+}
+
+function AppNameCell({
+  block,
+  nested = false,
+}: {
+  block: ActivityBlockListRow;
+  nested?: boolean;
+}) {
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      {nested ? (
+        <span className="w-[18px] shrink-0 text-center text-xs text-[var(--workspace-shell-text-muted)]">
+          ↳
+        </span>
+      ) : (
+        <ActivityAppIcon block={block} />
+      )}
+      <span
+        className="truncate text-xs text-[var(--workspace-shell-text)]"
+        title={block.appName}
+      >
+        {block.appName}
+      </span>
+    </div>
+  );
+}
+
+function SortableTableHead({
+  label,
+  sortKey,
+  activeSortKey,
+  sortDir,
+  onSort,
+  className,
+}: {
+  label: string;
+  sortKey: ActivitySortKey;
+  activeSortKey: ActivitySortKey;
+  sortDir: ActivitySortDir;
+  onSort: (sortKey: ActivitySortKey) => void;
+  className?: string;
+}) {
+  const active = activeSortKey === sortKey;
+  const Icon = active ? (sortDir === 'asc' ? ArrowUp : ArrowDown) : ArrowUpDown;
+
+  return (
+    <TableHead className={cn('h-9 px-3 text-xs', className)}>
+      <button
+        type="button"
+        className={cn(
+          'inline-flex items-center gap-1 font-medium transition-colors',
+          active
+            ? 'text-[var(--workspace-shell-text)]'
+            : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+        )}
+        onClick={() => onSort(sortKey)}
+      >
+        {label}
+        <Icon className="h-3 w-3 shrink-0 opacity-70" aria-hidden />
+      </button>
+    </TableHead>
+  );
+}
+
+function ActivityAssignmentDisplay({
+  block,
+  interactive = false,
+}: {
+  block: ActivityBlockListRow;
+  interactive?: boolean;
+}) {
+  const hasAssignment = Boolean(block.clientName || block.projectName);
+
+  if (!hasAssignment) {
+    return (
+      <span
+        className={cn(
+          'text-xs text-[var(--workspace-shell-text-muted)]',
+          interactive && 'underline-offset-2 group-hover:underline',
+        )}
+      >
+        Assign client or project
+      </span>
+    );
+  }
+
+  return (
+    <div className="min-w-0">
+      <span
+        className="block truncate text-xs font-medium text-[var(--workspace-shell-text)]"
+        title={block.clientName ?? undefined}
+      >
+        {block.clientName ?? 'No client'}
+      </span>
+      <span
+        className="block truncate text-[10px] text-[var(--workspace-shell-text-muted)]"
+        title={block.projectName ?? undefined}
+      >
+        {block.projectName ?? 'No project'}
+      </span>
+    </div>
+  );
 }
 
 function buildActivityUrl(
@@ -103,10 +213,6 @@ function buildActivityUrl(
   });
 
   return `${workAccountPath(pathsConfig.app.accountActivity, accountSlug)}?${search.toString()}`;
-}
-
-function assignmentLabel(block: ActivityBlockListRow): string {
-  return [block.projectName, block.clientName].filter(Boolean).join(' · ') || '—';
 }
 
 function AppItemCell({ block }: { block: ActivityBlockListRow }) {
@@ -133,24 +239,7 @@ function AppItemCell({ block }: { block: ActivityBlockListRow }) {
   );
 }
 
-function AppDetailCell({ block }: { block: ActivityBlockListRow }) {
-  const appContext = parseActivityAppContext(block);
-
-  if (!appContext?.detail) {
-    return <span className="text-xs text-[var(--workspace-shell-text-muted)]">—</span>;
-  }
-
-  return (
-    <span
-      className="block truncate text-xs text-[var(--workspace-shell-text)]"
-      title={appContext.detail}
-    >
-      {appContext.detail}
-    </span>
-  );
-}
-
-function ActivityBlockActions({
+function ActivityBlockAssignmentCell({
   block,
   canEdit,
   projects,
@@ -167,6 +256,7 @@ function ActivityBlockActions({
   accountSlug: string;
   onUpdated: (block: ActivityBlockListRow) => void;
 }) {
+  const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [projectId, setProjectId] = useState(block.projectId ?? 'none');
   const [clientId, setClientId] = useState(block.clientId ?? 'none');
@@ -185,48 +275,32 @@ function ActivityBlockActions({
 
       toast.success('Activity updated');
       onUpdated(nextBlock);
+      setOpen(false);
     });
   }
 
   if (!canEdit || block.isExcluded) {
-    return null;
+    return (
+      <ActivityAssignmentDisplay block={block} />
+    );
   }
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
+        <button
           type="button"
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 shrink-0"
+          className="group min-w-0 max-w-full rounded-md px-1 py-0.5 text-left transition-colors hover:bg-[var(--workspace-control-surface)]/60"
           disabled={pending}
         >
-          {pending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <MoreHorizontal className="h-4 w-4" />
-          )}
-        </Button>
+          <ActivityAssignmentDisplay block={block} interactive />
+        </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-72 space-y-3 p-3">
+      <PopoverContent align="start" className="w-72 space-y-3 p-3">
         <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
           Assign block
         </p>
         <div className="space-y-2">
-          <Select value={projectId} onValueChange={setProjectId} disabled={pending}>
-            <SelectTrigger className="h-8 bg-[var(--workspace-control-surface)] text-xs">
-              <SelectValue placeholder="Project" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">No project</SelectItem>
-              {projects.map((project) => (
-                <SelectItem key={project.id} value={project.id}>
-                  {project.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <Select value={clientId} onValueChange={setClientId} disabled={pending}>
             <SelectTrigger className="h-8 bg-[var(--workspace-control-surface)] text-xs">
               <SelectValue placeholder="Client" />
@@ -236,6 +310,19 @@ function ActivityBlockActions({
               {clients.map((client) => (
                 <SelectItem key={client.id} value={client.id}>
                   {client.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={projectId} onValueChange={setProjectId} disabled={pending}>
+            <SelectTrigger className="h-8 bg-[var(--workspace-control-surface)] text-xs">
+              <SelectValue placeholder="Project" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No project</SelectItem>
+              {projects.map((project) => (
+                <SelectItem key={project.id} value={project.id}>
+                  {project.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -272,7 +359,11 @@ function ActivityBlockActions({
               )
             }
           >
-            <Check className="mr-1.5 h-3.5 w-3.5" />
+            {pending ? (
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Check className="mr-1.5 h-3.5 w-3.5" />
+            )}
             Confirm
           </Button>
           <Button
@@ -297,6 +388,23 @@ function ActivityBlockActions({
         </div>
       </PopoverContent>
     </Popover>
+  );
+}
+
+function AppDetailCell({ block }: { block: ActivityBlockListRow }) {
+  const appContext = parseActivityAppContext(block);
+
+  if (!appContext?.detail) {
+    return <span className="text-xs text-[var(--workspace-shell-text-muted)]">—</span>;
+  }
+
+  return (
+    <span
+      className="block truncate text-xs text-[var(--workspace-shell-text)]"
+      title={appContext.detail}
+    >
+      {appContext.detail}
+    </span>
   );
 }
 
@@ -336,31 +444,22 @@ function ActivityBlockTableRow({
         block.isExcluded && 'opacity-50',
       )}
     >
-      <TableCell
-        className={cn(
-          'whitespace-nowrap py-2 align-top text-xs text-[var(--workspace-shell-text-muted)]',
-          nested ? 'pl-8 pr-3' : 'px-3',
-        )}
-      >
-        {formatTimeRange(block.startedAt, block.endedAt)}
-      </TableCell>
+      {showApp ? (
+        <TableCell
+          className={cn(
+            'max-w-[9rem] py-2 align-top',
+            nested ? 'pl-8 pr-3' : 'px-3',
+          )}
+        >
+          <AppNameCell block={block} nested={nested} />
+        </TableCell>
+      ) : null}
       <TableCell className="whitespace-nowrap px-3 py-2 align-top text-xs font-medium text-[var(--workspace-shell-text)]">
         {formatDuration(block.durationSeconds)}
       </TableCell>
-      {showApp ? (
-        <TableCell className="max-w-[7rem] px-3 py-2 align-top">
-          {nested ? (
-            <span className="text-xs text-[var(--workspace-shell-text-muted)]">↳</span>
-          ) : (
-            <span
-              className="block truncate text-xs text-[var(--workspace-shell-text)]"
-              title={block.appName}
-            >
-              {block.appName}
-            </span>
-          )}
-        </TableCell>
-      ) : null}
+      <TableCell className="whitespace-nowrap px-3 py-2 align-top text-xs text-[var(--workspace-shell-text-muted)]">
+        {formatTimeRange(block.startedAt, block.endedAt)}
+      </TableCell>
       <TableCell className="max-w-[8rem] px-3 py-2 align-top">
         <AppItemCell block={block} />
       </TableCell>
@@ -382,7 +481,7 @@ function ActivityBlockTableRow({
               href={block.url}
               target="_blank"
               rel="noreferrer"
-              className="block truncate text-xs text-sky-300 hover:underline"
+              className="block truncate text-xs text-sky-700 underline-offset-2 hover:underline dark:text-sky-300"
               title={urlLabel}
             >
               {urlLabel}
@@ -409,24 +508,8 @@ function ActivityBlockTableRow({
           </span>
         </TableCell>
       ) : null}
-      <TableCell className="max-w-[10rem] px-3 py-2 align-top">
-        <span
-          className="block truncate text-xs text-[var(--workspace-shell-text-muted)]"
-          title={assignmentLabel(block)}
-        >
-          {assignmentLabel(block)}
-        </span>
-      </TableCell>
-      <TableCell className="px-3 py-2 align-top">
-        <Badge
-          variant="outline"
-          className={cn('text-[10px] font-normal', statusBadgeClass(status))}
-        >
-          {blockStatusText(status)}
-        </Badge>
-      </TableCell>
-      <TableCell className="px-2 py-2 align-top">
-        <ActivityBlockActions
+      <TableCell className="max-w-[11rem] px-3 py-2 align-top">
+        <ActivityBlockAssignmentCell
           block={block}
           canEdit={canEdit}
           projects={projects}
@@ -435,6 +518,14 @@ function ActivityBlockTableRow({
           accountSlug={accountSlug}
           onUpdated={onUpdated}
         />
+      </TableCell>
+      <TableCell className="px-3 py-2 align-top">
+        <Badge
+          variant="outline"
+          className={cn('text-[10px] font-medium', statusBadgeClass(status))}
+        >
+          {blockStatusText(status)}
+        </Badge>
       </TableCell>
     </TableRow>
   );
@@ -482,22 +573,18 @@ function ActivityAppGroupRows({
     );
   }
 
+  const representativeBlock = appGroup.blocks[0]!;
+
   return (
     <>
       <TableRow
         className="cursor-pointer border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/40 hover:bg-[var(--workspace-control-surface)]/40"
         onClick={onToggle}
       >
-        <TableCell className="whitespace-nowrap px-3 py-2 align-top text-xs text-[var(--workspace-shell-text-muted)]">
-          {sessionLabel}
-        </TableCell>
-        <TableCell className="whitespace-nowrap px-3 py-2 align-top text-xs font-semibold text-[var(--workspace-shell-text)]">
-          {formatDuration(appGroup.totalDurationSeconds)}
-        </TableCell>
-        <TableCell className="max-w-[7rem] px-3 py-2 align-top">
+        <TableCell className="max-w-[9rem] px-3 py-2 align-top">
           <button
             type="button"
-            className="flex min-w-0 items-center gap-1.5 text-left"
+            className="flex min-w-0 items-center gap-2 text-left"
             onClick={(event) => {
               event.stopPropagation();
               onToggle();
@@ -508,6 +595,7 @@ function ActivityAppGroupRows({
             ) : (
               <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text-muted)]" />
             )}
+            <ActivityAppIcon block={representativeBlock} />
             <span
               className="truncate text-xs font-medium text-[var(--workspace-shell-text)]"
               title={appGroup.appName}
@@ -515,6 +603,12 @@ function ActivityAppGroupRows({
               {appGroup.appName}
             </span>
           </button>
+        </TableCell>
+        <TableCell className="whitespace-nowrap px-3 py-2 align-top text-xs font-semibold text-[var(--workspace-shell-text)]">
+          {formatDuration(appGroup.totalDurationSeconds)}
+        </TableCell>
+        <TableCell className="whitespace-nowrap px-3 py-2 align-top text-xs text-[var(--workspace-shell-text-muted)]">
+          {sessionLabel}
         </TableCell>
         <TableCell
           colSpan={showMember ? 7 : 6}
@@ -552,6 +646,9 @@ function ActivityDayTable({
   clients,
   accountId,
   accountSlug,
+  sortKey,
+  sortDir,
+  onSort,
   onUpdated,
 }: {
   group: ActivityDayGroup;
@@ -561,9 +658,15 @@ function ActivityDayTable({
   clients: ActivityPageData['clients'];
   accountId: string;
   accountSlug: string;
+  sortKey: ActivitySortKey;
+  sortDir: ActivitySortDir;
+  onSort: (sortKey: ActivitySortKey) => void;
   onUpdated: (block: ActivityBlockListRow) => void;
 }) {
-  const appGroups = useMemo(() => groupBlocksByApp(group.blocks), [group.blocks]);
+  const appGroups = useMemo(
+    () => sortActivityAppGroups(groupBlocksByApp(group.blocks), sortKey, sortDir),
+    [group.blocks, sortDir, sortKey],
+  );
   const [expandedApps, setExpandedApps] = useState<Set<string>>(() => new Set());
 
   function toggleApp(appKey: string) {
@@ -595,9 +698,27 @@ function ActivityDayTable({
         <Table>
           <TableHeader className="bg-[var(--workspace-shell-sidebar-accent)]">
             <TableRow className="border-[color:var(--workspace-shell-border)] hover:bg-transparent">
-              <TableHead className="h-9 px-3 text-xs">Time</TableHead>
-              <TableHead className="h-9 px-3 text-xs">Dur</TableHead>
-              <TableHead className="h-9 px-3 text-xs">App</TableHead>
+              <SortableTableHead
+                label="App"
+                sortKey="app"
+                activeSortKey={sortKey}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTableHead
+                label="Duration"
+                sortKey="duration"
+                activeSortKey={sortKey}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
+              <SortableTableHead
+                label="Time"
+                sortKey="time"
+                activeSortKey={sortKey}
+                sortDir={sortDir}
+                onSort={onSort}
+              />
               <TableHead className="h-9 px-3 text-xs">Item</TableHead>
               <TableHead className="h-9 px-3 text-xs">Detail</TableHead>
               <TableHead className="h-9 px-3 text-xs">Context</TableHead>
@@ -607,7 +728,6 @@ function ActivityDayTable({
               ) : null}
               <TableHead className="h-9 px-3 text-xs">Assignment</TableHead>
               <TableHead className="h-9 px-3 text-xs">Status</TableHead>
-              <TableHead className="h-9 w-10 px-2 text-xs" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -636,10 +756,22 @@ function ActivityDayTable({
 export function ActivityPageContent({ data }: Props) {
   const router = useRouter();
   const [rows, setRows] = useState(data.blocks);
+  const [sortKey, setSortKey] = useState<ActivitySortKey>('duration');
+  const [sortDir, setSortDir] = useState<ActivitySortDir>('desc');
 
   useEffect(() => {
     setRows(data.blocks);
   }, [data.blocks]);
+
+  function handleSort(nextKey: ActivitySortKey) {
+    if (sortKey === nextKey) {
+      setSortDir((current) => (current === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+
+    setSortKey(nextKey);
+    setSortDir(nextKey === 'app' ? 'asc' : 'desc');
+  }
 
   const settingsPath = workAccountPath(
     pathsConfig.app.accountActivityPrivacySettings,
@@ -774,6 +906,9 @@ export function ActivityPageContent({ data }: Props) {
               clients={data.clients}
               accountId={data.accountId}
               accountSlug={data.accountSlug}
+              sortKey={sortKey}
+              sortDir={sortDir}
+              onSort={handleSort}
               onUpdated={updateBlock}
             />
           ))}
