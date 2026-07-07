@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  activityAppGroupKey,
   blockPageTitle,
   blockStatusLabel,
   blockUrlLabel,
   formatDuration,
+  groupBlocksByApp,
   groupBlocksByDay,
   parseActivityRange,
   resolveRangeStart,
@@ -47,6 +49,40 @@ describe('activity history helpers', () => {
     expect(formatDuration(45)).toBe('45s');
     expect(formatDuration(300)).toBe('5m');
     expect(formatDuration(3660)).toBe('1h 1m');
+  });
+
+  it('groups blocks by app and sums active duration', () => {
+    const groups = groupBlocksByApp([
+      makeBlock({
+        id: 'a',
+        startedAt: '2026-07-07T10:00:00.000Z',
+        appName: 'Google Chrome',
+        bundleId: 'com.google.Chrome',
+        durationSeconds: 300,
+      }),
+      makeBlock({
+        id: 'b',
+        startedAt: '2026-07-07T11:00:00.000Z',
+        appName: 'Google Chrome',
+        bundleId: 'com.google.Chrome',
+        durationSeconds: 600,
+      }),
+      makeBlock({
+        id: 'c',
+        startedAt: '2026-07-07T12:00:00.000Z',
+        appName: 'Cursor',
+        bundleId: 'com.todesktop.cursor',
+        durationSeconds: 1200,
+      }),
+    ]);
+
+    expect(groups).toHaveLength(2);
+    expect(groups[0]?.appName).toBe('Cursor');
+    expect(groups[0]?.blocks).toHaveLength(1);
+    expect(groups[1]?.appName).toBe('Google Chrome');
+    expect(groups[1]?.blocks).toHaveLength(2);
+    expect(groups[1]?.totalDurationSeconds).toBe(900);
+    expect(activityAppGroupKey(groups[1]!.blocks[0]!)).toBe('com.google.Chrome');
   });
 
   it('groups blocks by day with Today label', () => {

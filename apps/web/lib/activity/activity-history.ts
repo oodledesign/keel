@@ -41,6 +41,13 @@ export type ActivityDayGroup = {
   totalDurationSeconds: number;
 };
 
+export type ActivityAppGroup = {
+  appKey: string;
+  appName: string;
+  blocks: ActivityBlockListRow[];
+  totalDurationSeconds: number;
+};
+
 export function parseActivityRange(value: string | null | undefined): ActivityRangeKey {
   if (value === 'today' || value === '30d') {
     return value;
@@ -173,6 +180,48 @@ export function sumTodayActiveDuration(
   return sumActiveDuration(
     blocks.filter((block) => isToday(parseISO(block.startedAt))),
   );
+}
+
+export function activityAppGroupKey(block: ActivityBlockListRow): string {
+  const bundleId = block.bundleId.trim();
+  if (bundleId) {
+    return bundleId;
+  }
+
+  return block.appName.trim().toLowerCase();
+}
+
+export function groupBlocksByApp(
+  blocks: ActivityBlockListRow[],
+): ActivityAppGroup[] {
+  const groups = new Map<string, ActivityBlockListRow[]>();
+  const appNames = new Map<string, string>();
+
+  for (const block of blocks) {
+    const appKey = activityAppGroupKey(block);
+    const existing = groups.get(appKey) ?? [];
+    existing.push(block);
+    groups.set(appKey, existing);
+
+    if (!appNames.has(appKey)) {
+      appNames.set(appKey, block.appName);
+    }
+  }
+
+  return [...groups.entries()]
+    .map(([appKey, appBlocks]) => {
+      const sortedBlocks = appBlocks.sort((left, right) =>
+        right.startedAt.localeCompare(left.startedAt),
+      );
+
+      return {
+        appKey,
+        appName: appNames.get(appKey) ?? appKey,
+        blocks: sortedBlocks,
+        totalDurationSeconds: sumActiveDuration(sortedBlocks),
+      };
+    })
+    .sort((left, right) => right.totalDurationSeconds - left.totalDurationSeconds);
 }
 
 export function groupBlocksByDay(

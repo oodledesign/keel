@@ -9,6 +9,8 @@ import {
   Activity,
   Ban,
   Check,
+  ChevronDown,
+  ChevronRight,
   Loader2,
   MoreHorizontal,
   Settings2,
@@ -48,15 +50,21 @@ import {
 import type { ActivityPageData } from '~/home/[account]/activity/_lib/server/activity-page.loader';
 import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
 import {
+  blockContextLabel,
+  parseActivityAppContext,
+} from '~/lib/activity/activity-app-context';
+import {
   blockPageTitle,
   blockStatusLabel,
   blockStatusText,
   blockUrlLabel,
   formatDuration,
   formatTimeRange,
+  groupBlocksByApp,
   groupBlocksByDay,
   sumActiveDuration,
   sumTodayActiveDuration,
+  type ActivityAppGroup,
   type ActivityBlockListRow,
   type ActivityDayGroup,
   type ActivityRangeKey,
@@ -99,6 +107,47 @@ function buildActivityUrl(
 
 function assignmentLabel(block: ActivityBlockListRow): string {
   return [block.projectName, block.clientName].filter(Boolean).join(' · ') || '—';
+}
+
+function AppItemCell({ block }: { block: ActivityBlockListRow }) {
+  const appContext = parseActivityAppContext(block);
+
+  if (!appContext?.item) {
+    return <span className="text-xs text-[var(--workspace-shell-text-muted)]">—</span>;
+  }
+
+  return (
+    <div className="min-w-0">
+      <span
+        className="block truncate text-xs text-[var(--workspace-shell-text)]"
+        title={appContext.item}
+      >
+        {appContext.item}
+      </span>
+      {appContext.meta ? (
+        <span className="text-[10px] text-[var(--workspace-shell-text-muted)]">
+          {appContext.meta}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function AppDetailCell({ block }: { block: ActivityBlockListRow }) {
+  const appContext = parseActivityAppContext(block);
+
+  if (!appContext?.detail) {
+    return <span className="text-xs text-[var(--workspace-shell-text-muted)]">—</span>;
+  }
+
+  return (
+    <span
+      className="block truncate text-xs text-[var(--workspace-shell-text)]"
+      title={appContext.detail}
+    >
+      {appContext.detail}
+    </span>
+  );
 }
 
 function ActivityBlockActions({
@@ -251,6 +300,250 @@ function ActivityBlockActions({
   );
 }
 
+function ActivityBlockTableRow({
+  block,
+  canEdit,
+  showMember,
+  showApp = true,
+  nested = false,
+  projects,
+  clients,
+  accountId,
+  accountSlug,
+  onUpdated,
+}: {
+  block: ActivityBlockListRow;
+  canEdit: boolean;
+  showMember: boolean;
+  showApp?: boolean;
+  nested?: boolean;
+  projects: ActivityPageData['projects'];
+  clients: ActivityPageData['clients'];
+  accountId: string;
+  accountSlug: string;
+  onUpdated: (block: ActivityBlockListRow) => void;
+}) {
+  const status = blockStatusLabel(block);
+  const pageTitle = blockContextLabel(block);
+  const urlLabel = blockUrlLabel(block);
+  const rawTitle = block.windowTitle.trim() || blockPageTitle(block);
+
+  return (
+    <TableRow
+      className={cn(
+        'border-[color:var(--workspace-shell-border)] text-sm',
+        nested && 'bg-[var(--workspace-control-surface)]/20',
+        block.isExcluded && 'opacity-50',
+      )}
+    >
+      <TableCell
+        className={cn(
+          'whitespace-nowrap py-2 align-top text-xs text-[var(--workspace-shell-text-muted)]',
+          nested ? 'pl-8 pr-3' : 'px-3',
+        )}
+      >
+        {formatTimeRange(block.startedAt, block.endedAt)}
+      </TableCell>
+      <TableCell className="whitespace-nowrap px-3 py-2 align-top text-xs font-medium text-[var(--workspace-shell-text)]">
+        {formatDuration(block.durationSeconds)}
+      </TableCell>
+      {showApp ? (
+        <TableCell className="max-w-[7rem] px-3 py-2 align-top">
+          {nested ? (
+            <span className="text-xs text-[var(--workspace-shell-text-muted)]">↳</span>
+          ) : (
+            <span
+              className="block truncate text-xs text-[var(--workspace-shell-text)]"
+              title={block.appName}
+            >
+              {block.appName}
+            </span>
+          )}
+        </TableCell>
+      ) : null}
+      <TableCell className="max-w-[8rem] px-3 py-2 align-top">
+        <AppItemCell block={block} />
+      </TableCell>
+      <TableCell className="max-w-[10rem] px-3 py-2 align-top">
+        <AppDetailCell block={block} />
+      </TableCell>
+      <TableCell className="max-w-[12rem] px-3 py-2 align-top">
+        <span
+          className="block truncate text-xs text-[var(--workspace-shell-text)]"
+          title={rawTitle}
+        >
+          {pageTitle}
+        </span>
+      </TableCell>
+      <TableCell className="max-w-[16rem] px-3 py-2 align-top">
+        {urlLabel ? (
+          block.url ? (
+            <a
+              href={block.url}
+              target="_blank"
+              rel="noreferrer"
+              className="block truncate text-xs text-sky-300 hover:underline"
+              title={urlLabel}
+            >
+              {urlLabel}
+            </a>
+          ) : (
+            <span
+              className="block truncate text-xs text-[var(--workspace-shell-text-muted)]"
+              title={urlLabel}
+            >
+              {urlLabel}
+            </span>
+          )
+        ) : (
+          <span className="text-xs text-[var(--workspace-shell-text-muted)]">—</span>
+        )}
+      </TableCell>
+      {showMember ? (
+        <TableCell className="max-w-[8rem] px-3 py-2 align-top">
+          <span
+            className="block truncate text-xs text-[var(--workspace-shell-text-muted)]"
+            title={block.userName ?? undefined}
+          >
+            {block.userName ?? '—'}
+          </span>
+        </TableCell>
+      ) : null}
+      <TableCell className="max-w-[10rem] px-3 py-2 align-top">
+        <span
+          className="block truncate text-xs text-[var(--workspace-shell-text-muted)]"
+          title={assignmentLabel(block)}
+        >
+          {assignmentLabel(block)}
+        </span>
+      </TableCell>
+      <TableCell className="px-3 py-2 align-top">
+        <Badge
+          variant="outline"
+          className={cn('text-[10px] font-normal', statusBadgeClass(status))}
+        >
+          {blockStatusText(status)}
+        </Badge>
+      </TableCell>
+      <TableCell className="px-2 py-2 align-top">
+        <ActivityBlockActions
+          block={block}
+          canEdit={canEdit}
+          projects={projects}
+          clients={clients}
+          accountId={accountId}
+          accountSlug={accountSlug}
+          onUpdated={onUpdated}
+        />
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function ActivityAppGroupRows({
+  appGroup,
+  expanded,
+  onToggle,
+  canEdit,
+  showMember,
+  projects,
+  clients,
+  accountId,
+  accountSlug,
+  onUpdated,
+}: {
+  appGroup: ActivityAppGroup;
+  expanded: boolean;
+  onToggle: () => void;
+  canEdit: boolean;
+  showMember: boolean;
+  projects: ActivityPageData['projects'];
+  clients: ActivityPageData['clients'];
+  accountId: string;
+  accountSlug: string;
+  onUpdated: (block: ActivityBlockListRow) => void;
+}) {
+  const sessionLabel = `${appGroup.blocks.length} session${appGroup.blocks.length === 1 ? '' : 's'}`;
+  const isSingleBlock = appGroup.blocks.length === 1;
+
+  if (isSingleBlock) {
+    return (
+      <ActivityBlockTableRow
+        block={appGroup.blocks[0]!}
+        canEdit={canEdit}
+        showMember={showMember}
+        showApp
+        projects={projects}
+        clients={clients}
+        accountId={accountId}
+        accountSlug={accountSlug}
+        onUpdated={onUpdated}
+      />
+    );
+  }
+
+  return (
+    <>
+      <TableRow
+        className="cursor-pointer border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/40 hover:bg-[var(--workspace-control-surface)]/40"
+        onClick={onToggle}
+      >
+        <TableCell className="whitespace-nowrap px-3 py-2 align-top text-xs text-[var(--workspace-shell-text-muted)]">
+          {sessionLabel}
+        </TableCell>
+        <TableCell className="whitespace-nowrap px-3 py-2 align-top text-xs font-semibold text-[var(--workspace-shell-text)]">
+          {formatDuration(appGroup.totalDurationSeconds)}
+        </TableCell>
+        <TableCell className="max-w-[7rem] px-3 py-2 align-top">
+          <button
+            type="button"
+            className="flex min-w-0 items-center gap-1.5 text-left"
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggle();
+            }}
+          >
+            {expanded ? (
+              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text-muted)]" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text-muted)]" />
+            )}
+            <span
+              className="truncate text-xs font-medium text-[var(--workspace-shell-text)]"
+              title={appGroup.appName}
+            >
+              {appGroup.appName}
+            </span>
+          </button>
+        </TableCell>
+        <TableCell
+          colSpan={showMember ? 7 : 6}
+          className="px-3 py-2 align-top text-xs text-[var(--workspace-shell-text-muted)]"
+        >
+          Click to {expanded ? 'collapse' : 'expand'} individual sessions
+        </TableCell>
+      </TableRow>
+      {expanded
+        ? appGroup.blocks.map((block) => (
+            <ActivityBlockTableRow
+              key={block.id}
+              block={block}
+              canEdit={canEdit}
+              showMember={showMember}
+              showApp
+              nested
+              projects={projects}
+              clients={clients}
+              accountId={accountId}
+              accountSlug={accountSlug}
+              onUpdated={onUpdated}
+            />
+          ))
+        : null}
+    </>
+  );
+}
+
 function ActivityDayTable({
   group,
   canEdit,
@@ -270,6 +563,23 @@ function ActivityDayTable({
   accountSlug: string;
   onUpdated: (block: ActivityBlockListRow) => void;
 }) {
+  const appGroups = useMemo(() => groupBlocksByApp(group.blocks), [group.blocks]);
+  const [expandedApps, setExpandedApps] = useState<Set<string>>(() => new Set());
+
+  function toggleApp(appKey: string) {
+    setExpandedApps((current) => {
+      const next = new Set(current);
+
+      if (next.has(appKey)) {
+        next.delete(appKey);
+      } else {
+        next.add(appKey);
+      }
+
+      return next;
+    });
+  }
+
   return (
     <section className="space-y-2">
       <div className="flex items-center justify-between gap-2 px-1">
@@ -288,7 +598,9 @@ function ActivityDayTable({
               <TableHead className="h-9 px-3 text-xs">Time</TableHead>
               <TableHead className="h-9 px-3 text-xs">Dur</TableHead>
               <TableHead className="h-9 px-3 text-xs">App</TableHead>
-              <TableHead className="h-9 px-3 text-xs">Page</TableHead>
+              <TableHead className="h-9 px-3 text-xs">Item</TableHead>
+              <TableHead className="h-9 px-3 text-xs">Detail</TableHead>
+              <TableHead className="h-9 px-3 text-xs">Context</TableHead>
               <TableHead className="h-9 px-3 text-xs">URL / domain</TableHead>
               {showMember ? (
                 <TableHead className="h-9 px-3 text-xs">Member</TableHead>
@@ -299,107 +611,21 @@ function ActivityDayTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {group.blocks.map((block) => {
-              const status = blockStatusLabel(block);
-              const pageTitle = blockPageTitle(block);
-              const urlLabel = blockUrlLabel(block);
-
-              return (
-                <TableRow
-                  key={block.id}
-                  className={cn(
-                    'border-[color:var(--workspace-shell-border)] text-sm',
-                    block.isExcluded && 'opacity-50',
-                  )}
-                >
-                  <TableCell className="whitespace-nowrap px-3 py-2 align-top text-xs text-[var(--workspace-shell-text-muted)]">
-                    {formatTimeRange(block.startedAt, block.endedAt)}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap px-3 py-2 align-top text-xs font-medium text-[var(--workspace-shell-text)]">
-                    {formatDuration(block.durationSeconds)}
-                  </TableCell>
-                  <TableCell className="max-w-[7rem] px-3 py-2 align-top">
-                    <span
-                      className="block truncate text-xs text-[var(--workspace-shell-text)]"
-                      title={block.appName}
-                    >
-                      {block.appName}
-                    </span>
-                  </TableCell>
-                  <TableCell className="max-w-[14rem] px-3 py-2 align-top">
-                    <span
-                      className="block truncate text-xs text-[var(--workspace-shell-text)]"
-                      title={pageTitle}
-                    >
-                      {pageTitle}
-                    </span>
-                  </TableCell>
-                  <TableCell className="max-w-[16rem] px-3 py-2 align-top">
-                    {urlLabel ? (
-                      block.url ? (
-                        <a
-                          href={block.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="block truncate text-xs text-sky-300 hover:underline"
-                          title={urlLabel}
-                        >
-                          {urlLabel}
-                        </a>
-                      ) : (
-                        <span
-                          className="block truncate text-xs text-[var(--workspace-shell-text-muted)]"
-                          title={urlLabel}
-                        >
-                          {urlLabel}
-                        </span>
-                      )
-                    ) : (
-                      <span className="text-xs text-[var(--workspace-shell-text-muted)]">
-                        —
-                      </span>
-                    )}
-                  </TableCell>
-                  {showMember ? (
-                    <TableCell className="max-w-[8rem] px-3 py-2 align-top">
-                      <span
-                        className="block truncate text-xs text-[var(--workspace-shell-text-muted)]"
-                        title={block.userName ?? undefined}
-                      >
-                        {block.userName ?? '—'}
-                      </span>
-                    </TableCell>
-                  ) : null}
-                  <TableCell className="max-w-[10rem] px-3 py-2 align-top">
-                    <span
-                      className="block truncate text-xs text-[var(--workspace-shell-text-muted)]"
-                      title={assignmentLabel(block)}
-                    >
-                      {assignmentLabel(block)}
-                    </span>
-                  </TableCell>
-                  <TableCell className="px-3 py-2 align-top">
-                    <Badge
-                      variant="outline"
-                      className={cn('text-[10px] font-normal', statusBadgeClass(status))}
-                    >
-                      {blockStatusText(status)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="px-2 py-2 align-top">
-                    <ActivityBlockActions
-                      block={block}
-                      canEdit={canEdit}
-                      projects={projects}
-                      clients={clients}
-                      accountId={accountId}
-                      accountSlug={accountSlug}
-                      onUpdated={onUpdated}
-                    />
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+            {appGroups.map((appGroup) => (
+              <ActivityAppGroupRows
+                key={appGroup.appKey}
+                appGroup={appGroup}
+                expanded={expandedApps.has(appGroup.appKey)}
+                onToggle={() => toggleApp(appGroup.appKey)}
+                canEdit={canEdit}
+                showMember={showMember}
+                projects={projects}
+                clients={clients}
+                accountId={accountId}
+                accountSlug={accountSlug}
+                onUpdated={onUpdated}
+              />
+            ))}
           </TableBody>
         </Table>
       </div>
