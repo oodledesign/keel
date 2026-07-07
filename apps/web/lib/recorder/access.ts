@@ -49,19 +49,23 @@ export async function resolveRecorderAccessTier(
     return 'standard';
   }
 
-  if (await isAccountBillingExempt(client, userId)) {
+  // Recorder API routes authenticate with bearer tokens (no Supabase session cookies).
+  // Entitlement and membership reads must use the admin client so tier matches the web UI.
+  const admin = getSupabaseServerAdminClient();
+
+  if (await isAccountBillingExempt(admin, userId)) {
     return 'standard';
   }
 
-  const workspaces = await loadUserWorkspaceAccounts(client, userId);
+  const workspaces = await loadUserWorkspaceAccounts(admin, userId);
 
   for (const workspace of workspaces) {
-    if (await isAccountBillingExempt(client, workspace.id)) {
+    if (await isAccountBillingExempt(admin, workspace.id)) {
       return 'standard';
     }
 
     for (const entitlement of FULL_PAID_ENTITLEMENTS) {
-      if (await hasEntitlement(client, workspace.id, entitlement)) {
+      if (await hasEntitlement(admin, workspace.id, entitlement)) {
         return 'standard';
       }
     }

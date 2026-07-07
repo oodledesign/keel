@@ -21,7 +21,7 @@ function revalidateSettings(input: {
   personal?: boolean;
 }) {
   if (input.personal) {
-    revalidatePath(pathsConfig.app.personalAccountSettings, 'page');
+    revalidatePath(pathsConfig.app.personalAccountRecorderSettings, 'page');
     return;
   }
 

@@ -10,7 +10,7 @@ import { requireUserInServerComponent } from '~/lib/server/require-user-in-serve
 import { disconnectGmailConnection } from '~/home/(user)/email/_lib/actions/email-assistant-actions';
 
 function revalidateIntegrationSurfaces() {
-  revalidatePath(pathsConfig.app.personalAccountSettings, 'page');
+  revalidatePath(pathsConfig.app.personalAccountIntegrationsSettings, 'page');
   revalidatePath(pathsConfig.app.personalPlanner, 'page');
   revalidatePath(pathsConfig.app.personalEmailAssistant, 'page');
 }

@@ -1,4 +1,3 @@
-import { PageBody } from '@kit/ui/page';
 import { Trans } from '@kit/ui/trans';
 
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
@@ -6,6 +5,7 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { PersonalSettingsPanel } from '../_components/personal-settings-panel';
 import { AccessibilitySettingsForm } from './_components/accessibility-settings-form';
 
 export const generateMetadata = async () => {
@@ -37,21 +37,12 @@ async function AccessibilitySettingsPage() {
   const initial = await loadUserAccessibilitySettings(user.id);
 
   return (
-    <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-[var(--workspace-shell-text)] lg:px-6">
-      <div className="flex w-full flex-1 flex-col lg:max-w-2xl">
-        <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
-              <Trans i18nKey="account:accessibilitySettings" />
-            </h2>
-            <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-              <Trans i18nKey="account:accessibilitySettingsDescription" />
-            </p>
-          </div>
-          <AccessibilitySettingsForm initial={initial} />
-        </div>
-      </div>
-    </PageBody>
+    <PersonalSettingsPanel
+      title={<Trans i18nKey="account:accessibilitySettings" />}
+      description={<Trans i18nKey="account:accessibilitySettingsDescription" />}
+    >
+      <AccessibilitySettingsForm initial={initial} />
+    </PersonalSettingsPanel>
   );
 }
 

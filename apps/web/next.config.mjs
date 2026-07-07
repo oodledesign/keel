@@ -185,8 +185,8 @@ async function getRewrites() {
         destination: '/home/billing/:path*',
       },
       {
-        source: '/app/settings/accessibility',
-        destination: '/home/settings/accessibility',
+        source: '/app/settings/:path*',
+        destination: '/home/settings/:path*',
       },
       {
         source: '/app/settings',
@@ -194,7 +194,7 @@ async function getRewrites() {
       },
       {
         source: '/app/accessibility',
-        destination: '/home/accessibility',
+        destination: '/home/settings/accessibility',
       },
       {
         source: '/app/pipeline',
@@ -270,7 +270,12 @@ async function getRedirects() {
     },
     {
       source: '/home/accessibility',
-      destination: '/app/accessibility',
+      destination: '/app/settings/accessibility',
+      permanent: false,
+    },
+    {
+      source: '/app/accessibility',
+      destination: '/app/settings/accessibility',
       permanent: false,
     },
     {

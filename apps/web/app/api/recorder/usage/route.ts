@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { authenticateRecorderRequest, recorderServiceUnavailable } from '~/lib/api-tokens/recorder-auth';
 import { loadRecorderUsageSummary } from '~/lib/recorder/access';
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const client = getSupabaseServerClient();
+    const client = getSupabaseServerAdminClient();
     const summary = await loadRecorderUsageSummary(client, auth.user_id);
 
     return NextResponse.json({

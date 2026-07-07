@@ -18,7 +18,7 @@ import {
 function revalidatePersonalDashboard() {
   revalidatePath('/home', 'layout');
   revalidatePath('/app', 'layout');
-  revalidatePath(pathsConfig.app.personalAccountSettings);
+  revalidatePath(pathsConfig.app.personalAccountShortcutsSettings);
 }
 
 function revalidateWorkspaceDashboard(slug: string) {
@@ -94,7 +94,6 @@ export async function savePersonalIncludeWorkspaceTasksAction(
 
     revalidatePersonalDashboard();
     revalidatePath(`${pathsConfig.app.home}/tasks`);
-    revalidatePath(pathsConfig.app.personalAccountSettings);
     return { success: true as const, error: null };
   } catch (err) {
     return {
@@ -144,7 +143,6 @@ export async function saveDefaultLandingAction(input: {
     if (error) return { success: false as const, error: error.message };
 
     revalidatePersonalDashboard();
-    revalidatePath(pathsConfig.app.personalAccountSettings);
     return { success: true as const, error: null };
   } catch (err) {
     return {

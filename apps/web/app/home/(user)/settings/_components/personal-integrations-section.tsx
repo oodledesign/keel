@@ -163,7 +163,7 @@ export function PersonalIntegrationsSection({ data }: Props) {
   );
 
   const settingsReturnPath = encodeURIComponent(
-    pathsConfig.app.personalAccountSettings,
+    pathsConfig.app.personalAccountIntegrationsSettings,
   );
 
   const calendarConnectHref = `/api/integrations/google-calendar/start?returnPath=${settingsReturnPath}`;

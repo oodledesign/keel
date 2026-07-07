@@ -37,7 +37,7 @@ export default async function DesktopRecorderConnectPage({ searchParams }: PageP
             to start the connection.
           </p>
           <Button asChild className="mt-6 w-full">
-            <Link href={pathsConfig.app.personalAccountSettings}>Open Ozer settings</Link>
+            <Link href={pathsConfig.app.personalAccountRecorderSettings}>Open Ozer settings</Link>
           </Button>
         </div>
       </main>
@@ -67,7 +67,7 @@ export default async function DesktopRecorderConnectPage({ searchParams }: PageP
           <h1 className="text-2xl font-bold tracking-tight">Connection failed</h1>
           <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">{message}</p>
           <Button asChild variant="outline" className="mt-6 w-full">
-            <Link href={pathsConfig.app.personalAccountSettings}>Back to settings</Link>
+            <Link href={pathsConfig.app.personalAccountRecorderSettings}>Back to settings</Link>
           </Button>
         </div>
       </main>

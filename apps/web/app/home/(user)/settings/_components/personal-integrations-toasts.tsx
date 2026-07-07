@@ -39,7 +39,7 @@ export function PersonalIntegrationsToasts() {
       toast.error(decodeURIComponent(emailError));
     }
 
-    router.replace(pathsConfig.app.personalAccountSettings);
+    router.replace(pathsConfig.app.personalAccountIntegrationsSettings);
   }, [router, searchParams]);
 
   return null;

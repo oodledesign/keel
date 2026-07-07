@@ -207,7 +207,7 @@ export async function upsertUserSettings(settings: {
     settings.use_keel_for_family !== undefined ||
     settings.use_keel_for_community !== undefined
   ) {
-    revalidatePath(pathsConfig.app.personalAccountSettings);
+    revalidatePath(pathsConfig.app.personalAccountPreferencesSettings);
   }
   return {};
 }
