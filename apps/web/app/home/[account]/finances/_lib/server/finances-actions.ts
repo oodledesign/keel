@@ -31,6 +31,21 @@ import { isFreeAgentConfigured } from '~/lib/integrations/freeagent/env';
 import { isStarlingConfigured } from '~/lib/integrations/starling/env';
 import { syncStarlingToOzer } from '~/lib/integrations/starling/sync';
 
+export const FINANCE_TRANSACTION_PAGE_SIZES = [50, 100, 200] as const;
+
+const DEFAULT_FINANCE_PAGE_SIZE = FINANCE_TRANSACTION_PAGE_SIZES[0];
+
+function applyFinanceDateFilters<T extends { gte: (col: string, val: string) => T; lte: (col: string, val: string) => T }>(
+  query: T,
+  dateFrom?: string,
+  dateTo?: string,
+) {
+  let next = query;
+  if (dateFrom) next = next.gte('transaction_date', dateFrom);
+  if (dateTo) next = next.lte('transaction_date', dateTo);
+  return next;
+}
+
 const DEFAULT_CATEGORIES = [
   { name: 'Sales', kind: 'income' as const },
   { name: 'Other income', kind: 'income' as const },
@@ -106,6 +121,9 @@ export const loadFinancesDashboardAction = enhanceAction(
 
     const from = input.dateFrom;
     const to = input.dateTo;
+    const page = input.page ?? 1;
+    const pageSize = input.pageSize ?? DEFAULT_FINANCE_PAGE_SIZE;
+    const offset = (page - 1) * pageSize;
 
     let txQuery = client
       .from('finance_transactions')
@@ -117,13 +135,36 @@ export const loadFinancesDashboardAction = enhanceAction(
       )
       .eq('account_id', input.accountId)
       .order('transaction_date', { ascending: false })
-      .limit(500);
+      .order('id', { ascending: false })
+      .range(offset, offset + pageSize - 1);
 
-    if (from) txQuery = txQuery.gte('transaction_date', from);
-    if (to) txQuery = txQuery.lte('transaction_date', to);
+    txQuery = applyFinanceDateFilters(txQuery, from, to);
+
+    let countQuery = client
+      .from('finance_transactions')
+      .select('id', { count: 'exact', head: true })
+      .eq('account_id', input.accountId);
+    countQuery = applyFinanceDateFilters(countQuery, from, to);
+
+    let summaryQuery = client
+      .from('finance_transactions')
+      .select('transaction_date, amount_pence, is_transfer')
+      .eq('account_id', input.accountId);
+    summaryQuery = applyFinanceDateFilters(summaryQuery, from, to);
+
+    let uncategorizedQuery = client
+      .from('finance_transactions')
+      .select('id', { count: 'exact', head: true })
+      .eq('account_id', input.accountId)
+      .is('category_id', null)
+      .eq('is_transfer', false);
+    uncategorizedQuery = applyFinanceDateFilters(uncategorizedQuery, from, to);
 
     const [
       { data: transactions, error: txError },
+      { count: transactionTotalCount, error: countError },
+      { data: summaryRows, error: summaryError },
+      { count: uncategorizedCount, error: uncategorizedError },
       categories,
       { data: bankAccounts },
       { data: connections },
@@ -131,6 +172,9 @@ export const loadFinancesDashboardAction = enhanceAction(
       { data: projects },
     ] = await Promise.all([
       txQuery,
+      countQuery,
+      summaryQuery,
+      uncategorizedQuery,
       loadFinanceCategoriesForAccount(client, input.accountId),
       client
         .from('finance_bank_accounts')
@@ -160,9 +204,12 @@ export const loadFinancesDashboardAction = enhanceAction(
     ]);
 
     if (txError) throw txError;
+    if (countError) throw countError;
+    if (summaryError) throw summaryError;
+    if (uncategorizedError) throw uncategorizedError;
 
     const totals = accumulateFinanceTotals(
-      (transactions ?? []).map((tx) => ({
+      (summaryRows ?? []).map((tx) => ({
         amount_pence: tx.amount_pence as number,
         is_transfer: tx.is_transfer as boolean | null | undefined,
       })),
@@ -176,6 +223,11 @@ export const loadFinancesDashboardAction = enhanceAction(
 
     return {
       transactions: transactions ?? [],
+      summaryRows: summaryRows ?? [],
+      transactionTotalCount: transactionTotalCount ?? 0,
+      uncategorizedCount: uncategorizedCount ?? 0,
+      page,
+      pageSize,
       categories: categories ?? [],
       bankAccounts: bankAccounts ?? [],
       connection: freeagentConnection,
@@ -201,6 +253,14 @@ export const loadFinancesDashboardAction = enhanceAction(
       accountId: z.string().uuid(),
       dateFrom: z.string().optional(),
       dateTo: z.string().optional(),
+      page: z.number().int().min(1).optional(),
+      pageSize: z
+        .union([
+          z.literal(50),
+          z.literal(100),
+          z.literal(200),
+        ])
+        .optional(),
     }),
   },
 );

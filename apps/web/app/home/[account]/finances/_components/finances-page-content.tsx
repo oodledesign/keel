@@ -72,6 +72,7 @@ import {
   applySuggestedCategoriesAction,
   categorizeFinanceTransactionAction,
   createManualTransactionAction,
+  FINANCE_TRANSACTION_PAGE_SIZES,
   importCsvTransactionsAction,
   loadFinancesDashboardAction,
   setFinanceTransactionLinksAction,
@@ -140,6 +141,8 @@ export function FinancesPageContent({
   const refreshRequestIdRef = useRef(0);
   const [dateFrom, setDateFrom] = useState(initialDateRange().from);
   const [dateTo, setDateTo] = useState(initialDateRange().to);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<(typeof FINANCE_TRANSACTION_PAGE_SIZES)[number]>(50);
   const [importOpen, setImportOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<CategorySuggestion[]>([]);
@@ -159,6 +162,8 @@ export function FinancesPageContent({
           accountId,
           dateFrom,
           dateTo,
+          page,
+          pageSize,
         });
         if (requestId !== refreshRequestIdRef.current) {
           return;
@@ -179,7 +184,7 @@ export function FinancesPageContent({
         setRefreshing(false);
       }
     },
-    [accountId, dateFrom, dateTo],
+    [accountId, dateFrom, dateTo, page, pageSize],
   );
 
   useEffect(() => {
@@ -214,14 +219,15 @@ export function FinancesPageContent({
   }, [accountId, accountSlug, refresh, router, searchParams]);
 
   const chartData = useMemo(() => {
-    if (!data?.transactions?.length) return [];
+    const rows = data?.summaryRows ?? [];
+    if (!rows.length) return [];
     const months = new Map<
       string,
       { month: string; income: number; expenses: number; net: number }
     >();
     const formatter = new Intl.DateTimeFormat('en-GB', { month: 'short' });
 
-    for (const tx of data.transactions) {
+    for (const tx of rows) {
       if (tx.is_transfer) continue;
 
       const key = String(tx.transaction_date).slice(0, 7);
@@ -244,15 +250,9 @@ export function FinancesPageContent({
     return [...months.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([, v]) => v);
-  }, [data?.transactions]);
+  }, [data?.summaryRows]);
 
-  const uncategorizedCount = useMemo(
-    () =>
-      (data?.transactions ?? []).filter(
-        (tx) => !tx.category_id && !tx.is_transfer,
-      ).length,
-    [data?.transactions],
-  );
+  const uncategorizedCount = data?.uncategorizedCount ?? 0;
 
   const suggestionMap = useMemo(
     () => new Map(aiSuggestions.map((s) => [s.transactionId, s])),
@@ -267,13 +267,15 @@ export function FinancesPageContent({
     setLoading(true);
     setDateFrom(from);
     setDateTo(to);
+    setPage(1);
     setAiSuggestions([]);
   };
 
   const forecast = useMemo(() => {
-    if (!data?.transactions?.length) return null;
+    const rows = data?.summaryRows ?? [];
+    if (!rows.length) return null;
     const months = new Map<string, { income: number; expense: number }>();
-    for (const tx of data.transactions) {
+    for (const tx of rows) {
       if (tx.is_transfer) continue;
 
       const key = String(tx.transaction_date).slice(0, 7);
@@ -294,7 +296,35 @@ export function FinancesPageContent({
       avgExpensePence: Math.round(avgExpense),
       projectedNetPence: Math.round(avgIncome - avgExpense),
     };
-  }, [data?.transactions]);
+  }, [data?.summaryRows]);
+
+  const formatSyncResult = (result: {
+    imported: number;
+    updated: number;
+    processed: number;
+    categorised: number;
+    categoriesSynced: number;
+  }) => {
+    const parts: string[] = [];
+    if (result.imported > 0) {
+      parts.push(`${result.imported} new`);
+    }
+    if (result.updated > 0) {
+      parts.push(`${result.updated} updated`);
+    }
+    if (result.processed > 0 && result.imported === 0 && result.updated === 0) {
+      parts.push(`${result.processed} checked`);
+    }
+    if (result.categoriesSynced > 0) {
+      parts.push(
+        `${result.categoriesSynced} categor${result.categoriesSynced === 1 ? 'y' : 'ies'} synced`,
+      );
+    }
+    if (result.categorised > 0) {
+      parts.push(`${result.categorised} categorised`);
+    }
+    return parts.length ? parts.join(', ') : 'No changes';
+  };
 
   const onSetLinks = (
     transactionId: string,
@@ -368,23 +398,10 @@ export function FinancesPageContent({
           ? await syncFreeAgentHistoryAction({ accountId, accountSlug })
           : await syncFreeAgentAction({ accountId, accountSlug });
         await refresh({ background: true });
-        const parts = [
-          `${result.imported} new transaction${result.imported === 1 ? '' : 's'}`,
-        ];
-        if (result.categoriesSynced > 0) {
-          parts.push(
-            `${result.categoriesSynced} categor${result.categoriesSynced === 1 ? 'y' : 'ies'} from FreeAgent`,
-          );
-        }
-        if (result.categorised > 0) {
-          parts.push(
-            `${result.categorised} categor${result.categorised === 1 ? 'y' : 'ies'} imported from FreeAgent`,
-          );
-        }
         toast.success(
           options?.history
-            ? `Historical sync complete — ${parts.join(', ')}`
-            : `Synced ${parts.join(', ')}`,
+            ? `Historical sync complete — ${formatSyncResult(result)}`
+            : `FreeAgent sync complete — ${formatSyncResult(result)}`,
         );
       } catch (e) {
         toast.error(e instanceof Error ? e.message : 'Sync failed');
@@ -567,6 +584,13 @@ export function FinancesPageContent({
             uncategorizedCount={uncategorizedCount}
             aiSuggestions={aiSuggestions}
             suggestionMap={suggestionMap}
+            page={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(nextSize) => {
+              setPageSize(nextSize);
+              setPage(1);
+            }}
             onSuggestCategories={onSuggestCategories}
             onApplySuggestions={onApplySuggestions}
             onCategorize={onCategorize}
@@ -674,6 +698,10 @@ function TransactionsPanel({
   uncategorizedCount,
   aiSuggestions,
   suggestionMap,
+  page,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
   onSuggestCategories,
   onApplySuggestions,
   onCategorize,
@@ -689,6 +717,10 @@ function TransactionsPanel({
   uncategorizedCount: number;
   aiSuggestions: CategorySuggestion[];
   suggestionMap: Map<string, CategorySuggestion>;
+  page: number;
+  pageSize: (typeof FINANCE_TRANSACTION_PAGE_SIZES)[number];
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: (typeof FINANCE_TRANSACTION_PAGE_SIZES)[number]) => void;
   onSuggestCategories: () => void;
   onApplySuggestions: () => void;
   onCategorize: (transactionId: string, categoryId: string | null) => void;
@@ -701,6 +733,11 @@ function TransactionsPanel({
   onSyncFreeAgent: () => void;
   onSyncFreeAgentHistory: () => void;
 }) {
+  const totalCount = data?.transactionTotalCount ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const rangeStart = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
+  const rangeEnd = Math.min(page * pageSize, totalCount);
+
   return (
     <div className={cn(panelClass, 'overflow-hidden')}>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
@@ -765,8 +802,9 @@ function TransactionsPanel({
       </div>
       {!data?.transactions.length ? (
         <p className="p-4 text-sm text-[var(--workspace-shell-text-muted)]">
-          No transactions in this range. Import a CSV, sync from FreeAgent in
-          settings, or add manually.
+          {totalCount > 0
+            ? 'No transactions on this page. Try an earlier page or widen the date range.'
+            : 'No transactions in this range. Import a CSV, sync from FreeAgent in settings, or add manually.'}
         </p>
       ) : (
         <div className="overflow-x-auto">
@@ -946,6 +984,55 @@ function TransactionsPanel({
           </table>
         </div>
       )}
+      {totalCount > 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[color:var(--workspace-shell-border)] px-4 py-3">
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+            Showing {rangeStart}–{rangeEnd} of {totalCount}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              value={String(pageSize)}
+              onValueChange={(value) =>
+                onPageSizeChange(Number(value) as (typeof FINANCE_TRANSACTION_PAGE_SIZES)[number])
+              }
+            >
+              <SelectTrigger className="h-8 w-[110px] border-[color:var(--workspace-shell-border)] bg-transparent text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {FINANCE_TRANSACTION_PAGE_SIZES.map((size) => (
+                  <SelectItem key={size} value={String(size)}>
+                    {size} rows
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="border-[color:var(--workspace-shell-border)]"
+              disabled={pending || loading || page <= 1}
+              onClick={() => onPageChange(page - 1)}
+            >
+              Previous
+            </Button>
+            <span className="text-xs tabular-nums text-[var(--workspace-shell-text-muted)]">
+              Page {page} of {totalPages}
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="border-[color:var(--workspace-shell-border)]"
+              disabled={pending || loading || page >= totalPages}
+              onClick={() => onPageChange(page + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -41,6 +41,8 @@ export type SyncFreeAgentOptions = {
 
 export type SyncFreeAgentResult = {
   imported: number;
+  updated: number;
+  processed: number;
   bankAccounts: number;
   categorised: number;
   categoriesSynced: number;
@@ -83,7 +85,7 @@ function explanationCategoryUrl(explanation: Record<string, unknown>): string | 
 async function fetchExplanationMapForBankAccount(
   client: FreeAgentClient,
   bankAccountUrl: string,
-  options?: { fromDate?: string; maxPages?: number },
+  options?: { fromDate?: string; toDate?: string; maxPages?: number },
 ): Promise<Map<string, FreeAgentExplanationSummary>> {
   const map = new Map<string, FreeAgentExplanationSummary>();
   const maxPages = options?.maxPages ?? 50;
@@ -92,7 +94,9 @@ async function fetchExplanationMapForBankAccount(
     const explanations = await client.listTransactionExplanationsForBankAccount(
       bankAccountUrl,
       page,
-      options?.fromDate ? { fromDate: options.fromDate } : undefined,
+      options?.fromDate || options?.toDate
+        ? { fromDate: options.fromDate, toDate: options.toDate }
+        : undefined,
     );
     if (explanations.length === 0) break;
 
@@ -186,6 +190,162 @@ function incrementalSyncFromDate(lastSyncAt: string | null | undefined): string 
   return from.toISOString().slice(0, 10);
 }
 
+type DateWindow = { fromDate: string; toDate?: string };
+
+type ImportStats = {
+  imported: number;
+  updated: number;
+  processed: number;
+  categorised: number;
+};
+
+function shiftDateYmd(ymd: string, days: number): string {
+  const date = new Date(`${ymd}T12:00:00`);
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+/** Full sync covers the last two years of bank activity. */
+function fullSyncFromDate(): string {
+  return shiftDateYmd(new Date().toISOString().slice(0, 10), -730);
+}
+
+/** Year-by-year windows for deep historical backfill. */
+function historyDateWindows(yearsBack = 15): DateWindow[] {
+  const today = new Date().toISOString().slice(0, 10);
+  const endYear = new Date().getFullYear();
+  const startYear = endYear - yearsBack + 1;
+  const windows: DateWindow[] = [];
+
+  for (let year = startYear; year <= endYear; year++) {
+    windows.push({
+      fromDate: `${year}-01-01`,
+      toDate: year === endYear ? today : `${year}-12-31`,
+    });
+  }
+
+  return windows;
+}
+
+async function importBankTransactionsForWindow(
+  db: SupabaseClient,
+  input: {
+    accountId: string;
+    bankAccountId: string;
+    client: FreeAgentClient;
+    bankAccountUrl: string;
+    categoryUrlToId: Map<string, string>;
+    explanationMap: Map<string, FreeAgentExplanationSummary>;
+    dateFilter?: DateWindow;
+    maxPages: number;
+  },
+): Promise<ImportStats> {
+  const stats: ImportStats = {
+    imported: 0,
+    updated: 0,
+    processed: 0,
+    categorised: 0,
+  };
+
+  for (let page = 1; page <= input.maxPages; page++) {
+    const transactions = await input.client.listBankTransactions(
+      input.bankAccountUrl,
+      page,
+      input.dateFilter?.fromDate || input.dateFilter?.toDate
+        ? {
+            fromDate: input.dateFilter.fromDate,
+            toDate: input.dateFilter.toDate,
+          }
+        : undefined,
+    );
+    if (transactions.length === 0) break;
+
+    for (const tx of transactions) {
+      const txUrl = String(tx.url ?? '');
+      const txId = parseFreeAgentId(txUrl);
+      if (!txUrl || !txId) continue;
+
+      stats.processed++;
+
+      const amountPence = poundsToPence(tx.amount as string | number);
+      const dated = String(tx.dated ?? tx.created_at ?? '').slice(0, 10);
+      if (!dated) continue;
+
+      const description = String(
+        tx.description ?? tx.full_description ?? tx.comment ?? '',
+      );
+
+      const faExplanation = input.explanationMap.get(txUrl);
+      const categoryId =
+        faExplanation?.categoryUrl != null
+          ? (input.categoryUrlToId.get(faExplanation.categoryUrl) ?? null)
+          : null;
+
+      const { data: existingTx } = await db
+        .from('finance_transactions')
+        .select('id, category_id, freeagent_explanation_url, sync_status')
+        .eq('account_id', input.accountId)
+        .eq('freeagent_transaction_url', txUrl)
+        .maybeSingle();
+
+      const preserveLocalCategory =
+        existingTx?.sync_status === 'pending_push' ||
+        existingTx?.sync_status === 'local';
+
+      const payload = {
+        account_id: input.accountId,
+        bank_account_id: input.bankAccountId,
+        transaction_date: dated,
+        description,
+        amount_pence: amountPence,
+        currency: String(tx.currency ?? 'GBP').toUpperCase(),
+        source: 'freeagent' as const,
+        external_id: `freeagent:${txId}`,
+        freeagent_transaction_url: txUrl,
+        freeagent_explanation_url: faExplanation?.explanationUrl ?? null,
+        category_id:
+          preserveLocalCategory && existingTx?.category_id
+            ? existingTx.category_id
+            : categoryId,
+        sync_status:
+          preserveLocalCategory && existingTx?.category_id
+            ? existingTx.sync_status
+            : categoryId
+              ? ('synced' as const)
+              : ('synced' as const),
+        sync_error: null,
+      };
+
+      if (existingTx?.id) {
+        await db
+          .from('finance_transactions')
+          .update({
+            transaction_date: payload.transaction_date,
+            description: payload.description,
+            amount_pence: payload.amount_pence,
+            bank_account_id: input.bankAccountId,
+            freeagent_explanation_url: payload.freeagent_explanation_url,
+            category_id: payload.category_id,
+            sync_status: payload.sync_status,
+            sync_error: null,
+          })
+          .eq('id', existingTx.id);
+
+        stats.updated++;
+        if (categoryId && !preserveLocalCategory) stats.categorised++;
+      } else {
+        await db.from('finance_transactions').insert(payload);
+        stats.imported++;
+        if (categoryId) stats.categorised++;
+      }
+    }
+
+    if (transactions.length < 100) break;
+  }
+
+  return stats;
+}
+
 export async function syncFreeAgentToOzer(
   db: SupabaseClient,
   accountId: string,
@@ -219,9 +379,9 @@ export async function syncFreeAgentToOzer(
 
   const fromDate = isIncremental
     ? (options.fromDate ?? incrementalSyncFromDate(connection.last_sync_at as string | null))
-    : null;
-  const maxTxPages = isIncremental ? 5 : isHistory ? 100 : 20;
-  const maxExplanationPages = isIncremental ? 5 : isHistory ? 100 : 50;
+    : isHistory
+      ? null
+      : fullSyncFromDate();
 
   let categoriesSynced = 0;
   if (!isIncremental) {
@@ -231,20 +391,14 @@ export async function syncFreeAgentToOzer(
 
   const faBankAccounts = await client.listBankAccounts();
   let imported = 0;
+  let updated = 0;
+  let processed = 0;
   let categorised = 0;
 
   for (const ba of faBankAccounts) {
     const baUrl = String(ba.url ?? '');
     const baId = parseFreeAgentId(baUrl);
     if (!baUrl) continue;
-
-    const explanationMap = await fetchExplanationMapForBankAccount(
-      client,
-      baUrl,
-      isIncremental
-        ? { fromDate: fromDate ?? undefined, maxPages: maxExplanationPages }
-        : { maxPages: maxExplanationPages },
-    );
 
     const { data: bankRow } = await db
       .from('finance_bank_accounts')
@@ -280,92 +434,42 @@ export async function syncFreeAgentToOzer(
 
     if (!bankAccountId) continue;
 
-    for (let page = 1; page <= maxTxPages; page++) {
-      const transactions = await client.listBankTransactions(
+    const windows: DateWindow[] = isHistory
+      ? historyDateWindows()
+      : [{ fromDate: fromDate ?? fullSyncFromDate(), toDate: undefined }];
+
+    for (const window of windows) {
+      const explanationMap = await fetchExplanationMapForBankAccount(
+        client,
         baUrl,
-        page,
-        fromDate ? { fromDate } : undefined,
+        isIncremental
+          ? {
+              fromDate: window.fromDate,
+              toDate: window.toDate,
+              maxPages: 5,
+            }
+          : {
+              fromDate: window.fromDate,
+              toDate: window.toDate,
+              maxPages: isHistory ? 100 : 50,
+            },
       );
-      if (transactions.length === 0) break;
 
-      for (const tx of transactions) {
-        const txUrl = String(tx.url ?? '');
-        const txId = parseFreeAgentId(txUrl);
-        if (!txUrl || !txId) continue;
+      const stats = await importBankTransactionsForWindow(db, {
+        accountId,
+        bankAccountId,
+        client,
+        bankAccountUrl: baUrl,
+        categoryUrlToId,
+        explanationMap,
+        dateFilter: window,
+        maxPages: isIncremental ? 5 : isHistory ? 100 : 50,
+      });
 
-        const amountPence = poundsToPence(tx.amount as string | number);
-        const dated = String(tx.dated ?? tx.created_at ?? '').slice(0, 10);
-        if (!dated) continue;
-
-        const description = String(
-          tx.description ?? tx.full_description ?? tx.comment ?? '',
-        );
-
-        const faExplanation = explanationMap.get(txUrl);
-        const categoryId =
-          faExplanation?.categoryUrl != null
-            ? (categoryUrlToId.get(faExplanation.categoryUrl) ?? null)
-            : null;
-
-        const { data: existingTx } = await db
-          .from('finance_transactions')
-          .select('id, category_id, freeagent_explanation_url, sync_status')
-          .eq('account_id', accountId)
-          .eq('freeagent_transaction_url', txUrl)
-          .maybeSingle();
-
-        const preserveLocalCategory =
-          existingTx?.sync_status === 'pending_push' ||
-          existingTx?.sync_status === 'local';
-
-        const payload = {
-          account_id: accountId,
-          bank_account_id: bankAccountId,
-          transaction_date: dated,
-          description,
-          amount_pence: amountPence,
-          currency: String(tx.currency ?? 'GBP').toUpperCase(),
-          source: 'freeagent' as const,
-          external_id: `freeagent:${txId}`,
-          freeagent_transaction_url: txUrl,
-          freeagent_explanation_url: faExplanation?.explanationUrl ?? null,
-          category_id:
-            preserveLocalCategory && existingTx?.category_id
-              ? existingTx.category_id
-              : categoryId,
-          sync_status:
-            preserveLocalCategory && existingTx?.category_id
-              ? existingTx.sync_status
-              : categoryId
-                ? ('synced' as const)
-                : ('synced' as const),
-          sync_error: null,
-        };
-
-        if (existingTx?.id) {
-          await db
-            .from('finance_transactions')
-            .update({
-              transaction_date: payload.transaction_date,
-              description: payload.description,
-              amount_pence: payload.amount_pence,
-              bank_account_id: bankAccountId,
-              freeagent_explanation_url: payload.freeagent_explanation_url,
-              category_id: payload.category_id,
-              sync_status: payload.sync_status,
-              sync_error: null,
-            })
-            .eq('id', existingTx.id);
-
-          if (categoryId && !preserveLocalCategory) categorised++;
-        } else {
-          await db.from('finance_transactions').insert(payload);
-          imported++;
-          if (categoryId) categorised++;
-        }
-      }
-
-      if (transactions.length < 100) break;
+      imported += stats.imported;
+      updated += stats.updated;
+      processed += stats.processed;
+      categorised += stats.categorised;
     }
 
     await db
@@ -388,6 +492,8 @@ export async function syncFreeAgentToOzer(
 
   return {
     imported,
+    updated,
+    processed,
     bankAccounts: faBankAccounts.length,
     categorised,
     categoriesSynced,
