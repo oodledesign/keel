@@ -131,9 +131,9 @@ export async function upsertUserSettings(settings: {
   first_name?: string | null;
   last_name?: string | null;
   mobile?: string | null;
-  use_keel_for_work?: boolean;
-  use_keel_for_family?: boolean;
-  use_keel_for_community?: boolean;
+  use_ozer_for_work?: boolean;
+  use_ozer_for_family?: boolean;
+  use_ozer_for_community?: boolean;
   accessibility_text_size?: 'small' | 'standard' | 'large';
   accessibility_high_contrast?: boolean;
   accessibility_simplified_mode?: boolean;
@@ -203,9 +203,9 @@ export async function upsertUserSettings(settings: {
 
   revalidatePath(pathsConfig.app.onboarding);
   if (
-    settings.use_keel_for_work !== undefined ||
-    settings.use_keel_for_family !== undefined ||
-    settings.use_keel_for_community !== undefined
+    settings.use_ozer_for_work !== undefined ||
+    settings.use_ozer_for_family !== undefined ||
+    settings.use_ozer_for_community !== undefined
   ) {
     revalidatePath(pathsConfig.app.personalAccountPreferencesSettings);
   }

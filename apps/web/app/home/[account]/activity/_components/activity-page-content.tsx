@@ -417,7 +417,7 @@ function ActivityBlockAssignmentCell({
           <Button
             type="button"
             size="sm"
-            className="keel-gradient-btn flex-1"
+            className="ozer-gradient-btn flex-1"
             disabled={pending}
             onClick={() =>
               runAction(
@@ -983,7 +983,7 @@ function ActivityBulkActionBar({
       <Button
         type="button"
         size="sm"
-        className="keel-gradient-btn"
+        className="ozer-gradient-btn"
         disabled={pending}
         onClick={() =>
           runBulkAction(
@@ -1263,7 +1263,7 @@ export function ActivityPageContent({ data }: Props) {
                 KeelAssistant uploads are blocked until you enable tracking for
                 this workspace.
               </p>
-              <Button asChild size="sm" className="keel-gradient-btn">
+              <Button asChild size="sm" className="ozer-gradient-btn">
                 <Link href={settingsPath}>Open activity settings</Link>
               </Button>
             </div>

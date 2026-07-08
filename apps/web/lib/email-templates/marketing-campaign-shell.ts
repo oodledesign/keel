@@ -6,7 +6,7 @@ const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
 const supportEmail =
   process.env.SUPPORT_INBOX?.trim() ??
   process.env.EMAIL_SENDER?.match(/<([^>]+)>/)?.[1] ??
-  'support@keel.app';
+  'hi@ozer.so';
 
 export const MARKETING_EMAIL_URLS = {
   app: appOrigin,

@@ -302,7 +302,7 @@ export function EmailPageClient({ initialData }: Props) {
           </Button>
           <Button
             type="button"
-            className="keel-gradient-btn text-[var(--ozer-white)]"
+            className="ozer-gradient-btn text-[var(--ozer-white)]"
             onClick={syncNow}
             disabled={!connected || syncing}
           >

@@ -1,4 +1,4 @@
--- Ensure public.user_settings exists (profile, accessibility, Keel “how you use” flags).
+-- Ensure public.user_settings exists (profile, accessibility, Ozer “how you use” flags).
 -- Use when the app errors with: Could not find the table 'public.user_settings' in the schema cache
 -- (PostgREST has no such table — usually migrations were not applied to this project).
 --
@@ -18,19 +18,62 @@ CREATE TABLE IF NOT EXISTS public.user_settings (
   accessibility_enhanced_focus boolean NOT NULL DEFAULT true,
   accessibility_dyslexia_font boolean NOT NULL DEFAULT false,
 
-  use_keel_for_work boolean NOT NULL DEFAULT false,
-  use_keel_for_family boolean NOT NULL DEFAULT false,
-  use_keel_for_community boolean NOT NULL DEFAULT false,
+  use_ozer_for_work boolean NOT NULL DEFAULT false,
+  use_ozer_for_family boolean NOT NULL DEFAULT false,
+  use_ozer_for_community boolean NOT NULL DEFAULT false,
 
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
 
--- If the table already existed from an older migration, add Keel columns when missing.
+-- Migrate legacy Keel column names if present (before ADD COLUMN for ozer_*).
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'user_settings'
+      AND column_name = 'use_keel_for_work'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'user_settings'
+      AND column_name = 'use_ozer_for_work'
+  ) THEN
+    ALTER TABLE public.user_settings
+      RENAME COLUMN use_keel_for_work TO use_ozer_for_work;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'user_settings'
+      AND column_name = 'use_keel_for_family'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'user_settings'
+      AND column_name = 'use_ozer_for_family'
+  ) THEN
+    ALTER TABLE public.user_settings
+      RENAME COLUMN use_keel_for_family TO use_ozer_for_family;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'user_settings'
+      AND column_name = 'use_keel_for_community'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'user_settings'
+      AND column_name = 'use_ozer_for_community'
+  ) THEN
+    ALTER TABLE public.user_settings
+      RENAME COLUMN use_keel_for_community TO use_ozer_for_community;
+  END IF;
+END $$;
+
+-- If the table already existed without context columns, add Ozer columns when missing.
 ALTER TABLE public.user_settings
-  ADD COLUMN IF NOT EXISTS use_keel_for_work boolean NOT NULL DEFAULT false,
-  ADD COLUMN IF NOT EXISTS use_keel_for_family boolean NOT NULL DEFAULT false,
-  ADD COLUMN IF NOT EXISTS use_keel_for_community boolean NOT NULL DEFAULT false;
+  ADD COLUMN IF NOT EXISTS use_ozer_for_work boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS use_ozer_for_family boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS use_ozer_for_community boolean NOT NULL DEFAULT false;
 
 CREATE OR REPLACE FUNCTION public.user_settings_updated_at()
 RETURNS trigger

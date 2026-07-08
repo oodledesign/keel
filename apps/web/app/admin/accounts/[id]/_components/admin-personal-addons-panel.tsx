@@ -11,7 +11,7 @@ import {
   adminRevokeEntitlementAction,
   adminSetBillingExemptAction,
 } from '~/lib/billing/admin-grants.actions';
-import { KEEL_PERSONAL_ADDON_CATALOG } from '~/lib/billing/keel-plan-catalog';
+import { OZER_PERSONAL_ADDON_CATALOG } from '~/lib/billing/ozer-plan-catalog';
 
 type EntitlementRow = {
   entitlement_key: string;
@@ -25,7 +25,7 @@ export function AdminPersonalAddonsPanel(props: {
   billingExempt: boolean;
 }) {
   const [pending, startTransition] = useTransition();
-  const emailAssistant = KEEL_PERSONAL_ADDON_CATALOG[0]!;
+  const emailAssistant = OZER_PERSONAL_ADDON_CATALOG[0]!;
 
   const hasKey = (key: string) =>
     props.entitlements.some((entry) => entry.entitlement_key === key);

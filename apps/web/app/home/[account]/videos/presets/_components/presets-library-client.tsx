@@ -195,7 +195,7 @@ export function PresetsLibraryClient(props: {
         </Link>
         <Button
           type="button"
-          className="keel-gradient-btn gap-2"
+          className="ozer-gradient-btn gap-2"
           onClick={() => setCreateOpen(true)}
         >
           <Plus className="h-4 w-4" />
@@ -212,7 +212,7 @@ export function PresetsLibraryClient(props: {
           </p>
           <Button
             type="button"
-            className="keel-gradient-btn mt-6 gap-2"
+            className="ozer-gradient-btn mt-6 gap-2"
             onClick={() => setCreateOpen(true)}
           >
             <Plus className="h-4 w-4" />
@@ -322,7 +322,7 @@ export function PresetsLibraryClient(props: {
             </Button>
             <Button
               type="button"
-              className="keel-gradient-btn"
+              className="ozer-gradient-btn"
               disabled={!presetName.trim() || creating}
               onClick={() => void createPreset()}
             >

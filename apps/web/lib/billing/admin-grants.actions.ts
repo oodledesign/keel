@@ -10,7 +10,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 
 import { logAdminAction } from '~/lib/admin/log-admin-action';
 
-import { findPlanByProductAndPlanId } from './keel-plan-catalog';
+import { findPlanByProductAndPlanId } from './ozer-plan-catalog';
 import { syncAddonModulesFromEntitlements } from './sync-addon-modules-from-entitlements';
 import {
   ensureEstablishedWorkspaceMembersOnboarded,

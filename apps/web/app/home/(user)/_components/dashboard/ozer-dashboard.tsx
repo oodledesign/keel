@@ -16,13 +16,13 @@ import { DashboardShortcutsBar } from '~/components/dashboard-shortcuts/dashboar
 import pathsConfig from '~/config/paths.config';
 
 import type {
-  KeelDashboardData,
+  OzerDashboardData,
   PersonalCalendarEvent,
   PersonalDashboardTask,
   PersonalPeopleUpcomingItem,
   PersonalRecentNote,
   WorkspaceOverviewCard,
-} from '../../_lib/server/keel-dashboard.loader';
+} from '../../_lib/server/ozer-dashboard.loader';
 
 import { PersonalDashboardTaskRow } from './personal-dashboard-task-row';
 import { ConnectedWorkspacesBar } from './connected-workspaces-bar';
@@ -34,7 +34,7 @@ const DASHBOARD_TASK_PREVIEW_LIMIT = 5;
 const personalTasksHref = `${pathsConfig.app.home}/tasks`;
 
 type Props = {
-  data: KeelDashboardData;
+  data: OzerDashboardData;
 };
 
 function getGreeting(): string {
@@ -44,7 +44,7 @@ function getGreeting(): string {
   return 'Good evening';
 }
 
-export function KeelDashboard({ data }: Props) {
+export function OzerDashboard({ data }: Props) {
   const greeting = useMemo(() => getGreeting(), []);
 
   return (
@@ -63,7 +63,7 @@ export function KeelDashboard({ data }: Props) {
         {data.brainWorkspaceSlug ? (
           <Button
             asChild
-            className="keel-gradient-btn w-full sm:w-auto"
+            className="ozer-gradient-btn w-full sm:w-auto"
           >
             <Link href={buildBrainChatUrl(data.brainWorkspaceSlug)}>
               <MessageSquare className="mr-2 h-4 w-4" />

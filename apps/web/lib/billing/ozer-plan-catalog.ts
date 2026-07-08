@@ -1,8 +1,8 @@
 import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
 
-import { KEEL_STRIPE_PRICES } from './stripe-price-ids';
+import { OZER_STRIPE_PRICES } from './stripe-price-ids';
 
-export type KeelPlanFamily =
+export type OzerPlanFamily =
   | 'community'
   | 'business'
   | 'business_lite'
@@ -13,37 +13,37 @@ export type KeelPlanFamily =
   | 'addon_signatures'
   | 'addon_email_assistant';
 
-export type KeelPlanLimits = {
+export type OzerPlanLimits = {
   maxMembers: number | null;
   maxProperties: number | null;
   maxVideos: number | null;
   maxMailboxes?: number | null;
 };
 
-export type KeelPlanDefinition = {
+export type OzerPlanDefinition = {
   productId: string;
   planId: string;
   stripePriceId: string;
-  family: KeelPlanFamily;
+  family: OzerPlanFamily;
   entitlementKey: string;
-  limits: KeelPlanLimits;
+  limits: OzerPlanLimits;
   workspaceProfiles?: WorkspaceProfile[];
 };
 
-const COMMUNITY: KeelPlanDefinition[] = [
+const COMMUNITY: OzerPlanDefinition[] = [
   {
-    productId: 'keel-community',
+    productId: 'ozer-community',
     planId: 'community-monthly',
-    stripePriceId: KEEL_STRIPE_PRICES.community_monthly,
+    stripePriceId: OZER_STRIPE_PRICES.community_monthly,
     family: 'community',
     entitlementKey: 'workspace_community',
     limits: { maxMembers: 3, maxProperties: null, maxVideos: null },
     workspaceProfiles: ['community'],
   },
   {
-    productId: 'keel-community',
+    productId: 'ozer-community',
     planId: 'community-yearly',
-    stripePriceId: KEEL_STRIPE_PRICES.community_yearly,
+    stripePriceId: OZER_STRIPE_PRICES.community_yearly,
     family: 'community',
     entitlementKey: 'workspace_community',
     limits: { maxMembers: 3, maxProperties: null, maxVideos: null },
@@ -51,11 +51,11 @@ const COMMUNITY: KeelPlanDefinition[] = [
   },
 ];
 
-const BUSINESS_LITE: KeelPlanDefinition[] = [
+const BUSINESS_LITE: OzerPlanDefinition[] = [
   {
-    productId: 'keel-business-lite',
+    productId: 'ozer-business-lite',
     planId: 'business-lite-free',
-    stripePriceId: KEEL_STRIPE_PRICES.business_lite_monthly,
+    stripePriceId: OZER_STRIPE_PRICES.business_lite_monthly,
     family: 'business_lite',
     entitlementKey: 'workspace_business_lite',
     limits: { maxMembers: 3, maxProperties: null, maxVideos: null },
@@ -63,56 +63,56 @@ const BUSINESS_LITE: KeelPlanDefinition[] = [
   },
 ];
 
-const BUSINESS: KeelPlanDefinition[] = [
+const BUSINESS: OzerPlanDefinition[] = [
   {
-    productId: 'keel-business-solo',
+    productId: 'ozer-business-solo',
     planId: 'business-solo-monthly',
-    stripePriceId: KEEL_STRIPE_PRICES.business_solo_monthly,
+    stripePriceId: OZER_STRIPE_PRICES.business_solo_monthly,
     family: 'business',
     entitlementKey: 'workspace_business',
     limits: { maxMembers: 1, maxProperties: null, maxVideos: null },
     workspaceProfiles: ['work_design'],
   },
   {
-    productId: 'keel-business-solo',
+    productId: 'ozer-business-solo',
     planId: 'business-solo-yearly',
-    stripePriceId: KEEL_STRIPE_PRICES.business_solo_yearly,
+    stripePriceId: OZER_STRIPE_PRICES.business_solo_yearly,
     family: 'business',
     entitlementKey: 'workspace_business',
     limits: { maxMembers: 1, maxProperties: null, maxVideos: null },
     workspaceProfiles: ['work_design'],
   },
   {
-    productId: 'keel-business-team',
+    productId: 'ozer-business-team',
     planId: 'business-team-monthly',
-    stripePriceId: KEEL_STRIPE_PRICES.business_team_monthly,
+    stripePriceId: OZER_STRIPE_PRICES.business_team_monthly,
     family: 'business',
     entitlementKey: 'workspace_business',
     limits: { maxMembers: 5, maxProperties: null, maxVideos: null },
     workspaceProfiles: ['work_design'],
   },
   {
-    productId: 'keel-business-team',
+    productId: 'ozer-business-team',
     planId: 'business-team-yearly',
-    stripePriceId: KEEL_STRIPE_PRICES.business_team_yearly,
+    stripePriceId: OZER_STRIPE_PRICES.business_team_yearly,
     family: 'business',
     entitlementKey: 'workspace_business',
     limits: { maxMembers: 5, maxProperties: null, maxVideos: null },
     workspaceProfiles: ['work_design'],
   },
   {
-    productId: 'keel-business-scale',
+    productId: 'ozer-business-scale',
     planId: 'business-scale-monthly',
-    stripePriceId: KEEL_STRIPE_PRICES.business_scale_monthly,
+    stripePriceId: OZER_STRIPE_PRICES.business_scale_monthly,
     family: 'business',
     entitlementKey: 'workspace_business',
     limits: { maxMembers: 15, maxProperties: null, maxVideos: null },
     workspaceProfiles: ['work_design'],
   },
   {
-    productId: 'keel-business-scale',
+    productId: 'ozer-business-scale',
     planId: 'business-scale-yearly',
-    stripePriceId: KEEL_STRIPE_PRICES.business_scale_yearly,
+    stripePriceId: OZER_STRIPE_PRICES.business_scale_yearly,
     family: 'business',
     entitlementKey: 'workspace_business',
     limits: { maxMembers: 15, maxProperties: null, maxVideos: null },
@@ -120,38 +120,38 @@ const BUSINESS: KeelPlanDefinition[] = [
   },
 ];
 
-const PROPERTY: KeelPlanDefinition[] = [
+const PROPERTY: OzerPlanDefinition[] = [
   {
-    productId: 'keel-property-starter',
+    productId: 'ozer-property-starter',
     planId: 'property-starter-monthly',
-    stripePriceId: KEEL_STRIPE_PRICES.property_starter_monthly,
+    stripePriceId: OZER_STRIPE_PRICES.property_starter_monthly,
     family: 'property',
     entitlementKey: 'workspace_property',
     limits: { maxMembers: null, maxProperties: 5, maxVideos: null },
     workspaceProfiles: ['work_property'],
   },
   {
-    productId: 'keel-property-starter',
+    productId: 'ozer-property-starter',
     planId: 'property-starter-yearly',
-    stripePriceId: KEEL_STRIPE_PRICES.property_starter_yearly,
+    stripePriceId: OZER_STRIPE_PRICES.property_starter_yearly,
     family: 'property',
     entitlementKey: 'workspace_property',
     limits: { maxMembers: null, maxProperties: 5, maxVideos: null },
     workspaceProfiles: ['work_property'],
   },
   {
-    productId: 'keel-property-portfolio',
+    productId: 'ozer-property-portfolio',
     planId: 'property-portfolio-monthly',
-    stripePriceId: KEEL_STRIPE_PRICES.property_portfolio_monthly,
+    stripePriceId: OZER_STRIPE_PRICES.property_portfolio_monthly,
     family: 'property',
     entitlementKey: 'workspace_property',
     limits: { maxMembers: null, maxProperties: 20, maxVideos: null },
     workspaceProfiles: ['work_property'],
   },
   {
-    productId: 'keel-property-portfolio',
+    productId: 'ozer-property-portfolio',
     planId: 'property-portfolio-yearly',
-    stripePriceId: KEEL_STRIPE_PRICES.property_portfolio_yearly,
+    stripePriceId: OZER_STRIPE_PRICES.property_portfolio_yearly,
     family: 'property',
     entitlementKey: 'workspace_property',
     limits: { maxMembers: null, maxProperties: 20, maxVideos: null },
@@ -159,114 +159,114 @@ const PROPERTY: KeelPlanDefinition[] = [
   },
 ];
 
-const ADDONS: KeelPlanDefinition[] = [
+const ADDONS: OzerPlanDefinition[] = [
   {
-    productId: 'keel-addon-signatures',
+    productId: 'ozer-addon-signatures',
     planId: 'signatures-starter-monthly',
-    stripePriceId: KEEL_STRIPE_PRICES.addon_signatures_starter_monthly,
+    stripePriceId: OZER_STRIPE_PRICES.addon_signatures_starter_monthly,
     family: 'addon_signatures',
     entitlementKey: 'addon_signatures',
     limits: { maxMembers: null, maxProperties: null, maxVideos: null, maxMailboxes: 10 },
   },
   {
-    productId: 'keel-addon-signatures',
+    productId: 'ozer-addon-signatures',
     planId: 'signatures-starter-yearly',
-    stripePriceId: KEEL_STRIPE_PRICES.addon_signatures_starter_yearly,
+    stripePriceId: OZER_STRIPE_PRICES.addon_signatures_starter_yearly,
     family: 'addon_signatures',
     entitlementKey: 'addon_signatures',
     limits: { maxMembers: null, maxProperties: null, maxVideos: null, maxMailboxes: 10 },
   },
   {
-    productId: 'keel-addon-signatures',
+    productId: 'ozer-addon-signatures',
     planId: 'signatures-team-monthly',
-    stripePriceId: KEEL_STRIPE_PRICES.addon_signatures_team_monthly,
+    stripePriceId: OZER_STRIPE_PRICES.addon_signatures_team_monthly,
     family: 'addon_signatures',
     entitlementKey: 'addon_signatures',
     limits: { maxMembers: null, maxProperties: null, maxVideos: null, maxMailboxes: 50 },
   },
   {
-    productId: 'keel-addon-signatures',
+    productId: 'ozer-addon-signatures',
     planId: 'signatures-team-yearly',
-    stripePriceId: KEEL_STRIPE_PRICES.addon_signatures_team_yearly,
+    stripePriceId: OZER_STRIPE_PRICES.addon_signatures_team_yearly,
     family: 'addon_signatures',
     entitlementKey: 'addon_signatures',
     limits: { maxMembers: null, maxProperties: null, maxVideos: null, maxMailboxes: 50 },
   },
   {
-    productId: 'keel-addon-signatures',
+    productId: 'ozer-addon-signatures',
     planId: 'signatures-office-monthly',
-    stripePriceId: KEEL_STRIPE_PRICES.addon_signatures_office_monthly,
+    stripePriceId: OZER_STRIPE_PRICES.addon_signatures_office_monthly,
     family: 'addon_signatures',
     entitlementKey: 'addon_signatures',
     limits: { maxMembers: null, maxProperties: null, maxVideos: null, maxMailboxes: 150 },
   },
   {
-    productId: 'keel-addon-signatures',
+    productId: 'ozer-addon-signatures',
     planId: 'signatures-office-yearly',
-    stripePriceId: KEEL_STRIPE_PRICES.addon_signatures_office_yearly,
+    stripePriceId: OZER_STRIPE_PRICES.addon_signatures_office_yearly,
     family: 'addon_signatures',
     entitlementKey: 'addon_signatures',
     limits: { maxMembers: null, maxProperties: null, maxVideos: null, maxMailboxes: 150 },
   },
   {
-    productId: 'keel-addon-rankly',
+    productId: 'ozer-addon-rankly',
     planId: 'rankly-monthly',
-    stripePriceId: KEEL_STRIPE_PRICES.addon_rankly_monthly,
+    stripePriceId: OZER_STRIPE_PRICES.addon_rankly_monthly,
     family: 'addon_rankly',
     entitlementKey: 'addon_rankly',
     limits: { maxMembers: null, maxProperties: null, maxVideos: null },
   },
   {
-    productId: 'keel-addon-feedflow',
+    productId: 'ozer-addon-feedflow',
     planId: 'feedflow-monthly',
-    stripePriceId: KEEL_STRIPE_PRICES.addon_feedflow_monthly,
+    stripePriceId: OZER_STRIPE_PRICES.addon_feedflow_monthly,
     family: 'addon_feedflow',
     entitlementKey: 'addon_feedflow',
     limits: { maxMembers: null, maxProperties: null, maxVideos: null },
   },
   {
-    productId: 'keel-addon-videos-starter',
+    productId: 'ozer-addon-videos-starter',
     planId: 'videos-starter-monthly',
-    stripePriceId: KEEL_STRIPE_PRICES.addon_videos_starter_monthly,
+    stripePriceId: OZER_STRIPE_PRICES.addon_videos_starter_monthly,
     family: 'addon_videos',
     entitlementKey: 'addon_videos',
     limits: { maxMembers: null, maxProperties: null, maxVideos: 5 },
   },
   {
-    productId: 'keel-addon-videos-growth',
+    productId: 'ozer-addon-videos-growth',
     planId: 'videos-growth-monthly',
-    stripePriceId: KEEL_STRIPE_PRICES.addon_videos_growth_monthly,
+    stripePriceId: OZER_STRIPE_PRICES.addon_videos_growth_monthly,
     family: 'addon_videos',
     entitlementKey: 'addon_videos',
     limits: { maxMembers: null, maxProperties: null, maxVideos: 20 },
   },
   {
-    productId: 'keel-addon-videos-pro',
+    productId: 'ozer-addon-videos-pro',
     planId: 'videos-pro-monthly',
-    stripePriceId: KEEL_STRIPE_PRICES.addon_videos_pro_monthly,
+    stripePriceId: OZER_STRIPE_PRICES.addon_videos_pro_monthly,
     family: 'addon_videos',
     entitlementKey: 'addon_videos',
     limits: { maxMembers: null, maxProperties: null, maxVideos: 49 },
   },
   {
-    productId: 'keel-addon-videos-studio',
+    productId: 'ozer-addon-videos-studio',
     planId: 'videos-studio-monthly',
-    stripePriceId: KEEL_STRIPE_PRICES.addon_videos_studio_monthly,
+    stripePriceId: OZER_STRIPE_PRICES.addon_videos_studio_monthly,
     family: 'addon_videos',
     entitlementKey: 'addon_videos',
     limits: { maxMembers: null, maxProperties: null, maxVideos: 100 },
   },
   {
-    productId: 'keel-addon-email-assistant',
+    productId: 'ozer-addon-email-assistant',
     planId: 'email-assistant-monthly',
-    stripePriceId: KEEL_STRIPE_PRICES.addon_email_assistant_monthly,
+    stripePriceId: OZER_STRIPE_PRICES.addon_email_assistant_monthly,
     family: 'addon_email_assistant',
     entitlementKey: 'addon_email_assistant',
     limits: { maxMembers: null, maxProperties: null, maxVideos: null },
   },
 ];
 
-export const KEEL_PLAN_CATALOG: KeelPlanDefinition[] = [
+export const OZER_PLAN_CATALOG: OzerPlanDefinition[] = [
   ...COMMUNITY,
   ...BUSINESS_LITE,
   ...BUSINESS,
@@ -276,15 +276,15 @@ export const KEEL_PLAN_CATALOG: KeelPlanDefinition[] = [
 
 export function findPlanByStripePriceId(
   variantId: string,
-): KeelPlanDefinition | undefined {
-  return KEEL_PLAN_CATALOG.find((plan) => plan.stripePriceId === variantId);
+): OzerPlanDefinition | undefined {
+  return OZER_PLAN_CATALOG.find((plan) => plan.stripePriceId === variantId);
 }
 
 export function findPlanByProductAndPlanId(
   productId: string,
   planId: string,
-): KeelPlanDefinition | undefined {
-  return KEEL_PLAN_CATALOG.find(
+): OzerPlanDefinition | undefined {
+  return OZER_PLAN_CATALOG.find(
     (plan) => plan.productId === productId && plan.planId === planId,
   );
 }
@@ -308,11 +308,11 @@ export function requiredEntitlementForProfile(
 
 export function catalogPlansForWorkspaceProfile(
   profile: WorkspaceProfile,
-): KeelPlanDefinition[] {
-  return KEEL_PLAN_CATALOG.filter(
+): OzerPlanDefinition[] {
+  return OZER_PLAN_CATALOG.filter(
     (plan) =>
       plan.workspaceProfiles?.includes(profile) &&
-      !plan.productId.startsWith('keel-addon') &&
+      !plan.productId.startsWith('ozer-addon') &&
       plan.family !== 'business_lite',
   );
 }
@@ -329,32 +329,32 @@ export function productIdsForWorkspaceProfile(
 
 export function addonProductIds(): string[] {
   const ids = new Set<string>();
-  for (const plan of KEEL_PLAN_CATALOG) {
-    if (plan.productId.startsWith('keel-addon')) {
+  for (const plan of OZER_PLAN_CATALOG) {
+    if (plan.productId.startsWith('ozer-addon')) {
       ids.add(plan.productId);
     }
   }
   return [...ids];
 }
 
-export function catalogPlansForAddonProduct(productId: string): KeelPlanDefinition[] {
-  return KEEL_PLAN_CATALOG.filter((plan) => plan.productId === productId);
+export function catalogPlansForAddonProduct(productId: string): OzerPlanDefinition[] {
+  return OZER_PLAN_CATALOG.filter((plan) => plan.productId === productId);
 }
 
-export type KeelAddonKey =
+export type OzerAddonKey =
   | 'addon_signatures'
   | 'addon_rankly'
   | 'addon_feedflow'
   | 'addon_videos';
 
 /** Personal-account add-ons (entitlement on the user's personal account id). */
-export type KeelPersonalAddonKey = 'addon_email_assistant';
+export type OzerPersonalAddonKey = 'addon_email_assistant';
 
-export const EMAIL_ASSISTANT_ENTITLEMENT: KeelPersonalAddonKey =
+export const EMAIL_ASSISTANT_ENTITLEMENT: OzerPersonalAddonKey =
   'addon_email_assistant';
 
-export const KEEL_PERSONAL_ADDON_CATALOG: Array<{
-  key: KeelPersonalAddonKey;
+export const OZER_PERSONAL_ADDON_CATALOG: Array<{
+  key: OzerPersonalAddonKey;
   productId: string;
   planId: string;
   name: string;
@@ -363,7 +363,7 @@ export const KEEL_PERSONAL_ADDON_CATALOG: Array<{
 }> = [
   {
     key: 'addon_email_assistant',
-    productId: 'keel-addon-email-assistant',
+    productId: 'ozer-addon-email-assistant',
     planId: 'email-assistant-monthly',
     name: 'Email Assistant',
     description:
@@ -372,8 +372,8 @@ export const KEEL_PERSONAL_ADDON_CATALOG: Array<{
   },
 ];
 
-export const KEEL_ADDON_CATALOG: Array<{
-  key: KeelAddonKey;
+export const OZER_ADDON_CATALOG: Array<{
+  key: OzerAddonKey;
   productId: string;
   name: string;
   description: string;
@@ -381,7 +381,7 @@ export const KEEL_ADDON_CATALOG: Array<{
 }> = [
   {
     key: 'addon_signatures',
-    productId: 'keel-addon-signatures',
+    productId: 'ozer-addon-signatures',
     name: 'Signatures',
     description:
       'Flat tiers for branded email signatures with Microsoft 365 and Google Workspace.',
@@ -389,7 +389,7 @@ export const KEEL_ADDON_CATALOG: Array<{
   },
   {
     key: 'addon_rankly',
-    productId: 'keel-addon-rankly',
+    productId: 'ozer-addon-rankly',
     name: 'Rankly',
     description:
       'SEO rankings, scheduled PageSpeed Insights, AI audits, and content briefs. Backlinks coming soon.',
@@ -397,14 +397,14 @@ export const KEEL_ADDON_CATALOG: Array<{
   },
   {
     key: 'addon_feedflow',
-    productId: 'keel-addon-feedflow',
+    productId: 'ozer-addon-feedflow',
     name: 'Feedflow',
     description: 'Review widgets and social publishing for your brand.',
     fromPriceGbp: 9,
   },
   {
     key: 'addon_videos',
-    productId: 'keel-addon-videos-starter',
+    productId: 'ozer-addon-videos-starter',
     name: 'Videos',
     description:
       'Hosted video with private/public controls, public links, branded players, and embeds for Webflow, WordPress & more.',

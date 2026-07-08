@@ -5,7 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { jsonErr } from '~/lib/rankly/api-response';
 
 import { canUseAddon } from './entitlements';
-import type { KeelAddonKey, KeelPersonalAddonKey } from './keel-plan-catalog';
+import type { OzerAddonKey, OzerPersonalAddonKey } from './ozer-plan-catalog';
 
 const ADDON_MESSAGES: Record<string, string> = {
   addon_rankly:
@@ -22,7 +22,7 @@ export async function denyUnlessAddonAccess(
   client: SupabaseClient,
   userId: string,
   accountId: string,
-  addonKey: KeelAddonKey | KeelPersonalAddonKey,
+  addonKey: OzerAddonKey | OzerPersonalAddonKey,
 ) {
   const allowed = await canUseAddon(client, userId, accountId, addonKey);
 

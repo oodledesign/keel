@@ -98,14 +98,14 @@ export function philosophyLine(): string {
 }
 
 export function ozerTeamAnnualGbp(): number {
-  const team = getBillingProductPrice('keel-business-team');
+  const team = getBillingProductPrice('ozer-business-team');
   return team?.yearlyPriceGbp ?? (team?.monthlyPriceGbp ?? 79) * 12;
 }
 
 export function pricingFaqs() {
-  const team = getBillingProductPrice('keel-business-team');
-  const solo = getBillingProductPrice('keel-business-solo');
-  const lite = getBillingProductPrice('keel-business-lite');
+  const team = getBillingProductPrice('ozer-business-team');
+  const solo = getBillingProductPrice('ozer-business-solo');
+  const lite = getBillingProductPrice('ozer-business-lite');
 
   return [
     {

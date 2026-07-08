@@ -8731,9 +8731,9 @@ export type Database = {
           personal_include_workspace_tasks: boolean
           personal_mobile_nav_shortcuts: Json
           updated_at: string | null
-          use_keel_for_community: boolean
-          use_keel_for_family: boolean
-          use_keel_for_work: boolean
+          use_ozer_for_community: boolean
+          use_ozer_for_family: boolean
+          use_ozer_for_work: boolean
           user_id: string
         }
         Insert: {
@@ -8752,9 +8752,9 @@ export type Database = {
           personal_include_workspace_tasks?: boolean
           personal_mobile_nav_shortcuts?: Json
           updated_at?: string | null
-          use_keel_for_community?: boolean
-          use_keel_for_family?: boolean
-          use_keel_for_work?: boolean
+          use_ozer_for_community?: boolean
+          use_ozer_for_family?: boolean
+          use_ozer_for_work?: boolean
           user_id: string
         }
         Update: {
@@ -8773,9 +8773,9 @@ export type Database = {
           personal_include_workspace_tasks?: boolean
           personal_mobile_nav_shortcuts?: Json
           updated_at?: string | null
-          use_keel_for_community?: boolean
-          use_keel_for_family?: boolean
-          use_keel_for_work?: boolean
+          use_ozer_for_community?: boolean
+          use_ozer_for_family?: boolean
+          use_ozer_for_work?: boolean
           user_id?: string
         }
         Relationships: []

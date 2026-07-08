@@ -11,7 +11,7 @@ import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access
 import { isWorkNavModuleEnabled } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../_lib/server/workspace-route-guard';
-import { KeelAppsMarketplace } from './_components/keel-apps-marketplace';
+import { OzerAppsMarketplace } from './_components/ozer-apps-marketplace';
 import { loadWorkspaceAddonState } from '~/lib/billing/workspace-addon-state.loader';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
@@ -62,7 +62,7 @@ async function WorkspaceAppsPage({ params }: WorkspaceAppsPageProps) {
       />
       <PageBody className="space-y-6 bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
         <div className="space-y-6 px-4 lg:px-0">
-          <KeelAppsMarketplace
+          <OzerAppsMarketplace
             accountSlug={accountSlug}
             installedApps={apps}
             workspacePaid={addonState.workspacePaid}

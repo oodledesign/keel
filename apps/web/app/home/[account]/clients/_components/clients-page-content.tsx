@@ -452,7 +452,7 @@ export function ClientsPageContent({
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition',
                 viewMode === 'cards'
-                  ? 'bg-[var(--keel-accent-blue)] text-[var(--workspace-shell-text)]'
+                  ? 'bg-[var(--ozer-info)] text-[var(--workspace-shell-text)]'
                   : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
               )}
               aria-pressed={viewMode === 'cards'}
@@ -466,7 +466,7 @@ export function ClientsPageContent({
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition',
                 viewMode === 'list'
-                  ? 'bg-[var(--keel-accent-blue)] text-[var(--workspace-shell-text)]'
+                  ? 'bg-[var(--ozer-info)] text-[var(--workspace-shell-text)]'
                   : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
               )}
               aria-pressed={viewMode === 'list'}

@@ -18,7 +18,7 @@ import { Trans } from '@kit/ui/trans';
 
 import billingConfig from '~/config/billing.config';
 import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
-import { productIdsForWorkspaceProfile } from '~/lib/billing/keel-plan-catalog';
+import { productIdsForWorkspaceProfile } from '~/lib/billing/ozer-plan-catalog';
 
 import { createTeamAccountCheckoutSession } from '../_lib/server/server-actions';
 
@@ -35,7 +35,7 @@ const EmbeddedCheckout = dynamic(
   },
 );
 
-export function KeelWorkspaceCheckoutForm(params: {
+export function OzerWorkspaceCheckoutForm(params: {
   accountId: string;
   customerId: string | null | undefined;
   workspaceProfile: WorkspaceProfile;

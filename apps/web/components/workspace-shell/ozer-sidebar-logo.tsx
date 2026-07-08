@@ -45,9 +45,3 @@ export function OzerSidebarLogo(props: {
 export function OzerLogoLight(props: { className?: string }) {
   return <OzerLogoMark tone="light" className={props.className} />;
 }
-
-/** @deprecated Use OzerSidebarLogo */
-export const KeelSidebarLogo = OzerSidebarLogo;
-
-/** @deprecated Use OzerLogoLight */
-export const KeelLogoLight = OzerLogoLight;

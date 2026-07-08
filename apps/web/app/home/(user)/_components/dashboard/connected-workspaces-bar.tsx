@@ -6,7 +6,7 @@ import { ArrowRight, Layers } from 'lucide-react';
 
 import pathsConfig from '~/config/paths.config';
 
-import type { WorkspaceOverviewCard } from '../../_lib/server/keel-dashboard.loader';
+import type { WorkspaceOverviewCard } from '../../_lib/server/ozer-dashboard.loader';
 
 type Props = {
   cards: WorkspaceOverviewCard[];

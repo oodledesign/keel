@@ -106,7 +106,7 @@ function LogoPositionControl(props: {
           type="button"
           className={`rounded-md px-2.5 py-1 text-xs transition ${
             props.value === option.value
-              ? 'keel-gradient-active text-[var(--ozer-white)]'
+              ? 'ozer-gradient-active text-[var(--ozer-white)]'
               : 'text-muted-foreground hover:text-[var(--workspace-shell-text)]'
           }`}
           onClick={() => props.onChange(option.value)}
@@ -208,7 +208,7 @@ export function PlayerConfigEditor(props: {
           <Button
             type="button"
             size="sm"
-            className="keel-gradient-btn"
+            className="ozer-gradient-btn"
             disabled={props.saving}
             onClick={props.onSave}
           >
@@ -606,7 +606,7 @@ export function PlayerConfigEditor(props: {
             </Button>
             <Button
               type="button"
-              className="keel-gradient-btn"
+              className="ozer-gradient-btn"
               disabled={!presetName.trim() || savingPreset}
               onClick={() => void handleSavePreset()}
             >

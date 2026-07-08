@@ -170,7 +170,7 @@ export function WorkspaceNewMenu(props: WorkspaceNewMenuProps) {
       <DropdownMenuTrigger asChild>
         <Button
           className={cn(
-            'keel-gradient-btn h-10 gap-1.5 rounded-lg border-0 px-4 text-sm font-semibold shadow-none',
+            'ozer-gradient-btn h-10 gap-1.5 rounded-lg border-0 px-4 text-sm font-semibold shadow-none',
           )}
         >
           <Plus className="h-4 w-4" />

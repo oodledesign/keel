@@ -4,7 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { UpsertSubscriptionParams } from '@kit/billing/types';
 
-import { findPlanByStripePriceId } from './keel-plan-catalog';
+import { findPlanByStripePriceId } from './ozer-plan-catalog';
 import { markBusinessUpgradedFromLite } from './business-lite';
 import { syncAddonModulesFromEntitlements } from './sync-addon-modules-from-entitlements';
 import { syncFullBusinessModules } from './sync-workspace-modules-from-plan';

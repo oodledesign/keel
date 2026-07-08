@@ -7,12 +7,12 @@ import {
   hasEntitlement,
   hasActiveWorkspaceSubscription,
 } from './entitlements';
-import type { KeelAddonKey } from './keel-plan-catalog';
+import type { OzerAddonKey } from './ozer-plan-catalog';
 import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
 
 export type WorkspaceAddonState = {
   workspacePaid: boolean;
-  addons: Record<KeelAddonKey, boolean>;
+  addons: Record<OzerAddonKey, boolean>;
 };
 
 export async function loadWorkspaceAddonState(
@@ -28,14 +28,14 @@ export async function loadWorkspaceAddonState(
     profile,
   );
 
-  const addonKeys: KeelAddonKey[] = [
+  const addonKeys: OzerAddonKey[] = [
     'addon_signatures',
     'addon_rankly',
     'addon_feedflow',
     'addon_videos',
   ];
 
-  const addons = {} as Record<KeelAddonKey, boolean>;
+  const addons = {} as Record<OzerAddonKey, boolean>;
 
   await Promise.all(
     addonKeys.map(async (key) => {

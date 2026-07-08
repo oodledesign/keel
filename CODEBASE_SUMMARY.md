@@ -1,6 +1,6 @@
-# Keel — codebase reference for new modules
+# Ozer — codebase reference for new modules
 
-> **Generated for internal use.** Summarises the current Keel monorepo: database (from `apps/web/supabase/migrations`), web app layout, packages, auth/tenancy, and UI/design system. **Source of truth for schema details remains the SQL migrations**; this file can drift if migrations change.
+> **Generated for internal use.** Summarises the current Ozer monorepo: database (from `apps/web/supabase/migrations`), web app layout, packages, auth/tenancy, and UI/design system. **Source of truth for schema details remains the SQL migrations**; this file can drift if migrations change.
 
 ---
 
@@ -14,13 +14,13 @@
 
 ## 1. Database: migrations and schema inventory
 
-Migrations live in **`apps/web/supabase/migrations/`** (50 SQL files, ordered by timestamp). Early runs establish Makerkit-style **`public`** tables and helpers; later migrations add Keel CRM/jobs/invoices and **`feedflow`** / **`rankly`** / **`platform_merge`** schemas.
+Migrations live in **`apps/web/supabase/migrations/`** (50 SQL files, ordered by timestamp). Early runs establish Makerkit-style **`public`** tables and helpers; later migrations add Ozer CRM/jobs/invoices and **`feedflow`** / **`rankly`** / **`platform_merge`** schemas.
 
 ### 1.1 Schemas
 
 | Schema | Purpose |
 |--------|---------|
-| **`public`** | Core tenancy (Makerkit), Keel CRM/work tables, config, billing linkage |
+| **`public`** | Core tenancy (Makerkit), Ozer CRM/work tables, config, billing linkage |
 | **`feedflow`** | Social feeds, widgets, Google/Webflow/Bunny integrations |
 | **`rankly`** | SEO/rank tracking projects, keywords, rankings, backlinks, alerts |
 | **`platform_merge`** | Id mapping and sync/drift tooling for legacy migrations |
@@ -58,11 +58,11 @@ Defined across migrations; heavily used by RLS:
 | **`notifications`** | In-app notifications per account |
 | **`nonces`** | One-time tokens (`20250301095452_one-time-tokens.sql`) |
 
-**Keel product (additional migrations):**
+**Ozer product (additional migrations):**
 
 | Table | Notes |
 |-------|--------|
-| **`user_settings`** | Per-user prefs; Keel context flags `use_keel_for_work|family|community` (`20260327150000`) |
+| **`user_settings`** | Per-user prefs; Ozer context flags `use_ozer_for_work|family|community` (`20260327150000`) |
 | **`account_module_settings`** | PK `(account_id, module_key)`, `enabled` — feature flags per account (`20260329160000`) |
 | **`clients`** | CRM clients per `account_id`; picture/name fields evolved in multiple migrations |
 | **`client_notes`** | Notes on clients |
@@ -234,7 +234,7 @@ Approximate scale: **~280+** `*.ts` / `*.tsx` files under `app/` (excluding `.ne
 
 ### 5.3 Brand / design reference
 
-- **`DESIGN_SYSTEM.md`** (repo root): authoritative **Keel** typography (**Poppins** primary UI, **Roboto Slab** reserved), colour palette (steel, green, teal, purple, orange, navy shell), dashboard gradients, card/sidebar rules, status colours.
+- **`DESIGN_SYSTEM.md`** (repo root): authoritative **Ozer** typography (**Poppins** primary UI, **Roboto Slab** reserved), colour palette (steel, green, teal, purple, orange, navy shell), dashboard gradients, card/sidebar rules, status colours.
 - **Rule of thumb for new UI:** Match existing **`@kit/ui`** components and **`DESIGN_SYSTEM.md`** tokens; avoid one-off colours outside the documented palette.
 
 ### 5.4 Other UI-related dependencies in `web`
@@ -273,7 +273,7 @@ Approximate scale: **~280+** `*.ts` / `*.tsx` files under `app/` (excluding `.ne
 | `20260224*` | Client profile fields, invitations |
 | `20260228*` | Invoices v1 |
 | `20260311*` … `20260314*` | Contractor RLS, clients |
-| `20260327*` | User settings Keel contexts |
+| `20260327*` | User settings Ozer contexts |
 | `20260329*` | Jobs/invoices repair, space_type, module settings, team_account_workspace, slug RPC |
 | `20260430*` | Profiles, feedflow/rankly foundation, platform_merge, expand schemas |
 

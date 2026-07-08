@@ -20,7 +20,7 @@ import {
 import { If } from '@kit/ui/if';
 import { cn } from '@kit/ui/utils';
 
-import { KeelSidebarLogo } from '~/components/workspace-shell/keel-sidebar-logo';
+import { OzerSidebarLogo } from '~/components/workspace-shell/ozer-sidebar-logo';
 import {
   WorkspaceAccountsSelector,
   buildPersonalSwitcherAccounts,
@@ -99,7 +99,7 @@ function HomeSidebarLogo() {
   const collapsed = ctx ? !ctx.open : false;
 
   return (
-    <KeelSidebarLogo
+    <OzerSidebarLogo
       href={getExplicitPersonalHomePath()}
       collapsed={collapsed}
     />

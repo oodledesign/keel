@@ -253,7 +253,7 @@ export function VideoLibraryClient(props: {
           </Button>
           <Button
             type="button"
-            className="keel-gradient-btn gap-2"
+            className="ozer-gradient-btn gap-2"
             onClick={() => setUploadOpen(true)}
           >
             <Plus className="h-4 w-4" />
@@ -345,7 +345,7 @@ export function VideoLibraryClient(props: {
               </p>
               <Button
                 type="button"
-                className="keel-gradient-btn mt-6 gap-2"
+                className="ozer-gradient-btn mt-6 gap-2"
                 onClick={() => setUploadOpen(true)}
               >
                 <Plus className="h-4 w-4" />

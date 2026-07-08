@@ -123,7 +123,7 @@ export function PublicSharePanel(props: {
             <Button
               type="button"
               size="sm"
-              className="keel-gradient-btn gap-1.5"
+              className="ozer-gradient-btn gap-1.5"
               onClick={() => void copyLink()}
             >
               {copied ? (

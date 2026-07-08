@@ -15,7 +15,7 @@ import { AuthProvider } from '~/components/auth-provider';
 import { QuickActionProvider } from '~/components/quick-action/quick-action-provider';
 import { ThemeColorSync } from '~/components/theme-color-sync';
 import featuresFlagConfig from '~/config/feature-flags.config';
-import { APP_DEFAULT_THEME, APP_THEME_STORAGE_KEY } from '~/lib/app-theme';
+import { APP_DEFAULT_THEME, APP_THEME_STORAGE_KEY, migrateThemeStorageKey } from '~/lib/app-theme';
 import { i18nResolver } from '~/lib/i18n/i18n.resolver';
 import { getI18nSettings } from '~/lib/i18n/i18n.settings';
 
@@ -34,6 +34,9 @@ export function RootProviders({
   children,
 }: RootProvidersProps) {
   const i18nSettings = useMemo(() => getI18nSettings(lang), [lang]);
+
+  // Prefer ozer-theme; migrate legacy keel-theme before ThemeProvider mounts.
+  migrateThemeStorageKey();
 
   return (
     <MonitoringProvider>

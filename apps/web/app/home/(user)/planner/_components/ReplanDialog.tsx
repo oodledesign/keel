@@ -41,7 +41,9 @@ const defaultPreferences: PlannerPreferences = {
 
 function loadPlannerPreferences(): PlannerPreferences {
   if (typeof window === 'undefined') return defaultPreferences;
-  const raw = window.localStorage.getItem('keel-planner-preferences');
+  const raw =
+    window.localStorage.getItem('ozer-planner-preferences') ??
+    window.localStorage.getItem('keel-planner-preferences');
   if (!raw) return defaultPreferences;
   try {
     return { ...defaultPreferences, ...JSON.parse(raw) };

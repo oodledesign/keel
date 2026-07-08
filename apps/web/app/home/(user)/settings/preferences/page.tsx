@@ -3,7 +3,7 @@ import { Suspense } from 'react';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
-import { KeelUsePreferencesSection } from '../_components/keel-use-preferences-section';
+import { OzerUsePreferencesSection } from '../_components/ozer-use-preferences-section';
 import { PersonalSettingsPanel } from '../_components/personal-settings-panel';
 
 export const generateMetadata = async () => {
@@ -11,7 +11,7 @@ export const generateMetadata = async () => {
 
   return {
     title: i18n.t('account:preferencesSettingsTitle', {
-      defaultValue: 'How you use Keel',
+      defaultValue: 'How you use Ozer',
     }),
   };
 };
@@ -26,7 +26,7 @@ function PersonalPreferencesSettingsPage() {
           </p>
         }
       >
-        <KeelUsePreferencesSection />
+        <OzerUsePreferencesSection />
       </Suspense>
     </PersonalSettingsPanel>
   );

@@ -1,7 +1,7 @@
 import { AdminGuard } from '@kit/admin/components/admin-guard';
 import { PageBody, PageHeader } from '@kit/ui/page';
 
-import { KeelBrandingGuide } from '~/admin/_components/keel-branding-guide';
+import { OzerBrandingGuide } from '~/admin/_components/ozer-branding-guide';
 
 function AdminBrandingPage() {
   return (
@@ -12,7 +12,7 @@ function AdminBrandingPage() {
       />
 
       <PageBody>
-        <KeelBrandingGuide />
+        <OzerBrandingGuide />
       </PageBody>
     </>
   );

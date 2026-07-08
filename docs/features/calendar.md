@@ -74,7 +74,7 @@ To add another type (e.g. invoice due dates, agreement sent):
 
 | Area | Path |
 |------|------|
-| Reusable calendar component | `apps/web/components/calendar/KeelCalendar.tsx` |
+| Reusable calendar component | `apps/web/components/calendar/OzerCalendar.tsx` |
 | Calendar schema | `apps/web/app/home/[account]/jobs/_lib/schema/calendar.schema.ts` |
 | Calendar service | `apps/web/app/home/[account]/jobs/_lib/server/calendar.service.ts` |
 | Server actions | `apps/web/app/home/[account]/jobs/_lib/server/server-actions.ts` (getJobCalendarItems, getOrgCalendarItems, getCalendarItemDetails) |

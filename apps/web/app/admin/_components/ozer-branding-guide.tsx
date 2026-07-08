@@ -17,7 +17,7 @@ const logos = [
   { label: 'Brand guide (HTML)', path: '/brand/ozer-brand-guide.html' },
 ];
 
-export function KeelBrandingGuide() {
+export function OzerBrandingGuide() {
   return (
     <div className="space-y-10">
       <section className="space-y-4">
@@ -91,14 +91,14 @@ export function KeelBrandingGuide() {
         <div className="rounded-xl border p-6">
           <p className="text-sm text-muted-foreground">
             Primary actions use <code className="text-xs">ozer-gradient-btn</code> (alias{' '}
-            <code className="text-xs">keel-gradient-btn</code>) or{' '}
+            <code className="text-xs">ozer-gradient-btn</code>) or{' '}
             <code className="text-xs">workspace-btn-primary</code> (coral via{' '}
             <code className="text-xs">--ozer-accent</code>).
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
             <button
               type="button"
-              className="keel-gradient-btn h-10 rounded-lg px-4 text-sm font-semibold text-white"
+              className="ozer-gradient-btn h-10 rounded-lg px-4 text-sm font-semibold text-white"
             >
               Primary
             </button>
@@ -110,7 +110,7 @@ export function KeelBrandingGuide() {
             </button>
             <button
               type="button"
-              className="keel-gradient-active h-10 rounded-lg px-4 text-sm font-semibold"
+              className="ozer-gradient-active h-10 rounded-lg px-4 text-sm font-semibold"
             >
               Active nav
             </button>

@@ -1,6 +1,6 @@
 # Signatures module — Google Workspace setup
 
-Keel’s **Signatures** module can sync staff from Google Workspace and push HTML signatures to Gmail using **domain-wide delegation (DWD)** and a Google Cloud **service account**.
+Ozer’s **Signatures** module can sync staff from Google Workspace and push HTML signatures to Gmail using **domain-wide delegation (DWD)** and a Google Cloud **service account**.
 
 ## Prerequisites
 
@@ -33,7 +33,7 @@ https://www.googleapis.com/auth/admin.directory.user.readonly,https://www.google
 
 4. **Authorize**
 
-## 4. Environment variables (Keel web app)
+## 4. Environment variables (Ozer web app)
 
 Use **one** of these patterns in Vercel / `.env.local`:
 
@@ -53,7 +53,7 @@ GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END P
 
 Redeploy after adding env vars.
 
-## 5. Connect in Keel
+## 5. Connect in Ozer
 
 1. Open **Signatures → Settings**.
 2. Under **Google Workspace connection**, enter:
@@ -61,11 +61,11 @@ Redeploy after adding env vars.
    - **Delegated admin email** — a Super Admin on that domain, e.g. `you@oodledesign.com`
 3. Click **Connect Google Workspace**.
 
-Keel verifies Directory API access, saves the connection, then you can **Sync staff** and **Push All** from the dashboard.
+Ozer verifies Directory API access, saves the connection, then you can **Sync staff** and **Push All** from the dashboard.
 
 ## 6. Provider priority
 
-If both Microsoft 365 and Google Workspace are connected, Keel uses **Google Workspace** for sync and push. Disconnect Google to use Microsoft only.
+If both Microsoft 365 and Google Workspace are connected, Ozer uses **Google Workspace** for sync and push. Disconnect Google to use Microsoft only.
 
 ## 7. Gmail client notes
 

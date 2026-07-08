@@ -14,6 +14,11 @@ export function plannerScopeKey(scope: PlannerScope): string {
 }
 
 export function planStorageKey(scope: PlannerScope, dateYmd: string): string {
+  return `ozer-planner-plan:${plannerScopeKey(scope)}:${dateYmd}`;
+}
+
+/** Legacy key used before Keel → Ozer rename; read for migration only. */
+function legacyPlanStorageKey(scope: PlannerScope, dateYmd: string): string {
   return `keel-planner-plan:${plannerScopeKey(scope)}:${dateYmd}`;
 }
 
@@ -29,7 +34,9 @@ export function loadStoredPlan(
   dateYmd: string,
 ): StoredPlan | null {
   if (typeof window === 'undefined') return null;
-  const raw = window.localStorage.getItem(planStorageKey(scope, dateYmd));
+  const raw =
+    window.localStorage.getItem(planStorageKey(scope, dateYmd)) ??
+    window.localStorage.getItem(legacyPlanStorageKey(scope, dateYmd));
   if (!raw) return null;
   try {
     return JSON.parse(raw) as StoredPlan;
@@ -44,10 +51,10 @@ export function saveStoredPlan(
   plan: StoredPlan,
 ): void {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem(
-    planStorageKey(scope, dateYmd),
-    JSON.stringify(plan),
-  );
+  const key = planStorageKey(scope, dateYmd);
+  window.localStorage.setItem(key, JSON.stringify(plan));
+  // Prefer ozer- keys going forward; drop legacy copy if present.
+  window.localStorage.removeItem(legacyPlanStorageKey(scope, dateYmd));
 }
 
 function scheduleBlockCount(markdown: string, dateIso: string): number {

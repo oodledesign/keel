@@ -36,7 +36,7 @@ import {
   getStepsForPersona,
 } from './_lib/onboarding-steps.config';
 import { OnboardingShell } from './_components/onboarding-shell';
-import { KeelContextsStep } from './_components/steps/keel-contexts-step';
+import { OzerContextsStep } from './_components/steps/ozer-contexts-step';
 import { TradeStep } from './_components/steps/trade-step';
 import { PersonalDetailsStep } from './_components/steps/personal-details-step';
 import { AccessibilityStep } from './_components/steps/accessibility-step';
@@ -106,16 +106,16 @@ export default async function OnboardingPage({
       dashboardAccountName={completedAccount?.accountName ?? null}
       isOwner={isOwner}
     >
-      {stepDef?.key === 'keel_contexts' && (
-        <KeelContextsStep
+      {stepDef?.key === 'ozer_contexts' && (
+        <OzerContextsStep
           accountId={ctx.accountId}
           nextStep={nextStep}
           initial={
             ctx.userSettings
               ? {
-                  use_keel_for_work: ctx.userSettings.use_keel_for_work,
-                  use_keel_for_family: ctx.userSettings.use_keel_for_family,
-                  use_keel_for_community: ctx.userSettings.use_keel_for_community,
+                  use_ozer_for_work: ctx.userSettings.use_ozer_for_work,
+                  use_ozer_for_family: ctx.userSettings.use_ozer_for_family,
+                  use_ozer_for_community: ctx.userSettings.use_ozer_for_community,
                 }
               : undefined
           }

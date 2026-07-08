@@ -11,50 +11,50 @@ import { upsertUserSettings } from '~/onboarding/_lib/server/onboarding.actions'
 
 const options = [
   {
-    key: 'use_keel_for_work' as const,
+    key: 'use_ozer_for_work' as const,
     title: 'Work',
     description: 'Trade, clients, jobs, and billing.',
     Icon: Briefcase,
   },
   {
-    key: 'use_keel_for_family' as const,
+    key: 'use_ozer_for_family' as const,
     title: 'Family',
     description: 'Household and shared life admin.',
     Icon: Heart,
   },
   {
-    key: 'use_keel_for_community' as const,
+    key: 'use_ozer_for_community' as const,
     title: 'Community groups',
     description: 'Clubs, volunteers, and local groups.',
     Icon: UsersRound,
   },
 ];
 
-export function KeelUsePreferencesForm(props: {
+export function OzerUsePreferencesForm(props: {
   initial: {
-    use_keel_for_work: boolean;
-    use_keel_for_family: boolean;
-    use_keel_for_community: boolean;
+    use_ozer_for_work: boolean;
+    use_ozer_for_family: boolean;
+    use_ozer_for_community: boolean;
   };
 }) {
-  const [work, setWork] = useState(props.initial.use_keel_for_work);
-  const [family, setFamily] = useState(props.initial.use_keel_for_family);
+  const [work, setWork] = useState(props.initial.use_ozer_for_work);
+  const [family, setFamily] = useState(props.initial.use_ozer_for_family);
   const [community, setCommunity] = useState(
-    props.initial.use_keel_for_community,
+    props.initial.use_ozer_for_community,
   );
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   const values = {
-    use_keel_for_work: work,
-    use_keel_for_family: family,
-    use_keel_for_community: community,
+    use_ozer_for_work: work,
+    use_ozer_for_family: family,
+    use_ozer_for_community: community,
   };
 
   const setters = {
-    use_keel_for_work: setWork,
-    use_keel_for_family: setFamily,
-    use_keel_for_community: setCommunity,
+    use_ozer_for_work: setWork,
+    use_ozer_for_family: setFamily,
+    use_ozer_for_community: setCommunity,
   };
 
   const handleSave = async () => {

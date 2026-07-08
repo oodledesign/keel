@@ -10,10 +10,10 @@ export async function register() {
 
   await registerMonitoringInstrumentation();
 
-  const { registerKeelBillingPolicies } = await import(
-    '~/lib/billing/register-keel-policies'
+  const { registerOzerBillingPolicies } = await import(
+    '~/lib/billing/register-ozer-policies'
   );
-  registerKeelBillingPolicies();
+  registerOzerBillingPolicies();
 }
 
 /**

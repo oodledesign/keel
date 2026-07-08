@@ -139,7 +139,7 @@ export function ClientOverviewCard({
                     </div>
                     <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
                       <div
-                        className="h-full rounded-full bg-[var(--keel-accent-blue)]"
+                        className="h-full rounded-full bg-[var(--ozer-info)]"
                         style={{ width: `${project.progress}%` }}
                       />
                     </div>
@@ -163,7 +163,7 @@ export function ClientOverviewCard({
         {remainingProjects > 0 ? (
           <Link
             href={jobsHref}
-            className="inline-flex items-center gap-1 text-sm font-medium text-[var(--keel-accent-blue)] hover:text-[var(--ozer-accent-muted)]"
+            className="inline-flex items-center gap-1 text-sm font-medium text-[var(--ozer-info)] hover:text-[var(--ozer-accent-muted)]"
           >
             View all {client.projectCount} projects
             <ArrowRight className="h-3.5 w-3.5" />
@@ -171,7 +171,7 @@ export function ClientOverviewCard({
         ) : client.projectCount > 0 ? (
           <Link
             href={jobsHref}
-            className="inline-flex items-center gap-1 text-sm font-medium text-[var(--keel-accent-blue)] hover:text-[var(--ozer-accent-muted)]"
+            className="inline-flex items-center gap-1 text-sm font-medium text-[var(--ozer-info)] hover:text-[var(--ozer-accent-muted)]"
           >
             View projects
             <ArrowRight className="h-3.5 w-3.5" />

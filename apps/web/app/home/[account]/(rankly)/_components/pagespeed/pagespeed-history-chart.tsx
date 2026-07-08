@@ -242,7 +242,7 @@ export function PagespeedHistoryChart(props: {
                 type="button"
                 className={`rounded-md px-2 py-1 text-xs transition ${
                   metric === key
-                    ? 'keel-gradient-active text-[var(--ozer-white)]'
+                    ? 'ozer-gradient-active text-[var(--ozer-white)]'
                     : 'text-muted-foreground hover:text-[var(--workspace-shell-text)]'
                 }`}
                 onClick={() => setMetric(key)}

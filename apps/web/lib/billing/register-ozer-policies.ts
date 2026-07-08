@@ -7,7 +7,7 @@ import {
 import { assertMemberInviteAllowed } from './entitlements';
 
 const seatLimitInvitationPolicy = definePolicy<FeaturePolicyInvitationContext>({
-  id: 'keel-seat-limit',
+  id: 'ozer-seat-limit',
   stages: ['submission'],
   evaluate: async (context) => {
     const { getSupabaseServerClient } = await import(
@@ -36,7 +36,7 @@ const seatLimitInvitationPolicy = definePolicy<FeaturePolicyInvitationContext>({
 
 let registered = false;
 
-export function registerKeelBillingPolicies() {
+export function registerOzerBillingPolicies() {
   if (registered) {
     return;
   }

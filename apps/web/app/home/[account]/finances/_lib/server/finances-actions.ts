@@ -21,7 +21,7 @@ import {
 } from '~/lib/finance/transaction-links';
 import {
   pushCategoryToFreeAgent,
-  syncFreeAgentToKeel,
+  syncFreeAgentToOzer,
 } from '~/lib/integrations/freeagent/sync';
 import {
   hasFreeAgentFinanceConnection,
@@ -29,7 +29,7 @@ import {
 } from '~/lib/integrations/freeagent/finance-categories';
 import { isFreeAgentConfigured } from '~/lib/integrations/freeagent/env';
 import { isStarlingConfigured } from '~/lib/integrations/starling/env';
-import { syncStarlingToKeel } from '~/lib/integrations/starling/sync';
+import { syncStarlingToOzer } from '~/lib/integrations/starling/sync';
 
 const DEFAULT_CATEGORIES = [
   { name: 'Sales', kind: 'income' as const },
@@ -309,7 +309,7 @@ export const categorizeFinanceTransactionAction = enhanceAction(
 export const syncFreeAgentAction = enhanceAction(
   async (input) => {
     const client = getSupabaseServerClient();
-    const result = await syncFreeAgentToKeel(client, input.accountId, {
+    const result = await syncFreeAgentToOzer(client, input.accountId, {
       mode: 'full',
     });
     revalidateFinances(input.accountSlug);
@@ -346,7 +346,7 @@ export const disconnectFreeAgentAction = enhanceAction(
 export const syncStarlingAction = enhanceAction(
   async (input) => {
     const client = getSupabaseServerClient();
-    const result = await syncStarlingToKeel(client, input.accountId, {
+    const result = await syncStarlingToOzer(client, input.accountId, {
       mode: 'full',
     });
     revalidateFinances(input.accountSlug);

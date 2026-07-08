@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { KeelAddonKey } from '~/lib/billing/keel-plan-catalog';
+import type { OzerAddonKey } from '~/lib/billing/ozer-plan-catalog';
 
 export type AdminUserInviteRow = {
   id: string;
@@ -34,7 +34,7 @@ export type AdminUserInviteAccessConfig = {
     name?: string;
     businessMode?: 'lite' | 'full';
   }>;
-  addons?: KeelAddonKey[];
+  addons?: OzerAddonKey[];
   personalAddons?: Array<'addon_email_assistant'>;
   /** Module key to open after invite is fulfilled (e.g. signatures). */
   landingModule?: string;
@@ -49,7 +49,7 @@ export const DEFAULT_WORKSPACE_NAMES: Record<AdminInviteWorkspaceProfile, string
   };
 
 export const ADMIN_INVITE_ADDON_OPTIONS: Array<{
-  key: KeelAddonKey;
+  key: OzerAddonKey;
   label: string;
 }> = [
   { key: 'addon_signatures', label: 'Signatures' },

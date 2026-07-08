@@ -248,7 +248,7 @@ export function AcceptActionItemDialog({
           </Button>
           <Button
             type="button"
-            className="keel-gradient-btn text-[var(--ozer-white)]"
+            className="ozer-gradient-btn text-[var(--ozer-white)]"
             onClick={handleAccept}
             disabled={pending || !actionItem}
           >

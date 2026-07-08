@@ -115,7 +115,7 @@
     --ozer-surface-elevated: var(--ozer-cream-200);
     --ozer-surface-active: var(--ozer-cream-200);
 
-    /* ── Legacy Keel aliases ── */
+    /* Legacy aliases (remove in next major) */
     --keel-teal: var(--ozer-accent);
     --keel-teal-hover: var(--ozer-accent-hover);
     --keel-accent-blue: var(--ozer-info);

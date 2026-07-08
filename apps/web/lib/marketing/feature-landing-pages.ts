@@ -544,7 +544,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
     indexIcon: 'Activity',
     primaryKeyword: 'automatic time tracking for freelancers',
     answerFirst:
-      'Ozer activity tracking captures desktop app and website usage from Keel Assistant, groups sessions by app and domain, and lets you assign time to clients and projects. Privacy controls stay per workspace. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+      'Ozer activity tracking captures desktop app and website usage from Ozer Assistant, groups sessions by app and domain, and lets you assign time to clients and projects. Privacy controls stay per workspace. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
     relatedBlog: {
       href: '/blog',
       label: 'Studio notes on time tracking on the Ozer blog',
@@ -557,7 +557,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
     metadata: {
       title: 'Desktop activity assigned to projects — Ozer',
       description:
-        'Keel Assistant captures app and website activity on your Mac. Review sessions, assign to clients and projects, and see where studio time actually went.',
+        'Ozer Assistant captures app and website activity on your Mac. Review sessions, assign to clients and projects, and see where studio time actually went.',
       keywords: [
         'automatic time tracking for freelancers',
         'desktop activity tracking Mac',
@@ -575,7 +575,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
       applicationCategory: 'ProductivityApplication',
       operatingSystem: 'macOS',
       description:
-        'Automatic desktop activity capture from Keel Assistant with assignment to clients and projects inside Ozer.',
+        'Automatic desktop activity capture from Ozer Assistant with assignment to clients and projects inside Ozer.',
       url: 'https://ozer.so/features/activity',
       isPartOf: { '@type': 'WebSite', name: 'Ozer', url: 'https://ozer.so' },
     },
@@ -583,7 +583,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
       eyebrow: 'Ozer Activity',
       heading: 'Know where studio time went',
       subheading:
-        'Ozer activity answers “what was I actually working on?” Keel Assistant captures app and website sessions on your Mac. Review by day, group by site, and assign blocks to the client or project they belong to — without a separate timer app.',
+        'Ozer activity answers “what was I actually working on?” Ozer Assistant captures app and website sessions on your Mac. Review by day, group by site, and assign blocks to the client or project they belong to — without a separate timer app.',
       highlights: [
         {
           icon: 'Monitor',
@@ -621,7 +621,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         'Activity blocks sit beside delivery and billing — so “how long did this take?” is answerable from the same system you run the job in.',
       faqs: [
         {
-          question: 'Do I need Keel Assistant installed?',
+          question: 'Do I need Ozer Assistant installed?',
           answer:
             'Yes. Activity is captured by Ozer Assistant for Mac and synced to your workspace. Install the desktop app, enable tracking in workspace settings, and upload from the menu bar.',
         },

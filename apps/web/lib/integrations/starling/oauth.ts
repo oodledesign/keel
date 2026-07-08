@@ -54,7 +54,7 @@ async function exchangeTokenParams(params: URLSearchParams) {
     method: 'POST',
     headers: {
       'content-type': 'application/x-www-form-urlencoded',
-      'user-agent': 'Keel/1.0',
+      'user-agent': 'Ozer/1.0',
     },
     body: params,
   });

@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 /**
- * Bootstrap Keel subscription products & prices in a Stripe account (test or live).
+ * Bootstrap Ozer subscription products & prices in a Stripe account (test or live).
  *
  * Usage:
  *   STRIPE_SECRET_KEY=sk_test_... node scripts/stripe-setup-catalog.mjs
  *   STRIPE_SECRET_KEY=sk_test_... node scripts/stripe-setup-catalog.mjs --write-env
  *
- * Idempotent: re-run safely; matches products by metadata.keel_catalog_id and
- * prices by lookup_key.
+ * Idempotent: re-run safely; matches products by metadata.ozer_catalog_id
+ * (and legacy metadata.keel_catalog_id) and prices by lookup_key.
+ * Price lookup_keys remain keel.* so existing live Stripe prices are reused.
  */
 
 import { writeFileSync } from 'node:fs';
@@ -30,8 +31,8 @@ const stripe = new Stripe(secret);
 /** @type {Array<{ catalogId: string; productName: string; prices: Array<{ envKey: string; lookupKey: string; amount: number; interval: 'month' | 'year' }> }>} */
 const CATALOG = [
   {
-    catalogId: 'keel-community',
-    productName: 'Keel Community',
+    catalogId: 'ozer-community',
+    productName: 'Ozer Community',
     prices: [
       {
         envKey: 'STRIPE_PRICE_COMMUNITY_MONTHLY',
@@ -48,8 +49,8 @@ const CATALOG = [
     ],
   },
   {
-    catalogId: 'keel-business-lite',
-    productName: 'Keel Business Lite',
+    catalogId: 'ozer-business-lite',
+    productName: 'Ozer Business Lite',
     prices: [
       {
         envKey: 'STRIPE_PRICE_BUSINESS_LITE_MONTHLY',
@@ -60,8 +61,8 @@ const CATALOG = [
     ],
   },
   {
-    catalogId: 'keel-business-solo',
-    productName: 'Keel Business Solo',
+    catalogId: 'ozer-business-solo',
+    productName: 'Ozer Business Solo',
     prices: [
       {
         envKey: 'STRIPE_PRICE_BUSINESS_SOLO_MONTHLY',
@@ -78,8 +79,8 @@ const CATALOG = [
     ],
   },
   {
-    catalogId: 'keel-business-team',
-    productName: 'Keel Business Team',
+    catalogId: 'ozer-business-team',
+    productName: 'Ozer Business Team',
     prices: [
       {
         envKey: 'STRIPE_PRICE_BUSINESS_TEAM_MONTHLY',
@@ -96,8 +97,8 @@ const CATALOG = [
     ],
   },
   {
-    catalogId: 'keel-business-scale',
-    productName: 'Keel Business Scale',
+    catalogId: 'ozer-business-scale',
+    productName: 'Ozer Business Scale',
     prices: [
       {
         envKey: 'STRIPE_PRICE_BUSINESS_SCALE_MONTHLY',
@@ -114,8 +115,8 @@ const CATALOG = [
     ],
   },
   {
-    catalogId: 'keel-property-starter',
-    productName: 'Keel Property Starter',
+    catalogId: 'ozer-property-starter',
+    productName: 'Ozer Property Starter',
     prices: [
       {
         envKey: 'STRIPE_PRICE_PROPERTY_STARTER_MONTHLY',
@@ -132,8 +133,8 @@ const CATALOG = [
     ],
   },
   {
-    catalogId: 'keel-property-portfolio',
-    productName: 'Keel Property Portfolio',
+    catalogId: 'ozer-property-portfolio',
+    productName: 'Ozer Property Portfolio',
     prices: [
       {
         envKey: 'STRIPE_PRICE_PROPERTY_PORTFOLIO_MONTHLY',
@@ -150,8 +151,8 @@ const CATALOG = [
     ],
   },
   {
-    catalogId: 'keel-addon-email-assistant',
-    productName: 'Keel Email Assistant',
+    catalogId: 'ozer-addon-email-assistant',
+    productName: 'Ozer Email Assistant',
     prices: [
       {
         envKey: 'STRIPE_PRICE_ADDON_EMAIL_ASSISTANT_MONTHLY',
@@ -162,8 +163,8 @@ const CATALOG = [
     ],
   },
   {
-    catalogId: 'keel-addon-signatures',
-    productName: 'Keel Signatures',
+    catalogId: 'ozer-addon-signatures',
+    productName: 'Ozer Signatures',
     prices: [
       {
         envKey: 'STRIPE_PRICE_ADDON_SIGNATURES_STARTER_MONTHLY',
@@ -204,8 +205,8 @@ const CATALOG = [
     ],
   },
   {
-    catalogId: 'keel-addon-rankly',
-    productName: 'Keel Rankly',
+    catalogId: 'ozer-addon-rankly',
+    productName: 'Ozer Rankly',
     prices: [
       {
         envKey: 'STRIPE_PRICE_ADDON_RANKLY_MONTHLY',
@@ -216,8 +217,8 @@ const CATALOG = [
     ],
   },
   {
-    catalogId: 'keel-addon-feedflow',
-    productName: 'Keel Feedflow',
+    catalogId: 'ozer-addon-feedflow',
+    productName: 'Ozer Feedflow',
     prices: [
       {
         envKey: 'STRIPE_PRICE_ADDON_FEEDFLOW_MONTHLY',
@@ -228,8 +229,8 @@ const CATALOG = [
     ],
   },
   {
-    catalogId: 'keel-addon-videos-starter',
-    productName: 'Keel Videos Starter',
+    catalogId: 'ozer-addon-videos-starter',
+    productName: 'Ozer Videos Starter',
     prices: [
       {
         envKey: 'STRIPE_PRICE_ADDON_VIDEOS_STARTER_MONTHLY',
@@ -240,8 +241,8 @@ const CATALOG = [
     ],
   },
   {
-    catalogId: 'keel-addon-videos-growth',
-    productName: 'Keel Videos Growth',
+    catalogId: 'ozer-addon-videos-growth',
+    productName: 'Ozer Videos Growth',
     prices: [
       {
         envKey: 'STRIPE_PRICE_ADDON_VIDEOS_GROWTH_MONTHLY',
@@ -252,8 +253,8 @@ const CATALOG = [
     ],
   },
   {
-    catalogId: 'keel-addon-videos-pro',
-    productName: 'Keel Videos Pro',
+    catalogId: 'ozer-addon-videos-pro',
+    productName: 'Ozer Videos Pro',
     prices: [
       {
         envKey: 'STRIPE_PRICE_ADDON_VIDEOS_PRO_MONTHLY',
@@ -264,8 +265,8 @@ const CATALOG = [
     ],
   },
   {
-    catalogId: 'keel-addon-videos-studio',
-    productName: 'Keel Videos Studio',
+    catalogId: 'ozer-addon-videos-studio',
+    productName: 'Ozer Videos Studio',
     prices: [
       {
         envKey: 'STRIPE_PRICE_ADDON_VIDEOS_STUDIO_MONTHLY',
@@ -277,23 +278,51 @@ const CATALOG = [
   },
 ];
 
+function toLegacyCatalogId(catalogId) {
+  return catalogId.startsWith('ozer-')
+    ? `keel-${catalogId.slice('ozer-'.length)}`
+    : catalogId;
+}
+
 async function findProductByCatalogId(catalogId) {
-  const products = await stripe.products.search({
-    query: `metadata['keel_catalog_id']:'${catalogId}'`,
-    limit: 1,
-  });
-  return products.data[0] ?? null;
+  const legacyId = toLegacyCatalogId(catalogId);
+  const queries = [
+    `metadata['ozer_catalog_id']:'${catalogId}'`,
+    `metadata['keel_catalog_id']:'${catalogId}'`,
+    `metadata['ozer_catalog_id']:'${legacyId}'`,
+    `metadata['keel_catalog_id']:'${legacyId}'`,
+  ];
+
+  for (const query of [...new Set(queries)]) {
+    const products = await stripe.products.search({ query, limit: 1 });
+    if (products.data[0]) {
+      return products.data[0];
+    }
+  }
+
+  return null;
 }
 
 async function ensureProduct(catalogId, productName) {
+  const legacyId = toLegacyCatalogId(catalogId);
   const existing = await findProductByCatalogId(catalogId);
   if (existing) {
-    return existing;
+    return stripe.products.update(existing.id, {
+      name: productName,
+      metadata: {
+        ...existing.metadata,
+        ozer_catalog_id: catalogId,
+        keel_catalog_id: existing.metadata?.keel_catalog_id || legacyId,
+      },
+    });
   }
 
   return stripe.products.create({
     name: productName,
-    metadata: { keel_catalog_id: catalogId },
+    metadata: {
+      ozer_catalog_id: catalogId,
+      keel_catalog_id: legacyId,
+    },
   });
 }
 
@@ -320,7 +349,7 @@ async function ensurePrice(productId, priceDef) {
 
 async function main() {
   const mode = secret.startsWith('sk_live_') ? 'live' : 'test';
-  console.log(`Keel Stripe catalog setup (${mode}, ${currency.toUpperCase()})\n`);
+  console.log(`Ozer Stripe catalog setup (${mode}, ${currency.toUpperCase()})\n`);
 
   const envLines = [
     '# Generated by scripts/stripe-setup-catalog.mjs',

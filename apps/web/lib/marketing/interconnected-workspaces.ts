@@ -137,7 +137,7 @@ export const INTERCONNECTED_WORKSPACES_MARKETING = {
       icon: Activity,
       title: 'Activity tracking',
       description:
-        'Keel Assistant captures app and website sessions on your Mac — assign time to clients and projects from one activity view.',
+        'Ozer Assistant captures app and website sessions on your Mac — assign time to clients and projects from one activity view.',
       href: '/features/activity',
     },
     {

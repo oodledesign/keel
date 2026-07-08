@@ -4,10 +4,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { resolveWorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
 
-import type { KeelAddonKey } from './keel-plan-catalog';
+import type { OzerAddonKey } from './ozer-plan-catalog';
 
 /** Maps paid add-on entitlements to `account_module_settings.module_key` values. */
-const ADDON_ENTITLEMENT_MODULES: Record<KeelAddonKey, string[]> = {
+const ADDON_ENTITLEMENT_MODULES: Record<OzerAddonKey, string[]> = {
   addon_signatures: ['signatures'],
   addon_rankly: ['rankly'],
   addon_feedflow: ['feedflow'],
@@ -70,7 +70,7 @@ export async function syncAddonModulesFromEntitlements(
 
   for (const [entitlementKey, moduleKeys] of Object.entries(
     ADDON_ENTITLEMENT_MODULES,
-  ) as Array<[KeelAddonKey, string[]]>) {
+  ) as Array<[OzerAddonKey, string[]]>) {
     const enabled = activeKeys.has(entitlementKey);
     if (enabled) anyAddonActive = true;
 

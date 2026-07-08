@@ -15,7 +15,7 @@ const ADMIN_STEPS: StepDef[] = [
   {
     step: 1,
     title: 'How you use Ozer',
-    key: 'keel_contexts',
+    key: 'ozer_contexts',
     canSkip: true,
   },
   { step: 2, title: 'Personal Details', key: 'personal' },
@@ -25,7 +25,7 @@ const STAFF_STEPS: StepDef[] = [
   {
     step: 1,
     title: 'How you use Ozer',
-    key: 'keel_contexts',
+    key: 'ozer_contexts',
     canSkip: true,
   },
   { step: 2, title: 'Trade Role', key: 'trade' },
@@ -37,7 +37,7 @@ const CLIENT_STEPS: StepDef[] = [
   {
     step: 1,
     title: 'How you use Ozer',
-    key: 'keel_contexts',
+    key: 'ozer_contexts',
     canSkip: true,
   },
   { step: 2, title: 'Personal Details', key: 'personal' },

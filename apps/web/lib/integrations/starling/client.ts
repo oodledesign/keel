@@ -79,7 +79,7 @@ export class StarlingClient {
         Authorization: `Bearer ${this.accessToken}`,
         Accept: 'application/json',
         'Content-Type': 'application/json',
-        'User-Agent': 'Keel/1.0',
+        'User-Agent': 'Ozer/1.0',
         ...(init?.headers ?? {}),
       },
     });

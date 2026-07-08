@@ -85,7 +85,8 @@ import {
 
 import { SearchableMultiSelect } from './searchable-multi-select';
 
-const FAV_STORAGE_KEY = 'keel:favourite-chat-ids';
+const FAV_STORAGE_KEY = 'ozer:favourite-chat-ids';
+const LEGACY_FAV_STORAGE_KEY = 'keel:favourite-chat-ids';
 
 type PendingAttachment = {
   type: 'note' | 'doc';
@@ -438,7 +439,9 @@ export function MessagesPageContent(props: Props) {
   }, [sortedThreads, listSearch, jobTitleById]);
 
   useEffect(() => {
-    const raw = window.localStorage.getItem(FAV_STORAGE_KEY);
+    const raw =
+      window.localStorage.getItem(FAV_STORAGE_KEY) ??
+      window.localStorage.getItem(LEGACY_FAV_STORAGE_KEY);
     if (!raw) return;
     try {
       const parsed = JSON.parse(raw) as unknown;

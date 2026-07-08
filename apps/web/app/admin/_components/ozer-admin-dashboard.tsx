@@ -22,7 +22,7 @@ const links = [
   { href: '/admin/audit', label: 'Audit log', description: 'Admin actions' },
 ];
 
-export async function KeelAdminDashboard() {
+export async function OzerAdminDashboard() {
   const data = await loadAdminDashboardStats();
 
   return (

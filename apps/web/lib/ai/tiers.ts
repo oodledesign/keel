@@ -2,7 +2,7 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { findPlanByStripePriceId } from '~/lib/billing/keel-plan-catalog';
+import { findPlanByStripePriceId } from '~/lib/billing/ozer-plan-catalog';
 
 export const TIER_CREDIT_LIMITS: Record<string, number> = {
   free: 200,

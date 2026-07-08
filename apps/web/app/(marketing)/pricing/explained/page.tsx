@@ -30,10 +30,10 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 import { MARKETING_FREE_TIER } from '~/lib/billing/pricing-marketing';
 
 const FAQS = () => {
-  const lite = getBillingProductPrice('keel-business-lite');
-  const solo = getBillingProductPrice('keel-business-solo');
-  const team = getBillingProductPrice('keel-business-team');
-  const scale = getBillingProductPrice('keel-business-scale');
+  const lite = getBillingProductPrice('ozer-business-lite');
+  const solo = getBillingProductPrice('ozer-business-solo');
+  const team = getBillingProductPrice('ozer-business-team');
+  const scale = getBillingProductPrice('ozer-business-scale');
 
   return [
     {
@@ -83,7 +83,7 @@ function PricingExplainedPage() {
   const business = listBusinessWorkspacePrices();
   const faqs = FAQS();
 
-  const answerFirst = `Ozer costs ${formatGbp(0)} per month for personal and family workspaces. Business Lite is ${formatGbp(business.find((p) => p.productId === 'keel-business-lite')?.monthlyPriceGbp ?? 0)} per month. Business Solo is ${formatGbp(solo.monthlyGbp)} per month for one member. Business Team is ${formatGbp(four.monthlyGbp)} per month for up to five members. Business Scale is ${formatGbp(ten.monthlyGbp)} per month for up to fifteen members. Prices are flat for the whole team, in pounds, with no per-user charge and no Ozer cut on invoices.`;
+  const answerFirst = `Ozer costs ${formatGbp(0)} per month for personal and family workspaces. Business Lite is ${formatGbp(business.find((p) => p.productId === 'ozer-business-lite')?.monthlyPriceGbp ?? 0)} per month. Business Solo is ${formatGbp(solo.monthlyGbp)} per month for one member. Business Team is ${formatGbp(four.monthlyGbp)} per month for up to five members. Business Scale is ${formatGbp(ten.monthlyGbp)} per month for up to fifteen members. Prices are flat for the whole team, in pounds, with no per-user charge and no Ozer cut on invoices.`;
 
   return (
     <main className={cn('relative overflow-hidden', marketingShellClass)}>

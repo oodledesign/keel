@@ -59,7 +59,7 @@ After running it, create teams in the app (“Create a team”) or insert rows i
 
 ### Fix 2: Apply all migrations
 
-Use this only if you’re okay applying the full Keel/Makerkit migration history.
+Use this only if you’re okay applying the full Ozer/Makerkit migration history.
 
 **Remote Supabase**
 
@@ -75,7 +75,7 @@ From repo root: `pnpm supabase:web:reset`
 
 ## Future: adding invites, billing, etc.
 
-You already have `accounts`, `accounts_memberships`, `config`, `roles`, and other tables. When you want **invitations**, **billing** (Stripe/subscriptions), and the rest of the Keel/Makerkit stack, you have two options.
+You already have `accounts`, `accounts_memberships`, `config`, `roles`, and other tables. When you want **invitations**, **billing** (Stripe/subscriptions), and the rest of the Ozer/Makerkit stack, you have two options.
 
 ### Option A: Run the full migration stack (recommended when you’re ready)
 

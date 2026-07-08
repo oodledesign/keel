@@ -300,7 +300,7 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
         icon: Activity,
         title: 'Activity tracking',
         description:
-          'Keel Assistant captures app and website sessions on your Mac. Review by day, group by domain, and assign blocks to clients and projects.',
+          'Ozer Assistant captures app and website sessions on your Mac. Review by day, group by domain, and assign blocks to clients and projects.',
       },
       {
         icon: FileText,

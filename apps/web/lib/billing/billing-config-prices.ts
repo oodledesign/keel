@@ -114,22 +114,22 @@ export function listBillingProductPlanPrices(
 
 export function listBusinessWorkspacePrices(): BillingPlanPrice[] {
   return [
-    'keel-business-lite',
-    'keel-business-solo',
-    'keel-business-team',
-    'keel-business-scale',
+    'ozer-business-lite',
+    'ozer-business-solo',
+    'ozer-business-team',
+    'ozer-business-scale',
   ]
     .map((id) => productPrices(id))
     .filter((p): p is BillingPlanPrice => Boolean(p));
 }
 
 export function listCommunityPrices(): BillingPlanPrice[] {
-  const plan = productPrices('keel-community');
+  const plan = productPrices('ozer-community');
   return plan ? [plan] : [];
 }
 
 export function listPropertyPrices(): BillingPlanPrice[] {
-  return ['keel-property-starter', 'keel-property-portfolio']
+  return ['ozer-property-starter', 'ozer-property-portfolio']
     .map((id) => productPrices(id))
     .filter((p): p is BillingPlanPrice => Boolean(p));
 }

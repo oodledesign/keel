@@ -75,7 +75,7 @@ export function BusinessLiteUpgradeBanner({
           </ul>
         </div>
         <div className="flex shrink-0 flex-col gap-3 sm:flex-row md:flex-col">
-          <Button asChild className="keel-gradient-btn h-11 rounded-xl px-6">
+          <Button asChild className="ozer-gradient-btn h-11 rounded-xl px-6">
             <Link href={`${billingPath}?upgrade=1`}>
               Upgrade from £29/mo
               <ArrowRight className="ml-2 h-4 w-4" aria-hidden />

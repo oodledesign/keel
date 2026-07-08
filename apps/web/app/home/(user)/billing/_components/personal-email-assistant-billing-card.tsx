@@ -19,7 +19,7 @@ import {
 } from '@kit/ui/card';
 
 import billingConfig from '~/config/billing.config';
-import { KEEL_PERSONAL_ADDON_CATALOG } from '~/lib/billing/keel-plan-catalog';
+import { OZER_PERSONAL_ADDON_CATALOG } from '~/lib/billing/ozer-plan-catalog';
 
 import { createPersonalAccountCheckoutSession } from '../_lib/server/server-actions';
 
@@ -31,7 +31,7 @@ const EmbeddedCheckout = dynamic(
   { ssr: false },
 );
 
-const EMAIL_ASSISTANT = KEEL_PERSONAL_ADDON_CATALOG[0]!;
+const EMAIL_ASSISTANT = OZER_PERSONAL_ADDON_CATALOG[0]!;
 
 export function PersonalEmailAssistantBillingCard(props: {
   active: boolean;

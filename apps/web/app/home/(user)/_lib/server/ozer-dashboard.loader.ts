@@ -88,7 +88,7 @@ export type PersonalRecentNote = {
   isPersonal?: boolean;
 };
 
-export type KeelDashboardData = {
+export type OzerDashboardData = {
   userName: string;
   dateLabel: string;
   workspaces: PersonalNavWorkspace[];
@@ -589,7 +589,7 @@ function resolveBrainWorkspaceSlug(
 
 // ─── Main loader ─────────────────────────────────────────────────────
 
-export const loadKeelDashboard = cache(async (): Promise<KeelDashboardData> => {
+export const loadOzerDashboard = cache(async (): Promise<OzerDashboardData> => {
   const client = getSupabaseServerClient();
   const user = await requireUserInServerComponent();
   const userId = user.id;

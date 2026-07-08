@@ -481,7 +481,7 @@ export function MeetingTaskReviewClient({
                       {isEditing ? (
                         <Button
                           type="button"
-                          className="keel-gradient-btn text-[var(--ozer-white)]"
+                          className="ozer-gradient-btn text-[var(--ozer-white)]"
                           disabled={isPending || bulkPending}
                           onClick={() => approveItem(item, true)}
                         >
@@ -497,7 +497,7 @@ export function MeetingTaskReviewClient({
                       ) : (
                         <Button
                           type="button"
-                          className="keel-gradient-btn text-[var(--ozer-white)]"
+                          className="ozer-gradient-btn text-[var(--ozer-white)]"
                           disabled={isPending || bulkPending}
                           onClick={() => approveItem(item, false)}
                         >

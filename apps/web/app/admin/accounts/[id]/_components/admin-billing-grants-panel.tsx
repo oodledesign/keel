@@ -36,37 +36,37 @@ const ADDON_ENTITLEMENTS = [
 const QUICK_PLANS = [
   {
     label: 'Business Solo',
-    productId: 'keel-business-solo',
+    productId: 'ozer-business-solo',
     planId: 'business-solo-monthly',
   },
   {
     label: 'Business Team',
-    productId: 'keel-business-team',
+    productId: 'ozer-business-team',
     planId: 'business-team-monthly',
   },
   {
     label: 'Business Scale',
-    productId: 'keel-business-scale',
+    productId: 'ozer-business-scale',
     planId: 'business-scale-monthly',
   },
   {
     label: 'Business Lite',
-    productId: 'keel-business-lite',
+    productId: 'ozer-business-lite',
     planId: 'business-lite-free',
   },
   {
     label: 'Property Starter',
-    productId: 'keel-property-starter',
+    productId: 'ozer-property-starter',
     planId: 'property-starter-monthly',
   },
   {
     label: 'Signatures Starter add-on',
-    productId: 'keel-addon-signatures',
+    productId: 'ozer-addon-signatures',
     planId: 'signatures-starter-monthly',
   },
   {
     label: 'Rankly add-on',
-    productId: 'keel-addon-rankly',
+    productId: 'ozer-addon-rankly',
     planId: 'rankly-monthly',
   },
 ];

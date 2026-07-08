@@ -10,10 +10,10 @@ import {
   EMAIL_ASSISTANT_ENTITLEMENT,
   findPlanByStripePriceId,
   requiredEntitlementForProfile,
-  type KeelAddonKey,
-  type KeelPersonalAddonKey,
-  type KeelPlanDefinition,
-} from './keel-plan-catalog';
+  type OzerAddonKey,
+  type OzerPersonalAddonKey,
+  type OzerPlanDefinition,
+} from './ozer-plan-catalog';
 
 export type AccountPlanLimitsRow = {
   account_id: string;
@@ -177,7 +177,7 @@ export async function canUseAddon(
   client: SupabaseClient,
   userId: string,
   accountId: string,
-  addonKey: KeelAddonKey | KeelPersonalAddonKey,
+  addonKey: OzerAddonKey | OzerPersonalAddonKey,
 ): Promise<boolean> {
   if (await isSuperAdmin(client)) {
     return true;
@@ -305,4 +305,4 @@ export async function assertVideoCreateAllowed(
   return { allowed: true };
 }
 
-export type { KeelPlanDefinition };
+export type { OzerPlanDefinition };

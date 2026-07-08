@@ -31,6 +31,7 @@ function stateSecret() {
   }
 
   return createHmac('sha256', tokenKey)
+    // keep legacy salt string — changing breaks in-flight OAuth state
     .update('keel-freeagent-oauth-state-v1')
     .digest('hex');
 }

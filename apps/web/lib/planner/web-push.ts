@@ -14,7 +14,7 @@ export function getWebPushConfig(): WebPushConfig | null {
   const subject =
     process.env.VAPID_SUBJECT?.trim() ||
     process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-    'mailto:support@keel.app';
+    'mailto:hi@ozer.so';
 
   if (!publicKey || !privateKey) return null;
 

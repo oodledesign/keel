@@ -10,11 +10,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 
-import type { CalendarEventClickPayload, CalendarItemNormalized } from '~/components/calendar/KeelCalendar';
-import type { KeelCalendarView } from '~/components/calendar/KeelCalendar';
+import type { CalendarEventClickPayload, CalendarItemNormalized } from '~/components/calendar/OzerCalendar';
+import type { OzerCalendarView } from '~/components/calendar/OzerCalendar';
 
-const KeelCalendar = dynamic(
-  () => import('~/components/calendar/KeelCalendar').then((m) => m.KeelCalendar),
+const OzerCalendar = dynamic(
+  () => import('~/components/calendar/OzerCalendar').then((m) => m.OzerCalendar),
   { ssr: false, loading: () => <div className="flex h-[420px] items-center justify-center rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text-muted)]">Loading calendar…</div> },
 );
 
@@ -56,7 +56,7 @@ export function JobScheduleTabContent({
   const [events, setEvents] = useState<CalendarItemNormalized[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<{ start: Date; end: Date } | null>(null);
-  const [view, setView] = useState<KeelCalendarView>('month');
+  const [view, setView] = useState<OzerCalendarView>('month');
   const [selectedEvent, setSelectedEvent] = useState<CalendarItemNormalized | null>(null);
   const [details, setDetails] = useState<Record<string, unknown> | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
@@ -187,7 +187,7 @@ export function JobScheduleTabContent({
         {loading && events.length === 0 && (
           <p className="text-sm text-[var(--workspace-shell-text-muted)] mb-2">Loading calendar…</p>
         )}
-        <KeelCalendar
+        <OzerCalendar
           key={view}
           events={events}
           onEventClick={handleEventClick}

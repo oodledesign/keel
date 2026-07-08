@@ -1,9 +1,9 @@
 'use client';
 
 export {
-  KeelCalendar,
+  OzerCalendar,
   type CalendarEventClickPayload,
   type CalendarItemNormalized,
-  type KeelCalendarProps,
-  type KeelCalendarView,
+  type OzerCalendarProps,
+  type OzerCalendarView,
 } from './TradewaysCalendar';

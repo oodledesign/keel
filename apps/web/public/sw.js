@@ -1,4 +1,4 @@
-const CACHE = 'keel-static-v6';
+const CACHE = 'ozer-static-v7';
 const PRECACHE = ['/manifest.webmanifest', '/images/brand/pwa-icon-512.png'];
 
 self.addEventListener('message', (event) => {
@@ -79,7 +79,7 @@ self.addEventListener('fetch', (event) => {
 
 self.addEventListener('push', (event) => {
   let payload = {
-    title: 'Keel',
+    title: 'Ozer',
     body: 'Something is coming up on your plan',
     url: '/app/planner/day',
     tag: 'planner-reminder',

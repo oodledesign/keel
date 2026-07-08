@@ -62,7 +62,7 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
     name: 'Signatures',
     icon: PenLine,
     fromPriceGbp: 9,
-    productId: 'keel-addon-signatures',
+    productId: 'ozer-addon-signatures',
     planId: 'signatures-starter-monthly',
     seo: {
       title: 'Team email signatures — Ozer',

@@ -174,7 +174,7 @@ export function SopNewPlaybookForm({
             type="button"
             disabled={importPending || rawText.trim().length < 20}
             onClick={handleImport}
-            className="keel-gradient-btn"
+            className="ozer-gradient-btn"
           >
             {importPending ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -312,7 +312,7 @@ export function SopNewPlaybookForm({
             type="button"
             disabled={pending}
             onClick={handleSave}
-            className="keel-gradient-btn"
+            className="ozer-gradient-btn"
           >
             {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Save playbook

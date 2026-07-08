@@ -115,7 +115,7 @@ export function SopPlaybookDetail({
             type="button"
             disabled={pending || steps.length === 0}
             onClick={startRun}
-            className="keel-gradient-btn shrink-0"
+            className="ozer-gradient-btn shrink-0"
           >
             {pending ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

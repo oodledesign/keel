@@ -7,7 +7,7 @@ import { cn } from '@kit/ui/utils';
 import { DashboardTaskDetailTrigger } from '~/components/dashboard/dashboard-task-detail-trigger';
 import pathsConfig from '~/config/paths.config';
 
-import type { PersonalDashboardTask } from '../../_lib/server/keel-dashboard.loader';
+import type { PersonalDashboardTask } from '../../_lib/server/ozer-dashboard.loader';
 
 const priorityStyles = {
   low: 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]',

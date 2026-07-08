@@ -38,7 +38,7 @@ function navigationShell() {
 export function buildPersonalHomeNavRoutes() {
   const routes: z.infer<typeof NavigationConfigSchema>['routes'] = [
     {
-      label: 'keel-nav',
+      label: 'ozer-nav',
       collapsible: false,
       children: [
         {

@@ -28,7 +28,7 @@ export function buildPersonalSettingsNav(): PersonalSettingsNavItem[] {
     },
     {
       id: 'preferences',
-      label: 'How you use Keel',
+      label: 'How you use Ozer',
       href: pathsConfig.app.personalAccountPreferencesSettings,
     },
     {

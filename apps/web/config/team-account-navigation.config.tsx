@@ -118,11 +118,11 @@ const getRoutes = (
     label: string;
     children: typeof applicationChildren;
     collapsible?: boolean;
-  }> = [{ label: 'keel-nav', children: applicationChildren }];
+  }> = [{ label: 'ozer-nav', children: applicationChildren }];
 
   if (settingsChildren.length > 0) {
     routes.push({
-      label: 'keel-nav-settings',
+      label: 'ozer-nav-settings',
       collapsible: false,
       children: settingsChildren,
     });

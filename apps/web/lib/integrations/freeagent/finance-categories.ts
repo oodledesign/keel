@@ -90,7 +90,7 @@ export async function loadFinanceCategoriesForAccount(
 }
 
 /** Remove Ozer's generic seed categories once FreeAgent categories are linked. */
-export async function removeKeelDefaultCategories(
+export async function removeOzerDefaultCategories(
   db: SupabaseClient,
   accountId: string,
 ) {

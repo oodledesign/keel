@@ -133,7 +133,7 @@ function IntegrationRow({
             <Button
               type="button"
               size="sm"
-              className="keel-gradient-btn text-[var(--ozer-white)]"
+              className="ozer-gradient-btn text-[var(--ozer-white)]"
               disabled={connectDisabled}
               onClick={() => {
                 window.location.href = connectHref;

@@ -7,9 +7,9 @@ import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { DashboardWorkspaceBanner } from './_components/dashboard/dashboard-workspace-banner';
-import { KeelDashboard } from './_components/dashboard/keel-dashboard';
+import { OzerDashboard } from './_components/dashboard/ozer-dashboard';
 import { DashboardSkeleton } from './_components/dashboard/dashboard-skeleton';
-import { loadKeelDashboard } from './_lib/server/keel-dashboard.loader';
+import { loadOzerDashboard } from './_lib/server/ozer-dashboard.loader';
 import { loadUserWorkspace } from './_lib/server/load-user-workspace';
 
 export const generateMetadata = async () => {
@@ -19,8 +19,8 @@ export const generateMetadata = async () => {
 };
 
 async function DashboardContent() {
-  const data = await loadKeelDashboard();
-  return <KeelDashboard data={data} />;
+  const data = await loadOzerDashboard();
+  return <OzerDashboard data={data} />;
 }
 
 async function UserHomePage() {

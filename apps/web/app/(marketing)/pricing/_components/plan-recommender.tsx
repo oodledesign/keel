@@ -15,7 +15,7 @@ import {
   formatGbp,
 } from '~/lib/billing/pricing-marketing';
 import { listBillingProductPlanPrices } from '~/lib/billing/billing-config-prices';
-import { catalogPlansForAddonProduct } from '~/lib/billing/keel-plan-catalog';
+import { catalogPlansForAddonProduct } from '~/lib/billing/ozer-plan-catalog';
 import {
   marketingBodyText,
   marketingBtnGradient,
@@ -493,7 +493,7 @@ function buildRecommendation(
       signaturesOnly
         ? {
             profile: 'work_design',
-            productId: 'keel-business-lite',
+            productId: 'ozer-business-lite',
             planId: 'business-lite-free',
           }
         : {
@@ -517,9 +517,9 @@ function buildWhy(
   }
 
   const businessWhy =
-    businessPlan?.productId === 'keel-business-solo'
+    businessPlan?.productId === 'ozer-business-solo'
       ? 'Solo covers one freelancer with clients, projects, and invoices — flat, no per-seat maths.'
-      : businessPlan?.productId === 'keel-business-team'
+      : businessPlan?.productId === 'ozer-business-team'
         ? 'Team covers up to 5 people with shared clients and projects — flat, no per-seat maths.'
         : 'Scale covers up to 15 people with shared clients, projects, and priority support — flat, no per-seat maths.';
 
@@ -531,10 +531,10 @@ function buildWhy(
 }
 
 function buildSignatureTiers(): SignatureTier[] {
-  const planPrices = listBillingProductPlanPrices('keel-addon-signatures');
+  const planPrices = listBillingProductPlanPrices('ozer-addon-signatures');
   const priceByPlanId = new Map(planPrices.map((plan) => [plan.planId, plan]));
 
-  return catalogPlansForAddonProduct('keel-addon-signatures')
+  return catalogPlansForAddonProduct('ozer-addon-signatures')
     .filter((plan) => plan.planId.endsWith('-monthly'))
     .map((plan) => {
       const annualPlanId = plan.planId.replace('-monthly', '-yearly');
@@ -577,7 +577,7 @@ function getBusinessPlan(
   plans: typeof MARKETING_WORKSPACE_PLANS,
 ) {
   if (answer === 'lite') {
-    return plans.find((plan) => plan.productId === 'keel-business-lite');
+    return plans.find((plan) => plan.productId === 'ozer-business-lite');
   }
   if (answer === 'solo') {
     return plans.find((plan) => plan.maxTeamMembers === 1);

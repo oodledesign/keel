@@ -107,7 +107,7 @@ function feedItemDate(item: {
   return raw.slice(0, 10);
 }
 
-export async function syncStarlingToKeel(
+export async function syncStarlingToOzer(
   db: SupabaseClient,
   accountId: string,
   options: SyncStarlingOptions = {},

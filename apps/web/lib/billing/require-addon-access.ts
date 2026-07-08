@@ -8,12 +8,12 @@ import pathsConfig from '~/config/paths.config';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import { canUseAddon } from './entitlements';
-import type { KeelAddonKey } from './keel-plan-catalog';
+import type { OzerAddonKey } from './ozer-plan-catalog';
 
 export async function redirectIfAddonNotAllowed(
   accountSlug: string,
   accountId: string,
-  addonKey: KeelAddonKey,
+  addonKey: OzerAddonKey,
 ) {
   const user = await requireUserInServerComponent();
   const client = getSupabaseServerClient();

@@ -1,7 +1,7 @@
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
-import { syncStarlingToKeel } from '~/lib/integrations/starling/sync';
+import { syncStarlingToOzer } from '~/lib/integrations/starling/sync';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
   for (const connection of connections ?? []) {
     const accountId = connection.account_id as string;
     try {
-      await syncStarlingToKeel(admin, accountId, { mode: 'incremental' });
+      await syncStarlingToOzer(admin, accountId, { mode: 'incremental' });
       synced++;
     } catch (err) {
       failed++;

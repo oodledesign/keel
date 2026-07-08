@@ -8,9 +8,9 @@ A demo version of this project can be found at [makerkit/next-supabase-saas-kit-
 
 **Please remember to update the repository daily**.
 
-## Signatures module (Keel)
+## Signatures module (Ozer)
 
-Keel includes a **Signatures** workspace module for Microsoft 365–connected email signatures (staff sync, HTML templates, push to Outlook).
+Ozer includes a **Signatures** workspace module for Microsoft 365–connected email signatures (staff sync, HTML templates, push to Outlook).
 
 - **Module flag**: `account_module_settings.module_key = 'signatures'` (enable per team account).
 - **Required environment variables** (web app): `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_REDIRECT_URI` (see [SIGNATURES_SETUP.md](./SIGNATURES_SETUP.md)).

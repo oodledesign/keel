@@ -704,7 +704,7 @@ export async function createTaskCalendarEvent(
       method: 'POST',
       body: JSON.stringify({
         summary: input.title,
-        description: input.description?.trim() || 'Scheduled by Keel',
+        description: input.description?.trim() || 'Scheduled by Ozer',
         start: { dateTime: input.start },
         end: { dateTime: input.end },
       }),

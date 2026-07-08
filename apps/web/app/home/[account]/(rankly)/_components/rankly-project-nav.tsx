@@ -38,7 +38,7 @@ function NavLink(props: {
           ? 'justify-center px-0 max-lg:h-9 max-lg:w-9 lg:justify-center lg:px-0'
           : 'gap-2.5 px-3',
         props.active
-          ? 'keel-gradient-active'
+          ? 'ozer-gradient-active'
           : 'text-muted-foreground hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
       )}
     >

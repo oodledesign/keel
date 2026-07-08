@@ -6,7 +6,7 @@ import {
   syncStaffFromGoogleWorkspace,
 } from './google-workspace';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
-import { findPlanByProductAndPlanId } from '~/lib/billing/keel-plan-catalog';
+import { findPlanByProductAndPlanId } from '~/lib/billing/ozer-plan-catalog';
 import {
   getSignaturesSupabaseClient,
   pushAllSignatures as pushAllMicrosoftSignatures,

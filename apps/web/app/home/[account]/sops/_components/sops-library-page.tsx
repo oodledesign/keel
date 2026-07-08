@@ -57,7 +57,7 @@ export function SopsLibraryPage({
             month or project — your whole team follows the same steps.
           </p>
         </div>
-        <Button asChild className="keel-gradient-btn shrink-0 rounded-xl">
+        <Button asChild className="ozer-gradient-btn shrink-0 rounded-xl">
           <Link href={newPath}>
             <Plus className="mr-2 h-4 w-4" />
             New playbook
@@ -76,7 +76,7 @@ export function SopsLibraryPage({
             any process your team repeats. Import existing docs with AI or build
             steps manually.
           </p>
-          <Button asChild className="keel-gradient-btn mt-6">
+          <Button asChild className="ozer-gradient-btn mt-6">
             <Link href={newPath}>Create your first playbook</Link>
           </Button>
         </div>

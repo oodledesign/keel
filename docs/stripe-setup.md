@@ -1,6 +1,6 @@
-# Stripe setup for Keel (subscriptions + Connect)
+# Stripe setup for Ozer (subscriptions + Connect)
 
-Keel already integrates Stripe in code. This guide wires a **new** Stripe account for:
+Ozer already integrates Stripe in code. This guide wires a **new** Stripe account for:
 
 1. **Platform subscriptions** — Community, Business, Property workspaces and add-ons
 2. **Stripe Connect** — business owners connect Stripe so clients can pay invoices via Checkout
@@ -42,18 +42,18 @@ Paste the printed `STRIPE_PRICE_*` values into Vercel (Production + Preview) and
 ## 3. Enable Stripe Connect (invoice payments)
 
 1. [Stripe Dashboard → Connect](https://dashboard.stripe.com/connect) → **Get started**.
-2. Choose **Platform** (Keel onboard businesses; payments go to their connected accounts).
+2. Choose **Platform** (Ozer onboard businesses; payments go to their connected accounts).
 3. Under **Connect settings → OAuth**:
    - **Redirect URI:** `https://app.ozer.so/api/stripe-connect/callback`
    - For local dev add: `http://localhost:3000/api/stripe-connect/callback`
 4. Copy **Client ID** (`ca_...`) → `STRIPE_CONNECT_CLIENT_ID`
 
-### How invoice payments work in Keel
+### How invoice payments work in Ozer
 
 - Workspace owner/admin opens **Settings → Payments** and clicks **Connect Stripe**.
 - OAuth stores `stripe_account_id` on the workspace.
 - Client pays via invoice portal Checkout; funds transfer to the connected account (`transfer_data.destination`).
-- Keel does not take an application fee on invoices today (100% to the business).
+- Ozer does not take an application fee on invoices today (100% to the business).
 
 ---
 
@@ -119,7 +119,7 @@ Use separate terminal tabs; each prints a `whsec_...` signing secret.
 
 ## 5. Vercel environment variables
 
-Set on **keel-web** (Production; mirror to Preview for staging):
+Set on **ozer-web** (Production; mirror to Preview for staging):
 
 ```bash
 # Provider

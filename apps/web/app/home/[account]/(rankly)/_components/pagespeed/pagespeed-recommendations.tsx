@@ -117,7 +117,7 @@ function CategoryRecommendations(props: {
               type="button"
               className={`rounded-md px-2 py-1 text-xs capitalize ${
                 priorityFilter === filter
-                  ? 'keel-gradient-active text-[var(--ozer-white)]'
+                  ? 'ozer-gradient-active text-[var(--ozer-white)]'
                   : 'bg-[var(--workspace-shell-sidebar-accent)] text-muted-foreground hover:text-[var(--workspace-shell-text)]'
               }`}
               onClick={() => setPriorityFilter(filter)}
@@ -205,7 +205,7 @@ function StrategyCategoryTabs(props: {
             <TabsTrigger
               key={category}
               value={category}
-              className="text-xs data-[state=active]:keel-gradient-active"
+              className="text-xs data-[state=active]:ozer-gradient-active"
             >
               {PAGESPEED_CATEGORY_LABELS[category]}
               {count > 0 ? ` (${count})` : ''}
@@ -276,14 +276,14 @@ export function PagespeedRecommendations(props: {
         <TabsList className="mb-4 flex h-auto gap-1 bg-black/30 p-1">
           <TabsTrigger
             value="mobile"
-            className="text-xs data-[state=active]:keel-gradient-active"
+            className="text-xs data-[state=active]:ozer-gradient-active"
           >
             Mobile
             {mobileCount > 0 ? ` (${mobileCount})` : ''}
           </TabsTrigger>
           <TabsTrigger
             value="desktop"
-            className="text-xs data-[state=active]:keel-gradient-active"
+            className="text-xs data-[state=active]:ozer-gradient-active"
           >
             Desktop
             {desktopCount > 0 ? ` (${desktopCount})` : ''}

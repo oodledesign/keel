@@ -11,8 +11,8 @@ import { If } from '@kit/ui/if';
 import { Trans } from '@kit/ui/trans';
 
 import billingConfig from '~/config/billing.config';
-import { KeelAddonCheckoutSection } from '~/home/[account]/billing/_components/keel-addon-checkout-section';
-import { KeelWorkspaceCheckoutForm } from '~/home/[account]/billing/_components/keel-workspace-checkout-form';
+import { OzerAddonCheckoutSection } from '~/home/[account]/billing/_components/ozer-addon-checkout-section';
+import { OzerWorkspaceCheckoutForm } from '~/home/[account]/billing/_components/ozer-workspace-checkout-form';
 import { createBillingPortalSession } from '~/home/[account]/billing/_lib/server/server-actions';
 import { loadTeamAccountBillingPage } from '~/home/[account]/_lib/server/team-account-billing-page.loader';
 import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
@@ -96,7 +96,7 @@ export async function WorkspaceBillingPanel({
 
       <div className="flex max-w-2xl flex-col gap-4">
         <If condition={showPlanCheckout}>
-          <KeelWorkspaceCheckoutForm
+          <OzerWorkspaceCheckoutForm
             customerId={customerId}
             accountId={accountId}
             workspaceProfile={workspace.workspaceProfile}
@@ -109,7 +109,7 @@ export async function WorkspaceBillingPanel({
         </If>
 
         <If condition={canManageBilling}>
-          <KeelAddonCheckoutSection
+          <OzerAddonCheckoutSection
             accountId={accountId}
             workspacePaid={addonState.workspacePaid}
             activeAddons={addonState.addons}

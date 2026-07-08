@@ -133,7 +133,7 @@ export function DocEditor({ accountId, accountSlug, doc }: DocEditorProps) {
           type="button"
           disabled={pending}
           onClick={onSave}
-          className="keel-gradient-btn"
+          className="ozer-gradient-btn"
         >
           {pending ? 'Saving…' : 'Save'}
         </Button>

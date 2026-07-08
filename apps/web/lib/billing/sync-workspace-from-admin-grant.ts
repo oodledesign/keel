@@ -3,7 +3,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { markBusinessUpgradedFromLite } from './business-lite';
-import type { KeelPlanDefinition } from './keel-plan-catalog';
+import type { OzerPlanDefinition } from './ozer-plan-catalog';
 import { syncAddonModulesFromEntitlements } from './sync-addon-modules-from-entitlements';
 import {
   syncBusinessLiteModules,
@@ -68,7 +68,7 @@ export async function syncWorkspaceStateAfterAdminGrant(
 export async function syncWorkspaceStateAfterAdminPlan(
   admin: SupabaseClient,
   accountId: string,
-  plan: KeelPlanDefinition,
+  plan: OzerPlanDefinition,
 ): Promise<void> {
   if (plan.family === 'business') {
     await markBusinessUpgradedFromLite(admin, accountId);

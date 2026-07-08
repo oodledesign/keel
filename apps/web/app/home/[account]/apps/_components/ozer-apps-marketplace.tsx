@@ -5,25 +5,25 @@ import { Button } from '@kit/ui/button';
 
 import pathsConfig from '~/config/paths.config';
 import {
-  KEEL_ADDON_CATALOG,
-  type KeelAddonKey,
-} from '~/lib/billing/keel-plan-catalog';
+  OZER_ADDON_CATALOG,
+  type OzerAddonKey,
+} from '~/lib/billing/ozer-plan-catalog';
 
 import type { NavChild } from '~/config/work-account-navigation.config';
 
-type KeelAppsMarketplaceProps = {
+type OzerAppsMarketplaceProps = {
   accountSlug: string;
   installedApps: NavChild[];
   workspacePaid: boolean;
-  activeAddons: Record<KeelAddonKey, boolean>;
+  activeAddons: Record<OzerAddonKey, boolean>;
 };
 
-export function KeelAppsMarketplace({
+export function OzerAppsMarketplace({
   accountSlug,
   installedApps,
   workspacePaid,
   activeAddons,
-}: KeelAppsMarketplaceProps) {
+}: OzerAppsMarketplaceProps) {
   const billingPath = pathsConfig.app.accountBilling.replace(
     '[account]',
     accountSlug,
@@ -80,7 +80,7 @@ export function KeelAppsMarketplace({
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {KEEL_ADDON_CATALOG.map((addon) => {
+          {OZER_ADDON_CATALOG.map((addon) => {
             const active = activeAddons[addon.key];
             const addonSlug = addon.key.replace('addon_', '');
 

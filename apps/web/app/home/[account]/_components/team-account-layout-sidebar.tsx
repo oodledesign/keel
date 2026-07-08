@@ -12,7 +12,7 @@ import {
   SidebarContext,
 } from '@kit/ui/shadcn-sidebar';
 
-import { KeelSidebarLogo } from '~/components/workspace-shell/keel-sidebar-logo';
+import { OzerSidebarLogo } from '~/components/workspace-shell/ozer-sidebar-logo';
 import { workspaceSidebarClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import { getTeamAccountSidebarConfig } from '~/config/team-account-navigation.config';
 import pathsConfig from '~/config/paths.config';
@@ -78,6 +78,6 @@ function SidebarLogoLink(props: { account: string }) {
   const href = pathsConfig.app.accountHome.replace('[account]', props.account);
 
   return (
-    <KeelSidebarLogo href={href} collapsed={collapsed} />
+    <OzerSidebarLogo href={href} collapsed={collapsed} />
   );
 }

@@ -16,7 +16,7 @@ export function ozerSourced<T>(value: T): SourcedValue<T> {
   };
 }
 
-const team = getBillingProductPrice('keel-business-team');
+const team = getBillingProductPrice('ozer-business-team');
 const teamMonthly = team?.monthlyPriceGbp ?? 79;
 const teamYearly = team?.yearlyPriceGbp ?? teamMonthly * 12;
 const teamSeats = team?.maxTeamMembers ?? 5;

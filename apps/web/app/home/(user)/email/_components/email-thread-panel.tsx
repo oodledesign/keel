@@ -400,7 +400,7 @@ export function EmailThreadPanel({
                         <Button
                           type="button"
                           size="sm"
-                          className="keel-gradient-btn h-8 px-3 text-[var(--workspace-shell-text)]"
+                          className="ozer-gradient-btn h-8 px-3 text-[var(--workspace-shell-text)]"
                           onClick={() => {
                             setAcceptItem(item);
                             setAcceptOpen(true);
@@ -481,7 +481,7 @@ export function EmailThreadPanel({
             <div className="flex flex-wrap items-center gap-3">
               <Button
                 type="button"
-                className="keel-gradient-btn text-[var(--ozer-white)]"
+                className="ozer-gradient-btn text-[var(--ozer-white)]"
                 onClick={runSaveDraft}
                 disabled={pending || !connected || !detail.draft}
               >

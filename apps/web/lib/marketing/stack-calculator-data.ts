@@ -86,12 +86,12 @@ export const STACK_TOOLS: StackTool[] = [
 ];
 
 export function ozerAnnualFromBilling(): number {
-  const team = getBillingProductPrice('keel-business-team');
+  const team = getBillingProductPrice('ozer-business-team');
   return team?.yearlyPriceGbp ?? (team?.monthlyPriceGbp ?? 79) * 12;
 }
 
 export function ozerMonthlyFromBilling(): number {
-  const team = getBillingProductPrice('keel-business-team');
+  const team = getBillingProductPrice('ozer-business-team');
   return team?.monthlyPriceGbp ?? 79;
 }
 

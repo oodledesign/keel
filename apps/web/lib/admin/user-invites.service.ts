@@ -17,8 +17,8 @@ import {
 } from '~/lib/admin/user-invites.schema';
 import {
   findPlanByProductAndPlanId,
-  type KeelAddonKey,
-} from '~/lib/billing/keel-plan-catalog';
+  type OzerAddonKey,
+} from '~/lib/billing/ozer-plan-catalog';
 import { syncAddonModulesFromEntitlements } from '~/lib/billing/sync-addon-modules-from-entitlements';
 import {
   ensureEstablishedWorkspaceMembersOnboarded,
@@ -38,22 +38,22 @@ const WORKSPACE_PLAN_PRESETS: Partial<
   >
 > = {
   work_design: {
-    productId: 'keel-business-lite',
+    productId: 'ozer-business-lite',
     planId: 'business-lite-free',
     businessMode: 'lite',
   },
   work_property: {
-    productId: 'keel-property-starter',
+    productId: 'ozer-property-starter',
     planId: 'property-starter-monthly',
   },
   community: {
-    productId: 'keel-community',
+    productId: 'ozer-community',
     planId: 'community-monthly',
   },
 };
 
 const FULL_BUSINESS_PLAN = {
-  productId: 'keel-business-solo',
+  productId: 'ozer-business-solo',
   planId: 'business-solo-monthly',
 };
 
@@ -202,7 +202,7 @@ async function setBillingExemptOnAccount(
 async function grantAddonsOnAccount(
   admin: SupabaseClient,
   accountId: string,
-  addons: KeelAddonKey[],
+  addons: OzerAddonKey[],
   grantedBy: string,
 ): Promise<void> {
   for (const addonKey of addons) {
@@ -621,9 +621,9 @@ export async function fulfillAdminUserInvite(
 
     await admin.from('user_settings').upsert({
       user_id: userId,
-      use_keel_for_work: useWork,
-      use_keel_for_family: useFamily,
-      use_keel_for_community: useCommunity,
+      use_ozer_for_work: useWork,
+      use_ozer_for_family: useFamily,
+      use_ozer_for_community: useCommunity,
     });
 
     await admin

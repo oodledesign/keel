@@ -6,7 +6,8 @@ import { usePathname, useRouter } from 'next/navigation';
 
 import { AddTaskDialog } from '~/home/(user)/_components/dashboard/add-task-dialog';
 
-export const CREATE_TASK_EVENT = 'keel:create-task';
+export const CREATE_TASK_EVENT = 'ozer:create-task';
+const LEGACY_CREATE_TASK_EVENT = 'keel:create-task';
 
 type WorkspaceCreateTaskHostProps = {
   accountId: string;
@@ -56,7 +57,11 @@ export function WorkspaceCreateTaskHost({
   useEffect(() => {
     const onCreateTask = () => setOpen(true);
     window.addEventListener(CREATE_TASK_EVENT, onCreateTask);
-    return () => window.removeEventListener(CREATE_TASK_EVENT, onCreateTask);
+    window.addEventListener(LEGACY_CREATE_TASK_EVENT, onCreateTask);
+    return () => {
+      window.removeEventListener(CREATE_TASK_EVENT, onCreateTask);
+      window.removeEventListener(LEGACY_CREATE_TASK_EVENT, onCreateTask);
+    };
   }, []);
 
   return (

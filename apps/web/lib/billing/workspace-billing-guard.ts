@@ -9,7 +9,7 @@ import type { TeamAccountWorkspace } from '~/home/[account]/_lib/server/team-acc
 import { spaceTypeFromProfile } from '~/home/[account]/_lib/server/workspace-profile';
 
 import { canAccessPaidWorkspace } from './entitlements';
-import { requiredEntitlementForProfile } from './keel-plan-catalog';
+import { requiredEntitlementForProfile } from './ozer-plan-catalog';
 
 const BILLING_PATH_SEGMENTS = ['/billing', '/billing/return'];
 

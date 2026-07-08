@@ -1,7 +1,7 @@
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
-import { syncFreeAgentToKeel } from '~/lib/integrations/freeagent/sync';
+import { syncFreeAgentToOzer } from '~/lib/integrations/freeagent/sync';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -41,7 +41,7 @@ export async function GET(request: Request) {
   for (const connection of connections ?? []) {
     const accountId = connection.account_id as string;
     try {
-      await syncFreeAgentToKeel(admin, accountId, { mode: 'incremental' });
+      await syncFreeAgentToOzer(admin, accountId, { mode: 'incremental' });
       synced++;
     } catch (err) {
       failed++;

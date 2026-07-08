@@ -1,17 +1,25 @@
-const STORAGE_PREFIX = 'keel_notice_dismissed:';
+const STORAGE_PREFIX = 'ozer_notice_dismissed:';
+const LEGACY_STORAGE_PREFIX = 'keel_notice_dismissed:';
 
-export function isNoticeDismissed(key: string): boolean {
+function readDismissedExpiry(key: string): number | null {
   if (typeof window === 'undefined') {
-    return false;
+    return null;
   }
 
-  const raw = localStorage.getItem(`${STORAGE_PREFIX}${key}`);
+  const raw =
+    localStorage.getItem(`${STORAGE_PREFIX}${key}`) ??
+    localStorage.getItem(`${LEGACY_STORAGE_PREFIX}${key}`);
   if (!raw) {
-    return false;
+    return null;
   }
 
   const expiresAt = Number(raw);
-  if (!Number.isFinite(expiresAt)) {
+  return Number.isFinite(expiresAt) ? expiresAt : null;
+}
+
+export function isNoticeDismissed(key: string): boolean {
+  const expiresAt = readDismissedExpiry(key);
+  if (expiresAt === null) {
     return false;
   }
 

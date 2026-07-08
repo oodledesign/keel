@@ -55,7 +55,7 @@ export function VerifyEmailContent({ email }: { email: string | null }) {
           <p>
             <Trans
               i18nKey="auth:verifyEmailBody"
-              defaults="We sent a confirmation link to your inbox. Confirm your email before using Keel."
+              defaults="We sent a confirmation link to your inbox. Confirm your email before using Ozer."
             />
           </p>
           {email ? (
@@ -67,7 +67,7 @@ export function VerifyEmailContent({ email }: { email: string | null }) {
       <div className="flex flex-col gap-2">
         <Button
           type="button"
-          className="keel-gradient-btn w-full"
+          className="ozer-gradient-btn w-full"
           disabled={pending || sent}
           onClick={resendVerificationEmail}
         >

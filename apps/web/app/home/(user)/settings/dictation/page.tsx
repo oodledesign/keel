@@ -19,11 +19,11 @@ async function PersonalDictationHistoryPage() {
   return (
     <PersonalSettingsPanel
       title="Dictation history"
-      description="Snippets from Keel Assistant global dictation. Your current session also shows recent items in the menu bar popover."
+      description="Snippets from Ozer Assistant global dictation. Your current session also shows recent items in the menu bar popover."
     >
       {items.length === 0 ? (
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-          No dictation saved yet. Use the dictation hotkey in Keel Assistant while
+          No dictation saved yet. Use the dictation hotkey in Ozer Assistant while
           signed in.
         </p>
       ) : (

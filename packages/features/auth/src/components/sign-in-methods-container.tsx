@@ -74,13 +74,13 @@ export function SignInMethodsContainer(props: {
             <TabsList className="grid h-auto w-full grid-cols-2 rounded-[18px] bg-[#0b132b]/80 p-0">
               <TabsTrigger
                 value="password"
-                className="rounded-[16px] px-4 py-2.5 text-[15px] font-medium text-zinc-300 transition-colors data-[state=active]:bg-[var(--keel-teal)] data-[state=active]:text-white data-[state=active]:shadow-none"
+                className="rounded-[16px] px-4 py-2.5 text-[15px] font-medium text-zinc-300 transition-colors data-[state=active]:bg-[var(--ozer-accent)] data-[state=active]:text-white data-[state=active]:shadow-none"
               >
                 <Trans i18nKey="auth:signInMethodPassword" />
               </TabsTrigger>
               <TabsTrigger
                 value="magic-link"
-                className="rounded-[16px] px-4 py-2.5 text-[15px] font-medium text-zinc-300 transition-colors data-[state=active]:bg-[var(--keel-teal)] data-[state=active]:text-white data-[state=active]:shadow-none"
+                className="rounded-[16px] px-4 py-2.5 text-[15px] font-medium text-zinc-300 transition-colors data-[state=active]:bg-[var(--ozer-accent)] data-[state=active]:text-white data-[state=active]:shadow-none"
               >
                 <Trans i18nKey="auth:signInMethodMagicLink" />
               </TabsTrigger>

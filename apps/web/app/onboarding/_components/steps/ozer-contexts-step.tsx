@@ -15,12 +15,12 @@ import {
 import { PrimaryButton } from '../primary-button';
 
 export interface KeelContextsInitial {
-  use_keel_for_work: boolean;
-  use_keel_for_family: boolean;
-  use_keel_for_community: boolean;
+  use_ozer_for_work: boolean;
+  use_ozer_for_family: boolean;
+  use_ozer_for_community: boolean;
 }
 
-interface KeelContextsStepProps {
+interface OzerContextsStepProps {
   accountId: string;
   nextStep: number;
   initial?: KeelContextsInitial;
@@ -28,48 +28,48 @@ interface KeelContextsStepProps {
 
 const options = [
   {
-    key: 'use_keel_for_work' as const,
+    key: 'use_ozer_for_work' as const,
     title: 'Work',
     description: 'Jobs, clients, quotes, and billing for your trade or business.',
     Icon: Briefcase,
   },
   {
-    key: 'use_keel_for_family' as const,
+    key: 'use_ozer_for_family' as const,
     title: 'Family',
     description: 'Household planning, shared tasks, and life admin at home.',
     Icon: Heart,
   },
   {
-    key: 'use_keel_for_community' as const,
+    key: 'use_ozer_for_community' as const,
     title: 'Community groups',
     description: 'Clubs, volunteers, neighbours — organising together.',
     Icon: UsersRound,
   },
 ];
 
-export function KeelContextsStep({
+export function OzerContextsStep({
   accountId,
   nextStep,
   initial,
-}: KeelContextsStepProps) {
+}: OzerContextsStepProps) {
   const router = useRouter();
-  const [work, setWork] = useState(initial?.use_keel_for_work ?? false);
-  const [family, setFamily] = useState(initial?.use_keel_for_family ?? false);
+  const [work, setWork] = useState(initial?.use_ozer_for_work ?? false);
+  const [family, setFamily] = useState(initial?.use_ozer_for_family ?? false);
   const [community, setCommunity] = useState(
-    initial?.use_keel_for_community ?? false,
+    initial?.use_ozer_for_community ?? false,
   );
   const [loading, setLoading] = useState(false);
 
   const values = {
-    use_keel_for_work: work,
-    use_keel_for_family: family,
-    use_keel_for_community: community,
+    use_ozer_for_work: work,
+    use_ozer_for_family: family,
+    use_ozer_for_community: community,
   };
 
   const setters = {
-    use_keel_for_work: setWork,
-    use_keel_for_family: setFamily,
-    use_keel_for_community: setCommunity,
+    use_ozer_for_work: setWork,
+    use_ozer_for_family: setFamily,
+    use_ozer_for_community: setCommunity,
   };
 
   const goNext = async (save: boolean) => {

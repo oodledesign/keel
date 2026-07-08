@@ -168,7 +168,7 @@ export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
         <div>
           <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">Calendar auto-scheduling</h2>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-            When a task is published with a due date, Keel can block time on the assignee&apos;s
+            When a task is published with a due date, Ozer can block time on the assignee&apos;s
             Google Calendar before the deadline.
           </p>
         </div>
@@ -287,7 +287,7 @@ export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
         ) : !data.calendar.connected ? (
           <Button
             type="button"
-            className="keel-gradient-btn text-[var(--ozer-white)]"
+            className="ozer-gradient-btn text-[var(--ozer-white)]"
             onClick={() => {
               window.location.href = data.calendar.connectHref;
             }}

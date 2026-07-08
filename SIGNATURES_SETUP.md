@@ -1,6 +1,6 @@
 # Signatures module — Microsoft Azure setup
 
-This guide configures Microsoft Entra ID (Azure AD) for Keel’s **Signatures** module: directory sync, profile photos, and mailbox signature updates via Microsoft Graph.
+This guide configures Microsoft Entra ID (Azure AD) for Ozer’s **Signatures** module: directory sync, profile photos, and mailbox signature updates via Microsoft Graph.
 
 ## Hosted Supabase (required)
 
@@ -14,7 +14,7 @@ Signatures data lives in the Postgres schema **`signatures`**. For **hosted** Su
 ## 1. Create an app registration
 
 1. Open [Azure Portal](https://portal.azure.com) → **Microsoft Entra ID** → **App registrations** → **New registration**.
-2. **Name**: e.g. `Keel Signatures`.
+2. **Name**: e.g. `Ozer Signatures`.
 3. **Supported account types**: **Accounts in any organizational directory (Any Microsoft Entra ID tenant — Multitenant)** (recommended for connecting customer tenants).
 4. **Redirect URI**: **Web** — `{APP_URL}/api/signatures/ms-callback`  
    Replace `{APP_URL}` with your deployed site origin (e.g. `https://app.example.com`). For local dev, use your local origin and register the same path.
@@ -31,14 +31,14 @@ Add **Microsoft Graph** → **Application permissions** (not Delegated):
 
 Then **Grant admin consent** for your directory (and ensure tenant admins consent when connecting customer tenants, if required by your deployment model).
 
-> **Note:** The OAuth “Connect Microsoft 365” flow uses delegated scopes with the same permission *names* for consent UX; Graph calls for sync and token refresh in Keel use **client credentials** against the stored tenant ID and rely on these **application** permissions for directory-wide access.
+> **Note:** The OAuth “Connect Microsoft 365” flow uses delegated scopes with the same permission *names* for consent UX; Graph calls for sync and token refresh in Ozer use **client credentials** against the stored tenant ID and rely on these **application** permissions for directory-wide access.
 
 ## 3. Client secret
 
 1. **Certificates & secrets** → **New client secret**.
 2. Copy the **Value** immediately (it is shown once).
 
-## 4. Environment variables (Keel web app)
+## 4. Environment variables (Ozer web app)
 
 Set in your deployment environment (and `.env.local` for development):
 
@@ -48,7 +48,7 @@ AZURE_CLIENT_SECRET=<Client secret value>
 AZURE_REDIRECT_URI=https://<your-host>/api/signatures/ms-callback
 ```
 
-Optional: if `AZURE_REDIRECT_URI` is omitted, Keel may derive the callback URL from `NEXT_PUBLIC_SITE_URL`; registering the exact URI in Azure must still match what the app sends.
+Optional: if `AZURE_REDIRECT_URI` is omitted, Ozer may derive the callback URL from `NEXT_PUBLIC_SITE_URL`; registering the exact URI in Azure must still match what the app sends.
 
 ## 5. Enable the module per workspace
 
@@ -61,7 +61,7 @@ Owners/admins can manage module toggles from team account settings (see product 
 
 ## 6. Outlook desktop vs Outlook on the web
 
-HTML signature behavior differs by client (Outlook desktop vs OWA). Microsoft Graph’s supported surface for **setting** the HTML signature varies by tenant and API version. Keel may still **render** the correct HTML for preview and push attempts; confirm Graph capabilities for your tenant before relying on automatic deployment to all clients.
+HTML signature behavior differs by client (Outlook desktop vs OWA). Microsoft Graph’s supported surface for **setting** the HTML signature varies by tenant and API version. Ozer may still **render** the correct HTML for preview and push attempts; confirm Graph capabilities for your tenant before relying on automatic deployment to all clients.
 
 ## 7. Storage
 

@@ -9,7 +9,7 @@ import {
 } from './client';
 import {
   buildCategoryUrlToIdMap,
-  removeKeelDefaultCategories,
+  removeOzerDefaultCategories,
 } from './finance-categories';
 import {
   freeAgentCategoryDisplayName,
@@ -160,7 +160,7 @@ async function syncFreeAgentCategories(
   }
 
   if (synced > 0) {
-    await removeKeelDefaultCategories(db, accountId);
+    await removeOzerDefaultCategories(db, accountId);
   }
 
   return synced;
@@ -186,7 +186,7 @@ function incrementalSyncFromDate(lastSyncAt: string | null | undefined): string 
   return from.toISOString().slice(0, 10);
 }
 
-export async function syncFreeAgentToKeel(
+export async function syncFreeAgentToOzer(
   db: SupabaseClient,
   accountId: string,
   options: SyncFreeAgentOptions = {},

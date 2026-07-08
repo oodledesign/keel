@@ -168,7 +168,7 @@ export function VideoSettingsForm(props: {
           {props.canEdit ? (
             <Button
               type="button"
-              className="keel-gradient-btn"
+              className="ozer-gradient-btn"
               disabled={saving}
               onClick={() => void save()}
             >

@@ -1,4 +1,4 @@
-# Keel / Ozer Design System
+# Ozer Design System
 
 Brand-aligned tokens for the Ozer workspace shell, Shadcn UI, and shared components.
 
@@ -7,7 +7,7 @@ Brand-aligned tokens for the Ozer workspace shell, Shadcn UI, and shared compone
 1. **Colours, gradients, radii** — edit **`apps/web/styles/ozer-tokens.css`** (primitives + semantic section).
 2. **App shell mapping** — usually no change needed; `shadcn-ui.css` reads semantic tokens automatically.
 3. **Fonts** — update the Fontshare `@import` in `ozer-tokens.css` and `--ozer-font-*` variables.
-4. **Component utilities** — prefer `var(--ozer-*)` or legacy `var(--keel-teal)`; avoid new hardcoded hex in TS/TSX.
+4. **Component utilities** — prefer `var(--ozer-*)` or legacy `var(--ozer-accent)`; avoid new hardcoded hex in TS/TSX.
 5. **Logos** — replace files under `apps/web/public/brand/` (wordmark, icon, favicon).
 
 Legacy `--keel-*` variables are aliases to `--ozer-*` so existing code keeps working during migration.
@@ -81,7 +81,7 @@ Workspace shell uses `--workspace-shell-*` variables (defined in `shadcn-ui.css`
 | `--keel-gradient-from` / `--to` | `--ozer-gradient-active-*` |
 | `--keel-accent-blue` | `--ozer-info` |
 
-Utility classes: `ozer-gradient-btn` (alias `keel-gradient-btn`), `ozer-gradient-active` (alias `keel-gradient-active`), `workspace-btn-primary` — all use CSS variables.
+Utility classes: `ozer-gradient-btn` (alias `ozer-gradient-btn`), `ozer-gradient-active` (alias `ozer-gradient-active`), `workspace-btn-primary` — all use CSS variables.
 
 ---
 
@@ -91,7 +91,7 @@ Utility classes: `ozer-gradient-btn` (alias `keel-gradient-btn`), `ozer-gradient
 
 - Fixed width **240px** (`15rem`, `--sidebar-width`)
 - **Top:** Ozer logo (theme-aware SVG wordmark), workspace switcher
-- **Nav:** icon + label, **40px** row height; active item uses coral gradient (`keel-gradient-active`)
+- **Nav:** icon + label, **40px** row height; active item uses coral gradient (`ozer-gradient-active`)
 - **Bottom:** collapse control, profile (team) or moved to top bar (personal)
 
 ### Top bar
@@ -161,7 +161,7 @@ Programmatic colours (charts, PM status cells, emails): `apps/web/lib/ozer/desig
 | Marketing shell utilities | `apps/web/styles/marketing.css` |
 | Shell layout classes | `apps/web/components/workspace-shell/workspace-shell-styles.ts` |
 | Fonts bootstrap | `apps/web/lib/fonts.ts` |
-| Live token preview | `apps/web/app/admin/_components/keel-branding-guide.tsx` |
+| Live token preview | `apps/web/app/admin/_components/ozer-branding-guide.tsx` |
 | Theme toggle (app) | `apps/web/components/appearance-theme-selector.tsx` |
 | Theme toggle (marketing) | `apps/web/components/theme-mode-toggle.tsx` |
 

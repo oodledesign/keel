@@ -26,22 +26,22 @@ export type SegmentPricingComparison = {
 };
 
 const WORK_PLAN_IDS = [
-  'keel-business-lite',
-  'keel-business-solo',
-  'keel-business-team',
-  'keel-business-scale',
+  'ozer-business-lite',
+  'ozer-business-solo',
+  'ozer-business-team',
+  'ozer-business-scale',
 ] as const;
 
 const PERSONAL_COMPARISON_COLUMNS: PricingComparisonPlanColumn[] = [
   { id: 'keel-personal', label: 'Personal & family' },
-  { id: 'keel-business-solo', label: 'Business' },
+  { id: 'ozer-business-solo', label: 'Business' },
 ];
 
 function workComparison(): SegmentPricingComparison {
   const cols = WORK_PLAN_IDS.map((id, index) => ({
     id,
     label: ['Lite', 'Solo', 'Team', 'Scale'][index]!,
-    highlighted: id === 'keel-business-team',
+    highlighted: id === 'ozer-business-team',
   }));
 
   const v = (
@@ -143,7 +143,7 @@ function workComparison(): SegmentPricingComparison {
 function personalComparison(): SegmentPricingComparison {
   const v = (personal: PricingFeatureCell, business: PricingFeatureCell) => ({
     'keel-personal': personal,
-    'keel-business-solo': business,
+    'ozer-business-solo': business,
   });
 
   return {

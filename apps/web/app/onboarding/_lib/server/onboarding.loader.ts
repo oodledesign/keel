@@ -29,9 +29,9 @@ export interface OnboardingContext {
     first_name: string | null;
     last_name: string | null;
     mobile: string | null;
-    use_keel_for_work: boolean;
-    use_keel_for_family: boolean;
-    use_keel_for_community: boolean;
+    use_ozer_for_work: boolean;
+    use_ozer_for_family: boolean;
+    use_ozer_for_community: boolean;
     accessibility_text_size: string;
     accessibility_high_contrast: boolean;
     accessibility_simplified_mode: boolean;
@@ -105,9 +105,9 @@ export const getOnboardingContext = cache(
             first_name: userSettings.first_name ?? null,
             last_name: userSettings.last_name ?? null,
             mobile: userSettings.mobile ?? null,
-            use_keel_for_work: userSettings.use_keel_for_work === true,
-            use_keel_for_family: userSettings.use_keel_for_family === true,
-            use_keel_for_community: userSettings.use_keel_for_community === true,
+            use_ozer_for_work: userSettings.use_ozer_for_work === true,
+            use_ozer_for_family: userSettings.use_ozer_for_family === true,
+            use_ozer_for_community: userSettings.use_ozer_for_community === true,
             accessibility_text_size:
               userSettings.accessibility_text_size ?? 'standard',
             accessibility_high_contrast:

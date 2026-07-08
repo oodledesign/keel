@@ -18,10 +18,10 @@ import {
 
 import billingConfig from '~/config/billing.config';
 import {
-  KEEL_ADDON_CATALOG,
+  OZER_ADDON_CATALOG,
   addonProductIds,
-  type KeelAddonKey,
-} from '~/lib/billing/keel-plan-catalog';
+  type OzerAddonKey,
+} from '~/lib/billing/ozer-plan-catalog';
 
 import { createTeamAccountCheckoutSession } from '../_lib/server/server-actions';
 
@@ -38,21 +38,21 @@ const EmbeddedCheckout = dynamic(
   },
 );
 
-type KeelAddonCheckoutSectionProps = {
+type OzerAddonCheckoutSectionProps = {
   accountId: string;
   workspacePaid: boolean;
-  activeAddons: Record<KeelAddonKey, boolean>;
+  activeAddons: Record<OzerAddonKey, boolean>;
   highlightAddon?: string | null;
 };
 
-function defaultProductForAddon(key: KeelAddonKey): string {
-  if (key === 'addon_signatures') return 'keel-addon-signatures';
-  if (key === 'addon_videos') return 'keel-addon-videos-starter';
-  if (key === 'addon_feedflow') return 'keel-addon-feedflow';
-  return 'keel-addon-rankly';
+function defaultProductForAddon(key: OzerAddonKey): string {
+  if (key === 'addon_signatures') return 'ozer-addon-signatures';
+  if (key === 'addon_videos') return 'ozer-addon-videos-starter';
+  if (key === 'addon_feedflow') return 'ozer-addon-feedflow';
+  return 'ozer-addon-rankly';
 }
 
-function addonKeyFromHighlight(value: string | null | undefined): KeelAddonKey | null {
+function addonKeyFromHighlight(value: string | null | undefined): OzerAddonKey | null {
   if (value === 'signatures') return 'addon_signatures';
   if (value === 'rankly') return 'addon_rankly';
   if (value === 'feedflow') return 'addon_feedflow';
@@ -60,22 +60,22 @@ function addonKeyFromHighlight(value: string | null | undefined): KeelAddonKey |
   return null;
 }
 
-export function KeelAddonCheckoutSection({
+export function OzerAddonCheckoutSection({
   accountId,
   workspacePaid,
   activeAddons,
   highlightAddon,
-}: KeelAddonCheckoutSectionProps) {
+}: OzerAddonCheckoutSectionProps) {
   const routeParams = useParams();
   const [pending, startTransition] = useTransition();
   const appEvents = useAppEvents();
 
   const initialKey =
     addonKeyFromHighlight(highlightAddon) ??
-    KEEL_ADDON_CATALOG.find((a) => !activeAddons[a.key])?.key ??
+    OZER_ADDON_CATALOG.find((a) => !activeAddons[a.key])?.key ??
     'addon_rankly';
 
-  const [selectedKey, setSelectedKey] = useState<KeelAddonKey>(initialKey);
+  const [selectedKey, setSelectedKey] = useState<OzerAddonKey>(initialKey);
   const [checkoutToken, setCheckoutToken] = useState<string | undefined>();
 
   const filteredConfig = useMemo(() => {
@@ -92,7 +92,7 @@ export function KeelAddonCheckoutSection({
     const productId = defaultProductForAddon(selectedKey);
     if (selectedKey === 'addon_videos') {
       return filteredConfig.products.filter((p) =>
-        p.id.startsWith('keel-addon-videos'),
+        p.id.startsWith('ozer-addon-videos'),
       );
     }
     return filteredConfig.products.filter((p) => p.id === productId);
@@ -136,7 +136,7 @@ export function KeelAddonCheckoutSection({
 
       <CardContent className="space-y-6">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {KEEL_ADDON_CATALOG.map((addon) => {
+          {OZER_ADDON_CATALOG.map((addon) => {
             const active = activeAddons[addon.key];
             const selected = selectedKey === addon.key;
 
@@ -173,7 +173,7 @@ export function KeelAddonCheckoutSection({
 
         {selectedActive ? (
           <p className="text-muted-foreground text-sm">
-            {KEEL_ADDON_CATALOG.find((a) => a.key === selectedKey)?.name} is
+            {OZER_ADDON_CATALOG.find((a) => a.key === selectedKey)?.name} is
             already active on this workspace. Use the billing portal below to
             change or cancel.
           </p>
@@ -181,7 +181,7 @@ export function KeelAddonCheckoutSection({
           <div className="rounded-xl border border-[color:var(--workspace-shell-border)] p-4">
             <p className="mb-4 text-sm font-medium">
               Choose a plan for{' '}
-              {KEEL_ADDON_CATALOG.find((a) => a.key === selectedKey)?.name}
+              {OZER_ADDON_CATALOG.find((a) => a.key === selectedKey)?.name}
             </p>
             <PlanPicker
               pending={pending}

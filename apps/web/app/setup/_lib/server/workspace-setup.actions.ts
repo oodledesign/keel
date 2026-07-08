@@ -11,7 +11,7 @@ import {
   type WorkspaceProfile,
 } from '~/home/[account]/_lib/server/workspace-profile';
 import pathsConfig from '~/config/paths.config';
-import { requiredEntitlementForProfile } from '~/lib/billing/keel-plan-catalog';
+import { requiredEntitlementForProfile } from '~/lib/billing/ozer-plan-catalog';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 export type WorkspaceSetupSelection = {
@@ -45,8 +45,8 @@ function requiresBillingAfterSetup(
 
     const productId = billingIntent?.productId ?? '';
     if (
-      productId.startsWith('keel-business-') &&
-      productId !== 'keel-business-lite'
+      productId.startsWith('ozer-business-') &&
+      productId !== 'ozer-business-lite'
     ) {
       return true;
     }
@@ -156,9 +156,9 @@ export async function completeWorkspaceSetup(
 
   await client.from('user_settings').upsert({
     user_id: user.id,
-    use_keel_for_work: useWork,
-    use_keel_for_family: useFamily,
-    use_keel_for_community: useCommunity,
+    use_ozer_for_work: useWork,
+    use_ozer_for_family: useFamily,
+    use_ozer_for_community: useCommunity,
   });
 
   // Mark every membership complete (cleans up duplicate workspaces from earlier retries).

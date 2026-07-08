@@ -3,7 +3,7 @@ import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'crypt
 const ALGO = 'aes-256-gcm';
 const IV_LEN = 16;
 const TAG_LEN = 16;
-const SALT = 'keel-google-calendar-token-v1';
+const SALT = 'keel-google-calendar-token-v1'; // keep legacy salt — changing breaks existing tokens
 
 function getTokenEncryptionKey(): string {
   const raw = process.env.TOKEN_ENCRYPTION_KEY?.trim();

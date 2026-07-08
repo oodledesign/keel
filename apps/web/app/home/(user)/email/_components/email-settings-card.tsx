@@ -218,7 +218,7 @@ export function EmailSettingsCard({
             </div>
             <Button
               type="button"
-              className="keel-gradient-btn text-[var(--ozer-white)]"
+              className="ozer-gradient-btn text-[var(--ozer-white)]"
               onClick={() => {
                 window.location.href = connectHref;
               }}
@@ -281,7 +281,7 @@ export function EmailSettingsCard({
 
         <Button
           type="button"
-          className="keel-gradient-btn text-[var(--ozer-white)]"
+          className="ozer-gradient-btn text-[var(--ozer-white)]"
           onClick={saveSettings}
           disabled={pending}
         >

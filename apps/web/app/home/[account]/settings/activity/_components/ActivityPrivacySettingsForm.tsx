@@ -270,7 +270,7 @@ export function ActivityPrivacySettingsForm({
           <Button
             type="submit"
             disabled={pending || !isDirty}
-            className="keel-gradient-btn min-w-[9rem]"
+            className="ozer-gradient-btn min-w-[9rem]"
           >
             {pending ? (
               <>

@@ -6,8 +6,8 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import { resolveWorkspaceProfile, workspaceTypeLabel } from '~/home/[account]/_lib/workspace-profile';
-import { findPlanByStripePriceId } from '~/lib/billing/keel-plan-catalog';
-import { requiredEntitlementForProfile } from '~/lib/billing/keel-plan-catalog';
+import { findPlanByStripePriceId } from '~/lib/billing/ozer-plan-catalog';
+import { requiredEntitlementForProfile } from '~/lib/billing/ozer-plan-catalog';
 
 export type UserSubscriptionHubRow = {
   accountId: string;
