@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { ActivityBlockListRow } from '~/lib/activity/activity-history';
 import {
   blockContextLabel,
+  getActivityRuleMatchOptions,
   inferActivityRuleMatch,
   parseActivityAppContext,
 } from '~/lib/activity/activity-app-context';
@@ -260,10 +261,10 @@ describe('activity app context parsing', () => {
           windowTitle: 'logo-mark.ai @ 100% (RGB/Preview)',
         }),
       ),
-    ).toEqual({
+    ).toMatchObject({
       matchType: 'title_contains',
       matchValue: 'logo-mark.ai',
-      label: 'logo-mark.ai',
+      level: 'file',
     });
 
     expect(
@@ -276,10 +277,10 @@ describe('activity app context parsing', () => {
           windowTitle: 'Homepage - Marketing Site - Figma',
         }),
       ),
-    ).toEqual({
+    ).toMatchObject({
       matchType: 'title_contains',
       matchValue: 'Marketing Site',
-      label: 'Marketing Site · Homepage',
+      level: 'file',
     });
 
     expect(
@@ -290,10 +291,10 @@ describe('activity app context parsing', () => {
           windowTitle: 'keel - activity-page-content.tsx - Cursor',
         }),
       ),
-    ).toEqual({
+    ).toMatchObject({
       matchType: 'title_contains',
       matchValue: 'keel',
-      label: 'keel project',
+      level: 'project',
     });
 
     expect(
@@ -307,10 +308,40 @@ describe('activity app context parsing', () => {
           windowTitle: 'Q3 Budget - Google Docs',
         }),
       ),
-    ).toEqual({
+    ).toMatchObject({
       matchType: 'title_contains',
       matchValue: 'Q3 Budget',
-      label: 'Q3 Budget',
+      level: 'page',
+    });
+  });
+
+  it('offers hierarchy levels for browser sessions', () => {
+    const block = makeBlock({
+      id: 'arcanum',
+      startedAt: '2026-07-07T10:00:00.000Z',
+      appName: 'Google Chrome',
+      bundleId: 'com.google.Chrome',
+      domain: 'arcanum-cyber.com',
+      url: 'https://arcanum-cyber.com/wp-admin/post.php?post=1',
+      windowTitle:
+        "Cyber Security Consultancy in the UK (NCSC Certified) | Arcanum Cyber Security",
+    });
+
+    const options = getActivityRuleMatchOptions(block);
+
+    expect(options.map((option) => option.level)).toEqual([
+      'page',
+      'url',
+      'domain',
+      'app',
+    ]);
+    expect(options.find((option) => option.level === 'domain')).toMatchObject({
+      matchType: 'domain',
+      matchValue: 'arcanum-cyber.com',
+    });
+    expect(options.find((option) => option.level === 'url')).toMatchObject({
+      matchType: 'url_path',
+      matchValue: 'arcanum-cyber.com/wp-admin/post.php',
     });
   });
 
@@ -326,10 +357,10 @@ describe('activity app context parsing', () => {
           windowTitle: 'GitHub',
         }),
       ),
-    ).toEqual({
+    ).toMatchObject({
       matchType: 'domain',
       matchValue: 'github.com',
-      label: 'github.com',
+      level: 'domain',
     });
 
     expect(
@@ -342,10 +373,10 @@ describe('activity app context parsing', () => {
           windowTitle: 'Adobe Illustrator',
         }),
       ),
-    ).toEqual({
+    ).toMatchObject({
       matchType: 'app_name',
       matchValue: 'Adobe Illustrator',
-      label: 'Adobe Illustrator',
+      level: 'app',
     });
   });
 });

@@ -172,7 +172,7 @@ export async function applyActivitySuggestionsAction(input: {
       let ruleKey: string | null = null;
       let rule:
         | {
-            matchType: 'domain' | 'app_name' | 'title_contains';
+            matchType: 'domain' | 'app_name' | 'title_contains' | 'url_path';
             matchValue: string;
           }
         | null = null;
@@ -183,6 +183,25 @@ export async function applyActivitySuggestionsAction(input: {
           matchValue: String(sample.domain),
         };
         ruleKey = `${rule.matchType}:${rule.matchValue}:${suggestion.clientId ?? ''}:${suggestion.projectId ?? ''}`;
+      } else if (sample.url) {
+        try {
+          const parsed = new URL(String(sample.url));
+          const host = parsed.hostname.replace(/^www\./i, '').toLowerCase();
+          const path =
+            parsed.pathname === '/'
+              ? ''
+              : parsed.pathname.replace(/\/$/, '');
+          const normalized = `${host}${path}`;
+          if (normalized.includes('/')) {
+            rule = {
+              matchType: 'url_path',
+              matchValue: normalized,
+            };
+            ruleKey = `${rule.matchType}:${rule.matchValue}:${suggestion.clientId ?? ''}:${suggestion.projectId ?? ''}`;
+          }
+        } catch {
+          // ignore invalid URLs
+        }
       } else if (sample.window_title) {
         const title = String(sample.window_title).split(' - ')[0]?.trim();
         if (title && title.length > 2) {

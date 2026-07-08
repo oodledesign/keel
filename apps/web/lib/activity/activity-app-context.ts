@@ -439,11 +439,32 @@ export function parseActivityAppContext(
   return null;
 }
 
+export type ActivityRuleMatchLevel =
+  | 'page'
+  | 'url'
+  | 'domain'
+  | 'app'
+  | 'file'
+  | 'project';
+
 export type ActivityRuleMatch = {
-  matchType: 'domain' | 'app_name' | 'title_contains';
+  matchType: 'domain' | 'app_name' | 'title_contains' | 'url_path';
   matchValue: string;
   label: string;
+  level: ActivityRuleMatchLevel;
+  description: string;
 };
+
+export function activityRuleMatchKey(match: ActivityRuleMatch): string {
+  return `${match.matchType}::${match.matchValue}`;
+}
+
+export function findActivityRuleMatchByKey(
+  options: ActivityRuleMatch[],
+  key: string,
+): ActivityRuleMatch | null {
+  return options.find((option) => activityRuleMatchKey(option) === key) ?? null;
+}
 
 function isGenericRememberLabel(
   value: string,
@@ -480,6 +501,18 @@ function ruleLabelForContext(
   return matchValue;
 }
 
+function normalizeUrlForRule(url: string): string | null {
+  try {
+    const parsed = new URL(url.trim());
+    const host = parsed.hostname.replace(/^www\./i, '').toLowerCase();
+    const path =
+      parsed.pathname === '/' ? '' : parsed.pathname.replace(/\/$/, '');
+    return `${host}${path}`;
+  } catch {
+    return null;
+  }
+}
+
 function browserTitleMatchesDomain(item: string, domain: string): boolean {
   const itemNorm = item.trim().toLowerCase();
   const domainNorm = domain.trim().toLowerCase().replace(/^www\./, '');
@@ -488,11 +521,26 @@ function browserTitleMatchesDomain(item: string, domain: string): boolean {
   return itemNorm === siteName || itemNorm === domainNorm;
 }
 
-export function inferActivityRuleMatch(
+export function getActivityRuleMatchOptions(
   block: ActivityBlockListRow,
-): ActivityRuleMatch | null {
+): ActivityRuleMatch[] {
+  const options: ActivityRuleMatch[] = [];
+  const seen = new Set<string>();
+
+  function add(option: ActivityRuleMatch) {
+    const key = `${option.matchType}:${option.matchValue.toLowerCase()}`;
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    options.push(option);
+  }
+
   const context = parseActivityAppContext(block);
   const domain = block.domain?.trim().toLowerCase();
+  const normalizedUrl = block.url?.trim()
+    ? normalizeUrlForRule(block.url.trim())
+    : null;
 
   if (context && context.kind !== 'email' && context.item?.trim()) {
     const item = context.item.trim();
@@ -500,32 +548,89 @@ export function inferActivityRuleMatch(
       domain != null && browserTitleMatchesDomain(item, domain);
 
     if (!preferDomain && !isGenericRememberLabel(item, block)) {
-      return {
+      const level: ActivityRuleMatchLevel =
+        context.kind === 'ide'
+          ? 'project'
+          : context.kind === 'design'
+            ? 'file'
+            : 'page';
+
+      const description =
+        level === 'project'
+          ? 'This repo or workspace'
+          : level === 'file'
+            ? 'This file'
+            : 'This page title';
+
+      add({
         matchType: 'title_contains',
         matchValue: item,
         label: ruleLabelForContext(context, item),
-      };
+        level,
+        description,
+      });
     }
   }
 
+  if (normalizedUrl?.includes('/')) {
+    add({
+      matchType: 'url_path',
+      matchValue: normalizedUrl,
+      label: normalizedUrl,
+      level: 'url',
+      description: 'This URL path',
+    });
+  }
+
   if (domain) {
-    return {
+    add({
       matchType: 'domain',
       matchValue: domain,
       label: domain,
-    };
+      level: 'domain',
+      description: 'All pages on this website',
+    });
   }
 
   const appName = block.appName.trim();
   if (appName) {
-    return {
+    add({
       matchType: 'app_name',
       matchValue: appName,
       label: appName,
-    };
+      level: 'app',
+      description: 'All sessions in this app',
+    });
   }
 
-  return null;
+  return options;
+}
+
+export function intersectActivityRuleMatchOptions(
+  blocks: ActivityBlockListRow[],
+): ActivityRuleMatch[] {
+  if (blocks.length === 0) {
+    return [];
+  }
+
+  const optionSets = blocks.map(getActivityRuleMatchOptions);
+  const [firstSet, ...restSets] = optionSets;
+
+  return (firstSet ?? []).filter((option) =>
+    restSets.every((set) =>
+      set.some(
+        (candidate) =>
+          candidate.matchType === option.matchType &&
+          candidate.matchValue === option.matchValue,
+      ),
+    ),
+  );
+}
+
+export function inferActivityRuleMatch(
+  block: ActivityBlockListRow,
+): ActivityRuleMatch | null {
+  return getActivityRuleMatchOptions(block)[0] ?? null;
 }
 
 export function blockContextLabel(block: ActivityBlockListRow): string {

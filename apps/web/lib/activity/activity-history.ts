@@ -7,7 +7,15 @@ import {
   startOfDay,
 } from 'date-fns';
 
-export { inferActivityRuleMatch, type ActivityRuleMatch } from './activity-app-context';
+export {
+  activityRuleMatchKey,
+  findActivityRuleMatchByKey,
+  getActivityRuleMatchOptions,
+  inferActivityRuleMatch,
+  intersectActivityRuleMatchOptions,
+  type ActivityRuleMatch,
+  type ActivityRuleMatchLevel,
+} from './activity-app-context';
 
 export type ActivityRangeKey = 'today' | '7d' | '30d';
 

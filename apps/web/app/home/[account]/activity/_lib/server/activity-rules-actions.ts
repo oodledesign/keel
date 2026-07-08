@@ -8,7 +8,7 @@ import { getActivitySupabaseClient } from '~/lib/activity/activity-supabase';
 
 export type ActivityRuleRow = {
   id: string;
-  matchType: 'domain' | 'app_name' | 'title_contains';
+  matchType: 'domain' | 'app_name' | 'title_contains' | 'url_path';
   matchValue: string;
   projectId: string | null;
   projectName: string | null;
@@ -123,7 +123,7 @@ export async function deleteActivityRuleAction(input: {
 export async function createManualActivityRuleAction(input: {
   accountId: string;
   accountSlug: string;
-  matchType: 'domain' | 'app_name' | 'title_contains';
+  matchType: 'domain' | 'app_name' | 'title_contains' | 'url_path';
   matchValue: string;
   projectId?: string | null;
   clientId?: string | null;

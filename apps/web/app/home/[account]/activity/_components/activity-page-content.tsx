@@ -63,8 +63,13 @@ import {
 import type { ActivityPageData } from '~/home/[account]/activity/_lib/server/activity-page.loader';
 import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
 import {
+  activityRuleMatchKey,
   blockContextLabel,
+  findActivityRuleMatchByKey,
+  getActivityRuleMatchOptions,
+  intersectActivityRuleMatchOptions,
   parseActivityAppContext,
+  type ActivityRuleMatch,
 } from '~/lib/activity/activity-app-context';
 import { faviconUrlForDomain } from '~/lib/activity/activity-app-icons';
 import {
@@ -75,7 +80,6 @@ import {
   formatTimeRange,
   groupBlocksByApp,
   groupBlocksByDay,
-  inferActivityRuleMatch,
   sortActivityAppGroups,
   sumActiveDuration,
   sumTodayActiveDuration,
@@ -376,6 +380,73 @@ function AppItemCell({ block }: { block: ActivityBlockListRow }) {
   );
 }
 
+function ActivityRememberRuleSelector({
+  options,
+  selectedKey,
+  onSelectedKeyChange,
+  rememberRule,
+  onRememberRuleChange,
+  disabled = false,
+}: {
+  options: ActivityRuleMatch[];
+  selectedKey: string;
+  onSelectedKeyChange: (key: string) => void;
+  rememberRule: boolean;
+  onRememberRuleChange: (checked: boolean) => void;
+  disabled?: boolean;
+}) {
+  const selectedRule = findActivityRuleMatchByKey(options, selectedKey) ?? options[0];
+
+  if (options.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-2">
+      <label className="flex items-start gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
+        <Checkbox
+          checked={rememberRule}
+          onCheckedChange={(checked) => onRememberRuleChange(checked === true)}
+          disabled={disabled}
+        />
+        <span>Remember for future sessions</span>
+      </label>
+      {rememberRule ? (
+        options.length > 1 ? (
+          <Select
+            value={selectedKey}
+            onValueChange={onSelectedKeyChange}
+            disabled={disabled}
+          >
+            <SelectTrigger className="h-8 bg-[var(--workspace-control-surface)] text-xs">
+              <SelectValue placeholder="Choose what to remember" />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((option) => (
+                <SelectItem
+                  key={activityRuleMatchKey(option)}
+                  value={activityRuleMatchKey(option)}
+                >
+                  <span className="block truncate">
+                    {option.description}: {option.label}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <p className="pl-6 text-xs text-[var(--workspace-shell-text-muted)]">
+            {selectedRule?.description}:{' '}
+            <strong className="text-[var(--workspace-shell-text)]">
+              {selectedRule?.label}
+            </strong>
+          </p>
+        )
+      ) : null}
+    </div>
+  );
+}
+
 function ActivityBlockAssignmentCell({
   block,
   canEdit,
@@ -401,13 +472,32 @@ function ActivityBlockAssignmentCell({
     block.workClassification ?? 'neutral',
   );
   const [rememberRule, setRememberRule] = useState(true);
-  const ruleMatch = inferActivityRuleMatch(block);
+  const ruleOptions = useMemo(
+    () => getActivityRuleMatchOptions(block),
+    [block],
+  );
+  const [selectedRuleKey, setSelectedRuleKey] = useState('');
+  const selectedRule = findActivityRuleMatchByKey(ruleOptions, selectedRuleKey);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const nextOptions = getActivityRuleMatchOptions(block);
+    const preferredDomain = nextOptions.find((option) => option.level === 'domain');
+    const defaultOption = preferredDomain ?? nextOptions[0];
+
+    if (defaultOption) {
+      setSelectedRuleKey(activityRuleMatchKey(defaultOption));
+    }
+  }, [open, block]);
 
   async function maybeCreateRule(
     nextProjectId: string | null,
     nextClientId: string | null,
   ): Promise<boolean> {
-    if (!rememberRule || !ruleMatch) {
+    if (!rememberRule || !selectedRule) {
       return false;
     }
 
@@ -418,8 +508,8 @@ function ActivityBlockAssignmentCell({
     const result = await createActivityRuleAction({
       accountId,
       accountSlug,
-      matchType: ruleMatch.matchType,
-      matchValue: ruleMatch.matchValue,
+      matchType: selectedRule.matchType,
+      matchValue: selectedRule.matchValue,
       projectId: nextProjectId,
       clientId: nextClientId,
       backfill: true,
@@ -432,10 +522,10 @@ function ActivityBlockAssignmentCell({
 
     if (result.backfilled && result.backfilled > 0) {
       toast.success(
-        `Saved rule for ${ruleMatch.label} and updated ${result.backfilled} matching sessions`,
+        `Saved rule for ${selectedRule.label} and updated ${result.backfilled} matching sessions`,
       );
     } else {
-      toast.success(`Saved rule for ${ruleMatch.label}`);
+      toast.success(`Saved rule for ${selectedRule.label}`);
     }
 
     if (result.error) {
@@ -492,7 +582,7 @@ function ActivityBlockAssignmentCell({
           <ActivityAssignmentDisplay block={block} interactive />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-72 space-y-3 p-3">
+      <PopoverContent align="start" className="w-80 space-y-3 p-3">
         <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
           Assign block
         </p>
@@ -540,18 +630,14 @@ function ActivityBlockAssignmentCell({
             </SelectContent>
           </Select>
         </div>
-        {ruleMatch ? (
-          <label className="flex items-start gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
-            <Checkbox
-              checked={rememberRule}
-              onCheckedChange={(checked) => setRememberRule(checked === true)}
-              disabled={pending}
-            />
-            <span>
-              Remember for future <strong>{ruleMatch.label}</strong> sessions
-            </span>
-          </label>
-        ) : null}
+        <ActivityRememberRuleSelector
+          options={ruleOptions}
+          selectedKey={selectedRuleKey}
+          onSelectedKeyChange={setSelectedRuleKey}
+          rememberRule={rememberRule}
+          onRememberRuleChange={setRememberRule}
+          disabled={pending}
+        />
         <div className="flex gap-2">
           <Button
             type="button"
@@ -1234,7 +1320,7 @@ function ActivityDayTable({
 
 function ActivityBulkActionBar({
   blockIds,
-  ruleMatch,
+  ruleOptions,
   projects,
   clients,
   accountId,
@@ -1243,7 +1329,7 @@ function ActivityBulkActionBar({
   onUpdatedBlocks,
 }: {
   blockIds: string[];
-  ruleMatch: ReturnType<typeof inferActivityRuleMatch>;
+  ruleOptions: ActivityRuleMatch[];
   projects: ActivityPageData['projects'];
   clients: ActivityPageData['clients'];
   accountId: string;
@@ -1266,6 +1352,12 @@ function ActivityBulkActionBar({
   const [workClassification, setWorkClassification] =
     useState<WorkClassification>('neutral');
   const [rememberRule, setRememberRule] = useState(true);
+  const [selectedRuleKey, setSelectedRuleKey] = useState(() => {
+    const preferredDomain = ruleOptions.find((option) => option.level === 'domain');
+    const defaultOption = preferredDomain ?? ruleOptions[0];
+    return defaultOption ? activityRuleMatchKey(defaultOption) : '';
+  });
+  const selectedRule = findActivityRuleMatchByKey(ruleOptions, selectedRuleKey);
 
   function runBulkAction(
     action: () => Promise<{ success: boolean; error?: string }>,
@@ -1291,15 +1383,15 @@ function ActivityBulkActionBar({
 
       if (
         rememberRule &&
-        ruleMatch &&
+        selectedRule &&
         update.isConfirmed &&
         (nextProjectId || nextClientId)
       ) {
         const ruleResult = await createActivityRuleAction({
           accountId,
           accountSlug,
-          matchType: ruleMatch.matchType,
-          matchValue: ruleMatch.matchValue,
+          matchType: selectedRule.matchType,
+          matchValue: selectedRule.matchValue,
           projectId: nextProjectId,
           clientId: nextClientId,
           backfill: true,
@@ -1309,11 +1401,11 @@ function ActivityBulkActionBar({
           ruleSaved = true;
           if (ruleResult.backfilled && ruleResult.backfilled > 0) {
             toast.success(
-              `Updated ${blockIds.length} sessions and backfilled ${ruleResult.backfilled} more via ${ruleMatch.label} rule`,
+              `Updated ${blockIds.length} sessions and backfilled ${ruleResult.backfilled} more via ${selectedRule.label} rule`,
             );
           } else {
             toast.success(
-              `Updated ${blockIds.length} sessions and saved ${ruleMatch.label} rule`,
+              `Updated ${blockIds.length} sessions and saved ${selectedRule.label} rule`,
             );
           }
         } else if (ruleResult.error) {
@@ -1381,15 +1473,15 @@ function ActivityBulkActionBar({
           <SelectItem value="internal">Internal</SelectItem>
         </SelectContent>
       </Select>
-      {ruleMatch ? (
-        <label className="flex items-center gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
-          <Checkbox
-            checked={rememberRule}
-            onCheckedChange={(checked) => setRememberRule(checked === true)}
-            disabled={pending}
-          />
-          Remember for {ruleMatch.label}
-        </label>
+      {ruleOptions.length > 0 ? (
+        <ActivityRememberRuleSelector
+          options={ruleOptions}
+          selectedKey={selectedRuleKey}
+          onSelectedKeyChange={setSelectedRuleKey}
+          rememberRule={rememberRule}
+          onRememberRuleChange={setRememberRule}
+          disabled={pending}
+        />
       ) : null}
       <Button
         type="button"
@@ -1481,26 +1573,10 @@ export function ActivityPageContent({ data }: Props) {
     () => rows.filter((row) => selectedBlockIds.has(row.id)),
     [rows, selectedBlockIds],
   );
-  const bulkRuleMatch = useMemo(() => {
-    if (selectedBlocks.length === 0) {
-      return null;
-    }
-
-    const firstMatch = inferActivityRuleMatch(selectedBlocks[0]!);
-    if (!firstMatch) {
-      return null;
-    }
-
-    const allMatch = selectedBlocks.every((block) => {
-      const match = inferActivityRuleMatch(block);
-      return (
-        match?.matchType === firstMatch.matchType &&
-        match.matchValue === firstMatch.matchValue
-      );
-    });
-
-    return allMatch ? firstMatch : null;
-  }, [selectedBlocks]);
+  const bulkRuleOptions = useMemo(
+    () => intersectActivityRuleMatchOptions(selectedBlocks),
+    [selectedBlocks],
+  );
 
   const reportsPath = `${workAccountPath(
     pathsConfig.app.accountActivityReports,
@@ -1870,7 +1946,7 @@ export function ActivityPageContent({ data }: Props) {
           {selectable && selectedIds.length > 0 ? (
             <ActivityBulkActionBar
               blockIds={selectedIds}
-              ruleMatch={bulkRuleMatch}
+              ruleOptions={bulkRuleOptions}
               projects={data.projects}
               clients={data.clients}
               accountId={data.accountId}

@@ -55,7 +55,7 @@ type AssignUnassignedReportFilterInput = {
   workClassification?: 'billable' | 'internal' | 'neutral';
   rememberRule?: boolean;
   ruleMatch?: {
-    matchType: 'domain' | 'app_name';
+    matchType: 'domain' | 'app_name' | 'title_contains' | 'url_path';
     matchValue: string;
   };
 };
@@ -63,7 +63,7 @@ type AssignUnassignedReportFilterInput = {
 type CreateActivityRuleInput = {
   accountId: string;
   accountSlug: string;
-  matchType: 'domain' | 'app_name' | 'title_contains';
+  matchType: 'domain' | 'app_name' | 'title_contains' | 'url_path';
   matchValue: string;
   projectId?: string | null;
   clientId?: string | null;
@@ -403,11 +403,23 @@ function normalizeRuleMatchValue(
     throw new Error('Rule match value is required');
   }
 
-  if (matchType === 'domain' || matchType === 'app_name') {
+  if (matchType === 'domain' || matchType === 'app_name' || matchType === 'url_path') {
     return trimmed.toLowerCase();
   }
 
   return trimmed;
+}
+
+function normalizeUrlForBackfill(url: string): string | null {
+  try {
+    const parsed = new URL(url.trim());
+    const host = parsed.hostname.replace(/^www\./i, '').toLowerCase();
+    const path =
+      parsed.pathname === '/' ? '' : parsed.pathname.replace(/\/$/, '');
+    return `${host}${path}`;
+  } catch {
+    return null;
+  }
 }
 
 async function backfillActivityRuleMatches(input: {
@@ -424,7 +436,7 @@ async function backfillActivityRuleMatches(input: {
 
   let query = client
     .from('activity_blocks')
-    .select('id, domain, app_name, window_title')
+    .select('id, domain, app_name, url, window_title')
     .eq('account_id', input.accountId)
     .eq('user_id', input.userId)
     .eq('is_confirmed', false)
@@ -461,6 +473,15 @@ async function backfillActivityRuleMatches(input: {
 
       if (input.matchType === 'app_name') {
         return row.app_name?.trim().toLowerCase() === normalizedValue;
+      }
+
+      if (input.matchType === 'url_path') {
+        const normalizedUrl = row.url ? normalizeUrlForBackfill(row.url) : null;
+        return (
+          normalizedUrl === normalizedValue ||
+          (normalizedUrl != null &&
+            normalizedUrl.startsWith(`${normalizedValue}/`))
+        );
       }
 
       const title = row.window_title ?? '';
