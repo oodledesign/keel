@@ -17,6 +17,8 @@ import {
   parseActivityView,
   resolveActivityDateRange,
   sumActiveDuration,
+  summarizeActivityAssignment,
+  type ActivityAssignmentSummary,
   type ActivityBlockListRow,
   type ActivityReportRow,
 } from '~/lib/activity/activity-history';
@@ -54,6 +56,8 @@ export type ActivityReportsData = {
   canViewTeamActivity: boolean;
   totalDurationSeconds: number;
   blockCount: number;
+  assignment: ActivityAssignmentSummary;
+  blockLimitReached: boolean;
   filters: {
     clientId: string | null;
     projectId: string | null;
@@ -344,6 +348,7 @@ async function loadActivityReportsDataImpl(
   };
 
   const filteredBlocks = filterActivityBlocksForReport(allBlocks, filters);
+  const assignment = summarizeActivityAssignment(allBlocks);
 
   return {
     accountId,
@@ -355,6 +360,8 @@ async function loadActivityReportsDataImpl(
     canViewTeamActivity,
     totalDurationSeconds: sumActiveDuration(filteredBlocks),
     blockCount: filteredBlocks.length,
+    assignment,
+    blockLimitReached: allBlocks.length >= ACTIVITY_REPORT_BLOCK_LIMIT,
     filters,
     byClient: aggregateActivityByClient(filteredBlocks),
     byProject: aggregateActivityByProject(filteredBlocks),

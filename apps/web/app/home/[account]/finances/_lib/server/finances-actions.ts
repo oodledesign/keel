@@ -45,6 +45,16 @@ function applyFinanceDateFilters<T extends { gte: (col: string, val: string) => 
   return next;
 }
 
+function applyFinanceSearchFilter<T extends { ilike: (col: string, pattern: string) => T }>(
+  query: T,
+  search?: string,
+) {
+  const term = search?.trim();
+  if (!term) return query;
+  const escaped = term.replace(/[%_\\]/g, '\\$&');
+  return query.ilike('description', `%${escaped}%`);
+}
+
 const DEFAULT_CATEGORIES = [
   { name: 'Sales', kind: 'income' as const },
   { name: 'Other income', kind: 'income' as const },
@@ -120,6 +130,7 @@ export const loadFinancesDashboardAction = enhanceAction(
 
     const from = input.dateFrom;
     const to = input.dateTo;
+    const search = input.search?.trim() ?? '';
     const page = input.page ?? 1;
     const pageSize = input.pageSize ?? DEFAULT_FINANCE_PAGE_SIZE;
     const offset = (page - 1) * pageSize;
@@ -138,12 +149,14 @@ export const loadFinancesDashboardAction = enhanceAction(
       .range(offset, offset + pageSize - 1);
 
     txQuery = applyFinanceDateFilters(txQuery, from, to);
+    txQuery = applyFinanceSearchFilter(txQuery, search);
 
     let countQuery = client
       .from('finance_transactions')
       .select('id', { count: 'exact', head: true })
       .eq('account_id', input.accountId);
     countQuery = applyFinanceDateFilters(countQuery, from, to);
+    countQuery = applyFinanceSearchFilter(countQuery, search);
 
     let summaryQuery = client
       .from('finance_transactions')
@@ -227,6 +240,7 @@ export const loadFinancesDashboardAction = enhanceAction(
       uncategorizedCount: uncategorizedCount ?? 0,
       page,
       pageSize,
+      search,
       categories: categories ?? [],
       bankAccounts: bankAccounts ?? [],
       connection: freeagentConnection,
@@ -260,6 +274,7 @@ export const loadFinancesDashboardAction = enhanceAction(
           z.literal(200),
         ])
         .optional(),
+      search: z.string().max(200).optional(),
     }),
   },
 );

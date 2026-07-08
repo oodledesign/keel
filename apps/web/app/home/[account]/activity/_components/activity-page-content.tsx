@@ -51,6 +51,7 @@ import type { DateRangeSelection } from '~/lib/date-range/analytics-date-range';
 import {
   bulkExcludeActivityBlocksAction,
   bulkUpdateActivityBlocksAction,
+  createActivityRuleAction,
   excludeActivityBlockAction,
   updateActivityBlockAction,
 } from '~/home/[account]/activity/_lib/server/activity-blocks-actions';
@@ -68,6 +69,7 @@ import {
   formatTimeRange,
   groupBlocksByApp,
   groupBlocksByDay,
+  inferActivityRuleMatch,
   sortActivityAppGroups,
   sumActiveDuration,
   sumTodayActiveDuration,
@@ -76,6 +78,7 @@ import {
   type ActivityDayGroup,
   type ActivitySortDir,
   type ActivitySortKey,
+  type ActivityStatusFilter,
 } from '~/lib/activity/activity-history';
 
 import { ActivityAppIcon } from './activity-app-icon';
@@ -257,13 +260,22 @@ function ActivityAssignmentDisplay({
 
 function buildActivityUrl(
   accountSlug: string,
-  params: { from: string; to: string; view: 'mine' | 'team' },
+  params: {
+    from: string;
+    to: string;
+    view: 'mine' | 'team';
+    status?: ActivityStatusFilter;
+  },
 ) {
   const search = new URLSearchParams({
     from: params.from,
     to: params.to,
     view: params.view,
   });
+
+  if (params.status && params.status !== 'all') {
+    search.set('status', params.status);
+  }
 
   return `${workAccountPath(pathsConfig.app.accountActivity, accountSlug)}?${search.toString()}`;
 }
@@ -345,10 +357,58 @@ function ActivityBlockAssignmentCell({
   const [pending, startTransition] = useTransition();
   const [projectId, setProjectId] = useState(block.projectId ?? 'none');
   const [clientId, setClientId] = useState(block.clientId ?? 'none');
+  const [rememberRule, setRememberRule] = useState(true);
+  const ruleMatch = inferActivityRuleMatch(block);
+
+  async function maybeCreateRule(
+    nextProjectId: string | null,
+    nextClientId: string | null,
+  ): Promise<boolean> {
+    if (!rememberRule || !ruleMatch) {
+      return false;
+    }
+
+    if (!nextProjectId && !nextClientId) {
+      return false;
+    }
+
+    const result = await createActivityRuleAction({
+      accountId,
+      accountSlug,
+      matchType: ruleMatch.matchType,
+      matchValue: ruleMatch.matchValue,
+      projectId: nextProjectId,
+      clientId: nextClientId,
+      backfill: true,
+    });
+
+    if (!result.success) {
+      toast.error(result.error ?? 'Could not save rule');
+      return false;
+    }
+
+    if (result.backfilled && result.backfilled > 0) {
+      toast.success(
+        `Saved rule for ${ruleMatch.label} and updated ${result.backfilled} matching sessions`,
+      );
+    } else {
+      toast.success(`Saved rule for ${ruleMatch.label}`);
+    }
+
+    if (result.error) {
+      toast.warning(result.error);
+    }
+
+    return true;
+  }
 
   function runAction(
     action: () => Promise<{ success: boolean; error?: string }>,
     nextBlock: ActivityBlockListRow,
+    options?: {
+      projectId?: string | null;
+      clientId?: string | null;
+    },
   ) {
     startTransition(async () => {
       const result = await action();
@@ -358,7 +418,15 @@ function ActivityBlockAssignmentCell({
         return;
       }
 
-      toast.success('Activity updated');
+      const ruleSaved = await maybeCreateRule(
+        options?.projectId ?? nextBlock.projectId,
+        options?.clientId ?? nextBlock.clientId,
+      );
+
+      if (!ruleSaved) {
+        toast.success('Activity updated');
+      }
+
       onUpdated(nextBlock);
       setOpen(false);
     });
@@ -413,6 +481,18 @@ function ActivityBlockAssignmentCell({
             </SelectContent>
           </Select>
         </div>
+        {ruleMatch ? (
+          <label className="flex items-start gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
+            <Checkbox
+              checked={rememberRule}
+              onCheckedChange={(checked) => setRememberRule(checked === true)}
+              disabled={pending}
+            />
+            <span>
+              Remember for future <strong>{ruleMatch.label}</strong> sessions
+            </span>
+          </label>
+        ) : null}
         <div className="flex gap-2">
           <Button
             type="button"
@@ -440,6 +520,10 @@ function ActivityBlockAssignmentCell({
                   clientName:
                     clients.find((client) => client.id === clientId)?.name ?? null,
                   isConfirmed: true,
+                },
+                {
+                  projectId: projectId === 'none' ? null : projectId,
+                  clientId: clientId === 'none' ? null : clientId,
                 },
               )
             }
@@ -895,6 +979,7 @@ function ActivityDayTable({
 
 function ActivityBulkActionBar({
   blockIds,
+  ruleMatch,
   projects,
   clients,
   accountId,
@@ -903,6 +988,7 @@ function ActivityBulkActionBar({
   onUpdatedBlocks,
 }: {
   blockIds: string[];
+  ruleMatch: ReturnType<typeof inferActivityRuleMatch>;
   projects: ActivityPageData['projects'];
   clients: ActivityPageData['clients'];
   accountId: string;
@@ -921,6 +1007,7 @@ function ActivityBulkActionBar({
   const [pending, startTransition] = useTransition();
   const [projectId, setProjectId] = useState('none');
   const [clientId, setClientId] = useState('none');
+  const [rememberRule, setRememberRule] = useState(true);
 
   function runBulkAction(
     action: () => Promise<{ success: boolean; error?: string }>,
@@ -939,9 +1026,48 @@ function ActivityBulkActionBar({
         return;
       }
 
-      toast.success(
-        `Updated ${blockIds.length} activity block${blockIds.length === 1 ? '' : 's'}`,
-      );
+      let ruleSaved = false;
+      const nextProjectId = update.projectId ?? null;
+      const nextClientId = update.clientId ?? null;
+
+      if (
+        rememberRule &&
+        ruleMatch &&
+        update.isConfirmed &&
+        (nextProjectId || nextClientId)
+      ) {
+        const ruleResult = await createActivityRuleAction({
+          accountId,
+          accountSlug,
+          matchType: ruleMatch.matchType,
+          matchValue: ruleMatch.matchValue,
+          projectId: nextProjectId,
+          clientId: nextClientId,
+          backfill: true,
+        });
+
+        if (ruleResult.success) {
+          ruleSaved = true;
+          if (ruleResult.backfilled && ruleResult.backfilled > 0) {
+            toast.success(
+              `Updated ${blockIds.length} sessions and backfilled ${ruleResult.backfilled} more via ${ruleMatch.label} rule`,
+            );
+          } else {
+            toast.success(
+              `Updated ${blockIds.length} sessions and saved ${ruleMatch.label} rule`,
+            );
+          }
+        } else if (ruleResult.error) {
+          toast.warning(ruleResult.error);
+        }
+      }
+
+      if (!ruleSaved) {
+        toast.success(
+          `Updated ${blockIds.length} activity block${blockIds.length === 1 ? '' : 's'}`,
+        );
+      }
+
       onUpdatedBlocks(blockIds, update);
       onClearSelection();
       setProjectId('none');
@@ -980,6 +1106,16 @@ function ActivityBulkActionBar({
           ))}
         </SelectContent>
       </Select>
+      {ruleMatch ? (
+        <label className="flex items-center gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
+          <Checkbox
+            checked={rememberRule}
+            onCheckedChange={(checked) => setRememberRule(checked === true)}
+            disabled={pending}
+          />
+          Remember for {ruleMatch.label}
+        </label>
+      ) : null}
       <Button
         type="button"
         size="sm"
@@ -1046,6 +1182,7 @@ function ActivityBulkActionBar({
 
 export function ActivityPageContent({ data }: Props) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [rows, setRows] = useState(data.blocks);
   const [selectedBlockIds, setSelectedBlockIds] = useState<Set<string>>(
     () => new Set(),
@@ -1063,6 +1200,31 @@ export function ActivityPageContent({ data }: Props) {
     () => [...selectedBlockIds],
     [selectedBlockIds],
   );
+  const selectedBlocks = useMemo(
+    () => rows.filter((row) => selectedBlockIds.has(row.id)),
+    [rows, selectedBlockIds],
+  );
+  const bulkRuleMatch = useMemo(() => {
+    if (selectedBlocks.length === 0) {
+      return null;
+    }
+
+    const firstMatch = inferActivityRuleMatch(selectedBlocks[0]!);
+    if (!firstMatch) {
+      return null;
+    }
+
+    const allMatch = selectedBlocks.every((block) => {
+      const match = inferActivityRuleMatch(block);
+      return (
+        match?.matchType === firstMatch.matchType &&
+        match.matchValue === firstMatch.matchValue
+      );
+    });
+
+    return allMatch ? firstMatch : null;
+  }, [selectedBlocks]);
+
   const reportsPath = `${workAccountPath(
     pathsConfig.app.accountActivityReports,
     data.accountSlug,
@@ -1090,6 +1252,7 @@ export function ActivityPageContent({ data }: Props) {
   const dayGroups = useMemo(() => groupBlocksByDay(rows), [rows]);
   const activeDuration = useMemo(() => sumActiveDuration(rows), [rows]);
   const todayDuration = useMemo(() => sumTodayActiveDuration(rows), [rows]);
+  const countSuffix = data.blockLimitReached ? '+' : '';
 
   function updateBlock(updated: ActivityBlockListRow) {
     setRows((current) =>
@@ -1182,14 +1345,18 @@ export function ActivityPageContent({ data }: Props) {
     from?: string;
     to?: string;
     view?: 'mine' | 'team';
+    status?: ActivityStatusFilter;
   }) {
-    router.push(
-      buildActivityUrl(data.accountSlug, {
-        from: next.from ?? data.dateFrom,
-        to: next.to ?? data.dateTo,
-        view: next.view ?? data.view,
-      }),
-    );
+    startTransition(() => {
+      router.push(
+        buildActivityUrl(data.accountSlug, {
+          from: next.from ?? data.dateFrom,
+          to: next.to ?? data.dateTo,
+          view: next.view ?? data.view,
+          status: next.status ?? data.statusFilter,
+        }),
+      );
+    });
   }
 
   function onDateRangeApply(from: string, to: string, _selection: DateRangeSelection) {
@@ -1197,7 +1364,12 @@ export function ActivityPageContent({ data }: Props) {
   }
 
   return (
-    <div className="space-y-6 pb-6">
+    <div
+      className={cn(
+        'space-y-6 pb-6 transition-opacity duration-200',
+        isPending && 'pointer-events-none opacity-60',
+      )}
+    >
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
           <p className="text-sm text-[var(--workspace-shell-text-muted)]">Today</p>
@@ -1234,6 +1406,7 @@ export function ActivityPageContent({ data }: Props) {
           <AnalyticsDateRangePicker
             fromIso={data.dateFrom}
             toIso={data.dateTo}
+            isLoading={isPending}
             onApply={onDateRangeApply}
           />
           <Button asChild type="button" size="sm" variant="outline">
@@ -1250,6 +1423,42 @@ export function ActivityPageContent({ data }: Props) {
           </Button>
         </div>
       </div>
+
+      <Tabs
+        value={data.statusFilter}
+        onValueChange={(value) =>
+          navigate({
+            status: value as ActivityStatusFilter,
+          })
+        }
+      >
+        <TabsList className="bg-[var(--workspace-shell-panel)]">
+          <TabsTrigger value="all">
+            All ({data.assignment.totalActiveCount}
+            {countSuffix})
+          </TabsTrigger>
+          <TabsTrigger value="needs_review">
+            Needs review ({data.assignment.needsReviewCount}
+            {countSuffix})
+          </TabsTrigger>
+          <TabsTrigger value="unassigned">
+            Unassigned ({data.assignment.unassignedCount}
+            {countSuffix})
+          </TabsTrigger>
+          <TabsTrigger value="confirmed">
+            Confirmed ({data.assignment.confirmedCount}
+            {countSuffix})
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {data.blockLimitReached ? (
+        <p className="rounded-xl border border-amber-500/25 bg-amber-500/8 px-4 py-3 text-sm text-[var(--workspace-shell-text-muted)]">
+          Showing the most recent {data.blocks.length.toLocaleString()} sessions
+          in this range. Narrow the date range or use a status filter to triage
+          faster.
+        </p>
+      ) : null}
 
       {!data.trackingEnabled && data.view === 'mine' ? (
         <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5">
@@ -1308,6 +1517,7 @@ export function ActivityPageContent({ data }: Props) {
           {selectable && selectedIds.length > 0 ? (
             <ActivityBulkActionBar
               blockIds={selectedIds}
+              ruleMatch={bulkRuleMatch}
               projects={data.projects}
               clients={data.clients}
               accountId={data.accountId}

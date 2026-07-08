@@ -138,8 +138,14 @@ export function AnalyticsDateRangePicker({
   const pickerBusy = isLoading || isApplying;
 
   useEffect(() => {
-    if (!isLoading) setIsApplying(false);
+    if (!isLoading) {
+      setIsApplying(false);
+    }
   }, [isLoading]);
+
+  useEffect(() => {
+    setIsApplying(false);
+  }, [fromIso, toIso]);
 
   const pickLastPreset = (id: LastSubPreset) => {
     setDraft({
@@ -195,7 +201,7 @@ export function AnalyticsDateRangePicker({
             {view !== 'main' ? (
               <button
                 type="button"
-                className="flex w-full items-center gap-2 border-b border-[color:var(--workspace-shell-border)] px-4 py-3 text-sm text-[var(--workspace-shell-text)]/80 hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                className="flex w-full items-center gap-2 border-b border-[color:var(--workspace-shell-border)] px-4 py-3 text-sm text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
                 onClick={() => setView('main')}
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -278,11 +284,11 @@ export function AnalyticsDateRangePicker({
           <div className="flex min-w-0 flex-1 flex-col">
             {(showLastControls || draft.preset === 'last') && draft.preset === 'last' ? (
               <div className="flex flex-wrap items-center gap-2 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
-                <span className="text-sm text-[var(--workspace-shell-text)]/70">Last</span>
+                <span className="text-sm text-[var(--workspace-shell-text-muted)]">Last</span>
                 <Input
                   type="number"
                   min={1}
-                  className="h-8 w-16 border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)]"
+                  className="h-8 w-16 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
                   value={draft.lastCount ?? 30}
                   onChange={(e) =>
                     setDraft({
@@ -304,7 +310,7 @@ export function AnalyticsDateRangePicker({
                     })
                   }
                 >
-                  <SelectTrigger className="h-8 w-28 border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)]">
+                  <SelectTrigger className="h-8 w-28 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -314,7 +320,7 @@ export function AnalyticsDateRangePicker({
                     <SelectItem value="years">Years</SelectItem>
                   </SelectContent>
                 </Select>
-                <label className="ml-auto flex items-center gap-2 text-xs text-[var(--workspace-shell-text)]/70">
+                <label className="ml-auto flex items-center gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
                   <Checkbox
                     checked={draft.includeToday !== false}
                     onCheckedChange={(checked) =>
@@ -345,18 +351,35 @@ export function AnalyticsDateRangePicker({
                   }
                 }}
                 defaultMonth={calendarRange.from}
-                className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] text-[var(--workspace-shell-text)]"
+                className={cn(
+                  'rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] text-[var(--workspace-shell-text)]',
+                  '[&_.text-muted-foreground]:text-[var(--workspace-shell-text-muted)]',
+                  '[&_button]:text-[var(--workspace-shell-text)]',
+                  '[&_button:hover]:bg-[var(--workspace-shell-sidebar-accent)]',
+                  '[&_button[data-range-middle=true]]:bg-[var(--ozer-accent-subtle)] [&_button[data-range-middle=true]]:text-[var(--workspace-shell-text)]',
+                  '[&_button[data-range-start=true]]:bg-[var(--ozer-accent)] [&_button[data-range-start=true]]:text-[var(--ozer-white)]',
+                  '[&_button[data-range-end=true]]:bg-[var(--ozer-accent)] [&_button[data-range-end=true]]:text-[var(--ozer-white)]',
+                  '[&_button[data-selected-single=true]]:bg-[var(--ozer-accent)] [&_button[data-selected-single=true]]:text-[var(--ozer-white)]',
+                )}
+                classNames={{
+                  today:
+                    'rounded-md bg-[var(--workspace-shell-sidebar-accent)] font-medium text-[var(--workspace-shell-text)]',
+                  outside:
+                    'text-[var(--workspace-shell-text-muted)] opacity-50 aria-selected:text-[var(--workspace-shell-text-muted)]',
+                  weekday: 'text-[var(--workspace-shell-text-muted)]',
+                  caption_label: 'text-[var(--workspace-shell-text)]',
+                }}
               />
             </div>
 
             <div className="flex items-center justify-between gap-3 border-t border-[color:var(--workspace-shell-border)] px-4 py-3">
-              <p className="text-xs text-[var(--workspace-shell-text)]/60">{footerLabel}</p>
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">{footerLabel}</p>
               <div className="flex gap-2">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="border-[color:var(--workspace-shell-border)]"
+                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
                   onClick={() => setOpen(false)}
                 >
                   Cancel
@@ -404,8 +427,8 @@ function SidebarItem({
       className={cn(
         'flex w-full items-center justify-between px-4 py-2.5 text-left text-sm transition',
         active
-          ? 'bg-white/8 font-medium text-[var(--workspace-shell-text)]'
-          : 'text-[var(--workspace-shell-text)]/75 hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
+          ? 'bg-[var(--workspace-shell-sidebar-accent)] font-medium text-[var(--workspace-shell-text)]'
+          : 'text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
       )}
     >
       <span>{children}</span>

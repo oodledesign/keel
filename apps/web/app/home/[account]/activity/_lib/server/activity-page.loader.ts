@@ -8,13 +8,17 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { createClientsService } from '~/home/[account]/clients/_lib/server/clients.service';
 import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
 import {
+  parseActivityStatusFilter,
   parseActivityView,
   resolveActivityDateRange,
+  summarizeActivityAssignment,
+  type ActivityAssignmentSummary,
   type ActivityBlockListRow,
+  type ActivityStatusFilter,
 } from '~/lib/activity/activity-history';
 import { getActivitySupabaseClient } from '~/lib/activity/activity-supabase';
 
-export const ACTIVITY_BLOCK_LIMIT = 150;
+export const ACTIVITY_BLOCK_LIMIT = 1000;
 
 export type ActivityProjectOption = {
   id: string;
@@ -154,7 +158,11 @@ export type ActivityPageData = {
   trackingEnabled: boolean;
   canViewTeamActivity: boolean;
   canEdit: boolean;
+  statusFilter: ActivityStatusFilter;
   blocks: ActivityBlockListRow[];
+  totalBlockCount: number;
+  blockLimitReached: boolean;
+  assignment: ActivityAssignmentSummary;
   projects: ActivityProjectOption[];
   clients: ActivityClientOption[];
 };
@@ -169,6 +177,7 @@ async function loadActivityPageDataImpl(
     range?: string | null;
   },
   viewInput?: string | null,
+  statusInput?: string | null,
 ): Promise<ActivityPageData> {
   const workspace = await loadTeamWorkspace(accountSlug);
   const accountId = workspace.account.id as string;
@@ -183,6 +192,7 @@ async function loadActivityPageDataImpl(
     range: dateInput?.range,
   });
   const view = parseActivityView(viewInput);
+  const statusFilter = parseActivityStatusFilter(statusInput);
 
   const blocksSelect = `
         id,
@@ -204,7 +214,9 @@ async function loadActivityPageDataImpl(
         clients:client_id ( id, display_name )
       `;
 
-  const fetchActivityBlocks = (filterUserId?: string) => {
+  const fetchActivityBlocks = (filterUserId?: string, options?: { status?: ActivityStatusFilter }) => {
+    const status = options?.status ?? statusFilter;
+
     let query = activityClient
       .from('activity_blocks')
       .select(blocksSelect)
@@ -216,6 +228,18 @@ async function loadActivityPageDataImpl(
 
     if (filterUserId) {
       query = query.eq('user_id', filterUserId);
+    }
+
+    if (status === 'confirmed') {
+      query = query.eq('is_confirmed', true).eq('is_excluded', false);
+    } else if (status === 'unassigned') {
+      query = query
+        .eq('is_confirmed', false)
+        .eq('is_excluded', false)
+        .is('project_id', null)
+        .is('client_id', null);
+    } else if (status === 'needs_review') {
+      query = query.eq('is_confirmed', false).eq('is_excluded', false);
     }
 
     return query;
@@ -280,6 +304,13 @@ async function loadActivityPageDataImpl(
       ? (teamBlocksResult.data ?? [])
       : (mineBlocksResult.data ?? []);
 
+  const mappedBlocks = ((blockRows ?? []) as unknown as ActivityBlockRow[]).map(
+    (row) => mapBlockRow(row, memberNames),
+  );
+  const blockLimitReached = mappedBlocks.length >= ACTIVITY_BLOCK_LIMIT;
+  const totalBlockCount = mappedBlocks.length;
+  const assignment = summarizeActivityAssignment(mappedBlocks);
+
   return {
     accountId,
     accountSlug,
@@ -291,9 +322,11 @@ async function loadActivityPageDataImpl(
       (privacyResult.data?.tracking_enabled as boolean | undefined) ?? false,
     canViewTeamActivity,
     canEdit: effectiveView === 'mine',
-    blocks: ((blockRows ?? []) as unknown as ActivityBlockRow[]).map((row) =>
-      mapBlockRow(row, memberNames),
-    ),
+    statusFilter,
+    blocks: mappedBlocks,
+    totalBlockCount,
+    blockLimitReached,
+    assignment,
     projects: mapProjectOptions(
       (projectsResult.data ?? []) as unknown as Array<{
         id: string;

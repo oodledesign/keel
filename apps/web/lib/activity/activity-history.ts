@@ -496,6 +496,132 @@ export function aggregateActivityByApp(
   });
 }
 
+export type ActivityStatusFilter = 'all' | 'needs_review' | 'unassigned' | 'confirmed';
+
+export function parseActivityStatusFilter(
+  value: string | null | undefined,
+): ActivityStatusFilter {
+  switch (value?.trim()) {
+    case 'needs_review':
+      return 'needs_review';
+    case 'unassigned':
+      return 'unassigned';
+    case 'confirmed':
+      return 'confirmed';
+    default:
+      return 'all';
+  }
+}
+
+export function filterBlocksByStatus(
+  blocks: ActivityBlockListRow[],
+  status: ActivityStatusFilter,
+): ActivityBlockListRow[] {
+  if (status === 'all') {
+    return blocks;
+  }
+
+  return blocks.filter((block) => {
+    if (block.isExcluded) {
+      return false;
+    }
+
+    if (status === 'confirmed') {
+      return block.isConfirmed;
+    }
+
+    if (status === 'unassigned') {
+      return !block.isConfirmed && !block.projectId && !block.clientId;
+    }
+
+    return !block.isConfirmed;
+  });
+}
+
+export type ActivityAssignmentSummary = {
+  totalActiveSeconds: number;
+  totalActiveCount: number;
+  unassignedSeconds: number;
+  unassignedCount: number;
+  needsReviewSeconds: number;
+  needsReviewCount: number;
+  confirmedSeconds: number;
+  confirmedCount: number;
+};
+
+export function summarizeActivityAssignment(
+  blocks: ActivityBlockListRow[],
+): ActivityAssignmentSummary {
+  let totalActiveSeconds = 0;
+  let totalActiveCount = 0;
+  let unassignedSeconds = 0;
+  let unassignedCount = 0;
+  let needsReviewSeconds = 0;
+  let needsReviewCount = 0;
+  let confirmedSeconds = 0;
+  let confirmedCount = 0;
+
+  for (const block of blocks) {
+    if (block.isExcluded) {
+      continue;
+    }
+
+    totalActiveSeconds += block.durationSeconds;
+    totalActiveCount += 1;
+
+    if (block.isConfirmed) {
+      confirmedSeconds += block.durationSeconds;
+      confirmedCount += 1;
+      continue;
+    }
+
+    needsReviewSeconds += block.durationSeconds;
+    needsReviewCount += 1;
+
+    if (!block.projectId && !block.clientId) {
+      unassignedSeconds += block.durationSeconds;
+      unassignedCount += 1;
+    }
+  }
+
+  return {
+    totalActiveSeconds,
+    totalActiveCount,
+    unassignedSeconds,
+    unassignedCount,
+    needsReviewSeconds,
+    needsReviewCount,
+    confirmedSeconds,
+    confirmedCount,
+  };
+}
+
+export function inferActivityRuleMatch(block: ActivityBlockListRow): {
+  matchType: 'domain' | 'app_name';
+  matchValue: string;
+  label: string;
+} | null {
+  const domain = block.domain?.trim().toLowerCase();
+  if (domain) {
+    return {
+      matchType: 'domain',
+      matchValue: domain,
+      label: domain,
+    };
+  }
+
+  const appName = block.appName.trim();
+  if (appName) {
+    return {
+      matchType: 'app_name',
+      matchValue: appName,
+      label: appName,
+    };
+  }
+
+  return null;
+}
+
 export function groupBlocksByDay(
   blocks: ActivityBlockListRow[],
   now = new Date(),

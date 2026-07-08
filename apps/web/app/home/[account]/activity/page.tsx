@@ -56,6 +56,7 @@ async function ActivityPage({ params, searchParams }: ActivityPageProps) {
       range: readSearchParam(query.range),
     },
     readSearchParam(query.view),
+    readSearchParam(query.status),
   );
 
   return (

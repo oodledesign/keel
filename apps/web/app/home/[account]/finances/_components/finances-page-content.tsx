@@ -12,6 +12,7 @@ import {
   MoreHorizontal,
   Plus,
   RefreshCw,
+  Search,
   Settings,
   Sparkles,
   Upload,
@@ -150,6 +151,8 @@ export function FinancesPageContent({
   const [dateTo, setDateTo] = useState(initialDateRange().to);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<(typeof FINANCE_TRANSACTION_PAGE_SIZES)[number]>(50);
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [importOpen, setImportOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<CategorySuggestion[]>([]);
@@ -171,6 +174,7 @@ export function FinancesPageContent({
           dateTo,
           page,
           pageSize,
+          search: searchQuery || undefined,
         });
         if (requestId !== refreshRequestIdRef.current) {
           return;
@@ -191,8 +195,16 @@ export function FinancesPageContent({
         setRefreshing(false);
       }
     },
-    [accountId, dateFrom, dateTo, page, pageSize],
+    [accountId, dateFrom, dateTo, page, pageSize, searchQuery],
   );
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearchQuery(searchInput.trim());
+      setPage(1);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
 
   useEffect(() => {
     void refresh();
@@ -403,11 +415,6 @@ export function FinancesPageContent({
       try {
         if (options?.history) {
           const toastId = 'freeagent-history-sync';
-          toast.loading(
-            resume ? 'Resuming historical sync…' : 'Starting historical sync…',
-            { id: toastId },
-          );
-
           const resume =
             (
               data?.connection?.sync_state as
@@ -415,6 +422,11 @@ export function FinancesPageContent({
                 | null
                 | undefined
             )?.historyBackfill?.status === 'running';
+
+          toast.loading(
+            resume ? 'Resuming historical sync…' : 'Starting historical sync…',
+            { id: toastId },
+          );
 
           let reset = !resume;
           let complete = false;
@@ -657,6 +669,8 @@ export function FinancesPageContent({
             suggestionMap={suggestionMap}
             page={page}
             pageSize={pageSize}
+            search={searchInput}
+            onSearchChange={setSearchInput}
             onPageChange={setPage}
             onPageSizeChange={(nextSize) => {
               setPageSize(nextSize);
@@ -717,7 +731,11 @@ function FinancesPageMenu({
           type="button"
           variant="outline"
           size="icon"
-          className="h-9 w-9 border-[color:var(--workspace-shell-border)]"
+          className={cn(
+            'h-9 w-9 shrink-0 rounded-xl border border-[color:var(--workspace-shell-border)]',
+            'bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text-muted)]',
+            'hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
+          )}
           disabled={disabled}
           aria-label="Finances actions"
         >
@@ -771,6 +789,8 @@ function TransactionsPanel({
   suggestionMap,
   page,
   pageSize,
+  search,
+  onSearchChange,
   onPageChange,
   onPageSizeChange,
   onSuggestCategories,
@@ -790,6 +810,8 @@ function TransactionsPanel({
   suggestionMap: Map<string, CategorySuggestion>;
   page: number;
   pageSize: (typeof FINANCE_TRANSACTION_PAGE_SIZES)[number];
+  search: string;
+  onSearchChange: (search: string) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: (typeof FINANCE_TRANSACTION_PAGE_SIZES)[number]) => void;
   onSuggestCategories: () => void;
@@ -808,6 +830,7 @@ function TransactionsPanel({
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const rangeStart = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
   const rangeEnd = Math.min(page * pageSize, totalCount);
+  const searchActive = search.trim().length > 0;
 
   return (
     <div className={cn(panelClass, 'overflow-hidden')}>
@@ -871,11 +894,34 @@ function TransactionsPanel({
           ) : null}
         </div>
       </div>
+      <div className="flex flex-wrap items-center gap-3 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
+        <div className="relative min-w-[220px] flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
+          <Input
+            placeholder="Search description..."
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="border-[color:var(--workspace-shell-border)] bg-transparent pl-9 text-[var(--workspace-shell-text)]"
+          />
+        </div>
+        {searchActive ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => onSearchChange('')}
+          >
+            Clear search
+          </Button>
+        ) : null}
+      </div>
       {!data?.transactions.length ? (
         <p className="p-4 text-sm text-[var(--workspace-shell-text-muted)]">
-          {totalCount > 0
-            ? 'No transactions on this page. Try an earlier page or widen the date range.'
-            : 'No transactions in this range. Import a CSV, sync from FreeAgent in settings, or add manually.'}
+          {searchActive
+            ? 'No transactions match your search in this date range.'
+            : totalCount > 0
+              ? 'No transactions on this page. Try an earlier page or widen the date range.'
+              : 'No transactions in this range. Import a CSV, sync from FreeAgent in settings, or add manually.'}
         </p>
       ) : (
         <div className="overflow-x-auto">
@@ -1058,7 +1104,9 @@ function TransactionsPanel({
       {totalCount > 0 ? (
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[color:var(--workspace-shell-border)] px-4 py-3">
           <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-            Showing {rangeStart}–{rangeEnd} of {totalCount}
+            {searchActive
+              ? `Showing ${rangeStart}–${rangeEnd} of ${totalCount} matching`
+              : `Showing ${rangeStart}–${rangeEnd} of ${totalCount}`}
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <Select
