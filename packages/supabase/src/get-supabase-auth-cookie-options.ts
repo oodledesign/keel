@@ -66,11 +66,15 @@ export function getSupabaseAuthCookieDomain(): string | undefined {
 export function getSupabaseAuthCookieOptions(): CookieOptions {
   const domain = getSupabaseAuthCookieDomain();
 
+  // IMPORTANT: no `httpOnly` here. These options are shared with the browser
+  // client (`createBrowserClient`), which reads the session from
+  // `document.cookie`. Marking the auth cookies httpOnly makes the client-side
+  // Supabase session invisible, which signs users out client-side and causes
+  // redirect loops.
   return {
     ...(domain ? { domain } : {}),
     path: '/',
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
   };
 }

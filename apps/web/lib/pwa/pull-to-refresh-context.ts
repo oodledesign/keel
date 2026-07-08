@@ -67,10 +67,6 @@ export function isPullToRefreshEnabled(): boolean {
     return false;
   }
 
-  if (isWorkspaceDashboardHome(pathname)) {
-    return false;
-  }
-
   return isStandalonePwa() || (isMobileViewport() && hasTouchInput());
 }
 
