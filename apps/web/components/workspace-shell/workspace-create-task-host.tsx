@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 import { AddTaskDialog } from '~/home/(user)/_components/dashboard/add-task-dialog';
 
@@ -13,32 +13,45 @@ type WorkspaceCreateTaskHostProps = {
   accountSlug: string;
 };
 
+function readCreateTaskQuery(): boolean {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  return new URLSearchParams(window.location.search).get('create') === 'task';
+}
+
 export function WorkspaceCreateTaskHost({
   accountId,
   accountSlug,
 }: WorkspaceCreateTaskHostProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
 
   const clearCreateQuery = useCallback(() => {
-    if (searchParams.get('create') !== 'task') {
+    if (typeof window === 'undefined') {
       return;
     }
 
-    const next = new URLSearchParams(searchParams.toString());
-    next.delete('create');
-    const query = next.toString();
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('create') !== 'task') {
+      return;
+    }
+
+    params.delete('create');
+    const query = params.toString();
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
-  }, [pathname, router, searchParams]);
+  }, [pathname, router]);
 
   useEffect(() => {
-    if (searchParams.get('create') === 'task') {
-      setOpen(true);
-      clearCreateQuery();
+    if (!readCreateTaskQuery()) {
+      return;
     }
-  }, [clearCreateQuery, searchParams]);
+
+    setOpen(true);
+    clearCreateQuery();
+  }, [clearCreateQuery, pathname]);
 
   useEffect(() => {
     const onCreateTask = () => setOpen(true);

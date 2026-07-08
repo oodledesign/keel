@@ -23,10 +23,11 @@ import {
 import type { MobileBottomNavTab } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
 import { isNoteEditorRoute } from '~/lib/pwa/is-note-editor-route';
 import {
+  isWorkspaceDashboardHome,
   syncPullToRefreshPathname,
 } from '~/lib/pwa/pull-to-refresh-context';
+import { WorkspaceMobileScrollArea } from '~/lib/pwa/workspace-mobile-scroll-area';
 import { WorkspaceMobileScrollLock } from '~/lib/pwa/workspace-mobile-scroll-lock';
-import { Suspense } from 'react';
 
 import { WorkspaceCreateTaskHost } from '~/components/workspace-shell/workspace-create-task-host';
 import { WorkspaceHelpButton } from '~/components/workspace-shell/workspace-help-button';
@@ -61,6 +62,7 @@ export function TeamWorkspaceMobileChrome({
 }: TeamWorkspaceMobileChromeProps) {
   const pathname = usePathname();
   const noteEditorScroll = isNoteEditorRoute(pathname);
+  const dashboardHome = isWorkspaceDashboardHome(pathname);
   const { menuOpen, setMenuOpen } = useWorkspaceMobileNav();
 
   useEffect(() => {
@@ -108,6 +110,10 @@ export function TeamWorkspaceMobileChrome({
           <div className="min-w-0 flex-1 lg:pb-0">
             {children}
           </div>
+        ) : dashboardHome ? (
+          <WorkspaceMobileScrollArea className="min-w-0 lg:pb-0">
+            {children}
+          </WorkspaceMobileScrollArea>
         ) : (
           <PullToRefresh className="min-w-0 lg:pb-0">
             {children}
@@ -144,9 +150,7 @@ export function TeamWorkspaceMobileChrome({
         }
       />
 
-      <Suspense fallback={null}>
-        <WorkspaceCreateTaskHost accountId={accountId} accountSlug={account} />
-      </Suspense>
+      <WorkspaceCreateTaskHost accountId={accountId} accountSlug={account} />
       <WorkspaceHelpButton defaultAccountId={accountId} />
     </>
   );

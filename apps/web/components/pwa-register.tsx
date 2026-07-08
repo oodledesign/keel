@@ -2,6 +2,8 @@
 
 import { useEffect } from 'react';
 
+let reloadingForServiceWorkerUpdate = false;
+
 export function PwaRegister() {
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
@@ -10,23 +12,17 @@ export function PwaRegister() {
       .register('/sw.js')
       .then((registration) => {
         void registration.update();
-
-        registration.addEventListener('updatefound', () => {
-          const worker = registration.installing;
-          if (!worker) return;
-
-          worker.addEventListener('statechange', () => {
-            if (worker.state === 'installed' && navigator.serviceWorker.controller) {
-              worker.postMessage({ type: 'SKIP_WAITING' });
-            }
-          });
-        });
       })
       .catch(() => {
         /* ignore registration errors in dev */
       });
 
     const onControllerChange = () => {
+      if (reloadingForServiceWorkerUpdate) {
+        return;
+      }
+
+      reloadingForServiceWorkerUpdate = true;
       window.location.reload();
     };
 

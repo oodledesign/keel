@@ -18,6 +18,7 @@ import { cn } from '@kit/ui/utils';
 import { triggerHapticFeedback } from '~/lib/haptics';
 import { MOBILE_FLOATING_CHROME_SCROLL_PB } from '~/lib/mobile-nav/mobile-floating-chrome';
 import { scrollWheelDeltaToScrollParent } from '~/lib/scroll-passthrough';
+import { WorkspaceMobileScrollArea } from '~/lib/pwa/workspace-mobile-scroll-area';
 import {
   isPullToRefreshEnabled,
   isWorkspaceDashboardHome,
@@ -213,6 +214,10 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
   const progress = Math.min(pullDistance / PULL_THRESHOLD, 1);
   const showSpinner = enabled && (pullDistance > 8 || refreshing);
 
+  if (!enabled) {
+    return <WorkspaceMobileScrollArea className={className}>{children}</WorkspaceMobileScrollArea>;
+  }
+
   return (
     <div
       className={cn(
@@ -220,29 +225,27 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
         className,
       )}
     >
-      {enabled ? (
-        <div
-          aria-hidden
-          aria-live="polite"
+      <div
+        aria-hidden
+        aria-live="polite"
+        className={cn(
+          'pointer-events-none absolute inset-x-0 top-0 z-10 flex items-end justify-center pb-2',
+          showSpinner ? 'opacity-100' : 'opacity-0',
+        )}
+        style={{ height: contentOffset }}
+      >
+        <Loader2
           className={cn(
-            'pointer-events-none absolute inset-x-0 top-0 z-10 flex items-end justify-center pb-2',
-            showSpinner ? 'opacity-100' : 'opacity-0',
+            'h-5 w-5 text-[var(--workspace-shell-text-muted)]',
+            refreshing ? 'animate-spin' : '',
           )}
-          style={{ height: contentOffset }}
-        >
-          <Loader2
-            className={cn(
-              'h-5 w-5 text-[var(--workspace-shell-text-muted)]',
-              refreshing ? 'animate-spin' : '',
-            )}
-            style={
-              refreshing
-                ? undefined
-                : { transform: `rotate(${progress * 180}deg)` }
-            }
-          />
-        </div>
-      ) : null}
+          style={
+            refreshing
+              ? undefined
+              : { transform: `rotate(${progress * 180}deg)` }
+          }
+        />
+      </div>
 
       <div
         ref={scrollRef}
@@ -250,16 +253,13 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
       >
         <div
           className={cn(
-            enabled
-              ? 'rounded-t-[1.25rem] bg-[var(--workspace-shell-canvas)] shadow-[0_-1px_0_rgba(255,255,255,0.06)]'
-              : 'min-h-full bg-[var(--workspace-shell-canvas)]',
-            enabled &&
-              (!isDragging && pullDistance === 0 && !refreshing
-                ? ''
-                : !isDragging && 'transition-transform duration-200 ease-out'),
+            'rounded-t-[1.25rem] bg-[var(--workspace-shell-canvas)] shadow-[0_-1px_0_rgba(255,255,255,0.06)]',
+            !isDragging && pullDistance === 0 && !refreshing
+              ? ''
+              : !isDragging && 'transition-transform duration-200 ease-out',
           )}
           style={
-            enabled && contentOffset > 0
+            contentOffset > 0
               ? { transform: `translateY(${contentOffset}px)` }
               : undefined
           }

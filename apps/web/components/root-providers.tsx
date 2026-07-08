@@ -12,6 +12,7 @@ import { VersionUpdater } from '@kit/ui/version-updater';
 
 import { AnalyticsProvider } from '~/components/analytics-provider';
 import { AuthProvider } from '~/components/auth-provider';
+import { RouterRefreshGuard } from '~/components/router-refresh-guard';
 import { QuickActionProvider } from '~/components/quick-action/quick-action-provider';
 import { ThemeColorSync } from '~/components/theme-color-sync';
 import featuresFlagConfig from '~/config/feature-flags.config';
@@ -42,6 +43,7 @@ export function RootProviders({
           <ReactQueryProvider>
             <I18nProvider settings={i18nSettings} resolver={i18nResolver}>
               <AuthProvider>
+                <RouterRefreshGuard />
                 <QuickActionProvider>
                   <ThemeProvider
                     attribute="class"
