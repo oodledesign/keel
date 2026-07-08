@@ -439,6 +439,95 @@ export function parseActivityAppContext(
   return null;
 }
 
+export type ActivityRuleMatch = {
+  matchType: 'domain' | 'app_name' | 'title_contains';
+  matchValue: string;
+  label: string;
+};
+
+function isGenericRememberLabel(
+  value: string,
+  block: ActivityBlockListRow,
+): boolean {
+  const normalized = value.trim().toLowerCase();
+  if (normalized.length < 3) {
+    return true;
+  }
+
+  if (GENERIC_APP_TITLES.has(normalized)) {
+    return true;
+  }
+
+  if (normalized === block.appName.trim().toLowerCase()) {
+    return true;
+  }
+
+  return false;
+}
+
+function ruleLabelForContext(
+  context: ActivityAppContext,
+  matchValue: string,
+): string {
+  if (context.kind === 'ide' && context.detail) {
+    return `${matchValue} project`;
+  }
+
+  if (context.kind === 'design' && context.detail && !context.detail.includes('/')) {
+    return `${matchValue} · ${context.detail}`;
+  }
+
+  return matchValue;
+}
+
+function browserTitleMatchesDomain(item: string, domain: string): boolean {
+  const itemNorm = item.trim().toLowerCase();
+  const domainNorm = domain.trim().toLowerCase().replace(/^www\./, '');
+  const siteName = domainNorm.split('.')[0] ?? domainNorm;
+
+  return itemNorm === siteName || itemNorm === domainNorm;
+}
+
+export function inferActivityRuleMatch(
+  block: ActivityBlockListRow,
+): ActivityRuleMatch | null {
+  const context = parseActivityAppContext(block);
+  const domain = block.domain?.trim().toLowerCase();
+
+  if (context && context.kind !== 'email' && context.item?.trim()) {
+    const item = context.item.trim();
+    const preferDomain =
+      domain != null && browserTitleMatchesDomain(item, domain);
+
+    if (!preferDomain && !isGenericRememberLabel(item, block)) {
+      return {
+        matchType: 'title_contains',
+        matchValue: item,
+        label: ruleLabelForContext(context, item),
+      };
+    }
+  }
+
+  if (domain) {
+    return {
+      matchType: 'domain',
+      matchValue: domain,
+      label: domain,
+    };
+  }
+
+  const appName = block.appName.trim();
+  if (appName) {
+    return {
+      matchType: 'app_name',
+      matchValue: appName,
+      label: appName,
+    };
+  }
+
+  return null;
+}
+
 export function blockContextLabel(block: ActivityBlockListRow): string {
   const context = parseActivityAppContext(block);
 

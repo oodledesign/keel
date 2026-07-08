@@ -16,6 +16,7 @@ import {
   ChevronDown,
   ChevronRight,
   Loader2,
+  Sparkles,
   Settings2,
 } from 'lucide-react';
 
@@ -49,6 +50,10 @@ import pathsConfig from '~/config/paths.config';
 import { AnalyticsDateRangePicker } from '~/components/date-range/analytics-date-range-picker';
 import type { DateRangeSelection } from '~/lib/date-range/analytics-date-range';
 import {
+  applyActivitySuggestionsAction,
+  suggestActivityAssignmentsAction,
+} from '~/home/[account]/activity/_lib/server/activity-assignment-actions';
+import {
   bulkExcludeActivityBlocksAction,
   bulkUpdateActivityBlocksAction,
   createActivityRuleAction,
@@ -63,6 +68,7 @@ import {
 } from '~/lib/activity/activity-app-context';
 import { faviconUrlForDomain } from '~/lib/activity/activity-app-icons';
 import {
+  aggregateActivityByApp,
   blockPageTitle,
   blockUrlLabel,
   formatDuration,
@@ -76,16 +82,49 @@ import {
   type ActivityAppGroup,
   type ActivityBlockListRow,
   type ActivityDayGroup,
+  type ActivitySessionGroup,
   type ActivitySortDir,
   type ActivitySortKey,
   type ActivityStatusFilter,
 } from '~/lib/activity/activity-history';
 
 import { ActivityAppIcon } from './activity-app-icon';
+import { ActivityReviewDigest } from './activity-review-digest';
 
 type Props = {
   data: ActivityPageData;
 };
+
+type WorkClassification = 'billable' | 'internal' | 'neutral';
+
+const WORK_CLASSIFICATION_LABELS: Record<WorkClassification, string> = {
+  neutral: 'Neutral',
+  billable: 'Billable',
+  internal: 'Internal',
+};
+
+function WorkClassificationBadge({
+  classification,
+}: {
+  classification?: WorkClassification;
+}) {
+  if (!classification || classification === 'neutral') {
+    return null;
+  }
+
+  return (
+    <span
+      className={cn(
+        'inline-flex shrink-0 rounded px-1 py-0.5 text-[9px] font-medium uppercase tracking-wide',
+        classification === 'billable'
+          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+          : 'bg-sky-500/15 text-sky-700 dark:text-sky-300',
+      )}
+    >
+      {WORK_CLASSIFICATION_LABELS[classification]}
+    </span>
+  );
+}
 
 function domainFromUrl(url: string): string | null {
   try {
@@ -247,6 +286,7 @@ function ActivityAssignmentDisplay({
           />
         ) : null}
         {block.clientName ?? 'No client'}
+        <WorkClassificationBadge classification={block.workClassification} />
       </span>
       <span
         className="block truncate text-[10px] text-[var(--workspace-shell-text-muted)]"
@@ -357,6 +397,9 @@ function ActivityBlockAssignmentCell({
   const [pending, startTransition] = useTransition();
   const [projectId, setProjectId] = useState(block.projectId ?? 'none');
   const [clientId, setClientId] = useState(block.clientId ?? 'none');
+  const [workClassification, setWorkClassification] = useState<WorkClassification>(
+    block.workClassification ?? 'neutral',
+  );
   const [rememberRule, setRememberRule] = useState(true);
   const ruleMatch = inferActivityRuleMatch(block);
 
@@ -480,6 +523,22 @@ function ActivityBlockAssignmentCell({
               ))}
             </SelectContent>
           </Select>
+          <Select
+            value={workClassification}
+            onValueChange={(value) =>
+              setWorkClassification(value as WorkClassification)
+            }
+            disabled={pending}
+          >
+            <SelectTrigger className="h-8 bg-[var(--workspace-control-surface)] text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="neutral">Neutral</SelectItem>
+              <SelectItem value="billable">Billable</SelectItem>
+              <SelectItem value="internal">Internal</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         {ruleMatch ? (
           <label className="flex items-start gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
@@ -509,6 +568,7 @@ function ActivityBlockAssignmentCell({
                     projectId: projectId === 'none' ? null : projectId,
                     clientId: clientId === 'none' ? null : clientId,
                     isConfirmed: true,
+                    workClassification,
                   }),
                 {
                   ...block,
@@ -520,6 +580,7 @@ function ActivityBlockAssignmentCell({
                   clientName:
                     clients.find((client) => client.id === clientId)?.name ?? null,
                   isConfirmed: true,
+                  workClassification,
                 },
                 {
                   projectId: projectId === 'none' ? null : projectId,
@@ -638,7 +699,9 @@ function ActivityBlockTableRow({
         >
           <AppNameCell block={block} nested={nested} />
         </TableCell>
-      ) : null}
+      ) : (
+        <TableCell className="max-w-[9rem] px-3 py-2 align-top" aria-hidden />
+      )}
       <TableCell className="whitespace-nowrap px-3 py-2 align-top text-xs font-medium text-[var(--workspace-shell-text)]">
         {formatDuration(block.durationSeconds)}
       </TableCell>
@@ -687,6 +750,168 @@ function ActivityBlockTableRow({
   );
 }
 
+function SessionUrlCell({
+  block,
+  label,
+}: {
+  block: ActivityBlockListRow;
+  label: string;
+}) {
+  return (
+    <div className="flex min-w-0 items-center gap-2 pl-4">
+      <span className="w-[18px] shrink-0 text-center text-xs text-[var(--workspace-shell-text-muted)]">
+        ↳
+      </span>
+      <ActivityAppIcon block={block} />
+      <span
+        className="truncate text-xs font-medium text-[var(--workspace-shell-text)]"
+        title={label}
+      >
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function ActivitySessionGroupRows({
+  sessionGroup,
+  appKey,
+  expanded,
+  onToggle,
+  canEdit,
+  showMember,
+  selectable,
+  selectedBlockIds,
+  onSelectedChange,
+  onGroupSelectedChange,
+  projects,
+  clients,
+  accountId,
+  accountSlug,
+  onUpdated,
+}: {
+  sessionGroup: ActivitySessionGroup;
+  appKey: string;
+  expanded: boolean;
+  onToggle: () => void;
+  canEdit: boolean;
+  showMember: boolean;
+  selectable: boolean;
+  selectedBlockIds: Set<string>;
+  onSelectedChange: (blockId: string, selected: boolean) => void;
+  onGroupSelectedChange: (blockIds: string[], selected: boolean) => void;
+  projects: ActivityPageData['projects'];
+  clients: ActivityPageData['clients'];
+  accountId: string;
+  accountSlug: string;
+  onUpdated: (block: ActivityBlockListRow) => void;
+}) {
+  const representativeBlock = sessionGroup.blocks[0]!;
+  const selectableBlocks = sessionGroup.blocks.filter((block) => !block.isExcluded);
+  const selectedCount = selectableBlocks.filter((block) =>
+    selectedBlockIds.has(block.id),
+  ).length;
+  const groupChecked =
+    selectableBlocks.length > 0 && selectedCount === selectableBlocks.length;
+  const groupIndeterminate =
+    selectedCount > 0 && selectedCount < selectableBlocks.length;
+  const sessionLabel = `${sessionGroup.blocks.length} block${sessionGroup.blocks.length === 1 ? '' : 's'}`;
+
+  if (sessionGroup.blocks.length === 1) {
+    return (
+      <ActivityBlockTableRow
+        block={representativeBlock}
+        canEdit={canEdit}
+        showMember={showMember}
+        showApp={false}
+        nested
+        selectable={selectable && !representativeBlock.isExcluded}
+        selected={selectedBlockIds.has(representativeBlock.id)}
+        onSelectedChange={onSelectedChange}
+        projects={projects}
+        clients={clients}
+        accountId={accountId}
+        accountSlug={accountSlug}
+        onUpdated={onUpdated}
+      />
+    );
+  }
+
+  return (
+    <>
+      <TableRow
+        className="cursor-pointer border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/15 hover:bg-[var(--workspace-control-surface)]/30"
+        onClick={onToggle}
+      >
+        {selectable ? (
+          <TableCell className="w-10 px-3 py-2 align-top">
+            <Checkbox
+              checked={groupIndeterminate ? 'indeterminate' : groupChecked}
+              onCheckedChange={(checked) =>
+                onGroupSelectedChange(
+                  selectableBlocks.map((block) => block.id),
+                  checked === true,
+                )
+              }
+              onClick={(event) => event.stopPropagation()}
+              aria-label={`Select all ${sessionGroup.label} blocks`}
+            />
+          </TableCell>
+        ) : null}
+        <TableCell className="max-w-[12rem] px-3 py-2 align-top" colSpan={1}>
+          <button
+            type="button"
+            className="flex min-w-0 items-center gap-2 text-left"
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggle();
+            }}
+          >
+            {expanded ? (
+              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text-muted)]" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text-muted)]" />
+            )}
+            <SessionUrlCell block={representativeBlock} label={sessionGroup.label} />
+          </button>
+        </TableCell>
+        <TableCell className="whitespace-nowrap px-3 py-2 align-top text-xs font-semibold text-[var(--workspace-shell-text)]">
+          {formatDuration(sessionGroup.totalDurationSeconds)}
+        </TableCell>
+        <TableCell className="whitespace-nowrap px-3 py-2 align-top text-xs text-[var(--workspace-shell-text-muted)]">
+          {formatTimeRange(sessionGroup.startedAt, sessionGroup.endedAt)}
+        </TableCell>
+        <TableCell
+          colSpan={showMember ? (selectable ? 6 : 5) : selectable ? 5 : 4}
+          className="px-3 py-2 align-top text-xs text-[var(--workspace-shell-text-muted)]"
+        >
+          {sessionLabel} · {expanded ? 'collapse' : 'expand'}
+        </TableCell>
+      </TableRow>
+      {expanded
+        ? sessionGroup.blocks.map((block) => (
+            <ActivityBlockTableRow
+              key={block.id}
+              block={block}
+              canEdit={canEdit}
+              showMember={showMember}
+              showApp={false}
+              nested
+              selectable={selectable && !block.isExcluded}
+              selected={selectedBlockIds.has(block.id)}
+              onSelectedChange={onSelectedChange}
+              projects={projects}
+              clients={clients}
+              accountId={accountId}
+              accountSlug={accountSlug}
+              onUpdated={onUpdated}
+            />
+          ))
+        : null}
+    </>
+  );
+}
+
 function ActivityAppGroupRows({
   appGroup,
   expanded,
@@ -702,6 +927,8 @@ function ActivityAppGroupRows({
   accountId,
   accountSlug,
   onUpdated,
+  expandedSessions,
+  onToggleSession,
 }: {
   appGroup: ActivityAppGroup;
   expanded: boolean;
@@ -717,6 +944,8 @@ function ActivityAppGroupRows({
   accountId: string;
   accountSlug: string;
   onUpdated: (block: ActivityBlockListRow) => void;
+  expandedSessions: Set<string>;
+  onToggleSession: (sessionKey: string) => void;
 }) {
   const sessionLabel = `${appGroup.blocks.length} session${appGroup.blocks.length === 1 ? '' : 's'}`;
   const isSingleBlock = appGroup.blocks.length === 1;
@@ -802,21 +1031,28 @@ function ActivityAppGroupRows({
           colSpan={showMember ? (selectable ? 7 : 6) : selectable ? 6 : 5}
           className="px-3 py-2 align-top text-xs text-[var(--workspace-shell-text-muted)]"
         >
-          Click to {expanded ? 'collapse' : 'expand'} individual sessions
+          {appGroup.sessionGroups.length} URL{appGroup.sessionGroups.length === 1 ? '' : 's'} ·{' '}
+          {sessionLabel} · click to {expanded ? 'collapse' : 'expand'}
         </TableCell>
       </TableRow>
       {expanded
-        ? appGroup.blocks.map((block) => (
-            <ActivityBlockTableRow
-              key={block.id}
-              block={block}
+        ? appGroup.sessionGroups.map((sessionGroup) => (
+            <ActivitySessionGroupRows
+              key={`${appGroup.appKey}::${sessionGroup.sessionKey}`}
+              sessionGroup={sessionGroup}
+              appKey={appGroup.appKey}
+              expanded={expandedSessions.has(
+                `${appGroup.appKey}::${sessionGroup.sessionKey}`,
+              )}
+              onToggle={() =>
+                onToggleSession(`${appGroup.appKey}::${sessionGroup.sessionKey}`)
+              }
               canEdit={canEdit}
               showMember={showMember}
-              showApp
-              nested
-              selectable={selectable && !block.isExcluded}
-              selected={selectedBlockIds.has(block.id)}
+              selectable={selectable}
+              selectedBlockIds={selectedBlockIds}
               onSelectedChange={onSelectedChange}
+              onGroupSelectedChange={onGroupSelectedChange}
               projects={projects}
               clients={clients}
               accountId={accountId}
@@ -867,6 +1103,9 @@ function ActivityDayTable({
     [group.blocks, sortDir, sortKey],
   );
   const [expandedApps, setExpandedApps] = useState<Set<string>>(() => new Set());
+  const [expandedSessions, setExpandedSessions] = useState<Set<string>>(
+    () => new Set(),
+  );
   const selectableBlocks = group.blocks.filter((block) => !block.isExcluded);
   const selectedCount = selectableBlocks.filter((block) =>
     selectedBlockIds.has(block.id),
@@ -884,6 +1123,20 @@ function ActivityDayTable({
         next.delete(appKey);
       } else {
         next.add(appKey);
+      }
+
+      return next;
+    });
+  }
+
+  function toggleSession(sessionKey: string) {
+    setExpandedSessions((current) => {
+      const next = new Set(current);
+
+      if (next.has(sessionKey)) {
+        next.delete(sessionKey);
+      } else {
+        next.add(sessionKey);
       }
 
       return next;
@@ -968,6 +1221,8 @@ function ActivityDayTable({
                 accountId={accountId}
                 accountSlug={accountSlug}
                 onUpdated={onUpdated}
+                expandedSessions={expandedSessions}
+                onToggleSession={toggleSession}
               />
             ))}
           </TableBody>
@@ -1001,12 +1256,15 @@ function ActivityBulkActionBar({
       clientId?: string | null;
       isConfirmed?: boolean;
       isExcluded?: boolean;
+      workClassification?: WorkClassification;
     },
   ) => void;
 }) {
   const [pending, startTransition] = useTransition();
   const [projectId, setProjectId] = useState('none');
   const [clientId, setClientId] = useState('none');
+  const [workClassification, setWorkClassification] =
+    useState<WorkClassification>('neutral');
   const [rememberRule, setRememberRule] = useState(true);
 
   function runBulkAction(
@@ -1016,6 +1274,7 @@ function ActivityBulkActionBar({
       clientId?: string | null;
       isConfirmed?: boolean;
       isExcluded?: boolean;
+      workClassification?: WorkClassification;
     },
   ) {
     startTransition(async () => {
@@ -1106,6 +1365,22 @@ function ActivityBulkActionBar({
           ))}
         </SelectContent>
       </Select>
+      <Select
+        value={workClassification}
+        onValueChange={(value) =>
+          setWorkClassification(value as WorkClassification)
+        }
+        disabled={pending}
+      >
+        <SelectTrigger className="h-9 w-[8.5rem] bg-[var(--workspace-control-surface)] text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="neutral">Neutral</SelectItem>
+          <SelectItem value="billable">Billable</SelectItem>
+          <SelectItem value="internal">Internal</SelectItem>
+        </SelectContent>
+      </Select>
       {ruleMatch ? (
         <label className="flex items-center gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
           <Checkbox
@@ -1131,11 +1406,13 @@ function ActivityBulkActionBar({
                 projectId: projectId === 'none' ? null : projectId,
                 clientId: clientId === 'none' ? null : clientId,
                 isConfirmed: true,
+                workClassification,
               }),
             {
               projectId: projectId === 'none' ? null : projectId,
               clientId: clientId === 'none' ? null : clientId,
               isConfirmed: true,
+              workClassification,
             },
           )
         }
@@ -1253,6 +1530,69 @@ export function ActivityPageContent({ data }: Props) {
   const activeDuration = useMemo(() => sumActiveDuration(rows), [rows]);
   const todayDuration = useMemo(() => sumTodayActiveDuration(rows), [rows]);
   const countSuffix = data.blockLimitReached ? '+' : '';
+  const topUnassignedApps = useMemo(() => {
+    const unassigned = rows.filter(
+      (block) =>
+        !block.isExcluded &&
+        !block.isConfirmed &&
+        !block.projectId &&
+        !block.clientId,
+    );
+    return aggregateActivityByApp(unassigned).slice(0, 3);
+  }, [rows]);
+  const reviewHref = buildActivityUrl(data.accountSlug, {
+    from: data.dateFrom,
+    to: data.dateTo,
+    view: data.view,
+    status: 'needs_review',
+  });
+  const [suggestPending, startSuggestTransition] = useTransition();
+
+  function onSuggestAssignments() {
+    const targets = rows
+      .filter(
+        (block) =>
+          !block.isExcluded &&
+          !block.isConfirmed &&
+          !block.projectId &&
+          !block.clientId,
+      )
+      .slice(0, 40)
+      .map((block) => block.id);
+
+    if (targets.length === 0) {
+      toast.message('No unassigned sessions to suggest for');
+      return;
+    }
+
+    startSuggestTransition(async () => {
+      const result = await suggestActivityAssignmentsAction({
+        accountId: data.accountId,
+        accountSlug: data.accountSlug,
+        blockIds: targets,
+      });
+
+      if (!result.success || !result.suggestions?.length) {
+        toast.error(result.error ?? 'No suggestions returned');
+        return;
+      }
+
+      const applyResult = await applyActivitySuggestionsAction({
+        accountId: data.accountId,
+        accountSlug: data.accountSlug,
+        suggestions: result.suggestions,
+        rememberRules: true,
+      });
+
+      if (!applyResult.success) {
+        toast.error(applyResult.error ?? 'Could not apply suggestions');
+        return;
+      }
+
+      toast.success(`Applied ${applyResult.applied} AI suggestions`);
+      router.refresh();
+    });
+  }
 
   function updateBlock(updated: ActivityBlockListRow) {
     setRows((current) =>
@@ -1298,6 +1638,7 @@ export function ActivityPageContent({ data }: Props) {
       clientId?: string | null;
       isConfirmed?: boolean;
       isExcluded?: boolean;
+      workClassification?: WorkClassification;
     },
   ) {
     const projectName =
@@ -1335,6 +1676,10 @@ export function ActivityPageContent({ data }: Props) {
             update.isExcluded !== undefined
               ? update.isExcluded
               : row.isExcluded,
+          workClassification:
+            update.workClassification !== undefined
+              ? update.workClassification
+              : row.workClassification,
         };
       }),
     );
@@ -1386,6 +1731,14 @@ export function ActivityPageContent({ data }: Props) {
           </p>
         </div>
       </div>
+
+      <ActivityReviewDigest
+        assignment={data.assignment}
+        topUnassignedApps={topUnassignedApps}
+        reviewHref={reviewHref}
+        onSuggest={data.canEdit ? onSuggestAssignments : undefined}
+        suggestPending={suggestPending}
+      />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Tabs

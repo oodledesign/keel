@@ -72,6 +72,8 @@ export type ActivityReportsData = {
   clients: ActivityClientOption[];
   members: ActivityMemberOption[];
   apps: ActivityAppOption[];
+  canEdit: boolean;
+  unassignedInFilterCount: number;
 };
 
 type ActivityBlockRow = {
@@ -349,6 +351,9 @@ async function loadActivityReportsDataImpl(
 
   const filteredBlocks = filterActivityBlocksForReport(allBlocks, filters);
   const assignment = summarizeActivityAssignment(allBlocks);
+  const unassignedInFilterCount = filteredBlocks.filter(
+    (block) => !block.projectId && !block.clientId,
+  ).length;
 
   return {
     accountId,
@@ -378,5 +383,7 @@ async function loadActivityReportsDataImpl(
     clients: mapClientOptions(clientsResult.data ?? []),
     members: mapMemberOptions(memberNames),
     apps: mapAppOptions(allBlocks.filter((block) => !block.isExcluded)),
+    canEdit: effectiveView === 'mine',
+    unassignedInFilterCount,
   };
 }

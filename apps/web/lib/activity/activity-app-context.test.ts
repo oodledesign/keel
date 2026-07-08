@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { ActivityBlockListRow } from '~/lib/activity/activity-history';
 import {
   blockContextLabel,
+  inferActivityRuleMatch,
   parseActivityAppContext,
 } from '~/lib/activity/activity-app-context';
 
@@ -246,5 +247,105 @@ describe('activity app context parsing', () => {
     });
 
     expect(blockContextLabel(block)).toBe('Workspace');
+  });
+
+  it('infers granular remember rules from project and file titles', () => {
+    expect(
+      inferActivityRuleMatch(
+        makeBlock({
+          id: 'ai',
+          startedAt: '2026-07-07T10:00:00.000Z',
+          appName: 'Adobe Illustrator',
+          bundleId: 'com.adobe.illustrator',
+          windowTitle: 'logo-mark.ai @ 100% (RGB/Preview)',
+        }),
+      ),
+    ).toEqual({
+      matchType: 'title_contains',
+      matchValue: 'logo-mark.ai',
+      label: 'logo-mark.ai',
+    });
+
+    expect(
+      inferActivityRuleMatch(
+        makeBlock({
+          id: 'figma',
+          startedAt: '2026-07-07T10:00:00.000Z',
+          appName: 'Figma',
+          bundleId: 'com.figma.Desktop',
+          windowTitle: 'Homepage - Marketing Site - Figma',
+        }),
+      ),
+    ).toEqual({
+      matchType: 'title_contains',
+      matchValue: 'Marketing Site',
+      label: 'Marketing Site · Homepage',
+    });
+
+    expect(
+      inferActivityRuleMatch(
+        makeBlock({
+          id: 'ide',
+          startedAt: '2026-07-07T10:00:00.000Z',
+          windowTitle: 'keel - activity-page-content.tsx - Cursor',
+        }),
+      ),
+    ).toEqual({
+      matchType: 'title_contains',
+      matchValue: 'keel',
+      label: 'keel project',
+    });
+
+    expect(
+      inferActivityRuleMatch(
+        makeBlock({
+          id: 'gdocs',
+          startedAt: '2026-07-07T10:00:00.000Z',
+          appName: 'Google Chrome',
+          bundleId: 'com.google.Chrome',
+          domain: 'docs.google.com',
+          windowTitle: 'Q3 Budget - Google Docs',
+        }),
+      ),
+    ).toEqual({
+      matchType: 'title_contains',
+      matchValue: 'Q3 Budget',
+      label: 'Q3 Budget',
+    });
+  });
+
+  it('falls back to domain or app rules when no specific title exists', () => {
+    expect(
+      inferActivityRuleMatch(
+        makeBlock({
+          id: 'browser',
+          startedAt: '2026-07-07T10:00:00.000Z',
+          appName: 'Safari',
+          bundleId: 'com.apple.Safari',
+          domain: 'github.com',
+          windowTitle: 'GitHub',
+        }),
+      ),
+    ).toEqual({
+      matchType: 'domain',
+      matchValue: 'github.com',
+      label: 'github.com',
+    });
+
+    expect(
+      inferActivityRuleMatch(
+        makeBlock({
+          id: 'illustrator',
+          startedAt: '2026-07-07T10:00:00.000Z',
+          appName: 'Adobe Illustrator',
+          bundleId: 'com.adobe.illustrator',
+          windowTitle: 'Adobe Illustrator',
+        }),
+      ),
+    ).toEqual({
+      matchType: 'app_name',
+      matchValue: 'Adobe Illustrator',
+      label: 'Adobe Illustrator',
+    });
   });
 });

@@ -7,6 +7,8 @@ import {
   startOfDay,
 } from 'date-fns';
 
+export { inferActivityRuleMatch, type ActivityRuleMatch } from './activity-app-context';
+
 export type ActivityRangeKey = 'today' | '7d' | '30d';
 
 export type ActivityBlockStatus =
@@ -34,6 +36,7 @@ export type ActivityBlockListRow = {
   confidenceScore: number | null;
   isConfirmed: boolean;
   isExcluded: boolean;
+  workClassification?: 'billable' | 'internal' | 'neutral';
 };
 
 export type ActivityDayGroup = {
@@ -48,7 +51,18 @@ export type ActivityAppGroup = {
   appName: string;
   domainLabel: string | null;
   blocks: ActivityBlockListRow[];
+  sessionGroups: ActivitySessionGroup[];
   totalDurationSeconds: number;
+};
+
+export type ActivitySessionGroup = {
+  sessionKey: string;
+  label: string;
+  urlLabel: string | null;
+  blocks: ActivityBlockListRow[];
+  totalDurationSeconds: number;
+  startedAt: string;
+  endedAt: string;
 };
 
 export type ActivityDateRange = {
@@ -336,6 +350,108 @@ function domainLabelFromAppKey(appKey: string): string | null {
   return appKey.slice(separatorIndex + 1);
 }
 
+export function normalizeActivityUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url.trim());
+    const host = parsed.hostname.replace(/^www\./i, '').toLowerCase();
+    const path =
+      parsed.pathname === '/' ? '' : parsed.pathname.replace(/\/$/, '');
+    return `${host}${path}`;
+  } catch {
+    return null;
+  }
+}
+
+export function activitySessionGroupKey(block: ActivityBlockListRow): string {
+  const url = block.url?.trim();
+  if (url) {
+    const normalized = normalizeActivityUrl(url);
+    if (normalized) {
+      return `url:${normalized}`;
+    }
+
+    return `url:${url.toLowerCase()}`;
+  }
+
+  const domain = block.domain?.trim().toLowerCase();
+  if (domain) {
+    return `domain:${domain}`;
+  }
+
+  const title = block.windowTitle.trim();
+  if (title) {
+    const primary = title.split(' - ')[0]?.trim() || title;
+    return `title:${primary.slice(0, 160).toLowerCase()}`;
+  }
+
+  return `app:${block.appName.trim().toLowerCase()}`;
+}
+
+export function activitySessionGroupLabel(block: ActivityBlockListRow): string {
+  const url = block.url?.trim();
+  if (url) {
+    const normalized = normalizeActivityUrl(url);
+    if (normalized) {
+      return normalized;
+    }
+  }
+
+  if (block.domain?.trim()) {
+    return block.domain.trim();
+  }
+
+  const title = block.windowTitle.trim();
+  if (title) {
+    return title.length > 96 ? `${title.slice(0, 93)}…` : title;
+  }
+
+  return block.appName;
+}
+
+export function groupBlocksBySession(
+  blocks: ActivityBlockListRow[],
+): ActivitySessionGroup[] {
+  const groups = new Map<string, ActivityBlockListRow[]>();
+  const labels = new Map<string, string>();
+
+  for (const block of blocks) {
+    const sessionKey = activitySessionGroupKey(block);
+    const existing = groups.get(sessionKey) ?? [];
+    existing.push(block);
+    groups.set(sessionKey, existing);
+
+    if (!labels.has(sessionKey)) {
+      labels.set(sessionKey, activitySessionGroupLabel(block));
+    }
+  }
+
+  return [...groups.entries()]
+    .map(([sessionKey, sessionBlocks]) => {
+      const sortedBlocks = sessionBlocks.sort((left, right) =>
+        right.startedAt.localeCompare(left.startedAt),
+      );
+      const earliest = sortedBlocks.reduce((min, block) =>
+        block.startedAt < min ? block.startedAt : min,
+      sortedBlocks[0]!.startedAt);
+      const latest = sortedBlocks.reduce((max, block) =>
+        block.endedAt > max ? block.endedAt : max,
+      sortedBlocks[0]!.endedAt);
+
+      return {
+        sessionKey,
+        label: labels.get(sessionKey) ?? sessionKey,
+        urlLabel: blockUrlLabel(sortedBlocks[0]!) ?? null,
+        blocks: sortedBlocks,
+        totalDurationSeconds: sumActiveDuration(sortedBlocks),
+        startedAt: earliest,
+        endedAt: latest,
+      };
+    })
+    .sort(
+      (left, right) => right.totalDurationSeconds - left.totalDurationSeconds,
+    );
+}
+
 export function groupBlocksByApp(
   blocks: ActivityBlockListRow[],
 ): ActivityAppGroup[] {
@@ -364,6 +480,7 @@ export function groupBlocksByApp(
         appName: appNames.get(appKey) ?? sortedBlocks[0]?.appName ?? appKey,
         domainLabel: domainLabelFromAppKey(appKey),
         blocks: sortedBlocks,
+        sessionGroups: groupBlocksBySession(sortedBlocks),
         totalDurationSeconds: sumActiveDuration(sortedBlocks),
       };
     })
@@ -594,32 +711,6 @@ export function summarizeActivityAssignment(
     confirmedSeconds,
     confirmedCount,
   };
-}
-
-export function inferActivityRuleMatch(block: ActivityBlockListRow): {
-  matchType: 'domain' | 'app_name';
-  matchValue: string;
-  label: string;
-} | null {
-  const domain = block.domain?.trim().toLowerCase();
-  if (domain) {
-    return {
-      matchType: 'domain',
-      matchValue: domain,
-      label: domain,
-    };
-  }
-
-  const appName = block.appName.trim();
-  if (appName) {
-    return {
-      matchType: 'app_name',
-      matchValue: appName,
-      label: appName,
-    };
-  }
-
-  return null;
 }
 
 export function groupBlocksByDay(

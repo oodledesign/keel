@@ -36,6 +36,8 @@ import {
 } from '~/lib/activity/activity-history';
 import type { DateRangeSelection } from '~/lib/date-range/analytics-date-range';
 
+import { ActivityReportsAssignPanel } from './activity-reports-assign-panel';
+
 type Props = {
   data: ActivityReportsData;
 };
@@ -501,6 +503,8 @@ export function ActivityReportsContent({ data }: Props) {
           ) : null}
         </div>
       </div>
+
+      <ActivityReportsAssignPanel data={data} />
 
       <div className="grid gap-5 xl:grid-cols-2">
         <ActivityReportTable

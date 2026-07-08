@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 
 import pathsConfig from '~/config/paths.config';
 import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
+import { filterActivityBlocksForReport } from '~/lib/activity/activity-history';
 import { getActivitySupabaseClient } from '~/lib/activity/activity-supabase';
 
 type UpdateActivityBlockInput = {
@@ -13,6 +14,7 @@ type UpdateActivityBlockInput = {
   projectId?: string | null;
   clientId?: string | null;
   isConfirmed?: boolean;
+  workClassification?: 'billable' | 'internal' | 'neutral';
 };
 
 type ExcludeActivityBlockInput = {
@@ -28,12 +30,34 @@ type BulkUpdateActivityBlocksInput = {
   projectId?: string | null;
   clientId?: string | null;
   isConfirmed?: boolean;
+  workClassification?: 'billable' | 'internal' | 'neutral';
 };
 
 type BulkExcludeActivityBlocksInput = {
   accountId: string;
   accountSlug: string;
   blockIds: string[];
+};
+
+type AssignUnassignedReportFilterInput = {
+  accountId: string;
+  accountSlug: string;
+  dateFrom: string;
+  dateTo: string;
+  filters: {
+    clientId?: string | null;
+    projectId?: string | null;
+    memberId?: string | null;
+    appKey?: string | null;
+  };
+  projectId?: string | null;
+  clientId?: string | null;
+  workClassification?: 'billable' | 'internal' | 'neutral';
+  rememberRule?: boolean;
+  ruleMatch?: {
+    matchType: 'domain' | 'app_name';
+    matchValue: string;
+  };
 };
 
 type CreateActivityRuleInput = {
@@ -120,6 +144,10 @@ export async function updateActivityBlockAction(
     payload.is_confirmed = input.isConfirmed;
   }
 
+  if (input.workClassification !== undefined) {
+    payload.work_classification = input.workClassification;
+  }
+
   if (Object.keys(payload).length === 0) {
     return { success: false, error: 'Nothing to update' };
   }
@@ -188,6 +216,10 @@ export async function bulkUpdateActivityBlocksAction(
     payload.is_confirmed = input.isConfirmed;
   }
 
+  if (input.workClassification !== undefined) {
+    payload.work_classification = input.workClassification;
+  }
+
   if (Object.keys(payload).length === 0) {
     return { success: false, error: 'Nothing to update' };
   }
@@ -229,6 +261,126 @@ export async function bulkExcludeActivityBlocksAction(
 
   await revalidateActivityPaths(input.accountSlug);
   return { success: true };
+}
+
+export async function assignUnassignedReportFilterAction(
+  input: AssignUnassignedReportFilterInput,
+): Promise<{ success: boolean; updated?: number; error?: string }> {
+  const client = getActivitySupabaseClient();
+  const { data: auth } = await client.auth.getUser();
+  const userId = auth.user?.id;
+
+  if (!userId) {
+    return { success: false, error: 'Not authenticated' };
+  }
+
+  if (!input.projectId && !input.clientId) {
+    return { success: false, error: 'Choose a client or project' };
+  }
+
+  if (input.projectId) {
+    await assertProjectBelongsToAccount(input.projectId, input.accountId);
+  }
+
+  if (input.clientId) {
+    await assertClientBelongsToAccount(input.clientId, input.accountId);
+  }
+
+  const rangeStart = `${input.dateFrom}T00:00:00.000Z`;
+  const rangeEnd = `${input.dateTo}T23:59:59.999Z`;
+
+  const { data, error } = await client
+    .from('activity_blocks')
+    .select(
+      `
+        id,
+        user_id,
+        app_name,
+        bundle_id,
+        domain,
+        url,
+        window_title,
+        started_at,
+        ended_at,
+        duration_seconds,
+        project_id,
+        client_id,
+        confidence_score,
+        is_confirmed,
+        is_excluded
+      `,
+    )
+    .eq('account_id', input.accountId)
+    .eq('user_id', userId)
+    .gte('started_at', rangeStart)
+    .lte('started_at', rangeEnd)
+    .eq('is_excluded', false)
+    .limit(5000);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  const blocks = (data ?? []).map((row) => ({
+    id: row.id as string,
+    userId: row.user_id as string,
+    userName: null,
+    appName: row.app_name as string,
+    bundleId: row.bundle_id as string,
+    domain: (row.domain as string | null) ?? null,
+    url: (row.url as string | null) ?? null,
+    windowTitle: row.window_title as string,
+    startedAt: row.started_at as string,
+    endedAt: row.ended_at as string,
+    durationSeconds: row.duration_seconds as number,
+    projectId: (row.project_id as string | null) ?? null,
+    projectName: null,
+    clientId: (row.client_id as string | null) ?? null,
+    clientName: null,
+    confidenceScore:
+      row.confidence_score == null ? null : Number(row.confidence_score),
+    isConfirmed: row.is_confirmed as boolean,
+    isExcluded: row.is_excluded as boolean,
+  }));
+
+  const targets = filterActivityBlocksForReport(blocks, input.filters).filter(
+    (block) => !block.projectId && !block.clientId,
+  );
+
+  if (targets.length === 0) {
+    return { success: false, error: 'No unassigned sessions match this filter' };
+  }
+
+  const blockIds = targets.map((block) => block.id);
+  const updateResult = await bulkUpdateActivityBlocksAction({
+    accountId: input.accountId,
+    accountSlug: input.accountSlug,
+    blockIds,
+    projectId: input.projectId,
+    clientId: input.clientId,
+    isConfirmed: true,
+    workClassification: input.workClassification,
+  });
+
+  if (!updateResult.success) {
+    return updateResult;
+  }
+
+  if (input.rememberRule && input.ruleMatch) {
+    await createActivityRuleAction({
+      accountId: input.accountId,
+      accountSlug: input.accountSlug,
+      matchType: input.ruleMatch.matchType,
+      matchValue: input.ruleMatch.matchValue,
+      projectId: input.projectId ?? null,
+      clientId: input.clientId ?? null,
+      backfill: true,
+      dateFrom: input.dateFrom,
+      dateTo: input.dateTo,
+    });
+  }
+
+  return { success: true, updated: blockIds.length };
 }
 
 export async function confirmActivityBlockAction(input: {

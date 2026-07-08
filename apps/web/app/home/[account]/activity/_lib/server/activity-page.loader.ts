@@ -46,6 +46,7 @@ type ActivityBlockRow = {
   confidence_score: number | null;
   is_confirmed: boolean;
   is_excluded: boolean;
+  work_classification?: string | null;
   projects?: { id: string; name: string | null; title: string | null } | null;
   clients?: { id: string; display_name: string | null } | null;
 };
@@ -110,6 +111,9 @@ function mapBlockRow(
       row.confidence_score == null ? null : Number(row.confidence_score),
     isConfirmed: row.is_confirmed,
     isExcluded: row.is_excluded,
+    workClassification:
+      (row.work_classification as ActivityBlockListRow['workClassification']) ??
+      'neutral',
   };
 }
 
@@ -210,6 +214,7 @@ async function loadActivityPageDataImpl(
         confidence_score,
         is_confirmed,
         is_excluded,
+        work_classification,
         projects:project_id ( id, name, title ),
         clients:client_id ( id, display_name )
       `;

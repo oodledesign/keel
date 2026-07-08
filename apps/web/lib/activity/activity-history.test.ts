@@ -124,6 +124,40 @@ describe('activity history helpers', () => {
     expect(groups.find((group) => group.domainLabel === 'github.com')?.blocks).toHaveLength(
       2,
     );
+    expect(groups[0]?.sessionGroups.length).toBeGreaterThan(0);
+  });
+
+  it('groups blocks by url within an app', () => {
+    const groups = groupBlocksByApp([
+      makeBlock({
+        id: 'a',
+        startedAt: '2026-07-07T10:00:00.000Z',
+        url: 'https://github.com/org/repo/pulls',
+        windowTitle: 'Pull requests',
+        durationSeconds: 120,
+      }),
+      makeBlock({
+        id: 'b',
+        startedAt: '2026-07-07T10:05:00.000Z',
+        url: 'https://github.com/org/repo/pulls',
+        windowTitle: 'Pull requests — review',
+        durationSeconds: 180,
+      }),
+      makeBlock({
+        id: 'c',
+        startedAt: '2026-07-07T11:00:00.000Z',
+        url: 'https://github.com/org/other',
+        windowTitle: 'Other page',
+        durationSeconds: 60,
+      }),
+    ]);
+
+    const githubGroup = groups.find((group) => group.domainLabel === 'github.com');
+    expect(githubGroup?.sessionGroups).toHaveLength(2);
+    expect(
+      githubGroup?.sessionGroups.find((session) => session.blocks.length === 2)
+        ?.totalDurationSeconds,
+    ).toBe(300);
   });
 
   it('groups blocks by day with Today label', () => {
