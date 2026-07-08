@@ -43,11 +43,13 @@ const PRODUCT_PROFILE: Record<string, WorkspaceProfile> = {
 };
 
 export const MARKETING_FREE_TIER = {
-  name: 'Personal & Family',
-  description: 'Your personal command centre plus one family workspace.',
+  name: 'Personal',
+  description:
+    'Your personal command centre — tasks, people, notes, and planner in one place.',
   features: [
-    'Personal tasks, planner & pipeline',
-    'One family workspace included',
+    'Personal tasks & planner',
+    'People — personal CRM for friends and family',
+    'Notes',
     'No credit card required',
   ],
 } as const;

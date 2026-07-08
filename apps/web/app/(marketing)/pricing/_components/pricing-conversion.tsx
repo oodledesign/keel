@@ -34,16 +34,85 @@ import { cn } from '@kit/ui/utils';
 
 const FEATURE_MATRIX: Array<{
   feature: string;
+  href?: string;
+  hint?: string;
   lite: boolean | string;
   solo: boolean | string;
   team: boolean | string;
   scale: boolean | string;
 }> = [
-  { feature: 'Apps marketplace', lite: true, solo: true, team: true, scale: true },
+  { feature: 'Apps marketplace', href: '/apps', lite: true, solo: true, team: true, scale: true },
   { feature: 'Team & brand settings', lite: true, solo: true, team: true, scale: true },
-  { feature: 'Clients, jobs, invoices & tasks', lite: false, solo: true, team: true, scale: true },
-  { feature: 'Docs, finances & pipeline', lite: false, solo: true, team: true, scale: true },
-  { feature: 'Team members included', lite: '—', solo: '1', team: 'Up to 5', scale: 'Up to 15' },
+  {
+    feature: 'Clients, jobs, invoices & tasks',
+    href: '/features/pipeline',
+    lite: false,
+    solo: true,
+    team: true,
+    scale: true,
+  },
+  {
+    feature: 'Activity tracking',
+    href: '/features/activity',
+    hint: 'Mac sessions assigned to clients and projects',
+    lite: false,
+    solo: true,
+    team: true,
+    scale: true,
+  },
+  {
+    feature: 'Docs, finances & pipeline',
+    href: '/features/finances',
+    lite: false,
+    solo: true,
+    team: true,
+    scale: true,
+  },
+  {
+    feature: 'Meeting Assistant',
+    href: '/features/desktop-assistant',
+    hint: 'Mac meetings → tasks; personal add-on',
+    lite: 'Add-on',
+    solo: 'Add-on',
+    team: 'Add-on',
+    scale: 'Add-on',
+  },
+  {
+    feature: 'Dictation',
+    href: '/features/dictation',
+    hint: 'Included with Meeting Assistant for Mac',
+    lite: 'Add-on',
+    solo: 'Add-on',
+    team: 'Add-on',
+    scale: 'Add-on',
+  },
+  {
+    feature: 'Email Assistant',
+    href: '/features/email-assistant',
+    hint: 'Gmail sync & drafts; £9/mo personal add-on',
+    lite: 'Add-on',
+    solo: 'Add-on',
+    team: 'Add-on',
+    scale: 'Add-on',
+  },
+  {
+    feature: 'Monthly AI credits',
+    hint: 'Shared AI allowance for drafts and assistants',
+    lite: '500',
+    solo: '2,000',
+    team: '2,000',
+    scale: '2,000',
+  },
+  {
+    feature: 'Signatures',
+    href: '/apps/signatures',
+    hint: 'Flat mailbox tiers from £9/mo',
+    lite: 'Add-on',
+    solo: 'Add-on',
+    team: 'Add-on',
+    scale: 'Add-on',
+  },
+  { feature: 'Team members included', lite: 'Up to 3', solo: '1', team: 'Up to 5', scale: 'Up to 15' },
   { feature: 'Shared client & project work', lite: false, solo: false, team: true, scale: true },
   { feature: 'Priority support', lite: false, solo: false, team: false, scale: true },
   { feature: 'Ozer subscription transaction fees', lite: 'None', solo: 'None', team: 'None', scale: 'None' },
@@ -233,7 +302,18 @@ export function PricingConversion() {
                   className="border-b border-[color:var(--workspace-shell-border)] last:border-b-0"
                 >
                   <th scope="row" className="px-4 py-3 font-medium">
-                    {row.feature}
+                    {row.href ? (
+                      <Link href={row.href} className="underline-offset-2 hover:underline">
+                        {row.feature}
+                      </Link>
+                    ) : (
+                      row.feature
+                    )}
+                    {row.hint ? (
+                      <span className={cn('mt-0.5 block text-xs font-normal', marketingMutedText)}>
+                        {row.hint}
+                      </span>
+                    ) : null}
                   </th>
                   <td className={cn('px-4 py-3', marketingMutedText)}>{cell(row.lite)}</td>
                   <td className={cn('px-4 py-3', marketingMutedText)}>{cell(row.solo)}</td>

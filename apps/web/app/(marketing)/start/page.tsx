@@ -8,7 +8,7 @@ import { StartFlowClient } from './_components/start-flow-client';
 export const metadata = buildMarketingMetadata({
   title: 'Start free — Ozer',
   description:
-    'Create a free Ozer personal account first. Optionally add a business, family, or community workspace — Solo and Team include a 14-day trial.',
+    'Create a free Ozer personal account first. Optionally add a business, family, or community workspace on the next step — Solo and Team include a 14-day trial.',
   path: '/start',
   keywords: [
     'Ozer signup',

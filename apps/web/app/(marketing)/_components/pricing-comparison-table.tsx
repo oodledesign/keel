@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 
+import Link from 'next/link';
 import { Check, ChevronDown, Minus } from 'lucide-react';
 
 import {
@@ -140,7 +141,16 @@ function GroupRows(props: {
             scope="row"
             className={cn('sticky left-0 z-10 bg-[var(--workspace-shell-panel)] px-4 py-3.5 font-normal', marketingBodyText)}
           >
-            <span className="block">{row.feature}</span>
+            {row.href ? (
+              <Link
+                href={row.href}
+                className="block font-medium text-[var(--workspace-shell-text)] underline-offset-2 hover:underline"
+              >
+                {row.feature}
+              </Link>
+            ) : (
+              <span className="block">{row.feature}</span>
+            )}
             {row.hint ? (
               <span className={cn('mt-0.5 block text-xs', marketingMutedText)}>
                 {row.hint}

@@ -23,15 +23,17 @@
     inset: 0;
     z-index: 0;
     pointer-events: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    /* Paper grain — visible on cream without reading as dirt. */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     background-repeat: repeat;
-    opacity: 0.035;
+    background-size: 180px 180px;
+    opacity: 0.12;
     mix-blend-mode: multiply;
   }
 
   .dark .marketing-grain::before {
-    opacity: 0.05;
-    mix-blend-mode: screen;
+    opacity: 0.14;
+    mix-blend-mode: soft-light;
   }
 
   .marketing-grain > * {
@@ -60,12 +62,13 @@
   .marketing-header {
     @apply border-b;
     border-color: var(--ozer-border-on-light);
-    background: var(--ozer-cream-50);
+    /* Keep grain visible through the sticky header */
+    background: color-mix(in srgb, var(--ozer-cream-50) 88%, transparent);
   }
 
   .dark .marketing-header {
     border-color: var(--ozer-border-on-dark);
-    background: var(--ozer-plum-950);
+    background: color-mix(in srgb, var(--ozer-plum-950) 88%, transparent);
   }
 
   .marketing-section-muted {

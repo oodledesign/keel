@@ -48,38 +48,48 @@ function planByProductId(productId: string) {
   return MARKETING_WORKSPACE_PLANS.find((plan) => plan.productId === productId);
 }
 
+function workspacePriceBadge(productId: string | null): string {
+  if (!productId) return 'Free';
+  const plan = planByProductId(productId);
+  if (!plan || plan.monthlyPriceGbp <= 0) return 'Free';
+  return `From ${formatGbp(plan.monthlyPriceGbp)}`;
+}
+
 const workspaceOptions: Array<{
   value: WorkspaceChoice;
   title: string;
   description: string;
   icon: typeof Home;
-  badge?: string;
+  /** null = free; otherwise lowest monthly product price for that workspace type. */
+  priceProductId: string | null;
 }> = [
   {
     value: 'personal_only',
     title: 'Just personal for now',
-    description: 'Free forever — tasks, planner, and your day in one place.',
+    description: 'Free forever — tasks, people, notes, and planner.',
     icon: Home,
-    badge: 'Free',
+    priceProductId: null,
   },
   {
     value: 'business',
     title: 'Add a business workspace',
     description: 'Clients, projects, and invoices — Lite, Solo, or Team.',
     icon: Briefcase,
+    priceProductId: 'ozer-business-solo',
   },
   {
     value: 'family',
     title: 'Add a family workspace',
-    description: 'Household tasks and calendar — included with Personal & Family.',
+    description: 'Household tasks, calendar, meals, and shopping — free.',
     icon: Heart,
-    badge: 'Free',
+    priceProductId: null,
   },
   {
     value: 'community',
     title: 'Add a community workspace',
     description: 'Clubs, groups, and shared schedules.',
     icon: UsersRound,
+    priceProductId: 'ozer-community',
   },
 ];
 
@@ -160,8 +170,8 @@ export function StartFlowClient() {
               Everyone starts with a free personal account
             </h1>
             <p className={cn('mx-auto max-w-lg text-base leading-relaxed', marketingBodyText)}>
-              {MARKETING_FREE_TIER.description} No card required. Workspaces for
-              business, family, or community are optional add-ons after this.
+              {MARKETING_FREE_TIER.description} No card required. Extra workspaces
+              are optional — you can add one on the next step.
             </p>
           </div>
 
@@ -240,6 +250,7 @@ export function StartFlowClient() {
             {workspaceOptions.map((option) => {
               const Icon = option.icon;
               const selected = workspace === option.value;
+              const priceLabel = workspacePriceBadge(option.priceProductId);
               return (
                 <li key={option.value}>
                   <button
@@ -260,11 +271,9 @@ export function StartFlowClient() {
                         <span className="font-semibold text-[var(--workspace-shell-text)]">
                           {option.title}
                         </span>
-                        {option.badge ? (
-                          <span className="rounded-full bg-[var(--ozer-accent-subtle)] px-2 py-0.5 text-[11px] font-semibold text-[var(--ozer-coral-600)]">
-                            {option.badge}
-                          </span>
-                        ) : null}
+                        <span className="rounded-full bg-[var(--ozer-accent-subtle)] px-2 py-0.5 text-[11px] font-semibold text-[var(--ozer-coral-600)]">
+                          {priceLabel}
+                        </span>
                       </span>
                       <span className={cn('mt-1 block text-sm', marketingMutedText)}>
                         {option.description}
@@ -344,10 +353,10 @@ export function StartFlowClient() {
                 {
                   value: 'solo' as const,
                   title: solo?.name ?? 'Business Solo',
-                  price:
+                  priceLabel:
                     solo != null
-                      ? `${formatGbp(solo.monthlyPriceGbp)}/mo`
-                      : 'From £29/mo',
+                      ? `From ${formatGbp(solo.monthlyPriceGbp)}`
+                      : 'From £29',
                   description:
                     solo?.description ??
                     'Full studio stack for one freelancer — 14-day trial.',
@@ -356,10 +365,10 @@ export function StartFlowClient() {
                 {
                   value: 'team' as const,
                   title: team?.name ?? 'Business Team',
-                  price:
+                  priceLabel:
                     team != null
-                      ? `${formatGbp(team.monthlyPriceGbp)}/mo`
-                      : 'From £79/mo',
+                      ? `From ${formatGbp(team.monthlyPriceGbp)}`
+                      : 'From £79',
                   description:
                     team?.description ??
                     'Shared clients and projects for up to five people — 14-day trial.',
@@ -368,7 +377,7 @@ export function StartFlowClient() {
                 {
                   value: 'lite' as const,
                   title: lite?.name ?? 'Business Lite',
-                  price: 'Free',
+                  priceLabel: 'Free',
                   description:
                     lite?.description ??
                     'Apps shell only — Signatures and add-ons, no CRM.',
@@ -394,8 +403,8 @@ export function StartFlowClient() {
                         <span className="font-semibold text-[var(--workspace-shell-text)]">
                           {option.title}
                         </span>
-                        <span className="text-sm font-medium text-[var(--ozer-coral-600)]">
-                          {option.price}
+                        <span className="rounded-full bg-[var(--ozer-accent-subtle)] px-2 py-0.5 text-[11px] font-semibold text-[var(--ozer-coral-600)]">
+                          {option.priceLabel}
                         </span>
                         {option.recommended ? (
                           <span className="rounded-full bg-[var(--ozer-accent)] px-2 py-0.5 text-[11px] font-semibold text-[var(--ozer-plum-950)]">

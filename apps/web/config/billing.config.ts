@@ -126,7 +126,9 @@ export default createBillingSchema({
         },
       ],
       features: [
+        'Apps marketplace access',
         'Clients, jobs, invoices & tasks',
+        'Activity tracking',
         '1 team member (you)',
         'Docs, finances & pipeline',
       ],
