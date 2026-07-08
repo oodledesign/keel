@@ -72,7 +72,6 @@ import {
   applySuggestedCategoriesAction,
   categorizeFinanceTransactionAction,
   createManualTransactionAction,
-  FINANCE_TRANSACTION_PAGE_SIZES,
   importCsvTransactionsAction,
   loadFinancesDashboardAction,
   setFinanceTransactionLinksAction,
@@ -82,6 +81,7 @@ import {
   syncFreeAgentAction,
   syncFreeAgentHistoryAction,
 } from '../_lib/server/finances-actions';
+import { FINANCE_TRANSACTION_PAGE_SIZES } from '../_lib/finance-transaction-pagination';
 import { FinancesDashboardSkeleton } from './finances-dashboard-skeleton';
 
 const panelClass =

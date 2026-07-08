@@ -31,9 +31,7 @@ import { isFreeAgentConfigured } from '~/lib/integrations/freeagent/env';
 import { isStarlingConfigured } from '~/lib/integrations/starling/env';
 import { syncStarlingToOzer } from '~/lib/integrations/starling/sync';
 
-export const FINANCE_TRANSACTION_PAGE_SIZES = [50, 100, 200] as const;
-
-const DEFAULT_FINANCE_PAGE_SIZE = FINANCE_TRANSACTION_PAGE_SIZES[0];
+import { DEFAULT_FINANCE_PAGE_SIZE } from '../finance-transaction-pagination';
 
 function applyFinanceDateFilters<T extends { gte: (col: string, val: string) => T; lte: (col: string, val: string) => T }>(
   query: T,
