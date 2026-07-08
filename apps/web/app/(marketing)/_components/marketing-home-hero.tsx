@@ -7,7 +7,7 @@ import { ArrowRight } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 
-import pathsConfig from '~/config/paths.config';
+import { MARKETING_FREE_SIGNUP_URL } from '~/lib/billing/pricing-marketing';
 import {
   marketingBtnGradient,
   marketingBtnOutline,
@@ -69,7 +69,7 @@ export function MarketingHomeHero() {
           {...fadeUpProps(0.24, 0.38)}
         >
           <Button asChild size="lg" className={marketingBtnGradient}>
-            <Link href={pathsConfig.auth.signUp}>
+            <Link href={MARKETING_FREE_SIGNUP_URL}>
               Start free
               <ArrowRight className="ml-1.5 h-4 w-4" />
             </Link>
@@ -83,7 +83,7 @@ export function MarketingHomeHero() {
           className={`mt-4 text-sm ${marketingMutedText}`}
           {...fadeUpProps(0.32, 0.32)}
         >
-          Designed by a freelancer, for freelancers and small studios.
+          Free personal account · add Solo or Team when you need the studio stack
         </motion.p>
       </div>
 

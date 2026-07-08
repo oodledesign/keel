@@ -13,6 +13,7 @@ import { cn } from '@kit/ui/utils';
 import { MobileNavTabIcon } from '~/components/workspace-shell/mobile-nav-tab-icon';
 import { HapticButton, HapticLink } from '~/components/haptic-link';
 import { WorkspaceHelpButton } from '~/components/workspace-shell/workspace-help-button';
+import { WorkspaceMobileBackButton } from '~/components/workspace-shell/workspace-mobile-back-button';
 import { WorkspaceAccountsSelector } from '~/components/workspace-shell/workspace-accounts-selector';
 import type { MobileBottomNavTab } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
 import {
@@ -241,7 +242,9 @@ export function WorkspaceMobileBottomNav({
       )}
       aria-label="Primary"
     >
-      <div aria-hidden />
+      <div className="pointer-events-auto flex justify-start">
+        <WorkspaceMobileBackButton />
+      </div>
       <div className="pointer-events-auto flex h-12 items-center gap-0.5 justify-self-center rounded-full border border-[var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/98 px-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl">
         {bottomNavTabs.map((tab) => {
           const tabPathname = navHrefPathname(tab.path);
@@ -263,7 +266,7 @@ export function WorkspaceMobileBottomNav({
                 MOBILE_NAV_BTN_CLASS,
                 active
                   ? 'bg-[var(--ozer-accent)] text-[var(--ozer-white)]'
-                  : 'text-[var(--workspace-shell-nav-text)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-nav-text-hover)]',
+                  : 'text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--ozer-accent)]',
               )}
             >
               <span
@@ -293,7 +296,7 @@ export function WorkspaceMobileBottomNav({
           aria-label="Open menu"
           className={cn(
             MOBILE_NAV_BTN_CLASS,
-            'text-[var(--workspace-shell-text-muted)] hover:bg-white/[0.08] hover:text-[var(--workspace-shell-text)]',
+            'text-[var(--workspace-shell-text-muted)] hover:bg-white/[0.08] hover:text-[var(--ozer-accent)]',
           )}
           onClick={() => onMenuOpenChange(true)}
         >

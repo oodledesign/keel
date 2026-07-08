@@ -19,7 +19,7 @@ import {
   marketingShellClass,
 } from '~/lib/marketing/marketing-ui';
 import { cn } from '@kit/ui/utils';
-import pathsConfig from '~/config/paths.config';
+import { MARKETING_FREE_SIGNUP_URL } from '~/lib/billing/pricing-marketing';
 
 type ComparisonPageProps = {
   config: ComparisonConfig;
@@ -285,7 +285,7 @@ export function ComparisonPage({ config }: ComparisonPageProps) {
 
         <div className="mt-14 flex flex-wrap gap-3">
           <Button asChild size="lg" className={marketingBtnGradient}>
-            <Link href={pathsConfig.auth.signUp}>Start free</Link>
+            <Link href={MARKETING_FREE_SIGNUP_URL}>Start free</Link>
           </Button>
           <Button asChild size="lg" variant="outline" className={marketingBtnOutline}>
             <Link href="/pricing">See pricing</Link>

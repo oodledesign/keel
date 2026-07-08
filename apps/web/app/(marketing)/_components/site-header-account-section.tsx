@@ -9,6 +9,7 @@ import { Button } from '@kit/ui/button';
 import { Trans } from '@kit/ui/trans';
 
 import pathsConfig from '~/config/paths.config';
+import { MARKETING_FREE_SIGNUP_URL } from '~/lib/billing/pricing-marketing';
 
 import { ThemeModeToggle } from '~/components/theme-mode-toggle';
 
@@ -61,7 +62,7 @@ function AuthButtons() {
         </Button>
 
         <Button asChild className="text-xs md:text-sm" variant="default" size="sm">
-          <Link href={pathsConfig.auth.signUp}>
+          <Link href={MARKETING_FREE_SIGNUP_URL}>
             <Trans i18nKey="auth:signUp" />
           </Link>
         </Button>
@@ -69,7 +70,7 @@ function AuthButtons() {
 
       <div className="flex items-center gap-x-2 md:hidden">
         <Button asChild className="text-xs" variant="default" size="sm">
-          <Link href={pathsConfig.auth.signUp}>
+          <Link href={MARKETING_FREE_SIGNUP_URL}>
             <Trans i18nKey="auth:signUp" />
           </Link>
         </Button>

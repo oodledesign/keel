@@ -4,9 +4,9 @@ import { Activity, Calendar, CreditCard, MessagesSquare, Users } from 'lucide-re
 
 import { Button } from '@kit/ui/button';
 
-import pathsConfig from '~/config/paths.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import {
+  MARKETING_FREE_SIGNUP_URL,
   MARKETING_FREE_TIER,
   MARKETING_WORKSPACE_PLANS,
 } from '~/lib/billing/pricing-marketing';
@@ -77,7 +77,7 @@ const features = [
     icon: Activity,
     title: 'Activity on your Mac',
     description:
-      'Keel Assistant captures app and website sessions — assign time to clients and projects from one view.',
+      'Ozer Assistant captures app and website sessions — assign time to clients and projects from one view.',
     href: '/features/activity',
   },
 ];
@@ -210,9 +210,9 @@ function Home() {
             Flat price for the whole team
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-[var(--workspace-shell-text-muted)]">
-            From {formatGbp(getBillingProductPrice('keel-business-solo')?.monthlyPriceGbp ?? 29)}
+            From {formatGbp(getBillingProductPrice('ozer-business-solo')?.monthlyPriceGbp ?? 29)}
             /month for solo freelancers. {formatGbp(
-              getBillingProductPrice('keel-business-team')?.monthlyPriceGbp ?? 79,
+              getBillingProductPrice('ozer-business-team')?.monthlyPriceGbp ?? 79,
             )}
             /month flat for a team of five — no per-seat maths, no transaction fees
             on your subscription.
@@ -244,7 +244,7 @@ function Home() {
             size="lg"
             className={cn('mt-2', marketingBtnGradient)}
           >
-            <Link href={pathsConfig.auth.signUp}>Start free</Link>
+            <Link href={MARKETING_FREE_SIGNUP_URL}>Start free</Link>
           </Button>
         </div>
       </section>

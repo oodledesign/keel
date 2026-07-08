@@ -1,12 +1,10 @@
-import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
-import pathsConfig from '~/config/paths.config';
-import { getSafeRedirectPath } from '@kit/shared/utils';
-
 import {
   formatGbp as formatGbpFromConfig,
   getBillingProductPrice,
   listAllWorkspacePrices,
 } from '~/lib/billing/billing-config-prices';
+import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
+import pathsConfig from '~/config/paths.config';
 
 export type BillingInterval = 'month' | 'year';
 
@@ -35,13 +33,13 @@ export type MarketingAddonPlan = {
 };
 
 const PRODUCT_PROFILE: Record<string, WorkspaceProfile> = {
-  'keel-community': 'community',
-  'keel-business-lite': 'work_design',
-  'keel-business-solo': 'work_design',
-  'keel-business-team': 'work_design',
-  'keel-business-scale': 'work_design',
-  'keel-property-starter': 'work_property',
-  'keel-property-portfolio': 'work_property',
+  'ozer-community': 'community',
+  'ozer-business-lite': 'work_design',
+  'ozer-business-solo': 'work_design',
+  'ozer-business-team': 'work_design',
+  'ozer-business-scale': 'work_design',
+  'ozer-property-starter': 'work_property',
+  'ozer-property-portfolio': 'work_property',
 };
 
 export const MARKETING_FREE_TIER = {
@@ -72,15 +70,15 @@ export const MARKETING_WORKSPACE_PLANS: MarketingWorkspacePlan[] =
   }));
 
 const ADDON_PRODUCT_IDS = [
-  'keel-addon-signatures',
+  'ozer-addon-signatures',
 ] as const;
 
 const PRODUCT_URL_ALIASES = {
-  'keel-business-lite': 'business-lite',
-  'keel-business-solo': 'business-solo',
-  'keel-business-team': 'business-team',
-  'keel-business-scale': 'business-scale',
-  'keel-addon-signatures': 'signatures',
+  'ozer-business-lite': 'business-lite',
+  'ozer-business-solo': 'business-solo',
+  'ozer-business-team': 'business-team',
+  'ozer-business-scale': 'business-scale',
+  'ozer-addon-signatures': 'signatures',
 } as const;
 
 const PRODUCT_ID_BY_URL_ALIAS = new Map(
@@ -164,6 +162,24 @@ export function buildPricingSignupUrl(params: {
   return `${pathsConfig.auth.signUp}?next=${next}`;
 }
 
+/**
+ * Default marketing "Start free": personal account first, then recommend
+ * Business Solo (the freelancers / small-studio path we want people on).
+ */
+export const MARKETING_FREE_SIGNUP_URL = buildPricingSignupUrl({
+  profile: 'work_design',
+  productId: 'ozer-business-solo',
+  planId: 'business-solo-monthly',
+  interval: 'month',
+});
+
+/** Apps / Signatures surfaces that specifically push free Business Lite. */
+export const MARKETING_BUSINESS_LITE_SIGNUP_URL = buildPricingSignupUrl({
+  profile: 'work_design',
+  productId: 'ozer-business-lite',
+  planId: 'business-lite-free',
+});
+
 export function buildSignedInBillingUrl(params: {
   accountSlug: string;
   productId: string;
@@ -227,8 +243,4 @@ export function internalProductId(product: string | null | undefined) {
   if (!value) return undefined;
 
   return PRODUCT_ID_BY_URL_ALIAS.get(value) ?? value;
-}
-
-export function safeNextPath(next: string | undefined) {
-  return getSafeRedirectPath(next, pathsConfig.app.workspaceSetup);
 }

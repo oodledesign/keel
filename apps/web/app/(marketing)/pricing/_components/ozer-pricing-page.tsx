@@ -11,6 +11,8 @@ import { cn } from '@kit/ui/utils';
 import pathsConfig from '~/config/paths.config';
 import {
   MARKETING_ADDON_PLANS,
+  MARKETING_BUSINESS_LITE_SIGNUP_URL,
+  MARKETING_FREE_SIGNUP_URL,
   MARKETING_FREE_TIER,
   MARKETING_WORKSPACE_PLANS,
   type BillingInterval,
@@ -53,13 +55,13 @@ export function OzerPricingPage() {
     <div className="space-y-16">
       <section className="text-center">
         <p className={cn('mx-auto max-w-2xl text-lg leading-relaxed', marketingBodyText)}>
-          Start free with personal and family — your hub for every workspace.
-          Pay when you add Ozer Business. One price covers the team, not a per-seat
-          tax. One Workspace OS, not a pile of siloed tools.
+          Start free with a personal account — your hub for every workspace.
+          Add Ozer Business when you need the studio stack. One price covers the
+          team, not a per-seat tax. One Workspace OS, not a pile of siloed tools.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Button asChild size="lg" className={marketingBtnGradient}>
-            <Link href={buildPricingSignupUrl({ profile: 'family' })}>
+            <Link href={MARKETING_FREE_SIGNUP_URL}>
               Start free
               <ArrowRight className="ml-1.5 h-4 w-4" />
             </Link>
@@ -69,7 +71,7 @@ export function OzerPricingPage() {
           </Button>
         </div>
         <p className={cn('mt-4 text-sm', marketingMutedText)}>
-          14-day trial on your first paid workspace · Annual plans are 16.7% less than 12 × monthly
+          Free personal forever · 14-day trial when you add Solo or Team · Annual plans save 16.7%
         </p>
       </section>
 
@@ -124,15 +126,16 @@ export function OzerPricingPage() {
       <section className={cn('rounded-2xl border border-[color:var(--workspace-shell-border)] px-6 py-10 text-center', marketingFeatureCard)}>
         <h2 className="text-xl font-semibold text-[var(--workspace-shell-text)]">Ready to run the studio?</h2>
         <p className={cn('mx-auto mt-2 max-w-lg text-sm', marketingBodyText)}>
-          Start free, choose workspaces, and trial paid plans when you need them.
-          Invited team members never pay — billing stays with the workspace owner.
+          Start with a free personal account, then add Solo or Team for the
+          studio. Invited team members never pay — billing stays with the
+          workspace owner.
         </p>
         <Button
           asChild
           className="mt-6 h-11 rounded-full bg-[var(--ozer-accent)] px-6 text-[var(--ozer-plum-950)] hover:bg-[var(--ozer-accent-hover)] hover:text-[var(--ozer-white)]"
           size="lg"
         >
-          <Link href={buildPricingSignupUrl({})}>Start free</Link>
+          <Link href={MARKETING_FREE_SIGNUP_URL}>Start free</Link>
         </Button>
       </section>
     </div>
@@ -185,8 +188,11 @@ function FreePlanCard() {
       <FeatureList features={[...MARKETING_FREE_TIER.features]} />
       <div className="mt-6">
         <Button asChild className={cn(marketingBtnOutline, 'w-full')} variant="outline">
-          <Link href={buildPricingSignupUrl({ profile: 'family' })}>Start free</Link>
+          <Link href={buildPricingSignupUrl({})}>Start free</Link>
         </Button>
+        <p className={cn('mt-2 text-center text-xs', marketingMutedText)}>
+          Free personal account · add business Solo or Team when ready
+        </p>
       </div>
     </article>
   );
@@ -207,7 +213,7 @@ function WorkspacePlanCard(props: {
     interval,
   });
   const features =
-    plan.productId === 'keel-business-lite'
+    plan.productId === 'ozer-business-lite'
       ? plan.features.map((feature) =>
           feature === 'Apps marketplace access'
             ? 'Apps marketplace — install Signatures and future add-ons'
@@ -260,7 +266,9 @@ function WorkspacePlanCard(props: {
           </Link>
         </Button>
         <p className={cn('text-center text-xs', marketingMutedText)}>
-          Sign up → create workspace → checkout
+          {plan.productId === 'ozer-business-lite'
+            ? 'Sign up → free personal → add Lite workspace'
+            : 'Sign up → free personal → add workspace → 14-day trial'}
         </p>
       </div>
     </article>
@@ -271,7 +279,7 @@ function AddonPlanCard(props: {
   plan: (typeof MARKETING_ADDON_PLANS)[number];
 }) {
   const { plan } = props;
-  const isSignatures = plan.productId === 'keel-addon-signatures';
+  const isSignatures = plan.productId === 'ozer-addon-signatures';
 
   return (
     <article className={cn('flex h-full flex-col rounded-2xl border border-[color:var(--workspace-shell-border)] p-6 text-[var(--workspace-shell-text)]', marketingFeatureCard)}>
@@ -291,10 +299,10 @@ function AddonPlanCard(props: {
       <FeatureList features={plan.features} compact />
       <div className="mt-6">
         <Button asChild className={cn(marketingBtnOutline, 'w-full')} variant="outline">
-          <Link href={buildPricingSignupUrl({})}>Start free</Link>
+          <Link href={MARKETING_BUSINESS_LITE_SIGNUP_URL}>Start free</Link>
         </Button>
         <p className={cn('mt-2 text-center text-xs', marketingMutedText)}>
-          Add-ons attach to a workspace after signup
+          Free personal + Lite workspace — then attach the add-on
         </p>
       </div>
     </article>

@@ -6,8 +6,8 @@ import { Button } from '@kit/ui/button';
 
 import pathsConfig from '~/config/paths.config';
 import {
-  buildPricingSignupUrl,
   formatGbp,
+  MARKETING_BUSINESS_LITE_SIGNUP_URL,
 } from '~/lib/billing/pricing-marketing';
 import { listAppLandingSummaries } from '~/lib/marketing/app-landing-pages';
 import {
@@ -21,12 +21,6 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
 import { JsonLd } from '~/lib/seo/json-ld';
 import { breadcrumbJsonLd, schemaGraph, webPageJsonLd } from '~/lib/seo/schema';
-
-const BUSINESS_LITE_SIGNUP = buildPricingSignupUrl({
-  profile: 'work_design',
-  productId: 'keel-business-lite',
-  planId: 'business-lite-free',
-});
 
 export const metadata = buildMarketingMetadata({
   title: 'Business workspace apps — Ozer',
@@ -69,7 +63,7 @@ function AppsMarketingPage() {
             when you need it — flat mailbox tiers by workspace, never per person.
           </p>
           <Button asChild size="lg" className={marketingBtnGradient}>
-            <Link href={BUSINESS_LITE_SIGNUP}>
+            <Link href={MARKETING_BUSINESS_LITE_SIGNUP_URL}>
               Start free
               <ArrowRight className="ml-1.5 h-4 w-4" />
             </Link>

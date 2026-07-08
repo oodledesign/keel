@@ -7,8 +7,8 @@ import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 import {
-  buildPricingSignupUrl,
   formatGbp,
+  MARKETING_BUSINESS_LITE_SIGNUP_URL,
 } from '~/lib/billing/pricing-marketing';
 import { listBillingProductPlanPrices } from '~/lib/billing/billing-config-prices';
 import type { AppLandingConfig } from '~/lib/marketing/app-landing-pages';
@@ -30,12 +30,6 @@ import { MarketingFaqsSection } from './marketing-faqs';
 type AppLandingPageProps = {
   config: AppLandingConfig;
 };
-
-const BUSINESS_LITE_SIGNUP = buildPricingSignupUrl({
-  profile: 'work_design',
-  productId: 'keel-business-lite',
-  planId: 'business-lite-free',
-});
 
 export function AppLandingPage({ config }: AppLandingPageProps) {
   const Icon = config.icon;
@@ -69,7 +63,7 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
 
             <div className="flex flex-wrap items-center gap-3">
               <Button asChild size="lg" className={marketingBtnGradient}>
-                <Link href={BUSINESS_LITE_SIGNUP}>
+                <Link href={MARKETING_BUSINESS_LITE_SIGNUP_URL}>
                   {config.hero.primaryCtaLabel ?? 'Start with free Business Lite'}
                   <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Link>
@@ -251,7 +245,7 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
             size="lg"
             className="mt-6 rounded-full bg-[var(--ozer-accent)] px-7 text-[var(--ozer-plum-950)] hover:bg-[var(--ozer-accent-hover)] hover:text-[var(--ozer-white)]"
           >
-            <Link href={BUSINESS_LITE_SIGNUP}>Start free</Link>
+            <Link href={MARKETING_BUSINESS_LITE_SIGNUP_URL}>Start free</Link>
           </Button>
           <p className={`mt-4 text-xs ${marketingMutedText}`}>
             Explore all apps on the{' '}
@@ -387,7 +381,7 @@ function SignaturePricingSection({ config }: { config: AppLandingConfig }) {
               </ul>
 
               <Button asChild className={cn('mt-6', marketingBtnGradient)}>
-                <Link href={BUSINESS_LITE_SIGNUP}>Start free with Business Lite</Link>
+                <Link href={MARKETING_BUSINESS_LITE_SIGNUP_URL}>Start free with Business Lite</Link>
               </Button>
             </article>
           );

@@ -24,7 +24,11 @@ import {
   completeWorkspaceSetup,
   type WorkspaceSetupSelection,
 } from '../_lib/server/workspace-setup.actions';
-import type { SetupIntent } from '~/lib/billing/pricing-marketing';
+import {
+  formatGbp,
+  MARKETING_WORKSPACE_PLANS,
+  type SetupIntent,
+} from '~/lib/billing/pricing-marketing';
 
 type DraftWorkspace = {
   id: string;
@@ -41,6 +45,40 @@ const DEFAULT_NAMES: Record<WorkspaceProfile, string> = {
   family: 'Our Family',
   community: 'Our Group',
 };
+
+function planPriceGbp(productId: string) {
+  return (
+    MARKETING_WORKSPACE_PLANS.find((plan) => plan.productId === productId)
+      ?.monthlyPriceGbp ?? null
+  );
+}
+
+const SOLO_PRICE = planPriceGbp('ozer-business-solo');
+const TEAM_PRICE = planPriceGbp('ozer-business-team');
+const PROPERTY_PRICE = planPriceGbp('ozer-property-starter');
+const COMMUNITY_PRICE = planPriceGbp('ozer-community');
+
+function businessCardBlurb(fullBusinessMode: boolean, propertyMode: boolean) {
+  if (propertyMode) {
+    const price =
+      PROPERTY_PRICE != null ? `From ${formatGbp(PROPERTY_PRICE)}/mo — ` : '';
+    return `${price}properties, tenants & maintenance`;
+  }
+  if (fullBusinessMode) {
+    const solo =
+      SOLO_PRICE != null ? `Solo from ${formatGbp(SOLO_PRICE)}/mo` : 'Solo';
+    const team =
+      TEAM_PRICE != null ? `Team from ${formatGbp(TEAM_PRICE)}/mo` : 'Team';
+    return `${solo} · ${team} — clients, projects & invoices`;
+  }
+  return 'Lite (free) for apps — or enable full CRM below (Solo / Team)';
+}
+
+function communityCardBlurb() {
+  const price =
+    COMMUNITY_PRICE != null ? `From ${formatGbp(COMMUNITY_PRICE)}/mo — ` : '';
+  return `${price}shared schedule, tasks and notes`;
+}
 
 function newDraft(profile: WorkspaceProfile, propertyMode = false): DraftWorkspace {
   const resolved: WorkspaceProfile =
@@ -87,8 +125,8 @@ function initialDrafts(intent?: SetupIntent): DraftWorkspace[] {
           enabled: true,
           fullBusinessMode:
             intent.profile === 'work_design' &&
-            Boolean(intent.productId?.startsWith('keel-business-')) &&
-            intent.productId !== 'keel-business-lite',
+            Boolean(intent.productId?.startsWith('ozer-business-')) &&
+            intent.productId !== 'ozer-business-lite',
         }
       : draft,
   );
@@ -185,17 +223,36 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
     <div className="mx-auto w-full max-w-2xl space-y-8 px-4 py-10">
       <header className="space-y-2 text-center">
         <h1 className="text-2xl font-bold tracking-tight text-[var(--workspace-shell-text)] md:text-3xl">
-          Welcome to Ozer
+          Your personal account is ready
         </h1>
         <p className="text-sm text-[var(--workspace-shell-text-muted)] md:text-base">
-          Let&apos;s set up your workspaces. Pick one or more — you can add more
-          later from the workspace menu.
+          Add a workspace for the studio — or skip and explore your personal hub
+          first. You can always add more later.
         </p>
-        {props.intent?.productId && props.intent.planId ? (
+        {props.intent?.productId === 'ozer-business-solo' ? (
           <p className="text-sm text-[var(--ozer-accent)]">
-            Your selected plan will be ready to start after workspace setup.
+            Recommended: Business Solo (14-day trial) — clients, projects &amp;
+            invoices for one person.
           </p>
-        ) : null}
+        ) : props.intent?.productId === 'ozer-business-team' ? (
+          <p className="text-sm text-[var(--ozer-accent)]">
+            Recommended: Business Team (14-day trial) — shared clients &amp;
+            projects for up to five people.
+          </p>
+        ) : props.intent?.productId === 'ozer-business-lite' ? (
+          <p className="text-sm text-[var(--ozer-accent)]">
+            Next: free Business Lite for apps. Switch to Solo or Team when you
+            need clients, projects, and invoices.
+          </p>
+        ) : props.intent?.productId && props.intent.planId ? (
+          <p className="text-sm text-[var(--ozer-accent)]">
+            Your selected plan will open after you create the workspace.
+          </p>
+        ) : (
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+            Most freelancers pick Solo; small studios pick Team.
+          </p>
+        )}
       </header>
 
       <div className="space-y-4">
@@ -248,14 +305,13 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
                   </span>
                   <span className="mt-1 block text-sm text-[var(--workspace-shell-text-muted)]">
                     {isBusiness
-                      ? draft.profile === 'work_property'
-                        ? 'From £19/mo — up to 5 properties, tenants & maintenance'
-                        : draft.fullBusinessMode
-                          ? 'From £29/mo — clients, projects, pipeline & invoicing'
-                          : 'Free — install Signatures, Rankly, and other apps'
+                      ? businessCardBlurb(
+                          !!draft.fullBusinessMode,
+                          draft.profile === 'work_property',
+                        )
                       : draft.profile === 'family'
                         ? 'Free — household tasks, calendar and meal planning'
-                        : 'From £12/mo — shared schedule, tasks and notes'}
+                        : communityCardBlurb()}
                   </span>
                 </span>
                 <span
@@ -305,7 +361,10 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
                             }
                             className="rounded border-[color:var(--workspace-shell-border)]"
                           />
-                          Full business CRM — clients, jobs, invoices (from £29/mo)
+                          Full business (Solo / Team) — clients, jobs, invoices
+                          {SOLO_PRICE != null
+                            ? ` · 14-day trial from ${formatGbp(SOLO_PRICE)}/mo`
+                            : ' · 14-day trial'}
                         </label>
                       ) : null}
                     </div>
@@ -329,15 +388,25 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
         <p className="text-center text-sm text-rose-300">{error}</p>
       ) : null}
 
-      <div className="flex justify-center">
+      <div className="flex flex-col items-center gap-3">
         <Button
           type="button"
           disabled={isPending}
           onClick={submit}
-          className="keel-gradient-btn h-11 rounded-xl px-8 text-sm font-semibold"
+          className="ozer-gradient-btn h-11 rounded-xl px-8 text-sm font-semibold"
         >
-          {isPending ? 'Creating workspaces…' : 'Get started'}
+          {isPending
+            ? 'Creating…'
+            : props.intent?.productId &&
+                props.intent.productId !== 'ozer-business-lite' &&
+                drafts.some((d) => d.enabled && d.fullBusinessMode)
+              ? 'Create workspace & start trial'
+              : 'Create selected workspaces'}
         </Button>
+        <p className="max-w-md text-center text-xs text-[var(--workspace-shell-text-muted)]">
+          Your free personal account is already set. Workspaces are optional
+          extras for business, family, or community.
+        </p>
       </div>
     </div>
   );

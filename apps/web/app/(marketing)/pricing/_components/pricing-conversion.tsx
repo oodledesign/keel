@@ -2,14 +2,16 @@ import Link from 'next/link';
 
 import { Button } from '@kit/ui/button';
 
-import pathsConfig from '~/config/paths.config';
 import {
   annualSavingPercent,
   formatAnnualSavingPercent,
   formatGbp,
   listBusinessWorkspacePrices,
 } from '~/lib/billing/billing-config-prices';
-import { buildPricingSignupUrl } from '~/lib/billing/pricing-marketing';
+import {
+  buildPricingSignupUrl,
+  MARKETING_FREE_SIGNUP_URL,
+} from '~/lib/billing/pricing-marketing';
 import {
   businessTierCards,
   philosophyLine,
@@ -57,7 +59,7 @@ export function PricingConversion() {
   const tiers = businessTierCards();
   const stackMonthly = replacedStackMonthlyTotal();
   const team = listBusinessWorkspacePrices().find(
-    (p) => p.productId === 'keel-business-team',
+    (p) => p.productId === 'ozer-business-team',
   );
   const teamMonthly = team?.monthlyPriceGbp ?? 79;
   const faqs = pricingFaqs();
@@ -287,7 +289,7 @@ export function PricingConversion() {
         </ul>
         <div className="mt-8 flex flex-wrap gap-3">
           <Button asChild className={marketingBtnGradient}>
-            <Link href={pathsConfig.auth.signUp}>Start free</Link>
+            <Link href={MARKETING_FREE_SIGNUP_URL}>Start free</Link>
           </Button>
           <Button asChild variant="outline" className={marketingBtnOutline}>
             <Link href="/pricing/explained">See full pricing answer</Link>

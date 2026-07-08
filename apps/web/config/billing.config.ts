@@ -1,8 +1,8 @@
 import { BillingProviderSchema, createBillingSchema } from '@kit/billing';
 
 import {
-  KEEL_BILLING_CURRENCY,
-  KEEL_STRIPE_PRICES,
+  OZER_BILLING_CURRENCY,
+  OZER_STRIPE_PRICES,
 } from '~/lib/billing/stripe-price-ids';
 
 const provider = BillingProviderSchema.parse(
@@ -15,10 +15,11 @@ export default createBillingSchema({
   provider,
   products: [
     {
-      id: 'keel-community',
+      id: 'ozer-community',
       name: 'Community',
       description: 'Groups, schedules, and shared tasks for clubs and homegroups',
-      currency: KEEL_BILLING_CURRENCY,
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: true,
       plans: [
         {
           id: 'community-monthly',
@@ -28,7 +29,7 @@ export default createBillingSchema({
           trialDays: TRIAL_DAYS,
           lineItems: [
             {
-              id: KEEL_STRIPE_PRICES.community_monthly,
+              id: OZER_STRIPE_PRICES.community_monthly,
               name: 'Community workspace',
               cost: 12,
               type: 'flat',
@@ -43,7 +44,7 @@ export default createBillingSchema({
           trialDays: TRIAL_DAYS,
           lineItems: [
             {
-              id: KEEL_STRIPE_PRICES.community_yearly,
+              id: OZER_STRIPE_PRICES.community_yearly,
               name: 'Community workspace',
               cost: 120,
               type: 'flat',
@@ -58,11 +59,12 @@ export default createBillingSchema({
       ],
     },
     {
-      id: 'keel-business-lite',
+      id: 'ozer-business-lite',
       name: 'Business Lite',
       description:
         'Free apps workspace — install Signatures and future add-ons',
-      currency: KEEL_BILLING_CURRENCY,
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: true,
       plans: [
         {
           id: 'business-lite-free',
@@ -71,7 +73,7 @@ export default createBillingSchema({
           interval: 'month',
           lineItems: [
             {
-              id: KEEL_STRIPE_PRICES.business_lite_monthly,
+              id: OZER_STRIPE_PRICES.business_lite_monthly,
               name: 'Business Lite',
               cost: 0,
               type: 'flat',
@@ -86,10 +88,11 @@ export default createBillingSchema({
       ],
     },
     {
-      id: 'keel-business-solo',
+      id: 'ozer-business-solo',
       name: 'Business Solo',
       description: 'Full business workspace for one person',
-      currency: KEEL_BILLING_CURRENCY,
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: true,
       plans: [
         {
           id: 'business-solo-monthly',
@@ -99,7 +102,7 @@ export default createBillingSchema({
           trialDays: TRIAL_DAYS,
           lineItems: [
             {
-              id: KEEL_STRIPE_PRICES.business_solo_monthly,
+              id: OZER_STRIPE_PRICES.business_solo_monthly,
               name: 'Business Solo',
               cost: 29,
               type: 'flat',
@@ -114,7 +117,7 @@ export default createBillingSchema({
           trialDays: TRIAL_DAYS,
           lineItems: [
             {
-              id: KEEL_STRIPE_PRICES.business_solo_yearly,
+              id: OZER_STRIPE_PRICES.business_solo_yearly,
               name: 'Business Solo',
               cost: 290,
               type: 'flat',
@@ -129,12 +132,13 @@ export default createBillingSchema({
       ],
     },
     {
-      id: 'keel-business-team',
+      id: 'ozer-business-team',
       name: 'Business Team',
       highlighted: true,
       badge: 'Popular',
       description: 'Collaborate with a small team',
-      currency: KEEL_BILLING_CURRENCY,
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: true,
       plans: [
         {
           id: 'business-team-monthly',
@@ -144,7 +148,7 @@ export default createBillingSchema({
           trialDays: TRIAL_DAYS,
           lineItems: [
             {
-              id: KEEL_STRIPE_PRICES.business_team_monthly,
+              id: OZER_STRIPE_PRICES.business_team_monthly,
               name: 'Business Team',
               cost: 79,
               type: 'flat',
@@ -159,7 +163,7 @@ export default createBillingSchema({
           trialDays: TRIAL_DAYS,
           lineItems: [
             {
-              id: KEEL_STRIPE_PRICES.business_team_yearly,
+              id: OZER_STRIPE_PRICES.business_team_yearly,
               name: 'Business Team',
               cost: 790,
               type: 'flat',
@@ -174,10 +178,11 @@ export default createBillingSchema({
       ],
     },
     {
-      id: 'keel-business-scale',
+      id: 'ozer-business-scale',
       name: 'Business Scale',
       description: 'Larger teams with more seats',
-      currency: KEEL_BILLING_CURRENCY,
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: true,
       plans: [
         {
           id: 'business-scale-monthly',
@@ -187,7 +192,7 @@ export default createBillingSchema({
           trialDays: TRIAL_DAYS,
           lineItems: [
             {
-              id: KEEL_STRIPE_PRICES.business_scale_monthly,
+              id: OZER_STRIPE_PRICES.business_scale_monthly,
               name: 'Business Scale',
               cost: 149,
               type: 'flat',
@@ -202,7 +207,7 @@ export default createBillingSchema({
           trialDays: TRIAL_DAYS,
           lineItems: [
             {
-              id: KEEL_STRIPE_PRICES.business_scale_yearly,
+              id: OZER_STRIPE_PRICES.business_scale_yearly,
               name: 'Business Scale',
               cost: 1490,
               type: 'flat',
@@ -217,10 +222,11 @@ export default createBillingSchema({
       ],
     },
     {
-      id: 'keel-property-starter',
+      id: 'ozer-property-starter',
       name: 'Property Starter',
       description: 'Landlords and small portfolios',
-      currency: KEEL_BILLING_CURRENCY,
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: true,
       plans: [
         {
           id: 'property-starter-monthly',
@@ -230,7 +236,7 @@ export default createBillingSchema({
           trialDays: TRIAL_DAYS,
           lineItems: [
             {
-              id: KEEL_STRIPE_PRICES.property_starter_monthly,
+              id: OZER_STRIPE_PRICES.property_starter_monthly,
               name: 'Property Starter',
               cost: 19,
               type: 'flat',
@@ -245,7 +251,7 @@ export default createBillingSchema({
           trialDays: TRIAL_DAYS,
           lineItems: [
             {
-              id: KEEL_STRIPE_PRICES.property_starter_yearly,
+              id: OZER_STRIPE_PRICES.property_starter_yearly,
               name: 'Property Starter',
               cost: 190,
               type: 'flat',
@@ -261,10 +267,11 @@ export default createBillingSchema({
       ],
     },
     {
-      id: 'keel-property-portfolio',
+      id: 'ozer-property-portfolio',
       name: 'Property Portfolio',
       description: 'Property managers with larger portfolios',
-      currency: KEEL_BILLING_CURRENCY,
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: true,
       plans: [
         {
           id: 'property-portfolio-monthly',
@@ -274,7 +281,7 @@ export default createBillingSchema({
           trialDays: TRIAL_DAYS,
           lineItems: [
             {
-              id: KEEL_STRIPE_PRICES.property_portfolio_monthly,
+              id: OZER_STRIPE_PRICES.property_portfolio_monthly,
               name: 'Property Portfolio',
               cost: 29,
               type: 'flat',
@@ -289,7 +296,7 @@ export default createBillingSchema({
           trialDays: TRIAL_DAYS,
           lineItems: [
             {
-              id: KEEL_STRIPE_PRICES.property_portfolio_yearly,
+              id: OZER_STRIPE_PRICES.property_portfolio_yearly,
               name: 'Property Portfolio',
               cost: 290,
               type: 'flat',
@@ -305,11 +312,12 @@ export default createBillingSchema({
       ],
     },
     {
-      id: 'keel-addon-email-assistant',
+      id: 'ozer-addon-email-assistant',
       name: 'Email Assistant',
       description:
         'Gmail inbox sync, AI action items, and draft replies in your personal Ozer',
-      currency: KEEL_BILLING_CURRENCY,
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: true,
       plans: [
         {
           id: 'email-assistant-monthly',
@@ -318,7 +326,7 @@ export default createBillingSchema({
           interval: 'month',
           lineItems: [
             {
-              id: KEEL_STRIPE_PRICES.addon_email_assistant_monthly,
+              id: OZER_STRIPE_PRICES.addon_email_assistant_monthly,
               name: 'Email Assistant',
               cost: 9,
               type: 'flat',
@@ -334,11 +342,12 @@ export default createBillingSchema({
       ],
     },
     {
-      id: 'keel-addon-signatures',
+      id: 'ozer-addon-signatures',
       name: 'Signatures',
       description:
         'Flat-tier branded email signatures for Microsoft 365 and Google Workspace',
-      currency: KEEL_BILLING_CURRENCY,
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: true,
       plans: [
         {
           id: 'signatures-starter-monthly',
@@ -347,7 +356,7 @@ export default createBillingSchema({
           interval: 'month',
           lineItems: [
             {
-              id: KEEL_STRIPE_PRICES.addon_signatures_starter_monthly,
+              id: OZER_STRIPE_PRICES.addon_signatures_starter_monthly,
               name: 'Signatures Starter',
               cost: 9,
               type: 'flat',
@@ -361,7 +370,7 @@ export default createBillingSchema({
           interval: 'year',
           lineItems: [
             {
-              id: KEEL_STRIPE_PRICES.addon_signatures_starter_yearly,
+              id: OZER_STRIPE_PRICES.addon_signatures_starter_yearly,
               name: 'Signatures Starter',
               cost: 90,
               type: 'flat',
@@ -375,7 +384,7 @@ export default createBillingSchema({
           interval: 'month',
           lineItems: [
             {
-              id: KEEL_STRIPE_PRICES.addon_signatures_team_monthly,
+              id: OZER_STRIPE_PRICES.addon_signatures_team_monthly,
               name: 'Signatures Team',
               cost: 19,
               type: 'flat',
@@ -389,7 +398,7 @@ export default createBillingSchema({
           interval: 'year',
           lineItems: [
             {
-              id: KEEL_STRIPE_PRICES.addon_signatures_team_yearly,
+              id: OZER_STRIPE_PRICES.addon_signatures_team_yearly,
               name: 'Signatures Team',
               cost: 190,
               type: 'flat',
@@ -403,7 +412,7 @@ export default createBillingSchema({
           interval: 'month',
           lineItems: [
             {
-              id: KEEL_STRIPE_PRICES.addon_signatures_office_monthly,
+              id: OZER_STRIPE_PRICES.addon_signatures_office_monthly,
               name: 'Signatures Office',
               cost: 39,
               type: 'flat',
@@ -417,7 +426,7 @@ export default createBillingSchema({
           interval: 'year',
           lineItems: [
             {
-              id: KEEL_STRIPE_PRICES.addon_signatures_office_yearly,
+              id: OZER_STRIPE_PRICES.addon_signatures_office_yearly,
               name: 'Signatures Office',
               cost: 390,
               type: 'flat',
@@ -433,10 +442,11 @@ export default createBillingSchema({
       ],
     },
     {
-      id: 'keel-addon-rankly',
+      id: 'ozer-addon-rankly',
       name: 'Rankly',
       description: 'SEO rankings, PageSpeed scheduling, AI insights, and keyword research',
-      currency: KEEL_BILLING_CURRENCY,
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: true,
       plans: [
         {
           id: 'rankly-monthly',
@@ -445,7 +455,7 @@ export default createBillingSchema({
           interval: 'month',
           lineItems: [
             {
-              id: KEEL_STRIPE_PRICES.addon_rankly_monthly,
+              id: OZER_STRIPE_PRICES.addon_rankly_monthly,
               name: 'Rankly',
               cost: 36,
               type: 'flat',
@@ -463,10 +473,11 @@ export default createBillingSchema({
       ],
     },
     {
-      id: 'keel-addon-feedflow',
+      id: 'ozer-addon-feedflow',
       name: 'Feedflow',
       description: 'Reviews and social content for your brand',
-      currency: KEEL_BILLING_CURRENCY,
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: true,
       plans: [
         {
           id: 'feedflow-monthly',
@@ -475,7 +486,7 @@ export default createBillingSchema({
           interval: 'month',
           lineItems: [
             {
-              id: KEEL_STRIPE_PRICES.addon_feedflow_monthly,
+              id: OZER_STRIPE_PRICES.addon_feedflow_monthly,
               name: 'Feedflow',
               cost: 9,
               type: 'flat',
@@ -486,10 +497,11 @@ export default createBillingSchema({
       features: ['Review widgets', 'Social accounts', 'Video snippets'],
     },
     {
-      id: 'keel-addon-videos-starter',
+      id: 'ozer-addon-videos-starter',
       name: 'Videos Starter',
       description: 'Hosted video for small libraries',
-      currency: KEEL_BILLING_CURRENCY,
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: true,
       plans: [
         {
           id: 'videos-starter-monthly',
@@ -498,7 +510,7 @@ export default createBillingSchema({
           interval: 'month',
           lineItems: [
             {
-              id: KEEL_STRIPE_PRICES.addon_videos_starter_monthly,
+              id: OZER_STRIPE_PRICES.addon_videos_starter_monthly,
               name: 'Videos (1–5)',
               cost: 5,
               type: 'flat',
@@ -516,10 +528,11 @@ export default createBillingSchema({
       ],
     },
     {
-      id: 'keel-addon-videos-growth',
+      id: 'ozer-addon-videos-growth',
       name: 'Videos Growth',
       description: 'Growing video libraries with analytics',
-      currency: KEEL_BILLING_CURRENCY,
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: true,
       plans: [
         {
           id: 'videos-growth-monthly',
@@ -528,7 +541,7 @@ export default createBillingSchema({
           interval: 'month',
           lineItems: [
             {
-              id: KEEL_STRIPE_PRICES.addon_videos_growth_monthly,
+              id: OZER_STRIPE_PRICES.addon_videos_growth_monthly,
               name: 'Videos (6–20)',
               cost: 12,
               type: 'flat',
@@ -547,10 +560,11 @@ export default createBillingSchema({
       ],
     },
     {
-      id: 'keel-addon-videos-pro',
+      id: 'ozer-addon-videos-pro',
       name: 'Videos Pro',
       description: 'Professional video hosting with full player control',
-      currency: KEEL_BILLING_CURRENCY,
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: true,
       plans: [
         {
           id: 'videos-pro-monthly',
@@ -559,7 +573,7 @@ export default createBillingSchema({
           interval: 'month',
           lineItems: [
             {
-              id: KEEL_STRIPE_PRICES.addon_videos_pro_monthly,
+              id: OZER_STRIPE_PRICES.addon_videos_pro_monthly,
               name: 'Videos (21–49)',
               cost: 29,
               type: 'flat',
@@ -577,10 +591,11 @@ export default createBillingSchema({
       ],
     },
     {
-      id: 'keel-addon-videos-studio',
+      id: 'ozer-addon-videos-studio',
       name: 'Videos Studio',
       description: 'Large video libraries with priority encoding',
-      currency: KEEL_BILLING_CURRENCY,
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: true,
       plans: [
         {
           id: 'videos-studio-monthly',
@@ -589,7 +604,7 @@ export default createBillingSchema({
           interval: 'month',
           lineItems: [
             {
-              id: KEEL_STRIPE_PRICES.addon_videos_studio_monthly,
+              id: OZER_STRIPE_PRICES.addon_videos_studio_monthly,
               name: 'Videos (50–100)',
               cost: 47,
               type: 'flat',

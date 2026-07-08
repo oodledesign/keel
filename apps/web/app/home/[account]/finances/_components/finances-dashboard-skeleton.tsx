@@ -7,11 +7,11 @@ const panelClass =
 export function FinancesDashboardSkeleton() {
   return (
     <div className="animate-in fade-in space-y-6 duration-200">
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className={cn(panelClass, 'p-4')}>
-            <Skeleton className="h-4 w-20 bg-[var(--workspace-shell-sidebar-accent)]" />
-            <Skeleton className="mt-3 h-8 w-32 bg-[var(--workspace-shell-sidebar-accent)]" />
+          <div key={i} className={cn(panelClass, 'min-w-0 p-2.5 sm:p-4')}>
+            <Skeleton className="h-3 w-14 bg-[var(--workspace-shell-sidebar-accent)] sm:h-4 sm:w-20" />
+            <Skeleton className="mt-2 h-4 w-16 bg-[var(--workspace-shell-sidebar-accent)] sm:mt-3 sm:h-8 sm:w-32" />
           </div>
         ))}
       </div>

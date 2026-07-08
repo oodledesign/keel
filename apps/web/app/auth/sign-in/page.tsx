@@ -8,6 +8,7 @@ import { Trans } from '@kit/ui/trans';
 
 import authConfig, { getSignInAuthProviders } from '~/config/auth.config';
 import pathsConfig from '~/config/paths.config';
+import { buildAuthLinkWithNext } from '~/lib/auth/signup-context';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
@@ -54,7 +55,10 @@ async function SignInPage({ searchParams }: SignInPageProps) {
 
       <div className={'flex justify-center'}>
         <Button asChild variant={'link'} size={'sm'}>
-          <Link href={pathsConfig.auth.signUp} prefetch={false}>
+          <Link
+            href={buildAuthLinkWithNext(pathsConfig.auth.signUp, next)}
+            prefetch={false}
+          >
             <Trans i18nKey={'auth:doNotHaveAccountYet'} />
           </Link>
         </Button>

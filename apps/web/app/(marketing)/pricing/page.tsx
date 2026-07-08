@@ -1,5 +1,8 @@
 import Link from 'next/link';
 
+import type { LucideIcon } from 'lucide-react';
+import { Activity, LayoutDashboard, ListTodo, Mail, Mic } from 'lucide-react';
+
 import { cn } from '@kit/ui/utils';
 import { marketingFeatureCard, marketingShellClass } from '~/lib/marketing/marketing-ui';
 import { PricingConversion } from '~/(marketing)/pricing/_components/pricing-conversion';
@@ -22,6 +25,27 @@ import {
   schemaGraph,
   softwareApplicationJsonLd,
 } from '~/lib/seo/schema';
+
+const STACK_EXTRAS: Array<{
+  label: string;
+  href: string;
+  icon: LucideIcon;
+}> = [
+  { label: 'Email Assistant', href: '/features/email-assistant', icon: Mail },
+  {
+    label: 'Meeting Assistant',
+    href: '/features/desktop-assistant',
+    icon: Mic,
+  },
+  { label: 'Activity tracking', href: '/features/activity', icon: Activity },
+  { label: 'AI Planner', href: '/features/planner', icon: LayoutDashboard },
+  { label: 'Tasks & pipeline', href: '/features/pipeline', icon: ListTodo },
+];
+
+function stackSavingPercent(stackYear: number, ozerYear: number): number | null {
+  if (stackYear <= 0 || ozerYear >= stackYear) return null;
+  return Math.floor(((stackYear - ozerYear) / stackYear) * 100);
+}
 
 export const metadata = buildMarketingMetadata({
   title: 'Pricing — flat team price — Ozer',
@@ -70,7 +94,9 @@ async function PricingPage() {
   ]);
 
   const stackYear = replacedStackMonthlyTotal() * 12;
-  const team = business.find((p) => p.productId === 'keel-business-team');
+  const team = business.find((p) => p.productId === 'ozer-business-team');
+  const teamYear = team?.yearlyPriceGbp ?? 790;
+  const savingPct = stackSavingPercent(stackYear, teamYear);
 
   return (
     <div className={cn('relative overflow-hidden', marketingShellClass)}>
@@ -93,14 +119,43 @@ async function PricingPage() {
             >
               What does this mean for your studio?
             </h2>
-            <p className="mt-2 max-w-2xl text-sm text-[var(--workspace-shell-text-muted)]">
-              A typical UK tool stack in our strip totals about {formatGbp(stackYear)} per
-              year. Ozer Business Team is {formatGbp(team?.yearlyPriceGbp ?? 790)} per year
-              — flat price for the whole team. Build your own stack below.
+            <p className="mt-2 max-w-3xl text-sm leading-relaxed text-[var(--workspace-shell-text-muted)]">
+              A typical UK tool stack in our strip totals about {formatGbp(stackYear)}{' '}
+              per year. Ozer Business Team is {formatGbp(teamYear)} per year — flat
+              price for the whole team
+              {savingPct != null ? (
+                <>
+                  {' '}
+                  (
+                  <span className="font-semibold text-[var(--ozer-coral-600)]">
+                    about {savingPct}% less
+                  </span>
+                  )
+                </>
+              ) : null}
+              . And that is not just the apps in the strip — you also get personal
+              assistants and tracking that usually sit in separate tools.
             </p>
+
+            <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              {STACK_EXTRAS.map(({ label, href, icon: Icon }) => (
+                <li key={label}>
+                  <Link
+                    href={href}
+                    className="flex items-center gap-2.5 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)]/60 px-3 py-2.5 text-sm font-medium text-[var(--workspace-shell-text)] transition-colors hover:border-[var(--ozer-accent)]/40 hover:bg-[var(--ozer-accent-subtle)]"
+                  >
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--ozer-accent-subtle)] text-[var(--ozer-coral-600)]">
+                      <Icon className="h-4 w-4" aria-hidden />
+                    </span>
+                    {label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+
             <Link
               href="/tools/stack-cost-calculator"
-              className="mt-4 inline-flex text-sm font-medium text-[var(--ozer-coral-600)] underline underline-offset-2"
+              className="mt-5 inline-flex text-sm font-medium text-[var(--ozer-coral-600)] underline underline-offset-2"
             >
               Open the stack cost calculator
             </Link>

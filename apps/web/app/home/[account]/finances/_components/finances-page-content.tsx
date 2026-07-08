@@ -9,6 +9,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowDownLeft,
   ArrowUpRight,
+  Info,
   Link2,
   RefreshCw,
   Sparkles,
@@ -18,6 +19,11 @@ import {
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@kit/ui/popover';
 import {
   Select,
   SelectContent,
@@ -64,7 +70,6 @@ import {
   categorizeFinanceTransactionAction,
   createManualTransactionAction,
   disconnectFreeAgentAction,
-  disconnectStarlingAction,
   importCsvTransactionsAction,
   loadFinancesDashboardAction,
   setFinanceTransactionLinksAction,
@@ -72,7 +77,6 @@ import {
   suggestCsvMappingAction,
   suggestTransactionCategoriesAction,
   syncFreeAgentAction,
-  syncStarlingAction,
 } from '../_lib/server/finances-actions';
 import { FinancesDashboardSkeleton } from './finances-dashboard-skeleton';
 
@@ -187,23 +191,6 @@ export function FinancesPageContent({
           await syncFreeAgentAction({ accountId, accountSlug });
           toast.success(
             'FreeAgent synced — transactions and categories imported',
-          );
-          await refresh({ background: true });
-        } catch {
-          toast.error('Connected, but initial sync failed — try Sync now');
-        }
-      });
-      router.replace(
-        pathsConfig.app.accountFinances.replace('[account]', accountSlug),
-      );
-    }
-    if (searchParams.get('finance_connected') === 'starling') {
-      toast.success('Starling connected');
-      startTransition(async () => {
-        try {
-          const result = await syncStarlingAction({ accountId, accountSlug });
-          toast.success(
-            `Starling synced — ${result.imported} new transaction${result.imported === 1 ? '' : 's'}`,
           );
           await refresh({ background: true });
         } catch {
@@ -396,20 +383,6 @@ export function FinancesPageContent({
     });
   };
 
-  const onSyncStarling = () => {
-    startTransition(async () => {
-      try {
-        const result = await syncStarlingAction({ accountId, accountSlug });
-        await refresh({ background: true });
-        toast.success(
-          `Synced ${result.imported} new Starling transaction${result.imported === 1 ? '' : 's'}`,
-        );
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Starling sync failed');
-      }
-    });
-  };
-
   const onSuggestCategories = () => {
     startTransition(async () => {
       try {
@@ -473,7 +446,6 @@ export function FinancesPageContent({
   };
 
   const connectFreeAgentUrl = `/api/integrations/freeagent/start?account=${encodeURIComponent(accountSlug)}`;
-  const connectStarlingUrl = `/api/integrations/starling/start?account=${encodeURIComponent(accountSlug)}`;
   const showSkeleton = loading || data === null;
 
   return (
@@ -528,7 +500,7 @@ export function FinancesPageContent({
             refreshing && 'pointer-events-none opacity-50',
           )}
         >
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
             <SummaryCard
               label="Income"
               value={formatPence(data.summary.incomePence)}
@@ -588,22 +560,13 @@ export function FinancesPageContent({
           <FinanceConnectionsPanel
             data={data}
             connectFreeAgentUrl={connectFreeAgentUrl}
-            connectStarlingUrl={connectStarlingUrl}
             pending={pending}
             onSyncFreeAgent={onSyncFreeAgent}
-            onSyncStarling={onSyncStarling}
             onDisconnectFreeAgent={() =>
               startTransition(async () => {
                 await disconnectFreeAgentAction({ accountId, accountSlug });
                 await refresh({ background: true });
                 toast.success('FreeAgent disconnected');
-              })
-            }
-            onDisconnectStarling={() =>
-              startTransition(async () => {
-                await disconnectStarlingAction({ accountId, accountSlug });
-                await refresh({ background: true });
-                toast.success('Starling disconnected');
               })
             }
           />
@@ -647,57 +610,38 @@ export function FinancesPageContent({
 function FinanceConnectionsPanel({
   data,
   connectFreeAgentUrl,
-  connectStarlingUrl,
   pending,
   onSyncFreeAgent,
-  onSyncStarling,
   onDisconnectFreeAgent,
-  onDisconnectStarling,
 }: {
   data: DashboardData | null;
   connectFreeAgentUrl: string;
-  connectStarlingUrl: string;
   pending: boolean;
   onSyncFreeAgent: () => void;
-  onSyncStarling: () => void;
   onDisconnectFreeAgent: () => void;
-  onDisconnectStarling: () => void;
 }) {
   return (
-    <div className="space-y-4">
-      <FinanceProviderCard
-        title="FreeAgent"
-        connected={Boolean(data?.connection)}
-        configured={Boolean(data?.freeAgentConfigured)}
-        description={
-          data?.connection
-            ? `Connected to ${data.connection.freeagent_company_name ?? 'FreeAgent'}. Ozer is your UI; FreeAgent stays the ledger. Categories sync from FreeAgent on each sync. When you categorise here, Ozer writes a bank transaction explanation in FreeAgent. New transactions sync automatically each morning; use Sync now for a full refresh.`
-            : 'Connect FreeAgent to import bank transactions and categories. Categorise in Ozer and sync explanations back to FreeAgent.'
-        }
-        configuredHint="Set FREEAGENT_CLIENT_ID and FREEAGENT_CLIENT_SECRET to enable."
-        connectUrl={connectFreeAgentUrl}
-        pending={pending}
-        onSync={onSyncFreeAgent}
-        onDisconnect={onDisconnectFreeAgent}
-        lastSyncAt={data?.connection?.last_sync_at ?? null}
-      />
-      <FinanceProviderCard
-        title="Starling Bank"
-        connected={Boolean(data?.starlingConnection)}
-        configured={Boolean(data?.starlingConfigured)}
-        description={
-          data?.starlingConnection
-            ? 'Connected to Starling. Transactions import from your business account feed into the same Finances view. Use Sync now for a full refresh; incremental sync runs on the morning cron.'
-            : 'Connect your Starling business account to import bank transactions automatically.'
-        }
-        configuredHint="Set STARLING_CLIENT_ID and STARLING_CLIENT_SECRET to enable (use STARLING_SANDBOX=true for sandbox)."
-        connectUrl={connectStarlingUrl}
-        pending={pending}
-        onSync={onSyncStarling}
-        onDisconnect={onDisconnectStarling}
-        lastSyncAt={data?.starlingConnection?.last_sync_at ?? null}
-      />
-    </div>
+    <FinanceProviderCard
+      title="FreeAgent"
+      connected={Boolean(data?.connection)}
+      configured={Boolean(data?.freeAgentConfigured)}
+      connectedLabel={
+        data?.connection
+          ? `Connected to ${data.connection.freeagent_company_name ?? 'FreeAgent'}`
+          : null
+      }
+      info={
+        data?.connection
+          ? 'Ozer is your UI; FreeAgent stays the ledger. Categories sync from FreeAgent on each sync. When you categorise here, Ozer writes a bank transaction explanation in FreeAgent. New transactions sync automatically each morning; use Sync now for a full refresh.'
+          : 'Connect FreeAgent to import bank transactions and categories. Categorise in Ozer and sync explanations back to FreeAgent.'
+      }
+      configuredHint="Set FREEAGENT_CLIENT_ID and FREEAGENT_CLIENT_SECRET to enable."
+      connectUrl={connectFreeAgentUrl}
+      pending={pending}
+      onSync={onSyncFreeAgent}
+      onDisconnect={onDisconnectFreeAgent}
+      lastSyncAt={data?.connection?.last_sync_at ?? null}
+    />
   );
 }
 
@@ -705,7 +649,8 @@ function FinanceProviderCard({
   title,
   connected,
   configured,
-  description,
+  connectedLabel,
+  info,
   configuredHint,
   connectUrl,
   pending,
@@ -716,7 +661,8 @@ function FinanceProviderCard({
   title: string;
   connected: boolean;
   configured: boolean;
-  description: string;
+  connectedLabel: string | null;
+  info: string;
   configuredHint: string;
   connectUrl: string;
   pending: boolean;
@@ -727,16 +673,41 @@ function FinanceProviderCard({
   return (
     <div className={cn(panelClass, 'p-4')}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h3 className="font-medium text-[var(--workspace-shell-text)]">{title}</h3>
-          <p className="text-sm text-[var(--workspace-shell-text-muted)]">{description}</p>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <h3 className="font-medium text-[var(--workspace-shell-text)]">
+              {title}
+            </h3>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
+                  aria-label={`${title} info`}
+                >
+                  <Info className="h-3.5 w-3.5" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent
+                align="start"
+                className="max-w-xs text-sm leading-relaxed"
+              >
+                {info}
+              </PopoverContent>
+            </Popover>
+          </div>
+          {connected && connectedLabel ? (
+            <p className="mt-0.5 text-sm text-[var(--workspace-shell-text-muted)]">
+              {connectedLabel}
+            </p>
+          ) : null}
           {connected && lastSyncAt ? (
             <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
               Last synced {new Date(lastSyncAt).toLocaleString('en-GB')}
             </p>
           ) : null}
         </div>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 gap-2">
           {connected ? (
             <>
               <Button
@@ -762,14 +733,20 @@ function FinanceProviderCard({
               </Button>
             </>
           ) : configured ? (
-            <Button type="button" asChild className="bg-[var(--ozer-accent)] text-[var(--ozer-white)]">
+            <Button
+              type="button"
+              asChild
+              className="bg-[var(--ozer-accent)] text-[var(--ozer-white)]"
+            >
               <a href={connectUrl}>
                 <Link2 className="mr-2 h-4 w-4" />
                 Connect {title}
               </a>
             </Button>
           ) : (
-            <p className="text-xs text-[var(--workspace-shell-text-muted)]">{configuredHint}</p>
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+              {configuredHint}
+            </p>
           )}
         </div>
       </div>
@@ -1038,14 +1015,14 @@ function SummaryCard({
   tone: 'positive' | 'negative';
 }) {
   return (
-    <div className={cn(panelClass, 'p-4')}>
-      <div className="flex items-center gap-2 text-[var(--workspace-shell-text-muted)]">
-        <Icon className="h-4 w-4" />
-        <span className="text-sm">{label}</span>
+    <div className={cn(panelClass, 'min-w-0 p-2.5 sm:p-4')}>
+      <div className="flex items-center gap-1 text-[var(--workspace-shell-text-muted)] sm:gap-2">
+        <Icon className="h-3 w-3 shrink-0 sm:h-4 sm:w-4" />
+        <span className="truncate text-[11px] sm:text-sm">{label}</span>
       </div>
       <p
         className={cn(
-          'mt-2 text-2xl font-semibold',
+          'mt-1 truncate text-sm font-semibold tabular-nums sm:mt-2 sm:text-2xl',
           tone === 'positive' ? 'text-emerald-400' : 'text-red-300',
         )}
       >
