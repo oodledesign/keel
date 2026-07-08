@@ -21,8 +21,8 @@ export type SignupContext = {
 
 const PERSONAL_FIRST_HIGHLIGHTS = [
   'Free personal account — tasks, planner & pipeline',
-  'Add a business workspace when you’re ready',
-  'Most studios choose Solo or Team',
+  'Workspaces are optional — add one when you need it',
+  'Most studios later choose Solo or Team',
 ] as const;
 
 const PROFILE_LABEL: Record<WorkspaceProfile, string> = {
@@ -71,10 +71,30 @@ export function resolveSignupContext(next: string | undefined): SignupContext {
     return {
       heading: 'Create your free personal account',
       subheading:
-        'Ozer starts with you. After signup you can add a business workspace — Solo or Team for the full studio, or Lite just for apps.',
+        'Your personal hub is free forever. After signup you can add a business, family, or community workspace — or explore personal-only first.',
       badge: 'Free forever · no card to start',
       highlights: [...PERSONAL_FIRST_HIGHLIGHTS],
       intent: null,
+    };
+  }
+
+  // Empty setup path = personal-only intent from /start
+  if (
+    !intent.profile &&
+    !intent.productId &&
+    !intent.planId
+  ) {
+    return {
+      heading: 'Create your free personal account',
+      subheading:
+        'No workspace required yet — start with personal tasks, planner, and pipeline. Add Solo, Team, or family when you need them.',
+      badge: 'Personal free · workspaces optional',
+      highlights: [
+        'Free personal account — always yours',
+        'No credit card required',
+        'Add a business workspace anytime',
+      ],
+      intent,
     };
   }
 

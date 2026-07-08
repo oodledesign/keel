@@ -83,7 +83,7 @@ export function MarketingHomeHero() {
           className={`mt-4 text-sm ${marketingMutedText}`}
           {...fadeUpProps(0.32, 0.32)}
         >
-          Free personal account · add Solo or Team when you need the studio stack
+          Free forever · optional workspaces after signup
         </motion.p>
       </div>
 

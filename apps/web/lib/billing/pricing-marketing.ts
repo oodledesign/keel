@@ -163,15 +163,10 @@ export function buildPricingSignupUrl(params: {
 }
 
 /**
- * Default marketing "Start free": personal account first, then recommend
- * Business Solo (the freelancers / small-studio path we want people on).
+ * Default marketing "Start free": chooser that makes personal-first obvious,
+ * then optional workspace (Solo / Team / Lite / family / community).
  */
-export const MARKETING_FREE_SIGNUP_URL = buildPricingSignupUrl({
-  profile: 'work_design',
-  productId: 'ozer-business-solo',
-  planId: 'business-solo-monthly',
-  interval: 'month',
-});
+export const MARKETING_FREE_SIGNUP_URL = '/start';
 
 /** Apps / Signatures surfaces that specifically push free Business Lite. */
 export const MARKETING_BUSINESS_LITE_SIGNUP_URL = buildPricingSignupUrl({
