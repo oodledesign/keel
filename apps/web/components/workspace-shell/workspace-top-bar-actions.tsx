@@ -1,5 +1,7 @@
 'use client';
 
+import { useMemo } from 'react';
+
 import { NotificationsPopover } from '@kit/notifications/components';
 import type { JWTUserData } from '@kit/supabase/types';
 
@@ -34,10 +36,11 @@ export function WorkspaceMobileTopActions(
         accountId?: string;
       } & WorkspaceTopBarBaseProps),
 ) {
-  const notificationAccountIds = [
-    props.userId,
-    props.variant === 'team' ? props.accountId : props.accountId,
-  ].filter((id): id is string => Boolean(id));
+  const notificationAccountIds = useMemo(
+    () =>
+      [props.userId, props.accountId].filter((id): id is string => Boolean(id)),
+    [props.accountId, props.userId],
+  );
 
   return (
     <div className="flex shrink-0 items-center gap-1">
@@ -65,10 +68,11 @@ export function WorkspaceDesktopTopBar(
       } & WorkspaceTopBarBaseProps),
 ) {
   const showNew = props.showNewMenu ?? true;
-  const notificationAccountIds = [
-    props.userId,
-    props.variant === 'team' ? props.accountId : props.accountId,
-  ].filter((id): id is string => Boolean(id));
+  const notificationAccountIds = useMemo(
+    () =>
+      [props.userId, props.accountId].filter((id): id is string => Boolean(id)),
+    [props.accountId, props.userId],
+  );
 
   return (
     <header className="sticky top-0 z-30 hidden h-14 shrink-0 items-center justify-end gap-2 border-0 bg-transparent px-4 lg:flex lg:px-6">

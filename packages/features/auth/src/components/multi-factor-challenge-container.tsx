@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useEffectEvent } from 'react';
+import { useCallback, useEffect, useEffectEvent, useRef } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -69,13 +69,18 @@ export function MultiFactorChallengeContainer({
     control: verificationCodeForm.control,
   });
 
+  const handleSelectFactor = useCallback(
+    (selectedFactorId: string) => {
+      verificationCodeForm.setValue('factorId', selectedFactorId);
+    },
+    [verificationCodeForm],
+  );
+
   if (!factorId) {
     return (
       <FactorsListContainer
         userId={userId}
-        onSelect={(factorId) => {
-          verificationCodeForm.setValue('factorId', factorId);
-        }}
+        onSelect={handleSelectFactor}
       />
     );
   }
@@ -250,6 +255,7 @@ function FactorsListContainer({
 }>) {
   const signOut = useSignOut();
   const { data: factors, isLoading, error } = useFetchAuthFactors(userId);
+  const autoSelectedRef = useRef(false);
 
   const isSuccess = factors && !isLoading && !error;
 
@@ -265,15 +271,17 @@ function FactorsListContainer({
   }, [error]);
 
   useEffect(() => {
-    // If there is only one factor, select it automatically
-    if (isSuccess && factors.totp.length === 1) {
-      const factorId = factors.totp[0]?.id;
-
-      if (factorId) {
-        onSelect(factorId);
-      }
+    if (autoSelectedRef.current || !isSuccess || factors.totp.length !== 1) {
+      return;
     }
-  });
+
+    const factorId = factors.totp[0]?.id;
+
+    if (factorId) {
+      autoSelectedRef.current = true;
+      onSelect(factorId);
+    }
+  }, [factors, isSuccess, onSelect]);
 
   if (isLoading) {
     return (

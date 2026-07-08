@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useEffectEvent } from 'react';
 
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
 import { analytics } from '@kit/analytics';
 import {
@@ -113,16 +113,16 @@ export function AnalyticsProvider(props: React.PropsWithChildren) {
  */
 function useReportPageView(reportAnalyticsFn: (url: string) => unknown) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
 
   const callAnalyticsOnPathChange = useEffectEvent(() => {
-    const url = [pathname, searchParams.toString()].filter(Boolean).join('?');
+    const search =
+      typeof window !== 'undefined' ? window.location.search.replace(/^\?/, '') : '';
+    const url = [pathname, search].filter(Boolean).join('?');
 
     return reportAnalyticsFn(url);
   });
 
   useEffect(() => {
     callAnalyticsOnPathChange();
-    // call whenever the pathname changes
   }, [pathname]);
 }

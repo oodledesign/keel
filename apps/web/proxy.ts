@@ -277,9 +277,9 @@ async function personalAppAuthHandler(req: NextRequest, res: NextResponse) {
     await checkRequiresMultiFactorAuthentication(supabase);
 
   if (requiresMultiFactorAuthentication) {
-    return NextResponse.redirect(
-      new URL(pathsConfig.auth.verifyMfa, origin).href,
-    );
+    const verifyUrl = new URL(pathsConfig.auth.verifyMfa, origin);
+    verifyUrl.searchParams.set('next', `${next}${req.nextUrl.search}`);
+    return NextResponse.redirect(verifyUrl.href);
   }
 
   if (

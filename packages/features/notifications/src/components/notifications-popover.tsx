@@ -15,7 +15,13 @@ import { cn } from '@kit/ui/utils';
 import { useDismissNotification, useFetchNotifications } from '../hooks';
 import { Notification } from '../types';
 
-export function NotificationsPopover(params: {
+export function NotificationsPopover({
+  realtime,
+  accountIds,
+  onClick,
+  shouldSurfaceNotification,
+  onNotificationSuppressed,
+}: {
   realtime: boolean;
   accountIds: string[];
   onClick?: (notification: Notification) => void;
@@ -49,13 +55,13 @@ export function NotificationsPopover(params: {
           continue;
         }
 
-        const shouldSurface = params.shouldSurfaceNotification
-          ? await params.shouldSurfaceNotification(notification)
+        const shouldSurface = shouldSurfaceNotification
+          ? await shouldSurfaceNotification(notification)
           : true;
 
         if (!shouldSurface) {
           nextSilenced.push(notification);
-          await params.onNotificationSuppressed?.(notification);
+          await onNotificationSuppressed?.(notification);
           continue;
         }
 
@@ -78,15 +84,15 @@ export function NotificationsPopover(params: {
         });
       }
     },
-    [params],
+    [onNotificationSuppressed, shouldSurfaceNotification],
   );
 
   const dismissNotification = useDismissNotification();
 
   useFetchNotifications({
     onNotifications: handleIncoming,
-    accountIds: params.accountIds,
-    realtime: params.realtime,
+    accountIds,
+    realtime,
     includeMuted: true,
   });
 
@@ -259,8 +265,8 @@ export function NotificationsPopover(params: {
                   isSilenced && 'bg-white/[0.03] opacity-70',
                 )}
                 onClick={() => {
-                  if (params.onClick) {
-                    params.onClick(notification);
+                  if (onClick) {
+                    onClick(notification);
                   }
                 }}
               >
