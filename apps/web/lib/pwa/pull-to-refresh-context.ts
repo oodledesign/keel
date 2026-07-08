@@ -1,25 +1,40 @@
 import { isStandalonePwa } from './is-standalone-pwa';
 import { isNoteEditorRoute } from './is-note-editor-route';
+import {
+  isWorkspaceDashboardHome,
+  normalizePublicPathname,
+} from './normalize-public-pathname';
+
+export { isWorkspaceDashboardHome, normalizePublicPathname };
 
 const MOBILE_MAX_WIDTH = 1023;
 
-/** Workspace dashboard home, e.g. /app/oodle — disable pull-to-refresh to avoid refresh loops. */
-export function isWorkspaceDashboardHome(pathname: string): boolean {
-  return /^\/app\/[^/]+\/?$/.test(pathname);
+function resolvePullToRefreshPathname(): string {
+  if (typeof window === 'undefined') {
+    return currentPathname;
+  }
+
+  return normalizePublicPathname(
+    window.location.pathname || currentPathname,
+  );
 }
 
 let currentPathname =
-  typeof window !== 'undefined' ? window.location.pathname : '';
+  typeof window !== 'undefined'
+    ? normalizePublicPathname(window.location.pathname)
+    : '';
 
 const pathnameListeners = new Set<() => void>();
 
 /** Keep pull-to-refresh in sync with client navigations. */
 export function syncPullToRefreshPathname(pathname: string) {
-  if (currentPathname === pathname) {
+  const normalized = normalizePublicPathname(pathname);
+
+  if (currentPathname === normalized) {
     return;
   }
 
-  currentPathname = pathname;
+  currentPathname = normalized;
   pathnameListeners.forEach((listener) => listener());
 }
 
@@ -46,11 +61,13 @@ export function isPullToRefreshEnabled(): boolean {
     return false;
   }
 
-  if (isNoteEditorRoute(currentPathname)) {
+  const pathname = resolvePullToRefreshPathname();
+
+  if (isNoteEditorRoute(pathname)) {
     return false;
   }
 
-  if (isWorkspaceDashboardHome(currentPathname)) {
+  if (isWorkspaceDashboardHome(pathname)) {
     return false;
   }
 

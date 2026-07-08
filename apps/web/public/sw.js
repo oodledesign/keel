@@ -1,4 +1,4 @@
-const CACHE = 'keel-static-v4';
+const CACHE = 'keel-static-v5';
 const PRECACHE = ['/manifest.webmanifest', '/images/brand/pwa-icon-512.png'];
 
 self.addEventListener('message', (event) => {

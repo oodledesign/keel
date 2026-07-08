@@ -20,6 +20,8 @@ import { MOBILE_FLOATING_CHROME_SCROLL_PB } from '~/lib/mobile-nav/mobile-floati
 import { scrollWheelDeltaToScrollParent } from '~/lib/scroll-passthrough';
 import {
   isPullToRefreshEnabled,
+  isWorkspaceDashboardHome,
+  normalizePublicPathname,
   subscribePullToRefreshContext,
 } from '~/lib/pwa/pull-to-refresh-context';
 
@@ -75,6 +77,14 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
 
   const handleRefresh = useCallback(() => {
     if (refreshingRef.current || globalRefreshInFlight) return;
+
+    if (typeof window !== 'undefined') {
+      const pathname = normalizePublicPathname(window.location.pathname);
+      if (isWorkspaceDashboardHome(pathname)) {
+        setPullDistance(0);
+        return;
+      }
+    }
 
     const now = Date.now();
     if (now - lastGlobalRefreshAt < REFRESH_COOLDOWN_MS) {

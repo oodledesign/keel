@@ -22,7 +22,9 @@ import {
 } from '~/components/workspace-shell/workspace-mobile-nav';
 import type { MobileBottomNavTab } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
 import { isNoteEditorRoute } from '~/lib/pwa/is-note-editor-route';
-import { syncPullToRefreshPathname } from '~/lib/pwa/pull-to-refresh-context';
+import {
+  syncPullToRefreshPathname,
+} from '~/lib/pwa/pull-to-refresh-context';
 import { WorkspaceMobileScrollLock } from '~/lib/pwa/workspace-mobile-scroll-lock';
 import { Suspense } from 'react';
 

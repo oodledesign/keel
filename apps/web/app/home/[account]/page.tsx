@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation';
-import { Suspense } from 'react';
 
 import { PageBody } from '@kit/ui/page';
 
@@ -69,13 +68,11 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
     ));
 
   const shortcutsBar = (
-    <Suspense fallback={null}>
-      <WorkspaceDashboardShortcutsBar
-        accountId={accountId}
-        accountSlug={account}
-        accountName={accountLabel}
-      />
-    </Suspense>
+    <WorkspaceDashboardShortcutsBar
+      accountId={accountId}
+      accountSlug={account}
+      accountName={accountLabel}
+    />
   );
 
   if (spaceType === 'property') {
@@ -185,15 +182,13 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
   const data = await loadDashboardPageData(account);
 
   const businessShortcutsBar = (
-    <Suspense fallback={null}>
-      <WorkspaceDashboardShortcutsBar
-        accountId={accountId}
-        accountSlug={account}
-        accountName={data.accountName}
-        compact
-        embedded
-      />
-    </Suspense>
+    <WorkspaceDashboardShortcutsBar
+      accountId={accountId}
+      accountSlug={account}
+      accountName={data.accountName}
+      compact
+      embedded
+    />
   );
 
   return (
