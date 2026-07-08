@@ -4,12 +4,24 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { findPlanByStripePriceId } from '~/lib/billing/ozer-plan-catalog';
 
+/**
+ * Monthly AI credit pools by plan.
+ * Pools scale with team size but stay sub-linear vs seats so Team/Scale
+ * stay commercially viable vs Solo (not just seat × Solo quota).
+ *
+ * Approx headroom: Solo 2k / 1 · Team 5k / 5 · Scale 12k / 15
+ */
 export const TIER_CREDIT_LIMITS: Record<string, number> = {
   free: 200,
   trial: 200,
   'business-lite-free': 500,
-  business: 2000,
-  agency: 10000,
+  'business-solo': 2_000,
+  'business-team': 5_000,
+  'business-scale': 12_000,
+  /** @deprecated Alias — prefer business-solo */
+  business: 2_000,
+  /** Legacy agency key — align with Scale pool */
+  agency: 12_000,
 };
 
 export const DEFAULT_CREDITS = 200;
@@ -19,8 +31,14 @@ const ACTIVE_SUB_STATUSES = new Set(['active', 'trialing']);
 function mapPlanIdToTierKey(planId: string | null | undefined): string | null {
   if (!planId) return null;
   if (planId in TIER_CREDIT_LIMITS) return planId;
-  if (planId === 'business-lite-free') return 'business-lite-free';
-  if (planId.startsWith('business-')) return 'business';
+
+  if (planId === 'business-lite-free' || planId.startsWith('business-lite')) {
+    return 'business-lite-free';
+  }
+  if (planId.startsWith('business-solo')) return 'business-solo';
+  if (planId.startsWith('business-team')) return 'business-team';
+  if (planId.startsWith('business-scale')) return 'business-scale';
+  if (planId.startsWith('business-')) return 'business-solo';
   if (planId.includes('agency')) return 'agency';
   return null;
 }

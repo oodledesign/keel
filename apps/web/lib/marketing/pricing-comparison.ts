@@ -69,7 +69,7 @@ function workComparison(): SegmentPricingComparison {
           },
           {
             feature: 'Team members included',
-            hint: 'Seats in this workspace. Extra seats may be available on request.',
+            hint: 'Seats in this workspace. On Scale, request more users anytime.',
             values: v('3', '1', '5', '15'),
           },
           {
@@ -84,8 +84,8 @@ function workComparison(): SegmentPricingComparison {
           },
           {
             feature: 'Monthly AI credits',
-            hint: 'Shared allowance for AI drafts, summaries, and assistant features on this account.',
-            values: v('500', '2,000', '2,000', '2,000'),
+            hint: 'Shared workspace pool for AI drafts, summaries, and assistants. Buy more packs anytime from Billing.',
+            values: v('500', '2,000', '5,000', '12,000'),
           },
         ],
       },

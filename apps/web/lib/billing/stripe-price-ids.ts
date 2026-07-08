@@ -112,6 +112,18 @@ export const OZER_STRIPE_PRICES = {
     'STRIPE_PRICE_ADDON_EMAIL_ASSISTANT_MONTHLY',
     'price_ozer_addon_email_assistant_monthly',
   ),
+  ai_credits_boost: price(
+    'STRIPE_PRICE_AI_CREDITS_BOOST',
+    'price_ozer_ai_credits_boost',
+  ),
+  ai_credits_studio: price(
+    'STRIPE_PRICE_AI_CREDITS_STUDIO',
+    'price_ozer_ai_credits_studio',
+  ),
+  ai_credits_agency: price(
+    'STRIPE_PRICE_AI_CREDITS_AGENCY',
+    'price_ozer_ai_credits_agency',
+  ),
 } as const;
 
 export const OZER_BILLING_CURRENCY =

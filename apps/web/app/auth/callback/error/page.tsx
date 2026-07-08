@@ -10,6 +10,8 @@ import { Trans } from '@kit/ui/trans';
 import pathsConfig from '~/config/paths.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
+import { AuthFormCard } from '../../_components/auth-form-card';
+
 interface AuthCallbackErrorPageProps {
   searchParams: Promise<{
     error: string;
@@ -25,23 +27,25 @@ async function AuthCallbackErrorPage(props: AuthCallbackErrorPageProps) {
   const redirectPath = callback ?? pathsConfig.auth.callback;
 
   return (
-    <div className={'flex flex-col space-y-4 py-4'}>
-      <Alert variant={'warning'}>
-        <AlertTitle>
-          <Trans i18nKey={'auth:authenticationErrorAlertHeading'} />
-        </AlertTitle>
+    <AuthFormCard className="max-w-md">
+      <div className="flex flex-col space-y-4">
+        <Alert variant="warning">
+          <AlertTitle>
+            <Trans i18nKey={'auth:authenticationErrorAlertHeading'} />
+          </AlertTitle>
 
-        <AlertDescription>
-          <Trans i18nKey={error ?? 'auth:authenticationErrorAlertBody'} />
-        </AlertDescription>
-      </Alert>
+          <AlertDescription>
+            <Trans i18nKey={error ?? 'auth:authenticationErrorAlertBody'} />
+          </AlertDescription>
+        </Alert>
 
-      <AuthCallbackForm
-        code={code}
-        signInPath={signInPath}
-        redirectPath={redirectPath}
-      />
-    </div>
+        <AuthCallbackForm
+          code={code}
+          signInPath={signInPath}
+          redirectPath={redirectPath}
+        />
+      </div>
+    </AuthFormCard>
   );
 }
 
@@ -60,7 +64,7 @@ function AuthCallbackForm(props: {
 
 function SignInButton(props: { signInPath: string }) {
   return (
-    <Button className={'w-full'} asChild>
+    <Button className="w-full" asChild>
       <Link href={props.signInPath}>
         <Trans i18nKey={'auth:signIn'} />
       </Link>

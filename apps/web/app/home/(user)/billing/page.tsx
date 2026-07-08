@@ -9,6 +9,7 @@ import { requireUserInServerComponent } from '~/lib/server/require-user-in-serve
 import { HomeLayoutPageHeader } from '../_components/home-page-header';
 import { UserSubscriptionsHub } from './_components/user-subscriptions-hub';
 import { PersonalEmailAssistantBillingCard } from './_components/personal-email-assistant-billing-card';
+import { PersonalAiCreditsBillingCard } from './_components/personal-ai-credits-billing-card';
 import { loadUserSubscriptionsHub } from './_lib/server/user-subscriptions-hub.loader';
 import { PersonalAccountCheckoutForm } from './_components/personal-account-checkout-form';
 import { loadPersonalAccountBillingPageData } from './_lib/server/personal-account-billing-page.loader';
@@ -63,6 +64,7 @@ async function PersonalAccountBillingPage({
             active={personalAddons.emailAssistant}
             highlighted={params.addon === 'email-assistant'}
           />
+          <PersonalAiCreditsBillingCard accountId={user.id} />
           <UserSubscriptionsHub
             rows={hubRows}
             stripePortalAction={

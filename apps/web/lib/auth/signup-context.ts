@@ -20,9 +20,9 @@ export type SignupContext = {
 };
 
 const PERSONAL_FIRST_HIGHLIGHTS = [
-  'Free personal account — tasks, planner & pipeline',
+  'Free personal hub — tasks, people, notes & planner',
   'Workspaces are optional — add one when you need it',
-  'Most studios later choose Solo or Team',
+  'Apps like Signatures start on free Business Lite',
 ] as const;
 
 const PROFILE_LABEL: Record<WorkspaceProfile, string> = {
@@ -87,11 +87,11 @@ export function resolveSignupContext(next: string | undefined): SignupContext {
     return {
       heading: 'Create your free personal account',
       subheading:
-        'No workspace required yet — start with personal tasks, planner, and pipeline. Add Solo, Team, or family when you need them.',
+        'No workspace required yet — start with personal tasks, people, notes, and planner. Add Solo, Team, or family when you need them.',
       badge: 'Personal free · workspaces optional',
       highlights: [
         'Free personal account — always yours',
-        'No credit card required',
+        'People, notes, tasks & planner included',
         'Add a business workspace anytime',
       ],
       intent,
@@ -112,8 +112,8 @@ export function resolveSignupContext(next: string | undefined): SignupContext {
         'Your personal hub comes first. Next you’ll add a free Business Lite workspace to install apps like Signatures.',
       badge: 'Free personal + Lite · no card',
       highlights: [
-        'Free personal tasks, planner & pipeline',
-        'Business Lite workspace for apps',
+        'Free personal tasks, people, notes & planner',
+        'Business Lite workspace for apps like Signatures',
         'Upgrade to Solo or Team when you need CRM',
       ],
       intent,

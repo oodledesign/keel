@@ -29,6 +29,21 @@ export function toLocalDateYmd(date = new Date()): string {
   return `${y}-${m}-${d}`;
 }
 
+/** Shift a local YYYY-MM-DD by `delta` calendar days. */
+export function shiftLocalDateYmd(dateYmd: string, delta: number): string {
+  const [y, m, d] = dateYmd.split('-').map(Number);
+  const date = new Date(y!, (m ?? 1) - 1, d ?? 1, 12, 0, 0, 0);
+  date.setDate(date.getDate() + delta);
+  return toLocalDateYmd(date);
+}
+
+export function dayViewHrefWithDate(baseHref: string, dateYmd: string): string {
+  const today = toLocalDateYmd();
+  if (dateYmd === today) return baseHref;
+  const sep = baseHref.includes('?') ? '&' : '?';
+  return `${baseHref}${sep}date=${encodeURIComponent(dateYmd)}`;
+}
+
 export function loadStoredPlan(
   scope: PlannerScope,
   dateYmd: string,

@@ -12,6 +12,8 @@ import {
   Check,
   Heart,
   Home,
+  Layers,
+  PenLine,
   UsersRound,
 } from 'lucide-react';
 
@@ -39,10 +41,11 @@ type Step = 'personal' | 'workspace' | 'business';
 type WorkspaceChoice =
   | 'personal_only'
   | 'business'
+  | 'apps'
   | 'family'
   | 'community';
 
-type BusinessTier = 'lite' | 'solo' | 'team';
+type BusinessTier = 'lite' | 'solo' | 'team' | 'scale';
 
 function planByProductId(productId: string) {
   return MARKETING_WORKSPACE_PLANS.find((plan) => plan.productId === productId);
@@ -62,6 +65,7 @@ const workspaceOptions: Array<{
   icon: typeof Home;
   /** null = free; otherwise lowest monthly product price for that workspace type. */
   priceProductId: string | null;
+  emphasized?: boolean;
 }> = [
   {
     value: 'personal_only',
@@ -71,9 +75,18 @@ const workspaceOptions: Array<{
     priceProductId: null,
   },
   {
+    value: 'apps',
+    title: 'I mainly want an app (e.g. Signatures)',
+    description:
+      'Free Business Lite — install Signatures and other apps. No CRM or clients.',
+    icon: PenLine,
+    priceProductId: null,
+    emphasized: true,
+  },
+  {
     value: 'business',
     title: 'Add a business workspace',
-    description: 'Clients, projects, and invoices — Lite, Solo, or Team.',
+    description: 'Clients, projects, and invoices — Solo, Team, or Scale.',
     icon: Briefcase,
     priceProductId: 'ozer-business-solo',
   },
@@ -103,24 +116,25 @@ export function StartFlowClient() {
 
   const solo = planByProductId('ozer-business-solo');
   const team = planByProductId('ozer-business-team');
+  const scale = planByProductId('ozer-business-scale');
   const lite = planByProductId('ozer-business-lite');
 
   const signupHref = useMemo(() => {
     if (workspace === 'personal_only' || workspace === null) {
       return buildPricingSignupUrl({});
     }
-    if (workspace === 'family') {
-      return buildPricingSignupUrl({ profile: 'family' });
-    }
-    if (workspace === 'community') {
-      return buildPricingSignupUrl({ profile: 'community' });
-    }
-    if (businessTier === 'lite') {
+    if (workspace === 'apps' || businessTier === 'lite') {
       return buildPricingSignupUrl({
         profile: 'work_design',
         productId: 'ozer-business-lite',
         planId: 'business-lite-free',
       });
+    }
+    if (workspace === 'family') {
+      return buildPricingSignupUrl({ profile: 'family' });
+    }
+    if (workspace === 'community') {
+      return buildPricingSignupUrl({ profile: 'community' });
     }
     if (businessTier === 'team') {
       return buildPricingSignupUrl({
@@ -130,13 +144,27 @@ export function StartFlowClient() {
         interval: 'month',
       });
     }
+    if (businessTier === 'scale') {
+      return buildPricingSignupUrl({
+        profile: 'work_design',
+        productId: 'ozer-business-scale',
+        planId: scale?.monthlyPlanId ?? 'business-scale-monthly',
+        interval: 'month',
+      });
+    }
     return buildPricingSignupUrl({
       profile: 'work_design',
       productId: 'ozer-business-solo',
       planId: solo?.monthlyPlanId ?? 'business-solo-monthly',
       interval: 'month',
     });
-  }, [workspace, businessTier, solo?.monthlyPlanId, team?.monthlyPlanId]);
+  }, [
+    workspace,
+    businessTier,
+    solo?.monthlyPlanId,
+    team?.monthlyPlanId,
+    scale?.monthlyPlanId,
+  ]);
 
   const stepIndex = step === 'personal' ? 0 : step === 'workspace' ? 1 : 2;
   const totalSteps = workspace === 'business' || step === 'business' ? 3 : 2;
@@ -241,8 +269,8 @@ export function StartFlowClient() {
               Want another workspace?
             </h1>
             <p className={cn('mx-auto max-w-lg text-base leading-relaxed', marketingBodyText)}>
-              Your personal account is always free. Add a workspace now, or start
-              personal-only and come back when you need one.
+              Your personal account is always free. Here for an app like Signatures?
+              Choose that path. Or add a full business workspace — or start personal-only.
             </p>
           </div>
 
@@ -255,12 +283,22 @@ export function StartFlowClient() {
                 <li key={option.value}>
                   <button
                     type="button"
-                    onClick={() => setWorkspace(option.value)}
+                    onClick={() => {
+                      setWorkspace(option.value);
+                      if (option.value === 'apps') {
+                        setBusinessTier('lite');
+                      }
+                    }}
                     className={cn(
                       'flex w-full items-start gap-3 rounded-2xl border p-4 text-left transition-colors',
                       selected
                         ? marketingFeaturedPlan
-                        : cn(marketingFeatureCard, 'hover:border-[var(--ozer-accent)]/35'),
+                        : option.emphasized
+                          ? cn(
+                              marketingFeatureCard,
+                              'border-dashed border-[var(--ozer-accent)]/40 bg-[var(--ozer-accent-subtle)]/40 hover:border-[var(--ozer-accent)]/60',
+                            )
+                          : cn(marketingFeatureCard, 'hover:border-[var(--ozer-accent)]/35'),
                     )}
                   >
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--ozer-accent-subtle)] text-[var(--ozer-coral-600)]">
@@ -274,6 +312,11 @@ export function StartFlowClient() {
                         <span className="rounded-full bg-[var(--ozer-accent-subtle)] px-2 py-0.5 text-[11px] font-semibold text-[var(--ozer-coral-600)]">
                           {priceLabel}
                         </span>
+                        {option.emphasized ? (
+                          <span className="rounded-full border border-[var(--ozer-accent)]/30 px-2 py-0.5 text-[11px] font-semibold text-[var(--ozer-coral-600)]">
+                            Apps
+                          </span>
+                        ) : null}
                       </span>
                       <span className={cn('mt-1 block text-sm', marketingMutedText)}>
                         {option.description}
@@ -342,8 +385,8 @@ export function StartFlowClient() {
               Pick a business workspace
             </h1>
             <p className={cn('mx-auto max-w-lg text-base leading-relaxed', marketingBodyText)}>
-              Personal stays free. Paid plans include a 14-day trial — Lite is free
-              forever for apps only.
+              Personal stays free. Paid plans include a 14-day trial. Lite is free
+              forever if you only need apps like Signatures.
             </p>
           </div>
 
@@ -361,6 +404,7 @@ export function StartFlowClient() {
                     solo?.description ??
                     'Full studio stack for one freelancer — 14-day trial.',
                   recommended: true,
+                  variant: 'plan' as const,
                 },
                 {
                   value: 'team' as const,
@@ -373,19 +417,33 @@ export function StartFlowClient() {
                     team?.description ??
                     'Shared clients and projects for up to five people — 14-day trial.',
                   recommended: false,
+                  variant: 'plan' as const,
+                },
+                {
+                  value: 'scale' as const,
+                  title: scale?.name ?? 'Business Scale',
+                  priceLabel:
+                    scale != null
+                      ? `From ${formatGbp(scale.monthlyPriceGbp)}`
+                      : 'From £149',
+                  description:
+                    'Larger teams — up to 15 seats and priority support. Need more? Request extra users anytime.',
+                  recommended: false,
+                  variant: 'plan' as const,
                 },
                 {
                   value: 'lite' as const,
                   title: lite?.name ?? 'Business Lite',
                   priceLabel: 'Free',
                   description:
-                    lite?.description ??
-                    'Apps shell only — Signatures and add-ons, no CRM.',
+                    'Apps only — Signatures and marketplace add-ons. No clients, jobs, or invoices.',
                   recommended: false,
+                  variant: 'apps' as const,
                 },
               ] as const
             ).map((option) => {
               const selected = businessTier === option.value;
+              const isApps = option.variant === 'apps';
               return (
                 <li key={option.value}>
                   <button
@@ -393,22 +451,49 @@ export function StartFlowClient() {
                     onClick={() => setBusinessTier(option.value)}
                     className={cn(
                       'flex w-full items-start gap-3 rounded-2xl border p-4 text-left transition-colors',
-                      selected
-                        ? marketingFeaturedPlan
-                        : cn(marketingFeatureCard, 'hover:border-[var(--ozer-accent)]/35'),
+                      selected && !isApps && marketingFeaturedPlan,
+                      selected &&
+                        isApps &&
+                        'border-[var(--ozer-info)] bg-[var(--workspace-shell-panel)] shadow-[0_0_0_1px_color-mix(in_srgb,var(--ozer-info)_40%,transparent)]',
+                      !selected &&
+                        isApps &&
+                        cn(
+                          marketingFeatureCard,
+                          'border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)]/80 hover:border-[var(--ozer-info)]/45',
+                        ),
+                      !selected &&
+                        !isApps &&
+                        cn(marketingFeatureCard, 'hover:border-[var(--ozer-accent)]/35'),
                     )}
                   >
+                    {isApps ? (
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-dashed border-[var(--ozer-info)]/35 bg-[color-mix(in_srgb,var(--ozer-info)_10%,transparent)] text-[var(--ozer-info)]">
+                        <Layers className="h-5 w-5" aria-hidden />
+                      </span>
+                    ) : null}
                     <span className="min-w-0 flex-1">
                       <span className="flex flex-wrap items-center gap-2">
                         <span className="font-semibold text-[var(--workspace-shell-text)]">
                           {option.title}
                         </span>
-                        <span className="rounded-full bg-[var(--ozer-accent-subtle)] px-2 py-0.5 text-[11px] font-semibold text-[var(--ozer-coral-600)]">
+                        <span
+                          className={cn(
+                            'rounded-full px-2 py-0.5 text-[11px] font-semibold',
+                            isApps
+                              ? 'bg-[color-mix(in_srgb,var(--ozer-info)_12%,transparent)] text-[var(--ozer-info)]'
+                              : 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-coral-600)]',
+                          )}
+                        >
                           {option.priceLabel}
                         </span>
                         {option.recommended ? (
                           <span className="rounded-full bg-[var(--ozer-accent)] px-2 py-0.5 text-[11px] font-semibold text-[var(--ozer-plum-950)]">
                             Popular
+                          </span>
+                        ) : null}
+                        {isApps ? (
+                          <span className="rounded-full border border-[var(--ozer-info)]/30 px-2 py-0.5 text-[11px] font-semibold text-[var(--ozer-info)]">
+                            Apps only
                           </span>
                         ) : null}
                       </span>
@@ -419,9 +504,11 @@ export function StartFlowClient() {
                     <span
                       className={cn(
                         'mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold',
-                        selected
+                        selected && !isApps
                           ? 'border-[var(--ozer-accent)] bg-[var(--ozer-accent)] text-[var(--ozer-plum-950)]'
-                          : 'border-[color:var(--workspace-shell-border)] text-transparent',
+                          : selected && isApps
+                            ? 'border-[var(--ozer-info)] bg-[var(--ozer-info)] text-[var(--ozer-cream-50)]'
+                            : 'border-[color:var(--workspace-shell-border)] text-transparent',
                       )}
                       aria-hidden
                     >

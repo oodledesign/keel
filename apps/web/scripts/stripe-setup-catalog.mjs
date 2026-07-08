@@ -3,17 +3,56 @@
  * Bootstrap Ozer subscription products & prices in a Stripe account (test or live).
  *
  * Usage:
- *   STRIPE_SECRET_KEY=sk_test_... node scripts/stripe-setup-catalog.mjs
- *   STRIPE_SECRET_KEY=sk_test_... node scripts/stripe-setup-catalog.mjs --write-env
+ *   node scripts/stripe-setup-catalog.mjs
+ *   node scripts/stripe-setup-catalog.mjs --write-env
+ *
+ * Loads STRIPE_SECRET_KEY from .env, .env.development, and .env.local (in apps/web).
+ * You can still pass STRIPE_SECRET_KEY=sk_test_... inline to override.
  *
  * Idempotent: re-run safely; matches products by metadata.ozer_catalog_id
  * (and legacy metadata.keel_catalog_id) and prices by lookup_key.
  * Price lookup_keys remain keel.* so existing live Stripe prices are reused.
  */
 
-import { writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import Stripe from 'stripe';
+
+function loadEnvFiles() {
+  const root = resolve(process.cwd());
+  /** Later files override earlier ones (matches Next.js dev precedence). */
+  const candidates = [
+    resolve(root, '.env'),
+    resolve(root, '.env.development'),
+    resolve(root, '.env.local'),
+  ];
+
+  for (const file of candidates) {
+    if (!existsSync(file)) continue;
+
+    const text = readFileSync(file, 'utf8');
+    for (const line of text.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+
+      const eq = trimmed.indexOf('=');
+      if (eq <= 0) continue;
+
+      const key = trimmed.slice(0, eq).trim();
+      let value = trimmed.slice(eq + 1).trim();
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+
+      process.env[key] = value;
+    }
+  }
+}
+
+loadEnvFiles();
 
 const currency = (process.env.STRIPE_BILLING_CURRENCY ?? 'GBP').toLowerCase();
 const writeEnv = process.argv.includes('--write-env');
@@ -28,7 +67,7 @@ if (!secret?.startsWith('sk_')) {
 
 const stripe = new Stripe(secret);
 
-/** @type {Array<{ catalogId: string; productName: string; prices: Array<{ envKey: string; lookupKey: string; amount: number; interval: 'month' | 'year' }> }>} */
+/** @type {Array<{ catalogId: string; productName: string; prices: Array<{ envKey: string; lookupKey: string; amount: number; interval?: 'month' | 'year' }> }>} */
 const CATALOG = [
   {
     catalogId: 'ozer-community',
@@ -276,6 +315,39 @@ const CATALOG = [
       },
     ],
   },
+  {
+    catalogId: 'ozer-ai-credits-boost',
+    productName: 'Ozer AI credits — Boost',
+    prices: [
+      {
+        envKey: 'STRIPE_PRICE_AI_CREDITS_BOOST',
+        lookupKey: 'ozer.ai_credits.boost',
+        amount: 500,
+      },
+    ],
+  },
+  {
+    catalogId: 'ozer-ai-credits-studio',
+    productName: 'Ozer AI credits — Studio',
+    prices: [
+      {
+        envKey: 'STRIPE_PRICE_AI_CREDITS_STUDIO',
+        lookupKey: 'ozer.ai_credits.studio',
+        amount: 1000,
+      },
+    ],
+  },
+  {
+    catalogId: 'ozer-ai-credits-agency',
+    productName: 'Ozer AI credits — Agency',
+    prices: [
+      {
+        envKey: 'STRIPE_PRICE_AI_CREDITS_AGENCY',
+        lookupKey: 'ozer.ai_credits.agency',
+        amount: 2000,
+      },
+    ],
+  },
 ];
 
 function toLegacyCatalogId(catalogId) {
@@ -336,15 +408,19 @@ async function ensurePrice(productId, priceDef) {
     return listed.data[0];
   }
 
-  return stripe.prices.create({
+  /** @type {import('stripe').Stripe.PriceCreateParams} */
+  const params = {
     product: productId,
     currency,
     unit_amount: priceDef.amount,
-    recurring: { interval: priceDef.interval },
     lookup_key: priceDef.lookupKey,
     transfer_lookup_key: true,
     metadata: { keel_env_key: priceDef.envKey },
-  });
+  };
+  if (priceDef.interval) {
+    params.recurring = { interval: priceDef.interval };
+  }
+  return stripe.prices.create(params);
 }
 
 async function main() {
@@ -362,8 +438,9 @@ async function main() {
 
     for (const priceDef of item.prices) {
       const price = await ensurePrice(product.id, priceDef);
-      const label =
-        priceDef.interval === 'year'
+      const label = !priceDef.interval
+        ? `${priceDef.envKey} (one-time)`
+        : priceDef.interval === 'year'
           ? `${priceDef.envKey} (yearly)`
           : priceDef.envKey;
       console.log(`  → ${label}: ${price.id}`);

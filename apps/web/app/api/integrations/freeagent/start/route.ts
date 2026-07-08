@@ -51,10 +51,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Account not found' }, { status: 404 });
   }
 
-  const returnPath = pathsConfig.app.accountFinances.replace(
-    '[account]',
-    accountSlug,
-  );
+  const returnTo = url.searchParams.get('returnTo')?.trim();
+  const returnPath =
+    returnTo === 'settings'
+      ? pathsConfig.app.accountFinancesSettings.replace('[account]', accountSlug)
+      : pathsConfig.app.accountFinances.replace('[account]', accountSlug);
 
   try {
     const authUrl = buildFreeAgentAuthUrl({

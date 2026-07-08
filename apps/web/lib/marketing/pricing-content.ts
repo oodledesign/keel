@@ -120,7 +120,7 @@ export function pricingFaqs() {
     },
     {
       question: 'What happens when the team grows?',
-      answer: `Business Solo is ${formatGbp(solo?.monthlyPriceGbp ?? 29)} per month for one member. Business Team is ${formatGbp(team?.monthlyPriceGbp ?? 79)} per month for up to ${team?.maxTeamMembers ?? 5} members. Business Scale is for up to 15 members. You change tier — you do not multiply seats on Solo.`,
+      answer: `Business Solo is ${formatGbp(solo?.monthlyPriceGbp ?? 29)} per month for one member. Business Team is ${formatGbp(team?.monthlyPriceGbp ?? 79)} per month for up to ${team?.maxTeamMembers ?? 5} members. Business Scale is for up to 15 members — and you can request more users if you need them. You change tier — you do not multiply seats on Solo.`,
     },
     {
       question: 'Is there a free trial?',

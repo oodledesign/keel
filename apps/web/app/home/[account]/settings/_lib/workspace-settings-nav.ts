@@ -6,7 +6,12 @@ import {
   spaceTypeFromProfile,
   type WorkspaceProfile,
 } from '~/home/[account]/_lib/workspace-profile';
-import { isVideosModuleEnabled, isWorkModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
+import {
+  isPropertyNavModuleEnabled,
+  isVideosModuleEnabled,
+  isWorkModuleEnabled,
+  isWorkNavModuleEnabled,
+} from '~/home/[account]/_lib/server/account-modules';
 
 export type WorkspaceSettingsNavIcon = 'calendar-off';
 
@@ -63,6 +68,19 @@ export function buildWorkspaceSettingsNav(input: {
       label: 'Payments',
       href: settingsPath(pathsConfig.app.accountPaymentSettings, accountSlug),
     });
+
+    const financesEnabled =
+      spaceType === 'property'
+        ? isPropertyNavModuleEnabled(moduleSettings, 'finances')
+        : isWorkNavModuleEnabled(moduleSettings, 'finances');
+
+    if (financesEnabled) {
+      items.push({
+        id: 'finances',
+        label: 'Finances',
+        href: settingsPath(pathsConfig.app.accountFinancesSettings, accountSlug),
+      });
+    }
 
     if (spaceType === 'work') {
       items.push({

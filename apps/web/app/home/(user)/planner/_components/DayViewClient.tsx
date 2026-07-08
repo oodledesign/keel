@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import Link from 'next/link';
 
 import {
+  ArrowLeft,
   ArrowRight,
   CalendarClock,
   CheckCircle2,
@@ -36,10 +37,12 @@ import {
 import { syncPlannerCalendarBlocks } from '~/lib/planner/sync-calendar-client';
 import { savePlannerPlanAction } from '~/lib/planner/plan-actions';
 import {
+  dayViewHrefWithDate,
   loadStoredPlan,
   pickBestPlanMarkdown,
   plannerScopeKey,
   saveStoredPlan,
+  shiftLocalDateYmd,
   toLocalDateYmd,
 } from '~/lib/planner/plan-storage';
 import type {
@@ -100,7 +103,9 @@ const gbp = new Intl.NumberFormat('en-GB', {
 
 export function DayViewClient({ initialData, dayViewHref }: Props) {
   const router = useRouter();
-  const dateYmd = toLocalDateYmd();
+  const todayYmd = toLocalDateYmd();
+  const dateYmd = initialData.viewDateYmd || todayYmd;
+  const isViewingToday = dateYmd === todayYmd;
   const [planMarkdown, setPlanMarkdown] = useState(
     initialData.planMarkdown ?? '',
   );
@@ -246,7 +251,7 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
     async function loadCalendar() {
       try {
         const response = await fetch(
-          `/api/planner/calendar?mode=day&date=${encodeURIComponent(new Date().toISOString())}`,
+          `/api/planner/calendar?mode=day&date=${encodeURIComponent(`${dateYmd}T12:00:00`)}`,
         );
         const body = (await response.json()) as {
           events?: PlannerCalendarEvent[];
@@ -263,7 +268,7 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [dateYmd]);
 
   const displayBlocks = useMemo<DisplayBlock[]>(() => {
     const dateIso = `${dateYmd}T12:00:00`;
@@ -404,7 +409,7 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
           status: 'pending',
           estimated_duration_minutes: null,
           due_date: dateYmd,
-          dueDateLabel: 'Today',
+          dueDateLabel: isViewingToday ? 'Today' : dateYmd,
           notes: null,
           overdue: false,
           context: 'life',
@@ -424,24 +429,92 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
     }
   }
 
-  const dateLabel = now.toLocaleDateString('en-GB', {
+  const viewDate = useMemo(() => {
+    const [y, m, d] = dateYmd.split('-').map(Number);
+    return new Date(y!, (m ?? 1) - 1, d ?? 1, 12, 0, 0, 0);
+  }, [dateYmd]);
+
+  const dateLabel = viewDate.toLocaleDateString('en-GB', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
   });
 
+  const prevDayHref = dayViewHrefWithDate(
+    dayViewHref,
+    shiftLocalDateYmd(dateYmd, -1),
+  );
+  const nextDayHref = dayViewHrefWithDate(
+    dayViewHref,
+    shiftLocalDateYmd(dateYmd, 1),
+  );
+  const todayHref = dayViewHref;
+
   return (
-    <div className={workspacePageMainClassName}>
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Today</h1>
-          <p className="mt-1 text-sm text-[var(--workspace-shell-text)]/55" suppressHydrationWarning>
+    <div className={cn(workspacePageMainClassName, 'gap-4 pt-1 md:gap-5 md:pt-3')}>
+      <header className="flex items-center gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+          aria-label="Previous day"
+          onClick={() => router.push(prevDayHref)}
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl font-bold tracking-tight md:text-2xl">
+            {isViewingToday ? 'Today' : dateLabel}
+          </h1>
+          <p
+            className="text-xs text-[var(--workspace-shell-text)]/55 md:text-sm"
+            suppressHydrationWarning
+          >
             {initialData.scope.kind === 'workspace'
               ? `${initialData.scope.accountName} — ${dateLabel}`
-              : dateLabel}
+              : isViewingToday
+                ? dateLabel
+                : 'Plans and tasks due this day'}
           </p>
         </div>
-        <div className="flex flex-col items-start gap-3 sm:items-end">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+          aria-label="Next day"
+          onClick={() => router.push(nextDayHref)}
+        >
+          <ArrowRight className="h-4 w-4" />
+        </Button>
+        {!isViewingToday ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8"
+            onClick={() => router.push(todayHref)}
+          >
+            Today
+          </Button>
+        ) : null}
+      </header>
+
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+        {isViewingToday ? (
+          <NowBar
+            now={now}
+            currentBlock={currentBlock}
+            nextBlock={nextBlock}
+            hasSchedule={displayBlocks.length > 0}
+            planHref={initialData.planViewHref}
+            className="min-w-0 flex-1"
+          />
+        ) : (
+          <div className="min-w-0 flex-1" />
+        )}
+        <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
           <PlannerViewTabs
             dayHref={dayViewHref}
             planHref={initialData.planViewHref}
@@ -449,15 +522,7 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
           />
           <PlannerRemindersToggle />
         </div>
-      </header>
-
-      <NowBar
-        now={now}
-        currentBlock={currentBlock}
-        nextBlock={nextBlock}
-        hasSchedule={displayBlocks.length > 0}
-        planHref={initialData.planViewHref}
-      />
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
         <section className="space-y-3">
@@ -513,7 +578,9 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
 
         <section className="space-y-3">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]/80">Due today</h2>
+            <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]/80">
+              {isViewingToday ? 'Due today' : 'Due this day'}
+            </h2>
             <span className="text-xs text-[var(--workspace-shell-text)]/40">
               {openTasks.length} open
               {doneTasks.length > 0 ? ` · ${doneTasks.length} done` : ''}
@@ -524,7 +591,9 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
             <input
               value={newTaskTitle}
               onChange={(event) => setNewTaskTitle(event.target.value)}
-              placeholder="Add a task for today…"
+              placeholder={
+                isViewingToday ? 'Add a task for today…' : 'Add a task for this day…'
+              }
               className="h-9 min-w-0 flex-1 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30 focus:border-[var(--ozer-accent)]/60 focus:outline-none"
             />
             <Button
@@ -540,7 +609,7 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
 
           {tasks.length === 0 ? (
             <p className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-6 text-center text-sm text-[var(--workspace-shell-text)]/45">
-              Nothing due today.
+              {isViewingToday ? 'Nothing due today.' : 'Nothing due this day.'}
             </p>
           ) : (
             <ul className="space-y-2">
@@ -585,12 +654,14 @@ function NowBar({
   nextBlock,
   hasSchedule,
   planHref,
+  className,
 }: {
   now: Date;
   currentBlock: DisplayBlock | undefined;
   nextBlock: DisplayBlock | undefined;
   hasSchedule: boolean;
   planHref: string;
+  className?: string;
 }) {
   const clock = now.toLocaleTimeString('en-GB', {
     hour: '2-digit',
@@ -598,18 +669,23 @@ function NowBar({
   });
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-5 py-4 sm:flex-row sm:items-center sm:gap-5">
+    <div
+      className={cn(
+        'flex items-center gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 py-2 sm:gap-4 sm:px-4',
+        className,
+      )}
+    >
       <span
-        className="font-mono text-3xl font-semibold tabular-nums text-[var(--workspace-shell-text)]"
+        className="font-mono text-xl font-semibold tabular-nums text-[var(--workspace-shell-text)] sm:text-2xl"
         suppressHydrationWarning
       >
         {clock}
       </span>
-      <span className="hidden h-10 w-px bg-[var(--workspace-shell-sidebar-accent)] sm:block" />
-      <div className="min-w-0 flex-1 space-y-1" suppressHydrationWarning>
+      <span className="hidden h-7 w-px bg-[var(--workspace-shell-sidebar-accent)] sm:block" />
+      <div className="min-w-0 flex-1 space-y-0.5" suppressHydrationWarning>
         {hasSchedule ? (
           <>
-            <p className="truncate text-sm">
+            <p className="truncate text-xs sm:text-sm">
               <span className="font-semibold uppercase tracking-wide text-[10px] text-[var(--ozer-accent-muted)]">
                 Now
               </span>{' '}
@@ -627,7 +703,7 @@ function NowBar({
                 </span>
               ) : null}
             </p>
-            <p className="truncate text-sm text-[var(--workspace-shell-text)]/55">
+            <p className="truncate text-xs text-[var(--workspace-shell-text)]/55 sm:text-sm">
               <span className="font-semibold uppercase tracking-wide text-[10px] text-[var(--workspace-shell-text)]/35">
                 Next
               </span>{' '}
@@ -637,7 +713,7 @@ function NowBar({
             </p>
           </>
         ) : (
-          <p className="text-sm text-[var(--workspace-shell-text)]/55">
+          <p className="text-xs text-[var(--workspace-shell-text)]/55 sm:text-sm">
             No schedule yet —{' '}
             <Link href={planHref} className="text-[var(--ozer-accent)] hover:underline">
               plan your day
@@ -871,7 +947,9 @@ function EmptySchedule({ planHref }: { planHref: string }) {
   return (
     <div className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-8 text-center">
       <Sparkles className="mx-auto h-6 w-6 text-[var(--ozer-accent-muted)]/70" />
-      <p className="mt-3 text-sm text-[var(--workspace-shell-text)]/60">No plan for today yet.</p>
+      <p className="mt-3 text-sm text-[var(--workspace-shell-text)]/60">
+        No plan for this day yet.
+      </p>
       <Button asChild className="mt-4 bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]">
         <Link href={planHref}>Plan my day</Link>
       </Button>

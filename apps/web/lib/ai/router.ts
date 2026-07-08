@@ -141,11 +141,20 @@ export type AiCreditBalanceRow = {
   account_id: string;
   credits_remaining: number;
   credits_monthly_limit: number;
+  /** One-time purchased credits that survive monthly reset. */
+  credits_purchased: number;
   period_start: string;
   period_end: string;
   created_at: string;
   updated_at: string;
 };
+
+export function totalCreditsAvailable(balance: AiCreditBalanceRow): number {
+  return (
+    Math.max(0, balance.credits_remaining) +
+    Math.max(0, balance.credits_purchased ?? 0)
+  );
+}
 
 export class OzerInsufficientCreditsError extends Error {
   readonly creditsRemaining: number;
@@ -191,6 +200,7 @@ export async function getOrCreateCreditBalance(
       account_id: accountId,
       credits_remaining: 200,
       credits_monthly_limit: 200,
+      credits_purchased: 0,
     })
     .select('*')
     .single();
@@ -240,22 +250,34 @@ export async function checkAndDeductCredits(
     balance = refreshed.data;
   }
 
-  const remaining = (balance as AiCreditBalanceRow).credits_remaining;
-  if (remaining < credits) {
+  const row = balance as AiCreditBalanceRow;
+  const monthly = Math.max(0, row.credits_remaining);
+  const purchased = Math.max(0, row.credits_purchased ?? 0);
+  const available = monthly + purchased;
+
+  if (available < credits) {
     throw new OzerInsufficientCreditsError({
-      creditsRemaining: remaining,
+      creditsRemaining: available,
       creditsRequired: credits,
     });
   }
 
+  // Spend plan pool first, then purchased top-ups.
+  const fromMonthly = Math.min(monthly, credits);
+  const fromPurchased = credits - fromMonthly;
+  const nextMonthly = monthly - fromMonthly;
+  const nextPurchased = purchased - fromPurchased;
+
   const { data: updated, error: updateError } = await supabase
     .from('ai_credit_balances')
     .update({
-      credits_remaining: remaining - credits,
+      credits_remaining: nextMonthly,
+      credits_purchased: nextPurchased,
       updated_at: new Date().toISOString(),
     })
     .eq('account_id', accountId)
-    .gte('credits_remaining', credits)
+    .eq('credits_remaining', monthly)
+    .eq('credits_purchased', purchased)
     .select('*')
     .maybeSingle();
 
@@ -266,13 +288,19 @@ export async function checkAndDeductCredits(
   if (!updated) {
     const { data: latest } = await supabase
       .from('ai_credit_balances')
-      .select('credits_remaining')
+      .select('credits_remaining, credits_purchased')
       .eq('account_id', accountId)
       .maybeSingle();
 
+    const latestRow = latest as {
+      credits_remaining?: number;
+      credits_purchased?: number;
+    } | null;
+
     throw new OzerInsufficientCreditsError({
-      creditsRemaining: (latest as { credits_remaining?: number } | null)
-        ?.credits_remaining ?? 0,
+      creditsRemaining:
+        Math.max(0, latestRow?.credits_remaining ?? 0) +
+        Math.max(0, latestRow?.credits_purchased ?? 0),
       creditsRequired: credits,
     });
   }

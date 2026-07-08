@@ -12,6 +12,8 @@ import { buildAuthLinkWithNext } from '~/lib/auth/signup-context';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
+import { AuthFormCard } from '../_components/auth-form-card';
+
 interface SignInPageProps {
   searchParams: Promise<{
     next?: string;
@@ -36,13 +38,13 @@ async function SignInPage({ searchParams }: SignInPageProps) {
   };
 
   return (
-    <>
-      <div className={'flex flex-col items-center gap-1'}>
-        <Heading level={4} className={'tracking-tight'}>
+    <AuthFormCard>
+      <div className="flex flex-col items-center gap-1 text-center">
+        <Heading level={4} className="tracking-tight">
           <Trans i18nKey={'auth:signInHeading'} />
         </Heading>
 
-        <p className={'text-muted-foreground text-sm'}>
+        <p className="text-muted-foreground text-sm">
           <Trans i18nKey={'auth:signInSubheading'} />
         </p>
       </div>
@@ -53,8 +55,8 @@ async function SignInPage({ searchParams }: SignInPageProps) {
         captchaSiteKey={authConfig.captchaTokenSiteKey}
       />
 
-      <div className={'flex justify-center'}>
-        <Button asChild variant={'link'} size={'sm'}>
+      <div className="flex justify-center">
+        <Button asChild variant="link" size="sm">
           <Link
             href={buildAuthLinkWithNext(pathsConfig.auth.signUp, next)}
             prefetch={false}
@@ -63,7 +65,7 @@ async function SignInPage({ searchParams }: SignInPageProps) {
           </Link>
         </Button>
       </div>
-    </>
+    </AuthFormCard>
   );
 }
 

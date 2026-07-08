@@ -31,7 +31,7 @@ type FreeAgentExplanationSummary = {
   categoryUrl: string | null;
 };
 
-export type SyncFreeAgentMode = 'full' | 'incremental';
+export type SyncFreeAgentMode = 'full' | 'incremental' | 'history';
 
 export type SyncFreeAgentOptions = {
   mode?: SyncFreeAgentMode;
@@ -193,6 +193,7 @@ export async function syncFreeAgentToOzer(
 ): Promise<SyncFreeAgentResult> {
   const mode = options.mode ?? 'full';
   const isIncremental = mode === 'incremental';
+  const isHistory = mode === 'history';
   const { data: connection, error } = await db
     .from('finance_connections')
     .select('*')
@@ -219,8 +220,8 @@ export async function syncFreeAgentToOzer(
   const fromDate = isIncremental
     ? (options.fromDate ?? incrementalSyncFromDate(connection.last_sync_at as string | null))
     : null;
-  const maxTxPages = isIncremental ? 5 : 20;
-  const maxExplanationPages = isIncremental ? 5 : 50;
+  const maxTxPages = isIncremental ? 5 : isHistory ? 100 : 20;
+  const maxExplanationPages = isIncremental ? 5 : isHistory ? 100 : 50;
 
   let categoriesSynced = 0;
   if (!isIncremental) {

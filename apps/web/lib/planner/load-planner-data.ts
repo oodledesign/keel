@@ -214,18 +214,31 @@ function sopHref(scope: PlannerScope, playbookId: string) {
     .replace('[playbookId]', playbookId);
 }
 
-async function buildPlannerBundle(scope: PlannerScope) {
+function parseViewDateYmd(dateYmd: string | undefined): string {
+  const today = todayLocalYmd();
+  if (!dateYmd) return today;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateYmd)) return today;
+  const parsed = new Date(`${dateYmd}T12:00:00`);
+  if (Number.isNaN(parsed.getTime())) return today;
+  return dateYmd;
+}
+
+async function buildPlannerBundle(
+  scope: PlannerScope,
+  viewDateYmd?: string,
+) {
   const client = getSupabaseServerClient();
   const user = await requireUserInServerComponent();
   const includeWorkspaceTasks = await loadPersonalIncludeWorkspaceTasks(
     client,
     user.id,
   );
+  const planDate = parseViewDateYmd(viewDateYmd);
 
   const [tasks, calendar, savedPlan] = await Promise.all([
     loadScopedTasks(scope, includeWorkspaceTasks),
     getGoogleCalendarConnectionStatus(client, user.id),
-    loadSavedDayPlanMarkdown(client, user.id, scope, todayLocalYmd()),
+    loadSavedDayPlanMarkdown(client, user.id, scope, planDate),
   ]);
 
   const taskTree = buildTaskTree(tasks, scope);
@@ -259,6 +272,7 @@ async function buildPlannerBundle(scope: PlannerScope) {
     calendar,
     taskTree,
     sopSuggestions,
+    viewDateYmd: planDate,
     savedPlanMarkdown: savedPlan?.markdown ?? null,
     savedPlanUpdatedAt: savedPlan?.updatedAt ?? null,
     dayViewHref,
@@ -271,27 +285,31 @@ export const loadPersonalPlannerPageData = cache(async (): Promise<PlannerPageDa
   buildPlannerBundle({ kind: 'personal' }),
 );
 
-export const loadPersonalDayViewData = cache(async (): Promise<DayViewData> => {
-  const bundle = await buildPlannerBundle({ kind: 'personal' });
-  const tasksDueToday = tasksDueOnDate(bundle.taskTree, todayLocalYmd());
-  const pipeline = await loadDayViewPipeline(bundle.scope);
-  const openTasksForReplan = flattenPlannerTasks(bundle.taskTree);
+export const loadPersonalDayViewData = cache(
+  async (dateYmd?: string): Promise<DayViewData> => {
+    const bundle = await buildPlannerBundle({ kind: 'personal' }, dateYmd);
+    const viewDateYmd = bundle.viewDateYmd;
+    const tasksDueToday = tasksDueOnDate(bundle.taskTree, viewDateYmd);
+    const pipeline = await loadDayViewPipeline(bundle.scope);
+    const openTasksForReplan = flattenPlannerTasks(bundle.taskTree);
 
-  return {
-    userId: bundle.userId,
-    scope: bundle.scope,
-    includeWorkspaceTasks: bundle.includeWorkspaceTasks,
-    calendar: bundle.calendar,
-    tasksDueToday,
-    openTasksForReplan,
-    sopSuggestions: [],
-    planMarkdown: bundle.savedPlanMarkdown,
-    planUpdatedAt: bundle.savedPlanUpdatedAt,
-    pipeline,
-    planViewHref: bundle.planViewHref,
-    settingsHref: bundle.settingsHref,
-  };
-});
+    return {
+      userId: bundle.userId,
+      scope: bundle.scope,
+      includeWorkspaceTasks: bundle.includeWorkspaceTasks,
+      calendar: bundle.calendar,
+      viewDateYmd,
+      tasksDueToday,
+      openTasksForReplan,
+      sopSuggestions: [],
+      planMarkdown: bundle.savedPlanMarkdown,
+      planUpdatedAt: bundle.savedPlanUpdatedAt,
+      pipeline,
+      planViewHref: bundle.planViewHref,
+      settingsHref: bundle.settingsHref,
+    };
+  },
+);
 
 export const loadWorkspacePlannerPageData = cache(
   async (accountSlug: string): Promise<PlannerPageData> => {
@@ -317,9 +335,30 @@ export const loadWorkspacePlannerPageData = cache(
 );
 
 export const loadWorkspaceDayViewData = cache(
-  async (accountSlug: string): Promise<DayViewData> => {
-    const bundle = await loadWorkspacePlannerPageData(accountSlug);
-    const tasksDueToday = tasksDueOnDate(bundle.taskTree, todayLocalYmd());
+  async (accountSlug: string, dateYmd?: string): Promise<DayViewData> => {
+    const workspace = await loadTeamWorkspace(accountSlug);
+    redirectIfSpaceNotIn(
+      workspace,
+      accountSlug,
+      BUSINESS_WORKSPACE_SPACE_TYPES,
+    );
+
+    const accountId = workspace.account.id as string;
+    const accountName =
+      (workspace.account as { name?: string | null }).name?.trim() ||
+      accountSlug;
+
+    const bundle = await buildPlannerBundle(
+      {
+        kind: 'workspace',
+        accountId,
+        accountSlug,
+        accountName,
+      },
+      dateYmd,
+    );
+    const viewDateYmd = bundle.viewDateYmd;
+    const tasksDueToday = tasksDueOnDate(bundle.taskTree, viewDateYmd);
     const pipeline = await loadDayViewPipeline(bundle.scope);
     let sopSuggestions = bundle.sopSuggestions;
 
@@ -337,11 +376,12 @@ export const loadWorkspaceDayViewData = cache(
       scope: bundle.scope,
       includeWorkspaceTasks: bundle.includeWorkspaceTasks,
       calendar: bundle.calendar,
+      viewDateYmd,
       tasksDueToday,
       openTasksForReplan: flattenPlannerTasks(bundle.taskTree),
       sopSuggestions,
       planMarkdown: bundle.savedPlanMarkdown,
-    planUpdatedAt: bundle.savedPlanUpdatedAt,
+      planUpdatedAt: bundle.savedPlanUpdatedAt,
       pipeline,
       planViewHref: bundle.planViewHref,
       settingsHref: bundle.settingsHref,

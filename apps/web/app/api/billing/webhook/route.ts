@@ -5,12 +5,16 @@ import { getLogger } from '@kit/shared/logger';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import billingConfig from '~/config/billing.config';
+import { fulfillAiCreditPackOrder } from '~/lib/billing/fulfill-ai-credit-pack';
 import {
   syncKeelPlanFromSubscription,
 } from '~/lib/billing/sync-subscription-plan';
 import { sendPaymentFailedEmail } from '~/lib/billing/trial-notifications';
 
-import type { UpsertSubscriptionParams } from '@kit/billing/types';
+import type {
+  UpsertOrderParams,
+  UpsertSubscriptionParams,
+} from '@kit/billing/types';
 
 /**
  * @description Handle the webhooks from Stripe related to checkouts
@@ -72,9 +76,59 @@ export const POST = enhanceRouteHandler(
         onSubscriptionUpdated: syncPlan,
         onCheckoutSessionCompleted: async (payload) => {
           if ('target_order_id' in payload) {
+            const admin = getSupabaseServerAdminClient();
+            await fulfillAiCreditPackOrder(
+              admin,
+              payload as UpsertOrderParams,
+            );
             return;
           }
           await syncPlan(payload as UpsertSubscriptionParams);
+        },
+        onPaymentSucceeded: async (sessionId) => {
+          const admin = getSupabaseServerAdminClient();
+          const { data: order } = await admin
+            .from('orders')
+            .select(
+              'id, account_id, status, currency, total_amount, billing_customer:billing_customers(customer_id), items:order_items(id, product_id, variant_id, price_amount, quantity)',
+            )
+            .eq('id', sessionId)
+            .maybeSingle();
+
+          if (!order) return;
+
+          const row = order as {
+            id: string;
+            account_id: string;
+            status: string;
+            currency: string;
+            total_amount: number;
+            billing_customer?: { customer_id?: string } | null;
+            items?: Array<{
+              id: string;
+              product_id: string;
+              variant_id: string;
+              price_amount: number | null;
+              quantity: number;
+            }>;
+          };
+
+          await fulfillAiCreditPackOrder(admin, {
+            target_account_id: row.account_id,
+            target_customer_id: row.billing_customer?.customer_id ?? '',
+            target_order_id: row.id,
+            billing_provider: 'stripe',
+            status: 'succeeded',
+            currency: row.currency,
+            total_amount: row.total_amount,
+            line_items: (row.items ?? []).map((item) => ({
+              id: item.id,
+              product_id: item.product_id,
+              variant_id: item.variant_id,
+              price_amount: item.price_amount,
+              quantity: item.quantity,
+            })),
+          });
         },
         onInvoicePaid: syncPlan,
       });

@@ -9,6 +9,8 @@ import pathsConfig from '~/config/paths.config';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
+import { AuthFormCard } from '../_components/auth-form-card';
+
 export const generateMetadata = async () => {
   const { t } = await createI18nServerInstance();
 
@@ -22,29 +24,29 @@ const redirectPath = `${callback}?next=${passwordUpdate}`;
 
 function PasswordResetPage() {
   return (
-    <>
-      <div className={'flex flex-col items-center gap-1'}>
-        <Heading level={4} className={'tracking-tight'}>
+    <AuthFormCard>
+      <div className="flex flex-col items-center gap-1 text-center">
+        <Heading level={4} className="tracking-tight">
           <Trans i18nKey={'auth:passwordResetLabel'} />
         </Heading>
 
-        <p className={'text-muted-foreground text-sm'}>
+        <p className="text-muted-foreground text-sm">
           <Trans i18nKey={'auth:passwordResetSubheading'} />
         </p>
       </div>
 
-      <div className={'flex flex-col space-y-4'}>
+      <div className="flex flex-col space-y-4">
         <PasswordResetRequestContainer redirectPath={redirectPath} />
 
-        <div className={'flex justify-center text-xs'}>
-          <Button asChild variant={'link'} size={'sm'}>
+        <div className="flex justify-center text-xs">
+          <Button asChild variant="link" size="sm">
             <Link href={signIn}>
               <Trans i18nKey={'auth:passwordRecoveredQuestion'} />
             </Link>
           </Button>
         </div>
       </div>
-    </>
+    </AuthFormCard>
   );
 }
 

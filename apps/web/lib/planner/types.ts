@@ -106,11 +106,13 @@ export type DayViewData = {
     connected: boolean;
     configured: boolean;
   };
+  /** Local YYYY-MM-DD for the day being viewed (may not be today). */
+  viewDateYmd: string;
   tasksDueToday: PlannerTask[];
   /** Open tasks in scope — used when re-planning the rest of the day. */
   openTasksForReplan: PlannerTask[];
   sopSuggestions: SopSuggestion[];
-  /** Saved day plan for today (from the database), if one exists. */
+  /** Saved day plan for the viewed date (from the database), if one exists. */
   planMarkdown: string | null;
   planUpdatedAt: string | null;
   /** Compact pipeline overview, when the scope has an active pipeline. */

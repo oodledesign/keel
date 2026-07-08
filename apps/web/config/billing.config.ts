@@ -130,6 +130,7 @@ export default createBillingSchema({
         'Clients, jobs, invoices & tasks',
         'Activity tracking',
         '1 team member (you)',
+        '2,000 AI credits / month',
         'Docs, finances & pipeline',
       ],
     },
@@ -176,6 +177,7 @@ export default createBillingSchema({
       features: [
         'Everything in Solo',
         'Up to 5 team members',
+        '5,000 AI credits / month',
         'Shared client & project work',
       ],
     },
@@ -220,6 +222,8 @@ export default createBillingSchema({
       features: [
         'Everything in Team',
         'Up to 15 team members',
+        'Need more seats? Request extra users anytime',
+        '12,000 AI credits / month',
         'Priority support',
       ],
     },
@@ -622,6 +626,87 @@ export default createBillingSchema({
         'Iframe, HTML5 & JS embed codes',
         'Webflow, WordPress & any CMS',
         'Priority encoding',
+      ],
+    },
+    {
+      id: 'ozer-ai-credits-boost',
+      name: 'AI credits — Boost',
+      description: '2,000 one-time AI credits that survive monthly resets',
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: false,
+      plans: [
+        {
+          id: 'ai-credits-boost',
+          name: 'Boost',
+          paymentType: 'one-time',
+          lineItems: [
+            {
+              id: OZER_STRIPE_PRICES.ai_credits_boost,
+              name: '2,000 AI credits',
+              cost: 5,
+              type: 'flat',
+            },
+          ],
+        },
+      ],
+      features: [
+        '2,000 AI credits',
+        'Added instantly after payment',
+        'Survives monthly plan pool reset',
+      ],
+    },
+    {
+      id: 'ozer-ai-credits-studio',
+      name: 'AI credits — Studio',
+      description: '5,000 one-time AI credits that survive monthly resets',
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: false,
+      plans: [
+        {
+          id: 'ai-credits-studio',
+          name: 'Studio',
+          paymentType: 'one-time',
+          lineItems: [
+            {
+              id: OZER_STRIPE_PRICES.ai_credits_studio,
+              name: '5,000 AI credits',
+              cost: 10,
+              type: 'flat',
+            },
+          ],
+        },
+      ],
+      features: [
+        '5,000 AI credits',
+        'Added instantly after payment',
+        'Survives monthly plan pool reset',
+      ],
+    },
+    {
+      id: 'ozer-ai-credits-agency',
+      name: 'AI credits — Agency',
+      description: '12,000 one-time AI credits that survive monthly resets',
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: false,
+      plans: [
+        {
+          id: 'ai-credits-agency',
+          name: 'Agency',
+          paymentType: 'one-time',
+          lineItems: [
+            {
+              id: OZER_STRIPE_PRICES.ai_credits_agency,
+              name: '12,000 AI credits',
+              cost: 20,
+              type: 'flat',
+            },
+          ],
+        },
+      ],
+      features: [
+        '12,000 AI credits',
+        'Added instantly after payment',
+        'Survives monthly plan pool reset',
       ],
     },
   ],

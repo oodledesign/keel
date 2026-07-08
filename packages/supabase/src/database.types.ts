@@ -1592,6 +1592,7 @@ export type Database = {
           account_id: string
           created_at: string | null
           credits_monthly_limit: number
+          credits_purchased: number
           credits_remaining: number
           id: string
           period_end: string
@@ -1602,6 +1603,7 @@ export type Database = {
           account_id: string
           created_at?: string | null
           credits_monthly_limit?: number
+          credits_purchased?: number
           credits_remaining?: number
           id?: string
           period_end?: string
@@ -1612,6 +1614,7 @@ export type Database = {
           account_id?: string
           created_at?: string | null
           credits_monthly_limit?: number
+          credits_purchased?: number
           credits_remaining?: number
           id?: string
           period_end?: string
@@ -1637,6 +1640,61 @@ export type Database = {
             foreignKeyName: "ai_credit_balances_account_id_fkey"
             columns: ["account_id"]
             isOneToOne: true
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_credit_purchases: {
+        Row: {
+          account_id: string
+          amount_total: number | null
+          created_at: string
+          credits: number
+          currency: string | null
+          id: string
+          stripe_checkout_session_id: string
+          stripe_price_id: string
+        }
+        Insert: {
+          account_id: string
+          amount_total?: number | null
+          created_at?: string
+          credits: number
+          currency?: string | null
+          id?: string
+          stripe_checkout_session_id: string
+          stripe_price_id: string
+        }
+        Update: {
+          account_id?: string
+          amount_total?: number | null
+          created_at?: string
+          credits?: number
+          currency?: string | null
+          id?: string
+          stripe_checkout_session_id?: string
+          stripe_price_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_credit_purchases_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_credit_purchases_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_credit_purchases_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
             referencedRelation: "user_accounts"
             referencedColumns: ["id"]
           },
@@ -9653,6 +9711,27 @@ export type Database = {
       personal_person_owned_by_user: {
         Args: { p_person_id: string }
         Returns: boolean
+      }
+      grant_ai_credit_purchase: {
+        Args: {
+          p_account_id: string
+          p_amount_total?: number | null
+          p_credits: number
+          p_currency?: string | null
+          p_stripe_checkout_session_id: string
+          p_stripe_price_id: string
+        }
+        Returns: {
+          account_id: string
+          created_at: string | null
+          credits_monthly_limit: number
+          credits_purchased: number
+          credits_remaining: number
+          id: string
+          period_end: string
+          period_start: string
+          updated_at: string | null
+        }
       }
       reset_ai_credits_if_expired: {
         Args: { p_account_id: string }

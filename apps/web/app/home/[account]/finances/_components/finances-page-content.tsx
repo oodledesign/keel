@@ -9,21 +9,24 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowDownLeft,
   ArrowUpRight,
-  Info,
-  Link2,
+  MoreHorizontal,
+  Plus,
   RefreshCw,
+  Settings,
   Sparkles,
   Upload,
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@kit/ui/dropdown-menu';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@kit/ui/popover';
 import {
   Select,
   SelectContent,
@@ -69,7 +72,6 @@ import {
   applySuggestedCategoriesAction,
   categorizeFinanceTransactionAction,
   createManualTransactionAction,
-  disconnectFreeAgentAction,
   importCsvTransactionsAction,
   loadFinancesDashboardAction,
   setFinanceTransactionLinksAction,
@@ -77,6 +79,7 @@ import {
   suggestCsvMappingAction,
   suggestTransactionCategoriesAction,
   syncFreeAgentAction,
+  syncFreeAgentHistoryAction,
 } from '../_lib/server/finances-actions';
 import { FinancesDashboardSkeleton } from './finances-dashboard-skeleton';
 
@@ -358,10 +361,12 @@ export function FinancesPageContent({
     });
   };
 
-  const onSyncFreeAgent = () => {
+  const onSyncFreeAgent = (options?: { history?: boolean }) => {
     startTransition(async () => {
       try {
-        const result = await syncFreeAgentAction({ accountId, accountSlug });
+        const result = options?.history
+          ? await syncFreeAgentHistoryAction({ accountId, accountSlug })
+          : await syncFreeAgentAction({ accountId, accountSlug });
         await refresh({ background: true });
         const parts = [
           `${result.imported} new transaction${result.imported === 1 ? '' : 's'}`,
@@ -376,7 +381,11 @@ export function FinancesPageContent({
             `${result.categorised} categor${result.categorised === 1 ? 'y' : 'ies'} imported from FreeAgent`,
           );
         }
-        toast.success(`Synced ${parts.join(', ')}`);
+        toast.success(
+          options?.history
+            ? `Historical sync complete — ${parts.join(', ')}`
+            : `Synced ${parts.join(', ')}`,
+        );
       } catch (e) {
         toast.error(e instanceof Error ? e.message : 'Sync failed');
       }
@@ -445,7 +454,11 @@ export function FinancesPageContent({
     });
   };
 
-  const connectFreeAgentUrl = `/api/integrations/freeagent/start?account=${encodeURIComponent(accountSlug)}`;
+  const financesSettingsPath = pathsConfig.app.accountFinancesSettings.replace(
+    '[account]',
+    accountSlug,
+  );
+  const freeAgentConnected = Boolean(data?.connection);
   const showSkeleton = loading || data === null;
 
   return (
@@ -457,26 +470,15 @@ export function FinancesPageContent({
           isLoading={showSkeleton}
           onApply={onDateRangeApply}
         />
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            className="border-[color:var(--workspace-shell-border)]"
-            disabled={showSkeleton}
-            onClick={() => setImportOpen(true)}
-          >
-            <Upload className="mr-2 h-4 w-4" />
-            Import CSV
-          </Button>
-          <Button
-            type="button"
-            className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
-            disabled={showSkeleton}
-            onClick={() => setManualOpen(true)}
-          >
-            Add transaction
-          </Button>
-        </div>
+        <FinancesPageMenu
+          disabled={showSkeleton}
+          pending={pending}
+          freeAgentConnected={freeAgentConnected}
+          settingsPath={financesSettingsPath}
+          onAddTransaction={() => setManualOpen(true)}
+          onImportCsv={() => setImportOpen(true)}
+          onSyncFreeAgent={() => onSyncFreeAgent()}
+        />
       </div>
 
       {showSkeleton ? (
@@ -544,37 +546,24 @@ export function FinancesPageContent({
           ) : null}
 
           {forecast ? (
-            <div className={cn(panelClass, 'p-4')}>
-              <h3 className="text-sm font-medium text-[var(--workspace-shell-text)]">Forecast (monthly average)</h3>
-              <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
-                Based on selected range: ~{formatPence(forecast.avgIncomePence)} income,{' '}
-                ~{formatPence(forecast.avgExpensePence)} expenses → projected net{' '}
-                <span className="text-[var(--ozer-accent-muted)]">
-                  {formatPence(forecast.projectedNetPence)}
-                </span>{' '}
-                / month
-              </p>
-            </div>
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+              <span className="font-medium text-[var(--workspace-shell-text)]">
+                Forecast (monthly average):
+              </span>{' '}
+              ~{formatPence(forecast.avgIncomePence)} income, ~{' '}
+              {formatPence(forecast.avgExpensePence)} expenses → projected net{' '}
+              <span className="font-medium text-[var(--ozer-accent-muted)]">
+                {formatPence(forecast.projectedNetPence)}
+              </span>{' '}
+              / month based on selected range
+            </p>
           ) : null}
-
-          <FinanceConnectionsPanel
-            data={data}
-            connectFreeAgentUrl={connectFreeAgentUrl}
-            pending={pending}
-            onSyncFreeAgent={onSyncFreeAgent}
-            onDisconnectFreeAgent={() =>
-              startTransition(async () => {
-                await disconnectFreeAgentAction({ accountId, accountSlug });
-                await refresh({ background: true });
-                toast.success('FreeAgent disconnected');
-              })
-            }
-          />
 
           <TransactionsPanel
             data={data}
             loading={false}
             pending={pending}
+            freeAgentConnected={freeAgentConnected}
             uncategorizedCount={uncategorizedCount}
             aiSuggestions={aiSuggestions}
             suggestionMap={suggestionMap}
@@ -583,6 +572,8 @@ export function FinancesPageContent({
             onCategorize={onCategorize}
             onSetTransfer={onSetTransfer}
             onSetLinks={onSetLinks}
+            onSyncFreeAgent={() => onSyncFreeAgent()}
+            onSyncFreeAgentHistory={() => onSyncFreeAgent({ history: true })}
           />
         </div>
       )}
@@ -607,150 +598,71 @@ export function FinancesPageContent({
   );
 }
 
-function FinanceConnectionsPanel({
-  data,
-  connectFreeAgentUrl,
+function FinancesPageMenu({
+  disabled,
   pending,
+  freeAgentConnected,
+  settingsPath,
+  onAddTransaction,
+  onImportCsv,
   onSyncFreeAgent,
-  onDisconnectFreeAgent,
 }: {
-  data: DashboardData | null;
-  connectFreeAgentUrl: string;
+  disabled: boolean;
   pending: boolean;
+  freeAgentConnected: boolean;
+  settingsPath: string;
+  onAddTransaction: () => void;
+  onImportCsv: () => void;
   onSyncFreeAgent: () => void;
-  onDisconnectFreeAgent: () => void;
 }) {
   return (
-    <FinanceProviderCard
-      title="FreeAgent"
-      connected={Boolean(data?.connection)}
-      configured={Boolean(data?.freeAgentConfigured)}
-      connectedLabel={
-        data?.connection
-          ? `Connected to ${data.connection.freeagent_company_name ?? 'FreeAgent'}`
-          : null
-      }
-      info={
-        data?.connection
-          ? 'Ozer is your UI; FreeAgent stays the ledger. Categories sync from FreeAgent on each sync. When you categorise here, Ozer writes a bank transaction explanation in FreeAgent. New transactions sync automatically each morning; use Sync now for a full refresh.'
-          : 'Connect FreeAgent to import bank transactions and categories. Categorise in Ozer and sync explanations back to FreeAgent.'
-      }
-      configuredHint="Set FREEAGENT_CLIENT_ID and FREEAGENT_CLIENT_SECRET to enable."
-      connectUrl={connectFreeAgentUrl}
-      pending={pending}
-      onSync={onSyncFreeAgent}
-      onDisconnect={onDisconnectFreeAgent}
-      lastSyncAt={data?.connection?.last_sync_at ?? null}
-    />
-  );
-}
-
-function FinanceProviderCard({
-  title,
-  connected,
-  configured,
-  connectedLabel,
-  info,
-  configuredHint,
-  connectUrl,
-  pending,
-  onSync,
-  onDisconnect,
-  lastSyncAt,
-}: {
-  title: string;
-  connected: boolean;
-  configured: boolean;
-  connectedLabel: string | null;
-  info: string;
-  configuredHint: string;
-  connectUrl: string;
-  pending: boolean;
-  onSync: () => void;
-  onDisconnect: () => void;
-  lastSyncAt: string | null;
-}) {
-  return (
-    <div className={cn(panelClass, 'p-4')}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <h3 className="font-medium text-[var(--workspace-shell-text)]">
-              {title}
-            </h3>
-            <Popover>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
-                  aria-label={`${title} info`}
-                >
-                  <Info className="h-3.5 w-3.5" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent
-                align="start"
-                className="max-w-xs text-sm leading-relaxed"
-              >
-                {info}
-              </PopoverContent>
-            </Popover>
-          </div>
-          {connected && connectedLabel ? (
-            <p className="mt-0.5 text-sm text-[var(--workspace-shell-text-muted)]">
-              {connectedLabel}
-            </p>
-          ) : null}
-          {connected && lastSyncAt ? (
-            <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-              Last synced {new Date(lastSyncAt).toLocaleString('en-GB')}
-            </p>
-          ) : null}
-        </div>
-        <div className="flex shrink-0 gap-2">
-          {connected ? (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                className="border-[color:var(--workspace-shell-border)]"
-                disabled={pending}
-                onClick={onSync}
-              >
-                <RefreshCw
-                  className={cn('mr-2 h-4 w-4', pending && 'animate-spin')}
-                />
-                Sync now
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                className="text-[var(--workspace-shell-text-muted)]"
-                disabled={pending}
-                onClick={onDisconnect}
-              >
-                Disconnect
-              </Button>
-            </>
-          ) : configured ? (
-            <Button
-              type="button"
-              asChild
-              className="bg-[var(--ozer-accent)] text-[var(--ozer-white)]"
-            >
-              <a href={connectUrl}>
-                <Link2 className="mr-2 h-4 w-4" />
-                Connect {title}
-              </a>
-            </Button>
-          ) : (
-            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              {configuredHint}
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="h-9 w-9 border-[color:var(--workspace-shell-border)]"
+          disabled={disabled}
+          aria-label="Finances actions"
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]"
+      >
+        <DropdownMenuItem onClick={onAddTransaction}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add transaction
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onImportCsv}>
+          <Upload className="mr-2 h-4 w-4" />
+          Import CSV
+        </DropdownMenuItem>
+        {freeAgentConnected ? (
+          <DropdownMenuItem disabled={pending} onClick={onSyncFreeAgent}>
+            <RefreshCw className={cn('mr-2 h-4 w-4', pending && 'animate-spin')} />
+            Sync FreeAgent
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem asChild>
+            <a href={settingsPath}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Sync FreeAgent
+            </a>
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <a href={settingsPath}>
+            <Settings className="mr-2 h-4 w-4" />
+            Settings
+          </a>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -758,6 +670,7 @@ function TransactionsPanel({
   data,
   loading,
   pending,
+  freeAgentConnected,
   uncategorizedCount,
   aiSuggestions,
   suggestionMap,
@@ -766,10 +679,13 @@ function TransactionsPanel({
   onCategorize,
   onSetTransfer,
   onSetLinks,
+  onSyncFreeAgent,
+  onSyncFreeAgentHistory,
 }: {
   data: DashboardData | null;
   loading: boolean;
   pending: boolean;
+  freeAgentConnected: boolean;
   uncategorizedCount: number;
   aiSuggestions: CategorySuggestion[];
   suggestionMap: Map<string, CategorySuggestion>;
@@ -782,12 +698,14 @@ function TransactionsPanel({
     clientId: string | null,
     projectId: string | null,
   ) => void;
+  onSyncFreeAgent: () => void;
+  onSyncFreeAgentHistory: () => void;
 }) {
   return (
     <div className={cn(panelClass, 'overflow-hidden')}>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
         <h3 className="font-medium text-[var(--workspace-shell-text)]">Transactions</h3>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {uncategorizedCount > 0 ? (
             <>
               <Button
@@ -814,12 +732,41 @@ function TransactionsPanel({
               ) : null}
             </>
           ) : null}
+          {freeAgentConnected ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+                  disabled={pending || loading}
+                  aria-label="Transaction sync actions"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]"
+              >
+                <DropdownMenuItem disabled={pending} onClick={onSyncFreeAgent}>
+                  <RefreshCw className={cn('mr-2 h-4 w-4', pending && 'animate-spin')} />
+                  Sync FreeAgent
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled={pending} onClick={onSyncFreeAgentHistory}>
+                  <RefreshCw className={cn('mr-2 h-4 w-4', pending && 'animate-spin')} />
+                  Sync all FreeAgent history
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
         </div>
       </div>
       {!data?.transactions.length ? (
         <p className="p-4 text-sm text-[var(--workspace-shell-text-muted)]">
-          No transactions in this range. Import a CSV, connect FreeAgent, or add
-          manually.
+          No transactions in this range. Import a CSV, sync from FreeAgent in
+          settings, or add manually.
         </p>
       ) : (
         <div className="overflow-x-auto">

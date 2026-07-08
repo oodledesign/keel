@@ -97,11 +97,11 @@ const FEATURE_MATRIX: Array<{
   },
   {
     feature: 'Monthly AI credits',
-    hint: 'Shared AI allowance for drafts and assistants',
+    hint: 'Shared pool — buy Boost (£5), Studio (£10), or Agency (£20) packs anytime',
     lite: '500',
     solo: '2,000',
-    team: '2,000',
-    scale: '2,000',
+    team: '5,000',
+    scale: '12,000',
   },
   {
     feature: 'Signatures',
@@ -112,7 +112,7 @@ const FEATURE_MATRIX: Array<{
     team: 'Add-on',
     scale: 'Add-on',
   },
-  { feature: 'Team members included', lite: 'Up to 3', solo: '1', team: 'Up to 5', scale: 'Up to 15' },
+  { feature: 'Team members included', lite: 'Up to 3', solo: '1', team: 'Up to 5', scale: 'Up to 15 (request more)' },
   { feature: 'Shared client & project work', lite: false, solo: false, team: true, scale: true },
   { feature: 'Priority support', lite: false, solo: false, team: false, scale: true },
   { feature: 'Ozer subscription transaction fees', lite: 'None', solo: 'None', team: 'None', scale: 'None' },

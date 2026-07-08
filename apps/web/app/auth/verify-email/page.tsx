@@ -9,6 +9,7 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { VerifyEmailContent } from './_components/verify-email-content';
+import { AuthFormCard } from '../_components/auth-form-card';
 
 export const generateMetadata = async () => {
   const i18n = await createI18nServerInstance();
@@ -32,15 +33,15 @@ async function VerifyEmailPage() {
   }
 
   return (
-    <>
-      <div className="flex flex-col items-center gap-1">
+    <AuthFormCard>
+      <div className="flex flex-col items-center gap-1 text-center">
         <Heading level={4} className="tracking-tight">
           <Trans i18nKey="auth:verifyEmailHeading" defaults="Verify your email" />
         </Heading>
       </div>
 
       <VerifyEmailContent email={user.email ?? null} />
-    </>
+    </AuthFormCard>
   );
 }
 

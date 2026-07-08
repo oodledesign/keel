@@ -13,13 +13,18 @@ import { DayViewClient } from '~/home/(user)/planner/_components/DayViewClient';
 
 interface WorkspacePlannerDayPageProps {
   params: Promise<{ account: string }>;
+  searchParams: Promise<{ date?: string }>;
 }
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Today' };
 
-async function WorkspacePlannerDayPage({ params }: WorkspacePlannerDayPageProps) {
+async function WorkspacePlannerDayPage({
+  params,
+  searchParams,
+}: WorkspacePlannerDayPageProps) {
   const accountSlug = (await params).account;
+  const { date } = await searchParams;
 
   try {
     await assertWorkspacePlannerAccess(accountSlug);
@@ -27,14 +32,14 @@ async function WorkspacePlannerDayPage({ params }: WorkspacePlannerDayPageProps)
     redirect(pathsConfig.app.accountHome.replace('[account]', accountSlug));
   }
 
-  const data = await loadWorkspaceDayViewData(accountSlug);
+  const data = await loadWorkspaceDayViewData(accountSlug, date);
   const dayViewHref = pathsConfig.app.accountPlannerDay.replace(
     '[account]',
     accountSlug,
   );
 
   return (
-    <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 text-[var(--workspace-shell-text)] lg:px-6">
+    <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-3 text-[var(--workspace-shell-text)] lg:px-6 lg:py-4">
       <DayViewClient initialData={data} dayViewHref={dayViewHref} />
     </PageBody>
   );

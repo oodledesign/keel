@@ -9,6 +9,8 @@ import pathsConfig from '~/config/paths.config';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
+import { AuthFormCard } from '../_components/auth-form-card';
+
 interface Props {
   searchParams: Promise<{
     next?: string;
@@ -42,12 +44,14 @@ async function VerifyPage(props: Props) {
   const redirectPath = getSafeRedirectPath(nextPath, pathsConfig.app.home);
 
   return (
-    <MultiFactorChallengeContainer
-      userId={data.claims.sub}
-      paths={{
-        redirectPath,
-      }}
-    />
+    <AuthFormCard>
+      <MultiFactorChallengeContainer
+        userId={data.claims.sub}
+        paths={{
+          redirectPath,
+        }}
+      />
+    </AuthFormCard>
   );
 }
 

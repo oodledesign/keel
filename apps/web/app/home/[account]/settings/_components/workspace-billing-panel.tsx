@@ -21,6 +21,7 @@ import { loadWorkspaceAddonState } from '~/lib/billing/workspace-addon-state.loa
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { WorkspaceAiCreditsBillingCard } from './workspace-ai-credits-billing-card';
 import { getTeamAccountAccess } from '../../_lib/role-access';
 
 type WorkspaceBillingPanelProps = {
@@ -116,6 +117,12 @@ export async function WorkspaceBillingPanel({
             highlightAddon={searchParams.addon ?? null}
           />
         </If>
+
+        <WorkspaceAiCreditsBillingCard
+          accountId={accountId}
+          accountSlug={accountSlug}
+          canManageBilling={canManageBilling}
+        />
 
         <If condition={subscription}>
           {(activeSubscription) => (

@@ -521,7 +521,7 @@ function buildWhy(
       ? 'Solo covers one freelancer with clients, projects, and invoices — flat, no per-seat maths.'
       : businessPlan?.productId === 'ozer-business-team'
         ? 'Team covers up to 5 people with shared clients and projects — flat, no per-seat maths.'
-        : 'Scale covers up to 15 people with shared clients, projects, and priority support — flat, no per-seat maths.';
+        : 'Scale covers up to 15 people with shared clients, projects, and priority support — flat, no per-seat maths. Need more seats? Request extra users anytime.';
 
   if (answers.signatures === 'yes' && signatureTier) {
     return `${businessWhy} Signatures ${signatureTier.name} adds ${mailboxBandText(signatureTier)}.`;

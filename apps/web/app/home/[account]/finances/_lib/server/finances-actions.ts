@@ -45,6 +45,9 @@ function revalidateFinances(accountSlug: string, projectId?: string | null) {
     pathsConfig.app.accountFinances.replace('[account]', accountSlug),
   );
   revalidatePath(
+    pathsConfig.app.accountFinancesSettings.replace('[account]', accountSlug),
+  );
+  revalidatePath(
     pathsConfig.app.accountHome.replace('[account]', accountSlug),
   );
   if (projectId) {
@@ -319,6 +322,50 @@ export const syncFreeAgentAction = enhanceAction(
     schema: z.object({
       accountId: z.string().uuid(),
       accountSlug: z.string().min(1),
+    }),
+  },
+);
+
+export const syncFreeAgentHistoryAction = enhanceAction(
+  async (input) => {
+    const client = getSupabaseServerClient();
+    const result = await syncFreeAgentToOzer(client, input.accountId, {
+      mode: 'history',
+    });
+    revalidateFinances(input.accountSlug);
+    return result;
+  },
+  {
+    schema: z.object({
+      accountId: z.string().uuid(),
+      accountSlug: z.string().min(1),
+    }),
+  },
+);
+
+export const loadFinancesSettingsAction = enhanceAction(
+  async (input) => {
+    const client = getSupabaseServerClient();
+
+    const { data: connection, error } = await client
+      .from('finance_connections')
+      .select(
+        'id, provider, freeagent_company_name, last_sync_at, token_expires_at, sync_state',
+      )
+      .eq('account_id', input.accountId)
+      .eq('provider', 'freeagent')
+      .maybeSingle();
+
+    if (error) throw error;
+
+    return {
+      connection: connection ?? null,
+      freeAgentConfigured: isFreeAgentConfigured(),
+    };
+  },
+  {
+    schema: z.object({
+      accountId: z.string().uuid(),
     }),
   },
 );
