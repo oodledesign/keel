@@ -138,7 +138,8 @@ export function PlanOutputPanel({
             Regenerate
           </Button>
           <PlannerSyncCalendarButton
-            dateIso={date}
+            dateIso={`${toLocalDateYmd(new Date(date))}T12:00:00`}
+            mode={mode}
             planDocument={planDocument}
             onSynced={onPersistPlanDocument}
           />

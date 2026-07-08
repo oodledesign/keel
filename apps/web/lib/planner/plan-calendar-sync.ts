@@ -1,5 +1,11 @@
 import type { EditablePlanBlock, PlanDocument } from './plan-blocks';
 import { flattenPlanBlocks } from './plan-blocks';
+import {
+  isWeekPlanDocument,
+  parsePlanDateAnchor,
+  resolveSectionDateYmd,
+  toLocalDateYmdFromAnchor,
+} from './plan-week-dates';
 
 export type PlannerSyncBlock = {
   blockId: string;
@@ -20,33 +26,69 @@ export type PlannerSyncResultMapping = {
   pushedByPlanner: boolean;
 };
 
-function minutesToIso(dateIso: string, minutes: number): string {
-  const base = new Date(dateIso);
-  if (Number.isNaN(base.getTime())) {
-    return new Date().toISOString();
-  }
+function minutesToIso(dateYmd: string, minutes: number): string {
+  const base = parsePlanDateAnchor(`${dateYmd}T12:00:00`);
   const next = new Date(base);
   next.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
   return next.toISOString();
 }
 
+function defaultDateYmd(dateIso: string): string {
+  return toLocalDateYmdFromAnchor(parsePlanDateAnchor(dateIso));
+}
+
 export function blocksForCalendarSync(
   doc: PlanDocument,
   dateIso: string,
+  options?: { mode?: 'day' | 'week' },
 ): PlannerSyncBlock[] {
-  return flattenPlanBlocks(doc)
-    .filter((block) => !block.isBreak)
-    .map((block) => ({
-      blockId: block.id,
-      title: block.title,
-      start: minutesToIso(dateIso, block.startMinutes),
-      end: minutesToIso(dateIso, block.endMinutes),
-      isCalendarEvent: block.isCalendarEvent,
-      isBreak: block.isBreak,
-      googleEventId: block.googleEventId ?? null,
-      googleCalendarId: block.googleCalendarId ?? null,
-      pushedByPlanner: block.pushedByPlanner ?? false,
-    }));
+  const fallbackDateYmd = defaultDateYmd(dateIso);
+  const weekPlan =
+    options?.mode === 'week' ||
+    (options?.mode !== 'day' && isWeekPlanDocument(doc));
+
+  if (!weekPlan) {
+    return flattenPlanBlocks(doc)
+      .filter((block) => !block.isBreak)
+      .map((block) => ({
+        blockId: block.id,
+        title: block.title,
+        start: minutesToIso(fallbackDateYmd, block.startMinutes),
+        end: minutesToIso(fallbackDateYmd, block.endMinutes),
+        isCalendarEvent: block.isCalendarEvent,
+        isBreak: block.isBreak,
+        googleEventId: block.googleEventId ?? null,
+        googleCalendarId: block.googleCalendarId ?? null,
+        pushedByPlanner: block.pushedByPlanner ?? false,
+      }));
+  }
+
+  const blocks: PlannerSyncBlock[] = [];
+
+  for (const section of doc.sections) {
+    const sectionDateYmd =
+      resolveSectionDateYmd(dateIso, section.heading) ?? fallbackDateYmd;
+
+    for (const block of section.blocks) {
+      if (block.isBreak) {
+        continue;
+      }
+
+      blocks.push({
+        blockId: block.id,
+        title: block.title,
+        start: minutesToIso(sectionDateYmd, block.startMinutes),
+        end: minutesToIso(sectionDateYmd, block.endMinutes),
+        isCalendarEvent: block.isCalendarEvent,
+        isBreak: block.isBreak,
+        googleEventId: block.googleEventId ?? null,
+        googleCalendarId: block.googleCalendarId ?? null,
+        pushedByPlanner: block.pushedByPlanner ?? false,
+      });
+    }
+  }
+
+  return blocks;
 }
 
 export function hasSyncableBlocks(doc: PlanDocument): boolean {

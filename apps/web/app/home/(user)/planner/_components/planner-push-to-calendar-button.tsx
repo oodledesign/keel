@@ -19,6 +19,7 @@ import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
 type Props = {
   dateIso: string;
+  mode?: 'day' | 'week';
   planDocument: PlanDocument | null;
   onSynced?: (document: PlanDocument) => Promise<void> | void;
   className?: string;
@@ -27,6 +28,7 @@ type Props = {
 
 export function PlannerSyncCalendarButton({
   dateIso,
+  mode,
   planDocument,
   onSynced,
   className,
@@ -39,12 +41,12 @@ export function PlannerSyncCalendarButton({
       return [];
     }
 
-    return blocksForCalendarSync(planDocument, dateIso).filter(
+    return blocksForCalendarSync(planDocument, dateIso, { mode }).filter(
       (block) =>
         !block.isBreak &&
         (!block.isCalendarEvent || Boolean(block.googleEventId)),
     );
-  }, [dateIso, planDocument]);
+  }, [dateIso, mode, planDocument]);
 
   const showButton = planDocument ? hasSyncableBlocks(planDocument) : false;
 

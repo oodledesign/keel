@@ -1,3 +1,9 @@
+import {
+  parsePlanDateAnchor,
+  parseWeekdayFromHeading,
+  weekDayOffsetsForAnchor,
+} from './plan-week-dates';
+
 export type ParsedScheduleBlock = {
   title: string;
   start: string;
@@ -145,8 +151,7 @@ export function parseDayScheduleFromMarkdown(
   markdown: string,
   dateIso: string,
 ): ParsedScheduleBlock[] {
-  const base = new Date(dateIso);
-  if (Number.isNaN(base.getTime())) return [];
+  const base = parsePlanDateAnchor(dateIso);
 
   const blocks: ParsedScheduleBlock[] = [];
 
@@ -193,22 +198,16 @@ export function parseScheduledBlocksForCalendarPush(
   markdown: string,
   dateIso: string,
 ) {
-  const base = new Date(dateIso);
-  if (Number.isNaN(base.getTime())) return [];
-
+  const base = parsePlanDateAnchor(dateIso);
   let currentDate = new Date(base);
   const blocks: Array<{ title: string; start: string; end: string }> = [];
-  const dayOffsets = weekDayOffsets(base);
+  const dayOffsets = weekDayOffsetsForAnchor(dateIso);
 
   for (const rawLine of markdown.split('\n')) {
     const line = rawLine.trim();
-    const heading = /^#{2,4}\s+(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i.exec(
-      line,
-    );
-    if (heading) {
-      const dayName = heading[1];
-      if (!dayName) continue;
-      const offset = dayOffsets[dayName.toLowerCase()];
+    const weekday = parseWeekdayFromHeading(line);
+    if (weekday) {
+      const offset = dayOffsets[weekday];
       if (offset !== undefined) {
         currentDate = new Date(base);
         currentDate.setDate(base.getDate() + offset);
@@ -248,24 +247,4 @@ export function parseScheduledBlocksForCalendarPush(
   }
 
   return blocks;
-}
-
-function weekDayOffsets(base: Date) {
-  const dayNames = [
-    'sunday',
-    'monday',
-    'tuesday',
-    'wednesday',
-    'thursday',
-    'friday',
-    'saturday',
-  ];
-  const offsets: Record<string, number> = {};
-  for (let i = 0; i < 7; i += 1) {
-    const d = new Date(base);
-    d.setDate(base.getDate() + i);
-    const dayName = dayNames[d.getDay()];
-    if (dayName) offsets[dayName] = i;
-  }
-  return offsets;
 }
