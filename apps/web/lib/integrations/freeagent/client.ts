@@ -163,3 +163,14 @@ export function poundsToPence(value: string | number | null | undefined): number
   if (!Number.isFinite(n)) return 0;
   return Math.round(n * 100);
 }
+
+/** Bank transaction date from FreeAgent (`dated_on`), not import metadata. */
+export function freeAgentTransactionDate(
+  tx: Record<string, unknown>,
+): string | null {
+  const raw = tx.dated_on ?? tx.dated;
+  if (typeof raw !== 'string' || !raw.trim()) {
+    return null;
+  }
+  return raw.trim().slice(0, 10);
+}

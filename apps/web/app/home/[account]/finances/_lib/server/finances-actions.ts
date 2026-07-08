@@ -21,6 +21,7 @@ import {
 } from '~/lib/finance/transaction-links';
 import {
   pushCategoryToFreeAgent,
+  syncFreeAgentHistoryChunk,
   syncFreeAgentToOzer,
 } from '~/lib/integrations/freeagent/sync';
 import {
@@ -384,11 +385,11 @@ export const syncFreeAgentAction = enhanceAction(
   },
 );
 
-export const syncFreeAgentHistoryAction = enhanceAction(
+export const syncFreeAgentHistoryChunkAction = enhanceAction(
   async (input) => {
     const client = getSupabaseServerClient();
-    const result = await syncFreeAgentToOzer(client, input.accountId, {
-      mode: 'history',
+    const result = await syncFreeAgentHistoryChunk(client, input.accountId, {
+      reset: input.reset,
     });
     revalidateFinances(input.accountSlug);
     return result;
@@ -397,6 +398,7 @@ export const syncFreeAgentHistoryAction = enhanceAction(
     schema: z.object({
       accountId: z.string().uuid(),
       accountSlug: z.string().min(1),
+      reset: z.boolean().optional(),
     }),
   },
 );

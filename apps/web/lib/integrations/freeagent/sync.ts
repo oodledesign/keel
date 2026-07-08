@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import {
   FreeAgentClient,
+  freeAgentTransactionDate,
   parseFreeAgentId,
   poundsToPence,
 } from './client';
@@ -50,6 +51,27 @@ export type SyncFreeAgentResult = {
   fromDate: string | null;
 };
 
+export type HistoryBackfillState = {
+  status: 'idle' | 'running' | 'complete';
+  bankAccountIndex: number;
+  windowIndex: number;
+  startedAt: string | null;
+  completedAt: string | null;
+  cumulativeImported: number;
+  cumulativeUpdated: number;
+  cumulativeProcessed: number;
+};
+
+export type SyncFreeAgentHistoryChunkResult = SyncFreeAgentResult & {
+  historyComplete: boolean;
+  historyProgress: string;
+  historyBackfill: HistoryBackfillState;
+};
+
+type ConnectionSyncState = Record<string, unknown> & {
+  historyBackfill?: HistoryBackfillState;
+};
+
 async function saveTokens(
   db: SupabaseClient,
   connectionId: string,
@@ -89,8 +111,9 @@ async function fetchExplanationMapForBankAccount(
 ): Promise<Map<string, FreeAgentExplanationSummary>> {
   const map = new Map<string, FreeAgentExplanationSummary>();
   const maxPages = options?.maxPages ?? 50;
+  const unlimitedPages = maxPages <= 0;
 
-  for (let page = 1; page <= maxPages; page++) {
+  for (let page = 1; unlimitedPages || page <= maxPages; page++) {
     const explanations = await client.listTransactionExplanationsForBankAccount(
       bankAccountUrl,
       page,
@@ -211,7 +234,7 @@ function fullSyncFromDate(): string {
 }
 
 /** Year-by-year windows for deep historical backfill. */
-function historyDateWindows(yearsBack = 15): DateWindow[] {
+function historyDateWindows(yearsBack = 20): DateWindow[] {
   const today = new Date().toISOString().slice(0, 10);
   const endYear = new Date().getFullYear();
   const startYear = endYear - yearsBack + 1;
@@ -247,7 +270,9 @@ async function importBankTransactionsForWindow(
     categorised: 0,
   };
 
-  for (let page = 1; page <= input.maxPages; page++) {
+  const unlimitedPages = input.maxPages <= 0;
+
+  for (let page = 1; unlimitedPages || page <= input.maxPages; page++) {
     const transactions = await input.client.listBankTransactions(
       input.bankAccountUrl,
       page,
@@ -268,7 +293,7 @@ async function importBankTransactionsForWindow(
       stats.processed++;
 
       const amountPence = poundsToPence(tx.amount as string | number);
-      const dated = String(tx.dated ?? tx.created_at ?? '').slice(0, 10);
+      const dated = freeAgentTransactionDate(tx);
       if (!dated) continue;
 
       const description = String(
@@ -344,6 +369,229 @@ async function importBankTransactionsForWindow(
   }
 
   return stats;
+}
+
+function readConnectionSyncState(
+  connection: { sync_state?: unknown },
+): ConnectionSyncState {
+  const raw = connection.sync_state;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return {};
+  }
+  return raw as ConnectionSyncState;
+}
+
+function initialHistoryBackfillState(): HistoryBackfillState {
+  return {
+    status: 'running',
+    bankAccountIndex: 0,
+    windowIndex: 0,
+    startedAt: new Date().toISOString(),
+    completedAt: null,
+    cumulativeImported: 0,
+    cumulativeUpdated: 0,
+    cumulativeProcessed: 0,
+  };
+}
+
+async function ensureFinanceBankAccount(
+  db: SupabaseClient,
+  accountId: string,
+  ba: Record<string, unknown>,
+): Promise<string | null> {
+  const baUrl = String(ba.url ?? '');
+  const baId = parseFreeAgentId(baUrl);
+  if (!baUrl) return null;
+
+  const { data: bankRow } = await db
+    .from('finance_bank_accounts')
+    .select('id')
+    .eq('account_id', accountId)
+    .eq('freeagent_bank_account_url', baUrl)
+    .maybeSingle();
+
+  if (bankRow?.id) {
+    await db
+      .from('finance_bank_accounts')
+      .update({
+        name: String(ba.name ?? ba.bank_name ?? 'Bank account'),
+        last_synced_at: new Date().toISOString(),
+      })
+      .eq('id', bankRow.id);
+    return bankRow.id as string;
+  }
+
+  const { data: inserted } = await db
+    .from('finance_bank_accounts')
+    .insert({
+      account_id: accountId,
+      name: String(ba.name ?? ba.bank_name ?? 'Bank account'),
+      currency: String(ba.currency ?? 'GBP').toUpperCase(),
+      source: 'freeagent',
+      freeagent_bank_account_url: baUrl,
+      freeagent_bank_account_id: baId,
+    })
+    .select('id')
+    .single();
+
+  return (inserted?.id as string | undefined) ?? null;
+}
+
+export async function syncFreeAgentHistoryChunk(
+  db: SupabaseClient,
+  accountId: string,
+  options: { reset?: boolean } = {},
+): Promise<SyncFreeAgentHistoryChunkResult> {
+  const { data: connection, error } = await db
+    .from('finance_connections')
+    .select('*')
+    .eq('account_id', accountId)
+    .eq('provider', 'freeagent')
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!connection) throw new Error('FreeAgent is not connected');
+
+  const client = clientFromConnection(db, connection as ConnectionRow);
+  const syncState = readConnectionSyncState(connection);
+  const windows = historyDateWindows();
+
+  let historyBackfill =
+    options.reset || syncState.historyBackfill?.status !== 'running'
+      ? initialHistoryBackfillState()
+      : { ...syncState.historyBackfill! };
+
+  const faBankAccounts = await client.listBankAccounts();
+  const totalSteps = Math.max(faBankAccounts.length * windows.length, 1);
+
+  if (historyBackfill.status === 'complete' && !options.reset) {
+    return {
+      imported: 0,
+      updated: 0,
+      processed: 0,
+      bankAccounts: faBankAccounts.length,
+      categorised: 0,
+      categoriesSynced: 0,
+      mode: 'history',
+      fromDate: null,
+      historyComplete: true,
+      historyProgress: 'Historical sync already complete',
+      historyBackfill,
+    };
+  }
+
+  let categoriesSynced = 0;
+  if (
+    options.reset ||
+    (historyBackfill.bankAccountIndex === 0 && historyBackfill.windowIndex === 0)
+  ) {
+    categoriesSynced = await syncFreeAgentCategories(db, accountId, client);
+  }
+  const categoryUrlToId = await buildCategoryUrlToIdMap(db, accountId);
+
+  let imported = 0;
+  let updated = 0;
+  let processed = 0;
+  let categorised = 0;
+  let historyProgress = 'Preparing historical sync';
+  let historyComplete = false;
+
+  while (historyBackfill.bankAccountIndex < faBankAccounts.length) {
+    const ba = faBankAccounts[historyBackfill.bankAccountIndex]!;
+    const baUrl = String(ba.url ?? '');
+    if (!baUrl) {
+      historyBackfill.bankAccountIndex++;
+      historyBackfill.windowIndex = 0;
+      continue;
+    }
+
+    if (historyBackfill.windowIndex >= windows.length) {
+      historyBackfill.bankAccountIndex++;
+      historyBackfill.windowIndex = 0;
+      continue;
+    }
+
+    const window = windows[historyBackfill.windowIndex]!;
+    const bankAccountId = await ensureFinanceBankAccount(db, accountId, ba);
+    if (!bankAccountId) {
+      historyBackfill.windowIndex++;
+      continue;
+    }
+
+    const accountLabel = String(ba.name ?? ba.bank_name ?? 'Bank account');
+    const yearLabel = window.fromDate.slice(0, 4);
+    const step =
+      historyBackfill.bankAccountIndex * windows.length +
+      historyBackfill.windowIndex +
+      1;
+    historyProgress = `${yearLabel} · ${accountLabel} (${step}/${totalSteps})`;
+
+    const explanationMap = await fetchExplanationMapForBankAccount(client, baUrl, {
+      fromDate: window.fromDate,
+      toDate: window.toDate,
+      maxPages: 0,
+    });
+
+    const stats = await importBankTransactionsForWindow(db, {
+      accountId,
+      bankAccountId,
+      client,
+      bankAccountUrl: baUrl,
+      categoryUrlToId,
+      explanationMap,
+      dateFilter: window,
+      maxPages: 0,
+    });
+
+    imported += stats.imported;
+    updated += stats.updated;
+    processed += stats.processed;
+    categorised += stats.categorised;
+
+    historyBackfill.cumulativeImported += stats.imported;
+    historyBackfill.cumulativeUpdated += stats.updated;
+    historyBackfill.cumulativeProcessed += stats.processed;
+    historyBackfill.windowIndex++;
+
+    break;
+  }
+
+  if (historyBackfill.bankAccountIndex >= faBankAccounts.length) {
+    historyBackfill.status = 'complete';
+    historyBackfill.completedAt = new Date().toISOString();
+    historyComplete = true;
+    historyProgress = `Complete — ${historyBackfill.cumulativeImported} new, ${historyBackfill.cumulativeUpdated} updated`;
+  } else {
+    historyBackfill.status = 'running';
+  }
+
+  await db
+    .from('finance_connections')
+    .update({
+      last_sync_at: new Date().toISOString(),
+      sync_state: {
+        ...syncState,
+        lastMode: 'history',
+        lastFromDate: null,
+        lastCronError: null,
+        historyBackfill,
+      },
+    })
+    .eq('id', connection.id);
+
+  return {
+    imported,
+    updated,
+    processed,
+    bankAccounts: faBankAccounts.length,
+    categorised,
+    categoriesSynced,
+    mode: 'history',
+    fromDate: null,
+    historyComplete,
+    historyProgress,
+    historyBackfill,
+  };
 }
 
 export async function syncFreeAgentToOzer(
@@ -483,6 +731,7 @@ export async function syncFreeAgentToOzer(
     .update({
       last_sync_at: new Date().toISOString(),
       sync_state: {
+        ...readConnectionSyncState(connection),
         lastMode: mode,
         lastFromDate: fromDate,
         lastCronError: null,

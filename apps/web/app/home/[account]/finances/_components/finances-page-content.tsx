@@ -46,7 +46,6 @@ import { cn } from '@kit/ui/utils';
 import pathsConfig from '~/config/paths.config';
 import {
   AnalyticsDateRangePicker,
-  DEFAULT_DATE_RANGE,
   type DateRangeSelection,
 } from '~/components/date-range/analytics-date-range-picker';
 import { resolveAnalyticsDateRange } from '~/lib/date-range/analytics-date-range';
@@ -79,7 +78,7 @@ import {
   suggestCsvMappingAction,
   suggestTransactionCategoriesAction,
   syncFreeAgentAction,
-  syncFreeAgentHistoryAction,
+  syncFreeAgentHistoryChunkAction,
 } from '../_lib/server/finances-actions';
 import { FINANCE_TRANSACTION_PAGE_SIZES } from '../_lib/finance-transaction-pagination';
 import { FinancesDashboardSkeleton } from './finances-dashboard-skeleton';
@@ -96,8 +95,16 @@ type CategorySuggestion = {
   reason?: string;
 };
 
+const FINANCES_DEFAULT_DATE_RANGE: DateRangeSelection = {
+  preset: 'last',
+  lastSubPreset: 'last_12_months',
+  lastCount: 12,
+  lastUnit: 'months',
+  includeToday: true,
+};
+
 function initialDateRange() {
-  const resolved = resolveAnalyticsDateRange(DEFAULT_DATE_RANGE);
+  const resolved = resolveAnalyticsDateRange(FINANCES_DEFAULT_DATE_RANGE);
   return { from: resolved.fromIso, to: resolved.toIso };
 }
 
@@ -394,15 +401,79 @@ export function FinancesPageContent({
   const onSyncFreeAgent = (options?: { history?: boolean }) => {
     startTransition(async () => {
       try {
-        const result = options?.history
-          ? await syncFreeAgentHistoryAction({ accountId, accountSlug })
-          : await syncFreeAgentAction({ accountId, accountSlug });
+        if (options?.history) {
+          const toastId = 'freeagent-history-sync';
+          toast.loading(
+            resume ? 'Resuming historical sync…' : 'Starting historical sync…',
+            { id: toastId },
+          );
+
+          const resume =
+            (
+              data?.connection?.sync_state as
+                | { historyBackfill?: { status?: string } }
+                | null
+                | undefined
+            )?.historyBackfill?.status === 'running';
+
+          let reset = !resume;
+          let complete = false;
+          const totals = {
+            imported: 0,
+            updated: 0,
+            processed: 0,
+            categorised: 0,
+            categoriesSynced: 0,
+          };
+
+          const maxChunks = 500;
+          let chunks = 0;
+
+          while (!complete && chunks < maxChunks) {
+            chunks++;
+            const result = await syncFreeAgentHistoryChunkAction({
+              accountId,
+              accountSlug,
+              reset,
+            });
+            reset = false;
+            complete = result.historyComplete;
+            totals.imported += result.imported;
+            totals.updated += result.updated;
+            totals.processed += result.processed;
+            totals.categorised += result.categorised;
+            totals.categoriesSynced += result.categoriesSynced;
+
+            toast.loading(`Syncing history… ${result.historyProgress}`, {
+              id: toastId,
+            });
+          }
+
+          if (!complete) {
+            toast.error(
+              'Historical sync paused — run Sync all FreeAgent history again to continue.',
+              { id: toastId },
+            );
+            await refresh({ background: true });
+            return;
+          }
+
+          const wideRange = resolveAnalyticsDateRange(FINANCES_DEFAULT_DATE_RANGE);
+          setDateFrom(wideRange.fromIso);
+          setDateTo(wideRange.toIso);
+          setPage(1);
+
+          await refresh({ background: true });
+          toast.success(
+            `Historical sync complete — ${formatSyncResult(totals)}`,
+            { id: toastId },
+          );
+          return;
+        }
+
+        const result = await syncFreeAgentAction({ accountId, accountSlug });
         await refresh({ background: true });
-        toast.success(
-          options?.history
-            ? `Historical sync complete — ${formatSyncResult(result)}`
-            : `FreeAgent sync complete — ${formatSyncResult(result)}`,
-        );
+        toast.success(`FreeAgent sync complete — ${formatSyncResult(result)}`);
       } catch (e) {
         toast.error(e instanceof Error ? e.message : 'Sync failed');
       }
