@@ -5,7 +5,6 @@ import { PageBody } from '@kit/ui/page';
 
 import { withI18n } from '~/lib/i18n/with-i18n';
 
-import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
 import { getDefaultAccountPath } from '../../_lib/role-access';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
 import { WebsiteDetailContent } from '../_components/website-detail-content';
@@ -80,25 +79,17 @@ async function WebsiteDetailPage({
       : undefined;
 
   return (
-    <>
-      <TeamAccountLayoutPageHeader
-        title={website.name}
-        description="Website details"
-        account={accountSlug}
+    <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
+      <WebsiteDetailContent
+        website={website}
+        accountSlug={accountSlug}
+        accountId={accountId}
+        canEditWebsites={canEditWebsites}
+        planning={planning}
+        siteStudio={siteStudio}
+        planningTab={planningTab}
       />
-
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
-        <WebsiteDetailContent
-          website={website}
-          accountSlug={accountSlug}
-          accountId={accountId}
-          canEditWebsites={canEditWebsites}
-          planning={planning}
-          siteStudio={siteStudio}
-          planningTab={planningTab}
-        />
-      </PageBody>
-    </>
+    </PageBody>
   );
 }
 

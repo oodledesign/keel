@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 
 import { ChevronDown, ChevronRight, Plus, Trash2 } from 'lucide-react';
 
@@ -22,11 +22,13 @@ export function WebsiteSitemapEditor({
   accountId,
   websiteId,
   initialSitemap,
+  onSitemapChange,
   canEdit,
 }: {
   accountId: string;
   websiteId: string;
   initialSitemap: WebsiteSitemapPage[];
+  onSitemapChange?: (sitemap: WebsiteSitemapPage[]) => void;
   canEdit: boolean;
 }) {
   const [pages, setPages] = useState(initialSitemap);
@@ -35,13 +37,36 @@ export function WebsiteSitemapEditor({
   );
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [, startTransition] = useTransition();
+  const skipNextSave = useRef(true);
+  const onSitemapChangeRef = useRef(onSitemapChange);
+  onSitemapChangeRef.current = onSitemapChange;
 
   useEffect(() => {
-    setPages(initialSitemap);
+    setPages((current) => {
+      if (current === initialSitemap) return current;
+      skipNextSave.current = true;
+      return initialSitemap;
+    });
   }, [initialSitemap]);
+
+  function updatePages(
+    next:
+      | WebsiteSitemapPage[]
+      | ((current: WebsiteSitemapPage[]) => WebsiteSitemapPage[]),
+  ) {
+    setPages((current) => {
+      const resolved = typeof next === 'function' ? next(current) : next;
+      queueMicrotask(() => onSitemapChangeRef.current?.(resolved));
+      return resolved;
+    });
+  }
 
   useEffect(() => {
     if (!canEdit) return;
+    if (skipNextSave.current) {
+      skipNextSave.current = false;
+      return;
+    }
 
     setSaveState('saving');
     const timer = setTimeout(() => {
@@ -69,12 +94,12 @@ export function WebsiteSitemapEditor({
       slug: slugifyPageTitle(title),
       sections: [],
     };
-    setPages((current) => [...current, page]);
+    updatePages((current) => [...current, page]);
     setExpandedPageIds((current) => new Set([...current, page.id]));
   }
 
   function updatePage(pageId: string, patch: Partial<WebsiteSitemapPage>) {
-    setPages((current) =>
+    updatePages((current) =>
       current.map((page) => {
         if (page.id !== pageId) return page;
         const next = { ...page, ...patch };
@@ -87,11 +112,11 @@ export function WebsiteSitemapEditor({
   }
 
   function removePage(pageId: string) {
-    setPages((current) => current.filter((page) => page.id !== pageId));
+    updatePages((current) => current.filter((page) => page.id !== pageId));
   }
 
   function addSection(pageId: string) {
-    setPages((current) =>
+    updatePages((current) =>
       current.map((page) => {
         if (page.id !== pageId) return page;
         return {

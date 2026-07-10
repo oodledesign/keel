@@ -106,7 +106,11 @@ Respond with ONLY a JSON array — one item per sitemap section, in order:
     "sitemapSectionTitle": "exact title of the sitemap section this maps to",
     "title": "client-friendly section name",
     "libraryKey": "one of the library keys below",
-    "copyOutline": "suggested copy outline: headline, supporting line, CTA labels — 2-5 lines, written for this client",
+    "copyOutline": "2-5 lines: headline, supporting line, CTA labels — specific to this client",
+    "copy": {
+      "slots": { "headline": "…", "subheadline": "…", "primaryCta": "…" },
+      "items": [{ "slots": { "title": "…", "body": "…" } }]
+    },
     "contentNotes": "internal notes: layout intent, content to collect, pitfalls"
   }
 ]
@@ -115,8 +119,10 @@ Library keys: ${LIBRARY_KEYS}.
 
 Rules:
 - Pick the most fitting libraryKey per section; use "hero-split" or "hero-centered" for heroes, "footer-standard" for footers.
-- copyOutline must be specific to the brief (no lorem, no generic filler).
-- Keep contentNotes internal-facing and copyOutline client-facing.`;
+- copy.slots keys should match the section type (headline/subheadline/primaryCta for heroes; heading/body for content; etc.).
+- copy.items only for grids/cards (features, services, testimonials, FAQ, pricing, team). 3–4 items.
+- copy and copyOutline must be specific to the brief (no lorem, no generic filler).
+- Keep contentNotes internal-facing.`;
 
 export const STYLE_SUGGEST_SYSTEM = `You are a brand-led art director. From a website brief and moodboard references you propose a style system.
 

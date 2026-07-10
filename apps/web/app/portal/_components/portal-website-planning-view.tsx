@@ -10,9 +10,9 @@ import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import { setWebsiteShareApproval } from '~/home/[account]/websites/_lib/server/site-studio-actions';
+import { WireframeLibrarySection } from '~/home/[account]/websites/_components/site-studio/wireframe-library-sections';
 import {
   PLANNING_STATUS_OPTIONS,
-  WIREFRAME_LAYOUT_OPTIONS,
   sectionTypeMeta,
   type WebsitePortalShareScope,
   type WebsiteShareScope,
@@ -21,6 +21,7 @@ import {
   type WebsiteWireframePage,
   type WebsiteWireframeSection,
 } from '~/lib/websites/planning-types';
+import { ensureWireframeCopy } from '~/lib/websites/wireframe-copy';
 
 type PlanningScope = WebsiteShareScope | WebsitePortalShareScope;
 
@@ -32,50 +33,18 @@ function scopeShowsStyle(scope: PlanningScope) {
   return scope === 'design' || scope === 'full';
 }
 
-function layoutPreviewClass(layout: WebsiteWireframeSection['layout']) {
-  switch (layout) {
-    case 'split':
-      return 'grid grid-cols-2 gap-1';
-    case 'grid':
-      return 'grid grid-cols-3 gap-1';
-    case 'cards':
-      return 'grid grid-cols-2 gap-1 sm:grid-cols-3';
-    case 'cta':
-      return 'flex h-10 items-center justify-center';
-    case 'footer':
-      return 'grid grid-cols-4 gap-1';
-    default:
-      return 'block';
-  }
-}
-
 function WireframePreview({ section }: { section: WebsiteWireframeSection }) {
-  const blocks =
-    section.layout === 'full' || section.layout === 'cta'
-      ? 1
-      : section.layout === 'split'
-        ? 2
-        : section.layout === 'footer'
-          ? 4
-          : 3;
+  const copy = ensureWireframeCopy(section);
 
   return (
-    <div
-      className={cn(
-        'rounded-md border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-2',
-        layoutPreviewClass(section.layout),
-      )}
-    >
-      {Array.from({ length: blocks }).map((_, index) => (
-        <div
-          key={index}
-          className={cn(
-            'rounded bg-[var(--workspace-shell-sidebar-accent)]',
-            section.layout === 'cta' ? 'h-6 w-full' : 'h-8',
-          )}
-        />
-      ))}
-    </div>
+    <WireframeLibrarySection
+      libraryKey={section.libraryKey}
+      layout={section.layout}
+      copy={copy}
+      canEdit={false}
+      onSlotChange={() => undefined}
+      onItemSlotChange={() => undefined}
+    />
   );
 }
 
@@ -313,15 +282,10 @@ export function PortalWebsitePlanningView({
                   </p>
                   <div className="space-y-3">
                     {wireframe.sections.map((section) => (
-                      <div key={section.id} className="space-y-1">
-                        <div className="flex items-center justify-between gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
-                          <span>{section.title}</span>
-                          <span>
-                            {WIREFRAME_LAYOUT_OPTIONS.find(
-                              (item) => item.value === section.layout,
-                            )?.label ?? section.layout}
-                          </span>
-                        </div>
+                      <div key={section.id} className="space-y-2">
+                        <p className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+                          {section.title}
+                        </p>
                         <WireframePreview section={section} />
                         {section.contentNotes ? (
                           <p className="text-xs text-[var(--workspace-shell-text-muted)]">

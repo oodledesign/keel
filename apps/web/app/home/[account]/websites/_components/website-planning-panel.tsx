@@ -12,6 +12,8 @@ import {
   SITE_STUDIO_PLANNING_TABS,
   type SiteStudioBundle,
   type WebsitePlanningTab,
+  type WebsiteSitemapPage,
+  type WebsiteWireframePage,
 } from '~/lib/websites/planning-types';
 
 import type { WebsitePlanningBundle } from '../_lib/server/website-planning.service';
@@ -65,6 +67,13 @@ export function WebsitePlanningPanel({
 
   const safeInitial = tabs.includes(initialTab) ? initialTab : 'overview';
   const [tab, setTab] = useState<WebsitePlanningTab>(safeInitial);
+  // Lifted so sitemap/wireframes survive tab switches (children unmount otherwise).
+  const [sitemap, setSitemap] = useState<WebsiteSitemapPage[]>(
+    () => planning.sitemap,
+  );
+  const [wireframes, setWireframes] = useState<WebsiteWireframePage[]>(
+    () => planning.wireframes,
+  );
 
   const jobHref = useMemo(() => {
     if (!planning.jobId) return null;
@@ -166,12 +175,14 @@ export function WebsitePlanningPanel({
           />
         ) : null}
 
-        {tab === 'sitemap' ? (
-          siteStudio.enabled ? (
+        {/* Keep sitemap + wireframes mounted so autosave and local edits survive tab switches. */}
+        <div className={cn(tab === 'sitemap' ? 'block' : 'hidden')}>
+          {siteStudio.enabled ? (
             <WebsiteSitemapCanvas
               accountId={accountId}
               websiteId={planning.websiteId}
-              initialSitemap={planning.sitemap}
+              initialSitemap={sitemap}
+              onSitemapChange={setSitemap}
               canEdit={canEdit}
               siteStudioEnabled
             />
@@ -179,22 +190,24 @@ export function WebsitePlanningPanel({
             <WebsiteSitemapEditor
               accountId={accountId}
               websiteId={planning.websiteId}
-              initialSitemap={planning.sitemap}
+              initialSitemap={sitemap}
+              onSitemapChange={setSitemap}
               canEdit={canEdit}
             />
-          )
-        ) : null}
+          )}
+        </div>
 
-        {tab === 'wireframe' ? (
+        <div className={cn(tab === 'wireframe' ? 'block' : 'hidden')}>
           <WebsiteWireframeEditor
             accountId={accountId}
             websiteId={planning.websiteId}
-            sitemap={planning.sitemap}
-            initialWireframes={planning.wireframes}
+            sitemap={sitemap}
+            initialWireframes={wireframes}
+            onWireframesChange={setWireframes}
             canEdit={canEdit}
             siteStudioEnabled={siteStudio.enabled}
           />
-        ) : null}
+        </div>
 
         {tab === 'design' && siteStudio.enabled ? (
           <WebsiteDesignEditor
@@ -209,7 +222,7 @@ export function WebsitePlanningPanel({
           <WebsiteSeoEditor
             accountId={accountId}
             websiteId={planning.websiteId}
-            sitemap={planning.sitemap}
+            sitemap={sitemap}
             initialSeoPages={siteStudio.seoPages}
             canEdit={canEdit}
           />
@@ -220,8 +233,8 @@ export function WebsitePlanningPanel({
             websiteName={websiteName}
             domain={websiteDomain}
             brief={siteStudio.brief}
-            sitemap={planning.sitemap}
-            wireframes={planning.wireframes}
+            sitemap={sitemap}
+            wireframes={wireframes}
             style={siteStudio.style}
             seoPages={siteStudio.seoPages}
           />

@@ -2,10 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
-import { RefreshCw, Sparkles } from 'lucide-react';
+import { ChevronDown, ChevronRight, RefreshCw, Sparkles } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
-import { Input } from '@kit/ui/input';
 import {
   Select,
   SelectContent,
@@ -19,8 +18,8 @@ import { cn } from '@kit/ui/utils';
 
 import {
   createPlanningId,
-  WIREFRAME_LAYOUT_OPTIONS,
   type WebsiteSitemapPage,
+  type WebsiteWireframeCopy,
   type WebsiteWireframePage,
   type WebsiteWireframeSection,
 } from '~/lib/websites/planning-types';
@@ -28,56 +27,15 @@ import {
   WEBSITE_SECTION_LIBRARY,
   findSectionLibraryEntry,
 } from '~/lib/websites/section-library';
+import {
+  createDefaultWireframeCopy,
+  ensureWireframeCopy,
+  libraryEntryLabel,
+} from '~/lib/websites/wireframe-copy';
 
 import { saveWebsiteWireframes } from '../_lib/server/planning-actions';
 import { generateWebsiteWireframes } from '../_lib/server/site-studio-actions';
-
-function layoutPreviewClass(layout: WebsiteWireframeSection['layout']) {
-  switch (layout) {
-    case 'split':
-      return 'grid grid-cols-2 gap-1';
-    case 'grid':
-      return 'grid grid-cols-3 gap-1';
-    case 'cards':
-      return 'grid grid-cols-2 gap-1 sm:grid-cols-3';
-    case 'cta':
-      return 'flex h-10 items-center justify-center';
-    case 'footer':
-      return 'grid grid-cols-4 gap-1';
-    default:
-      return 'block';
-  }
-}
-
-function WireframePreview({ section }: { section: WebsiteWireframeSection }) {
-  const blocks =
-    section.layout === 'full' || section.layout === 'cta'
-      ? 1
-      : section.layout === 'split'
-        ? 2
-        : section.layout === 'footer'
-          ? 4
-          : 3;
-
-  return (
-    <div
-      className={cn(
-        'rounded-md border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-2',
-        layoutPreviewClass(section.layout),
-      )}
-    >
-      {Array.from({ length: blocks }).map((_, index) => (
-        <div
-          key={index}
-          className={cn(
-            'rounded bg-[var(--workspace-shell-sidebar-accent)]',
-            section.layout === 'cta' ? 'h-6 w-full' : 'h-8',
-          )}
-        />
-      ))}
-    </div>
-  );
-}
+import { WireframeLibrarySection } from './site-studio/wireframe-library-sections';
 
 function syncWireframesFromSitemap(
   sitemap: WebsiteSitemapPage[],
@@ -94,7 +52,14 @@ function syncWireframesFromSitemap(
             (row) => row.sitemapSectionId === section.id,
           );
           if (match) {
-            return { ...match, title: section.title };
+            return {
+              ...match,
+              title: section.title,
+              copy: ensureWireframeCopy({
+                ...match,
+                title: section.title,
+              }),
+            };
           }
           return {
             id: createPlanningId(),
@@ -104,6 +69,7 @@ function syncWireframesFromSitemap(
             libraryKey: null,
             copyOutline: '',
             contentNotes: section.description,
+            copy: createDefaultWireframeCopy(null),
           };
         }),
       };
@@ -121,9 +87,128 @@ function syncWireframesFromSitemap(
         libraryKey: null,
         copyOutline: '',
         contentNotes: section.description,
+        copy: createDefaultWireframeCopy(null),
       })),
     };
   });
+}
+
+function WireframeSectionCard({
+  section,
+  canEdit,
+  siteStudioEnabled,
+  onChange,
+}: {
+  section: WebsiteWireframeSection;
+  canEdit: boolean;
+  siteStudioEnabled: boolean;
+  onChange: (patch: Partial<WebsiteWireframeSection>) => void;
+}) {
+  const [notesOpen, setNotesOpen] = useState(false);
+  const copy = ensureWireframeCopy(section);
+  const libraryEntry = findSectionLibraryEntry(section.libraryKey);
+
+  function patchCopy(next: WebsiteWireframeCopy) {
+    onChange({ copy: next });
+  }
+
+  function onSlotChange(key: string, value: string) {
+    patchCopy({
+      ...copy,
+      slots: { ...copy.slots, [key]: value },
+    });
+  }
+
+  function onItemSlotChange(itemId: string, key: string, value: string) {
+    patchCopy({
+      ...copy,
+      items: (copy.items ?? []).map((item) =>
+        item.id !== itemId
+          ? item
+          : { ...item, slots: { ...item.slots, [key]: value } },
+      ),
+    });
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+          {section.title}
+        </span>
+        {siteStudioEnabled ? (
+          <Select
+            value={section.libraryKey ?? '__custom__'}
+            onValueChange={(value) => {
+              if (value === '__custom__') {
+                onChange({
+                  libraryKey: null,
+                  copy: createDefaultWireframeCopy(null),
+                });
+                return;
+              }
+              const entry = findSectionLibraryEntry(value);
+              onChange({
+                libraryKey: value,
+                ...(entry ? { layout: entry.layout } : {}),
+                copy: createDefaultWireframeCopy(value),
+              });
+            }}
+            disabled={!canEdit}
+          >
+            <SelectTrigger className="h-8 w-[220px] border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-xs text-[var(--workspace-shell-text)]">
+              <SelectValue placeholder="Section library…" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__custom__">Custom section</SelectItem>
+              {WEBSITE_SECTION_LIBRARY.map((entry) => (
+                <SelectItem key={entry.key} value={entry.key}>
+                  {entry.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => setNotesOpen((open) => !open)}
+          className="inline-flex items-center gap-1 text-xs text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+        >
+          {notesOpen ? (
+            <ChevronDown className="h-3.5 w-3.5" />
+          ) : (
+            <ChevronRight className="h-3.5 w-3.5" />
+          )}
+          Notes
+        </button>
+        {libraryEntry ? (
+          <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+            {libraryEntry.hint}
+          </span>
+        ) : null}
+      </div>
+
+      {notesOpen ? (
+        <Textarea
+          value={section.contentNotes}
+          readOnly={!canEdit}
+          rows={2}
+          onChange={(event) => onChange({ contentNotes: event.target.value })}
+          placeholder="Internal notes for this section…"
+          className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-sm text-[var(--workspace-shell-text)]"
+        />
+      ) : null}
+
+      <WireframeLibrarySection
+        libraryKey={section.libraryKey}
+        layout={section.layout}
+        copy={copy}
+        canEdit={canEdit}
+        onSlotChange={onSlotChange}
+        onItemSlotChange={onItemSlotChange}
+      />
+    </div>
+  );
 }
 
 export function WebsiteWireframeEditor({
@@ -131,6 +216,7 @@ export function WebsiteWireframeEditor({
   websiteId,
   sitemap,
   initialWireframes,
+  onWireframesChange,
   canEdit,
   siteStudioEnabled = false,
 }: {
@@ -138,6 +224,7 @@ export function WebsiteWireframeEditor({
   websiteId: string;
   sitemap: WebsiteSitemapPage[];
   initialWireframes: WebsiteWireframePage[];
+  onWireframesChange?: (wireframes: WebsiteWireframePage[]) => void;
   canEdit: boolean;
   siteStudioEnabled?: boolean;
 }) {
@@ -149,11 +236,43 @@ export function WebsiteWireframeEditor({
   const [isGenerating, startGenerating] = useTransition();
   const [, startTransition] = useTransition();
   const skipNextSave = useRef(true);
+  const onWireframesChangeRef = useRef(onWireframesChange);
+  onWireframesChangeRef.current = onWireframesChange;
 
   useEffect(() => {
-    setWireframes(initialWireframes);
-    skipNextSave.current = true;
+    setWireframes((current) => {
+      if (current === initialWireframes) return current;
+      skipNextSave.current = true;
+      return initialWireframes;
+    });
   }, [initialWireframes]);
+
+  useEffect(() => {
+    if (!activePageId && sitemap[0]) {
+      setActivePageId(sitemap[0].id);
+      return;
+    }
+    if (
+      activePageId &&
+      sitemap.length > 0 &&
+      !sitemap.some((page) => page.id === activePageId) &&
+      !wireframes.some((page) => page.pageId === activePageId)
+    ) {
+      setActivePageId(sitemap[0]?.id ?? wireframes[0]?.pageId ?? null);
+    }
+  }, [activePageId, sitemap, wireframes]);
+
+  function updateWireframes(
+    next:
+      | WebsiteWireframePage[]
+      | ((current: WebsiteWireframePage[]) => WebsiteWireframePage[]),
+  ) {
+    setWireframes((current) => {
+      const resolved = typeof next === 'function' ? next(current) : next;
+      queueMicrotask(() => onWireframesChangeRef.current?.(resolved));
+      return resolved;
+    });
+  }
 
   useEffect(() => {
     if (!canEdit) return;
@@ -191,8 +310,8 @@ export function WebsiteWireframeEditor({
 
   function syncFromSitemap() {
     const next = syncWireframesFromSitemap(sitemap, wireframes);
-    setWireframes(next);
-    if (!activePageId && next[0]) {
+    updateWireframes(next);
+    if (next[0]) {
       setActivePageId(next[0].pageId);
     }
     toast.success('Wireframes synced from sitemap');
@@ -209,8 +328,16 @@ export function WebsiteWireframeEditor({
           pageId: activePageId,
         });
         skipNextSave.current = true;
-        setWireframes(next);
-        toast.success('Wireframe generated — review copy outlines');
+        updateWireframes(
+          next.map((page) => ({
+            ...page,
+            sections: page.sections.map((section) => ({
+              ...section,
+              copy: ensureWireframeCopy(section),
+            })),
+          })),
+        );
+        toast.success('Wireframe generated — edit copy in place');
       } catch (error) {
         toast.error(
           error instanceof Error
@@ -226,7 +353,7 @@ export function WebsiteWireframeEditor({
     sectionId: string,
     patch: Partial<WebsiteWireframeSection>,
   ) {
-    setWireframes((current) =>
+    updateWireframes((current) =>
       current.map((page) =>
         page.pageId !== pageId
           ? page
@@ -240,15 +367,13 @@ export function WebsiteWireframeEditor({
     );
   }
 
-  const inputClass =
-    'border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]';
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm text-[var(--workspace-shell-text)]/70">
-            Layout intent per section — sync from sitemap, then refine.
+            Relume-style wireframes — pick a library section, then edit copy in
+            place.
           </p>
           {canEdit ? (
             <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
@@ -293,11 +418,36 @@ export function WebsiteWireframeEditor({
           Build your sitemap first, then sync wireframes here.
         </div>
       ) : wireframes.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center text-sm text-[var(--workspace-shell-text-muted)]">
-          No wireframes yet. Click sync from sitemap to generate structure.
+        <div className="space-y-4">
+          <div className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center text-sm text-[var(--workspace-shell-text-muted)]">
+            {sitemap.length} page{sitemap.length === 1 ? '' : 's'} ready in the
+            sitemap. Sync to create wireframe structure, or generate AI layouts
+            for the selected page.
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {sitemap.map((page) => (
+              <button
+                key={page.id}
+                type="button"
+                onClick={() => setActivePageId(page.id)}
+                className={cn(
+                  'rounded-lg border px-3 py-2 text-left text-sm transition-colors',
+                  activePageId === page.id
+                    ? 'border-[var(--ozer-accent)] bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-text)]'
+                    : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
+                )}
+              >
+                {page.title}
+                <span className="mt-0.5 block text-xs opacity-70">
+                  {page.sections.length} section
+                  {page.sections.length === 1 ? '' : 's'}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
+        <div className="grid gap-4 lg:grid-cols-[200px_minmax(0,1fr)]">
           <div className="flex flex-wrap gap-2 lg:flex-col">
             {wireframes.map((page) => (
               <button
@@ -317,124 +467,39 @@ export function WebsiteWireframeEditor({
           </div>
 
           {activePage ? (
-            <div className="space-y-4">
-              {activePage.sections.map((section) => {
-                const libraryEntry = findSectionLibraryEntry(section.libraryKey);
-                return (
-                  <div
-                    key={section.id}
-                    className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/40 p-4"
-                  >
-                    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_180px]">
-                      <div className="space-y-3">
-                        <Input
-                          value={section.title}
-                          readOnly={!canEdit}
-                          onChange={(event) =>
-                            updateSection(activePage.pageId, section.id, {
-                              title: event.target.value,
-                            })
-                          }
-                          className={cn(inputClass, 'h-9')}
-                        />
-                        {siteStudioEnabled ? (
-                          <Select
-                            value={section.libraryKey ?? '__custom__'}
-                            onValueChange={(value) => {
-                              if (value === '__custom__') {
-                                updateSection(activePage.pageId, section.id, {
-                                  libraryKey: null,
-                                });
-                                return;
-                              }
-                              const entry = findSectionLibraryEntry(value);
-                              updateSection(activePage.pageId, section.id, {
-                                libraryKey: value,
-                                ...(entry ? { layout: entry.layout } : {}),
-                              });
-                            }}
-                            disabled={!canEdit}
-                          >
-                            <SelectTrigger className={inputClass}>
-                              <SelectValue placeholder="Section library…" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="__custom__">
-                                Custom (no library section)
-                              </SelectItem>
-                              {WEBSITE_SECTION_LIBRARY.map((entry) => (
-                                <SelectItem key={entry.key} value={entry.key}>
-                                  {entry.label} — {entry.hint}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : null}
-                        <Select
-                          value={section.layout}
-                          onValueChange={(value) =>
-                            updateSection(activePage.pageId, section.id, {
-                              layout: value as WebsiteWireframeSection['layout'],
-                            })
-                          }
-                          disabled={!canEdit}
-                        >
-                          <SelectTrigger className={inputClass}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {WIREFRAME_LAYOUT_OPTIONS.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label} — {option.hint}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {siteStudioEnabled ? (
-                          <Textarea
-                            value={section.copyOutline ?? ''}
-                            readOnly={!canEdit}
-                            rows={3}
-                            onChange={(event) =>
-                              updateSection(activePage.pageId, section.id, {
-                                copyOutline: event.target.value,
-                              })
-                            }
-                            placeholder="Client-facing copy outline: headline, supporting line, CTA…"
-                            className={cn(inputClass, 'text-sm')}
-                          />
-                        ) : null}
-                        <Textarea
-                          value={section.contentNotes}
-                          readOnly={!canEdit}
-                          rows={3}
-                          onChange={(event) =>
-                            updateSection(activePage.pageId, section.id, {
-                              contentNotes: event.target.value,
-                            })
-                          }
-                          placeholder={
-                            siteStudioEnabled
-                              ? 'Internal notes: layout intent, content to collect…'
-                              : 'Layout notes, content blocks, CTA labels…'
-                          }
-                          className={cn(inputClass, 'text-sm')}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <WireframePreview section={section} />
-                        {libraryEntry ? (
-                          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                            {libraryEntry.label}: {libraryEntry.hint}
-                            <br />
-                            Slots: {libraryEntry.copySlots.join(', ')}
-                          </p>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="space-y-6">
+              <div className="rounded-xl border border-[#d4d4d4] bg-[#fafafa] px-4 py-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-[#8a8a8a]">
+                  Page wireframe
+                </p>
+                <p className="text-lg font-semibold text-[#1a1a1a]">
+                  {activePage.title}
+                </p>
+              </div>
+
+              {activePage.sections.map((section) => (
+                <WireframeSectionCard
+                  key={section.id}
+                  section={section}
+                  canEdit={canEdit}
+                  siteStudioEnabled={siteStudioEnabled}
+                  onChange={(patch) =>
+                    updateSection(activePage.pageId, section.id, patch)
+                  }
+                />
+              ))}
+
+              {activePage.sections.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center text-sm text-[var(--workspace-shell-text-muted)]">
+                  This page has no sections yet. Add them in the sitemap, then
+                  sync.
+                </div>
+              ) : null}
+
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                Tip: choose a library variant (e.g. {libraryEntryLabel('hero-split')})
+                so the preview matches the layout you will build.
+              </p>
             </div>
           ) : null}
         </div>

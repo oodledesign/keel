@@ -99,6 +99,22 @@ export type WebsiteWireframeSection = {
   libraryKey?: string | null;
   /** Site Studio: AI-suggested copy outline (client-friendly). */
   copyOutline?: string;
+  /**
+   * Site Studio: structured Relume-style copy for in-place wireframe editing.
+   * `slots` = named fields (headline, cta…); `items` = repeating cards/rows.
+   */
+  copy?: WebsiteWireframeCopy;
+};
+
+/** Structured copy bound to a library section preview. */
+export type WebsiteWireframeCopy = {
+  slots: Record<string, string>;
+  items?: WebsiteWireframeCopyItem[];
+};
+
+export type WebsiteWireframeCopyItem = {
+  id: string;
+  slots: Record<string, string>;
 };
 
 export type WebsiteWireframePage = {

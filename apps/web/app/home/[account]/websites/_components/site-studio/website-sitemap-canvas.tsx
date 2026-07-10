@@ -194,12 +194,14 @@ export function WebsiteSitemapCanvas({
   accountId,
   websiteId,
   initialSitemap,
+  onSitemapChange,
   canEdit,
   siteStudioEnabled,
 }: {
   accountId: string;
   websiteId: string;
   initialSitemap: WebsiteSitemapPage[];
+  onSitemapChange?: (sitemap: WebsiteSitemapPage[]) => void;
   canEdit: boolean;
   siteStudioEnabled: boolean;
 }) {
@@ -209,11 +211,28 @@ export function WebsiteSitemapCanvas({
   const [, startTransition] = useTransition();
   const dragPageId = useRef<string | null>(null);
   const skipNextSave = useRef(true);
+  const onSitemapChangeRef = useRef(onSitemapChange);
+  onSitemapChangeRef.current = onSitemapChange;
 
   useEffect(() => {
-    setPages(initialSitemap);
-    skipNextSave.current = true;
+    setPages((current) => {
+      if (current === initialSitemap) return current;
+      skipNextSave.current = true;
+      return initialSitemap;
+    });
   }, [initialSitemap]);
+
+  function updatePages(
+    next:
+      | WebsiteSitemapPage[]
+      | ((current: WebsiteSitemapPage[]) => WebsiteSitemapPage[]),
+  ) {
+    setPages((current) => {
+      const resolved = typeof next === 'function' ? next(current) : next;
+      queueMicrotask(() => onSitemapChangeRef.current?.(resolved));
+      return resolved;
+    });
+  }
 
   useEffect(() => {
     if (!canEdit) return;
@@ -262,7 +281,7 @@ export function WebsiteSitemapCanvas({
 
   function addPage(parentId: string | null = null) {
     const title = 'New page';
-    setPages((current) => [
+    updatePages((current) => [
       ...current,
       {
         id: createPlanningId(),
@@ -277,7 +296,7 @@ export function WebsiteSitemapCanvas({
   }
 
   function updatePage(pageId: string, patch: Partial<WebsiteSitemapPage>) {
-    setPages((current) =>
+    updatePages((current) =>
       current.map((page) => {
         if (page.id !== pageId) return page;
         const next = { ...page, ...patch };
@@ -290,7 +309,7 @@ export function WebsiteSitemapCanvas({
   }
 
   function removePage(pageId: string) {
-    setPages((current) =>
+    updatePages((current) =>
       current
         .filter((page) => page.id !== pageId)
         .map((page) =>
@@ -305,7 +324,7 @@ export function WebsiteSitemapCanvas({
     sectionId: string,
     patch: Partial<WebsiteSitemapSection>,
   ) {
-    setPages((current) => {
+    updatePages((current) => {
       const sourcePage = current.find((page) => page.id === pageId);
       const source = sourcePage?.sections.find(
         (section) => section.id === sectionId,
@@ -335,7 +354,7 @@ export function WebsiteSitemapCanvas({
   }
 
   function addSection(pageId: string) {
-    setPages((current) =>
+    updatePages((current) =>
       current.map((page) =>
         page.id !== pageId
           ? page
@@ -358,7 +377,7 @@ export function WebsiteSitemapCanvas({
   }
 
   function moveSection(pageId: string, sectionId: string, direction: -1 | 1) {
-    setPages((current) =>
+    updatePages((current) =>
       current.map((page) => {
         if (page.id !== pageId) return page;
         const index = page.sections.findIndex((s) => s.id === sectionId);
@@ -375,7 +394,7 @@ export function WebsiteSitemapCanvas({
   }
 
   function removeSection(pageId: string, sectionId: string) {
-    setPages((current) =>
+    updatePages((current) =>
       current.map((page) =>
         page.id !== pageId
           ? page
@@ -392,7 +411,7 @@ export function WebsiteSitemapCanvas({
     dragPageId.current = null;
     if (!sourceId || sourceId === targetPageId) return;
 
-    setPages((current) => {
+    updatePages((current) => {
       const sourceIndex = current.findIndex((page) => page.id === sourceId);
       const targetIndex = current.findIndex((page) => page.id === targetPageId);
       if (sourceIndex === -1 || targetIndex === -1) return current;
@@ -422,7 +441,7 @@ export function WebsiteSitemapCanvas({
           mode,
         });
         skipNextSave.current = true;
-        setPages(next);
+        updatePages(next);
         toast.success(
           mode === 'replace'
             ? 'Sitemap suggested from brief'

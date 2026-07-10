@@ -30,6 +30,7 @@ import {
   type WebsiteWireframeSection,
 } from '~/lib/websites/planning-types';
 import { findSectionLibraryEntry } from '~/lib/websites/section-library';
+import { ensureWireframeCopy } from '~/lib/websites/wireframe-copy';
 
 import {
   isMissingColumnError,
@@ -664,6 +665,10 @@ class SiteStudioService {
       libraryKey?: string;
       copyOutline?: string;
       contentNotes?: string;
+      copy?: {
+        slots?: Record<string, string>;
+        items?: Array<{ slots?: Record<string, string> }>;
+      };
     };
 
     const rawSections = extractJson<RawWireframeSection[]>(text);
@@ -682,7 +687,7 @@ class SiteStudioService {
 
         const library = findSectionLibraryEntry(match?.libraryKey ?? null);
 
-        return {
+        const section: WebsiteWireframeSection = {
           id: createPlanningId(),
           sitemapSectionId: sitemapSection.id,
           title: String(match?.title ?? sitemapSection.title).slice(0, 200),
@@ -692,6 +697,35 @@ class SiteStudioService {
           contentNotes: String(
             match?.contentNotes ?? sitemapSection.description,
           ).slice(0, 10000),
+        };
+
+        const seeded = ensureWireframeCopy(section);
+        const aiSlots = match?.copy?.slots;
+        if (aiSlots && typeof aiSlots === 'object') {
+          for (const [key, value] of Object.entries(aiSlots)) {
+            if (typeof value === 'string' && value.trim()) {
+              seeded.slots[key] = value.slice(0, 10000);
+            }
+          }
+        }
+        const aiItems = match?.copy?.items;
+        if (Array.isArray(aiItems) && aiItems.length > 0 && seeded.items) {
+          seeded.items = seeded.items.map((item, itemIndex) => {
+            const rawItem = aiItems[itemIndex];
+            if (!rawItem?.slots) return item;
+            const nextSlots = { ...item.slots };
+            for (const [key, value] of Object.entries(rawItem.slots)) {
+              if (typeof value === 'string' && value.trim()) {
+                nextSlots[key] = value.slice(0, 10000);
+              }
+            }
+            return { ...item, slots: nextSlots };
+          });
+        }
+
+        return {
+          ...section,
+          copy: seeded,
         };
       },
     );

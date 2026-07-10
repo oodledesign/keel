@@ -54,6 +54,16 @@ const SitemapPageSchema = z.object({
   approvalNote: z.string().max(2000).optional(),
 });
 
+const WireframeCopyItemSchema = z.object({
+  id: z.string().uuid(),
+  slots: z.record(z.string(), z.string().max(10000)),
+});
+
+const WireframeCopySchema = z.object({
+  slots: z.record(z.string(), z.string().max(10000)),
+  items: z.array(WireframeCopyItemSchema).optional(),
+});
+
 const WireframeSectionSchema = z.object({
   id: z.string().uuid(),
   sitemapSectionId: z.string().uuid().nullable(),
@@ -62,6 +72,7 @@ const WireframeSectionSchema = z.object({
   contentNotes: z.string().max(10000),
   libraryKey: z.string().max(100).nullable().optional(),
   copyOutline: z.string().max(10000).optional(),
+  copy: WireframeCopySchema.optional(),
 });
 
 const WireframePageSchema = z.object({
