@@ -22,6 +22,15 @@ const PLANNER_CALENDAR_NAME = 'Ozer Planner';
 type GoogleEvent = {
   id?: string;
   summary?: string;
+  description?: string;
+  location?: string;
+  hangoutLink?: string;
+  conferenceData?: {
+    entryPoints?: Array<{
+      entryPointType?: string;
+      uri?: string;
+    }>;
+  };
   start?: { dateTime?: string; date?: string };
   end?: { dateTime?: string; date?: string };
   organizer?: { displayName?: string; email?: string };
@@ -152,7 +161,77 @@ function mapRecorderCalendarEvent(
       name: attendee.displayName?.trim() || attendee.email?.trim() || 'Guest',
       email: attendee.email?.trim() || '',
     })),
+    meeting_url: extractMeetingUrl(event),
   };
+}
+
+const MEETING_HOST_HINTS = [
+  'meet.google.com',
+  'zoom.us',
+  'zoom.com',
+  'teams.microsoft.com',
+  'teams.live.com',
+  'webex.com',
+  'whereby.com',
+  'meet.jit.si',
+  'facetime.apple.com',
+];
+
+const URL_IN_TEXT =
+  /https?:\/\/[^\s<>"')\]]+/gi;
+
+function extractMeetingUrl(event: GoogleEvent): string | null {
+  const hangout = event.hangoutLink?.trim();
+  if (hangout && isHttpUrl(hangout)) {
+    return hangout;
+  }
+
+  const videoEntry = event.conferenceData?.entryPoints?.find(
+    (entry) =>
+      entry.entryPointType === 'video' &&
+      typeof entry.uri === 'string' &&
+      isHttpUrl(entry.uri),
+  );
+  if (videoEntry?.uri) {
+    return videoEntry.uri.trim();
+  }
+
+  const fromLocation = firstMeetingUrlInText(event.location);
+  if (fromLocation) return fromLocation;
+
+  return firstMeetingUrlInText(event.description);
+}
+
+function firstMeetingUrlInText(text: string | undefined): string | null {
+  if (!text) return null;
+  const matches = text.match(URL_IN_TEXT) ?? [];
+  for (const raw of matches) {
+    const cleaned = raw.replace(/[.,;:!?)]+$/, '');
+    if (!isHttpUrl(cleaned)) continue;
+    try {
+      const host = new URL(cleaned).hostname.toLowerCase();
+      if (MEETING_HOST_HINTS.some((hint) => host === hint || host.endsWith(`.${hint}`))) {
+        return cleaned;
+      }
+    } catch {
+      continue;
+    }
+  }
+  // Fall back to first http(s) URL in location/description if nothing matched hosts.
+  for (const raw of matches) {
+    const cleaned = raw.replace(/[.,;:!?)]+$/, '');
+    if (isHttpUrl(cleaned)) return cleaned;
+  }
+  return null;
+}
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 function pickNextUpcomingRecorderEvent(
@@ -229,6 +308,7 @@ async function listGoogleCalendarEventsInRange(
     singleEvents: 'true',
     orderBy: 'startTime',
     maxResults: '250',
+    conferenceDataVersion: '1',
   });
 
   const batches = await Promise.all(
@@ -261,6 +341,7 @@ function mockRecorderEvents(nowMs: number): RecorderCalendarEvent[] {
       { name: 'Alex Example', email: 'alex@example.com' },
       { name: 'Sam Example', email: 'sam@example.com' },
     ],
+    meeting_url: 'https://meet.google.com/abc-defg-hij',
   }));
 
   return [
@@ -273,6 +354,7 @@ function mockRecorderEvents(nowMs: number): RecorderCalendarEvent[] {
         { name: 'Alex Example', email: 'alex@example.com' },
         { name: 'Sam Example', email: 'sam@example.com' },
       ],
+      meeting_url: 'https://zoom.us/j/123456789',
     },
     ...scheduled,
   ];

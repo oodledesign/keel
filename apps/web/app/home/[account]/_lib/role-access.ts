@@ -67,6 +67,14 @@ export function getTeamAccountAccess(input?: TeamAccountAccessInput) {
     isOwner || isAdmin || isStaff || isContractor || isClient;
   const canMessageClients = isOwner || isAdmin || isStaff;
   const canViewSchedule = canViewProjects && !isClient;
+  const canViewScheduling =
+    permissions.has('scheduling.view') ||
+    permissions.has('scheduling.edit') ||
+    isOwner ||
+    isAdmin ||
+    isStaff;
+  const canEditScheduling =
+    permissions.has('scheduling.edit') || isOwner || isAdmin || isStaff;
   const canViewMembers = canManageMembers;
   const canViewSettings = canManageSettings;
   const canViewBilling = canManageBilling;
@@ -100,6 +108,8 @@ export function getTeamAccountAccess(input?: TeamAccountAccessInput) {
     canViewMessages,
     canMessageClients,
     canViewSchedule,
+    canViewScheduling,
+    canEditScheduling,
     canViewMembers,
     canViewSettings,
     canViewBilling,

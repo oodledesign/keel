@@ -85,6 +85,27 @@ describe('resolveAppSubdomainRedirect', () => {
     ).toBeNull();
   });
 
+  it('serves public booking flows on the app host without redirecting to /app', () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://app.ozer.so');
+    vi.stubEnv('NEXT_PUBLIC_MARKETING_SITE_URL', 'https://www.ozer.so');
+
+    expect(
+      resolveAppSubdomainRedirect(new URL('https://app.ozer.so/book/acme')),
+    ).toBeNull();
+    expect(
+      resolveAppSubdomainRedirect(
+        new URL('https://app.ozer.so/book/acme/intro-call'),
+      ),
+    ).toBeNull();
+    expect(
+      resolveAppSubdomainRedirect(
+        new URL(
+          'https://app.ozer.so/book/manage/11111111-1111-1111-1111-111111111111',
+        ),
+      ),
+    ).toBeNull();
+  });
+
   it('serves API routes on the app host without redirecting to /app', () => {
     vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://app.ozer.so');
     vi.stubEnv('NEXT_PUBLIC_MARKETING_SITE_URL', 'https://www.ozer.so');

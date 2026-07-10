@@ -2,8 +2,9 @@ import {
   Activity,
   BarChart3,
   Briefcase,
-  Calendar,
-  CheckSquare,
+    Calendar,
+    CalendarClock,
+    CheckSquare,
   ClipboardList,
   CreditCard,
   FileSignature,
@@ -199,6 +200,15 @@ export function buildWorkSpaceNavChildren(
             label: 'Schedule',
             path: createPath(pathsConfig.app.accountSchedule, account),
             Icon: <Calendar className={iconClasses} />,
+          }
+        : null,
+    scheduling: () =>
+      access.canViewScheduling
+        ? {
+            label: 'Scheduling',
+            path: createPath(pathsConfig.app.accountScheduling, account),
+            Icon: <CalendarClock className={iconClasses} />,
+            description: 'Public booking pages, availability, and meetings.',
           }
         : null,
     pipeline: () =>

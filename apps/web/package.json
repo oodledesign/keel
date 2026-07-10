@@ -87,6 +87,7 @@
     "@kit/notifications": "workspace:*",
     "@kit/ozer-mcp": "workspace:*",
     "@kit/policies": "workspace:*",
+    "@kit/scheduling": "workspace:*",
     "@kit/shared": "workspace:*",
     "@kit/supabase": "workspace:*",
     "@kit/tasks": "workspace:*",

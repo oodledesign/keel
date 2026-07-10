@@ -32,6 +32,12 @@ type MailPayload = {
   from: string;
   subject: string;
   cc?: string[];
+  replyTo?: string;
+  attachments?: Array<{
+    name: string;
+    content: string;
+    mimeType: string;
+  }>;
 } & ({ html: string } | { text: string }) &
   Record<string, unknown>;
 
@@ -68,6 +74,9 @@ export async function sendPlatformEmail(params: {
         subject: mail.subject,
         htmlBody,
         textBody,
+        from: mail.from,
+        replyTo: mail.replyTo,
+        attachments: mail.attachments,
       });
 
       if (!result.sent) {

@@ -17,6 +17,8 @@ interface SendEmailParams {
   htmlBody: string;
   textBody?: string;
   replyTo?: string;
+  /** Optional override; defaults to ZEPTOMAIL_FROM_* */
+  from?: string;
   clientReference?: string;
   listUnsubscribeUrl?: string;
 }
@@ -35,9 +37,23 @@ function getZeptoMailFrom() {
   };
 }
 
-export function getTransactionalEmailSender() {
+function resolveFrom(from?: string) {
+  const fallback = getZeptoMailFrom();
+  if (!from?.trim()) return fallback;
+
+  const match = from.trim().match(/^(.*)<([^>]+)>$/);
+  if (!match) {
+    return { address: from.trim(), name: fallback.name };
+  }
+
+  const name = match[1]?.trim().replace(/^"|"$/g, '') || fallback.name;
+  const address = match[2]?.trim() || fallback.address;
+  return { address, name: name.slice(0, 120) };
+}
+
+export function getTransactionalEmailSender(displayName?: string) {
   const { address, name } = getZeptoMailFrom();
-  return `${name} <${address}>`;
+  return `${(displayName?.trim() || name).slice(0, 120)} <${address}>`;
 }
 
 export function getZeptomailDiagnostics() {
@@ -52,6 +68,12 @@ export function getZeptomailDiagnostics() {
   };
 }
 
+export type ZeptoMailAttachment = {
+  name: string;
+  content: string;
+  mimeType: string;
+};
+
 export async function sendTransactionalEmail({
   to,
   toName,
@@ -59,9 +81,13 @@ export async function sendTransactionalEmail({
   htmlBody,
   textBody,
   replyTo,
+  from,
   clientReference,
   listUnsubscribeUrl,
-}: SendEmailParams): Promise<{ sent: boolean; reason?: string }> {
+  attachments,
+}: SendEmailParams & {
+  attachments?: ZeptoMailAttachment[];
+}): Promise<{ sent: boolean; reason?: string }> {
   if (await isEmailSuppressed(to)) {
     console.warn(`[zeptomail] Skipping suppressed address: ${to}`);
     return { sent: false, reason: 'suppressed' };
@@ -84,7 +110,7 @@ export async function sendTransactionalEmail({
   }
 
   await client.sendMail({
-    from: getZeptoMailFrom(),
+    from: resolveFrom(from),
     to: [{ email_address: { address: to, name: toName ?? to } }],
     subject,
     htmlbody: htmlBody,
@@ -94,7 +120,16 @@ export async function sendTransactionalEmail({
     ...(Object.keys(mimeHeaders).length > 0
       ? { mime_headers: mimeHeaders }
       : {}),
-  });
+    ...(attachments && attachments.length > 0
+      ? {
+          attachments: attachments.map((file) => ({
+            name: file.name,
+            content: file.content,
+            mime_type: file.mimeType,
+          })),
+        }
+      : {}),
+  } as Parameters<typeof client.sendMail>[0]);
 
   return { sent: true };
 }

@@ -1,0 +1,35 @@
+{
+  "name": "@kit/scheduling",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "clean": "git clean -xdf .turbo node_modules",
+    "format": "prettier --check \"**/*.{ts,md,json}\"",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "prettier": "@kit/prettier-config",
+  "exports": {
+    ".": "./src/index.ts",
+    "./slots": "./src/slots/compute-available-slots.ts",
+    "./google": "./src/google/index.ts",
+    "./calendar-provider": "./src/calendar-provider.ts",
+    "./conferencing": "./src/conferencing/index.ts"
+  },
+  "dependencies": {
+    "@date-fns/tz": "^1.4.1",
+    "@kit/supabase": "workspace:*",
+    "server-only": "^0.0.1",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@kit/eslint-config": "workspace:*",
+    "@kit/prettier-config": "workspace:*",
+    "@kit/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}

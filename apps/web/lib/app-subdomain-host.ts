@@ -19,6 +19,7 @@ const APP_ROUTE_PREFIXES = [
   '/join',
   '/portal',
   '/watch',
+  '/book',
   '/api',
 ] as const;
 
@@ -52,7 +53,12 @@ export function isAppHostOAuthPublicPath(pathname: string): boolean {
 
 /** Public connect flows (no Ozer login) — e.g. Signatures IT admin consent links. */
 export function isAppHostPublicConnectPath(pathname: string): boolean {
-  return pathname === '/connect' || pathname.startsWith('/connect/');
+  return (
+    pathname === '/connect' ||
+    pathname.startsWith('/connect/') ||
+    pathname === '/book' ||
+    pathname.startsWith('/book/')
+  );
 }
 
 const MARKETING_ROUTE_PREFIXES = [

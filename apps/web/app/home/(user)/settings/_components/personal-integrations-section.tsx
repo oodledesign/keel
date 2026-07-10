@@ -222,7 +222,7 @@ export function PersonalIntegrationsSection({ data }: Props) {
         icon={<Calendar className="h-4 w-4" />}
         iconClassName="bg-[#4285F4]/15 text-[#8ab4f8]"
         title="Google Calendar"
-        description="Powers Planner scheduling and meeting titles in the desktop recorder."
+        description="Powers Planner, public booking availability, and meeting titles in the desktop recorder."
         status={calendarStatus}
         statusLabel={
           calendarStatus === 'connected'

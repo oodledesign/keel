@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 
-import { Calendar, Loader2 } from 'lucide-react';
+import { Calendar, Loader2, Unplug } from 'lucide-react';
 
 import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
@@ -20,6 +20,7 @@ import type { AccountTaskAutomationSettings } from '~/lib/recorder/task-automati
 
 import type { TaskAutomationSettingsPageData } from '../_lib/server/task-automation-settings.loader';
 import {
+  disconnectGoogleCalendarFromWorkspaceAction,
   saveAccountTaskAutomationSettingsAction,
   saveGoogleCalendarSelectionAction,
 } from '../_lib/server/task-automation-settings-actions';
@@ -107,6 +108,23 @@ export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
         toast.success('Task automation settings saved');
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'Save failed');
+      }
+    });
+  }
+
+  function disconnectCalendar() {
+    if (!canEdit) return;
+
+    startTransition(async () => {
+      try {
+        await disconnectGoogleCalendarFromWorkspaceAction({
+          accountSlug: data.accountSlug,
+        });
+        toast.success('Google Calendar disconnected');
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not disconnect Google Calendar',
+        );
       }
     });
   }
@@ -264,20 +282,39 @@ export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
           <div>
             <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">Google Calendar connection</h2>
             <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-              Connect your Google account and choose which calendars count as busy time for
+              Connect your Google account for busy-time checks, public booking slots, and
               auto-scheduling tasks assigned to you.
             </p>
           </div>
-          <Badge
-            variant="outline"
-            className={
-              data.calendar.connected
-                ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200'
-                : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]'
-            }
-          >
-            {data.calendar.connected ? 'Connected' : 'Not connected'}
-          </Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge
+              variant="outline"
+              className={
+                data.calendar.connected
+                  ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200'
+                  : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]'
+              }
+            >
+              {data.calendar.connected ? 'Connected' : 'Not connected'}
+            </Badge>
+            {data.calendar.connected && canEdit ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                disabled={pending}
+                onClick={disconnectCalendar}
+              >
+                {pending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Unplug className="mr-2 h-4 w-4" />
+                )}
+                Disconnect
+              </Button>
+            ) : null}
+          </div>
         </div>
 
         {!data.calendar.configured ? (

@@ -110,3 +110,28 @@ export const saveGoogleCalendarSelectionAction = enhanceAction(
   },
   { schema: saveCalendarSelectionSchema },
 );
+
+const disconnectCalendarSchema = z.object({
+  accountSlug: z.string().min(1),
+});
+
+export const disconnectGoogleCalendarFromWorkspaceAction = enhanceAction(
+  async (input, user) => {
+    const client = getSupabaseServerClient();
+    const { error } = await client
+      .from('google_calendar_connections')
+      .delete()
+      .eq('user_id', user.id);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    revalidateTaskAutomationSurfaces(input.accountSlug);
+    revalidatePath(pathsConfig.app.personalAccountIntegrationsSettings, 'page');
+    revalidatePath(pathsConfig.app.personalPlanner, 'page');
+
+    return { success: true as const };
+  },
+  { schema: disconnectCalendarSchema },
+);

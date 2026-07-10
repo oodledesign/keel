@@ -77,4 +77,6 @@ export type RecorderCalendarEvent = {
   attendees: RecorderCalendarAttendee[];
   start: string;
   end: string;
+  /** Best join URL for Meet / Zoom / Teams / etc., when present on the invite. */
+  meeting_url: string | null;
 };
