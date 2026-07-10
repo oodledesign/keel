@@ -485,7 +485,16 @@ class SiteStudioService {
       sections?: RawSection[];
     };
 
-    const rawPages = extractJson<RawPage[]>(text);
+    let rawPages: RawPage[];
+    try {
+      rawPages = extractJson<RawPage[]>(text);
+    } catch (error) {
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : 'Failed to parse AI sitemap response',
+      );
+    }
     if (!Array.isArray(rawPages) || rawPages.length === 0) {
       throw new Error('AI did not return any pages');
     }

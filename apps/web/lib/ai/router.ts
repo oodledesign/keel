@@ -154,7 +154,7 @@ export const FEATURE_CONFIG: Record<OzerAIFeatureKey, FeatureConfig> = {
     model: SONNET_MODEL,
     credits: 10,
     batchable: false,
-    maxOutputTokens: 4096,
+    maxOutputTokens: 8192,
     structuredOutput: true,
   },
   website_wireframe_generate: {
@@ -162,7 +162,7 @@ export const FEATURE_CONFIG: Record<OzerAIFeatureKey, FeatureConfig> = {
     model: SONNET_MODEL,
     credits: 8,
     batchable: false,
-    maxOutputTokens: 4096,
+    maxOutputTokens: 8192,
     structuredOutput: true,
   },
   website_style_suggest: {

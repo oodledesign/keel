@@ -6,29 +6,7 @@ import type {
 } from '~/lib/websites/planning-types';
 import { WEBSITE_SECTION_LIBRARY } from '~/lib/websites/section-library';
 
-/**
- * Extract the first JSON object/array from an LLM response.
- * Claude sometimes wraps JSON in prose or fences even when asked not to.
- */
-export function extractJson<T>(text: string): T {
-  const fenced = /```(?:json)?\s*([\s\S]*?)```/.exec(text);
-  const candidate = fenced?.[1] ?? text;
-
-  const firstBrace = candidate.search(/[[{]/);
-  if (firstBrace === -1) {
-    throw new Error('AI response did not contain JSON');
-  }
-
-  const open = candidate[firstBrace];
-  const close = open === '[' ? ']' : '}';
-  const lastClose = candidate.lastIndexOf(close);
-  if (lastClose === -1) {
-    throw new Error('AI response did not contain complete JSON');
-  }
-
-  const raw = candidate.slice(firstBrace, lastClose + 1);
-  return JSON.parse(raw) as T;
-}
+export { extractJson } from '~/lib/websites/extract-json';
 
 export function briefContextBlock(brief: WebsiteBrief | null): string {
   if (!brief) return 'No structured brief captured yet.';
@@ -83,32 +61,38 @@ Rules:
 
 export const SITEMAP_GENERATE_SYSTEM = `You are a senior information architect. You design website sitemaps that convert and rank (SEO + local + LLM answer engines).
 
-Respond with ONLY a JSON array of pages:
+Respond with ONLY a valid JSON array — no markdown fences, no commentary, no trailing commas:
 [
   {
     "title": "Home",
     "slug": "home",
     "description": "one line on the page's job",
-    "pageType": "home" | "service" | "location" | "about" | "contact" | "blog-index" | "blog-post" | "legal" | "landing" | "other",
+    "pageType": "home",
     "seoIntent": "one line search intent",
-    "parentSlug": null or "slug-of-parent-page",
+    "parentSlug": null,
     "sections": [
       {
         "title": "Hero",
         "description": "purpose + key content in one sentence",
-        "sectionType": "nav" | "hero" | "proof" | "conversion" | "content" | "footer",
-        "componentKey": null or a shared key like "site-header", "site-footer", "cta-band"
+        "sectionType": "hero",
+        "componentKey": null
       }
     ]
   }
 ]
 
-Rules:
-- 5–12 pages for a typical business site; nest service/location detail pages under their index page via parentSlug.
-- Every page: sections top-to-bottom including a shared header (componentKey "site-header"), one conversion section, and shared footer (componentKey "site-footer").
-- Use componentKey ONLY for sections repeated across pages (header, footer, CTA band, service card row). Repeated sections must share identical title/description.
-- Include SEO-driven pages the business needs (service pages, location pages, FAQ/legal) based on the brief.
-- Slugs: lowercase kebab-case, home page slug "home".`;
+Allowed pageType values: home | service | location | about | contact | blog-index | blog-post | legal | landing | other
+Allowed sectionType values: nav | hero | proof | conversion | content | footer
+
+Hard limits (keep the payload small and complete):
+- 5–8 pages maximum for a typical business site.
+- At most 6 sections per page.
+- Keep every string under 120 characters.
+- Nest service/location detail pages under their index via parentSlug.
+- Every page: shared header (componentKey "site-header"), one conversion section, shared footer (componentKey "site-footer").
+- Use componentKey ONLY for repeated sections; repeated sections must share identical title/description.
+- Slugs: lowercase kebab-case; home page slug "home".
+- Prefer fewer, clearer pages over a huge tree — a complete valid JSON array matters more than coverage.`;
 
 const LIBRARY_KEYS = WEBSITE_SECTION_LIBRARY.map(
   (entry) => `"${entry.key}" (${entry.label}: ${entry.hint})`,
