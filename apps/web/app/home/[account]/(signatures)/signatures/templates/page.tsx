@@ -1,16 +1,16 @@
 import Link from 'next/link';
 
-import { FileText, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
-import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 
 import pathsConfig from '~/config/paths.config';
 
 import { ModuleDataSection } from '../../../_components/module-data-section';
+import { SignatureTemplatePreviewCard } from '../../_components/signature-template-preview-card';
 import {
   loadSignaturesWorkspace,
+  loadStaffRows,
   loadTemplates,
 } from '../../_lib/server/signatures-data';
 
@@ -24,7 +24,11 @@ export default async function SignaturesTemplatesPage({
   const { account } = await params;
   const workspace = await loadSignaturesWorkspace(account);
   const accountId = workspace.account.id as string;
-  const templates = await loadTemplates(accountId);
+  const [templates, staff] = await Promise.all([
+    loadTemplates(accountId),
+    loadStaffRows(accountId),
+  ]);
+  const previewStaff = staff[0] ?? null;
   const newPath = `${pathsConfig.app.accountSignaturesTemplates.replace(
     '[account]',
     account,
@@ -33,7 +37,7 @@ export default async function SignaturesTemplatesPage({
   return (
     <ModuleDataSection
       title="Templates"
-      description="Create and edit reusable HTML email signature templates."
+      description="Create and edit reusable HTML email signature templates. Cards show a live preview with sample staff data."
     >
       <div className="mb-4 flex justify-end">
         <Button asChild>
@@ -54,44 +58,28 @@ export default async function SignaturesTemplatesPage({
             const href = pathsConfig.app.accountSignaturesTemplateDetail
               .replace('[account]', account)
               .replace('[templateId]', template.id);
+            const previewSrc =
+              previewStaff != null
+                ? `/api/signatures/preview?staffId=${encodeURIComponent(previewStaff.id)}&templateId=${encodeURIComponent(template.id)}`
+                : null;
 
             return (
-              <Card
+              <SignatureTemplatePreviewCard
                 key={template.id}
-                className="overflow-hidden border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
-              >
-                <div className="flex h-40 items-center justify-center border-b border-[color:var(--workspace-shell-border)] bg-white p-4">
-                  {template.preview_image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={template.preview_image_url}
-                      alt=""
-                      className="max-h-full max-w-full rounded object-contain"
-                    />
-                  ) : (
-                    <FileText className="h-10 w-10 text-[#465B6F]" />
-                  )}
-                </div>
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-3">
-                    <CardTitle className="text-base">{template.name}</CardTitle>
-                    {template.is_default ? (
-                      <Badge className="bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]">
-                        Default
-                      </Badge>
-                    ) : null}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={href}>Open editor</Link>
-                  </Button>
-                </CardContent>
-              </Card>
+                template={template}
+                href={href}
+                previewSrc={previewSrc}
+              />
             );
           })}
         </div>
       )}
+
+      {!previewStaff && templates.length > 0 ? (
+        <p className="mt-4 text-xs text-muted-foreground">
+          Sync at least one staff member to see live HTML previews on these cards.
+        </p>
+      ) : null}
     </ModuleDataSection>
   );
 }

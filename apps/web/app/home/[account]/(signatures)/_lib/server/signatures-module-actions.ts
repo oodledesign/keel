@@ -41,6 +41,7 @@ import {
   syncStaffActionSchema,
   upsertDepartmentBadgeActionSchema,
   updateStaffActionSchema,
+  bulkUpdateStaffActionSchema,
 } from '../schema/signatures-module.schema';
 import { uploadPhotoFromDataUrl } from './signatures-data';
 
@@ -229,6 +230,95 @@ export const updateSignatureStaff = enhanceAction(
     return { ok: true as const };
   },
   { schema: updateStaffActionSchema },
+);
+
+export const bulkUpdateSignatureStaff = enhanceAction(
+  async (input, user) => {
+    const { accountSlug } = await assertSignaturesAdmin(input.accountId, user.id);
+    const db = getSignaturesSupabaseClient();
+
+    const branchCache = new Map<string, string>();
+    for (const row of input.rows) {
+      if (row.branch_id && !branchCache.has(row.branch_id)) {
+        const branch = await loadAccountBranchById(input.accountId, row.branch_id);
+        if (!branch) {
+          throw new Error(`Branch not found for staff ${row.staffId}`);
+        }
+        branchCache.set(row.branch_id, branch.name);
+      }
+    }
+
+    let updated = 0;
+
+    for (const row of input.rows) {
+      let photoUrl: string | null | undefined;
+      if (row.photoDataUrl) {
+        photoUrl = await uploadPhotoFromDataUrl(
+          input.accountId,
+          row.staffId,
+          row.photoDataUrl,
+        );
+      }
+
+      const update = {
+        full_name: row.full_name,
+        job_title: row.job_title,
+        department: row.department,
+        phone_direct: row.phone_direct,
+        phone_mobile: row.phone_mobile,
+        branch_id: row.branch_id,
+        branch: row.branch_id ? (branchCache.get(row.branch_id) ?? null) : null,
+        signature_email: row.signature_email,
+        ...(photoUrl ? { photo_url: photoUrl } : {}),
+      };
+
+      const { data: staff, error } = await db
+        .from('staff')
+        .update(update)
+        .eq('id', row.staffId)
+        .eq('account_id', input.accountId)
+        .select('id')
+        .maybeSingle();
+
+      if (error) {
+        throw new Error(error.message);
+      }
+      if (!staff) {
+        throw new Error(`Staff member not found: ${row.staffId}`);
+      }
+
+      await db.from('staff_templates').delete().eq('staff_id', row.staffId);
+
+      if (row.templateId) {
+        const { data: template } = await db
+          .from('templates')
+          .select('id')
+          .eq('id', row.templateId)
+          .eq('account_id', input.accountId)
+          .maybeSingle();
+
+        if (!template) {
+          throw new Error(`Template not found for staff ${row.staffId}`);
+        }
+
+        const { error: linkError } = await db.from('staff_templates').insert({
+          staff_id: row.staffId,
+          template_id: row.templateId,
+        });
+
+        if (linkError) {
+          throw new Error(linkError.message);
+        }
+      }
+
+      updated += 1;
+    }
+
+    revalidatePath(workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug));
+    revalidatePath(workPath(pathsConfig.app.accountSignaturesStaff, accountSlug));
+    return { ok: true as const, updated };
+  },
+  { schema: bulkUpdateStaffActionSchema },
 );
 
 export const saveSignatureTemplate = enhanceAction(

@@ -69,6 +69,28 @@ export const updateStaffActionSchema = z.object({
   templateId: z.string().uuid().nullable().optional(),
 });
 
+const bulkStaffRowSchema = z.object({
+  staffId: z.string().uuid(),
+  full_name: emptyToNull,
+  job_title: emptyToNull,
+  department: emptyToNull,
+  phone_direct: emptyToNull,
+  phone_mobile: emptyToNull,
+  branch_id: z.string().uuid().nullable(),
+  signature_email: emptyToNull,
+  photoDataUrl: z
+    .string()
+    .max(3_500_000, 'Photo is too large. Try a smaller image.')
+    .optional()
+    .nullable(),
+  templateId: z.string().uuid().nullable(),
+});
+
+export const bulkUpdateStaffActionSchema = z.object({
+  accountId: z.string().uuid(),
+  rows: z.array(bulkStaffRowSchema).min(1).max(200),
+});
+
 export const saveTemplateActionSchema = z.object({
   accountId: z.string().uuid(),
   templateId: z.string().uuid(),

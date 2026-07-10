@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { Save } from 'lucide-react';
+import { Moon, Save, Sun } from 'lucide-react';
 
 import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
@@ -12,6 +12,7 @@ import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { cn } from '@kit/ui/utils';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 
@@ -30,6 +31,8 @@ const tokens = [
   'email',
   'branch',
   'photo_url',
+  'website',
+  'brand_accent_color',
 ] as const;
 
 export function SignatureTemplateEditor({
@@ -48,6 +51,7 @@ export function SignatureTemplateEditor({
   const [isDefault, setIsDefault] = useState(template.is_default);
   const [previewHtml, setPreviewHtml] = useState(template.html_template);
   const [saving, setSaving] = useState(false);
+  const [previewTheme, setPreviewTheme] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setPreviewHtml(html), 250);
@@ -59,14 +63,17 @@ export function SignatureTemplateEditor({
     let output = previewHtml;
 
     for (const token of tokens) {
-      const value = staff ? String(staff[token] ?? '') : token;
+      let value = token;
+      if (staff && token in staff) {
+        value = String(staff[token as keyof SignatureStaff] ?? '');
+      }
       output = output.replace(
         new RegExp(`\\{\\{\\s*${token}\\s*\\}\\}`, 'gi'),
         value,
       );
     }
 
-    return `<div style="color:#000000;font-family:Arial,Calibri,Georgia,sans-serif;line-height:1.4;">${output}</div>`;
+    return `<div style="color-scheme:light only;supported-color-schemes:light only;color:#000000 !important;background-color:#ffffff;font-family:Arial,Calibri,Georgia,sans-serif;line-height:1.4;">${output}</div>`;
   }, [previewHtml, previewStaff]);
 
   const insertToken = (token: string) => {
@@ -174,18 +181,61 @@ export function SignatureTemplateEditor({
       </Card>
 
       <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Live preview</CardTitle>
-          {previewStaff ? (
-            <Badge variant="outline">{previewStaff.email}</Badge>
-          ) : null}
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <div className="space-y-1">
+            <CardTitle>Live preview</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Signatures are forced to light mode in real inboxes. Use Dark to
+              check how a dark client chrome looks around the signature.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {previewStaff ? (
+              <Badge variant="outline">{previewStaff.email}</Badge>
+            ) : null}
+            <div className="inline-flex rounded-lg border border-[color:var(--workspace-shell-border)] p-0.5">
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className={cn(
+                  'h-8 px-2',
+                  previewTheme === 'light' &&
+                    'bg-[var(--workspace-shell-sidebar-accent)]',
+                )}
+                onClick={() => setPreviewTheme('light')}
+              >
+                <Sun className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className={cn(
+                  'h-8 px-2',
+                  previewTheme === 'dark' &&
+                    'bg-[var(--workspace-shell-sidebar-accent)]',
+                )}
+                onClick={() => setPreviewTheme('dark')}
+              >
+                <Moon className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          <iframe
-            title="Template preview"
-            srcDoc={renderedPreview}
-            className="h-[680px] w-full rounded-xl border border-[color:var(--workspace-shell-border)] bg-white"
-          />
+          <div
+            className={cn(
+              'rounded-xl border border-[color:var(--workspace-shell-border)] p-3',
+              previewTheme === 'light' ? 'bg-white' : 'bg-[#1c1c1e]',
+            )}
+          >
+            <iframe
+              title="Template preview"
+              srcDoc={renderedPreview}
+              className="h-[680px] w-full rounded-lg border-0 bg-white"
+            />
+          </div>
         </CardContent>
       </Card>
     </div>
