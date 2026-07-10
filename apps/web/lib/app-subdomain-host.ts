@@ -49,6 +49,11 @@ export function isAppHostOAuthPublicPath(pathname: string): boolean {
   );
 }
 
+/** Public connect flows (no Ozer login) — e.g. Signatures IT admin consent links. */
+export function isAppHostPublicConnectPath(pathname: string): boolean {
+  return pathname === '/connect' || pathname.startsWith('/connect/');
+}
+
 const MARKETING_ROUTE_PREFIXES = [
   '/personal',
   '/work',
@@ -162,7 +167,8 @@ export function resolveAppSubdomainRedirect(url: URL): string | null {
     if (
       isAppRoute(pathname) ||
       isAppHostStaticPath(pathname) ||
-      isAppHostOAuthPublicPath(pathname)
+      isAppHostOAuthPublicPath(pathname) ||
+      isAppHostPublicConnectPath(pathname)
     ) {
       return null;
     }

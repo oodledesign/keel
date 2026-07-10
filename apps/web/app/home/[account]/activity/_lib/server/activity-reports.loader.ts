@@ -84,6 +84,7 @@ type ActivityBlockRow = {
   domain: string | null;
   url: string | null;
   window_title: string;
+  repo_name?: string | null;
   started_at: string;
   ended_at: string;
   duration_seconds: number;
@@ -145,6 +146,7 @@ function mapBlockRow(
     domain: row.domain,
     url: row.url,
     windowTitle: row.window_title,
+    repoName: row.repo_name ?? null,
     startedAt: row.started_at,
     endedAt: row.ended_at,
     durationSeconds: row.duration_seconds,
@@ -257,6 +259,7 @@ async function loadActivityReportsDataImpl(
         domain,
         url,
         window_title,
+        repo_name,
         started_at,
         ended_at,
         duration_seconds,

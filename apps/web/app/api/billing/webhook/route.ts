@@ -5,7 +5,7 @@ import { getLogger } from '@kit/shared/logger';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import billingConfig from '~/config/billing.config';
-import { fulfillAiCreditPackOrder } from '~/lib/billing/fulfill-ai-credit-pack';
+import { fulfillAiCreditPackOrder, fulfillAiCreditPackFromSubscription } from '~/lib/billing/fulfill-ai-credit-pack';
 import {
   syncKeelPlanFromSubscription,
 } from '~/lib/billing/sync-subscription-plan';
@@ -130,7 +130,11 @@ export const POST = enhanceRouteHandler(
             })),
           });
         },
-        onInvoicePaid: syncPlan,
+        onInvoicePaid: async (payload) => {
+          await syncPlan(payload);
+          const admin = getSupabaseServerAdminClient();
+          await fulfillAiCreditPackFromSubscription(admin, payload);
+        },
       });
 
       logger.info(ctx, `Successfully processed billing webhook`);

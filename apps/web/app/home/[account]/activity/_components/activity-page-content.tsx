@@ -69,6 +69,7 @@ import {
   getActivityRuleMatchOptions,
   intersectActivityRuleMatchOptions,
   parseActivityAppContext,
+  resolveIdeRepoName,
   type ActivityRuleMatch,
 } from '~/lib/activity/activity-app-context';
 import { faviconUrlForDomain } from '~/lib/activity/activity-app-icons';
@@ -358,6 +359,39 @@ function AppGroupNameCell({
 
 function AppItemCell({ block }: { block: ActivityBlockListRow }) {
   const appContext = parseActivityAppContext(block);
+
+  if (appContext?.kind === 'ide') {
+    const repo = appContext.repo ?? resolveIdeRepoName(block);
+    const workspace = appContext.item?.trim() ?? null;
+    const file = appContext.detail?.trim() ?? null;
+    const primary = repo ?? workspace ?? file;
+    const secondary = repo
+      ? file ?? (workspace && workspace.toLowerCase() !== repo.toLowerCase() ? workspace : null)
+      : file;
+
+    if (!primary) {
+      return <span className="text-xs text-[var(--workspace-shell-text-muted)]">—</span>;
+    }
+
+    return (
+      <div className="min-w-0">
+        <span
+          className="block truncate text-xs font-medium text-[var(--workspace-shell-text)]"
+          title={primary}
+        >
+          {primary}
+        </span>
+        {secondary ? (
+          <span
+            className="block truncate text-[10px] text-[var(--workspace-shell-text-muted)]"
+            title={secondary}
+          >
+            {secondary}
+          </span>
+        ) : null}
+      </div>
+    );
+  }
 
   if (!appContext?.item) {
     return <span className="text-xs text-[var(--workspace-shell-text-muted)]">—</span>;

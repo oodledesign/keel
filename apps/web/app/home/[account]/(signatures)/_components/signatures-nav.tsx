@@ -55,7 +55,7 @@ export function SignaturesNav({ accountSlug }: { accountSlug: string }) {
               key={item.label}
               value={item.label}
               asChild
-              className="gap-2 rounded-md data-[state=active]:bg-[#1F2C43] data-[state=active]:text-[var(--workspace-shell-text)]"
+              className="gap-2 text-[var(--workspace-shell-text-muted)] data-[state=active]:border data-[state=active]:border-[var(--ozer-accent)]/30 data-[state=active]:bg-[var(--workspace-shell-panel)] data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
             >
               <Link href={href}>
                 <Icon className="h-4 w-4" />

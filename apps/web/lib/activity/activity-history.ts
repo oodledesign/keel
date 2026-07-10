@@ -7,6 +7,12 @@ import {
   startOfDay,
 } from 'date-fns';
 
+import {
+  isIdeApp,
+  parseActivityAppContext,
+  resolveIdeRepoName,
+} from './activity-app-context';
+
 export {
   activityRuleMatchKey,
   findActivityRuleMatchByKey,
@@ -45,6 +51,7 @@ export type ActivityBlockListRow = {
   isConfirmed: boolean;
   isExcluded: boolean;
   workClassification?: 'billable' | 'internal' | 'neutral';
+  repoName?: string | null;
 };
 
 export type ActivityDayGroup = {
@@ -371,6 +378,18 @@ export function normalizeActivityUrl(url: string): string | null {
 }
 
 export function activitySessionGroupKey(block: ActivityBlockListRow): string {
+  if (isIdeApp(block)) {
+    const repo = resolveIdeRepoName(block);
+    if (repo) {
+      return `repo:${repo.toLowerCase()}`;
+    }
+
+    const context = parseActivityAppContext(block);
+    if (context?.item?.trim()) {
+      return `workspace:${context.item.trim().toLowerCase()}`;
+    }
+  }
+
   const url = block.url?.trim();
   if (url) {
     const normalized = normalizeActivityUrl(url);
@@ -396,6 +415,31 @@ export function activitySessionGroupKey(block: ActivityBlockListRow): string {
 }
 
 export function activitySessionGroupLabel(block: ActivityBlockListRow): string {
+  if (isIdeApp(block)) {
+    const repo = resolveIdeRepoName(block);
+    const context = parseActivityAppContext(block);
+    const workspace = context?.item?.trim() ?? null;
+
+    if (repo && workspace) {
+      const workspaceLower = workspace.toLowerCase();
+      if (
+        workspaceLower === 'cursor agents' ||
+        workspaceLower === 'agents' ||
+        workspaceLower === 'workspace'
+      ) {
+        return `${repo} · ${workspace}`;
+      }
+    }
+
+    if (repo) {
+      return repo;
+    }
+
+    if (workspace) {
+      return workspace;
+    }
+  }
+
   const url = block.url?.trim();
   if (url) {
     const normalized = normalizeActivityUrl(url);

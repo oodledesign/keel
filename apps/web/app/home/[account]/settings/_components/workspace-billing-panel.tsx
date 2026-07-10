@@ -22,6 +22,7 @@ import { requireUserInServerComponent } from '~/lib/server/require-user-in-serve
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { WorkspaceAiCreditsBillingCard } from './workspace-ai-credits-billing-card';
+import { WorkspacePlanStatusCard } from './workspace-plan-status-card';
 import { getTeamAccountAccess } from '../../_lib/role-access';
 
 type WorkspaceBillingPanelProps = {
@@ -83,25 +84,53 @@ export async function WorkspaceBillingPanel({
     billingClient,
     accountId,
   );
-  const showPlanCheckout = !hasBillingData && canManageBilling;
+  const showPlanCheckout =
+    !hasBillingData && !isBusinessLite && canManageBilling;
   const isUpgradeIntent = searchParams.upgrade === '1';
+  const showLiteUpgrade =
+    isBusinessLite && canManageBilling && isUpgradeIntent && !hasBillingData;
+
+  const subscriptionIsWorkspacePlan = Boolean(
+    subscriptionProductPlan &&
+      !subscriptionProductPlan.product.id.startsWith('ozer-addon-') &&
+      !subscriptionProductPlan.product.id.startsWith('ozer-ai-credits-'),
+  );
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h2 className="text-base font-semibold">Billing</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Workspace subscription, add-ons, and Stripe billing portal.
+          Workspace plan, Signatures, AI credits, and Stripe billing portal.
         </p>
       </div>
 
       <div className="flex max-w-2xl flex-col gap-4">
+        <WorkspacePlanStatusCard
+          isBusinessLite={isBusinessLite}
+          hasPaidSubscription={subscriptionIsWorkspacePlan}
+          subscriptionProductPlan={
+            subscriptionIsWorkspacePlan ? subscriptionProductPlan : undefined
+          }
+          canManageBilling={canManageBilling}
+          accountSlug={accountSlug}
+        />
+
         <If condition={showPlanCheckout}>
           <OzerWorkspaceCheckoutForm
             customerId={customerId}
             accountId={accountId}
             workspaceProfile={workspace.workspaceProfile}
             upgradeFromLite={isUpgradeIntent && isBusinessLite}
+          />
+        </If>
+
+        <If condition={showLiteUpgrade && !showPlanCheckout}>
+          <OzerWorkspaceCheckoutForm
+            customerId={customerId}
+            accountId={accountId}
+            workspaceProfile={workspace.workspaceProfile}
+            upgradeFromLite
           />
         </If>
 
@@ -124,7 +153,7 @@ export async function WorkspaceBillingPanel({
           canManageBilling={canManageBilling}
         />
 
-        <If condition={subscription}>
+        <If condition={subscription && subscriptionIsWorkspacePlan}>
           {(activeSubscription) => (
             <CurrentSubscriptionCard
               subscription={activeSubscription}

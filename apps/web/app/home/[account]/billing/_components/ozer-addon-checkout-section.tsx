@@ -18,8 +18,8 @@ import {
 
 import billingConfig from '~/config/billing.config';
 import {
-  OZER_ADDON_CATALOG,
-  addonProductIds,
+  launchedAddonProductIds,
+  launchedWorkspaceAddons,
   type OzerAddonKey,
 } from '~/lib/billing/ozer-plan-catalog';
 
@@ -46,10 +46,8 @@ type OzerAddonCheckoutSectionProps = {
 };
 
 function defaultProductForAddon(key: OzerAddonKey): string {
-  if (key === 'addon_signatures') return 'ozer-addon-signatures';
-  if (key === 'addon_videos') return 'ozer-addon-videos-starter';
-  if (key === 'addon_feedflow') return 'ozer-addon-feedflow';
-  return 'ozer-addon-rankly';
+  const addon = launchedWorkspaceAddons().find((entry) => entry.key === key);
+  return addon?.productId ?? 'ozer-addon-signatures';
 }
 
 function addonKeyFromHighlight(value: string | null | undefined): OzerAddonKey | null {
@@ -70,16 +68,19 @@ export function OzerAddonCheckoutSection({
   const [pending, startTransition] = useTransition();
   const appEvents = useAppEvents();
 
+  const availableAddons = launchedWorkspaceAddons();
+
   const initialKey =
     addonKeyFromHighlight(highlightAddon) ??
-    OZER_ADDON_CATALOG.find((a) => !activeAddons[a.key])?.key ??
-    'addon_rankly';
+    availableAddons.find((addon) => !activeAddons[addon.key])?.key ??
+    availableAddons[0]?.key ??
+    'addon_signatures';
 
   const [selectedKey, setSelectedKey] = useState<OzerAddonKey>(initialKey);
   const [checkoutToken, setCheckoutToken] = useState<string | undefined>();
 
   const filteredConfig = useMemo(() => {
-    const allowed = new Set(addonProductIds());
+    const allowed = new Set(launchedAddonProductIds());
     return {
       ...billingConfig,
       products: billingConfig.products.filter((product) =>
@@ -90,11 +91,6 @@ export function OzerAddonCheckoutSection({
 
   const pickerProducts = useMemo(() => {
     const productId = defaultProductForAddon(selectedKey);
-    if (selectedKey === 'addon_videos') {
-      return filteredConfig.products.filter((p) =>
-        p.id.startsWith('ozer-addon-videos'),
-      );
-    }
     return filteredConfig.products.filter((p) => p.id === productId);
   }, [filteredConfig.products, selectedKey]);
 
@@ -112,76 +108,107 @@ export function OzerAddonCheckoutSection({
     return (
       <Card id="addons">
         <CardHeader>
-          <CardTitle>Add-ons</CardTitle>
+          <CardTitle>Signatures</CardTitle>
           <CardDescription>
-            Subscribe to a workspace plan first, then add Signatures, Rankly,
-            Feedflow, or Videos.
+            Activate this workspace (Business Lite is free) before subscribing to
+            Signatures.
           </CardDescription>
         </CardHeader>
       </Card>
     );
   }
 
-  const selectedActive = activeAddons[selectedKey];
+  const selectedAddon =
+    availableAddons.find((addon) => addon.key === selectedKey) ??
+    availableAddons[0];
+  const selectedActive = selectedAddon
+    ? activeAddons[selectedAddon.key]
+    : false;
+  const showAddonPicker = availableAddons.length > 1;
 
   return (
     <Card id="addons">
       <CardHeader>
-        <CardTitle>Add-ons</CardTitle>
+        <CardTitle>
+          {availableAddons.length === 1
+            ? availableAddons[0]?.name ?? 'Add-ons'
+            : 'Add-ons'}
+        </CardTitle>
         <CardDescription>
-          Optional modules for this workspace. Each add-on is a separate
-          subscription on your Stripe account.
+          {availableAddons.length === 1
+            ? 'Separate subscription from your workspace plan — choose monthly or annual billing independently.'
+            : 'Optional modules for this workspace. Each add-on is its own subscription.'}
         </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-6">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {OZER_ADDON_CATALOG.map((addon) => {
-            const active = activeAddons[addon.key];
-            const selected = selectedKey === addon.key;
+        {showAddonPicker ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {availableAddons.map((addon) => {
+              const active = activeAddons[addon.key];
+              const selected = selectedKey === addon.key;
 
-            return (
-              <button
-                key={addon.key}
-                type="button"
-                onClick={() => setSelectedKey(addon.key)}
-                className={`rounded-xl border p-4 text-left transition ${
-                  selected
-                    ? 'border-[var(--ozer-accent)]/40 bg-[var(--ozer-accent)]/5'
-                    : 'border-[color:var(--workspace-shell-border)] bg-black/10 hover:border-[color:var(--workspace-shell-border)]'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="font-semibold">{addon.name}</p>
-                  {active ? (
-                    <Badge variant="outline" className="text-emerald-400">
-                      Active
-                    </Badge>
-                  ) : (
-                    <span className="text-muted-foreground text-xs">
-                      from £{addon.fromPriceGbp}/mo
-                    </span>
-                  )}
-                </div>
-                <p className="text-muted-foreground mt-2 text-sm">
-                  {addon.description}
+              return (
+                <button
+                  key={addon.key}
+                  type="button"
+                  onClick={() => setSelectedKey(addon.key)}
+                  className={`rounded-xl border p-4 text-left transition ${
+                    selected
+                      ? 'border-[var(--ozer-accent)]/40 bg-[var(--ozer-accent)]/5'
+                      : 'border-[color:var(--workspace-shell-border)] bg-black/10 hover:border-[color:var(--workspace-shell-border)]'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-semibold">{addon.name}</p>
+                    {active ? (
+                      <Badge variant="outline" className="text-emerald-400">
+                        Active
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">
+                        from £{addon.fromPriceGbp}/mo
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-muted-foreground mt-2 text-sm">
+                    {addon.description}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        ) : selectedAddon ? (
+          <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/10 p-4">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="font-semibold">{selectedAddon.name}</p>
+                <p className="text-muted-foreground mt-1 text-sm">
+                  {selectedAddon.description}
                 </p>
-              </button>
-            );
-          })}
-        </div>
+              </div>
+              {selectedActive ? (
+                <Badge variant="outline" className="text-emerald-400">
+                  Active
+                </Badge>
+              ) : (
+                <span className="text-muted-foreground shrink-0 text-xs">
+                  from £{selectedAddon.fromPriceGbp}/mo
+                </span>
+              )}
+            </div>
+          </div>
+        ) : null}
 
         {selectedActive ? (
           <p className="text-muted-foreground text-sm">
-            {OZER_ADDON_CATALOG.find((a) => a.key === selectedKey)?.name} is
-            already active on this workspace. Use the billing portal below to
-            change or cancel.
+            {selectedAddon?.name} is already active on this workspace. Use the
+            billing portal below to change plan interval or cancel.
           </p>
-        ) : (
+        ) : selectedAddon ? (
           <div className="rounded-xl border border-[color:var(--workspace-shell-border)] p-4">
             <p className="mb-4 text-sm font-medium">
-              Choose a plan for{' '}
-              {OZER_ADDON_CATALOG.find((a) => a.key === selectedKey)?.name}
+              Choose a {selectedAddon.name} plan
             </p>
             <PlanPicker
               pending={pending}
@@ -212,7 +239,7 @@ export function OzerAddonCheckoutSection({
               }}
             />
           </div>
-        )}
+        ) : null}
       </CardContent>
     </Card>
   );

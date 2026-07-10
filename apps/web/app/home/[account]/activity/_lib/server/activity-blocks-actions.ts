@@ -55,7 +55,7 @@ type AssignUnassignedReportFilterInput = {
   workClassification?: 'billable' | 'internal' | 'neutral';
   rememberRule?: boolean;
   ruleMatch?: {
-    matchType: 'domain' | 'app_name' | 'title_contains' | 'url_path';
+    matchType: 'domain' | 'app_name' | 'title_contains' | 'url_path' | 'repo_name';
     matchValue: string;
   };
 };
@@ -63,7 +63,7 @@ type AssignUnassignedReportFilterInput = {
 type CreateActivityRuleInput = {
   accountId: string;
   accountSlug: string;
-  matchType: 'domain' | 'app_name' | 'title_contains' | 'url_path';
+  matchType: 'domain' | 'app_name' | 'title_contains' | 'url_path' | 'repo_name';
   matchValue: string;
   projectId?: string | null;
   clientId?: string | null;
@@ -330,6 +330,7 @@ export async function assignUnassignedReportFilterAction(
     domain: (row.domain as string | null) ?? null,
     url: (row.url as string | null) ?? null,
     windowTitle: row.window_title as string,
+    repoName: (row.repo_name as string | null) ?? null,
     startedAt: row.started_at as string,
     endedAt: row.ended_at as string,
     durationSeconds: row.duration_seconds as number,
@@ -403,7 +404,7 @@ function normalizeRuleMatchValue(
     throw new Error('Rule match value is required');
   }
 
-  if (matchType === 'domain' || matchType === 'app_name' || matchType === 'url_path') {
+  if (matchType === 'domain' || matchType === 'app_name' || matchType === 'url_path' || matchType === 'repo_name') {
     return trimmed.toLowerCase();
   }
 
@@ -436,7 +437,7 @@ async function backfillActivityRuleMatches(input: {
 
   let query = client
     .from('activity_blocks')
-    .select('id, domain, app_name, url, window_title')
+    .select('id, domain, app_name, url, window_title, repo_name')
     .eq('account_id', input.accountId)
     .eq('user_id', input.userId)
     .eq('is_confirmed', false)
@@ -482,6 +483,10 @@ async function backfillActivityRuleMatches(input: {
           (normalizedUrl != null &&
             normalizedUrl.startsWith(`${normalizedValue}/`))
         );
+      }
+
+      if (input.matchType === 'repo_name') {
+        return row.repo_name?.trim().toLowerCase() === normalizedValue;
       }
 
       const title = row.window_title ?? '';

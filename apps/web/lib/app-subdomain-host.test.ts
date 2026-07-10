@@ -66,6 +66,25 @@ describe('resolveAppSubdomainRedirect', () => {
     ).toBeNull();
   });
 
+  it('serves public connect flows on the app host without redirecting to /app', () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://app.ozer.so');
+    vi.stubEnv('NEXT_PUBLIC_MARKETING_SITE_URL', 'https://www.ozer.so');
+
+    expect(
+      resolveAppSubdomainRedirect(
+        new URL(
+          'https://app.ozer.so/connect/signatures/75d71cf6fa47ff6e38f3bc444a621ffed7f1770f2b0995c9630da228093dc0fa',
+        ),
+      ),
+    ).toBeNull();
+
+    expect(
+      resolveAppSubdomainRedirect(
+        new URL('https://app.ozer.so/connect/signatures/success?provider=microsoft'),
+      ),
+    ).toBeNull();
+  });
+
   it('locks app host even when env vars only list www marketing', () => {
     vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://www.ozer.so');

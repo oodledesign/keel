@@ -14,7 +14,16 @@ export type ActivityAppContext = {
   detail: string | null;
   meta: string | null;
   context: string | null;
+  repo?: string | null;
 };
+
+const GENERIC_IDE_WORKSPACES = new Set([
+  'cursor agents',
+  'agents',
+  'workspace',
+  'untitled',
+  'no folder opened',
+]);
 
 const FILE_EXTENSION_PATTERN = /\.[a-z0-9][\w.-]*$/i;
 
@@ -95,6 +104,75 @@ function stripSuffixParts(parts: string[], suffixes: Set<string>) {
   }
 
   return parts;
+}
+
+function isGenericIdeWorkspace(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  return GENERIC_IDE_WORKSPACES.has(normalized);
+}
+
+function inferRepoFromFilePath(value: string): string | null {
+  const normalized = value.replace(/\\/g, '/');
+
+  const projectsMatch = normalized.match(
+    /(?:^|\/)(?:Users\/[^/]+\/)?(?:projects|repos|dev|code|src)\/([^/]+)\//i,
+  );
+  if (projectsMatch?.[1]) {
+    return projectsMatch[1];
+  }
+
+  const fileInRepo = normalized.match(/\/([^/]+)\/[^/]+\.[a-z0-9][\w.-]*$/i);
+  if (fileInRepo?.[1] && !isGenericIdeWorkspace(fileInRepo[1])) {
+    return fileInRepo[1];
+  }
+
+  return null;
+}
+
+export function inferRepoFromWindowTitle(title: string): string | null {
+  const trimmed = title.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const fromPath = inferRepoFromFilePath(trimmed);
+  if (fromPath) {
+    return fromPath;
+  }
+
+  const parts = stripSuffixParts(splitTitleParts(trimmed), IDE_SUFFIXES);
+  if (parts.length >= 2) {
+    const candidate = extractBranch(parts[0]!).label;
+    if (!looksLikeFile(candidate) && !isGenericIdeWorkspace(candidate)) {
+      return candidate;
+    }
+  }
+
+  if (parts.length === 1) {
+    const candidate = extractBranch(parts[0]!).label;
+    if (!looksLikeFile(candidate) && !isGenericIdeWorkspace(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+export function resolveIdeRepoName(block: ActivityBlockListRow): string | null {
+  const explicit = block.repoName?.trim();
+  if (explicit) {
+    return explicit;
+  }
+
+  return inferRepoFromWindowTitle(block.windowTitle);
+}
+
+function withIdeRepo(
+  block: ActivityBlockListRow,
+  context: ActivityAppContext,
+): ActivityAppContext {
+  const repo = resolveIdeRepoName(block);
+  return { ...context, repo };
 }
 
 function bundleIncludes(block: ActivityBlockListRow, value: string) {
@@ -404,7 +482,8 @@ export function parseActivityAppContext(
   }
 
   if (isIdeApp(block)) {
-    return parseIdeContext(title);
+    const context = parseIdeContext(title);
+    return context ? withIdeRepo(block, context) : null;
   }
 
   if (isEmailApp(block) || block.domain?.trim().toLowerCase() === 'mail.google.com') {
@@ -439,21 +518,22 @@ export function parseActivityAppContext(
   return null;
 }
 
+export type ActivityRuleMatch = {
+  matchType: 'domain' | 'app_name' | 'title_contains' | 'url_path' | 'repo_name';
+  matchValue: string;
+  label: string;
+  level: ActivityRuleMatchLevel;
+  description: string;
+};
+
 export type ActivityRuleMatchLevel =
   | 'page'
   | 'url'
   | 'domain'
   | 'app'
   | 'file'
-  | 'project';
-
-export type ActivityRuleMatch = {
-  matchType: 'domain' | 'app_name' | 'title_contains' | 'url_path';
-  matchValue: string;
-  label: string;
-  level: ActivityRuleMatchLevel;
-  description: string;
-};
+  | 'project'
+  | 'repo';
 
 export function activityRuleMatchKey(match: ActivityRuleMatch): string {
   return `${match.matchType}::${match.matchValue}`;
@@ -572,6 +652,19 @@ export function getActivityRuleMatchOptions(
     }
   }
 
+  if (context?.kind === 'ide') {
+    const repo = context.repo ?? resolveIdeRepoName(block);
+    if (repo) {
+      add({
+        matchType: 'repo_name',
+        matchValue: repo,
+        label: repo,
+        level: 'repo',
+        description: 'This git repo',
+      });
+    }
+  }
+
   if (normalizedUrl?.includes('/')) {
     add({
       matchType: 'url_path',
@@ -654,7 +747,14 @@ export function blockContextLabel(block: ActivityBlockListRow): string {
   }
 
   if (context.kind === 'ide' && context.item && !context.detail) {
+    if (context.repo) {
+      return context.repo;
+    }
     return 'Workspace';
+  }
+
+  if (context.kind === 'ide' && context.repo) {
+    return context.repo;
   }
 
   if (context.kind === 'email' && context.meta) {
@@ -676,7 +776,7 @@ export function parseIdeWindowContext(block: ActivityBlockListRow) {
   }
 
   return {
-    repo: context.item,
+    repo: context.repo ?? context.item,
     file: context.detail,
     branch: context.meta,
     context: context.context,

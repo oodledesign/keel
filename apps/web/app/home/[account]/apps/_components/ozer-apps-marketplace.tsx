@@ -5,7 +5,7 @@ import { Button } from '@kit/ui/button';
 
 import pathsConfig from '~/config/paths.config';
 import {
-  OZER_ADDON_CATALOG,
+  launchedWorkspaceAddons,
   type OzerAddonKey,
 } from '~/lib/billing/ozer-plan-catalog';
 
@@ -79,8 +79,8 @@ export function OzerAppsMarketplace({
           </p>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {OZER_ADDON_CATALOG.map((addon) => {
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {launchedWorkspaceAddons().map((addon) => {
             const active = activeAddons[addon.key];
             const addonSlug = addon.key.replace('addon_', '');
 

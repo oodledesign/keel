@@ -6,6 +6,7 @@ import {
   getActivityRuleMatchOptions,
   inferActivityRuleMatch,
   parseActivityAppContext,
+  resolveIdeRepoName,
 } from '~/lib/activity/activity-app-context';
 
 function makeBlock(
@@ -42,12 +43,11 @@ describe('activity app context parsing', () => {
           windowTitle: 'keel - activity-page-content.tsx - Cursor',
         }),
       ),
-    ).toEqual({
+    ).toMatchObject({
       kind: 'ide',
       item: 'keel',
       detail: 'activity-page-content.tsx',
-      meta: null,
-      context: null,
+      repo: 'keel',
     });
   });
 
@@ -247,7 +247,41 @@ describe('activity app context parsing', () => {
       windowTitle: 'keel - Cursor',
     });
 
-    expect(blockContextLabel(block)).toBe('Workspace');
+    expect(blockContextLabel(block)).toBe('keel');
+  });
+
+  it('infers repo for Cursor Agents sessions with file paths', () => {
+    expect(
+      resolveIdeRepoName(
+        makeBlock({
+          id: 'agents',
+          startedAt: '2026-07-07T10:00:00.000Z',
+          windowTitle: 'links.md — Cursor Agents',
+        }),
+      ),
+    ).toBeNull();
+
+    expect(
+      resolveIdeRepoName(
+        makeBlock({
+          id: 'agents-repo',
+          startedAt: '2026-07-07T10:00:00.000Z',
+          repoName: 'keel',
+          windowTitle: 'links.md — Cursor Agents',
+        }),
+      ),
+    ).toBe('keel');
+
+    expect(
+      resolveIdeRepoName(
+        makeBlock({
+          id: 'agents-path',
+          startedAt: '2026-07-07T10:00:00.000Z',
+          windowTitle:
+            '/Users/dan/projects/keel/apps/web/lib/activity/links.md — Cursor Agents',
+        }),
+      ),
+    ).toBe('keel');
   });
 
   it('infers granular remember rules from project and file titles', () => {

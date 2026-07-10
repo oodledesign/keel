@@ -19,8 +19,10 @@ import { cn } from '@kit/ui/utils';
 
 import billingConfig from '~/config/billing.config';
 import {
-  OZER_AI_CREDIT_PACKS,
-  type OzerAiCreditPack,
+  OZER_AI_CREDIT_PACK_TIERS,
+  tierDescription,
+  type AiCreditPurchaseMode,
+  type OzerAiCreditPackTier,
 } from '~/lib/billing/ai-credit-packs';
 
 const EmbeddedCheckout = dynamic(
@@ -58,13 +60,17 @@ function formatCredits(n: number) {
 export function AiCreditsBillingCard(props: AiCreditsBillingCardProps) {
   const [pending, startTransition] = useTransition();
   const [checkoutToken, setCheckoutToken] = useState<string | undefined>();
-  const [selected, setSelected] = useState<OzerAiCreditPack>(
-    OZER_AI_CREDIT_PACKS[0]!,
+  const [purchaseMode, setPurchaseMode] =
+    useState<AiCreditPurchaseMode>('one-time');
+  const [selected, setSelected] = useState<OzerAiCreditPackTier>(
+    OZER_AI_CREDIT_PACK_TIERS[0]!,
   );
   const [snapshot, setSnapshot] = useState<CreditsSnapshot | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const canBuy = props.canManageBilling !== false;
+  const selectedOffer =
+    purchaseMode === 'monthly' ? selected.monthly : selected.oneTime;
 
   const refresh = useCallback(async () => {
     try {
@@ -108,12 +114,14 @@ export function AiCreditsBillingCard(props: AiCreditsBillingCardProps) {
               AI credits
             </CardTitle>
             <CardDescription>
-              Monthly pool resets each month. Purchased packs stay until you use
-              them.
+              Your plan includes a monthly pool that resets each billing period.
+              Top-ups add to a separate purchased balance that rolls over.
             </CardDescription>
           </div>
           {snapshot ? (
-            <Badge variant="outline">{formatCredits(snapshot.creditsRemaining)} left</Badge>
+            <Badge variant="outline">
+              {formatCredits(snapshot.creditsRemaining)} left
+            </Badge>
           ) : null}
         </div>
       </CardHeader>
@@ -136,7 +144,7 @@ export function AiCreditsBillingCard(props: AiCreditsBillingCardProps) {
               </p>
             </div>
             <div className="rounded-lg border px-3 py-2">
-              <p className="text-muted-foreground text-xs">Resets</p>
+              <p className="text-muted-foreground text-xs">Pool resets</p>
               <p className="font-medium">
                 {new Date(snapshot.periodEnd).toLocaleDateString('en-GB', {
                   day: 'numeric',
@@ -151,15 +159,46 @@ export function AiCreditsBillingCard(props: AiCreditsBillingCardProps) {
 
         {canBuy ? (
           <div className="space-y-3">
-            <p className="text-sm font-medium">Buy more credits</p>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm font-medium">Buy more credits</p>
+              <div className="inline-flex rounded-lg border p-0.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setPurchaseMode('one-time')}
+                  className={cn(
+                    'rounded-md px-3 py-1.5 font-medium transition-colors',
+                    purchaseMode === 'one-time'
+                      ? 'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-text)]'
+                      : 'text-muted-foreground',
+                  )}
+                >
+                  One-time
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPurchaseMode('monthly')}
+                  className={cn(
+                    'rounded-md px-3 py-1.5 font-medium transition-colors',
+                    purchaseMode === 'monthly'
+                      ? 'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-text)]'
+                      : 'text-muted-foreground',
+                  )}
+                >
+                  Every month
+                </button>
+              </div>
+            </div>
+
             <ul className="grid gap-2">
-              {OZER_AI_CREDIT_PACKS.map((pack) => {
-                const isSelected = selected.planId === pack.planId;
+              {OZER_AI_CREDIT_PACK_TIERS.map((tier) => {
+                const offer =
+                  purchaseMode === 'monthly' ? tier.monthly : tier.oneTime;
+                const isSelected = selected.id === tier.id;
                 return (
-                  <li key={pack.planId}>
+                  <li key={tier.id}>
                     <button
                       type="button"
-                      onClick={() => setSelected(pack)}
+                      onClick={() => setSelected(tier)}
                       className={cn(
                         'flex w-full items-start justify-between gap-3 rounded-xl border px-3 py-3 text-left transition-colors',
                         isSelected
@@ -169,14 +208,16 @@ export function AiCreditsBillingCard(props: AiCreditsBillingCardProps) {
                     >
                       <span>
                         <span className="block text-sm font-semibold">
-                          {pack.name} · {formatCredits(pack.credits)} credits
+                          {tier.name} · {formatCredits(tier.credits)} credits
+                          {purchaseMode === 'monthly' ? '/month' : ''}
                         </span>
                         <span className="text-muted-foreground mt-0.5 block text-xs">
-                          {pack.description}
+                          {tierDescription(tier, purchaseMode)}
                         </span>
                       </span>
                       <span className="shrink-0 text-sm font-semibold text-[var(--ozer-coral-600)]">
-                        £{pack.priceGbp}
+                        £{offer.priceGbp}
+                        {purchaseMode === 'monthly' ? '/mo' : ''}
                       </span>
                     </button>
                   </li>
@@ -192,8 +233,8 @@ export function AiCreditsBillingCard(props: AiCreditsBillingCardProps) {
                 startTransition(async () => {
                   try {
                     const { checkoutToken: token } = await props.createCheckout({
-                      productId: selected.productId,
-                      planId: selected.planId,
+                      productId: selectedOffer.productId,
+                      planId: selectedOffer.planId,
                     });
                     setCheckoutToken(token);
                   } catch {
@@ -204,7 +245,9 @@ export function AiCreditsBillingCard(props: AiCreditsBillingCardProps) {
             >
               {pending
                 ? 'Starting checkout…'
-                : `Buy ${selected.name} for £${selected.priceGbp}`}
+                : purchaseMode === 'monthly'
+                  ? `Subscribe to ${selected.name} for £${selectedOffer.priceGbp}/mo`
+                  : `Buy ${selected.name} for £${selectedOffer.priceGbp}`}
             </Button>
           </div>
         ) : (

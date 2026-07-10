@@ -12,6 +12,7 @@ export type ActivityBlockInput = {
   domain?: string | null;
   url?: string | null;
   window_title: string;
+  repo_name?: string | null;
   started_at: string;
   ended_at: string;
   duration_seconds: number;
@@ -71,6 +72,7 @@ export function normalizeActivityBlockInput(
     domain: normalizeOptionalText(block.domain),
     url: privacy.capture_full_urls ? normalizeOptionalText(block.url) : null,
     window_title: block.window_title.trim(),
+    repo_name: normalizeOptionalText(block.repo_name),
     started_at: startedAt,
     ended_at: endedAt,
     duration_seconds: block.duration_seconds,
