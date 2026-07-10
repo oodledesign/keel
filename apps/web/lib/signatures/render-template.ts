@@ -131,8 +131,7 @@ export function renderTemplate(
 
   const inner = html.trim();
 
-  // Soft shell only: set a default text colour. Do not force a white canvas —
-  // many signatures sit on the client's own background, and a hard #fff block
-  // looks wrong. Dark-mode inversion is client-specific and not controllable.
-  return `<div style="color:#000000;font-family:Arial,Calibri,Georgia,sans-serif;line-height:1.4;">${inner}</div>`;
+  // Soft shell only: mid-grey default text (not pure #000) so dark-mode clients
+  // can invert more gracefully. No forced background canvas.
+  return `<div style="color:#333333;font-family:Arial,Calibri,Georgia,sans-serif;line-height:1.4;">${inner}</div>`;
 }

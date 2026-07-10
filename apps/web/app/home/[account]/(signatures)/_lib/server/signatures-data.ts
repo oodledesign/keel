@@ -9,20 +9,21 @@ import { redirectIfSpaceNotIn } from '~/home/[account]/_lib/server/workspace-rou
 import { getSignaturesSupabaseClient } from '~/lib/signatures/graph';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
-/** Simple two-column layout — kept for reference / migration copy-paste. */
-export const MINIMAL_SIGNATURE_TEMPLATE = `<!-- Ozer Signatures minimal template -->
-<table cellpadding="0" cellspacing="0" role="presentation" style="font-family:Arial,sans-serif;color:#000;border-collapse:collapse;">
+/** Simple two-column layout — kept for reference / migration copy-paste.
+ * Dark-mode friendly: mid-grey text, underlined links, no solid canvas. */
+export const MINIMAL_SIGNATURE_TEMPLATE = `<!-- Ozer Signatures minimal template (dark-mode resilient) -->
+<table cellpadding="0" cellspacing="0" role="presentation" style="font-family:Arial,sans-serif;color:#333333;border-collapse:collapse;">
   <tr>
     <td style="padding-right:16px;vertical-align:top;">
-      <img src="{{photo_url}}" width="80" height="80" alt="{{full_name}}" style="display:block;width:80px;height:80px;border-radius:999px;object-fit:cover;background:#f3f4f6;" />
+      <img src="{{photo_url}}" width="80" height="80" alt="{{full_name}}" style="display:block;width:80px;height:80px;border-radius:999px;object-fit:cover;" />
     </td>
-    <td style="vertical-align:top;">
-      <div style="font-size:18px;font-weight:700;line-height:1.25;">{{full_name}}</div>
-      <div style="font-size:14px;line-height:1.4;">{{job_title}}</div>
-      <div style="font-size:13px;margin-top:8px;line-height:1.5;">
+    <td style="vertical-align:top;color:#333333;">
+      <div style="font-size:18px;font-weight:700;line-height:1.25;color:#333333;">{{full_name}}</div>
+      <div style="font-size:14px;line-height:1.4;color:#555555;">{{job_title}}</div>
+      <div style="font-size:13px;margin-top:8px;line-height:1.5;color:#333333;">
         <div>{{phone_direct}}</div>
         <div>{{phone_mobile}}</div>
-        <div><a href="mailto:{{email}}" style="color:#000;text-decoration:none;">{{email}}</a></div>
+        <div><a href="mailto:{{email}}" style="color:#333333;text-decoration:underline;">{{email}}</a></div>
       </div>
     </td>
   </tr>

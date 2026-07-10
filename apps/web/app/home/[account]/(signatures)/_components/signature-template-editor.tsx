@@ -73,7 +73,7 @@ export function SignatureTemplateEditor({
       );
     }
 
-    return `<div style="color:#000000;font-family:Arial,Calibri,Georgia,sans-serif;line-height:1.4;">${output}</div>`;
+    return `<div style="color:#333333;font-family:Arial,Calibri,Georgia,sans-serif;line-height:1.4;">${output}</div>`;
   }, [previewHtml, previewStaff]);
 
   const insertToken = (token: string) => {
@@ -185,8 +185,9 @@ export function SignatureTemplateEditor({
           <div className="space-y-1">
             <CardTitle>Live preview</CardTitle>
             <p className="text-xs text-muted-foreground">
-              Signatures are forced to light mode in real inboxes. Use Dark to
-              check how a dark client chrome looks around the signature.
+              Preview against a light or dark inbox chrome. Real clients may
+              still invert colours unpredictably — there is no reliable auto
+              dark/light switch for HTML signatures.
             </p>
           </div>
           <div className="flex items-center gap-2">
