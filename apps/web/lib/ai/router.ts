@@ -5,6 +5,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenAI } from '@google/genai';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+
 export const GEMINI_FLASH_LITE_MODEL = 'gemini-3.1-flash-lite';
 export const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
 export const SONNET_MODEL = 'claude-sonnet-4-6';
@@ -221,10 +223,20 @@ const getAnthropicClient = () =>
 const getGoogleClient = () =>
   new GoogleGenAI({ apiKey: process.env.GOOGLE_AI_API_KEY });
 
+/**
+ * Credit balance mutations are service-role only (see ai_credits migrations).
+ * Callers still pass a user-scoped client for auth context elsewhere; credit
+ * reads/writes always go through the admin client.
+ */
+function aiCreditsDb() {
+  return getSupabaseServerAdminClient();
+}
+
 export async function getOrCreateCreditBalance(
   accountId: string,
-  supabase: SupabaseClient,
+  _supabase?: SupabaseClient,
 ): Promise<AiCreditBalanceRow> {
+  const supabase = aiCreditsDb();
   const { data: existing, error: selectError } = await supabase
     .from('ai_credit_balances')
     .select('*')
@@ -260,8 +272,9 @@ export async function getOrCreateCreditBalance(
 export async function checkAndDeductCredits(
   accountId: string,
   credits: number,
-  supabase: SupabaseClient,
+  _supabase?: SupabaseClient,
 ): Promise<AiCreditBalanceRow> {
+  const supabase = aiCreditsDb();
   const { error: resetError } = await supabase.rpc('reset_ai_credits_if_expired', {
     p_account_id: accountId,
   });
@@ -464,7 +477,7 @@ export async function callAI({
     responseSchema,
   });
 
-  const { error: txError } = await supabase.from('ai_credit_transactions').insert({
+  const { error: txError } = await aiCreditsDb().from('ai_credit_transactions').insert({
     account_id: accountId,
     feature,
     provider: result.provider,

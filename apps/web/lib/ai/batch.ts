@@ -4,6 +4,8 @@ import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+
 import {
   checkAndDeductCredits,
   FEATURE_CONFIG,
@@ -34,13 +36,12 @@ function getAnthropicClient() {
 }
 
 async function recordBatchedTransaction(
-  supabase: SupabaseClient,
   job: BatchJobRow,
   inputTokens: number | null,
   outputTokens: number | null,
 ) {
   const config = FEATURE_CONFIG[job.feature as OzerAIFeatureKey];
-  await supabase.from('ai_credit_transactions').insert({
+  await getSupabaseServerAdminClient().from('ai_credit_transactions').insert({
     account_id: job.account_id,
     feature: job.feature,
     provider: job.provider,
@@ -77,7 +78,7 @@ export async function queueBatchRequest({
 
   await checkAndDeductCredits(accountId, config.credits, supabase);
 
-  const { data, error } = await supabase
+  const { data, error } = await getSupabaseServerAdminClient()
     .from('ai_batch_jobs')
     .insert({
       account_id: accountId,
@@ -187,7 +188,6 @@ export async function submitPendingBatches(supabase: SupabaseClient) {
         .eq('id', job.id);
 
       await recordBatchedTransaction(
-        supabase,
         job,
         result.inputTokens,
         result.outputTokens,
@@ -273,7 +273,6 @@ export async function pollAndProcessBatches(supabase: SupabaseClient) {
           .eq('id', jobId);
 
         await recordBatchedTransaction(
-          supabase,
           job,
           message.usage.input_tokens,
           message.usage.output_tokens,
