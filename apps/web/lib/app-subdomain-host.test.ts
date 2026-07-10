@@ -85,6 +85,25 @@ describe('resolveAppSubdomainRedirect', () => {
     ).toBeNull();
   });
 
+  it('serves API routes on the app host without redirecting to /app', () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://app.ozer.so');
+    vi.stubEnv('NEXT_PUBLIC_MARKETING_SITE_URL', 'https://www.ozer.so');
+
+    expect(
+      resolveAppSubdomainRedirect(
+        new URL(
+          'https://app.ozer.so/api/signatures/ms-delegated-auth?token=abc',
+        ),
+      ),
+    ).toBeNull();
+
+    expect(
+      resolveAppSubdomainRedirect(
+        new URL('https://app.ozer.so/api/signatures/ms-callback?admin_consent=True'),
+      ),
+    ).toBeNull();
+  });
+
   it('locks app host even when env vars only list www marketing', () => {
     vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://www.ozer.so');

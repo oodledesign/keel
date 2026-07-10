@@ -19,6 +19,7 @@ const APP_ROUTE_PREFIXES = [
   '/join',
   '/portal',
   '/watch',
+  '/api',
 ] as const;
 
 /** Static assets required for PWA install — must not redirect to /app on app host. */

@@ -2,6 +2,9 @@ import { type NextRequest, NextResponse } from 'next/server';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { loadIntegrationInviteByToken } from '~/lib/signatures/integration-invite';
+import { signSignaturesMsOAuthState } from '~/lib/signatures/signatures-oauth-state';
+
 export const dynamic = 'force-dynamic';
 
 const MS_ADMIN_CONSENT =
