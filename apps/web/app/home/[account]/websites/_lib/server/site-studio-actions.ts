@@ -7,6 +7,8 @@ import { createJobsService } from '~/home/[account]/jobs/_lib/server/jobs.servic
 import { createProjectPhasesService } from '~/home/[account]/jobs/_lib/server/project-phases.service';
 import { WEBSITE_DESIGN_TEMPLATE_NAME } from '~/lib/websites/website-design-template';
 
+import { isMissingColumnError } from '../../../_lib/server/supabase-errors';
+
 import {
   CreateWebsiteProjectSchema,
   CreateWebsiteShareSchema,
@@ -137,14 +139,47 @@ export const createWebsiteProject = enhanceAction(
     const phasesService = createProjectPhasesService(client);
     const planningService = createWebsitePlanningService(client);
 
-    const { data: website, error } = await client
+    const websiteQuery = await client
       .from('websites')
       .select('id, name, client_org_id, job_id, business_id')
       .eq('id', input.websiteId)
       .eq('business_id', input.accountId)
       .maybeSingle();
 
-    if (error) throw error;
+    let website = websiteQuery.data as {
+      id: string;
+      name: string | null;
+      client_org_id: string | null;
+      job_id: string | null;
+      business_id: string;
+    } | null;
+
+    if (websiteQuery.error) {
+      if (!isMissingColumnError(websiteQuery.error)) {
+        throw websiteQuery.error;
+      }
+
+      const fallback = await client
+        .from('websites')
+        .select('id, name, client_org_id, business_id')
+        .eq('id', input.websiteId)
+        .eq('business_id', input.accountId)
+        .maybeSingle();
+
+      if (fallback.error) throw fallback.error;
+      if (!fallback.data) throw new Error('Website not found');
+
+      website = {
+        ...(fallback.data as {
+          id: string;
+          name: string | null;
+          client_org_id: string | null;
+          business_id: string;
+        }),
+        job_id: null,
+      };
+    }
+
     if (!website) throw new Error('Website not found');
 
     const { data: account } = await client

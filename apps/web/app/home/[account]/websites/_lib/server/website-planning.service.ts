@@ -239,7 +239,14 @@ class WebsitePlanningService {
       .eq('id', websiteId)
       .eq('business_id', accountId);
 
-    if (error) throw error;
+    if (error) {
+      if (isMissingColumnError(error)) {
+        throw new Error(
+          'Website planning schema is not applied yet. Run `pnpm exec supabase db push` from apps/web (adds websites.sitemap).',
+        );
+      }
+      throw error;
+    }
     return { ok: true as const };
   }
 
@@ -259,7 +266,14 @@ class WebsitePlanningService {
       .eq('id', websiteId)
       .eq('business_id', accountId);
 
-    if (error) throw error;
+    if (error) {
+      if (isMissingColumnError(error)) {
+        throw new Error(
+          'Website planning schema is not applied yet. Run `pnpm exec supabase db push` from apps/web (adds websites.wireframes).',
+        );
+      }
+      throw error;
+    }
     return { ok: true as const };
   }
 
@@ -275,7 +289,14 @@ class WebsitePlanningService {
       .eq('id', websiteId)
       .eq('business_id', accountId);
 
-    if (error) throw error;
+    if (error) {
+      if (isMissingColumnError(error)) {
+        throw new Error(
+          'Website planning schema is not applied yet. Run `pnpm exec supabase db push` from apps/web (adds websites.job_id).',
+        );
+      }
+      throw error;
+    }
     return { ok: true as const };
   }
 

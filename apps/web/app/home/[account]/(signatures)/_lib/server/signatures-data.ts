@@ -4,6 +4,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import {
+  createMinimalSignatureDocument,
+  signatureBlocksToHtml,
+} from '~/lib/signatures/signature-blocks';
+
 import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '~/home/[account]/_lib/server/workspace-route-guard';
 import { getSignaturesSupabaseClient } from '~/lib/signatures/graph';
@@ -425,7 +430,7 @@ export async function createTemplateAndReturnId(accountId: string) {
     .insert({
       account_id: accountId,
       name: 'New signature template',
-      html_template: DEFAULT_SIGNATURE_TEMPLATE,
+      html_template: signatureBlocksToHtml(createMinimalSignatureDocument()),
       is_default: false,
     })
     .select('id')

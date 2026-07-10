@@ -40,6 +40,10 @@ export default async function SignaturesSettingsPage({
       <div className="space-y-6">
         <SignaturesIntegrationLinksCard
           accountId={accountId}
+          accountName={
+            (workspace.account.name as string | null | undefined)?.trim() ||
+            account
+          }
           initialInvites={integrationInvites}
         />
         <SignaturesSettingsPanel

@@ -32,6 +32,7 @@ import {
 import { findSectionLibraryEntry } from '~/lib/websites/section-library';
 
 import {
+  isMissingColumnError,
   isMissingRelationError,
   logMissingRelation,
 } from '../../../_lib/server/supabase-errors';
@@ -165,17 +166,43 @@ class SiteStudioService {
   }
 
   private async verifyWebsite(accountId: string, websiteId: string) {
-    const { data, error } = await this.client
+    const full = await this.client
       .from('websites')
       .select('id, name, domain, client_org_id, job_id, sitemap, wireframes')
       .eq('id', websiteId)
       .eq('business_id', accountId)
       .maybeSingle();
 
-    if (error) throw error;
-    if (!data) throw new Error('Website not found');
+    if (full.error && isMissingColumnError(full.error)) {
+      logMissingRelation('site_studio.verifyWebsite', full.error);
 
-    return data as {
+      const fallback = await this.client
+        .from('websites')
+        .select('id, name, domain, client_org_id')
+        .eq('id', websiteId)
+        .eq('business_id', accountId)
+        .maybeSingle();
+
+      if (fallback.error) throw fallback.error;
+      if (!fallback.data) throw new Error('Website not found');
+
+      return {
+        ...(fallback.data as {
+          id: string;
+          name: string | null;
+          domain: string | null;
+          client_org_id: string | null;
+        }),
+        job_id: null,
+        sitemap: [],
+        wireframes: [],
+      };
+    }
+
+    if (full.error) throw full.error;
+    if (!full.data) throw new Error('Website not found');
+
+    return full.data as {
       id: string;
       name: string | null;
       domain: string | null;

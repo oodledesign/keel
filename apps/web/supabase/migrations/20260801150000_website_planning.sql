@@ -1,12 +1,26 @@
--- Website planning: sitemap/wireframes on websites, content docs, job link, design template seed.
+-- Website planning: sitemap/wireframes on websites, content docs, delivery project link, design template seed.
+-- Note: delivery work lives in public.projects (jobs were unified in 20260726120000).
 
 ALTER TABLE public.websites
-  ADD COLUMN IF NOT EXISTS job_id uuid REFERENCES public.jobs (id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS job_id uuid,
   ADD COLUMN IF NOT EXISTS sitemap jsonb NOT NULL DEFAULT '[]'::jsonb,
   ADD COLUMN IF NOT EXISTS wireframes jsonb NOT NULL DEFAULT '[]'::jsonb;
 
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'websites_job_id_fkey'
+  ) THEN
+    ALTER TABLE public.websites
+      ADD CONSTRAINT websites_job_id_fkey
+      FOREIGN KEY (job_id) REFERENCES public.projects (id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
 COMMENT ON COLUMN public.websites.job_id IS
-  'Optional PM job this website build is tracked under.';
+  'Optional delivery project (public.projects) this website build is tracked under.';
 COMMENT ON COLUMN public.websites.sitemap IS
   'Pages and sections: [{ id, title, slug, sections: [{ id, title, description }] }]';
 COMMENT ON COLUMN public.websites.wireframes IS
