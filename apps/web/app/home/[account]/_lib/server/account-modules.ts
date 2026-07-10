@@ -28,6 +28,7 @@ export type AccountModuleKey =
   | 'rankly'
   | 'signatures'
   | 'videos'
+  | 'site_studio'
   | 'properties'
   | 'calendar'
   | 'shopping'
@@ -167,4 +168,11 @@ export function isVideosModuleEnabled(
   moduleSettings: Record<string, boolean> | null | undefined,
 ) {
   return isWorkModuleEnabled(moduleSettings, 'videos');
+}
+
+/** Site Studio add-on (`account_module_settings.module_key = 'site_studio'`). */
+export function isSiteStudioModuleEnabled(
+  moduleSettings: Record<string, boolean> | null | undefined,
+) {
+  return isWorkModuleEnabled(moduleSettings, 'site_studio');
 }

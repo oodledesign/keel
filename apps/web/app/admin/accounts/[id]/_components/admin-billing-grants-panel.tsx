@@ -250,15 +250,26 @@ function EntitlementGroup({
                 ) : null}
               </div>
               {active && row?.source === 'admin_grant' ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={pending}
-                  onClick={() => onRevoke(item.key)}
-                >
-                  Revoke grant
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    disabled={pending}
+                    onClick={() => onGrant(item.key)}
+                  >
+                    Re-sync modules
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={pending}
+                    onClick={() => onRevoke(item.key)}
+                  >
+                    Revoke grant
+                  </Button>
+                </div>
               ) : active ? (
                 <span className="text-muted-foreground text-xs">Active (Stripe)</span>
               ) : (

@@ -11,6 +11,14 @@ import {
 
 import type { NavChild } from '~/config/work-account-navigation.config';
 
+const ADDON_OPEN_PATH: Partial<Record<OzerAddonKey, string>> = {
+  addon_signatures: pathsConfig.app.accountSignaturesDashboard,
+  addon_site_studio: pathsConfig.app.accountWebsites,
+  addon_rankly: pathsConfig.app.accountRanklyDashboard,
+  addon_videos: pathsConfig.app.accountVideos,
+  addon_feedflow: pathsConfig.app.accountFeedflowReviews,
+};
+
 type OzerAppsMarketplaceProps = {
   accountSlug: string;
   installedApps: NavChild[];
@@ -83,6 +91,10 @@ export function OzerAppsMarketplace({
           {launchedWorkspaceAddons().map((addon) => {
             const active = activeAddons[addon.key];
             const addonSlug = addon.key.replace('addon_', '');
+            const openPathTemplate = ADDON_OPEN_PATH[addon.key];
+            const openPath = openPathTemplate
+              ? openPathTemplate.replace('[account]', accountSlug)
+              : null;
 
             return (
               <div
@@ -105,9 +117,16 @@ export function OzerAppsMarketplace({
                   {addon.description}
                 </p>
                 {active ? (
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={billingPath}>Manage billing</Link>
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    {openPath ? (
+                      <Button asChild size="sm">
+                        <Link href={openPath}>Open</Link>
+                      </Button>
+                    ) : null}
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={billingPath}>Manage billing</Link>
+                    </Button>
+                  </div>
                 ) : workspacePaid ? (
                   <Button asChild size="sm">
                     <Link href={`${billingPath}?addon=${addonSlug}#addons`}>

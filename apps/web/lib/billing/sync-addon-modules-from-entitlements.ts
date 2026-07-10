@@ -12,8 +12,8 @@ const ADDON_ENTITLEMENT_MODULES: Record<OzerAddonKey, string[]> = {
   addon_rankly: ['rankly'],
   addon_feedflow: ['feedflow'],
   addon_videos: ['videos'],
-  // Site Studio lives inside Websites — enable that module on Business Lite when granted.
-  addon_site_studio: ['websites'],
+  // Dedicated Apps-nav module; Websites core module is enabled separately below.
+  addon_site_studio: ['site_studio'],
 };
 
 function isEntitlementActive(row: {
@@ -103,6 +103,19 @@ export async function syncAddonModulesFromEntitlements(
         account_id: accountId,
         module_key: 'apps',
         enabled: false,
+      },
+      { onConflict: 'account_id,module_key' },
+    );
+  }
+
+  // Site Studio needs the Websites route. Enable when entitled; never force-disable
+  // websites here (full Business workspaces keep websites as a core module).
+  if (activeKeys.has('addon_site_studio')) {
+    await admin.from('account_module_settings').upsert(
+      {
+        account_id: accountId,
+        module_key: 'websites',
+        enabled: true,
       },
       { onConflict: 'account_id,module_key' },
     );

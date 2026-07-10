@@ -34,6 +34,7 @@ import {
   isFeedflowModuleEnabled,
   isRanklyModuleEnabled,
   isSignaturesModuleEnabled,
+  isSiteStudioModuleEnabled,
   isVideosModuleEnabled,
   isWorkNavModuleEnabled,
 } from '~/home/[account]/_lib/server/account-modules';
@@ -86,6 +87,16 @@ function buildWorkAppsGroup(
       path: createPath(pathsConfig.app.accountSignaturesDashboard, account),
       Icon: <PenLine className={iconClasses} />,
       description: 'Branded email signatures for your team.',
+    });
+  }
+
+  if (isSiteStudioModuleEnabled(ms)) {
+    children.push({
+      label: 'Site Studio',
+      path: createPath(pathsConfig.app.accountWebsites, account),
+      Icon: <Sparkles className={iconClasses} />,
+      description:
+        'AI website planning — brief, sitemap, wireframes, design, SEO, and export.',
     });
   }
 

@@ -1,20 +1,25 @@
 import { redirect } from 'next/navigation';
 
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { PageBody } from '@kit/ui/page';
 
 import pathsConfig from '~/config/paths.config';
 import { buildWorkAppLinks } from '~/config/work-account-navigation.config';
+import { loadWorkspaceAddonState } from '~/lib/billing/workspace-addon-state.loader';
+import { syncAddonModulesFromEntitlements } from '~/lib/billing/sync-addon-modules-from-entitlements';
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
 import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access';
-import { isWorkNavModuleEnabled } from '../_lib/server/account-modules';
+import {
+  isSiteStudioModuleEnabled,
+  isWorkNavModuleEnabled,
+} from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../_lib/server/workspace-route-guard';
 import { OzerAppsMarketplace } from './_components/ozer-apps-marketplace';
-import { loadWorkspaceAddonState } from '~/lib/billing/workspace-addon-state.loader';
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
-import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 interface WorkspaceAppsPageProps {
   params: Promise<{ account: string }>;
@@ -37,13 +42,6 @@ async function WorkspaceAppsPage({ params }: WorkspaceAppsPageProps) {
     },
   );
 
-  const appsEnabled = isWorkNavModuleEnabled(workspace.moduleSettings, 'apps');
-  const apps = buildWorkAppLinks(accountSlug, workspace.moduleSettings);
-
-  if (!access.canViewDashboard || !appsEnabled) {
-    redirect(getDefaultAccountPath(accountSlug, workspace.account));
-  }
-
   const user = await requireUserInServerComponent();
   const client = getSupabaseServerClient();
   const addonState = await loadWorkspaceAddonState(
@@ -52,6 +50,28 @@ async function WorkspaceAppsPage({ params }: WorkspaceAppsPageProps) {
     workspace.account.id as string,
     workspace.workspaceProfile,
   );
+
+  // Self-heal: entitlement may exist before site_studio/websites modules were wired.
+  let moduleSettings = workspace.moduleSettings;
+  if (
+    addonState.addons.addon_site_studio &&
+    (!isSiteStudioModuleEnabled(moduleSettings) ||
+      !isWorkNavModuleEnabled(moduleSettings, 'websites'))
+  ) {
+    await syncAddonModulesFromEntitlements(
+      getSupabaseServerAdminClient(),
+      workspace.account.id as string,
+    );
+    const refreshed = await loadTeamWorkspace(accountSlug);
+    moduleSettings = refreshed.moduleSettings;
+  }
+
+  const apps = buildWorkAppLinks(accountSlug, moduleSettings);
+  const appsEnabled = isWorkNavModuleEnabled(moduleSettings, 'apps');
+
+  if (!access.canViewDashboard || !appsEnabled) {
+    redirect(getDefaultAccountPath(accountSlug, workspace.account));
+  }
 
   return (
     <>

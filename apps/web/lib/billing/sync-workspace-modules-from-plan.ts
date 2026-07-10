@@ -31,7 +31,13 @@ const BUSINESS_LITE_MODULE_KEYS = [
   'team',
 ] as const;
 
-const ADDON_MODULE_KEYS = ['feedflow', 'rankly', 'signatures', 'videos'] as const;
+const ADDON_MODULE_KEYS = [
+  'feedflow',
+  'rankly',
+  'signatures',
+  'videos',
+  'site_studio',
+] as const;
 
 async function setModuleEnabled(
   admin: SupabaseClient,
