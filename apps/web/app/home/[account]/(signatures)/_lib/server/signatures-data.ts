@@ -437,11 +437,11 @@ export async function createTemplateAndReturnId(accountId: string) {
   return data.id as string;
 }
 
-export function uploadPhotoFromDataUrl(
+export async function uploadPhotoFromDataUrl(
   accountId: string,
   staffId: string,
   dataUrl: string,
-) {
+): Promise<string> {
   const match = dataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
   if (!match) {
     throw new Error('Invalid image upload');
@@ -453,22 +453,36 @@ export function uploadPhotoFromDataUrl(
     throw new Error('Invalid image upload');
   }
 
-  const ext = mimeType.includes('png') ? 'png' : 'jpg';
+  const ext = mimeType.includes('png')
+    ? 'png'
+    : mimeType.includes('webp')
+      ? 'webp'
+      : 'jpg';
   const path = `${accountId}/${staffId}-${Date.now()}.${ext}`;
   const bytes = Buffer.from(base64, 'base64');
+
+  // Keep uploads under typical server-action body limits after client resize.
+  if (bytes.byteLength > 2_500_000) {
+    throw new Error(
+      'Photo is too large after processing. Try a smaller image (under ~2MB).',
+    );
+  }
+
   const admin = getSupabaseServerAdminClient();
 
-  return admin.storage
-    .from('signatures-photos')
-    .upload(path, bytes, {
-      contentType: mimeType,
-      upsert: true,
-    })
-    .then(({ error }) => {
-      if (error) {
-        throw new Error(error.message);
-      }
-      return admin.storage.from('signatures-photos').getPublicUrl(path).data
-        .publicUrl;
-    });
+  const { error } = await admin.storage.from('signatures-photos').upload(path, bytes, {
+    contentType: mimeType,
+    upsert: true,
+  });
+
+  if (error) {
+    throw new Error(`Photo upload failed: ${error.message}`);
+  }
+
+  const { data } = admin.storage.from('signatures-photos').getPublicUrl(path);
+  if (!data.publicUrl) {
+    throw new Error('Photo uploaded but public URL could not be created');
+  }
+
+  return data.publicUrl;
 }

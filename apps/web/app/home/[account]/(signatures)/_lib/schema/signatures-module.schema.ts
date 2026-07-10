@@ -61,7 +61,11 @@ export const updateStaffActionSchema = z.object({
   phone_mobile: emptyToNull,
   branch_id: z.string().uuid().nullable().optional(),
   signature_email: emptyToNull,
-  photoDataUrl: z.string().optional().nullable(),
+  photoDataUrl: z
+    .string()
+    .max(3_500_000, 'Photo is too large. Try a smaller image.')
+    .optional()
+    .nullable(),
   templateId: z.string().uuid().nullable().optional(),
 });
 

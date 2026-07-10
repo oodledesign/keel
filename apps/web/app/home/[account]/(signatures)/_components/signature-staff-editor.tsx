@@ -41,6 +41,45 @@ import type {
 
 const NO_TEMPLATE = '__none__';
 const NO_BRANCH = '__none__';
+const MAX_PHOTO_EDGE_PX = 640;
+
+async function fileToCompressedDataUrl(file: File): Promise<string> {
+  if (!file.type.startsWith('image/')) {
+    throw new Error('Please choose a PNG, JPEG, or WebP image');
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('Could not read that image'));
+      img.src = objectUrl;
+    });
+
+    const scale = Math.min(
+      1,
+      MAX_PHOTO_EDGE_PX / Math.max(image.width, image.height),
+    );
+    const width = Math.max(1, Math.round(image.width * scale));
+    const height = Math.max(1, Math.round(image.height * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('Could not process image');
+    }
+    ctx.drawImage(image, 0, 0, width, height);
+
+    // JPEG keeps server-action payloads small enough to upload reliably.
+    return canvas.toDataURL('image/jpeg', 0.85);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
 
 export function SignatureStaffEditor({
   accountId,
@@ -56,6 +95,7 @@ export function SignatureStaffEditor({
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [pushing, setPushing] = useState(false);
+  const [processingPhoto, setProcessingPhoto] = useState(false);
   const [templateId, setTemplateId] = useState(staff.template_id ?? NO_TEMPLATE);
   const [branchId, setBranchId] = useState(staff.branch_id ?? NO_BRANCH);
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
@@ -78,15 +118,24 @@ export function SignatureStaffEditor({
     return `/api/signatures/preview?${params.toString()}`;
   }, [staff.id, templateId]);
 
+  const photoPreview = photoDataUrl || staff.photo_url;
+
   const onPhoto = async (file: File | null) => {
     if (!file) {
       setPhotoDataUrl(null);
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => setPhotoDataUrl(String(reader.result));
-    reader.readAsDataURL(file);
+    setProcessingPhoto(true);
+    try {
+      const dataUrl = await fileToCompressedDataUrl(file);
+      setPhotoDataUrl(dataUrl);
+    } catch (error) {
+      setPhotoDataUrl(null);
+      toast.error(getErrorMessage(error));
+    } finally {
+      setProcessingPhoto(false);
+    }
   };
 
   const save = async (formData: FormData) => {
@@ -105,6 +154,7 @@ export function SignatureStaffEditor({
         photoDataUrl,
         templateId: templateId === NO_TEMPLATE ? null : templateId,
       });
+      setPhotoDataUrl(null);
       toast.success('Staff member saved');
       router.refresh();
     } catch (e) {
@@ -197,14 +247,37 @@ export function SignatureStaffEditor({
 
             <div className="space-y-2">
               <Label>Photo upload</Label>
-              <Input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                onChange={(event) => onPhoto(event.target.files?.[0] ?? null)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Uploading replaces the synced photo for this staff profile.
-              </p>
+              <div className="flex flex-wrap items-center gap-4">
+                {photoPreview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={photoPreview}
+                    alt={staff.full_name ?? 'Staff photo'}
+                    className="h-20 w-20 rounded-lg object-cover border border-[color:var(--workspace-shell-border)]"
+                  />
+                ) : (
+                  <div className="flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-[color:var(--workspace-shell-border)] text-xs text-muted-foreground">
+                    No photo
+                  </div>
+                )}
+                <div className="min-w-0 flex-1 space-y-2">
+                  <Input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    disabled={processingPhoto || saving}
+                    onChange={(event) =>
+                      void onPhoto(event.target.files?.[0] ?? null)
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {processingPhoto
+                      ? 'Preparing photo…'
+                      : photoDataUrl
+                        ? 'New photo ready — click Save changes to upload.'
+                        : 'Uploading replaces the synced photo for this staff profile.'}
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -225,7 +298,7 @@ export function SignatureStaffEditor({
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button type="submit" disabled={saving}>
+              <Button type="submit" disabled={saving || processingPhoto}>
                 {saving ? 'Saving...' : 'Save changes'}
               </Button>
               <Dialog>

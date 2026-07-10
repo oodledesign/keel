@@ -81,6 +81,10 @@ const config = {
     webpackMemoryOptimizations: true,
     webpackBuildWorker: true,
     cpus: 1,
+    /** Signature staff photos are sent as compressed data URLs. */
+    serverActions: {
+      bodySizeLimit: '4mb',
+    },
     staleTimes: {
       dynamic: 30,
       static: 180,
