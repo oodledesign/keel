@@ -73,7 +73,7 @@ export function SignatureTemplateEditor({
       );
     }
 
-    return `<div style="color-scheme:light only;supported-color-schemes:light only;color:#000000 !important;background-color:#ffffff;font-family:Arial,Calibri,Georgia,sans-serif;line-height:1.4;">${output}</div>`;
+    return `<div style="color:#000000;font-family:Arial,Calibri,Georgia,sans-serif;line-height:1.4;">${output}</div>`;
   }, [previewHtml, previewStaff]);
 
   const insertToken = (token: string) => {

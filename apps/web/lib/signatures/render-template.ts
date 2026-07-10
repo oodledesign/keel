@@ -131,8 +131,8 @@ export function renderTemplate(
 
   const inner = html.trim();
 
-  // Force a light-mode signature shell. Outlook/Apple Mail dark mode often
-  // inverts colours; color-scheme + solid black text / white canvas resist that.
-  // Keep this body-safe (no <meta>) so it works inside mailbox HTML.
-  return `<div style="color-scheme:light only;supported-color-schemes:light only;color:#000000 !important;background-color:#ffffff !important;font-family:Arial,Calibri,Georgia,sans-serif;line-height:1.4;">${inner}</div>`;
+  // Soft shell only: set a default text colour. Do not force a white canvas —
+  // many signatures sit on the client's own background, and a hard #fff block
+  // looks wrong. Dark-mode inversion is client-specific and not controllable.
+  return `<div style="color:#000000;font-family:Arial,Calibri,Georgia,sans-serif;line-height:1.4;">${inner}</div>`;
 }
