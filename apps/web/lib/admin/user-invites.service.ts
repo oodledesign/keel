@@ -311,6 +311,8 @@ function resolveLandingPath(
         '[account]',
         primarySlug,
       );
+    case 'websites':
+      return pathsConfig.app.accountWebsites.replace('[account]', primarySlug);
     case 'apps':
       return pathsConfig.app.accountApps.replace('[account]', primarySlug);
     default:

@@ -53,6 +53,7 @@ export const ADMIN_INVITE_ADDON_OPTIONS: Array<{
   label: string;
 }> = [
   { key: 'addon_signatures', label: 'Signatures' },
+  { key: 'addon_site_studio', label: 'Site Studio' },
   { key: 'addon_rankly', label: 'Rankly' },
   { key: 'addon_feedflow', label: 'Feedflow' },
   { key: 'addon_videos', label: 'Videos' },
@@ -61,6 +62,7 @@ export const ADMIN_INVITE_ADDON_OPTIONS: Array<{
 export const ADMIN_INVITE_LANDING_MODULES = [
   { key: 'dashboard', label: 'Workspace home' },
   { key: 'signatures', label: 'Signatures' },
+  { key: 'websites', label: 'Websites / Site Studio' },
   { key: 'apps', label: 'Apps' },
 ] as const;
 
@@ -80,12 +82,15 @@ export const CreateAdminUserInviteSchema = z
     addons: z.array(
       z.enum([
         'addon_signatures',
+        'addon_site_studio',
         'addon_rankly',
         'addon_feedflow',
         'addon_videos',
       ]),
     ),
-    landingModule: z.enum(['dashboard', 'signatures', 'apps']).optional(),
+    landingModule: z
+      .enum(['dashboard', 'signatures', 'websites', 'apps'])
+      .optional(),
   })
   .superRefine((data, ctx) => {
     if (data.personalOnly && data.workspaces.length > 0) {

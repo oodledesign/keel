@@ -12,8 +12,8 @@ const ADDON_ENTITLEMENT_MODULES: Record<OzerAddonKey, string[]> = {
   addon_rankly: ['rankly'],
   addon_feedflow: ['feedflow'],
   addon_videos: ['videos'],
-  // Site Studio gates advanced tabs inside the core Websites module — no extra nav module.
-  addon_site_studio: [],
+  // Site Studio lives inside Websites — enable that module on Business Lite when granted.
+  addon_site_studio: ['websites'],
 };
 
 function isEntitlementActive(row: {

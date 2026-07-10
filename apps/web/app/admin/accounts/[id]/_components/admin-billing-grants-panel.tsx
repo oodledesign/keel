@@ -28,6 +28,7 @@ const WORKSPACE_ENTITLEMENTS = [
 
 const ADDON_ENTITLEMENTS = [
   { key: 'addon_signatures', label: 'Signatures' },
+  { key: 'addon_site_studio', label: 'Site Studio' },
   { key: 'addon_rankly', label: 'Rankly' },
   { key: 'addon_feedflow', label: 'Feedflow' },
   { key: 'addon_videos', label: 'Videos' },
@@ -63,6 +64,11 @@ const QUICK_PLANS = [
     label: 'Signatures Starter add-on',
     productId: 'ozer-addon-signatures',
     planId: 'signatures-starter-monthly',
+  },
+  {
+    label: 'Site Studio add-on',
+    productId: 'ozer-addon-site-studio',
+    planId: 'site-studio-monthly',
   },
   {
     label: 'Rankly add-on',
