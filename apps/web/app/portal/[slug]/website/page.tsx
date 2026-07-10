@@ -13,6 +13,7 @@ import type {
   WebsiteStatus,
 } from '~/home/[account]/websites/_lib/schema/websites.schema';
 
+import { PortalWebsitePlanningView } from '../../_components/portal-website-planning-view';
 import { portalExternalHref } from '../_components/portal-badges';
 import { loadClientPortalContext } from '../_lib/server/client-portal.loader';
 import { createClientPortalService } from '../_lib/server/client-portal.service';
@@ -31,13 +32,17 @@ export default async function PortalWebsitePage({
 
   const cmsUrl = website ? portalExternalHref(website.cmsAdminUrl) : null;
   const liveUrl = website ? portalExternalHref(website.domain) : null;
+  const showPlanning =
+    website && website.portalShareScope !== 'off' && website.sitemap.length > 0;
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold text-[var(--ozer-text-on-light)]">Website</h2>
+        <h2 className="text-2xl font-semibold text-[var(--ozer-text-on-light)]">
+          Website
+        </h2>
         <p className="mt-1 text-sm text-[var(--ozer-text-on-light-muted)]">
-          Your website details and quick links.
+          Your website details, planning review, and quick links.
         </p>
       </div>
 
@@ -108,13 +113,31 @@ export default async function PortalWebsitePage({
         </Card>
       )}
 
+      {showPlanning && website ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Planning review</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <PortalWebsitePlanningView
+              scope={website.portalShareScope}
+              sitemap={website.sitemap}
+              wireframes={website.wireframes}
+              style={website.style}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card className="border-dashed">
         <CardHeader className="flex flex-row items-center gap-2 space-y-0">
           <BarChart3 className="h-5 w-5 text-[var(--workspace-shell-text-muted)]" />
           <CardTitle className="text-base">Analytics</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-[var(--ozer-text-on-light-muted)]">Coming soon</p>
+          <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
+            Coming soon
+          </p>
         </CardContent>
       </Card>
     </div>

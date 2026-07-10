@@ -112,6 +112,14 @@ export const OZER_STRIPE_PRICES = {
     'STRIPE_PRICE_ADDON_EMAIL_ASSISTANT_MONTHLY',
     'price_ozer_addon_email_assistant_monthly',
   ),
+  addon_site_studio_monthly: price(
+    'STRIPE_PRICE_ADDON_SITE_STUDIO_MONTHLY',
+    'price_ozer_addon_site_studio_monthly',
+  ),
+  addon_site_studio_yearly: price(
+    'STRIPE_PRICE_ADDON_SITE_STUDIO_YEARLY',
+    'price_ozer_addon_site_studio_yearly',
+  ),
   ai_credits_boost: price(
     'STRIPE_PRICE_AI_CREDITS_BOOST',
     'price_ozer_ai_credits_boost',
@@ -123,6 +131,18 @@ export const OZER_STRIPE_PRICES = {
   ai_credits_agency: price(
     'STRIPE_PRICE_AI_CREDITS_AGENCY',
     'price_ozer_ai_credits_agency',
+  ),
+  ai_credits_boost_monthly: price(
+    'STRIPE_PRICE_AI_CREDITS_BOOST_MONTHLY',
+    'price_ozer_ai_credits_boost_monthly',
+  ),
+  ai_credits_studio_monthly: price(
+    'STRIPE_PRICE_AI_CREDITS_STUDIO_MONTHLY',
+    'price_ozer_ai_credits_studio_monthly',
+  ),
+  ai_credits_agency_monthly: price(
+    'STRIPE_PRICE_AI_CREDITS_AGENCY_MONTHLY',
+    'price_ozer_ai_credits_agency_monthly',
   ),
 } as const;
 

@@ -7,36 +7,64 @@ import Link from 'next/link';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
-import type { WebsitePlanningTab } from '~/lib/websites/planning-types';
+import {
+  CORE_PLANNING_TABS,
+  SITE_STUDIO_PLANNING_TABS,
+  type SiteStudioBundle,
+  type WebsitePlanningTab,
+} from '~/lib/websites/planning-types';
+
 import type { WebsitePlanningBundle } from '../_lib/server/website-planning.service';
 
 import { WebsiteContentDocsPanel } from './website-content-docs-panel';
 import { WebsiteSitemapEditor } from './website-sitemap-editor';
 import { WebsiteWireframeEditor } from './website-wireframe-editor';
+import { WebsiteBriefEditor } from './site-studio/website-brief-editor';
+import { WebsiteDesignEditor } from './site-studio/website-design-editor';
+import { WebsiteExportPanel } from './site-studio/website-export-panel';
+import { WebsiteSeoEditor } from './site-studio/website-seo-editor';
+import { WebsiteSharePanel } from './site-studio/website-share-panel';
+import { WebsiteSitemapCanvas } from './site-studio/website-sitemap-canvas';
+import { SiteStudioUpsell } from './site-studio/site-studio-upsell';
 
-const TABS: Array<{ id: WebsitePlanningTab; label: string }> = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'sitemap', label: 'Sitemap' },
-  { id: 'wireframe', label: 'Wireframes' },
-  { id: 'content', label: 'Content docs' },
-];
+const TAB_LABELS: Record<WebsitePlanningTab, string> = {
+  overview: 'Overview',
+  brief: 'Brief',
+  sitemap: 'Sitemap',
+  wireframe: 'Wireframes',
+  design: 'Design',
+  seo: 'Search',
+  export: 'Export',
+  content: 'Content docs',
+};
 
 export function WebsitePlanningPanel({
   accountId,
   accountSlug,
+  websiteName,
+  websiteDomain,
   planning,
+  siteStudio,
   canEdit,
   initialTab = 'overview',
   linkedJobTitle,
 }: {
   accountId: string;
   accountSlug: string;
+  websiteName: string;
+  websiteDomain: string | null;
   planning: WebsitePlanningBundle;
+  siteStudio: SiteStudioBundle;
   canEdit: boolean;
   initialTab?: WebsitePlanningTab;
   linkedJobTitle?: string | null;
 }) {
-  const [tab, setTab] = useState<WebsitePlanningTab>(initialTab);
+  const tabs = siteStudio.enabled
+    ? SITE_STUDIO_PLANNING_TABS
+    : CORE_PLANNING_TABS;
+
+  const safeInitial = tabs.includes(initialTab) ? initialTab : 'overview';
+  const [tab, setTab] = useState<WebsitePlanningTab>(safeInitial);
 
   const jobHref = useMemo(() => {
     if (!planning.jobId) return null;
@@ -50,9 +78,13 @@ export function WebsitePlanningPanel({
       <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-4 md:px-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">Website planning</h2>
+            <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">
+              Website planning
+            </h2>
             <p className="mt-1 text-sm text-[var(--workspace-shell-text)]/60">
-              Sitemap, wireframes, and content docs for this build.
+              {siteStudio.enabled
+                ? 'Site Studio — brief, canvas sitemap, wireframes, design, SEO, and export.'
+                : 'Sitemap, wireframes, and content docs for this build.'}
             </p>
           </div>
           {jobHref ? (
@@ -66,19 +98,19 @@ export function WebsitePlanningPanel({
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          {TABS.map((item) => (
+          {tabs.map((item) => (
             <button
-              key={item.id}
+              key={item}
               type="button"
-              onClick={() => setTab(item.id)}
+              onClick={() => setTab(item)}
               className={cn(
                 'rounded-full px-3 py-1.5 text-sm transition-colors',
-                tab === item.id
+                tab === item
                   ? 'bg-[var(--ozer-accent)] text-[var(--ozer-white)]'
                   : 'border border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
               )}
             >
-              {item.label}
+              {TAB_LABELS[item]}
             </button>
           ))}
         </div>
@@ -86,35 +118,63 @@ export function WebsitePlanningPanel({
 
       <div className="px-4 py-5 md:px-6">
         {tab === 'overview' ? (
-          <div className="space-y-4 text-sm text-[var(--workspace-shell-text)]/75">
-            <p>
-              Follow the <strong className="text-[var(--workspace-shell-text)]">Website design</strong>{' '}
-              project template in Jobs: business context → sitemap → wireframes →
-              client content → design → typography → build.
-            </p>
-            <ol className="list-decimal space-y-2 pl-5 text-[var(--workspace-shell-text)]/70">
-              <li>Set visual references before any AI tool.</li>
-              <li>Map pages and sections in the sitemap.</li>
-              <li>Add layout intent in wireframes.</li>
-              <li>Collect real client copy in content docs.</li>
-              <li>Lock colour, type, and imagery — then build with visual direction.</li>
-            </ol>
-            {!planning.jobId ? (
-              <p className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-amber-100/90">
-                Tip: link this website to a job in Edit to connect PM phases with
-                these planning tools.
-              </p>
-            ) : null}
+          <div className="space-y-6">
+            {!siteStudio.enabled ? <SiteStudioUpsell accountSlug={accountSlug} /> : null}
+
+            {siteStudio.enabled ? (
+              <WebsiteSharePanel
+                accountId={accountId}
+                websiteId={planning.websiteId}
+                accountSlug={accountSlug}
+                shares={siteStudio.shares}
+                portalScope={siteStudio.portalScope}
+                hasJob={Boolean(planning.jobId)}
+                canEdit={canEdit}
+              />
+            ) : (
+              <div className="space-y-4 text-sm text-[var(--workspace-shell-text)]/75">
+                <p>
+                  Follow the <strong className="text-[var(--workspace-shell-text)]">Website design</strong>{' '}
+                  project template: business context → sitemap → wireframes →
+                  client content → design → build.
+                </p>
+                {!planning.jobId ? (
+                  <p className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-amber-100/90">
+                    Tip: link this website to a project in Edit, or add Site
+                    Studio to create a delivery project from the Overview tab.
+                  </p>
+                ) : null}
+              </div>
+            )}
           </div>
         ) : null}
 
-        {tab === 'sitemap' ? (
-          <WebsiteSitemapEditor
+        {tab === 'brief' && siteStudio.enabled ? (
+          <WebsiteBriefEditor
             accountId={accountId}
             websiteId={planning.websiteId}
-            initialSitemap={planning.sitemap}
+            initialBrief={siteStudio.brief}
             canEdit={canEdit}
           />
+        ) : null}
+
+        {tab === 'sitemap' ? (
+          siteStudio.enabled ? (
+            <WebsiteSitemapCanvas
+              accountId={accountId}
+              websiteId={planning.websiteId}
+              initialSitemap={planning.sitemap}
+              canEdit={canEdit}
+              siteStudioEnabled
+            />
+          ) : (
+            <WebsiteSitemapEditor
+              accountId={accountId}
+              websiteId={planning.websiteId}
+              initialSitemap={planning.sitemap}
+              canEdit={canEdit}
+            />
+          )
         ) : null}
 
         {tab === 'wireframe' ? (
@@ -124,6 +184,38 @@ export function WebsitePlanningPanel({
             sitemap={planning.sitemap}
             initialWireframes={planning.wireframes}
             canEdit={canEdit}
+            siteStudioEnabled={siteStudio.enabled}
+          />
+        ) : null}
+
+        {tab === 'design' && siteStudio.enabled ? (
+          <WebsiteDesignEditor
+            accountId={accountId}
+            websiteId={planning.websiteId}
+            initialStyle={siteStudio.style}
+            canEdit={canEdit}
+          />
+        ) : null}
+
+        {tab === 'seo' && siteStudio.enabled ? (
+          <WebsiteSeoEditor
+            accountId={accountId}
+            websiteId={planning.websiteId}
+            sitemap={planning.sitemap}
+            initialSeoPages={siteStudio.seoPages}
+            canEdit={canEdit}
+          />
+        ) : null}
+
+        {tab === 'export' && siteStudio.enabled ? (
+          <WebsiteExportPanel
+            websiteName={websiteName}
+            domain={websiteDomain}
+            brief={siteStudio.brief}
+            sitemap={planning.sitemap}
+            wireframes={planning.wireframes}
+            style={siteStudio.style}
+            seoPages={siteStudio.seoPages}
           />
         ) : null}
 

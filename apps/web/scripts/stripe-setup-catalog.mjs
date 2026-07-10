@@ -244,6 +244,24 @@ const CATALOG = [
     ],
   },
   {
+    catalogId: 'ozer-addon-site-studio',
+    productName: 'Ozer Site Studio',
+    prices: [
+      {
+        envKey: 'STRIPE_PRICE_ADDON_SITE_STUDIO_MONTHLY',
+        lookupKey: 'keel.addon.site_studio.monthly',
+        amount: 1900,
+        interval: 'month',
+      },
+      {
+        envKey: 'STRIPE_PRICE_ADDON_SITE_STUDIO_YEARLY',
+        lookupKey: 'keel.addon.site_studio.yearly',
+        amount: 19000,
+        interval: 'year',
+      },
+    ],
+  },
+  {
     catalogId: 'ozer-addon-rankly',
     productName: 'Ozer Rankly',
     prices: [
@@ -324,6 +342,12 @@ const CATALOG = [
         lookupKey: 'ozer.ai_credits.boost',
         amount: 500,
       },
+      {
+        envKey: 'STRIPE_PRICE_AI_CREDITS_BOOST_MONTHLY',
+        lookupKey: 'ozer.ai_credits.boost.monthly',
+        amount: 500,
+        interval: 'month',
+      },
     ],
   },
   {
@@ -335,6 +359,12 @@ const CATALOG = [
         lookupKey: 'ozer.ai_credits.studio',
         amount: 1000,
       },
+      {
+        envKey: 'STRIPE_PRICE_AI_CREDITS_STUDIO_MONTHLY',
+        lookupKey: 'ozer.ai_credits.studio.monthly',
+        amount: 1000,
+        interval: 'month',
+      },
     ],
   },
   {
@@ -345,6 +375,12 @@ const CATALOG = [
         envKey: 'STRIPE_PRICE_AI_CREDITS_AGENCY',
         lookupKey: 'ozer.ai_credits.agency',
         amount: 2000,
+      },
+      {
+        envKey: 'STRIPE_PRICE_AI_CREDITS_AGENCY_MONTHLY',
+        lookupKey: 'ozer.ai_credits.agency.monthly',
+        amount: 2000,
+        interval: 'month',
       },
     ],
   },

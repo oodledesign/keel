@@ -9,8 +9,12 @@ import type { WebsitePlanningTab } from '~/lib/websites/planning-types';
 
 const TAB_LABELS: Record<WebsitePlanningTab, string> = {
   overview: 'Planning overview',
+  brief: 'Brief',
   sitemap: 'Sitemap',
   wireframe: 'Wireframes',
+  design: 'Design',
+  seo: 'Search',
+  export: 'Export',
   content: 'Content docs',
 };
 

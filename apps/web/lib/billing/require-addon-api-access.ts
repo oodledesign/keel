@@ -16,6 +16,8 @@ const ADDON_MESSAGES: Record<string, string> = {
     'Feedflow add-on required. Subscribe from Billing in this workspace.',
   addon_email_assistant:
     'Email Assistant add-on required. Subscribe from Billing in your personal account.',
+  addon_site_studio:
+    'Site Studio add-on required. Subscribe from Billing in this workspace.',
 };
 
 export async function denyUnlessAddonAccess(

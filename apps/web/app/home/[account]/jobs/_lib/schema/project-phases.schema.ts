@@ -152,7 +152,16 @@ const PhaseTemplatePhaseSchema = z.object({
   is_milestone: z.boolean().optional(),
   page_content: z.string().max(100000).nullable().optional(),
   planning_tab: z
-    .enum(['overview', 'sitemap', 'wireframe', 'content'])
+    .enum([
+      'overview',
+      'brief',
+      'sitemap',
+      'wireframe',
+      'design',
+      'seo',
+      'export',
+      'content',
+    ])
     .nullable()
     .optional(),
 });

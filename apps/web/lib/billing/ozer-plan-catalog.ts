@@ -11,6 +11,7 @@ export type OzerPlanFamily =
   | 'addon_feedflow'
   | 'addon_videos'
   | 'addon_signatures'
+  | 'addon_site_studio'
   | 'addon_email_assistant';
 
 export type OzerPlanLimits = {
@@ -257,6 +258,22 @@ const ADDONS: OzerPlanDefinition[] = [
     limits: { maxMembers: null, maxProperties: null, maxVideos: 100 },
   },
   {
+    productId: 'ozer-addon-site-studio',
+    planId: 'site-studio-monthly',
+    stripePriceId: OZER_STRIPE_PRICES.addon_site_studio_monthly,
+    family: 'addon_site_studio',
+    entitlementKey: 'addon_site_studio',
+    limits: { maxMembers: null, maxProperties: null, maxVideos: null },
+  },
+  {
+    productId: 'ozer-addon-site-studio',
+    planId: 'site-studio-yearly',
+    stripePriceId: OZER_STRIPE_PRICES.addon_site_studio_yearly,
+    family: 'addon_site_studio',
+    entitlementKey: 'addon_site_studio',
+    limits: { maxMembers: null, maxProperties: null, maxVideos: null },
+  },
+  {
     productId: 'ozer-addon-email-assistant',
     planId: 'email-assistant-monthly',
     stripePriceId: OZER_STRIPE_PRICES.addon_email_assistant_monthly,
@@ -345,7 +362,8 @@ export type OzerAddonKey =
   | 'addon_signatures'
   | 'addon_rankly'
   | 'addon_feedflow'
-  | 'addon_videos';
+  | 'addon_videos'
+  | 'addon_site_studio';
 
 /** Personal-account add-ons (entitlement on the user's personal account id). */
 export type OzerPersonalAddonKey = 'addon_email_assistant';
@@ -410,4 +428,28 @@ export const OZER_ADDON_CATALOG: Array<{
       'Hosted video with private/public controls, public links, branded players, and embeds for Webflow, WordPress & more.',
     fromPriceGbp: 5,
   },
+  {
+    key: 'addon_site_studio',
+    productId: 'ozer-addon-site-studio',
+    name: 'Site Studio',
+    description:
+      'AI website planning: brief → canvas sitemap → wireframes → style system → SEO/AEO → export packs for Webflow (Client-First), Astro, Next.js, and Cursor/Claude prompts.',
+    fromPriceGbp: 19,
+  },
 ];
+
+/** Workspace add-ons shown in billing checkout and apps marketplace. */
+export const LAUNCHED_WORKSPACE_ADDON_KEYS: OzerAddonKey[] = [
+  'addon_signatures',
+  'addon_site_studio',
+];
+
+export function launchedWorkspaceAddons() {
+  return OZER_ADDON_CATALOG.filter((addon) =>
+    LAUNCHED_WORKSPACE_ADDON_KEYS.includes(addon.key),
+  );
+}
+
+export function launchedAddonProductIds(): string[] {
+  return [...new Set(launchedWorkspaceAddons().map((addon) => addon.productId))];
+}

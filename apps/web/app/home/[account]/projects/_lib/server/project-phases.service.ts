@@ -55,7 +55,16 @@ const PhaseTemplatePhaseSchema = z.object({
   is_milestone: z.boolean().optional(),
   page_content: z.string().max(100000).nullable().optional(),
   planning_tab: z
-    .enum(['overview', 'sitemap', 'wireframe', 'content'])
+    .enum([
+      'overview',
+      'brief',
+      'sitemap',
+      'wireframe',
+      'design',
+      'seo',
+      'export',
+      'content',
+    ])
     .nullable()
     .optional(),
 });
@@ -1099,8 +1108,17 @@ class ProjectPhasesService {
       const hasPageContent =
         parsed.success &&
         parsed.data.some((phase) => Boolean(phase.page_content?.trim()));
+      // Resync when the phase list drifts from the current template
+      // (e.g. Site Studio renamed phases to Brief → … → Build).
+      const phaseNamesMatch =
+        parsed.success &&
+        parsed.data.length === WEBSITE_DESIGN_TEMPLATE.phases.length &&
+        parsed.data.every(
+          (phase, index) =>
+            phase.name === WEBSITE_DESIGN_TEMPLATE.phases[index]?.name,
+        );
 
-      if (!hasPageContent) {
+      if (!hasPageContent || !phaseNamesMatch) {
         const { error: updateErr } = await this.db
           .from('project_phase_templates')
           .update({

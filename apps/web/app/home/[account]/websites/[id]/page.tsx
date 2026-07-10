@@ -14,8 +14,13 @@ import {
   createWebsitePlanningService,
   emptyWebsitePlanningBundle,
 } from '../_lib/server/website-planning.service';
+import { createSiteStudioService } from '../_lib/server/site-studio.service';
 import { createWebsitesService } from '../_lib/server/websites.service';
-import type { WebsitePlanningTab } from '~/lib/websites/planning-types';
+import {
+  ALL_PLANNING_TABS,
+  emptySiteStudioBundle,
+  type WebsitePlanningTab,
+} from '~/lib/websites/planning-types';
 
 interface WebsiteDetailPageProps {
   params: Promise<{ account: string; id: string }>;
@@ -54,6 +59,7 @@ async function WebsiteDetailPage({
 
   const service = createWebsitesService(getSupabaseServerClient());
   const planningService = createWebsitePlanningService(getSupabaseServerClient());
+  const siteStudioService = createSiteStudioService(getSupabaseServerClient());
   const website = await service.getWebsite({ accountId, websiteId });
 
   if (!website) {
@@ -64,11 +70,14 @@ async function WebsiteDetailPage({
     (await planningService.getPlanningBundle(accountId, websiteId)) ??
     emptyWebsitePlanningBundle(websiteId);
 
-  const planningTab = ['overview', 'sitemap', 'wireframe', 'content'].includes(
-    plan ?? '',
-  )
-    ? (plan as WebsitePlanningTab)
-    : undefined;
+  const siteStudio = await siteStudioService
+    .getBundle(accountId, websiteId)
+    .catch(() => emptySiteStudioBundle());
+
+  const planningTab =
+    plan && ALL_PLANNING_TABS.includes(plan as WebsitePlanningTab)
+      ? (plan as WebsitePlanningTab)
+      : undefined;
 
   return (
     <>
@@ -85,6 +94,7 @@ async function WebsiteDetailPage({
           accountId={accountId}
           canEditWebsites={canEditWebsites}
           planning={planning}
+          siteStudio={siteStudio}
           planningTab={planningTab}
         />
       </PageBody>

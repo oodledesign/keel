@@ -22,6 +22,11 @@ export const OzerAIFeature = {
   meeting_recap: 'meeting_recap',
   weekly_digest: 'weekly_digest',
   complex_analysis: 'complex_analysis',
+  website_brief_suggest: 'website_brief_suggest',
+  website_sitemap_generate: 'website_sitemap_generate',
+  website_wireframe_generate: 'website_wireframe_generate',
+  website_style_suggest: 'website_style_suggest',
+  website_seo_generate: 'website_seo_generate',
 } as const;
 
 export type OzerAIFeatureKey = (typeof OzerAIFeature)[keyof typeof OzerAIFeature];
@@ -133,6 +138,46 @@ export const FEATURE_CONFIG: Record<OzerAIFeatureKey, FeatureConfig> = {
     batchable: false,
     maxOutputTokens: 2048,
     structuredOutput: false,
+  },
+  website_brief_suggest: {
+    provider: 'anthropic',
+    model: HAIKU_MODEL,
+    credits: 5,
+    batchable: false,
+    maxOutputTokens: 2048,
+    structuredOutput: true,
+  },
+  website_sitemap_generate: {
+    provider: 'anthropic',
+    model: SONNET_MODEL,
+    credits: 10,
+    batchable: false,
+    maxOutputTokens: 4096,
+    structuredOutput: true,
+  },
+  website_wireframe_generate: {
+    provider: 'anthropic',
+    model: SONNET_MODEL,
+    credits: 8,
+    batchable: false,
+    maxOutputTokens: 4096,
+    structuredOutput: true,
+  },
+  website_style_suggest: {
+    provider: 'anthropic',
+    model: HAIKU_MODEL,
+    credits: 4,
+    batchable: false,
+    maxOutputTokens: 2048,
+    structuredOutput: true,
+  },
+  website_seo_generate: {
+    provider: 'anthropic',
+    model: SONNET_MODEL,
+    credits: 8,
+    batchable: false,
+    maxOutputTokens: 4096,
+    structuredOutput: true,
   },
 };
 

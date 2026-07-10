@@ -4,6 +4,14 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { requireUser } from '@kit/supabase/require-user';
 
+import {
+  emptyWebsiteStyleSystem,
+  type WebsitePortalShareScope,
+  type WebsiteSitemapPage,
+  type WebsiteStyleSystem,
+  type WebsiteWireframePage,
+} from '~/lib/websites/planning-types';
+
 import type {
   AddPortalTicketMessageInput,
   CreatePortalTicketInput,
@@ -18,6 +26,10 @@ export type PortalWebsite = {
   status: string;
   stack: string | null;
   cmsAdminUrl: string | null;
+  portalShareScope: WebsitePortalShareScope;
+  sitemap: WebsiteSitemapPage[];
+  wireframes: WebsiteWireframePage[];
+  style: WebsiteStyleSystem | null;
 };
 
 export type PortalSubscription = {
@@ -152,6 +164,14 @@ class ClientPortalService {
   }
 
   private mapWebsite(row: Record<string, unknown>): PortalWebsite {
+    const portalScope = row.portal_share_scope;
+    const scope: WebsitePortalShareScope =
+      portalScope === 'sitemap' ||
+      portalScope === 'wireframes' ||
+      portalScope === 'full'
+        ? portalScope
+        : 'off';
+
     return {
       id: String(row.id),
       name: String(row.name ?? 'Website'),
@@ -159,6 +179,36 @@ class ClientPortalService {
       status: String(row.status ?? 'in-progress'),
       stack: (row.stack as string | null) ?? null,
       cmsAdminUrl: (row.cms_admin_url as string | null) ?? null,
+      portalShareScope: scope,
+      sitemap: Array.isArray(row.sitemap)
+        ? (row.sitemap as WebsiteSitemapPage[])
+        : [],
+      wireframes: Array.isArray(row.wireframes)
+        ? (row.wireframes as WebsiteWireframePage[])
+        : [],
+      style: null,
+    };
+  }
+
+  private async loadWebsiteStyle(
+    websiteId: string,
+    accountId: string,
+  ): Promise<WebsiteStyleSystem | null> {
+    const { data } = await this.db
+      .from('website_style_systems')
+      .select('style')
+      .eq('website_id', websiteId)
+      .eq('account_id', accountId)
+      .maybeSingle();
+
+    if (!data?.style || typeof data.style !== 'object') return null;
+
+    const empty = emptyWebsiteStyleSystem();
+    const stored = data.style as Partial<WebsiteStyleSystem>;
+    return {
+      tokens: { ...empty.tokens, ...(stored.tokens ?? {}) },
+      moodboard: stored.moodboard ?? [],
+      locked: Boolean(stored.locked),
     };
   }
 
@@ -169,7 +219,9 @@ class ClientPortalService {
       await Promise.all([
         this.db
           .from('websites')
-          .select('id, name, domain, status, stack, cms_admin_url')
+          .select(
+            'id, name, domain, status, stack, cms_admin_url, portal_share_scope, sitemap, wireframes, business_id',
+          )
           .eq('client_org_id', clientOrgId)
           .order('created_at', { ascending: true })
           .limit(1)
@@ -231,13 +283,28 @@ class ClientPortalService {
 
     const { data } = await this.db
       .from('websites')
-      .select('id, name, domain, status, stack, cms_admin_url')
+      .select(
+        'id, name, domain, status, stack, cms_admin_url, portal_share_scope, sitemap, wireframes, business_id',
+      )
       .eq('client_org_id', clientOrgId)
       .order('created_at', { ascending: true })
       .limit(1)
       .maybeSingle();
 
-    return data ? this.mapWebsite(data as Record<string, unknown>) : null;
+    if (!data) return null;
+
+    const website = this.mapWebsite(data as Record<string, unknown>);
+
+    if (website.portalShareScope === 'full') {
+      const accountId = String(
+        (data as { business_id?: string }).business_id ?? '',
+      );
+      if (accountId) {
+        website.style = await this.loadWebsiteStyle(website.id, accountId);
+      }
+    }
+
+    return website;
   }
 
   async listTickets(

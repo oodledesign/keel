@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Sparkles } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -24,8 +24,13 @@ import {
   type WebsiteWireframePage,
   type WebsiteWireframeSection,
 } from '~/lib/websites/planning-types';
+import {
+  WEBSITE_SECTION_LIBRARY,
+  findSectionLibraryEntry,
+} from '~/lib/websites/section-library';
 
 import { saveWebsiteWireframes } from '../_lib/server/planning-actions';
+import { generateWebsiteWireframes } from '../_lib/server/site-studio-actions';
 
 function layoutPreviewClass(layout: WebsiteWireframeSection['layout']) {
   switch (layout) {
@@ -96,6 +101,8 @@ function syncWireframesFromSitemap(
             sitemapSectionId: section.id,
             title: section.title,
             layout: 'full' as const,
+            libraryKey: null,
+            copyOutline: '',
             contentNotes: section.description,
           };
         }),
@@ -111,6 +118,8 @@ function syncWireframesFromSitemap(
         sitemapSectionId: section.id,
         title: section.title,
         layout: 'full' as const,
+        libraryKey: null,
+        copyOutline: '',
         contentNotes: section.description,
       })),
     };
@@ -123,26 +132,35 @@ export function WebsiteWireframeEditor({
   sitemap,
   initialWireframes,
   canEdit,
+  siteStudioEnabled = false,
 }: {
   accountId: string;
   websiteId: string;
   sitemap: WebsiteSitemapPage[];
   initialWireframes: WebsiteWireframePage[];
   canEdit: boolean;
+  siteStudioEnabled?: boolean;
 }) {
   const [wireframes, setWireframes] = useState(initialWireframes);
   const [activePageId, setActivePageId] = useState<string | null>(
     initialWireframes[0]?.pageId ?? sitemap[0]?.id ?? null,
   );
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [isGenerating, startGenerating] = useTransition();
   const [, startTransition] = useTransition();
+  const skipNextSave = useRef(true);
 
   useEffect(() => {
     setWireframes(initialWireframes);
+    skipNextSave.current = true;
   }, [initialWireframes]);
 
   useEffect(() => {
     if (!canEdit) return;
+    if (skipNextSave.current) {
+      skipNextSave.current = false;
+      return;
+    }
 
     setSaveState('saving');
     const timer = setTimeout(() => {
@@ -180,6 +198,29 @@ export function WebsiteWireframeEditor({
     toast.success('Wireframes synced from sitemap');
   }
 
+  function generateForActivePage() {
+    if (!activePageId) return;
+
+    startGenerating(async () => {
+      try {
+        const next = await generateWebsiteWireframes({
+          accountId,
+          websiteId,
+          pageId: activePageId,
+        });
+        skipNextSave.current = true;
+        setWireframes(next);
+        toast.success('Wireframe generated — review copy outlines');
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'Could not generate wireframe',
+        );
+      }
+    });
+  }
+
   function updateSection(
     pageId: string,
     sectionId: string,
@@ -199,6 +240,9 @@ export function WebsiteWireframeEditor({
     );
   }
 
+  const inputClass =
+    'border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]';
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -216,19 +260,32 @@ export function WebsiteWireframeEditor({
             </p>
           ) : null}
         </div>
-        {canEdit ? (
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
-            onClick={syncFromSitemap}
-            disabled={sitemap.length === 0}
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Sync from sitemap
-          </Button>
-        ) : null}
+        <div className="flex flex-wrap gap-2">
+          {canEdit && siteStudioEnabled ? (
+            <Button
+              type="button"
+              size="sm"
+              onClick={generateForActivePage}
+              disabled={isGenerating || !activePageId}
+            >
+              <Sparkles className="mr-2 h-4 w-4" />
+              {isGenerating ? 'Generating…' : 'Generate for page'}
+            </Button>
+          ) : null}
+          {canEdit ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
+              onClick={syncFromSitemap}
+              disabled={sitemap.length === 0}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Sync from sitemap
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       {sitemap.length === 0 ? (
@@ -261,60 +318,123 @@ export function WebsiteWireframeEditor({
 
           {activePage ? (
             <div className="space-y-4">
-              {activePage.sections.map((section) => (
-                <div
-                  key={section.id}
-                  className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/40 p-4"
-                >
-                  <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_180px]">
-                    <div className="space-y-3">
-                      <Input
-                        value={section.title}
-                        readOnly={!canEdit}
-                        onChange={(event) =>
-                          updateSection(activePage.pageId, section.id, {
-                            title: event.target.value,
-                          })
-                        }
-                        className="h-9 border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]"
-                      />
-                      <Select
-                        value={section.layout}
-                        onValueChange={(value) =>
-                          updateSection(activePage.pageId, section.id, {
-                            layout: value as WebsiteWireframeSection['layout'],
-                          })
-                        }
-                        disabled={!canEdit}
-                      >
-                        <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {WIREFRAME_LAYOUT_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label} — {option.hint}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Textarea
-                        value={section.contentNotes}
-                        readOnly={!canEdit}
-                        rows={3}
-                        onChange={(event) =>
-                          updateSection(activePage.pageId, section.id, {
-                            contentNotes: event.target.value,
-                          })
-                        }
-                        placeholder="Layout notes, content blocks, CTA labels…"
-                        className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-sm text-[var(--workspace-shell-text)]"
-                      />
+              {activePage.sections.map((section) => {
+                const libraryEntry = findSectionLibraryEntry(section.libraryKey);
+                return (
+                  <div
+                    key={section.id}
+                    className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/40 p-4"
+                  >
+                    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_180px]">
+                      <div className="space-y-3">
+                        <Input
+                          value={section.title}
+                          readOnly={!canEdit}
+                          onChange={(event) =>
+                            updateSection(activePage.pageId, section.id, {
+                              title: event.target.value,
+                            })
+                          }
+                          className={cn(inputClass, 'h-9')}
+                        />
+                        {siteStudioEnabled ? (
+                          <Select
+                            value={section.libraryKey ?? '__custom__'}
+                            onValueChange={(value) => {
+                              if (value === '__custom__') {
+                                updateSection(activePage.pageId, section.id, {
+                                  libraryKey: null,
+                                });
+                                return;
+                              }
+                              const entry = findSectionLibraryEntry(value);
+                              updateSection(activePage.pageId, section.id, {
+                                libraryKey: value,
+                                ...(entry ? { layout: entry.layout } : {}),
+                              });
+                            }}
+                            disabled={!canEdit}
+                          >
+                            <SelectTrigger className={inputClass}>
+                              <SelectValue placeholder="Section library…" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__custom__">
+                                Custom (no library section)
+                              </SelectItem>
+                              {WEBSITE_SECTION_LIBRARY.map((entry) => (
+                                <SelectItem key={entry.key} value={entry.key}>
+                                  {entry.label} — {entry.hint}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : null}
+                        <Select
+                          value={section.layout}
+                          onValueChange={(value) =>
+                            updateSection(activePage.pageId, section.id, {
+                              layout: value as WebsiteWireframeSection['layout'],
+                            })
+                          }
+                          disabled={!canEdit}
+                        >
+                          <SelectTrigger className={inputClass}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {WIREFRAME_LAYOUT_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label} — {option.hint}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {siteStudioEnabled ? (
+                          <Textarea
+                            value={section.copyOutline ?? ''}
+                            readOnly={!canEdit}
+                            rows={3}
+                            onChange={(event) =>
+                              updateSection(activePage.pageId, section.id, {
+                                copyOutline: event.target.value,
+                              })
+                            }
+                            placeholder="Client-facing copy outline: headline, supporting line, CTA…"
+                            className={cn(inputClass, 'text-sm')}
+                          />
+                        ) : null}
+                        <Textarea
+                          value={section.contentNotes}
+                          readOnly={!canEdit}
+                          rows={3}
+                          onChange={(event) =>
+                            updateSection(activePage.pageId, section.id, {
+                              contentNotes: event.target.value,
+                            })
+                          }
+                          placeholder={
+                            siteStudioEnabled
+                              ? 'Internal notes: layout intent, content to collect…'
+                              : 'Layout notes, content blocks, CTA labels…'
+                          }
+                          className={cn(inputClass, 'text-sm')}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <WireframePreview section={section} />
+                        {libraryEntry ? (
+                          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                            {libraryEntry.label}: {libraryEntry.hint}
+                            <br />
+                            Slots: {libraryEntry.copySlots.join(', ')}
+                          </p>
+                        ) : null}
+                      </div>
                     </div>
-                    <WireframePreview section={section} />
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : null}
         </div>

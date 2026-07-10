@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 
 import pathsConfig from '~/config/paths.config';
 import { workspaceBtnPrimaryMd, workspaceLinkAccent } from '~/lib/workspace-ui';
-import type { WebsitePlanningTab } from '~/lib/websites/planning-types';
+import type { WebsitePlanningTab, SiteStudioBundle } from '~/lib/websites/planning-types';
 
 import type { WebsitePlanningBundle } from '../_lib/server/website-planning.service';
 import type { Website } from '../_lib/server/websites.service';
@@ -58,6 +58,7 @@ export function WebsiteDetailContent({
   accountId,
   canEditWebsites,
   planning,
+  siteStudio,
   planningTab,
 }: {
   website: Website;
@@ -65,6 +66,7 @@ export function WebsiteDetailContent({
   accountId: string;
   canEditWebsites: boolean;
   planning: WebsitePlanningBundle;
+  siteStudio: SiteStudioBundle;
   planningTab?: WebsitePlanningTab;
 }) {
   const editHref = pathsConfig.app.accountWebsiteEdit
@@ -132,7 +134,10 @@ export function WebsiteDetailContent({
       <WebsitePlanningPanel
         accountId={accountId}
         accountSlug={accountSlug}
+        websiteName={website.name}
+        websiteDomain={website.domain}
         planning={planning}
+        siteStudio={siteStudio}
         canEdit={canEditWebsites}
         initialTab={planningTab ?? 'overview'}
       />
