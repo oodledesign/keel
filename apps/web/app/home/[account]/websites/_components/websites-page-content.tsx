@@ -52,7 +52,7 @@ export function WebsitesPageContent({
   );
 
   return (
-    <div className="space-y-6 px-4 lg:px-0">
+    <div className="flex w-full flex-col gap-6 px-4 md:px-0">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-lg font-bold text-[var(--workspace-shell-text)]">Websites</h1>

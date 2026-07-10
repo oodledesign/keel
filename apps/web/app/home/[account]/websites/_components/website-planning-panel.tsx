@@ -74,7 +74,7 @@ export function WebsitePlanningPanel({
   }, [accountSlug, planning.jobId]);
 
   return (
-    <section className="rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+    <section className="w-full rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
       <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-4 md:px-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -97,26 +97,34 @@ export function WebsitePlanningPanel({
           ) : null}
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          {tabs.map((item) => (
-            <button
-              key={item}
-              type="button"
-              onClick={() => setTab(item)}
-              className={cn(
-                'rounded-full px-3 py-1.5 text-sm transition-colors',
-                tab === item
-                  ? 'bg-[var(--ozer-accent)] text-[var(--ozer-white)]'
-                  : 'border border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
-              )}
-            >
-              {TAB_LABELS[item]}
-            </button>
-          ))}
+        <div className="-mx-4 mt-4 overflow-x-auto px-4 md:-mx-6 md:px-6">
+          <div
+            className="flex min-w-full gap-2 pb-0.5"
+            role="tablist"
+            aria-label="Website planning tabs"
+          >
+            {tabs.map((item) => (
+              <button
+                key={item}
+                type="button"
+                role="tab"
+                aria-selected={tab === item}
+                onClick={() => setTab(item)}
+                className={cn(
+                  'shrink-0 rounded-full px-3 py-1.5 text-sm transition-colors',
+                  tab === item
+                    ? 'bg-[var(--ozer-accent)] text-[var(--ozer-white)]'
+                    : 'border border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
+                )}
+              >
+                {TAB_LABELS[item]}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="px-4 py-5 md:px-6">
+      <div className="w-full min-w-0 px-4 py-5 md:px-6">
         {tab === 'overview' ? (
           <div className="space-y-6">
             {!siteStudio.enabled ? <SiteStudioUpsell accountSlug={accountSlug} /> : null}
