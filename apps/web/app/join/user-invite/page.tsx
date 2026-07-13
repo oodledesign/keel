@@ -93,9 +93,13 @@ async function AdminUserInvitePage(props: AdminUserInvitePageProps) {
 
   if (isNewAccount && supportsInviteAuthSelection) {
     const fulfillPath = `${pathsConfig.app.joinUserInvite}?invite_token=${encodeURIComponent(token)}`;
-    redirect(
-      `/identities?next=${encodeURIComponent(fulfillPath)}&require_auth_method=true`,
-    );
+    const identitiesParams = new URLSearchParams({
+      next: fulfillPath,
+      require_auth_method: 'true',
+      invite_token: token,
+      invite_kind: 'admin',
+    });
+    redirect(`/identities?${identitiesParams.toString()}`);
   }
 
   let result: { redirectTo: string };

@@ -150,7 +150,15 @@ async function JoinTeamAccountPage(props: JoinTeamAccountPageProps) {
   // After join: go to onboarding (required); if new user needs to pick an auth
   // method, send them through identities first with the requirement encoded.
   const nextPath = shouldSetupAccount
-    ? `/identities?next=${encodeURIComponent(onboardingUrl)}&require_auth_method=true`
+    ? (() => {
+        const identitiesParams = new URLSearchParams({
+          next: onboardingUrl,
+          require_auth_method: 'true',
+          invite_token: token,
+          invite_kind: 'team',
+        });
+        return `/identities?${identitiesParams.toString()}`;
+      })()
     : onboardingUrl;
 
   const email = auth.data.email ?? '';

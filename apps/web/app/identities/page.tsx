@@ -15,6 +15,7 @@ import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { IdentitiesStepWrapper } from './_components/identities-step-wrapper';
+import { loadInvitePasswordSetupContext } from './_lib/load-invite-password-setup-context';
 
 export const meta = async (): Promise<Metadata> => {
   const i18n = await createI18nServerInstance();
@@ -25,7 +26,12 @@ export const meta = async (): Promise<Metadata> => {
 };
 
 type IdentitiesPageProps = {
-  searchParams: Promise<{ next?: string; require_auth_method?: string }>;
+  searchParams: Promise<{
+    next?: string;
+    require_auth_method?: string;
+    invite_token?: string;
+    invite_kind?: string;
+  }>;
 };
 
 /**
@@ -33,7 +39,16 @@ type IdentitiesPageProps = {
  * @description Invited users set a password for their account email.
  */
 async function IdentitiesPage(props: IdentitiesPageProps) {
-  const { nextPath } = await fetchData(props);
+  const { nextPath, inviteContext, isInviteSetup } = await fetchData(props);
+
+  const descriptionKey =
+    isInviteSetup &&
+    inviteContext.hasWorkspaceInvite &&
+    inviteContext.workspaceName
+      ? 'auth:invitePasswordSetupWithWorkspace'
+      : isInviteSetup
+        ? 'auth:invitePasswordSetupPersonal'
+        : 'auth:linkAccountToSignInDescription';
 
   return (
     <AuthLayoutShell
@@ -45,22 +60,50 @@ async function IdentitiesPage(props: IdentitiesPageProps) {
           'flex max-h-[70vh] w-full flex-col items-center space-y-6 overflow-y-auto'
         }
       >
-        <div className={'flex flex-col items-center gap-1'}>
+        <div className="flex flex-col items-center gap-2 text-center">
           <Heading
             level={4}
             className="text-center"
             data-test="identities-page-heading"
           >
-            <Trans i18nKey={'auth:linkAccountToSignIn'} />
+            {isInviteSetup ? (
+              inviteContext.firstName ? (
+                <Trans
+                  i18nKey="auth:invitePasswordSetupGreetingNamed"
+                  values={{ name: inviteContext.firstName }}
+                />
+              ) : (
+                <Trans i18nKey="auth:invitePasswordSetupGreeting" />
+              )
+            ) : (
+              <Trans i18nKey={'auth:linkAccountToSignIn'} />
+            )}
           </Heading>
 
-          <Heading
-            level={6}
-            className={'text-muted-foreground text-center text-sm'}
+          <p
+            className="text-muted-foreground max-w-sm text-sm leading-relaxed"
             data-test="identities-page-description"
           >
-            <Trans i18nKey={'auth:linkAccountToSignInDescription'} />
-          </Heading>
+            <Trans
+              i18nKey={descriptionKey}
+              values={
+                inviteContext.workspaceName
+                  ? { workspace: inviteContext.workspaceName }
+                  : undefined
+              }
+              components={{
+                workspace: (
+                  <span className="text-foreground font-medium" />
+                ),
+              }}
+            />
+          </p>
+
+          {isInviteSetup ? (
+            <p className="text-foreground/80 max-w-sm text-sm font-medium">
+              <Trans i18nKey={'auth:invitePasswordSetupAction'} />
+            </p>
+          ) : null}
         </div>
 
         <IdentitiesStepWrapper nextPath={nextPath} />
@@ -81,6 +124,22 @@ async function fetchData(props: IdentitiesPageProps) {
   }
 
   const nextPath = getSafeRedirectPath(searchParams.next, pathsConfig.app.home);
+  const isInviteSetup = Boolean(searchParams.invite_token?.trim());
 
-  return { nextPath };
+  const metadataName =
+    typeof auth.data.user_metadata?.full_name === 'string'
+      ? auth.data.user_metadata.full_name
+      : typeof auth.data.user_metadata?.name === 'string'
+        ? auth.data.user_metadata.name
+        : typeof auth.data.user_metadata?.first_name === 'string'
+          ? auth.data.user_metadata.first_name
+          : null;
+
+  const inviteContext = await loadInvitePasswordSetupContext({
+    inviteToken: searchParams.invite_token,
+    inviteKind: searchParams.invite_kind,
+    fallbackName: metadataName,
+  });
+
+  return { nextPath, inviteContext, isInviteSetup };
 }
