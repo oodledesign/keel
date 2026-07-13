@@ -259,16 +259,19 @@ export async function loadPublicBookingPage(pageSlug: string) {
     .select('*')
     .eq('booking_page_id', page.id)
     .eq('is_active', true)
-    .eq('is_private', false)
     .order('created_at', { ascending: true });
 
   throwIfError(etError, 'Could not load event types');
 
+  // Filter private types in app code so public pages keep working if the
+  // is_private migration has not been applied yet.
+  const publicEventTypes = ((eventRows ?? []) as Record<string, unknown>[])
+    .map(mapEventType)
+    .filter((eventType) => !eventType.isPrivate);
+
   return {
     page: await enrichPublicBookingPage(page),
-    eventTypes: ((eventRows ?? []) as Record<string, unknown>[]).map(
-      mapEventType,
-    ),
+    eventTypes: publicEventTypes,
   };
 }
 

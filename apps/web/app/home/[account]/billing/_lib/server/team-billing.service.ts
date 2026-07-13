@@ -133,7 +133,9 @@ class TeamBillingService {
         `Error creating the checkout session`,
       );
 
-      throw new Error(`Checkout not created`);
+      throw new Error(
+        'Could not start checkout. Please try again, or contact support if this keeps happening.',
+      );
     }
   }
 

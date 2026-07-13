@@ -14,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@kit/ui/card';
+import { toast } from '@kit/ui/sonner';
 import { Trans } from '@kit/ui/trans';
 
 import billingConfig from '~/config/billing.config';
@@ -131,15 +132,23 @@ export function OzerWorkspaceCheckoutForm(params: {
                 },
               });
 
-              const { checkoutToken: token } =
-                await createTeamAccountCheckoutSession({
-                  planId,
-                  productId,
-                  slug,
-                  accountId: params.accountId,
-                });
+              try {
+                const { checkoutToken: token } =
+                  await createTeamAccountCheckoutSession({
+                    planId,
+                    productId,
+                    slug,
+                    accountId: params.accountId,
+                  });
 
-              setCheckoutToken(token);
+                setCheckoutToken(token);
+              } catch (error) {
+                toast.error(
+                  error instanceof Error
+                    ? error.message
+                    : 'Could not start checkout. Please try again.',
+                );
+              }
             });
           }}
         />

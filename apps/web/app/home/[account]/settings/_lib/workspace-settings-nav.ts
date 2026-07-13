@@ -8,7 +8,6 @@ import {
 } from '~/home/[account]/_lib/workspace-profile';
 import {
   isPropertyNavModuleEnabled,
-  isVideosModuleEnabled,
   isWorkModuleEnabled,
   isWorkNavModuleEnabled,
 } from '~/home/[account]/_lib/server/account-modules';
@@ -106,14 +105,6 @@ export function buildWorkspaceSettingsNav(input: {
       label: 'Knowledge base',
       href: settingsPath(pathsConfig.app.accountBrainKnowledge, accountSlug),
     });
-
-    if (isVideosModuleEnabled(moduleSettings)) {
-      items.push({
-        id: 'videos',
-        label: 'Video hosting',
-        href: settingsPath(pathsConfig.app.accountVideoSettings, accountSlug),
-      });
-    }
 
     if (
       access.canViewBilling &&

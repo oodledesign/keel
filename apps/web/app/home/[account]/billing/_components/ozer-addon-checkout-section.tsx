@@ -15,6 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@kit/ui/card';
+import { toast } from '@kit/ui/sonner';
 
 import billingConfig from '~/config/billing.config';
 import {
@@ -226,15 +227,23 @@ export function OzerAddonCheckoutSection({
                     payload: { planId, account: slug },
                   });
 
-                  const { checkoutToken: token } =
-                    await createTeamAccountCheckoutSession({
-                      planId,
-                      productId,
-                      slug,
-                      accountId,
-                    });
+                  try {
+                    const { checkoutToken: token } =
+                      await createTeamAccountCheckoutSession({
+                        planId,
+                        productId,
+                        slug,
+                        accountId,
+                      });
 
-                  setCheckoutToken(token);
+                    setCheckoutToken(token);
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : 'Could not start checkout. Please try again.',
+                    );
+                  }
                 });
               }}
             />
