@@ -78,12 +78,16 @@ type BunnyVideoRaw = {
 };
 
 const BUNNY_STATUS_MAP: Record<number, BunnyVideoStatus> = {
-  0: 'created',
-  1: 'uploaded',
-  2: 'processing',
-  3: 'transcoding',
-  4: 'finished',
-  5: 'error',
+  // Bunny Stream status codes: https://docs.bunny.net/stream/webhooks
+  0: 'created', // Queued
+  1: 'processing', // Processing
+  2: 'transcoding', // Encoding
+  3: 'finished', // Finished — fully available
+  4: 'finished', // Resolution finished — playable
+  5: 'error', // Failed
+  6: 'uploaded', // PresignedUploadStarted
+  7: 'uploaded', // PresignedUploadFinished
+  8: 'error', // PresignedUploadFailed
 };
 
 function mapBunnyVideo(raw: BunnyVideoRaw): BunnyVideo {

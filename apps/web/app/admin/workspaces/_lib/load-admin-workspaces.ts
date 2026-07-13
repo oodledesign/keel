@@ -2,7 +2,7 @@ import 'server-only';
 
 import { cache } from 'react';
 
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import {
   resolveWorkspaceProfile,
@@ -14,11 +14,91 @@ export type AdminWorkspaceRow = {
   name: string;
   slug: string;
   workspaceLabel: string;
+  ownerEmail: string | null;
   subscriptionStatus: string | null;
   billingExempt: boolean;
   entitlements: string[];
-  createdAt: string;
+  createdAt: string | null;
 };
+
+function sanitizeFilterValue(value: string) {
+  return value.replace(/[%(),]/g, ' ').trim();
+}
+
+/**
+ * Resolve team account IDs linked to an email (owner, member, or pending invite).
+ */
+async function findTeamAccountIdsByEmail(
+  admin: ReturnType<typeof getSupabaseServerAdminClient>,
+  query: string,
+): Promise<string[]> {
+  const pattern = `%${sanitizeFilterValue(query)}%`;
+
+  const [
+    { data: personalAccounts, error: personalError },
+    { data: invitations, error: inviteError },
+  ] = await Promise.all([
+    admin
+      .from('accounts')
+      .select('primary_owner_user_id')
+      .eq('is_personal_account', true)
+      .ilike('email', pattern),
+    admin.from('invitations').select('account_id').ilike('email', pattern),
+  ]);
+
+  if (personalError ?? inviteError) {
+    throw personalError ?? inviteError;
+  }
+
+  const userIds = [
+    ...new Set(
+      (personalAccounts ?? [])
+        .map((row) => row.primary_owner_user_id as string | null)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+
+  const accountIds = new Set<string>();
+
+  for (const row of invitations ?? []) {
+    if (row.account_id) {
+      accountIds.add(row.account_id as string);
+    }
+  }
+
+  if (userIds.length === 0) {
+    return [...accountIds];
+  }
+
+  const [
+    { data: ownedTeams, error: ownedError },
+    { data: memberships, error: membershipError },
+  ] = await Promise.all([
+    admin
+      .from('accounts')
+      .select('id')
+      .eq('is_personal_account', false)
+      .in('primary_owner_user_id', userIds),
+    admin
+      .from('accounts_memberships')
+      .select('account_id')
+      .in('user_id', userIds),
+  ]);
+
+  if (ownedError ?? membershipError) {
+    throw ownedError ?? membershipError;
+  }
+
+  for (const row of ownedTeams ?? []) {
+    accountIds.add(row.id as string);
+  }
+
+  for (const row of memberships ?? []) {
+    accountIds.add(row.account_id as string);
+  }
+
+  return [...accountIds];
+}
 
 export const loadAdminWorkspacesPage = cache(
   async (options: {
@@ -31,24 +111,34 @@ export const loadAdminWorkspacesPage = cache(
     pageSize: number;
     pageCount: number;
   }> => {
-    const client = getSupabaseServerClient();
+    const admin = getSupabaseServerAdminClient();
     const page = Math.max(1, options.page);
     const pageSize = options.pageSize;
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
+    const rawQuery = options.query?.trim() ?? '';
+    const q = sanitizeFilterValue(rawQuery);
 
-    let queryBuilder = client
+    let queryBuilder = admin
       .from('accounts')
-      .select('id, name, slug, space_type, created_at', { count: 'exact' })
+      .select('id, name, slug, space_type, created_at, primary_owner_user_id', {
+        count: 'exact',
+      })
       .eq('is_personal_account', false)
       .order('created_at', { ascending: false })
       .range(from, to);
 
-    if (options.query?.trim()) {
-      const q = options.query.trim();
-      queryBuilder = queryBuilder.or(
-        `name.ilike.%${q}%,slug.ilike.%${q}%,email.ilike.%${q}%`,
-      );
+    if (q) {
+      const emailMatchedIds = await findTeamAccountIdsByEmail(admin, q);
+      const textFilters = `name.ilike.%${q}%,slug.ilike.%${q}%`;
+
+      if (emailMatchedIds.length > 0) {
+        queryBuilder = queryBuilder.or(
+          `${textFilters},id.in.(${emailMatchedIds.join(',')})`,
+        );
+      } else {
+        queryBuilder = queryBuilder.or(textFilters);
+      }
     }
 
     const { data: accounts, count, error } = await queryBuilder;
@@ -58,6 +148,13 @@ export const loadAdminWorkspacesPage = cache(
     }
 
     const accountIds = (accounts ?? []).map((a) => a.id as string);
+    const ownerUserIds = [
+      ...new Set(
+        (accounts ?? [])
+          .map((a) => a.primary_owner_user_id as string | null)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
 
     if (accountIds.length === 0) {
       return {
@@ -68,26 +165,40 @@ export const loadAdminWorkspacesPage = cache(
       };
     }
 
-    const [businesses, subscriptions, entitlements, exempt] = await Promise.all(
-      [
-        client
+    const [businesses, subscriptions, entitlements, exempt, ownerAccounts] =
+      await Promise.all([
+        admin
           .from('businesses')
           .select('account_id, type')
           .in('account_id', accountIds),
-        client
+        admin
           .from('subscriptions')
           .select('account_id, status')
           .in('account_id', accountIds),
-        client
+        admin
           .from('account_entitlements')
           .select('account_id, entitlement_key')
           .in('account_id', accountIds),
-        client
+        admin
           .from('account_billing_exempt')
           .select('account_id')
           .in('account_id', accountIds),
-      ],
-    );
+        ownerUserIds.length > 0
+          ? admin
+              .from('accounts')
+              .select('primary_owner_user_id, email')
+              .eq('is_personal_account', true)
+              .in('primary_owner_user_id', ownerUserIds)
+          : Promise.resolve({ data: [] as { primary_owner_user_id: string; email: string | null }[] }),
+      ]);
+
+    const ownerEmailByUserId = new Map<string, string | null>();
+    for (const row of ownerAccounts.data ?? []) {
+      ownerEmailByUserId.set(
+        row.primary_owner_user_id as string,
+        (row.email as string | null) ?? null,
+      );
+    }
 
     const bizByAccount = new Map<string, string>();
     for (const row of businesses.data ?? []) {
@@ -120,6 +231,7 @@ export const loadAdminWorkspacesPage = cache(
 
     const rows: AdminWorkspaceRow[] = (accounts ?? []).map((account) => {
       const id = account.id as string;
+      const ownerUserId = account.primary_owner_user_id as string | null;
       const profile = resolveWorkspaceProfile({
         space_type: account.space_type as string | null,
         business_type: bizByAccount.get(id) ?? null,
@@ -130,10 +242,13 @@ export const loadAdminWorkspacesPage = cache(
         name: (account.name as string) ?? (account.slug as string),
         slug: account.slug as string,
         workspaceLabel: workspaceTypeLabel(profile),
+        ownerEmail: ownerUserId
+          ? (ownerEmailByUserId.get(ownerUserId) ?? null)
+          : null,
         subscriptionStatus: subByAccount.get(id) ?? null,
         billingExempt: exemptSet.has(id),
         entitlements: entByAccount.get(id) ?? [],
-        createdAt: account.created_at as string,
+        createdAt: (account.created_at as string | null) ?? null,
       };
     });
 

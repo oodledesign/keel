@@ -14,6 +14,7 @@ import { createTeamAccountsApi } from '@kit/team-accounts/api';
 import appConfig from '~/config/app.config';
 import billingConfig from '~/config/billing.config';
 import pathsConfig from '~/config/paths.config';
+import { getTeamAccountAccess } from '~/home/[account]/_lib/role-access';
 import { Database } from '~/lib/database.types';
 
 import { TeamCheckoutSchema } from '../schema/team-billing.schema';
@@ -30,6 +31,71 @@ class TeamBillingService {
   private readonly namespace = 'billing.team-account';
 
   constructor(private readonly client: SupabaseClient<Database>) {}
+
+  /**
+   * Aligns with UI `canManageBilling`: `billing.manage` OR owner/admin.
+   * Makerkit `has_permission` alone rejects owners whose role row lacks the flag.
+   */
+  private async assertCanManageBilling(params: {
+    userId: string;
+    accountId: string;
+    action: string;
+  }) {
+    const { userId, accountId, action } = params;
+    const logger = await getLogger();
+    const api = createTeamAccountsApi(this.client);
+
+    const hasPermission = await api.hasPermission({
+      userId,
+      accountId,
+      permission: 'billing.manage',
+    });
+
+    if (hasPermission) {
+      return;
+    }
+
+    const [{ data: account }, { data: membership }] = await Promise.all([
+      this.client
+        .from('accounts')
+        .select('primary_owner_user_id')
+        .eq('id', accountId)
+        .maybeSingle(),
+      this.client
+        .from('accounts_memberships')
+        .select('account_role, company_role')
+        .eq('account_id', accountId)
+        .eq('user_id', userId)
+        .maybeSingle(),
+    ]);
+
+    const isPrimaryOwner = account?.primary_owner_user_id === userId;
+    const access = getTeamAccountAccess({
+      role: membership?.account_role ?? null,
+      company_role: membership?.company_role ?? null,
+      permissions: [],
+    });
+
+    if (isPrimaryOwner || access.canManageBilling) {
+      return;
+    }
+
+    logger.warn(
+      {
+        userId,
+        accountId,
+        action,
+        name: this.namespace,
+        accountRole: membership?.account_role ?? null,
+        companyRole: membership?.company_role ?? null,
+      },
+      `User without billing access attempted ${action}.`,
+    );
+
+    throw new Error(
+      'You do not have permission to manage billing for this workspace.',
+    );
+  }
 
   /**
    * @name createCheckout
@@ -57,23 +123,11 @@ class TeamBillingService {
 
     const api = createTeamAccountsApi(this.client);
 
-    // verify permissions to manage billing
-    const hasPermission = await api.hasPermission({
+    await this.assertCanManageBilling({
       userId,
       accountId,
-      permission: 'billing.manage',
+      action: 'create checkout',
     });
-
-    // if the user does not have permission to manage billing for the account
-    // then we should not proceed
-    if (!hasPermission) {
-      logger.warn(
-        ctx,
-        `User without permissions attempted to create checkout.`,
-      );
-
-      throw new Error('Permission denied');
-    }
 
     // here we have confirmed that the user has permission to manage billing for the account
     // so we go on and create a checkout session
@@ -176,27 +230,11 @@ class TeamBillingService {
 
     const api = createTeamAccountsApi(client);
 
-    // we require the user to have permissions to manage billing for the account
-    const hasPermission = await api.hasPermission({
+    await this.assertCanManageBilling({
       userId,
       accountId,
-      permission: 'billing.manage',
+      action: 'create billing portal session',
     });
-
-    // if the user does not have permission to manage billing for the account
-    // then we should not proceed
-    if (!hasPermission) {
-      logger.warn(
-        {
-          userId,
-          accountId,
-          name: this.namespace,
-        },
-        `User without permissions attempted to create billing portal session.`,
-      );
-
-      throw new Error('Permission denied');
-    }
 
     const customerId = await api.getCustomerId(accountId);
 

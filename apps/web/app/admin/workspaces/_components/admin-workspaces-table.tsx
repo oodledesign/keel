@@ -72,7 +72,10 @@ function WorkspacesFilters(props: { query: string }) {
           render={({ field }) => (
             <FormItem>
               <FormControl>
-                <Input placeholder="Search name or slug…" {...field} />
+                <Input
+                  placeholder="Search name, slug, or email…"
+                  {...field}
+                />
               </FormControl>
             </FormItem>
           )}
@@ -102,6 +105,14 @@ const columns: ColumnDef<AdminWorkspaceRow>[] = [
     header: 'Type',
     cell: ({ row }) => (
       <Badge variant="outline">{row.original.workspaceLabel}</Badge>
+    ),
+  },
+  {
+    header: 'Owner',
+    cell: ({ row }) => (
+      <span className="text-muted-foreground text-sm">
+        {row.original.ownerEmail ?? '—'}
+      </span>
     ),
   },
   {

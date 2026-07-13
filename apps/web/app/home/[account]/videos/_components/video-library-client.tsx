@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -40,6 +40,14 @@ const UploadModal = dynamic(
   { ssr: false },
 );
 
+const ENCODING_POLL_MS = 8000;
+
+type StatusApiOk = {
+  ok: true;
+  data: { status: string };
+};
+type StatusApiErr = { ok: false; error: { message: string } };
+
 function folderBreadcrumb(
   folderId: string | null,
   folders: VideoFolderRow[],
@@ -57,6 +65,10 @@ function folderBreadcrumb(
   return trail;
 }
 
+function isEncodingStatus(status: VideoStatus) {
+  return status === 'processing' || status === 'uploading';
+}
+
 export function VideoLibraryClient(props: {
   accountId: string;
   accountSlug: string;
@@ -72,6 +84,67 @@ export function VideoLibraryClient(props: {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [previewVideo, setPreviewVideo] = useState<VideoRow | null>(null);
+  const notifiedReady = useRef(new Set<string>());
+
+  const encodingVideoIds = useMemo(
+    () =>
+      props.videos
+        .filter((video) => isEncodingStatus(video.status))
+        .map((video) => video.id),
+    [props.videos],
+  );
+
+  useEffect(() => {
+    if (encodingVideoIds.length === 0) return;
+
+    let cancelled = false;
+
+    const poll = async () => {
+      let shouldRefresh = false;
+
+      await Promise.all(
+        encodingVideoIds.map(async (videoId) => {
+          try {
+            const res = await fetch(`/api/videos/${videoId}/status`);
+            const json = (await res.json()) as StatusApiOk | StatusApiErr;
+            if (!json.ok) return;
+
+            if (json.data.status === 'ready') {
+              if (!notifiedReady.current.has(videoId)) {
+                notifiedReady.current.add(videoId);
+                const title =
+                  props.videos.find((video) => video.id === videoId)?.title ??
+                  'Video';
+                toast.success(`${title} is ready`);
+              }
+              shouldRefresh = true;
+              return;
+            }
+
+            if (json.data.status === 'failed') {
+              shouldRefresh = true;
+            }
+          } catch {
+            // Keep polling; transient network errors are fine.
+          }
+        }),
+      );
+
+      if (!cancelled && shouldRefresh) {
+        router.refresh();
+      }
+    };
+
+    void poll();
+    const interval = window.setInterval(() => {
+      void poll();
+    }, ENCODING_POLL_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [encodingVideoIds, props.videos, router]);
 
   const breadcrumb = folderBreadcrumb(selectedFolderId, props.folders);
   const presetsPath = pathsConfig.app.accountVideoPresets.replace(

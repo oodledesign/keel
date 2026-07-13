@@ -44,7 +44,7 @@ type CreateUploadResponse = {
   libraryId: string;
 };
 
-type UploadPhase = 'idle' | 'preparing' | 'uploading' | 'processing';
+type UploadPhase = 'idle' | 'preparing' | 'uploading';
 
 function titleFromFilename(name: string) {
   return name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim();
@@ -110,19 +110,6 @@ function uploadWithTus(
   });
 }
 
-async function pollVideoStatus(videoId: string) {
-  const maxAttempts = 120;
-  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    const res = await fetch(`/api/videos/${videoId}/status`);
-    const json = (await res.json()) as ApiOk<{ status: string }> | ApiErr;
-    if (!json.ok) throw new Error(json.error.message);
-    if (json.data.status === 'ready') return 'ready';
-    if (json.data.status === 'failed') return 'failed';
-    await new Promise((r) => setTimeout(r, 5000));
-  }
-  throw new Error('Encoding timed out');
-}
-
 function UploadProgressPanel(props: {
   phase: Exclude<UploadPhase, 'idle'>;
   progress: number;
@@ -130,18 +117,12 @@ function UploadProgressPanel(props: {
   totalBytes: number;
 }) {
   const label =
-    props.phase === 'preparing'
-      ? 'Preparing upload…'
-      : props.phase === 'uploading'
-        ? 'Uploading…'
-        : 'Encoding video…';
+    props.phase === 'preparing' ? 'Preparing upload…' : 'Uploading…';
 
   const detail =
     props.phase === 'uploading'
       ? `${formatFileSize(props.uploadedBytes)} / ${formatFileSize(props.totalBytes)}`
-      : props.phase === 'processing'
-        ? 'Upload complete — Bunny Stream is processing your video'
-        : 'Creating upload session';
+      : 'Creating upload session';
 
   return (
     <div className="space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
@@ -150,25 +131,15 @@ function UploadProgressPanel(props: {
           <p className="text-sm font-medium">{label}</p>
           <p className="text-muted-foreground mt-0.5 text-xs">{detail}</p>
         </div>
-        {props.phase === 'processing' ? (
-          <Loader2 className="text-[var(--ozer-accent)] h-4 w-4 shrink-0 animate-spin" />
-        ) : (
-          <span className="text-sm font-medium tabular-nums text-[var(--ozer-accent)]">
-            {props.progress}%
-          </span>
-        )}
+        <span className="text-sm font-medium tabular-nums text-[var(--ozer-accent)]">
+          {props.progress}%
+        </span>
       </div>
 
-      {props.phase === 'processing' ? (
-        <div className="h-2 overflow-hidden rounded-full bg-black/30">
-          <div className="h-full w-2/3 animate-pulse rounded-full bg-[var(--ozer-accent)]" />
-        </div>
-      ) : (
-        <Progress
-          value={props.progress}
-          className="h-2 bg-black/30 [&>div]:bg-[var(--ozer-accent)]"
-        />
-      )}
+      <Progress
+        value={props.progress}
+        className="h-2 bg-black/30 [&>div]:bg-[var(--ozer-accent)]"
+      />
     </div>
   );
 }
@@ -179,6 +150,7 @@ export function UploadModal(props: {
   accountId: string;
   folders: VideoFolderRow[];
   defaultFolderId?: string | null;
+  onUploadStarted?: (videoId: string) => void;
 }) {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
@@ -215,8 +187,8 @@ export function UploadModal(props: {
     disabled: phase !== 'idle',
   });
 
-  const isBusy = phase !== 'idle';
-  const canSubmit = Boolean(file && title.trim() && !isBusy);
+  const isUploading = phase === 'preparing' || phase === 'uploading';
+  const canSubmit = Boolean(file && title.trim() && !isUploading);
 
   const submit = async () => {
     if (!file) return;
@@ -277,15 +249,8 @@ export function UploadModal(props: {
 
       await fetch(`/api/videos/${videoId}/status`, { method: 'POST' });
 
-      setPhase('processing');
-
-      const finalStatus = await pollVideoStatus(videoId);
-      if (finalStatus === 'ready') {
-        toast.success('Video uploaded and ready');
-      } else {
-        toast.error('Video encoding failed');
-      }
-
+      toast.success('Upload complete — encoding in the background');
+      props.onUploadStarted?.(videoId);
       props.onOpenChange(false);
       reset();
       router.refresh();
@@ -307,7 +272,8 @@ export function UploadModal(props: {
     <Dialog
       open={props.open}
       onOpenChange={(open) => {
-        if (isBusy) return;
+        // Allow closing anytime except mid-upload (bytes still transferring).
+        if (!open && isUploading) return;
         if (!open) reset();
         props.onOpenChange(open);
       }}
@@ -316,8 +282,8 @@ export function UploadModal(props: {
         <DialogHeader>
           <DialogTitle>Upload video</DialogTitle>
           <DialogDescription>
-            Upload a video file to Bunny Stream. Encoding continues in the
-            background after upload.
+            Upload finishes here; Bunny encodes in the background and the library
+            updates when the video is ready.
           </DialogDescription>
         </DialogHeader>
 
@@ -328,7 +294,7 @@ export function UploadModal(props: {
               isDragActive
                 ? 'border-[var(--ozer-accent)]/60 bg-[var(--ozer-accent-subtle)]'
                 : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] hover:border-[color:var(--workspace-shell-border)]'
-            } ${isBusy ? 'pointer-events-none opacity-60' : ''}`}
+            } ${isUploading ? 'pointer-events-none opacity-60' : ''}`}
           >
             <input {...getInputProps()} />
             {file ? (
@@ -351,7 +317,7 @@ export function UploadModal(props: {
               id="video-title"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              disabled={isBusy}
+              disabled={isUploading}
             />
           </div>
 
@@ -360,7 +326,7 @@ export function UploadModal(props: {
             <Select
               value={folderId}
               onValueChange={setFolderId}
-              disabled={isBusy}
+              disabled={isUploading}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select folder" />
@@ -389,8 +355,12 @@ export function UploadModal(props: {
           <Button
             type="button"
             variant="outline"
-            onClick={() => props.onOpenChange(false)}
-            disabled={isBusy}
+            onClick={() => {
+              if (isUploading) return;
+              props.onOpenChange(false);
+              reset();
+            }}
+            disabled={isUploading}
           >
             Cancel
           </Button>
@@ -400,7 +370,7 @@ export function UploadModal(props: {
             ) : (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {phase === 'processing' ? 'Encoding…' : 'Uploading…'}
+                Uploading…
               </>
             )}
           </Button>

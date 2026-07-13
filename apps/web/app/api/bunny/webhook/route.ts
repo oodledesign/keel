@@ -14,15 +14,58 @@ import { resolveBunnyCdnHostname } from '~/lib/videos/server/videos-data';
 
 export const runtime = 'nodejs';
 
-function verifyBunnySignature(
+/**
+ * Bunny Stream signs webhooks with the library Read-Only API key.
+ * See https://docs.bunny.net/stream/webhooks
+ *
+ * Configure the library webhook URL to:
+ *   https://app.ozer.so/api/bunny/webhook
+ * (not a *.vercel.app preview/legacy host)
+ */
+function getWebhookSigningSecret(): string | null {
+  return (
+    process.env.BUNNY_STREAM_READ_API_KEY?.trim() ||
+    process.env.BUNNY_WEBHOOK_SECRET?.trim() ||
+    null
+  );
+}
+
+function verifyBunnyStreamSignature(
   rawBody: string,
-  signatureHeader: string | null,
+  request: NextRequest,
   secret: string,
 ): boolean {
-  if (!signatureHeader?.trim()) return false;
+  const signature =
+    request.headers.get('x-bunnystream-signature') ??
+    request.headers.get('X-BunnyStream-Signature') ??
+    request.headers.get('x-bunny-signature') ??
+    request.headers.get('X-Bunny-Signature');
 
-  const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
-  const received = signatureHeader.trim().toLowerCase();
+  const version =
+    request.headers.get('x-bunnystream-signature-version') ??
+    request.headers.get('X-BunnyStream-Signature-Version');
+
+  const algorithm =
+    request.headers.get('x-bunnystream-signature-algorithm') ??
+    request.headers.get('X-BunnyStream-Signature-Algorithm');
+
+  // Bunny Stream signed webhooks include version + algorithm headers.
+  // Legacy payloads may only send a signature header — still verify HMAC.
+  if (version && version !== 'v1') return false;
+  if (algorithm && algorithm !== 'hmac-sha256') return false;
+  if (!signature?.trim()) return false;
+
+  const expected = createHmac('sha256', secret)
+    .update(rawBody, 'utf8')
+    .digest('hex');
+  const received = signature.trim().toLowerCase();
+
+  if (
+    received.length !== expected.length ||
+    !/^[0-9a-f]+$/.test(received)
+  ) {
+    return false;
+  }
 
   try {
     return timingSafeEqual(
@@ -59,23 +102,73 @@ async function logVideoEvent(input: {
   });
 }
 
+function mapWebhookStatus(payload: BunnyWebhookPayload): {
+  nextStatus: 'ready' | 'failed' | 'processing' | 'uploading' | null;
+  eventType: string;
+} {
+  const statusCode =
+    typeof payload.Status === 'number' ? payload.Status : Number(payload.Status);
+  const eventName = (payload.EventName ?? payload.Type ?? '').toLowerCase();
+
+  if (
+    statusCode === 3 ||
+    statusCode === 4 ||
+    eventName.includes('encoded') ||
+    eventName.includes('finished')
+  ) {
+    return { nextStatus: 'ready', eventType: eventName || `status_${statusCode}` };
+  }
+
+  if (
+    statusCode === 5 ||
+    statusCode === 8 ||
+    eventName.includes('failed') ||
+    eventName.includes('error')
+  ) {
+    return { nextStatus: 'failed', eventType: eventName || `status_${statusCode}` };
+  }
+
+  if (statusCode === 6 || statusCode === 7) {
+    return {
+      nextStatus: 'uploading',
+      eventType: eventName || `status_${statusCode}`,
+    };
+  }
+
+  if (
+    statusCode === 0 ||
+    statusCode === 1 ||
+    statusCode === 2 ||
+    eventName.includes('processing') ||
+    eventName.includes('encoding') ||
+    eventName.includes('upload')
+  ) {
+    return {
+      nextStatus: 'processing',
+      eventType: eventName || `status_${statusCode}`,
+    };
+  }
+
+  return {
+    nextStatus: null,
+    eventType: eventName || (Number.isFinite(statusCode) ? `status_${statusCode}` : 'unknown'),
+  };
+}
+
 export async function POST(request: NextRequest) {
   const ip = clientIpFromRequest(request);
   if (isRateLimited(`bunny-webhook:${ip}`)) {
     return NextResponse.json({ ok: false, error: 'rate_limited' }, { status: 429 });
   }
 
-  const secret = process.env.BUNNY_WEBHOOK_SECRET?.trim();
+  const secret = getWebhookSigningSecret();
   if (!secret) {
     return NextResponse.json({ ok: false }, { status: 500 });
   }
 
   const rawBody = await request.text();
-  const signature =
-    request.headers.get('x-bunny-signature') ??
-    request.headers.get('X-Bunny-Signature');
 
-  if (!verifyBunnySignature(rawBody, signature, secret)) {
+  if (!verifyBunnyStreamSignature(rawBody, request, secret)) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 
@@ -87,7 +180,7 @@ export async function POST(request: NextRequest) {
   }
 
   const bunnyVideoId = payload.VideoGuid ?? null;
-  const eventName = (payload.EventName ?? payload.Type ?? 'unknown').toLowerCase();
+  const { nextStatus, eventType } = mapWebhookStatus(payload);
 
   const admin = getSupabaseServerAdminClient();
   let accountId: string | null = null;
@@ -105,36 +198,12 @@ export async function POST(request: NextRequest) {
   await logVideoEvent({
     accountId,
     bunnyVideoId,
-    eventType: eventName,
+    eventType,
     payload: payload as Record<string, unknown>,
     ipAddress: ip,
   });
 
-  if (!bunnyVideoId) {
-    return NextResponse.json({ ok: true });
-  }
-
-  const statusCode = payload.Status;
-
-  let nextStatus: 'ready' | 'failed' | 'processing' | null = null;
-
-  if (
-    eventName.includes('encoded') ||
-    eventName.includes('finished') ||
-    statusCode === 4
-  ) {
-    nextStatus = 'ready';
-  } else if (
-    eventName.includes('failed') ||
-    eventName.includes('error') ||
-    statusCode === 5
-  ) {
-    nextStatus = 'failed';
-  } else if (eventName.includes('processing') || eventName.includes('upload')) {
-    nextStatus = 'processing';
-  }
-
-  if (!nextStatus) {
+  if (!bunnyVideoId || !nextStatus) {
     return NextResponse.json({ ok: true });
   }
 
