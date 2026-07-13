@@ -180,25 +180,27 @@ export async function WorkspaceBillingPanel({
           canManageBilling={canManageBilling}
         />
 
-        <If condition={subscription && subscriptionIsWorkspacePlan}>
-          {(activeSubscription) => (
-            <CurrentSubscriptionCard
-              subscription={activeSubscription}
-              product={subscriptionProductPlan!.product}
-              plan={subscriptionProductPlan!.plan}
-            />
-          )}
-        </If>
+        {subscription && subscriptionIsWorkspacePlan && subscriptionProductPlan ? (
+          <CurrentSubscriptionCard
+            subscription={{
+              ...subscription,
+              items: subscription.items ?? [],
+            }}
+            product={subscriptionProductPlan.product}
+            plan={subscriptionProductPlan.plan}
+          />
+        ) : null}
 
-        <If condition={order}>
-          {(activeOrder) => (
-            <CurrentLifetimeOrderCard
-              order={activeOrder}
-              product={orderProductPlan!.product}
-              plan={orderProductPlan!.plan}
-            />
-          )}
-        </If>
+        {order && orderProductPlan ? (
+          <CurrentLifetimeOrderCard
+            order={{
+              ...order,
+              items: order.items ?? [],
+            }}
+            product={orderProductPlan.product}
+            plan={orderProductPlan.plan}
+          />
+        ) : null}
 
         {shouldShowBillingPortal ? (
           <BillingPortalForm accountId={accountId} account={accountSlug} />

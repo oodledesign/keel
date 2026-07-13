@@ -31,14 +31,14 @@ export function CurrentLifetimeOrderCard({
   product,
   plan,
 }: React.PropsWithChildren<Props>) {
-  const lineItems = order.items;
+  const lineItems = order.items ?? [];
   const firstLineItem = lineItems[0];
 
   if (!firstLineItem) {
-    throw new Error('No line items found in subscription');
+    return null;
   }
 
-  const productLineItems = plan.lineItems;
+  const productLineItems = plan.lineItems ?? [];
 
   return (
     <Card>

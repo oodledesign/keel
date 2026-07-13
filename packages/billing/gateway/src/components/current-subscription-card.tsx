@@ -35,14 +35,14 @@ export function CurrentSubscriptionCard({
   product,
   plan,
 }: React.PropsWithChildren<Props>) {
-  const lineItems = subscription.items;
+  const lineItems = subscription.items ?? [];
   const firstLineItem = lineItems[0];
 
   if (!firstLineItem) {
-    throw new Error('No line items found in subscription');
+    return null;
   }
 
-  const productLineItems = plan.lineItems;
+  const productLineItems = plan.lineItems ?? [];
 
   return (
     <Card>
