@@ -36,10 +36,13 @@ export const UpdatePasswordForm = ({
   email,
   callbackPath,
   onSuccess,
+  submitLabelKey = 'account:updatePasswordSubmitLabel',
 }: {
   email: string;
   callbackPath: string;
   onSuccess?: () => void;
+  /** Optional i18n key for the submit button (defaults to update password). */
+  submitLabelKey?: string;
 }) => {
   const { t } = useTranslation('account');
   const updateUserMutation = useUpdateUser();
@@ -182,7 +185,7 @@ export const UpdatePasswordForm = ({
               disabled={updateUserMutation.isPending}
               data-test="identity-form-submit"
             >
-              <Trans i18nKey={'account:updatePasswordSubmitLabel'} />
+              <Trans i18nKey={submitLabelKey} />
             </Button>
           </div>
         </div>

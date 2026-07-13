@@ -44,7 +44,7 @@ describe('resolveAppSubdomainRedirect', () => {
 
     expect(
       resolveAppSubdomainRedirect(
-        new URL('https://app.ozer.so/brand/keel-white-transparent.png'),
+        new URL('https://app.ozer.so/brand/ozer-wordmark-dark.png'),
       ),
     ).toBeNull();
   });

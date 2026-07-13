@@ -10,7 +10,6 @@ import { Heading } from '@kit/ui/heading';
 import { Trans } from '@kit/ui/trans';
 
 import { AppLogo } from '~/components/app-logo';
-import authConfig from '~/config/auth.config';
 import pathsConfig from '~/config/paths.config';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
@@ -31,19 +30,10 @@ type IdentitiesPageProps = {
 
 /**
  * @name IdentitiesPage
- * @description Displays linked accounts and available authentication methods.
+ * @description Invited users set a password for their account email.
  */
 async function IdentitiesPage(props: IdentitiesPageProps) {
-  const {
-    nextPath,
-    showPasswordOption,
-    showEmailOption,
-    showMagicLinkOption,
-    oAuthProviders,
-    enableIdentityLinking,
-    requiresConfirmation,
-    requireMethodSelection,
-  } = await fetchData(props);
+  const { nextPath } = await fetchData(props);
 
   return (
     <AuthLayoutShell
@@ -73,16 +63,7 @@ async function IdentitiesPage(props: IdentitiesPageProps) {
           </Heading>
         </div>
 
-        <IdentitiesStepWrapper
-          nextPath={nextPath}
-          showPasswordOption={showPasswordOption}
-          showEmailOption={showEmailOption}
-          showMagicLinkOption={showMagicLinkOption}
-          oAuthProviders={oAuthProviders}
-          enableIdentityLinking={enableIdentityLinking}
-          requiresConfirmation={requiresConfirmation}
-          requireMethodSelection={requireMethodSelection}
-        />
+        <IdentitiesStepWrapper nextPath={nextPath} />
       </div>
     </AuthLayoutShell>
   );
@@ -95,41 +76,11 @@ async function fetchData(props: IdentitiesPageProps) {
   const client = getSupabaseServerClient();
   const auth = await requireUser(client);
 
-  // If not authenticated, redirect to sign in
   if (!auth.data) {
     throw redirect(pathsConfig.auth.signIn);
   }
 
-  // Get the next path from URL params (where to redirect after setup)
   const nextPath = getSafeRedirectPath(searchParams.next, pathsConfig.app.home);
-  const requireMethodSelection =
-    searchParams.require_auth_method === 'true';
 
-  // Available auth methods to add
-  const showPasswordOption = authConfig.providers.password;
-  const showMagicLinkOption = authConfig.providers.magicLinkSignIn;
-
-  // Show email option if password, magic link, or OTP is enabled
-  const showEmailOption =
-    authConfig.providers.password ||
-    authConfig.providers.magicLinkSignIn ||
-    authConfig.providers.otp;
-
-  const oAuthProviders = authConfig.providers.oAuth;
-  const enableIdentityLinking = authConfig.enableIdentityLinking;
-
-  // Only require confirmation if password or oauth providers are enabled
-  const requiresConfirmation =
-    authConfig.providers.password || oAuthProviders.length > 0;
-
-  return {
-    nextPath,
-    showPasswordOption,
-    showEmailOption,
-    showMagicLinkOption,
-    oAuthProviders,
-    enableIdentityLinking,
-    requiresConfirmation,
-    requireMethodSelection,
-  };
+  return { nextPath };
 }
