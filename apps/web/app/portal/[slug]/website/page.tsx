@@ -33,7 +33,9 @@ export default async function PortalWebsitePage({
   const cmsUrl = website ? portalExternalHref(website.cmsAdminUrl) : null;
   const liveUrl = website ? portalExternalHref(website.domain) : null;
   const showPlanning =
-    website && website.portalShareScope !== 'off' && website.sitemap.length > 0;
+    website &&
+    website.portalShareScope !== 'off' &&
+    (website.sitemap.length > 0 || Boolean(website.brief));
 
   return (
     <div className="space-y-6">
@@ -54,7 +56,7 @@ export default async function PortalWebsitePage({
           <CardContent className="space-y-4">
             <dl className="grid gap-4 sm:grid-cols-2">
               <div>
-                <dt className="text-xs font-medium uppercase tracking-wide text-[var(--ozer-text-on-light-muted)]">
+                <dt className="text-xs font-medium tracking-wide text-[var(--ozer-text-on-light-muted)] uppercase">
                   Domain
                 </dt>
                 <dd className="mt-1 text-sm text-[var(--ozer-text-on-light)]">
@@ -62,7 +64,7 @@ export default async function PortalWebsitePage({
                 </dd>
               </div>
               <div>
-                <dt className="text-xs font-medium uppercase tracking-wide text-[var(--ozer-text-on-light-muted)]">
+                <dt className="text-xs font-medium tracking-wide text-[var(--ozer-text-on-light-muted)] uppercase">
                   Status
                 </dt>
                 <dd className="mt-1">
@@ -72,7 +74,7 @@ export default async function PortalWebsitePage({
                 </dd>
               </div>
               <div>
-                <dt className="text-xs font-medium uppercase tracking-wide text-[var(--ozer-text-on-light-muted)]">
+                <dt className="text-xs font-medium tracking-wide text-[var(--ozer-text-on-light-muted)] uppercase">
                   Stack
                 </dt>
                 <dd className="mt-1">
@@ -114,19 +116,24 @@ export default async function PortalWebsitePage({
       )}
 
       {showPlanning && website ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Planning review</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <PortalWebsitePlanningView
-              scope={website.portalShareScope}
-              sitemap={website.sitemap}
-              wireframes={website.wireframes}
-              style={website.style}
-            />
-          </CardContent>
-        </Card>
+        <section className="w-full space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold text-[var(--ozer-text-on-light)]">
+              Planning review
+            </h3>
+            <p className="mt-1 text-sm text-[var(--ozer-text-on-light-muted)]">
+              Brief, sitemap, and wireframes for your site.
+            </p>
+          </div>
+          <PortalWebsitePlanningView
+            scope={website.portalShareScope}
+            sitemap={website.sitemap}
+            wireframes={website.wireframes}
+            style={website.style}
+            brief={website.brief}
+            websiteName={website.name}
+          />
+        </section>
       ) : null}
 
       <Card className="border-dashed">

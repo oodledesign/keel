@@ -176,6 +176,24 @@ export class StripeWebhookHandlerService implements BillingWebhookHandlerService
         return result;
       }
 
+      case 'invoice.payment_succeeded':
+      case 'invoice.payment_failed':
+      case 'customer.subscription.trial_will_end': {
+        if (params.onEvent) {
+          return params.onEvent(event);
+        }
+
+        const logger = await getLogger();
+        logger.debug(
+          {
+            eventType: event.type,
+            name: this.namespace,
+          },
+          `Stripe event delegated to onEvent handler: ${event.type}`,
+        );
+        return;
+      }
+
       default: {
         // when none of the events were matched, attempt to call
         // the user-supplied handler

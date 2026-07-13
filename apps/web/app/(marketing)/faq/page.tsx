@@ -29,7 +29,7 @@ async function FAQPage() {
   const faqItems = [
     {
       question: `Is there a free plan?`,
-      answer: `Yes. Personal home and one family workspace are free with no card and no time limit. Business Lite is also free if you mainly need apps. Paid workspaces include a 14-day trial on your first paid plan.`,
+      answer: `Yes. Personal home and one family workspace are free with no card and no time limit. Business Lite is also free if you mainly need apps. Paid workspaces include a 14-day trial on your first paid plan — no credit card required to start.`,
     },
     {
       question: `Do I pay per seat?`,

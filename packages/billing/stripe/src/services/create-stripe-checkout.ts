@@ -107,7 +107,7 @@ export async function createStripeCheckout(
   });
 
   const paymentCollectionMethod =
-    enableTrialWithoutCreditCard && params.plan.trialDays
+    enableTrialWithoutCreditCard && trialDays
       ? {
           payment_method_collection: 'if_required' as const,
         }

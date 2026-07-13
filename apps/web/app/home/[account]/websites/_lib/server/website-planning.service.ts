@@ -307,13 +307,23 @@ class WebsitePlanningService {
   ) {
     const user = await this.ensureCanEdit(accountId);
 
-    const { data: maxRow } = await this.client
+    const { data: maxRow, error: maxError } = await this.adminDb
       .from('website_content_docs')
       .select('sort_order')
       .eq('website_id', websiteId)
+      .eq('account_id', accountId)
       .order('sort_order', { ascending: false })
       .limit(1)
       .maybeSingle();
+
+    if (maxError) {
+      if (isMissingRelationError(maxError)) {
+        throw new Error(
+          'Content docs schema is not applied yet. Run `pnpm exec supabase db push` from apps/web.',
+        );
+      }
+      throw new Error(maxError.message);
+    }
 
     const sortOrder = ((maxRow?.sort_order as number | undefined) ?? -1) + 1;
 
@@ -330,7 +340,15 @@ class WebsitePlanningService {
       .select('id, title, content_md, sort_order, created_at, updated_at')
       .single();
 
-    if (error) throw error;
+    if (error) {
+      if (isMissingRelationError(error)) {
+        throw new Error(
+          'Content docs schema is not applied yet. Run `pnpm exec supabase db push` from apps/web.',
+        );
+      }
+      throw new Error(error.message);
+    }
+
     return this.mapContentDoc(data as ContentDocRow);
   }
 
@@ -359,7 +377,7 @@ class WebsitePlanningService {
       .select('id, title, content_md, sort_order, created_at, updated_at')
       .single();
 
-    if (error) throw error;
+    if (error) throw new Error(error.message);
     return this.mapContentDoc(data as ContentDocRow);
   }
 
@@ -377,7 +395,7 @@ class WebsitePlanningService {
       .eq('website_id', websiteId)
       .eq('account_id', accountId);
 
-    if (error) throw error;
+    if (error) throw new Error(error.message);
     return { ok: true as const };
   }
 }

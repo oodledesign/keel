@@ -14,6 +14,8 @@ import {
   type OzerPersonalAddonKey,
   type OzerPlanDefinition,
 } from './ozer-plan-catalog';
+import { accessLevelFromBillingStatus } from './account-access-matrix';
+import { loadAccountBilling } from './account-billing-lifecycle';
 
 export type AccountPlanLimitsRow = {
   account_id: string;
@@ -125,6 +127,7 @@ export async function canAccessPaidWorkspace(
     billingExempt,
     entitlement,
     businessLiteEntitlement,
+    billing,
     subscription,
   ] = await Promise.all([
     isSuperAdmin(client),
@@ -145,6 +148,7 @@ export async function canAccessPaidWorkspace(
           .or(`expires_at.is.null,expires_at.gt.${now}`)
           .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
+    loadAccountBilling(client, accountId),
     client
       .from('subscriptions')
       .select('status')
@@ -154,6 +158,17 @@ export async function canAccessPaidWorkspace(
 
   if (superAdmin || billingExempt) {
     return true;
+  }
+
+  // Lifecycle row wins when present (grace = full, restricted = enter, suspended = block).
+  const lifecycleLevel = accessLevelFromBillingStatus(
+    billing?.subscription_status,
+  );
+  if (lifecycleLevel === 'full_access' || lifecycleLevel === 'restricted_access') {
+    return true;
+  }
+  if (lifecycleLevel === 'no_access') {
+    return false;
   }
 
   if (entitlement.data) {

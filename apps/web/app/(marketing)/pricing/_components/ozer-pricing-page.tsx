@@ -71,7 +71,7 @@ export function OzerPricingPage() {
           </Button>
         </div>
         <p className={cn('mt-4 text-sm', marketingMutedText)}>
-          Free personal forever · 14-day trial when you add Solo or Team · Annual plans save 16.7%
+          Free personal forever · 14-day trial, no card needed · Annual plans save 16.7%
         </p>
       </section>
 
@@ -84,7 +84,7 @@ export function OzerPricingPage() {
 
       <PricingSection
         title="Always free"
-        subtitle="No credit card required — upgrade only when you add a paid workspace"
+        subtitle="No credit card required to start a free trial — upgrade only when you’re ready"
       >
         <div className="mx-auto max-w-md">
           <FreePlanCard />

@@ -52,7 +52,7 @@ export const loadTaskAssignmentOptionsForWorkspace = cache(
       accountId,
     );
 
-    const [projectsResult, clientsResult] = await Promise.all([
+    const [projectsResult, clientsResult, accountResult] = await Promise.all([
       readDb
         .from('projects')
         .select('id, name, account_id, accounts(id, name), businesses(colour)')
@@ -62,7 +62,12 @@ export const loadTaskAssignmentOptionsForWorkspace = cache(
         .from('clients')
         .select('id, display_name, first_name, last_name, account_id')
         .eq('account_id', accountId),
+      readDb.from('accounts').select('name').eq('id', accountId).maybeSingle(),
     ]);
+
+    const accountName =
+      (accountResult.data as { name?: string | null } | null)?.name?.trim() ||
+      null;
 
     const projects: TaskAssignmentOption[] = (projectsResult.data ?? []).map(
       (row: ProjectAssignmentRow) => ({
@@ -71,7 +76,7 @@ export const loadTaskAssignmentOptionsForWorkspace = cache(
         type: 'project' as const,
         color: row.businesses?.colour ?? null,
         accountId: row.account_id ?? row.accounts?.id ?? null,
-        accountName: row.accounts?.name?.trim() || null,
+        accountName: row.accounts?.name?.trim() || accountName,
       }),
     );
 
@@ -82,7 +87,7 @@ export const loadTaskAssignmentOptionsForWorkspace = cache(
         type: 'client' as const,
         color: null,
         accountId,
-        accountName: null,
+        accountName,
       }),
     );
 

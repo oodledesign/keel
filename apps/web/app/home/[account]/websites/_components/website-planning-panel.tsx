@@ -240,14 +240,14 @@ export function WebsitePlanningPanel({
           />
         ) : null}
 
-        {tab === 'content' ? (
+        <div className={cn(tab === 'content' ? 'block' : 'hidden')}>
           <WebsiteContentDocsPanel
             accountId={accountId}
             websiteId={planning.websiteId}
             initialDocs={planning.contentDocs}
             canEdit={canEdit}
           />
-        ) : null}
+        </div>
       </div>
     </section>
   );

@@ -15,6 +15,7 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamWorkspaceTopBarClient } from '~/components/workspace-shell/team-workspace-top-bar-client';
 
+import { BillingAccessBannerHost } from './_components/billing-access-banner-host';
 import { TeamAccountLayoutSidebar } from './_components/team-account-layout-sidebar';
 import { TeamWorkspaceMobileChrome } from './_components/team-workspace-mobile-chrome';
 import { flattenTeamNavLinks } from './_lib/flatten-team-nav-links';
@@ -142,6 +143,11 @@ async function SidebarLayout({
         homePath={homePath}
       >
         <TeamWorkspaceTopBarClient accountSlug={account} />
+        <BillingAccessBannerHost
+          accountId={accountId}
+          accountSlug={account}
+          canManageBilling={access.canManageBilling}
+        />
         {children}
       </TeamWorkspaceSidebarShell>
     </TeamAccountWorkspaceContextProvider>
@@ -328,6 +334,11 @@ async function HeaderLayout({
             spaceType={spaceTypeFromProfile(workspaceProfile)}
             showNewMenu={access.canUseQuickCreate}
           >
+            <BillingAccessBannerHost
+              accountId={accountId}
+              accountSlug={account}
+              canManageBilling={access.canManageBilling}
+            />
             {children}
           </TeamWorkspaceMobileChrome>
         </Page>

@@ -46,12 +46,17 @@ export function WebsiteContentDocsPanel({
     };
   }, []);
 
+  // Only re-sync when the server bundle identity changes — not when the user
+  // selects/creates a doc (activeDocId used to be a dep and wiped local state).
   useEffect(() => {
     setDocs(initialDocs);
-    if (!initialDocs.find((doc) => doc.id === activeDocId)) {
-      setActiveDocId(initialDocs[0]?.id ?? null);
-    }
-  }, [activeDocId, initialDocs]);
+    setActiveDocId((current) => {
+      if (current && initialDocs.some((doc) => doc.id === current)) {
+        return current;
+      }
+      return initialDocs[0]?.id ?? null;
+    });
+  }, [initialDocs]);
 
   const activeDoc = docs.find((doc) => doc.id === activeDocId) ?? null;
 

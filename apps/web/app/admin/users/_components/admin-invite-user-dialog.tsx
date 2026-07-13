@@ -76,6 +76,7 @@ export function AdminInviteUserDialog(props: React.PropsWithChildren) {
     resolver: zodResolver(CreateAdminUserInviteSchema),
     defaultValues: {
       email: '',
+      inviteeName: '',
       personalOnly: false,
       billingExempt: true,
       personalAddons: [],
@@ -204,10 +205,31 @@ export function AdminInviteUserDialog(props: React.PropsWithChildren) {
                     <Input
                       {...field}
                       type="email"
-                      placeholder="user@example.com"
+                      placeholder="amie@thistleleaf.com"
                       autoComplete="off"
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="inviteeName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name (optional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      placeholder="Aimee"
+                      autoComplete="off"
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Used in the invite email greeting — e.g. “Hi Aimee,”.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

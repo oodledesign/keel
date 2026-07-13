@@ -12,6 +12,9 @@ import {
 
 import pathsConfig from '~/config/paths.config';
 
+import type { AccountBillingStatus } from '~/lib/billing/account-billing-types';
+import { isBillingRecoveryStatus } from '~/lib/billing/billing-recovery';
+
 type WorkspacePlanStatusCardProps = {
   isBusinessLite: boolean;
   hasPaidSubscription: boolean;
@@ -21,7 +24,25 @@ type WorkspacePlanStatusCardProps = {
   };
   canManageBilling: boolean;
   accountSlug: string;
+  billingStatus?: AccountBillingStatus | null;
 };
+
+function statusBadge(status: AccountBillingStatus | null | undefined) {
+  if (!status) return null;
+  if (status === 'active' || status === 'trialing') {
+    return <Badge variant="outline">Active</Badge>;
+  }
+  if (status === 'past_due_grace') {
+    return <Badge variant="outline">Payment retrying</Badge>;
+  }
+  if (isBillingRecoveryStatus(status)) {
+    return <Badge variant="destructive">Action needed</Badge>;
+  }
+  if (status === 'canceled') {
+    return <Badge variant="outline">Cancelled</Badge>;
+  }
+  return <Badge variant="outline">{status}</Badge>;
+}
 
 export function WorkspacePlanStatusCard({
   isBusinessLite,
@@ -29,6 +50,7 @@ export function WorkspacePlanStatusCard({
   subscriptionProductPlan,
   canManageBilling,
   accountSlug,
+  billingStatus,
 }: WorkspacePlanStatusCardProps) {
   const billingPath = pathsConfig.app.accountBilling.replace(
     '[account]',
@@ -73,7 +95,9 @@ export function WorkspacePlanStatusCard({
                 {subscriptionProductPlan.plan.name}
               </CardDescription>
             </div>
-            <Badge variant="outline">Active</Badge>
+            {statusBadge(billingStatus) ?? (
+              <Badge variant="outline">Active</Badge>
+            )}
           </div>
         </CardHeader>
       </Card>

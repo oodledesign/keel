@@ -1,8 +1,8 @@
 import 'server-only';
 
-import { randomBytes } from 'crypto';
-
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { randomBytes } from 'crypto';
 
 import { requireUser } from '@kit/supabase/require-user';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
@@ -10,12 +10,6 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { callAI } from '~/lib/ai/router';
 import { canUseAddon } from '~/lib/billing/entitlements';
 import {
-  createPlanningId,
-  emptyWebsiteBrief,
-  emptyWebsiteSeoPageFields,
-  emptyWebsiteStyleSystem,
-  emptySiteStudioBundle,
-  slugifyPageTitle,
   type SiteStudioBundle,
   type WebsiteBrief,
   type WebsitePlanningStatus,
@@ -28,6 +22,12 @@ import {
   type WebsiteStyleSystem,
   type WebsiteWireframePage,
   type WebsiteWireframeSection,
+  createPlanningId,
+  emptySiteStudioBundle,
+  emptyWebsiteBrief,
+  emptyWebsiteSeoPageFields,
+  emptyWebsiteStyleSystem,
+  slugifyPageTitle,
 } from '~/lib/websites/planning-types';
 import { findSectionLibraryEntry } from '~/lib/websites/section-library';
 import { ensureWireframeCopy } from '~/lib/websites/wireframe-copy';
@@ -218,7 +218,10 @@ class SiteStudioService {
   /* Bundle                                                            */
   /* ---------------------------------------------------------------- */
 
-  async getBundle(accountId: string, websiteId: string): Promise<SiteStudioBundle> {
+  async getBundle(
+    accountId: string,
+    websiteId: string,
+  ): Promise<SiteStudioBundle> {
     await this.ensureCanView(accountId);
     const enabled = await this.hasSiteStudioAccess(accountId);
 
@@ -293,13 +296,15 @@ class SiteStudioService {
       };
     }
 
-    bundle.shares = ((sharesRes.data ?? []) as Array<{
-      id: string;
-      token: string;
-      scope: string;
-      expires_at: string | null;
-      created_at: string;
-    }>).map((row) => ({
+    bundle.shares = (
+      (sharesRes.data ?? []) as Array<{
+        id: string;
+        token: string;
+        scope: string;
+        expires_at: string | null;
+        created_at: string;
+      }>
+    ).map((row) => ({
       id: row.id,
       token: row.token,
       scope: row.scope as WebsiteShareScope,
@@ -307,8 +312,9 @@ class SiteStudioService {
       createdAt: row.created_at,
     }));
 
-    const portalScope = (websiteRes.data as { portal_share_scope?: string } | null)
-      ?.portal_share_scope;
+    const portalScope = (
+      websiteRes.data as { portal_share_scope?: string } | null
+    )?.portal_share_scope;
     if (
       portalScope === 'sitemap' ||
       portalScope === 'wireframes' ||
@@ -943,7 +949,9 @@ class SiteStudioService {
       ...emptyWebsiteSeoPageFields(),
       ...suggested,
       schemaTypes: Array.isArray(suggested.schemaTypes)
-        ? suggested.schemaTypes.map((type) => String(type).slice(0, 100)).slice(0, 10)
+        ? suggested.schemaTypes
+            .map((type) => String(type).slice(0, 100))
+            .slice(0, 10)
         : [],
       answerBlocks: Array.isArray(suggested.answerBlocks)
         ? suggested.answerBlocks
@@ -1073,6 +1081,7 @@ export type PublicWebsiteShare = {
   sitemap: WebsiteSitemapPage[];
   wireframes: WebsiteWireframePage[];
   style: WebsiteStyleSystem | null;
+  brief: WebsiteBrief | null;
 };
 
 export async function getWebsiteShareByToken(
@@ -1104,25 +1113,44 @@ export async function getWebsiteShareByToken(
     return null;
   }
 
-  const { data: website } = await admin
-    .from('websites')
-    .select('id, name, sitemap, wireframes')
-    .eq('id', shareRow.website_id)
-    .maybeSingle();
+  const scope = shareRow.scope as WebsiteShareScope;
+  const loadStyle = scope === 'design' || scope === 'full';
 
+  // Brief is always loaded for client review (alongside sitemap/wireframes).
+  const [websiteRes, briefRes, styleRes] = await Promise.all([
+    admin
+      .from('websites')
+      .select('id, name, sitemap, wireframes')
+      .eq('id', shareRow.website_id)
+      .maybeSingle(),
+    admin
+      .from('website_briefs')
+      .select('brief')
+      .eq('website_id', shareRow.website_id)
+      .maybeSingle(),
+    loadStyle
+      ? admin
+          .from('website_style_systems')
+          .select('style')
+          .eq('website_id', shareRow.website_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+
+  const website = websiteRes.data;
   if (!website) return null;
 
+  let brief: WebsiteBrief | null = null;
+  if (briefRes.data?.brief && typeof briefRes.data.brief === 'object') {
+    brief = {
+      ...emptyWebsiteBrief(),
+      ...(briefRes.data.brief as Partial<WebsiteBrief>),
+    };
+  }
+
   let style: WebsiteStyleSystem | null = null;
-  const scope = shareRow.scope as WebsiteShareScope;
-
-  if (scope === 'design' || scope === 'full') {
-    const { data: styleRow } = await admin
-      .from('website_style_systems')
-      .select('style')
-      .eq('website_id', shareRow.website_id)
-      .maybeSingle();
-
-    const styleData = styleRow as { style?: unknown } | null;
+  if (loadStyle) {
+    const styleData = styleRes.data as { style?: unknown } | null;
     if (styleData?.style && typeof styleData.style === 'object') {
       const empty = emptyWebsiteStyleSystem();
       const stored = styleData.style as Partial<WebsiteStyleSystem>;
@@ -1153,6 +1181,7 @@ export async function getWebsiteShareByToken(
       ? (websiteRow.wireframes as WebsiteWireframePage[])
       : [],
     style,
+    brief,
   };
 }
 

@@ -146,9 +146,11 @@ class TeamBillingService {
   async createBillingPortalSession({
     accountId,
     slug,
+    intent = 'manage',
   }: {
     accountId: string;
     slug: string;
+    intent?: 'manage' | 'recover';
   }) {
     const client = getSupabaseServerClient();
     const logger = await getLogger();
@@ -156,6 +158,7 @@ class TeamBillingService {
     logger.info(
       {
         accountId,
+        intent,
         name: this.namespace,
       },
       `Billing portal session requested. Processing...`,
@@ -204,6 +207,7 @@ class TeamBillingService {
         userId,
         customerId,
         accountId,
+        intent,
         name: this.namespace,
       },
       `Creating billing portal session...`,
@@ -213,11 +217,14 @@ class TeamBillingService {
     const service = await getBillingGatewayProvider(client);
 
     try {
-      const returnUrl = getBillingPortalReturnUrl(slug);
+      const returnUrl = getBillingPortalReturnUrl(slug, intent);
 
       const { url } = await service.createBillingPortalSession({
         customerId,
         returnUrl,
+        ...(intent === 'recover'
+          ? { flowData: { type: 'payment_method_update' as const } }
+          : {}),
       });
 
       // redirect the user to the billing portal
@@ -228,6 +235,7 @@ class TeamBillingService {
           userId,
           customerId,
           accountId,
+          intent,
           name: this.namespace,
           error,
         },
@@ -298,8 +306,15 @@ function getCheckoutSessionReturnUrl(accountSlug: string) {
   return getAccountUrl(pathsConfig.app.accountBillingReturn, accountSlug);
 }
 
-function getBillingPortalReturnUrl(accountSlug: string) {
-  return getAccountUrl(pathsConfig.app.accountBilling, accountSlug);
+function getBillingPortalReturnUrl(
+  accountSlug: string,
+  intent: 'manage' | 'recover' = 'manage',
+) {
+  const url = getAccountUrl(pathsConfig.app.accountBilling, accountSlug);
+  if (intent === 'recover') {
+    return `${url}?payment_updated=1`;
+  }
+  return url;
 }
 
 function getAccountUrl(path: string, slug: string) {

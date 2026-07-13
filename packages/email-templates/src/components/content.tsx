@@ -1,19 +1,16 @@
-import { Container } from '@react-email/components';
+import { Section } from '@react-email/components';
 
-export function EmailContent({
-  children,
-  className,
-}: React.PropsWithChildren<{
-  className?: string;
-  displayLogo?: boolean;
-}>) {
+export function EmailContent(props: React.PropsWithChildren) {
   return (
-    <Container
-      className={
-        'mx-auto rounded-xl bg-white px-[48px] py-[36px] ' + className || ''
-      }
+    <Section
+      style={{
+        padding: '8px 32px 28px',
+        color: '#5A4450',
+        fontSize: '15px',
+        lineHeight: '1.65',
+      }}
     >
-      {children}
-    </Container>
+      {props.children}
+    </Section>
   );
 }

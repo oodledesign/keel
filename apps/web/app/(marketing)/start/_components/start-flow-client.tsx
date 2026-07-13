@@ -385,8 +385,8 @@ export function StartFlowClient() {
               Pick a business workspace
             </h1>
             <p className={cn('mx-auto max-w-lg text-base leading-relaxed', marketingBodyText)}>
-              Personal stays free. Paid plans include a 14-day trial. Lite is free
-              forever if you only need apps like Signatures.
+              Personal stays free. Paid plans include a 14-day trial with no card
+              required. Lite is free forever if you only need apps like Signatures.
             </p>
           </div>
 

@@ -18,27 +18,31 @@ export default async function PortalWebsiteSharePage({
   if (!share) notFound();
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
-      <header className="mb-8 space-y-2 border-b border-[color:var(--workspace-shell-border)] pb-6">
-        <p className="text-xs uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
-          Website planning
-        </p>
-        <h1 className="text-2xl font-semibold text-[var(--workspace-shell-text)]">
-          {share.websiteName}
-        </h1>
-        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-          Review the sitemap and wireframes below. Approve each page or send
-          change requests — no Ozer login required.
-        </p>
-      </header>
+    <div className="min-h-svh w-full bg-[var(--ozer-cream-50)]">
+      <div className="w-full px-4 py-6 sm:px-6 lg:px-8 xl:px-10">
+        <header className="mb-6 space-y-2 border-b border-[color:var(--workspace-shell-border)] pb-6">
+          <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+            Website planning
+          </p>
+          <h1 className="font-[family-name:var(--ozer-font-display)] text-3xl font-bold tracking-tight text-[var(--ozer-plum-900)] sm:text-4xl">
+            {share.websiteName}
+          </h1>
+          <p className="max-w-3xl text-sm leading-relaxed text-[var(--workspace-shell-text-muted)] sm:text-base">
+            Review the brief, sitemap, and wireframes. Approve each page or send
+            change requests — no Ozer login required.
+          </p>
+        </header>
 
-      <PortalWebsitePlanningView
-        scope={share.scope}
-        sitemap={share.sitemap}
-        wireframes={share.wireframes}
-        style={share.style}
-        shareToken={token}
-      />
+        <PortalWebsitePlanningView
+          scope={share.scope}
+          sitemap={share.sitemap}
+          wireframes={share.wireframes}
+          style={share.style}
+          brief={share.brief}
+          shareToken={token}
+          websiteName={share.websiteName}
+        />
+      </div>
     </div>
   );
 }

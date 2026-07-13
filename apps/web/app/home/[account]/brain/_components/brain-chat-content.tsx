@@ -3,11 +3,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Loader2, MessageSquarePlus, Sparkles } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
+import { cn } from '@kit/ui/utils';
 
 import {
   createBrainThread,
@@ -47,7 +50,8 @@ type BrainScope = {
 function parseRefsFromStream(text: string) {
   const marker = '[[BRAIN_REFS:';
   const start = text.indexOf(marker);
-  if (start < 0) return { content: text, refs: [] as MessageRow['context_refs'] };
+  if (start < 0)
+    return { content: text, refs: [] as MessageRow['context_refs'] };
   const end = text.indexOf(']]', start);
   if (end < 0) return { content: text.slice(0, start).trim(), refs: [] };
   const json = text.slice(start + marker.length, end);
@@ -59,6 +63,103 @@ function parseRefsFromStream(text: string) {
   } catch {
     return { content: text.slice(0, start).trim(), refs: [] };
   }
+}
+
+function BrainReplyMarkdown({ content }: { content: string }) {
+  if (!content.trim()) return null;
+
+  return (
+    <div
+      className={cn(
+        'brain-reply-markdown space-y-3 text-sm leading-relaxed',
+        '[&_a]:font-medium [&_a]:text-[var(--ozer-accent)] [&_a]:underline-offset-2 hover:[&_a]:underline',
+        '[&_code]:rounded [&_code]:bg-[var(--workspace-control-surface)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-[0.85em]',
+        '[&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-[color:var(--workspace-shell-border)] [&_pre]:bg-[var(--workspace-control-surface)] [&_pre]:p-3',
+        '[&_pre_code]:bg-transparent [&_pre_code]:p-0',
+        '[&_blockquote]:border-l-2 [&_blockquote]:border-[color:var(--workspace-shell-border)] [&_blockquote]:pl-3 [&_blockquote]:text-[var(--workspace-shell-text-muted)]',
+        '[&_hr]:border-[color:var(--workspace-shell-border)]',
+        '[&_strong]:font-semibold [&_strong]:text-[var(--workspace-shell-text)]',
+      )}
+    >
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          h1: ({ children }) => (
+            <h1 className="text-base font-semibold text-[var(--workspace-shell-text)]">
+              {children}
+            </h1>
+          ),
+          h2: ({ children }) => (
+            <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+              {children}
+            </h2>
+          ),
+          h3: ({ children }) => (
+            <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+              {children}
+            </h3>
+          ),
+          p: ({ children }) => (
+            <p className="text-[var(--workspace-shell-text)]">{children}</p>
+          ),
+          ul: ({ children }) => (
+            <ul className="list-disc space-y-1 pl-5 text-[var(--workspace-shell-text)]">
+              {children}
+            </ul>
+          ),
+          ol: ({ children }) => (
+            <ol className="list-decimal space-y-1 pl-5 text-[var(--workspace-shell-text)]">
+              {children}
+            </ol>
+          ),
+          li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+          a: ({ href, children }) => {
+            const safeHref =
+              href &&
+              (href.startsWith('http://') ||
+                href.startsWith('https://') ||
+                href.startsWith('/') ||
+                href.startsWith('mailto:'))
+                ? href
+                : undefined;
+            if (!safeHref) {
+              return <span>{children}</span>;
+            }
+            const external = safeHref.startsWith('http');
+            return (
+              <a
+                href={safeHref}
+                {...(external
+                  ? { target: '_blank', rel: 'noopener noreferrer' }
+                  : {})}
+              >
+                {children}
+              </a>
+            );
+          },
+          table: ({ children }) => (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left text-xs">
+                {children}
+              </table>
+            </div>
+          ),
+          th: ({ children }) => (
+            <th className="border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] px-2 py-1 font-semibold">
+              {children}
+            </th>
+          ),
+          td: ({ children }) => (
+            <td className="border border-[color:var(--workspace-shell-border)] px-2 py-1">
+              {children}
+            </td>
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
 }
 
 export function BrainChatContent({
@@ -106,7 +207,10 @@ export function BrainChatContent({
   const loadThreads = useCallback(async () => {
     setLoadingThreads(true);
     try {
-      const rows = (await listBrainThreads({ accountId, accountSlug })) as ThreadRow[];
+      const rows = (await listBrainThreads({
+        accountId,
+        accountSlug,
+      })) as ThreadRow[];
       setThreads(rows);
       if (!threadId && rows[0]) setThreadId(rows[0].id);
     } catch {
@@ -250,9 +354,9 @@ export function BrainChatContent({
     <div className="flex min-h-[70vh] flex-col gap-4 lg:flex-row">
       {!voyageConfigured && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 lg:col-span-2">
-          Set <code className="text-amber-50">VOYAGE_API_KEY</code> to index your
-          workspace and enable semantic search. Anthropic powers replies; Voyage
-          powers embeddings.
+          Set <code className="text-amber-50">VOYAGE_API_KEY</code> to index
+          your workspace and enable semantic search. Anthropic powers replies;
+          Voyage powers embeddings.
         </div>
       )}
 
@@ -262,7 +366,9 @@ export function BrainChatContent({
         }`}
       >
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Chats</h2>
+          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+            Chats
+          </h2>
           <Button
             type="button"
             size="sm"
@@ -287,7 +393,9 @@ export function BrainChatContent({
               Loading…
             </li>
           ) : filteredThreads.length === 0 ? (
-            <li className="px-2 py-3 text-sm text-[var(--workspace-shell-text-muted)]">No chats yet</li>
+            <li className="px-2 py-3 text-sm text-[var(--workspace-shell-text-muted)]">
+              No chats yet
+            </li>
           ) : (
             filteredThreads.map((thread) => (
               <li key={thread.id}>
@@ -339,7 +447,9 @@ export function BrainChatContent({
         </div>
         <div className="flex-1 space-y-4 overflow-y-auto p-4">
           {loadingMessages ? (
-            <p className="text-sm text-[var(--workspace-shell-text-muted)]">Loading messages…</p>
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+              Loading messages…
+            </p>
           ) : messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 py-16 text-center">
               <Sparkles className="h-8 w-8 text-[var(--ozer-accent)]" />
@@ -358,7 +468,11 @@ export function BrainChatContent({
                     : 'mr-8 bg-[var(--workspace-shell-panel)]/70 text-[var(--workspace-shell-text)]'
                 }`}
               >
-                <p className="whitespace-pre-wrap">{message.content}</p>
+                {message.role === 'assistant' ? (
+                  <BrainReplyMarkdown content={message.content} />
+                ) : (
+                  <p className="whitespace-pre-wrap">{message.content}</p>
+                )}
                 {message.context_refs && message.context_refs.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {message.context_refs.map((ref) => (
@@ -409,7 +523,11 @@ export function BrainChatContent({
           />
           <div className="mt-2 flex items-center justify-between gap-2">
             <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">
-              ~{Math.ceil(draft.trim().split(/\s+/).filter(Boolean).length * 1.3)} tokens
+              ~
+              {Math.ceil(
+                draft.trim().split(/\s+/).filter(Boolean).length * 1.3,
+              )}{' '}
+              tokens
             </span>
             <Button
               type="button"

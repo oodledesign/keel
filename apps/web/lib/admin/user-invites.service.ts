@@ -332,6 +332,7 @@ export async function sendAdminUserInviteEmail(params: {
   inviteToken: string;
   accessSummary: string;
   inviterName: string;
+  inviteeName?: string | null;
 }): Promise<void> {
   const acceptUrl = getAdminUserInviteAcceptUrl(params.inviteToken);
   const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
@@ -341,26 +342,48 @@ export async function sendAdminUserInviteEmail(params: {
     throw new Error('EMAIL_SENDER is not configured');
   }
 
-  const html = `
-    <div style="font-family: system-ui, sans-serif; line-height: 1.5; color: #111;">
-      <p>Hi,</p>
-      <p>${params.inviterName} invited you to ${productName}.</p>
-      <p><strong>Your access:</strong> ${params.accessSummary}</p>
-      <p>
-        <a href="${acceptUrl}" style="display:inline-block;padding:12px 20px;background:#FF5C34;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">
-          Accept invitation
-        </a>
-      </p>
-      <p style="color:#666;font-size:14px;">This link expires in 30 days. If you did not expect this email, you can ignore it.</p>
-    </div>
-  `.trim();
+  const {
+    escapeEmailHtml,
+    renderOzerTransactionalEmail,
+  } = await import('~/lib/email/ozer-transactional-shell');
+
+  const firstName = params.inviteeName?.trim().split(/\s+/)[0] ?? '';
+  const greeting = firstName
+    ? `Hi ${escapeEmailHtml(firstName)},`
+    : 'Hi there,';
+  const inviter = escapeEmailHtml(params.inviterName);
+  const access = escapeEmailHtml(params.accessSummary);
+
+  const bodyHtml = `
+<p style="margin:0 0 16px;">${greeting}</p>
+<p style="margin:0 0 16px;"><strong style="color:#2A1720;">${inviter}</strong> has invited you to <strong style="color:#2A1720;">${escapeEmailHtml(productName)}</strong> — the workspace for running community, business, and property work in one place.</p>
+<p style="margin:0 0 16px;">Clients, projects, scheduling, invoicing, docs, and add-ons like Signatures live together so your team can move faster without juggling tools.</p>
+<p style="margin:0 0 8px;padding:14px 16px;background:#FBF6EC;border:1px solid #E7DECF;border-radius:12px;color:#2A1720;"><strong>Your access</strong><br /><span style="color:#5A4450;">${access}</span></p>
+<p style="margin:16px 0 0;">Accept the invitation to set your password and jump straight into your workspace.</p>
+`.trim();
+
+  const html = renderOzerTransactionalEmail({
+    title: `You're invited to ${productName}`,
+    preview: `${params.inviterName} invited you to ${productName}`,
+    heading: "You're invited",
+    bodyHtml,
+    cta: {
+      label: 'Accept invitation',
+      href: acceptUrl,
+    },
+    footerNote:
+      'This link expires in 30 days. If you did not expect this email, you can ignore it.',
+    productName,
+  });
 
   await sendPlatformEmail({
     type: 'invitation',
     mail: {
       to: params.email,
       from: sender,
-      subject: `You're invited to ${productName}`,
+      subject: firstName
+        ? `${firstName}, you're invited to ${productName}`
+        : `You're invited to ${productName}`,
       html,
     },
     metadata: {
@@ -450,6 +473,7 @@ export async function createAdminUserInvite(
       inviteToken: invite.invite_token,
       accessSummary: summarizeAccessConfig(params.accessConfig),
       inviterName: params.inviterName,
+      inviteeName: params.accessConfig.inviteeName,
     });
   } catch (error) {
     await admin.from('admin_user_invites').delete().eq('id', invite.id);
@@ -515,6 +539,7 @@ export async function resendAdminUserInvite(
     inviteToken: invite.invite_token,
     accessSummary: summarizeAccessConfig(config),
     inviterName,
+    inviteeName: config.inviteeName,
   });
 }
 

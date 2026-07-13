@@ -85,6 +85,8 @@ export const adminGrantEntitlementAction = enhanceAction(
     });
 
     revalidatePath(`/admin/accounts/${input.accountId}`);
+    revalidatePath(`/admin/workspaces/${input.accountId}`);
+    revalidatePath('/admin/workspaces');
     revalidatePath('/admin/audit');
     return { success: true };
   },
@@ -117,6 +119,8 @@ export const adminRevokeEntitlementAction = enhanceAction(
     });
 
     revalidatePath(`/admin/accounts/${input.accountId}`);
+    revalidatePath(`/admin/workspaces/${input.accountId}`);
+    revalidatePath('/admin/workspaces');
     revalidatePath('/admin/audit');
     return { success: true };
   },
@@ -160,6 +164,8 @@ export const adminSetBillingExemptAction = enhanceAction(
     });
 
     revalidatePath(`/admin/accounts/${input.accountId}`);
+    revalidatePath(`/admin/workspaces/${input.accountId}`);
+    revalidatePath('/admin/workspaces');
     revalidatePath('/admin/audit');
     return { success: true };
   },
@@ -219,6 +225,8 @@ export const adminApplyPlanLimitsAction = enhanceAction(
     });
 
     revalidatePath(`/admin/accounts/${input.accountId}`);
+    revalidatePath(`/admin/workspaces/${input.accountId}`);
+    revalidatePath('/admin/workspaces');
     revalidatePath('/admin/audit');
     return { success: true };
   },

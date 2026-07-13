@@ -1,6 +1,6 @@
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
-import { runBillingDunningReminders } from '~/lib/billing/dunning-notifications';
+import { runBillingDunningLifecycleCron } from '~/lib/billing/billing-lifecycle-cron';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 
 export const runtime = 'nodejs';
@@ -12,14 +12,24 @@ function authorizeCron(request: Request): boolean {
   return request.headers.get('authorization') === `Bearer ${secret}`;
 }
 
-/** Daily: follow-up emails for past_due / unpaid workspace subscriptions. */
+/**
+ * Daily (09:00): past_due grace reminder → restricted → suspended → canceled.
+ * Status transitions only — no account/data deletion.
+ */
 export async function GET(request: Request) {
   if (!authorizeCron(request)) {
     return jsonErr('UNAUTHORIZED', 'Invalid cron secret', 401);
   }
 
-  const admin = getSupabaseServerAdminClient();
-  const result = await runBillingDunningReminders(admin);
-
-  return jsonOk(result);
+  try {
+    const admin = getSupabaseServerAdminClient();
+    const result = await runBillingDunningLifecycleCron(admin);
+    return jsonOk(result);
+  } catch (err) {
+    return jsonErr(
+      'INTERNAL_ERROR',
+      err instanceof Error ? err.message : 'Dunning lifecycle cron failed',
+      500,
+    );
+  }
 }

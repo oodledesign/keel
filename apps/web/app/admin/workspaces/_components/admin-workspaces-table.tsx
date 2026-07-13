@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
-import { ColumnDef } from '@tanstack/react-table';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { ColumnDef } from '@tanstack/react-table';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -90,7 +90,7 @@ const columns: ColumnDef<AdminWorkspaceRow>[] = [
       <div>
         <Link
           className="font-medium hover:underline"
-          href={`/admin/accounts/${row.original.id}`}
+          href={`/admin/workspaces/${row.original.id}`}
         >
           {row.original.name}
         </Link>

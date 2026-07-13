@@ -11,8 +11,16 @@ export async function createStripeBillingPortalSession(
   stripe: Stripe,
   params: z.infer<typeof CreateBillingPortalSessionSchema>,
 ) {
-  return stripe.billingPortal.sessions.create({
+  const sessionParams: Stripe.BillingPortal.SessionCreateParams = {
     customer: params.customerId,
     return_url: params.returnUrl,
-  });
+  };
+
+  if (params.flowData?.type === 'payment_method_update') {
+    sessionParams.flow_data = {
+      type: 'payment_method_update',
+    };
+  }
+
+  return stripe.billingPortal.sessions.create(sessionParams);
 }

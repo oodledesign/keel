@@ -1,0 +1,37 @@
+{
+  "category": "logo-reveal",
+  "duration_s": 10,
+  "fps": 30,
+  "canvas": { "w": 1920, "h": 1080, "aspect": "16:9" },
+  "style": "Elegant brand sting for homepage hero — plum canvas, coral mark assemble, cream wordmark, soft glow. Confident, quiet luxury, no clutter.",
+  "palette": ["#351E28", "#2A1720", "#FF5C34", "#FBF6EC", "#B7A4AC"],
+  "font": "Inter",
+  "beats": [0.2, 2.4, 4.2, 6.5, 8.5],
+  "export": "mp4",
+  "asset_needs": [
+    {
+      "role": "logo",
+      "kind": "svg",
+      "source": "assets/ozer-icon.svg",
+      "treatment": "none"
+    },
+    {
+      "role": "wordmark",
+      "kind": "svg",
+      "source": "assets/ozer-wordmark.svg",
+      "treatment": "none"
+    }
+  ],
+  "block": "logo-outro",
+  "customize": {
+    "palette": "ozer",
+    "tagline": "The operating system for creative agencies",
+    "url": "ozer.so"
+  },
+  "content": {
+    "logo": "assets/ozer-icon.svg",
+    "tagline": "The operating system for creative agencies",
+    "url": "ozer.so"
+  },
+  "brief": "Viewer lands on deep plum. Coral petal mark assembles with a soft bloom, then the Ozer wordmark resolves. A single cream tagline fades up and the ozer.so pill settles — hold for homepage loop friendliness."
+}

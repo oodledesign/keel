@@ -17,7 +17,7 @@ export const MARKETING_EMAIL_URLS = {
   marketing: marketingOrigin,
   support: `mailto:${supportEmail}`,
   info: `mailto:${supportEmail}`,
-  logo: `${appOrigin}/brand/ozer-wordmark-on-dark.svg`,
+  logo: `${appOrigin}/brand/ozer-wordmark-dark.png`,
 } as const;
 
 type ShellOptions = {
@@ -108,8 +108,8 @@ ${options.bodyHtml}
 
 export function renderPrimaryCta(label: string, href: string) {
   return `<tr>
-<td align="center" style="background:#f0fdf4;border-top:3px solid #22c55e;padding:24px 40px;text-align:center;">
-<a href="${href}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#1a2e44;color:#ffffff;text-decoration:none;padding:15px 32px;border-radius:8px;font-size:16px;font-weight:700;">${label}</a>
+<td align="center" style="background:#FBF6EC;border-top:3px solid #FF5C34;padding:24px 40px;text-align:center;">
+<a href="${href}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#FF5C34;color:#ffffff;text-decoration:none;padding:15px 32px;border-radius:999px;font-size:16px;font-weight:700;">${label}</a>
 </td>
 </tr>`;
 }

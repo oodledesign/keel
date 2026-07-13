@@ -79,12 +79,12 @@ export async function renderInviteEmail(props: Props) {
             </EmailHeader>
 
             <EmailContent>
-              <Text className="text-[16px] leading-[24px] text-[#242424]">
+              <Text className="text-[16px] leading-[24px] text-[#5A4450]">
                 {hello}
               </Text>
 
               <Text
-                className="text-[16px] leading-[24px] text-[#242424]"
+                className="text-[16px] leading-[24px] text-[#5A4450]"
                 dangerouslySetInnerHTML={{ __html: mainText }}
               />
 
@@ -103,20 +103,20 @@ export async function renderInviteEmail(props: Props) {
                 </Section>
               )}
 
-              <Section className="mt-[32px] mb-[32px] text-center">
+              <Section className="mt-[24px] mb-[24px] text-center">
                 <CtaButton href={props.link}>{joinTeam}</CtaButton>
               </Section>
 
-              <Text className="text-[16px] leading-[24px] text-[#242424]">
+              <Text className="text-[14px] leading-[22px] text-[#5A4450]">
                 {t(`${namespace}:copyPasteLink`)}{' '}
-                <Link href={props.link} className="text-blue-600 no-underline">
+                <Link href={props.link} className="text-[#FF5C34] no-underline">
                   {props.link}
                 </Link>
               </Text>
 
-              <Hr className="mx-0 my-[26px] w-full border border-solid border-[#eaeaea]" />
+              <Hr className="mx-0 my-[26px] w-full border border-solid border-[#E7DECF]" />
 
-              <Text className="text-[12px] leading-[24px] text-[#666666]">
+              <Text className="text-[12px] leading-[20px] text-[#9B8590]">
                 {t(`${namespace}:invitationIntendedFor`, {
                   invitedUserEmail: props.invitedUserEmail,
                 })}

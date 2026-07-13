@@ -378,7 +378,7 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> = 
       {
         question: 'Is there a free trial?',
         answer:
-          'Paid business plans include a 14-day trial on your first paid workspace. Business Lite remains free with no card required.',
+          'Paid business plans include a 14-day trial on your first paid workspace — no credit card required. Business Lite remains free forever.',
       },
     ],
     relatedSegments: relatedExcept('work'),

@@ -43,7 +43,7 @@ export function AdminMobileNavigation() {
         </DropdownMenuItem>
 
         <DropdownMenuItem>
-          <Link href={'/admin/accounts'}>Accounts</Link>
+          <Link href={'/admin/billing/at-risk'}>At-risk</Link>
         </DropdownMenuItem>
 
         <DropdownMenuItem>

@@ -1,3 +1,5 @@
+import { after } from 'next/server';
+
 import { getBillingEventHandlerService } from '@kit/billing-gateway';
 import { getPlanTypesMap } from '@kit/billing';
 import { enhanceRouteHandler } from '@kit/next/routes';
@@ -5,19 +7,25 @@ import { getLogger } from '@kit/shared/logger';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import billingConfig from '~/config/billing.config';
-import { fulfillAiCreditPackOrder, fulfillAiCreditPackFromSubscription } from '~/lib/billing/fulfill-ai-credit-pack';
 import {
-  syncKeelPlanFromSubscription,
-} from '~/lib/billing/sync-subscription-plan';
-import { sendPaymentFailedEmail } from '~/lib/billing/trial-notifications';
+  fulfillAiCreditPackOrder,
+  fulfillAiCreditPackFromSubscription,
+} from '~/lib/billing/fulfill-ai-credit-pack';
+import {
+  handleBillingLifecycleStripeEvent,
+  isBillingLifecycleStripeEvent,
+} from '~/lib/billing/handle-billing-lifecycle-event';
+import { flushBillingEmailJobs } from '~/lib/billing/billing-email-outbox';
+import { syncKeelPlanFromSubscription } from '~/lib/billing/sync-subscription-plan';
 
 import type {
   UpsertOrderParams,
   UpsertSubscriptionParams,
 } from '@kit/billing/types';
+import type Stripe from 'stripe';
 
 /**
- * @description Handle the webhooks from Stripe related to checkouts
+ * @description Handle the webhooks from Stripe related to checkouts + Ozer billing lifecycle
  */
 export const POST = enhanceRouteHandler(
   async ({ request }) => {
@@ -42,34 +50,9 @@ export const POST = enhanceRouteHandler(
     const syncPlan = async (subscription: UpsertSubscriptionParams) => {
       const admin = getSupabaseServerAdminClient();
       await syncKeelPlanFromSubscription(admin, subscription);
-
-      if (
-        subscription.status === 'past_due' ||
-        subscription.status === 'unpaid'
-      ) {
-        const accountId = subscription.target_account_id;
-        const subscriptionId = subscription.target_subscription_id;
-
-        if (accountId && subscriptionId) {
-          const { data: account } = await admin
-            .from('accounts')
-            .select('name, slug')
-            .eq('id', accountId)
-            .maybeSingle();
-
-          const slug = (account as { slug?: string | null } | null)?.slug;
-          if (slug) {
-            await sendPaymentFailedEmail(admin, {
-              subscriptionId,
-              accountId,
-              accountSlug: slug,
-              accountName:
-                (account as { name?: string | null } | null)?.name ?? slug,
-            }).catch(() => undefined);
-          }
-        }
-      }
     };
+
+    const pendingEmailJobIds: string[] = [];
 
     try {
       await service.handleWebhookEvent(request, {
@@ -135,7 +118,34 @@ export const POST = enhanceRouteHandler(
           const admin = getSupabaseServerAdminClient();
           await fulfillAiCreditPackFromSubscription(admin, payload);
         },
+        onEvent: async (rawEvent) => {
+          const event = rawEvent as Stripe.Event;
+          if (!isBillingLifecycleStripeEvent(event.type)) {
+            return;
+          }
+
+          const admin = getSupabaseServerAdminClient();
+          const { emailJobIds } = await handleBillingLifecycleStripeEvent(
+            admin,
+            event,
+          );
+          pendingEmailJobIds.push(...emailJobIds);
+        },
       });
+
+      if (pendingEmailJobIds.length > 0) {
+        const jobIds = [...pendingEmailJobIds];
+        after(() => {
+          const admin = getSupabaseServerAdminClient();
+          void flushBillingEmailJobs(admin, jobIds).catch(async (error) => {
+            const log = await getLogger();
+            log.error(
+              { error, jobIds },
+              '[billing.webhook] email outbox flush failed',
+            );
+          });
+        });
+      }
 
       logger.info(ctx, `Successfully processed billing webhook`);
 

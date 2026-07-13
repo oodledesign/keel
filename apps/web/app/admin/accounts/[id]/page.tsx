@@ -1,3 +1,5 @@
+import { redirect } from 'next/navigation';
+
 import { AdminAccountPage } from '@kit/admin/components/admin-account-page';
 import { AdminGuard } from '@kit/admin/components/admin-guard';
 import { PageBody } from '@kit/ui/page';
@@ -25,33 +27,26 @@ export const generateMetadata = async (props: Params) => {
 async function AccountPage(props: Params) {
   const params = await props.params;
   const account = await loadAdminAccount(params.id);
+
+  // Team workspaces are managed under /admin/workspaces.
+  if (!account.is_personal_account) {
+    redirect(`/admin/workspaces/${account.id}`);
+  }
+
   const billing = await loadAdminAccountBillingState(account.id);
-  const isPersonal = account.is_personal_account;
 
   return (
     <>
       <AdminAccountPage account={account} />
-      {isPersonal ? (
-        <PageBody className="border-t py-4">
-          <div className="mx-auto max-w-3xl px-4">
-            <AdminPersonalAddonsPanel
-              accountId={account.id}
-              entitlements={billing.entitlements}
-              billingExempt={billing.billingExempt}
-            />
-          </div>
-        </PageBody>
-      ) : (
-        <PageBody className="border-t py-4">
-          <div className="mx-auto max-w-3xl px-4">
-            <AdminBillingGrantsPanel
-              accountId={account.id}
-              entitlements={billing.entitlements}
-              billingExempt={billing.billingExempt}
-            />
-          </div>
-        </PageBody>
-      )}
+      <PageBody className="border-t py-4">
+        <div className="mx-auto max-w-3xl px-4">
+          <AdminPersonalAddonsPanel
+            accountId={account.id}
+            entitlements={billing.entitlements}
+            billingExempt={billing.billingExempt}
+          />
+        </div>
+      </PageBody>
     </>
   );
 }

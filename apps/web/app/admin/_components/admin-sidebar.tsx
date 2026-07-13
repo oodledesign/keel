@@ -77,7 +77,10 @@ export function AdminSidebar() {
               </SidebarMenuButton>
 
               <SidebarMenuButton
-                isActive={path.includes('/admin/billing')}
+                isActive={
+                  path.includes('/admin/billing') &&
+                  !path.includes('/admin/billing/at-risk')
+                }
                 asChild
               >
                 <Link className={'flex gap-2.5'} href={'/admin/billing'}>
@@ -87,18 +90,15 @@ export function AdminSidebar() {
               </SidebarMenuButton>
 
               <SidebarMenuButton
-                isActive={
-                  path.includes('/admin/accounts') &&
-                  !path.match(/\/admin\/accounts\/[^/]+/)
-                }
+                isActive={path.includes('/admin/billing/at-risk')}
                 asChild
               >
                 <Link
-                  className={'flex size-full gap-2.5'}
-                  href={'/admin/accounts'}
+                  className={'flex gap-2.5'}
+                  href={'/admin/billing/at-risk'}
                 >
-                  <Users className={'h-4'} />
-                  <span>Accounts</span>
+                  <LifeBuoy className={'h-4'} />
+                  <span>At-risk</span>
                 </Link>
               </SidebarMenuButton>
 
@@ -136,7 +136,10 @@ export function AdminSidebar() {
                 isActive={path.includes('/admin/email-marketing')}
                 asChild
               >
-                <Link className={'flex gap-2.5'} href={'/admin/email-marketing'}>
+                <Link
+                  className={'flex gap-2.5'}
+                  href={'/admin/email-marketing'}
+                >
                   <Mail className={'h-4'} />
                   <span>Email marketing</span>
                 </Link>
@@ -177,7 +180,7 @@ export function AdminSidebar() {
         </SidebarMenu>
 
         <div className="flex justify-center px-2">
-          <SidebarTrigger className="h-8 w-8 rounded-md border border-border text-muted-foreground hover:bg-muted hover:text-foreground" />
+          <SidebarTrigger className="border-border text-muted-foreground hover:bg-muted hover:text-foreground h-8 w-8 rounded-md border" />
         </div>
 
         <ProfileAccountDropdownContainer />

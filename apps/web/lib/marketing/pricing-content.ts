@@ -124,7 +124,7 @@ export function pricingFaqs() {
     },
     {
       question: 'Is there a free trial?',
-      answer: `Personal and family are free forever. Business Lite is ${formatGbp(lite?.monthlyPriceGbp ?? 0)} per month. Paid workspaces include a ${BILLING_TRIAL_DAYS}-day free trial on your first paid workspace.`,
+      answer: `Personal and family are free forever. Business Lite is ${formatGbp(lite?.monthlyPriceGbp ?? 0)} per month. Paid workspaces include a ${BILLING_TRIAL_DAYS}-day free trial on your first paid workspace — no credit card required.`,
     },
     {
       question: 'How do I cancel?',

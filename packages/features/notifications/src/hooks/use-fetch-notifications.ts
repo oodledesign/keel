@@ -78,16 +78,17 @@ function useFetchInitialNotifications(props: {
   includeMuted: boolean;
 }) {
   const client = useSupabase();
-  const now = new Date().toISOString();
 
   return useQuery({
     queryKey: ['notifications', ...props.accountIds, props.includeMuted],
+    enabled: props.accountIds.length > 0,
     queryFn: async () => {
+      const now = new Date().toISOString();
       const {
         data: { user },
       } = await client.auth.getUser();
 
-      let query = client
+      const { data, error } = await client
         .from('notifications')
         .select(
           `id,
@@ -101,11 +102,14 @@ function useFetchInitialNotifications(props: {
         )
         .in('account_id', props.accountIds)
         .eq('dismissed', false)
+        .eq('channel', 'in_app')
         .gt('expires_at', now)
         .order('created_at', { ascending: false })
         .limit(20);
 
-      const { data } = await query;
+      if (error) {
+        throw error;
+      }
 
       const rows = (data ?? []) as Notification[];
 
@@ -122,7 +126,7 @@ function useFetchInitialNotifications(props: {
         ? merged
         : merged.filter((row) => !row.muted);
     },
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 }

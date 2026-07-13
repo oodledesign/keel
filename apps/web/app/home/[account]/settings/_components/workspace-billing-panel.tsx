@@ -23,7 +23,10 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { WorkspaceAiCreditsBillingCard } from './workspace-ai-credits-billing-card';
 import { WorkspacePlanStatusCard } from './workspace-plan-status-card';
+import { PaymentRecoveryCard } from '../../_components/payment-recovery-card';
 import { getTeamAccountAccess } from '../../_lib/role-access';
+import { checkAccountAccess } from '~/lib/billing/check-account-access';
+import { isBillingRecoveryStatus } from '~/lib/billing/billing-recovery';
 
 type WorkspaceBillingPanelProps = {
   accountSlug: string;
@@ -31,6 +34,8 @@ type WorkspaceBillingPanelProps = {
     addon?: string;
     setup?: string;
     upgrade?: string;
+    billing?: string;
+    payment_updated?: string;
   };
 };
 
@@ -90,6 +95,16 @@ export async function WorkspaceBillingPanel({
   const showLiteUpgrade =
     isBusinessLite && canManageBilling && isUpgradeIntent && !hasBillingData;
 
+  const accessState = await checkAccountAccess(billingClient, accountId);
+  const paymentUpdated = searchParams.payment_updated === '1';
+  const recovered =
+    paymentUpdated && accessState.status === 'active';
+  const showPaymentRecovery =
+    canManageBilling &&
+    (recovered ||
+      paymentUpdated ||
+      isBillingRecoveryStatus(accessState.status));
+
   const subscriptionIsWorkspacePlan = Boolean(
     subscriptionProductPlan &&
       !subscriptionProductPlan.product.id.startsWith('ozer-addon-') &&
@@ -106,6 +121,17 @@ export async function WorkspaceBillingPanel({
       </div>
 
       <div className="flex max-w-2xl flex-col gap-4">
+        {showPaymentRecovery ? (
+          <PaymentRecoveryCard
+            accountId={accountId}
+            accountSlug={accountSlug}
+            status={accessState.status}
+            hasStripeCustomer={Boolean(customerId)}
+            paymentUpdated={paymentUpdated}
+            recovered={recovered}
+          />
+        ) : null}
+
         <WorkspacePlanStatusCard
           isBusinessLite={isBusinessLite}
           hasPaidSubscription={subscriptionIsWorkspacePlan}
@@ -114,6 +140,7 @@ export async function WorkspaceBillingPanel({
           }
           canManageBilling={canManageBilling}
           accountSlug={accountSlug}
+          billingStatus={accessState.status}
         />
 
         <If condition={showPlanCheckout}>
@@ -208,6 +235,7 @@ function BillingPortalForm({
     <form action={createBillingPortalSession}>
       <input type="hidden" name={'accountId'} value={accountId} />
       <input type="hidden" name={'slug'} value={account} />
+      <input type="hidden" name={'intent'} value="manage" />
 
       <BillingPortalCard />
     </form>

@@ -44,6 +44,6 @@ export const OZER_TEAM_OF_FOUR = {
     'UK company; UK GDPR / EU GDPR posture documented in Trust Centre',
   ),
   freeTrial: ozerSourced(
-    'Personal & family free; 14-day trial on first paid workspace',
+    'Personal & family free; 14-day no-card trial on first paid workspace',
   ),
 };

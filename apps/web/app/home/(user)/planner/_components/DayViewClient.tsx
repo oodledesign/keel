@@ -530,24 +530,39 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
             <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]/80">Schedule</h2>
             <div className="flex flex-wrap items-center gap-2">
               {hasPlan ? (
-                <PlannerSyncCalendarButton
-                  dateIso={`${dateYmd}T12:00:00`}
-                  planDocument={planDocument}
-                  onSynced={persistPlanDocument}
-                  size="sm"
-                />
-              ) : null}
-              <ReplanDialog
-                scope={initialData.scope}
-                planMarkdown={planMarkdown}
-                openTasks={replanOpenTasks}
-                calendarEvents={calendarEvents}
-                onPlanUpdated={setPlanMarkdown}
-              />
+                <>
+                  <PlannerSyncCalendarButton
+                    dateIso={`${dateYmd}T12:00:00`}
+                    planDocument={planDocument}
+                    onSynced={persistPlanDocument}
+                    size="sm"
+                  />
+                  <ReplanDialog
+                    scope={initialData.scope}
+                    planMarkdown={planMarkdown}
+                    openTasks={replanOpenTasks}
+                    calendarEvents={calendarEvents}
+                    onPlanUpdated={setPlanMarkdown}
+                  />
+                </>
+              ) : (
+                <Button
+                  asChild
+                  className={cn(
+                    'h-10 rounded-xl px-5 text-sm font-semibold shadow-sm',
+                    'bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]',
+                  )}
+                >
+                  <Link href={initialData.planViewHref}>
+                    <Sparkles className="mr-1.5 h-4 w-4" />
+                    Plan
+                  </Link>
+                </Button>
+              )}
             </div>
           </div>
           {displayBlocks.length === 0 ? (
-            <EmptySchedule planHref={initialData.planViewHref} />
+            <EmptySchedule />
           ) : showEditableSchedule && planDocument ? (
             <DayScheduleEditor
               document={planDocument}
@@ -943,16 +958,13 @@ function PipelineOverview({ pipeline }: { pipeline: DayViewPipeline }) {
   );
 }
 
-function EmptySchedule({ planHref }: { planHref: string }) {
+function EmptySchedule() {
   return (
     <div className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-8 text-center">
       <Sparkles className="mx-auto h-6 w-6 text-[var(--ozer-accent-muted)]/70" />
       <p className="mt-3 text-sm text-[var(--workspace-shell-text)]/60">
-        No plan for this day yet.
+        No plan for this day yet. Use Plan above to build one.
       </p>
-      <Button asChild className="mt-4 bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]">
-        <Link href={planHref}>Plan my day</Link>
-      </Button>
     </div>
   );
 }

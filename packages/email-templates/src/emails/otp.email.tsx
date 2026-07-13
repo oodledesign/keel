@@ -65,20 +65,31 @@ export async function renderOtpEmail(props: Props) {
             </EmailHeader>
 
             <EmailContent>
-              <Text className="text-[16px] text-[#242424]">{mainText}</Text>
+              <Text className="text-[16px] text-[#5A4450]">{mainText}</Text>
 
-              <Text className="text-[16px] text-[#242424]">{otpText}</Text>
+              <Text className="text-[16px] text-[#5A4450]">{otpText}</Text>
 
               <Section className="mt-[16px] mb-[16px] text-center">
-                <Button className={'w-full rounded bg-neutral-950 text-center'}>
-                  <Text className="text-[16px] leading-[16px] font-medium font-semibold text-white">
-                    {props.otp}
-                  </Text>
+                <Button
+                  style={{
+                    backgroundColor: '#FF5C34',
+                    borderRadius: '12px',
+                    color: '#FFFFFF',
+                    display: 'inline-block',
+                    fontSize: '22px',
+                    fontWeight: 700,
+                    letterSpacing: '0.2em',
+                    padding: '16px 28px',
+                    textAlign: 'center',
+                    textDecoration: 'none',
+                  }}
+                >
+                  {props.otp}
                 </Button>
               </Section>
 
               <Text
-                className="text-[16px] text-[#242424]"
+                className="text-[16px] text-[#5A4450]"
                 dangerouslySetInnerHTML={{ __html: footerText }}
               />
             </EmailContent>

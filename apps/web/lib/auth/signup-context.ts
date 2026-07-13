@@ -132,7 +132,7 @@ export function resolveSignupContext(next: string | undefined): SignupContext {
       subheading: isTeam
         ? `Ozer starts with your personal hub. After signup, add a ${planName} workspace for the studio — 14-day trial, then £${product.monthlyPriceGbp}/${intervalLabel}.`
         : `Ozer starts with your personal hub. After signup, add ${planName} for clients, projects, and invoices — 14-day trial, then £${product.monthlyPriceGbp}/${intervalLabel}.`,
-      badge: 'Personal free · 14-day trial on business',
+      badge: 'Personal free · 14-day trial, no card',
       highlights: [
         'Free personal account — always yours',
         ...productHighlights(intent.productId, [

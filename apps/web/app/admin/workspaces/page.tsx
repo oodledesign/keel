@@ -1,7 +1,9 @@
 import { AdminGuard } from '@kit/admin/components/admin-guard';
 import { AppBreadcrumbs } from '@kit/ui/app-breadcrumbs';
+import { Button } from '@kit/ui/button';
 import { PageBody, PageHeader } from '@kit/ui/page';
 
+import { AdminCreateWorkspaceDialog } from './_components/admin-create-workspace-dialog';
 import { AdminWorkspacesTable } from './_components/admin-workspaces-table';
 import { loadAdminWorkspacesPage } from './_lib/load-admin-workspaces';
 
@@ -31,7 +33,11 @@ async function AdminWorkspacesPage({ searchParams }: AdminWorkspacesPageProps) {
             }}
           />
         }
-      />
+      >
+        <AdminCreateWorkspaceDialog>
+          <Button>Create workspace</Button>
+        </AdminCreateWorkspaceDialog>
+      </PageHeader>
       <PageBody>
         <AdminWorkspacesTable
           rows={data.rows}

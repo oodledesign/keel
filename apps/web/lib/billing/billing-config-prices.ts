@@ -207,7 +207,7 @@ export function trialLabel(plan: BillingPlanPrice): string {
     return 'Free forever — no card, no trial clock.';
   }
   const days = plan.trialDays ?? BILLING_TRIAL_DAYS;
-  return `${days}-day free trial on your first paid workspace.`;
+  return `${days}-day free trial — no credit card required.`;
 }
 
 export const PRICING_LAST_VERIFIED = '4 July 2026';

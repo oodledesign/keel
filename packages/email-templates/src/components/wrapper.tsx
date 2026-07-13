@@ -8,20 +8,25 @@ export function EmailWrapper(
   return (
     <Container
       style={{
-        backgroundColor: '#fafafa',
-        margin: 'auto',
-        fontFamily: 'sans-serif',
-        color: '#242424',
+        backgroundColor: '#FBF6EC',
+        margin: '0 auto',
+        fontFamily:
+          "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
+        color: '#2A1720',
         width: '100%',
+        padding: '28px 16px',
       }}
     >
       <Container
         style={{
-          maxWidth: '720px',
-          backgroundColor: '#fafafa',
-          margin: 'auto',
+          maxWidth: '560px',
+          backgroundColor: '#FFFFFF',
+          margin: '0 auto',
+          borderRadius: '16px',
+          border: '1px solid #E7DECF',
+          overflow: 'hidden',
         }}
-        className={'mx-auto px-[20px] py-[40px] ' + props.className || ''}
+        className={props.className}
       >
         {props.children}
       </Container>

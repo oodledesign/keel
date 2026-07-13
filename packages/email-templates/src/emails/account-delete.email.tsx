@@ -53,27 +53,27 @@ export async function renderAccountDeleteEmail(props: Props) {
             </EmailHeader>
 
             <EmailContent>
-              <Text className="text-[16px] leading-[24px] text-[#242424]">
+              <Text className="text-[16px] leading-[24px] text-[#5A4450]">
                 {t(`${namespace}:hello`)}
               </Text>
 
-              <Text className="text-[16px] leading-[24px] text-[#242424]">
+              <Text className="text-[16px] leading-[24px] text-[#5A4450]">
                 {t(`${namespace}:paragraph1`, {
                   productName: props.productName,
                 })}
               </Text>
 
-              <Text className="text-[16px] leading-[24px] text-[#242424]">
+              <Text className="text-[16px] leading-[24px] text-[#5A4450]">
                 {t(`${namespace}:paragraph2`)}
               </Text>
 
-              <Text className="text-[16px] leading-[24px] text-[#242424]">
+              <Text className="text-[16px] leading-[24px] text-[#5A4450]">
                 {t(`${namespace}:paragraph3`, {
                   productName: props.productName,
                 })}
               </Text>
 
-              <Text className="text-[16px] leading-[24px] text-[#242424]">
+              <Text className="text-[16px] leading-[24px] text-[#5A4450]">
                 {t(`${namespace}:paragraph4`, {
                   productName: props.productName,
                 })}

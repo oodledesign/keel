@@ -12,7 +12,6 @@ import { Button } from '@kit/ui/button';
 import {
   Command,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList,
   CommandSeparator,
@@ -91,7 +90,7 @@ export function WorkspaceAccountsSelector({
       type="button"
       onClick={variant === 'inline' ? () => setOpen((v) => !v) : undefined}
       className={cn(
-        'group mr-1 w-full min-w-0 px-2 text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)] lg:w-auto lg:max-w-fit',
+        'group mr-1 w-full min-w-0 px-2 text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)] lg:w-auto lg:max-w-fit',
         collapsed && variant === 'popover' ? 'm-auto justify-center px-2' : 'justify-start',
         className,
       )}
@@ -128,11 +127,7 @@ export function WorkspaceAccountsSelector({
   );
 
   const list = (
-    <Command className="bg-transparent">
-      <CommandInput
-        placeholder="Search workspaces…"
-        className="h-9 border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)]"
-      />
+    <Command className="bg-transparent text-[var(--workspace-shell-text)]">
       <CommandList className={workspaceComboboxListClass}>
         <CommandGroup heading="Your workspaces">
           {accounts.map((account) => (
@@ -150,7 +145,7 @@ export function WorkspaceAccountsSelector({
             <CommandSeparator className="bg-[var(--workspace-shell-sidebar-accent)]" />
             <CommandGroup>
               <CommandItem
-                className="cursor-pointer aria-selected:bg-[var(--workspace-shell-sidebar-accent)]"
+                className="cursor-pointer text-[var(--workspace-shell-text)] aria-selected:bg-[var(--workspace-shell-sidebar-accent)] aria-selected:text-[var(--workspace-shell-text)]"
                 onSelect={() => {
                   setOpen(false);
                   setIsCreating(true);
@@ -182,7 +177,7 @@ export function WorkspaceAccountsSelector({
           <PopoverTrigger asChild>{trigger}</PopoverTrigger>
           <PopoverContent
             data-test="account-selector-content"
-            className="z-[200] w-[min(100vw-2rem,320px)] overflow-hidden border-[var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text-on-dark)]"
+            className="z-[200] w-[min(100vw-2rem,320px)] overflow-hidden border-[var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text)]"
             align="start"
           >
             {list}
@@ -278,7 +273,7 @@ function WorkspaceSwitcherAccountRow({
     <CommandItem
       value={`${account.label} ${account.slug} ${account.typeLabel}`}
       className={cn(
-        'my-1 cursor-pointer aria-selected:bg-[var(--workspace-shell-sidebar-accent)]',
+        'my-1 cursor-pointer text-[var(--workspace-shell-text)] aria-selected:bg-[var(--workspace-shell-sidebar-accent)] aria-selected:text-[var(--workspace-shell-text)]',
         getWorkspaceFocusMutedClassName(focusSettings),
       )}
       onSelect={onSelect}

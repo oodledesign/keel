@@ -196,15 +196,17 @@ export function NotificationsPopover({
 
       <PopoverContent
         className={
-          'flex w-full max-w-96 flex-col border-white/10 bg-[var(--workspace-shell-panel)] p-0 text-white lg:min-w-64'
+          'flex w-full max-w-96 flex-col border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text)] shadow-[0_16px_48px_rgba(53,30,40,0.18)] lg:min-w-64 dark:shadow-[0_16px_48px_rgba(0,0,0,0.45)]'
         }
-        align={'start'}
+        align={'end'}
         collisionPadding={20}
         sideOffset={10}
       >
         <div className={'flex items-center justify-between gap-3 px-3 py-2'}>
-          <div className={'text-sm font-semibold'}>{t('common:notifications')}</div>
-          <label className="flex items-center gap-2 text-xs text-zinc-400">
+          <div className={'text-sm font-semibold text-[var(--workspace-shell-text)]'}>
+            {t('common:notifications')}
+          </div>
+          <label className="flex items-center gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
             <span>Show silenced</span>
             <Switch
               checked={showSilencedNotifications}
@@ -213,21 +215,21 @@ export function NotificationsPopover({
           </label>
         </div>
 
-        <Separator />
+        <Separator className="bg-[color:var(--workspace-shell-border)]" />
 
         <If condition={!visibleNotifications.length}>
-          <div className={'px-3 py-2 text-sm'}>
+          <div className={'px-3 py-3 text-sm text-[var(--workspace-shell-text-muted)]'}>
             {t('common:noNotifications')}
           </div>
         </If>
 
         <div
           className={
-            'flex max-h-[min(60dvh,calc(100dvh-8rem))] flex-col divide-y divide-white/10 overflow-y-auto overscroll-contain'
+            'flex max-h-[min(60dvh,calc(100dvh-8rem))] flex-col divide-y divide-[color:var(--workspace-shell-border)] overflow-y-auto overscroll-contain'
           }
         >
           {showSilencedNotifications && silencedNotifications.length > 0 ? (
-            <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
               While you were away
             </div>
           ) : null}
@@ -262,7 +264,7 @@ export function NotificationsPopover({
                 key={notification.id.toString()}
                 className={cn(
                   'flex min-h-18 flex-col items-start justify-center gap-y-1 px-3 py-2',
-                  isSilenced && 'bg-white/[0.03] opacity-70',
+                  isSilenced && 'bg-[var(--workspace-shell-sidebar-accent)] opacity-70',
                 )}
                 onClick={() => {
                   if (onClick) {
@@ -289,7 +291,7 @@ export function NotificationsPopover({
                         </If>
                       </div>
 
-                      <span className={'text-muted-foreground text-xs'}>
+                      <span className={'text-xs text-[var(--workspace-shell-text-muted)]'}>
                         {timeAgo(notification.created_at)}
                       </span>
                     </div>

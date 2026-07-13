@@ -263,11 +263,6 @@ export function AddTaskDialog({
                 onValueChange={setAssignTo}
                 options={options}
                 isWorkspaceMode={isWorkspaceMode}
-                placeholder={
-                  isWorkspaceMode
-                    ? 'Workspace only (no project/client)'
-                    : 'No assignment'
-                }
               />
             )}
             {isWorkspaceMode &&

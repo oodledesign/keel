@@ -34,7 +34,7 @@ const MENU_PANEL_CLASS =
   'w-[min(18rem,calc(100vw-2rem))] overflow-hidden rounded-[1.25rem] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text)] shadow-[0_16px_48px_rgba(53,30,40,0.18)] outline-none ring-0 dark:shadow-[0_16px_48px_rgba(0,0,0,0.45)]';
 
 const MENU_ITEM_CLASS =
-  'mx-1.5 flex cursor-pointer items-center gap-3 rounded-xl px-2.5 py-2 text-sm font-medium text-[var(--workspace-shell-text)] outline-none focus:bg-[var(--workspace-shell-sidebar-accent)] data-[highlighted]:bg-[var(--workspace-shell-sidebar-accent)]';
+  'flex cursor-pointer items-center gap-3 rounded-xl px-2.5 py-2 text-sm font-medium text-[var(--workspace-shell-text)] outline-none focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)] data-[highlighted]:bg-[var(--workspace-shell-sidebar-accent)] data-[highlighted]:text-[var(--workspace-shell-text)]';
 
 const MENU_ICON_WRAP_CLASS =
   'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]';
@@ -202,7 +202,7 @@ export function PersonalAccountDropdown({
           </div>
         </div>
 
-        <div className="py-1.5">
+        <div className="space-y-0.5 px-1.5 py-1.5">
           <MenuLinkItem
             href={paths.home}
             icon={Home}
@@ -235,7 +235,7 @@ export function PersonalAccountDropdown({
         <If condition={isSuperAdmin}>
           <DropdownMenuSeparator className="bg-[color:var(--workspace-shell-border)]" />
 
-          <div className="py-1.5">
+          <div className="space-y-0.5 px-1.5 py-1.5">
             <MenuLinkItem
               href={'/admin'}
               icon={Shield}
@@ -255,7 +255,7 @@ export function PersonalAccountDropdown({
 
         <DropdownMenuSeparator className="bg-[color:var(--workspace-shell-border)]" />
 
-        <div className="pb-1.5 pt-0.5">
+        <div className="space-y-0.5 px-1.5 pb-1.5 pt-0.5">
           <DropdownMenuItem
             data-test={'account-dropdown-sign-out'}
             role={'button'}

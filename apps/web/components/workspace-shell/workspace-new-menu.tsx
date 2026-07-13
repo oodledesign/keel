@@ -59,10 +59,13 @@ const MOBILE_NEW_MENU_ROW_CLASS =
   'flex min-h-[3.25rem] w-full items-center gap-4 rounded-xl px-4 py-3 text-[1.05rem] font-medium text-[var(--workspace-shell-text)] transition-colors hover:bg-white/6';
 
 const DESKTOP_NEW_MENU_CONTENT_CLASS =
-  'w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-[1.25rem] border border-[var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text-on-dark)] shadow-[0_16px_48px_rgba(0,0,0,0.45)] outline-none ring-0 focus:outline-none focus-visible:outline-none';
+  'w-[min(18rem,calc(100vw-2rem))] overflow-hidden rounded-[1.25rem] border border-[var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text)] shadow-[0_16px_48px_rgba(53,30,40,0.18)] outline-none ring-0 focus:outline-none focus-visible:outline-none dark:shadow-[0_16px_48px_rgba(0,0,0,0.45)]';
 
 const DESKTOP_NEW_MENU_ITEM_CLASS =
-  'rounded-xl p-0 outline-none ring-0 focus:bg-white/6 focus:text-[var(--workspace-shell-text)] data-[highlighted]:bg-white/6 data-[highlighted]:text-[var(--workspace-shell-text)]';
+  'rounded-xl p-0 outline-none ring-0 focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)] data-[highlighted]:bg-[var(--workspace-shell-sidebar-accent)] data-[highlighted]:text-[var(--workspace-shell-text)]';
+
+const DESKTOP_NEW_MENU_ROW_CLASS =
+  'flex w-full cursor-pointer items-center gap-3 rounded-xl px-2.5 py-2 text-sm font-medium text-[var(--workspace-shell-text)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]';
 
 function getNewMenuItems(props: WorkspaceNewMenuProps) {
   const items =
@@ -92,15 +95,17 @@ function NewMenuItemRow({
   variant?: 'dropdown' | 'mobile' | 'panel';
 }) {
   const iconClassName =
-    variant === 'mobile' || variant === 'panel'
+    variant === 'mobile'
       ? 'h-5 w-5 shrink-0 text-[var(--ozer-accent)]'
-      : 'mr-2 h-4 w-4 text-[var(--ozer-accent)]';
+      : 'h-4 w-4 shrink-0 text-[var(--ozer-accent)]';
 
   if (item.action === 'create-task') {
     const className =
-      variant === 'mobile' || variant === 'panel'
+      variant === 'mobile'
         ? MOBILE_NEW_MENU_ROW_CLASS
-        : 'flex w-full cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm outline-hidden hover:bg-[var(--workspace-shell-sidebar-accent)]';
+        : variant === 'panel'
+          ? DESKTOP_NEW_MENU_ROW_CLASS
+          : 'flex w-full cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm outline-hidden hover:bg-[var(--workspace-shell-sidebar-accent)]';
 
     return (
       <button
@@ -129,7 +134,7 @@ function NewMenuItemRow({
 
     if (variant === 'panel') {
       return (
-        <Link href={item.href} onClick={onNavigate} className={MOBILE_NEW_MENU_ROW_CLASS}>
+        <Link href={item.href} onClick={onNavigate} className={DESKTOP_NEW_MENU_ROW_CLASS}>
           <item.icon className={iconClassName} />
           {item.label}
         </Link>
@@ -186,11 +191,11 @@ export function WorkspaceNewMenu(props: WorkspaceNewMenuProps) {
         className={DESKTOP_NEW_MENU_CONTENT_CLASS}
       >
         <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
-          <p className="text-base font-semibold text-[var(--workspace-shell-text)]">Create</p>
+          <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">Create</p>
         </div>
 
-        <nav className="max-h-[min(52vh,22rem)] overflow-y-auto px-2 py-2">
-          <ul className="flex flex-col gap-1">
+        <nav className="max-h-[min(52vh,22rem)] overflow-y-auto px-1.5 py-1.5">
+          <ul className="flex flex-col gap-0.5">
             {items.map((item) => (
               <li key={item.key}>
                 <DropdownMenuItem asChild className={DESKTOP_NEW_MENU_ITEM_CLASS}>

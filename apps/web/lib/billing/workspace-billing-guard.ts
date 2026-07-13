@@ -6,30 +6,54 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import pathsConfig from '~/config/paths.config';
 import type { TeamAccountWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
-import { spaceTypeFromProfile } from '~/home/[account]/_lib/server/workspace-profile';
+import { spaceTypeFromProfile } from '~/home/[account]/_lib/workspace-profile';
 
+import {
+  canEnterWorkspace,
+  checkAccountAccess,
+} from './check-account-access';
 import { canAccessPaidWorkspace } from './entitlements';
 import { requiredEntitlementForProfile } from './ozer-plan-catalog';
-
-const BILLING_PATH_SEGMENTS = ['/billing', '/billing/return'];
 
 function isBillingRoute(pathname: string, accountSlug: string): boolean {
   if (!pathname) {
     return false;
   }
 
-  if (BILLING_PATH_SEGMENTS.some((segment) => pathname.includes(segment))) {
-    return true;
+  let path = pathname;
+  try {
+    path = new URL(pathname, 'http://localhost').pathname;
+  } catch {
+    // already a path
   }
 
   const billingBase = pathsConfig.app.accountBilling.replace(
     '[account]',
     accountSlug,
   );
-
-  return (
-    pathname === billingBase || pathname.startsWith(`${billingBase}/`)
+  const returnBase = pathsConfig.app.accountBillingReturn.replace(
+    '[account]',
+    accountSlug,
   );
+
+  if (path === billingBase || path.startsWith(`${billingBase}/`)) {
+    return true;
+  }
+
+  if (path === returnBase || path.startsWith(`${returnBase}/`)) {
+    return true;
+  }
+
+  // Pathname headers may use /home/{slug}/… while pathsConfig uses /app/{slug}/…
+  const slugEscaped = accountSlug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const homeBilling = new RegExp(
+    `/(?:home|app)/${slugEscaped}/settings/billing(?:/|$)`,
+  );
+  const homeReturn = new RegExp(
+    `/(?:home|app)/${slugEscaped}/billing/return(?:/|$)`,
+  );
+
+  return homeBilling.test(path) || homeReturn.test(path);
 }
 
 export async function redirectIfWorkspaceBillingRequired(
@@ -50,10 +74,24 @@ export async function redirectIfWorkspaceBillingRequired(
     return;
   }
 
+  const accountId = workspace.account.id;
+  const access = await checkAccountAccess(client, accountId, { userId });
+
+  // Restricted stays in the shell (read-mostly); suspended/canceled/expired → billing.
+  if (access.billing?.subscription_status) {
+    if (canEnterWorkspace(access)) {
+      return;
+    }
+
+    redirect(
+      `${pathsConfig.app.accountBilling.replace('[account]', accountSlug)}?billing=1`,
+    );
+  }
+
   const allowed = await canAccessPaidWorkspace(
     client,
     userId,
-    workspace.account.id,
+    accountId,
     profile,
   );
 

@@ -5,7 +5,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { requireUser } from '@kit/supabase/require-user';
 
 import {
+  emptyWebsiteBrief,
   emptyWebsiteStyleSystem,
+  type WebsiteBrief,
   type WebsitePortalShareScope,
   type WebsiteSitemapPage,
   type WebsiteStyleSystem,
@@ -30,6 +32,7 @@ export type PortalWebsite = {
   sitemap: WebsiteSitemapPage[];
   wireframes: WebsiteWireframePage[];
   style: WebsiteStyleSystem | null;
+  brief: WebsiteBrief | null;
 };
 
 export type PortalSubscription = {
@@ -187,6 +190,25 @@ class ClientPortalService {
         ? (row.wireframes as WebsiteWireframePage[])
         : [],
       style: null,
+      brief: null,
+    };
+  }
+
+  private async loadWebsiteBrief(
+    websiteId: string,
+    accountId: string,
+  ): Promise<WebsiteBrief | null> {
+    const { data } = await this.db
+      .from('website_briefs')
+      .select('brief')
+      .eq('website_id', websiteId)
+      .eq('account_id', accountId)
+      .maybeSingle();
+
+    if (!data?.brief || typeof data.brief !== 'object') return null;
+    return {
+      ...emptyWebsiteBrief(),
+      ...(data.brief as Partial<WebsiteBrief>),
     };
   }
 
@@ -295,12 +317,15 @@ class ClientPortalService {
 
     const website = this.mapWebsite(data as Record<string, unknown>);
 
-    if (website.portalShareScope === 'full') {
+    if (website.portalShareScope !== 'off') {
       const accountId = String(
         (data as { business_id?: string }).business_id ?? '',
       );
       if (accountId) {
-        website.style = await this.loadWebsiteStyle(website.id, accountId);
+        website.brief = await this.loadWebsiteBrief(website.id, accountId);
+        if (website.portalShareScope === 'full') {
+          website.style = await this.loadWebsiteStyle(website.id, accountId);
+        }
       }
     }
 

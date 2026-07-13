@@ -28,11 +28,17 @@ export function useNotificationsStream({
         {
           event: 'INSERT',
           schema: 'public',
-          filter: `account_id=in.(${accountIds.join(', ')})`,
+          filter: `account_id=in.(${accountIds.join(',')})`,
           table: 'notifications',
         },
         (payload) => {
-          onNotifications([payload.new as Notification]);
+          const row = payload.new as Notification & { channel?: string };
+
+          if (row.channel && row.channel !== 'in_app') {
+            return;
+          }
+
+          onNotifications([row]);
         },
       )
       .subscribe();

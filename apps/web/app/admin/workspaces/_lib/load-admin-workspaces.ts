@@ -68,21 +68,26 @@ export const loadAdminWorkspacesPage = cache(
       };
     }
 
-    const [businesses, subscriptions, entitlements, exempt] = await Promise.all([
-      client.from('businesses').select('account_id, type').in('account_id', accountIds),
-      client
-        .from('subscriptions')
-        .select('account_id, status')
-        .in('account_id', accountIds),
-      client
-        .from('account_entitlements')
-        .select('account_id, entitlement_key')
-        .in('account_id', accountIds),
-      client
-        .from('account_billing_exempt')
-        .select('account_id')
-        .in('account_id', accountIds),
-    ]);
+    const [businesses, subscriptions, entitlements, exempt] = await Promise.all(
+      [
+        client
+          .from('businesses')
+          .select('account_id, type')
+          .in('account_id', accountIds),
+        client
+          .from('subscriptions')
+          .select('account_id, status')
+          .in('account_id', accountIds),
+        client
+          .from('account_entitlements')
+          .select('account_id, entitlement_key')
+          .in('account_id', accountIds),
+        client
+          .from('account_billing_exempt')
+          .select('account_id')
+          .in('account_id', accountIds),
+      ],
+    );
 
     const bizByAccount = new Map<string, string>();
     for (const row of businesses.data ?? []) {

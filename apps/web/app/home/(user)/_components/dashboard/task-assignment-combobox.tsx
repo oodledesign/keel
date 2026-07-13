@@ -1,13 +1,11 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useContext, useMemo, useState } from 'react';
 
 import { Check, ChevronsUpDown } from 'lucide-react';
 
-import {
-  workspaceComboboxListClass,
-  workspaceComboboxPopoverClass,
-} from '~/components/workspace-shell/workspace-combobox-styles';
+import { TeamAccountWorkspaceContext } from '@kit/team-accounts/components';
+import { Button } from '@kit/ui/button';
 import {
   Command,
   CommandEmpty,
@@ -18,8 +16,12 @@ import {
   CommandSeparator,
 } from '@kit/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
-import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
+
+import {
+  workspaceComboboxListClass,
+  workspaceComboboxPopoverClass,
+} from '~/components/workspace-shell/workspace-combobox-styles';
 
 import type { TaskAssignmentOption } from '../../_lib/actions/task-actions';
 import { groupProjectsByWorkspace } from '../../tasks/_lib/group-task-options';
@@ -29,17 +31,46 @@ type TaskAssignmentComboboxProps = {
   onValueChange: (value: string) => void;
   options: TaskAssignmentOption[];
   isWorkspaceMode?: boolean;
+  /** Team workspace display name — used for the “{name} only” option. */
+  workspaceName?: string | null;
   placeholder?: string;
 };
+
+function workspaceOnlyLabel(workspaceName?: string | null) {
+  const name = workspaceName?.trim();
+  return name ? `${name} only` : 'Workspace only';
+}
 
 export function TaskAssignmentCombobox({
   value,
   onValueChange,
   options,
   isWorkspaceMode = false,
-  placeholder = 'Select project or client',
+  workspaceName,
+  placeholder,
 }: TaskAssignmentComboboxProps) {
   const [open, setOpen] = useState(false);
+  const teamWorkspace = useContext(TeamAccountWorkspaceContext);
+
+  const resolvedWorkspaceName = useMemo(() => {
+    if (workspaceName?.trim()) {
+      return workspaceName.trim();
+    }
+
+    const fromOptions = options
+      .find((option) => option.accountName?.trim())
+      ?.accountName?.trim();
+    if (fromOptions) {
+      return fromOptions;
+    }
+
+    const contextName = teamWorkspace?.account?.name;
+    return typeof contextName === 'string' ? contextName.trim() || null : null;
+  }, [options, teamWorkspace?.account?.name, workspaceName]);
+
+  const noneLabel = isWorkspaceMode
+    ? workspaceOnlyLabel(resolvedWorkspaceName)
+    : 'No assignment';
 
   const projects = useMemo(
     () => options.filter((option) => option.type === 'project'),
@@ -73,10 +104,11 @@ export function TaskAssignmentCombobox({
 
   const displayLabel =
     selected?.name ??
-    (isWorkspaceMode ? placeholder : 'No assignment');
+    placeholder ??
+    (isWorkspaceMode ? noneLabel : 'No assignment');
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover modal open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -85,8 +117,9 @@ export function TaskAssignmentCombobox({
           aria-expanded={open}
           className={cn(
             'h-9 w-full justify-between border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] font-normal text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
-            !selected && !isWorkspaceMode && value === 'none' && 'text-[var(--workspace-shell-text-muted)]',
-            !selected && isWorkspaceMode && 'text-[var(--workspace-shell-text-muted)]',
+            !selected &&
+              value === 'none' &&
+              'text-[var(--workspace-shell-text-muted)]',
           )}
         >
           <span className="truncate">{displayLabel}</span>
@@ -94,41 +127,40 @@ export function TaskAssignmentCombobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent className={workspaceComboboxPopoverClass} align="start">
-        <Command className="bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+        <Command className="flex max-h-[inherit] flex-col overflow-hidden bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
           <CommandInput
             placeholder="Search projects and clients…"
             className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
           />
-          <CommandList className={workspaceComboboxListClass}>
+          <CommandList
+            className={workspaceComboboxListClass}
+            onWheel={(event) => event.stopPropagation()}
+          >
             <CommandEmpty>No matches found.</CommandEmpty>
 
-            {!isWorkspaceMode ? (
-              <CommandGroup>
-                <CommandItem
-                  value="no assignment none"
-                  onSelect={() => {
-                    onValueChange('none');
-                    setOpen(false);
-                  }}
-                  className="text-[var(--workspace-shell-text)] aria-selected:bg-[var(--workspace-shell-sidebar-accent)]"
-                >
-                  <Check
-                    className={cn(
-                      'mr-2 h-4 w-4',
-                      value === 'none' ? 'opacity-100' : 'opacity-0',
-                    )}
-                  />
-                  No assignment
-                </CommandItem>
-              </CommandGroup>
-            ) : null}
+            <CommandGroup>
+              <CommandItem
+                value={`${noneLabel} none unassigned`}
+                onSelect={() => {
+                  onValueChange('none');
+                  setOpen(false);
+                }}
+                className="text-[var(--workspace-shell-text)] aria-selected:bg-[var(--workspace-shell-sidebar-accent)] aria-selected:text-[var(--workspace-shell-text)]"
+              >
+                <Check
+                  className={cn(
+                    'mr-2 h-4 w-4',
+                    value === 'none' ? 'opacity-100' : 'opacity-0',
+                  )}
+                />
+                {noneLabel}
+              </CommandItem>
+            </CommandGroup>
 
             {projectGroups.map((group) => (
               <CommandGroup
                 key={group.key}
-                heading={
-                  isWorkspaceMode ? 'Projects' : group.label
-                }
+                heading={isWorkspaceMode ? 'Projects' : group.label}
               >
                 {group.projects.map((project) => (
                   <CommandItem
@@ -138,7 +170,7 @@ export function TaskAssignmentCombobox({
                       onValueChange(project.id);
                       setOpen(false);
                     }}
-                    className="text-[var(--workspace-shell-text)] aria-selected:bg-[var(--workspace-shell-sidebar-accent)]"
+                    className="text-[var(--workspace-shell-text)] aria-selected:bg-[var(--workspace-shell-sidebar-accent)] aria-selected:text-[var(--workspace-shell-text)]"
                   >
                     <Check
                       className={cn(
@@ -174,7 +206,7 @@ export function TaskAssignmentCombobox({
                         onValueChange(client.id);
                         setOpen(false);
                       }}
-                      className="text-[var(--workspace-shell-text)] aria-selected:bg-[var(--workspace-shell-sidebar-accent)]"
+                      className="text-[var(--workspace-shell-text)] aria-selected:bg-[var(--workspace-shell-sidebar-accent)] aria-selected:text-[var(--workspace-shell-text)]"
                     >
                       <Check
                         className={cn(
@@ -203,7 +235,7 @@ export function TaskAssignmentCombobox({
                         onValueChange(area.id);
                         setOpen(false);
                       }}
-                      className="text-[var(--workspace-shell-text)] aria-selected:bg-[var(--workspace-shell-sidebar-accent)]"
+                      className="text-[var(--workspace-shell-text)] aria-selected:bg-[var(--workspace-shell-sidebar-accent)] aria-selected:text-[var(--workspace-shell-text)]"
                     >
                       <Check
                         className={cn(

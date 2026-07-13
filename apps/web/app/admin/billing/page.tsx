@@ -28,7 +28,11 @@ async function AdminBillingPage() {
       <PageHeader
         title="Billing"
         description="Platform SaaS subscriptions — MRR estimate, dunning, and churn."
-      />
+      >
+        <Button asChild variant="outline" size="sm">
+          <Link href="/admin/billing/at-risk">At-risk outreach</Link>
+        </Button>
+      </PageHeader>
       <PageBody className="mx-auto max-w-5xl space-y-8 py-4">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <MetricCard
@@ -79,7 +83,7 @@ async function AdminBillingPage() {
                   <div>
                     <Link
                       className="font-medium hover:underline"
-                      href={`/admin/accounts/${row.accountId}`}
+                      href={`/admin/workspaces/${row.accountId}`}
                     >
                       {row.accountName}
                     </Link>

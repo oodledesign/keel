@@ -445,10 +445,44 @@ export function sectionTypeMeta(type: WebsiteSectionType | undefined) {
   );
 }
 
+/** High-contrast chips for light client-facing surfaces (portal / share links). */
+export function portalSectionChipClass(type: WebsiteSectionType | undefined) {
+  switch (type ?? 'other') {
+    case 'nav':
+      return 'border-sky-300 bg-sky-50 text-sky-950';
+    case 'hero':
+      return 'border-violet-300 bg-violet-50 text-violet-950';
+    case 'proof':
+      return 'border-amber-300 bg-amber-50 text-amber-950';
+    case 'conversion':
+      return 'border-orange-300 bg-orange-50 text-orange-950';
+    case 'content':
+      return 'border-emerald-300 bg-emerald-50 text-emerald-950';
+    case 'footer':
+      return 'border-slate-300 bg-slate-100 text-slate-900';
+    default:
+      return 'border-[color:var(--workspace-shell-border)] bg-[var(--ozer-cream-50)] text-[var(--ozer-plum-900)]';
+  }
+}
+
+export function portalStatusChipClass(
+  status: WebsitePlanningStatus | undefined,
+) {
+  switch (status ?? 'draft') {
+    case 'approved':
+      return 'border-emerald-300 bg-emerald-50 text-emerald-900';
+    case 'blocked':
+      return 'border-red-300 bg-red-50 text-red-900';
+    default:
+      return 'border-slate-300 bg-slate-100 text-slate-800';
+  }
+}
+
 export function planningStatusMeta(status: WebsitePlanningStatus | undefined) {
   return (
-    PLANNING_STATUS_OPTIONS.find((item) => item.value === (status ?? 'draft')) ??
-    PLANNING_STATUS_OPTIONS[0]!
+    PLANNING_STATUS_OPTIONS.find(
+      (item) => item.value === (status ?? 'draft'),
+    ) ?? PLANNING_STATUS_OPTIONS[0]!
   );
 }
 

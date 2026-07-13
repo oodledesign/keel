@@ -10,7 +10,13 @@ import { WorkspaceBillingPanel } from '../_components/workspace-billing-panel';
 
 interface WorkspaceBillingSettingsPageProps {
   params: Promise<{ account: string }>;
-  searchParams: Promise<{ addon?: string; setup?: string; upgrade?: string }>;
+  searchParams: Promise<{
+    addon?: string;
+    setup?: string;
+    upgrade?: string;
+    billing?: string;
+    payment_updated?: string;
+  }>;
 }
 
 export const generateMetadata = async () => {

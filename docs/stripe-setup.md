@@ -37,6 +37,16 @@ STRIPE_SECRET_KEY=sk_test_... pnpm stripe:setup-catalog -- --write-env
 
 Paste the printed `STRIPE_PRICE_*` values into Vercel (Production + Preview) and local `.env.local`.
 
+### No-card free trials
+
+Set on Vercel (Production + Preview) and in local `.env.local`:
+
+```bash
+STRIPE_ENABLE_TRIAL_WITHOUT_CC=true
+```
+
+This makes Stripe Checkout use `payment_method_collection: if_required` for plans with a trial. Users can start the 14-day trial without a card; if they still have no payment method at trial end, Stripe **cancels** the subscription (no surprise charge).
+
 ---
 
 ## 3. Enable Stripe Connect (invoice payments)
