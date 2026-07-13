@@ -23,6 +23,7 @@ import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import { WireframeLibrarySection } from '~/home/[account]/websites/_components/site-studio/wireframe-library-sections';
+import { WireframePageViewer } from '~/home/[account]/websites/_components/site-studio/wireframe-page-viewer';
 import { setWebsiteShareApproval } from '~/home/[account]/websites/_lib/server/site-studio-actions';
 import {
   PLANNING_STATUS_OPTIONS,
@@ -685,34 +686,35 @@ export function PortalWebsitePlanningView({
             </Button>
           </div>
 
-          <div className="flex-1 overflow-y-auto">
-            <div className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-10">
-              {openPage.description ? (
-                <p className="max-w-3xl text-sm leading-relaxed text-[var(--workspace-shell-text-muted)]">
-                  {openPage.description}
-                </p>
-              ) : null}
-
-              {openWireframe.sections.map((section) => (
-                <div key={section.id} className="space-y-2">
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <h3 className="text-sm font-semibold tracking-wide text-[var(--ozer-plum-900)] uppercase">
-                      {section.title}
-                    </h3>
-                    {section.contentNotes ? (
-                      <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                        {section.contentNotes}
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)] bg-white">
-                    <WireframePreview section={section} />
-                  </div>
-                </div>
-              ))}
-
-              {shareToken ? (
-                <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-white p-4">
+          <WireframePageViewer
+            fullViewport
+            className="min-h-0 flex-1"
+            pageTitle={openPage.title}
+            pageDescription={openPage.description}
+            sections={openWireframe.sections.map((section) => {
+              const sitemapSection = openPage.sections.find(
+                (item) => item.id === section.sitemapSectionId,
+              );
+              return {
+                id: section.id,
+                title: section.title,
+                description:
+                  sitemapSection?.description ||
+                  section.copyOutline ||
+                  undefined,
+                notes: section.contentNotes || undefined,
+              };
+            })}
+            renderSection={(sectionId) => {
+              const section = openWireframe.sections.find(
+                (item) => item.id === sectionId,
+              );
+              if (!section) return null;
+              return <WireframePreview section={section} />;
+            }}
+            footer={
+              shareToken ? (
+                <div className="mx-auto w-full max-w-5xl">
                   <p className="mb-2 text-sm font-medium text-[var(--ozer-plum-900)]">
                     Feedback for this page
                   </p>
@@ -727,9 +729,9 @@ export function PortalWebsitePlanningView({
                     }}
                   />
                 </div>
-              ) : null}
-            </div>
-          </div>
+              ) : null
+            }
+          />
         </div>
       ) : null}
     </div>

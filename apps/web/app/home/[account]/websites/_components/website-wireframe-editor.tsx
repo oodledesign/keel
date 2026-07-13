@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
-import { ChevronDown, ChevronRight, RefreshCw, Sparkles } from 'lucide-react';
+import { RefreshCw, Sparkles } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import {
@@ -12,16 +12,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import {
-  createPlanningId,
   type WebsiteSitemapPage,
   type WebsiteWireframeCopy,
   type WebsiteWireframePage,
   type WebsiteWireframeSection,
+  createPlanningId,
 } from '~/lib/websites/planning-types';
 import {
   WEBSITE_SECTION_LIBRARY,
@@ -36,6 +35,7 @@ import {
 import { saveWebsiteWireframes } from '../_lib/server/planning-actions';
 import { generateWebsiteWireframes } from '../_lib/server/site-studio-actions';
 import { WireframeLibrarySection } from './site-studio/wireframe-library-sections';
+import { WireframePageViewer } from './site-studio/wireframe-page-viewer';
 
 function syncWireframesFromSitemap(
   sitemap: WebsiteSitemapPage[],
@@ -93,20 +93,16 @@ function syncWireframesFromSitemap(
   });
 }
 
-function WireframeSectionCard({
+function WireframeCanvasSection({
   section,
   canEdit,
-  siteStudioEnabled,
   onChange,
 }: {
   section: WebsiteWireframeSection;
   canEdit: boolean;
-  siteStudioEnabled: boolean;
   onChange: (patch: Partial<WebsiteWireframeSection>) => void;
 }) {
-  const [notesOpen, setNotesOpen] = useState(false);
   const copy = ensureWireframeCopy(section);
-  const libraryEntry = findSectionLibraryEntry(section.libraryKey);
 
   function patchCopy(next: WebsiteWireframeCopy) {
     onChange({ copy: next });
@@ -131,83 +127,62 @@ function WireframeSectionCard({
   }
 
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
-          {section.title}
-        </span>
-        {siteStudioEnabled ? (
-          <Select
-            value={section.libraryKey ?? '__custom__'}
-            onValueChange={(value) => {
-              if (value === '__custom__') {
-                onChange({
-                  libraryKey: null,
-                  copy: createDefaultWireframeCopy(null),
-                });
-                return;
-              }
-              const entry = findSectionLibraryEntry(value);
-              onChange({
-                libraryKey: value,
-                ...(entry ? { layout: entry.layout } : {}),
-                copy: createDefaultWireframeCopy(value),
-              });
-            }}
-            disabled={!canEdit}
-          >
-            <SelectTrigger className="h-8 w-[220px] border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-xs text-[var(--workspace-shell-text)]">
-              <SelectValue placeholder="Section library…" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__custom__">Custom section</SelectItem>
-              {WEBSITE_SECTION_LIBRARY.map((entry) => (
-                <SelectItem key={entry.key} value={entry.key}>
-                  {entry.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : null}
-        <button
-          type="button"
-          onClick={() => setNotesOpen((open) => !open)}
-          className="inline-flex items-center gap-1 text-xs text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
-        >
-          {notesOpen ? (
-            <ChevronDown className="h-3.5 w-3.5" />
-          ) : (
-            <ChevronRight className="h-3.5 w-3.5" />
-          )}
-          Notes
-        </button>
-        {libraryEntry ? (
-          <span className="text-xs text-[var(--workspace-shell-text-muted)]">
-            {libraryEntry.hint}
-          </span>
-        ) : null}
-      </div>
+    <WireframeLibrarySection
+      libraryKey={section.libraryKey}
+      layout={section.layout}
+      copy={copy}
+      canEdit={canEdit}
+      onSlotChange={onSlotChange}
+      onItemSlotChange={onItemSlotChange}
+    />
+  );
+}
 
-      {notesOpen ? (
-        <Textarea
-          value={section.contentNotes}
-          readOnly={!canEdit}
-          rows={2}
-          onChange={(event) => onChange({ contentNotes: event.target.value })}
-          placeholder="Internal notes for this section…"
-          className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-sm text-[var(--workspace-shell-text)]"
-        />
-      ) : null}
+function SectionLibraryControl({
+  section,
+  canEdit,
+  siteStudioEnabled,
+  onChange,
+}: {
+  section: WebsiteWireframeSection;
+  canEdit: boolean;
+  siteStudioEnabled: boolean;
+  onChange: (patch: Partial<WebsiteWireframeSection>) => void;
+}) {
+  if (!siteStudioEnabled) return null;
 
-      <WireframeLibrarySection
-        libraryKey={section.libraryKey}
-        layout={section.layout}
-        copy={copy}
-        canEdit={canEdit}
-        onSlotChange={onSlotChange}
-        onItemSlotChange={onItemSlotChange}
-      />
-    </div>
+  return (
+    <Select
+      value={section.libraryKey ?? '__custom__'}
+      onValueChange={(value) => {
+        if (value === '__custom__') {
+          onChange({
+            libraryKey: null,
+            copy: createDefaultWireframeCopy(null),
+          });
+          return;
+        }
+        const entry = findSectionLibraryEntry(value);
+        onChange({
+          libraryKey: value,
+          ...(entry ? { layout: entry.layout } : {}),
+          copy: createDefaultWireframeCopy(value),
+        });
+      }}
+      disabled={!canEdit}
+    >
+      <SelectTrigger className="h-8 w-full border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-xs text-[var(--workspace-shell-text)]">
+        <SelectValue placeholder="Section library…" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="__custom__">Custom section</SelectItem>
+        {WEBSITE_SECTION_LIBRARY.map((entry) => (
+          <SelectItem key={entry.key} value={entry.key}>
+            {entry.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -232,7 +207,9 @@ export function WebsiteWireframeEditor({
   const [activePageId, setActivePageId] = useState<string | null>(
     initialWireframes[0]?.pageId ?? sitemap[0]?.id ?? null,
   );
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>(
+    'idle',
+  );
   const [isGenerating, startGenerating] = useTransition();
   const [, startTransition] = useTransition();
   const skipNextSave = useRef(true);
@@ -294,7 +271,9 @@ export function WebsiteWireframeEditor({
         } catch (error) {
           setSaveState('idle');
           toast.error(
-            error instanceof Error ? error.message : 'Could not save wireframes',
+            error instanceof Error
+              ? error.message
+              : 'Could not save wireframes',
           );
         }
       });
@@ -447,8 +426,8 @@ export function WebsiteWireframeEditor({
           </div>
         </div>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-[200px_minmax(0,1fr)]">
-          <div className="flex flex-wrap gap-2 lg:flex-col">
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-2">
             {wireframes.map((page) => (
               <button
                 key={page.pageId}
@@ -467,40 +446,79 @@ export function WebsiteWireframeEditor({
           </div>
 
           {activePage ? (
-            <div className="space-y-6">
-              <div className="rounded-xl border border-[#d4d4d4] bg-[#fafafa] px-4 py-3">
-                <p className="text-xs font-medium uppercase tracking-wide text-[#8a8a8a]">
-                  Page wireframe
+            <WireframePageViewer
+              className="min-h-[70vh]"
+              pageTitle={activePage.title}
+              pageDescription={
+                sitemap.find((page) => page.id === activePage.pageId)
+                  ?.description
+              }
+              sections={activePage.sections.map((section) => {
+                const sitemapSection = sitemap
+                  .find((page) => page.id === activePage.pageId)
+                  ?.sections.find(
+                    (item) => item.id === section.sitemapSectionId,
+                  );
+                return {
+                  id: section.id,
+                  title: section.title,
+                  description:
+                    sitemapSection?.description ||
+                    section.copyOutline ||
+                    undefined,
+                  notes: section.contentNotes || undefined,
+                };
+              })}
+              canEditNotes={canEdit}
+              onNotesChange={(sectionId, notes) =>
+                updateSection(activePage.pageId, sectionId, {
+                  contentNotes: notes,
+                })
+              }
+              renderSectionControls={
+                siteStudioEnabled
+                  ? (sectionId) => {
+                      const section = activePage.sections.find(
+                        (item) => item.id === sectionId,
+                      );
+                      if (!section) return null;
+                      return (
+                        <SectionLibraryControl
+                          section={section}
+                          canEdit={canEdit}
+                          siteStudioEnabled={siteStudioEnabled}
+                          onChange={(patch) =>
+                            updateSection(activePage.pageId, section.id, patch)
+                          }
+                        />
+                      );
+                    }
+                  : undefined
+              }
+              renderSection={(sectionId) => {
+                const section = activePage.sections.find(
+                  (item) => item.id === sectionId,
+                );
+                if (!section) return null;
+                return (
+                  <WireframeCanvasSection
+                    section={section}
+                    canEdit={canEdit}
+                    onChange={(patch) =>
+                      updateSection(activePage.pageId, section.id, patch)
+                    }
+                  />
+                );
+              }}
+              canvasHeader={
+                <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                  Continuous page preview — collapse the sections column for a
+                  full-width browser-like flow. Tip: choose a library variant
+                  (e.g. {libraryEntryLabel('hero-split')}) so the preview
+                  matches the layout you will build.
                 </p>
-                <p className="text-lg font-semibold text-[#1a1a1a]">
-                  {activePage.title}
-                </p>
-              </div>
-
-              {activePage.sections.map((section) => (
-                <WireframeSectionCard
-                  key={section.id}
-                  section={section}
-                  canEdit={canEdit}
-                  siteStudioEnabled={siteStudioEnabled}
-                  onChange={(patch) =>
-                    updateSection(activePage.pageId, section.id, patch)
-                  }
-                />
-              ))}
-
-              {activePage.sections.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center text-sm text-[var(--workspace-shell-text-muted)]">
-                  This page has no sections yet. Add them in the sitemap, then
-                  sync.
-                </div>
-              ) : null}
-
-              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                Tip: choose a library variant (e.g. {libraryEntryLabel('hero-split')})
-                so the preview matches the layout you will build.
-              </p>
-            </div>
+              }
+            />
           ) : null}
         </div>
       )}
