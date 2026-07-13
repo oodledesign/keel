@@ -25,6 +25,9 @@ export default async function PublicBookEventPage({ params }: Props) {
       title={loaded.page.title}
       description={null}
       brandColour={loaded.page.brandColour}
+      logoUrl={loaded.page.logoUrl}
+      hostName={loaded.page.hostName}
+      hostPictureUrl={loaded.page.hostPictureUrl}
     >
       <BookingWizard
         page={loaded.page}

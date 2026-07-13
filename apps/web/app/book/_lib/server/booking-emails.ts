@@ -99,6 +99,7 @@ function buildContext(
     locationDetail: booking.locationDetail,
     cancellationReason: extras?.cancellationReason ?? booking.cancellationReason,
     formResponses: extras?.formResponses,
+    inviteeNotes: booking.inviteeNotes ?? null,
     clientId: booking.clientId,
     previousStartAt: extras?.previousStartAt ?? null,
   };

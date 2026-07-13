@@ -32,6 +32,9 @@ export default async function PublicBookPage({ params }: Props) {
       title={page.title}
       description={page.description}
       brandColour={page.brandColour}
+      logoUrl={page.logoUrl}
+      hostName={page.hostName}
+      hostPictureUrl={page.hostPictureUrl}
     >
       {eventTypes.length === 0 ? (
         <div className="rounded-2xl border border-black/10 bg-white/70 p-8 text-center">

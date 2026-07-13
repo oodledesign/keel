@@ -467,6 +467,7 @@ export function WebsiteWireframeEditor({
                     section.copyOutline ||
                     undefined,
                   notes: section.contentNotes || undefined,
+                  clientComment: section.clientComment,
                 };
               })}
               canEditNotes={canEdit}

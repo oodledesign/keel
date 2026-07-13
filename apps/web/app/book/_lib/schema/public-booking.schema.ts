@@ -32,6 +32,7 @@ export const CreatePublicBookingSchema = z.object({
   inviteeTimezone: z.string().min(1).max(100),
   guests: z.array(GuestInputSchema).max(10).default([]),
   formResponses: z.array(FormResponseInputSchema).default([]),
+  inviteeNotes: z.string().max(2000).nullable().optional(),
 });
 
 export const CancelPublicBookingSchema = z.object({

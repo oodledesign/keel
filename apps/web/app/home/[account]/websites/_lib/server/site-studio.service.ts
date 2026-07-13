@@ -1202,7 +1202,10 @@ export async function setShareApprovalByToken(input: {
       ? {
           ...page,
           status: input.status,
-          approvalNote: input.note?.slice(0, 2000) ?? page.approvalNote,
+          approvalNote:
+            input.status === 'approved'
+              ? undefined
+              : (input.note?.slice(0, 2000) ?? page.approvalNote),
         }
       : page,
   );
@@ -1214,6 +1217,49 @@ export async function setShareApprovalByToken(input: {
   const { error } = await admin
     .from('websites')
     .update({ sitemap: nextSitemap, updated_at: new Date().toISOString() })
+    .eq('id', share.websiteId);
+
+  if (error) throw error;
+  return { ok: true };
+}
+
+/** Client comment on a wireframe section from a public share link. */
+export async function setShareSectionCommentByToken(input: {
+  token: string;
+  pageId: string;
+  sectionId: string;
+  comment: string;
+}): Promise<{ ok: true }> {
+  const share = await getWebsiteShareByToken(input.token);
+  if (!share) throw new Error('Share link not found or expired');
+
+  const admin = getSupabaseServerAdminClient();
+  const comment = input.comment.trim().slice(0, 2000);
+
+  let found = false;
+  const nextWireframes = share.wireframes.map((page) => {
+    if (page.pageId !== input.pageId) return page;
+    return {
+      ...page,
+      sections: page.sections.map((section) => {
+        if (section.id !== input.sectionId) return section;
+        found = true;
+        return {
+          ...section,
+          clientComment: comment || undefined,
+        };
+      }),
+    };
+  });
+
+  if (!found) throw new Error('Section not found');
+
+  const { error } = await admin
+    .from('websites')
+    .update({
+      wireframes: nextWireframes,
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', share.websiteId);
 
   if (error) throw error;

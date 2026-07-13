@@ -27,6 +27,7 @@ export type BookingEmailContext = {
   locationDetail: string | null;
   cancellationReason?: string | null;
   formResponses?: Array<{ label: string; value: string }>;
+  inviteeNotes?: string | null;
   clientId?: string | null;
   previousStartAt?: string | null;
 };
@@ -76,6 +77,12 @@ function formResponsesBlock(ctx: BookingEmailContext) {
   return `<p><strong>Form responses</strong></p><ul>${items}</ul>`;
 }
 
+function notesBlock(ctx: BookingEmailContext) {
+  if (!ctx.inviteeNotes?.trim()) return '';
+  const escaped = escapeHtml(ctx.inviteeNotes.trim()).replaceAll('\n', '<br />');
+  return `<p><strong>Notes:</strong><br />${escaped}</p>`;
+}
+
 function clientLinkBlock(ctx: BookingEmailContext) {
   if (!ctx.clientId || !ctx.accountSlug) return '';
   const href = `${ctx.siteUrl.replace(/\/$/, '')}/app/${ctx.accountSlug}/clients/${ctx.clientId}`;
@@ -123,6 +130,7 @@ export function renderHostConfirmationEmail(ctx: BookingEmailContext) {
 <p><strong>Meeting:</strong> ${escapeHtml(ctx.eventTypeName)}</p>
 <p><strong>When:</strong> ${whenLine(ctx)}</p>
 ${joinBlock(ctx)}
+${notesBlock(ctx)}
 ${formResponsesBlock(ctx)}
 ${clientLinkBlock(ctx)}
 ${attention}`,

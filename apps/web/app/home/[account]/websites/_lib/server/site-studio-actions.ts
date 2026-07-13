@@ -21,12 +21,14 @@ import {
   SaveWebsiteSeoPageSchema,
   SaveWebsiteStyleSystemSchema,
   SetShareApprovalSchema,
+  SetShareSectionCommentSchema,
   SetWebsitePortalScopeSchema,
   SuggestWebsiteBriefSchema,
 } from '../schema/site-studio.schema';
 import {
   createSiteStudioService,
   setShareApprovalByToken,
+  setShareSectionCommentByToken,
 } from './site-studio.service';
 import { createWebsitePlanningService } from './website-planning.service';
 
@@ -126,6 +128,18 @@ export const setWebsiteShareApproval = enhanceAction(
       note: input.note,
     }),
   { schema: SetShareApprovalSchema, auth: false },
+);
+
+/** Public share section comment — token-authenticated, no session required. */
+export const setWebsiteShareSectionComment = enhanceAction(
+  async (input) =>
+    setShareSectionCommentByToken({
+      token: input.token,
+      pageId: input.pageId,
+      sectionId: input.sectionId,
+      comment: input.comment,
+    }),
+  { schema: SetShareSectionCommentSchema, auth: false },
 );
 
 /**

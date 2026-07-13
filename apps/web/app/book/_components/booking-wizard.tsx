@@ -123,7 +123,15 @@ function AvailabilityDayButton({
 }: ComponentProps<typeof CalendarDayButton>) {
   return (
     <CalendarDayButton
-      className={cn(className, 'relative pb-2')}
+      className={cn(
+        className,
+        'relative pb-2 text-[color:var(--ozer-plum-950,#2A1720)]',
+        'hover:bg-black/[0.06] hover:text-[color:var(--ozer-plum-950,#2A1720)]',
+        'data-[selected-single=true]:bg-[color-mix(in_srgb,var(--book-accent,#FF5C34)_18%,white)]',
+        'data-[selected-single=true]:text-[color:var(--ozer-plum-950,#2A1720)]',
+        'data-[selected-single=true]:hover:bg-[color-mix(in_srgb,var(--book-accent,#FF5C34)_24%,white)]',
+        'data-[selected-single=true]:font-semibold',
+      )}
       modifiers={modifiers}
       {...props}
     >
@@ -156,6 +164,8 @@ export function BookingWizard({ page, eventType, formFields }: Props) {
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [notes, setNotes] = useState('');
+  const [guestsOpen, setGuestsOpen] = useState(false);
   const [guestInput, setGuestInput] = useState('');
   const [guests, setGuests] = useState<string[]>([]);
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
@@ -302,6 +312,7 @@ export function BookingWizard({ page, eventType, formFields }: Props) {
           inviteeEmail: email.trim(),
           inviteeTimezone,
           guests: guests.map((guestEmail) => ({ email: guestEmail })),
+          inviteeNotes: notes.trim() || null,
           formResponses: formFields.map((field) => ({
             formFieldId: field.id,
             value: answers[field.id] ?? null,
@@ -394,46 +405,79 @@ export function BookingWizard({ page, eventType, formFields }: Props) {
             />
           ))}
 
+          <div className="space-y-2">
+            <Label htmlFor="invitee-notes">Notes</Label>
+            <Textarea
+              id="invitee-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Anything the host should know before the meeting?"
+              rows={3}
+            />
+          </div>
+
           {eventType.allowGuestInvites ? (
-            <div className="space-y-2">
-              <Label>Add guests</Label>
-              <div className="flex gap-2">
-                <Input
-                  type="email"
-                  placeholder="colleague@company.com"
-                  value={guestInput}
-                  onChange={(e) => setGuestInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      addGuest();
-                    }
-                  }}
-                />
-                <Button type="button" variant="outline" onClick={addGuest}>
-                  Add
-                </Button>
-              </div>
-              {guests.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {guests.map((guest) => (
-                    <span
-                      key={guest}
-                      className="inline-flex items-center gap-1 rounded-full bg-black/5 px-3 py-1 text-sm"
-                    >
-                      {guest}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setGuests((current) =>
-                            current.filter((item) => item !== guest),
-                          )
-                        }
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
+            <div className="space-y-2 rounded-xl border border-black/10 p-3">
+              <button
+                type="button"
+                className="flex w-full items-center justify-between text-left text-sm font-medium"
+                onClick={() => setGuestsOpen((open) => !open)}
+                aria-expanded={guestsOpen}
+              >
+                <span>
+                  Add guests
+                  {guests.length > 0 ? (
+                    <span className="text-muted-foreground ml-2 font-normal">
+                      ({guests.length})
                     </span>
-                  ))}
+                  ) : null}
+                </span>
+                <span className="text-muted-foreground text-xs">
+                  {guestsOpen ? 'Hide' : 'Show'}
+                </span>
+              </button>
+
+              {guestsOpen ? (
+                <div className="space-y-2 pt-1">
+                  <div className="flex gap-2">
+                    <Input
+                      type="email"
+                      placeholder="colleague@company.com"
+                      value={guestInput}
+                      onChange={(e) => setGuestInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addGuest();
+                        }
+                      }}
+                    />
+                    <Button type="button" variant="outline" onClick={addGuest}>
+                      Add
+                    </Button>
+                  </div>
+                  {guests.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {guests.map((guest) => (
+                        <span
+                          key={guest}
+                          className="inline-flex items-center gap-1 rounded-full bg-black/5 px-3 py-1 text-sm"
+                        >
+                          {guest}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setGuests((current) =>
+                                current.filter((item) => item !== guest),
+                              )
+                            }
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -531,7 +575,10 @@ export function BookingWizard({ page, eventType, formFields }: Props) {
         </div>
       </div>
 
-      <div className="grid gap-4 rounded-2xl border border-black/10 bg-white p-4 md:grid-cols-[minmax(0,1fr)_minmax(220px,280px)] md:p-5">
+      <div
+        className="grid gap-4 rounded-2xl border border-black/10 bg-white p-4 md:grid-cols-[minmax(0,1fr)_minmax(220px,280px)] md:p-5"
+        style={{ ['--book-accent' as string]: accent }}
+      >
         <div className="flex flex-col items-center">
           <Calendar
             mode="single"

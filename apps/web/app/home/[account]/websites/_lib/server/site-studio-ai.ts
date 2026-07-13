@@ -122,7 +122,9 @@ Rules:
 - copy.slots keys should match the section type (headline/subheadline/primaryCta for heroes; heading/body for content; etc.).
 - copy.items only for grids/cards (features, services, testimonials, FAQ, pricing, team). 3–4 items.
 - copy and copyOutline must be specific to the brief (no lorem, no generic filler).
-- Keep contentNotes internal-facing.`;
+- Slot values must be the real on-page copy only — never prefix with labels like "Headline:", "Supporting line:", "Primary CTA:", or "Links:".
+- Nav CTAs must be a single short button label (e.g. "Get in touch"), never a pipe-separated list of links.
+- Keep contentNotes internal-facing and short (1–2 sentences max).`;
 
 export const STYLE_SUGGEST_SYSTEM = `You are a brand-led art director. From a website brief and moodboard references you propose a style system.
 

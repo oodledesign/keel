@@ -113,6 +113,10 @@ content_path = "./supabase/templates/change-email-address.html"
 subject = "Sign in to Ozer"
 content_path = "./supabase/templates/magic-link.html"
 
+[auth.email.template.reauthentication]
+subject = "{{ .Token }} is your Ozer verification code"
+content_path = "./supabase/templates/reauthentication.html"
+
 [analytics]
 enabled = true
 port = 54337

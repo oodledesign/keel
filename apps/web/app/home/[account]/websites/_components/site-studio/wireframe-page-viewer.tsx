@@ -22,7 +22,10 @@ export type WireframeViewerSectionMeta = {
   id: string;
   title: string;
   description?: string;
+  /** Internal agency notes (contentNotes). */
   notes?: string;
+  /** Client feedback on this section. */
+  clientComment?: string;
 };
 
 type WireframePageViewerProps = {
@@ -32,10 +35,16 @@ type WireframePageViewerProps = {
   /** Continuous browser-like page canvas (no per-section chrome). */
   renderSection: (sectionId: string) => ReactNode;
   footer?: ReactNode;
+  /** Sticky footer pinned to the bottom of the left sidebar. */
+  sidebarFooter?: ReactNode;
   /** Optional toolbar above the canvas (library controls, etc.). */
   canvasHeader?: ReactNode;
   canEditNotes?: boolean;
   onNotesChange?: (sectionId: string, notes: string) => void;
+  /** When true, hide internal notes and show client comment fields instead. */
+  clientFeedbackMode?: boolean;
+  canEditClientComments?: boolean;
+  onClientCommentChange?: (sectionId: string, comment: string) => void;
   /** Extra controls per section in the left rail (e.g. library picker). */
   renderSectionControls?: (sectionId: string) => ReactNode;
   className?: string;
@@ -49,9 +58,13 @@ export function WireframePageViewer({
   sections,
   renderSection,
   footer,
+  sidebarFooter,
   canvasHeader,
   canEditNotes = false,
   onNotesChange,
+  clientFeedbackMode = false,
+  canEditClientComments = false,
+  onClientCommentChange,
   renderSectionControls,
   className,
   fullViewport = false,
@@ -82,7 +95,9 @@ export function WireframePageViewer({
     <div
       className={cn(
         'flex min-h-0 w-full overflow-hidden bg-[var(--ozer-cream-50)]',
-        fullViewport ? 'h-full flex-1' : 'min-h-[32rem] rounded-2xl border border-[color:var(--workspace-shell-border)]',
+        fullViewport
+          ? 'h-full flex-1'
+          : 'min-h-[32rem] rounded-2xl border border-[color:var(--workspace-shell-border)]',
         className,
       )}
     >
@@ -123,113 +138,167 @@ export function WireframePageViewer({
         </div>
 
         {sidebarOpen ? (
-          <div className="flex-1 space-y-2 overflow-y-auto p-2">
-            {pageDescription ? (
-              <p className="rounded-lg bg-[var(--ozer-cream-50)] px-3 py-2 text-xs leading-relaxed text-[var(--workspace-shell-text-muted)]">
-                {pageDescription}
-              </p>
-            ) : null}
+          <>
+            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-2">
+              {pageDescription && !clientFeedbackMode ? (
+                <p className="rounded-lg bg-[var(--ozer-cream-50)] px-3 py-2 text-xs leading-relaxed text-[var(--workspace-shell-text-muted)]">
+                  {pageDescription}
+                </p>
+              ) : null}
 
-            {sections.length === 0 ? (
-              <p className="px-2 py-4 text-sm text-[var(--workspace-shell-text-muted)]">
-                No sections yet.
-              </p>
-            ) : (
-              sections.map((section, index) => {
-                const descriptionOpen = Boolean(
-                  expandedDescriptions[section.id],
-                );
-                const isActive = section.id === activeSectionId;
+              {sections.length === 0 ? (
+                <p className="px-2 py-4 text-sm text-[var(--workspace-shell-text-muted)]">
+                  No sections yet.
+                </p>
+              ) : (
+                sections.map((section, index) => {
+                  const descriptionOpen = Boolean(
+                    expandedDescriptions[section.id],
+                  );
+                  const isActive = section.id === activeSectionId;
+                  const description = clientFeedbackMode
+                    ? undefined
+                    : section.description;
 
-                return (
-                  <div
-                    key={section.id}
-                    className={cn(
-                      'rounded-xl border px-3 py-2.5 transition-colors',
-                      isActive
-                        ? 'border-[var(--ozer-accent)]/40 bg-[color-mix(in_srgb,var(--ozer-accent)_8%,white)]'
-                        : 'border-[color:var(--workspace-shell-border)] bg-white',
-                    )}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => scrollToSection(section.id)}
-                      className="flex w-full items-start gap-2 text-left"
-                    >
-                      <span className="mt-0.5 text-[10px] font-semibold tabular-nums text-[var(--workspace-shell-text-muted)]">
-                        {String(index + 1).padStart(2, '0')}
-                      </span>
-                      <span className="min-w-0 flex-1 text-sm font-semibold text-[var(--ozer-plum-900)]">
-                        {section.title || 'Untitled section'}
-                      </span>
-                    </button>
-
-                    {section.description ? (
-                      <div className="mt-2">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setExpandedDescriptions((current) => ({
-                              ...current,
-                              [section.id]: !current[section.id],
-                            }))
-                          }
-                          className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--workspace-shell-text-muted)] hover:text-[var(--ozer-plum-900)]"
-                        >
-                          {descriptionOpen ? (
-                            <ChevronDown className="h-3 w-3" />
-                          ) : (
-                            <ChevronRight className="h-3 w-3" />
-                          )}
-                          Description
-                        </button>
-                        {descriptionOpen ? (
-                          <p className="mt-1 text-xs leading-relaxed text-[var(--workspace-shell-text-muted)]">
-                            {section.description}
-                          </p>
-                        ) : (
-                          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[var(--workspace-shell-text-muted)]">
-                            {section.description}
-                          </p>
-                        )}
-                      </div>
-                    ) : null}
-
-                    <div className="mt-2 space-y-1">
-                      <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
-                        Notes
-                      </p>
-                      {canEditNotes ? (
-                        <Textarea
-                          value={section.notes ?? ''}
-                          rows={2}
-                          onChange={(event) =>
-                            onNotesChange?.(section.id, event.target.value)
-                          }
-                          placeholder="Internal notes…"
-                          className="min-h-[4rem] border-[color:var(--workspace-shell-border)] bg-[var(--ozer-cream-50)] text-xs text-[var(--ozer-plum-900)]"
-                        />
-                      ) : section.notes ? (
-                        <p className="text-xs leading-relaxed text-[var(--ozer-plum-900)]/80">
-                          {section.notes}
-                        </p>
-                      ) : (
-                        <p className="text-xs italic text-[var(--workspace-shell-text-muted)]">
-                          No notes
-                        </p>
+                  return (
+                    <div
+                      key={section.id}
+                      className={cn(
+                        'rounded-xl border px-3 py-2.5 transition-colors',
+                        isActive
+                          ? 'border-[var(--ozer-accent)]/40 bg-[color-mix(in_srgb,var(--ozer-accent)_8%,white)]'
+                          : 'border-[color:var(--workspace-shell-border)] bg-white',
                       )}
-                    </div>
+                    >
+                      <button
+                        type="button"
+                        onClick={() => scrollToSection(section.id)}
+                        className="flex w-full items-start gap-2 text-left"
+                      >
+                        <span className="mt-0.5 text-[10px] font-semibold tabular-nums text-[var(--workspace-shell-text-muted)]">
+                          {String(index + 1).padStart(2, '0')}
+                        </span>
+                        <span className="min-w-0 flex-1 text-sm font-semibold text-[var(--ozer-plum-900)]">
+                          {section.title || 'Untitled section'}
+                        </span>
+                      </button>
 
-                    {renderSectionControls ? (
-                      <div className="mt-2 border-t border-[color:var(--workspace-shell-border)] pt-2">
-                        {renderSectionControls(section.id)}
-                      </div>
-                    ) : null}
-                  </div>
-                );
-              })
-            )}
-          </div>
+                      {description ? (
+                        <div className="mt-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedDescriptions((current) => ({
+                                ...current,
+                                [section.id]: !current[section.id],
+                              }))
+                            }
+                            className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--workspace-shell-text-muted)] hover:text-[var(--ozer-plum-900)]"
+                          >
+                            {descriptionOpen ? (
+                              <ChevronDown className="h-3 w-3" />
+                            ) : (
+                              <ChevronRight className="h-3 w-3" />
+                            )}
+                            Description
+                          </button>
+                          {descriptionOpen ? (
+                            <p className="mt-1 text-xs leading-relaxed text-[var(--workspace-shell-text-muted)]">
+                              {description}
+                            </p>
+                          ) : (
+                            <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[var(--workspace-shell-text-muted)]">
+                              {description}
+                            </p>
+                          )}
+                        </div>
+                      ) : null}
+
+                      {clientFeedbackMode ? (
+                        <div className="mt-2 space-y-1">
+                          <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+                            Your comment
+                          </p>
+                          {canEditClientComments ? (
+                            <Textarea
+                              value={section.clientComment ?? ''}
+                              rows={2}
+                              onChange={(event) =>
+                                onClientCommentChange?.(
+                                  section.id,
+                                  event.target.value,
+                                )
+                              }
+                              placeholder="Feedback on this section…"
+                              className="min-h-[3.5rem] border-[color:var(--workspace-shell-border)] bg-[var(--ozer-cream-50)] text-xs text-[var(--ozer-plum-900)]"
+                            />
+                          ) : section.clientComment ? (
+                            <p className="text-xs leading-relaxed text-[var(--ozer-plum-900)]/80">
+                              {section.clientComment}
+                            </p>
+                          ) : (
+                            <p className="text-xs italic text-[var(--workspace-shell-text-muted)]">
+                              No comment yet
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="mt-2 space-y-1">
+                          <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+                            Notes
+                          </p>
+                          {canEditNotes ? (
+                            <Textarea
+                              value={section.notes ?? ''}
+                              rows={2}
+                              onChange={(event) =>
+                                onNotesChange?.(
+                                  section.id,
+                                  event.target.value,
+                                )
+                              }
+                              placeholder="Internal notes…"
+                              className="min-h-[4rem] border-[color:var(--workspace-shell-border)] bg-[var(--ozer-cream-50)] text-xs text-[var(--ozer-plum-900)]"
+                            />
+                          ) : section.notes ? (
+                            <p className="text-xs leading-relaxed text-[var(--ozer-plum-900)]/80">
+                              {section.notes}
+                            </p>
+                          ) : (
+                            <p className="text-xs italic text-[var(--workspace-shell-text-muted)]">
+                              No notes
+                            </p>
+                          )}
+                          {section.clientComment ? (
+                            <div className="mt-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-cream-50)] px-2.5 py-2">
+                              <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+                                Client comment
+                              </p>
+                              <p className="mt-1 text-xs leading-relaxed text-[var(--ozer-plum-900)]">
+                                {section.clientComment}
+                              </p>
+                            </div>
+                          ) : null}
+                        </div>
+                      )}
+
+                      {renderSectionControls ? (
+                        <div className="mt-2 border-t border-[color:var(--workspace-shell-border)] pt-2">
+                          {renderSectionControls(section.id)}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {sidebarFooter ? (
+              <div className="shrink-0 border-t border-[color:var(--workspace-shell-border)] bg-white p-3">
+                {sidebarFooter}
+              </div>
+            ) : null}
+          </>
         ) : (
           <div className="flex flex-1 flex-col items-center gap-2 overflow-y-auto py-3">
             {sections.map((section, index) => (

@@ -140,3 +140,10 @@ export const SetShareApprovalSchema = z.object({
   status: z.enum(['approved', 'blocked']),
   note: z.string().max(2000).optional(),
 });
+
+export const SetShareSectionCommentSchema = z.object({
+  token: z.string().min(16).max(200),
+  pageId: z.string().uuid(),
+  sectionId: z.string().uuid(),
+  comment: z.string().max(2000),
+});

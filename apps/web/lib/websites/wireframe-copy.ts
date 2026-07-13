@@ -69,27 +69,27 @@ export const WIREFRAME_COPY_SPECS: Record<string, WireframeLibraryCopySpec> = {
   },
   'hero-split': {
     slots: [
-      slot('eyebrow', 'label', 'Eyebrow'),
-      slot('headline', 'heading', 'Headline that sells the outcome'),
+      slot('eyebrow', 'label', ''),
+      slot('headline', 'heading', 'Independent expertise that delivers outcomes'),
       slot(
         'subheadline',
         'body',
-        'Supporting line that clarifies who this is for and why it matters.',
+        'Clear advice and hands-on delivery for organisations that need trusted construction consultancy.',
       ),
-      slot('primaryCta', 'button', 'Primary CTA'),
-      slot('secondaryCta', 'button', 'Secondary'),
+      slot('primaryCta', 'button', 'Discuss your project'),
+      slot('secondaryCta', 'button', 'View services'),
     ],
   },
   'hero-centered': {
     slots: [
-      slot('eyebrow', 'label', 'Eyebrow'),
-      slot('headline', 'heading', 'Centered headline for the hero'),
+      slot('eyebrow', 'label', ''),
+      slot('headline', 'heading', 'A clearer path from brief to delivery'),
       slot(
         'subheadline',
         'body',
-        'A short supporting sentence under the headline.',
+        'Practical support for projects that need momentum and accountability.',
       ),
-      slot('primaryCta', 'button', 'Primary CTA'),
+      slot('primaryCta', 'button', 'Get in touch'),
     ],
   },
   'hero-form': {
@@ -287,6 +287,64 @@ export function getWireframeCopySpec(
   return WIREFRAME_COPY_SPECS[libraryKey] ?? GENERIC_SPEC;
 }
 
+/**
+ * Strip meta labels AI often bakes into slot values
+ * ("Headline: …", "Primary CTA: …", "Links: a | b | c").
+ */
+export function sanitizeWireframeSlotValue(value: string): string {
+  let next = value.trim();
+  if (!next) return '';
+
+  // Bare meta labels sometimes land in slots as the whole value.
+  if (
+    /^(eyebrow|headline|supporting line|subheadline|primary cta|secondary cta|intro line|body copy|body|heading|label|cta|button|image|links?)$/i.test(
+      next,
+    )
+  ) {
+    return '';
+  }
+
+  next = next.replace(
+    /^(eyebrow|headline|supporting line|subheadline|primary cta|secondary cta|intro line|body copy|body|heading|label|cta|button|links?|card\s*\d+(?:\s*[—\-–:]\s*[a-z ]+)?)\s*:\s*/i,
+    '',
+  );
+
+  return next.trim();
+}
+
+/** True when a CTA/button slot is actually a dumped nav links string. */
+export function isWireframeLinkDump(value: string): boolean {
+  const next = value.trim();
+  if (!next) return false;
+  if (/^links?\s*:/i.test(next)) return true;
+  const pipes = (next.match(/\|/g) ?? []).length;
+  return pipes >= 2 && next.length > 28;
+}
+
+export function displayWireframeSlotValue(value: string): string {
+  if (isWireframeLinkDump(value)) return '';
+  return sanitizeWireframeSlotValue(value);
+}
+
+function sanitizeCopy(copy: WebsiteWireframeCopy): WebsiteWireframeCopy {
+  const slots: Record<string, string> = {};
+  for (const [key, value] of Object.entries(copy.slots)) {
+    slots[key] = displayWireframeSlotValue(value);
+  }
+  return {
+    slots,
+    items: copy.items?.map((item) => ({
+      id: item.id,
+      slots: Object.fromEntries(
+        Object.entries(item.slots).map(([key, value]) => [
+          key,
+          displayWireframeSlotValue(value),
+        ]),
+      ),
+    })),
+  };
+}
+
 export function createDefaultWireframeCopy(
   libraryKey: string | null | undefined,
 ): WebsiteWireframeCopy {
@@ -312,13 +370,13 @@ export function ensureWireframeCopy(
   >,
 ): WebsiteWireframeCopy {
   if (section.copy?.slots && Object.keys(section.copy.slots).length > 0) {
-    return {
+    return sanitizeCopy({
       slots: { ...section.copy.slots },
       items: section.copy.items?.map((item) => ({
         id: item.id || createPlanningId(),
         slots: { ...item.slots },
       })),
-    };
+    });
   }
 
   const seeded = createDefaultWireframeCopy(section.libraryKey ?? null);
@@ -326,7 +384,9 @@ export function ensureWireframeCopy(
   if (outline) {
     const lines = outline
       .split('\n')
-      .map((line) => line.replace(/^[-*•]\s*/, '').trim())
+      .map((line) =>
+        sanitizeWireframeSlotValue(line.replace(/^[-*•]\s*/, '').trim()),
+      )
       .filter(Boolean);
 
     const slotKeys = Object.keys(seeded.slots);
@@ -341,11 +401,12 @@ export function ensureWireframeCopy(
       seeded.slots.body = lines[1]!;
     }
     const ctaLine = lines.find((line) =>
-      /cta|button|book|get started|contact/i.test(line),
+      /cta|button|book|get started|contact|discuss/i.test(line),
     );
-    if (ctaLine) {
-      if (slotKeys.includes('primaryCta')) seeded.slots.primaryCta = ctaLine;
-      else if (slotKeys.includes('cta')) seeded.slots.cta = ctaLine;
+    if (ctaLine && !isWireframeLinkDump(ctaLine)) {
+      const cleaned = sanitizeWireframeSlotValue(ctaLine);
+      if (slotKeys.includes('primaryCta')) seeded.slots.primaryCta = cleaned;
+      else if (slotKeys.includes('cta')) seeded.slots.cta = cleaned;
     }
   } else if (section.title && seeded.slots.heading !== undefined) {
     seeded.slots.heading = section.title;
@@ -353,7 +414,7 @@ export function ensureWireframeCopy(
     seeded.slots.headline = section.title;
   }
 
-  return seeded;
+  return sanitizeCopy(seeded);
 }
 
 export function libraryEntryLabel(key: string | null | undefined) {

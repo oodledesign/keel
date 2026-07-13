@@ -24,7 +24,7 @@ import { cn } from '@kit/ui/utils';
 
 import { WireframeLibrarySection } from '~/home/[account]/websites/_components/site-studio/wireframe-library-sections';
 import { WireframePageViewer } from '~/home/[account]/websites/_components/site-studio/wireframe-page-viewer';
-import { setWebsiteShareApproval } from '~/home/[account]/websites/_lib/server/site-studio-actions';
+import { setWebsiteShareApproval, setWebsiteShareSectionComment } from '~/home/[account]/websites/_lib/server/site-studio-actions';
 import {
   PLANNING_STATUS_OPTIONS,
   type WebsiteBrief,
@@ -93,6 +93,7 @@ function PageApproval({
   page,
   shareToken,
   onUpdated,
+  compact = false,
 }: {
   page: WebsiteSitemapPage;
   shareToken: string;
@@ -101,6 +102,8 @@ function PageApproval({
     status: 'approved' | 'blocked',
     note?: string,
   ) => void;
+  /** Sidebar layout — expands the note field in place. */
+  compact?: boolean;
 }) {
   const [note, setNote] = useState(page.approvalNote ?? '');
   const [showNote, setShowNote] = useState(false);
@@ -129,12 +132,28 @@ function PageApproval({
   };
 
   return (
-    <div className="mt-auto space-y-2 border-t border-[color:var(--workspace-shell-border)] pt-3">
-      <div className="flex flex-wrap gap-2">
+    <div
+      className={cn(
+        'space-y-2',
+        !compact &&
+          'mt-auto border-t border-[color:var(--workspace-shell-border)] pt-3',
+      )}
+    >
+      {compact ? (
+        <p className="text-xs font-semibold text-[var(--ozer-plum-900)]">
+          Page feedback
+        </p>
+      ) : null}
+      {page.approvalNote && !showNote ? (
+        <p className="text-xs leading-relaxed text-red-700">
+          Requested: {page.approvalNote}
+        </p>
+      ) : null}
+      <div className={cn('flex gap-2', compact ? 'flex-col' : 'flex-wrap')}>
         <Button
           type="button"
           size="sm"
-          className="ozer-gradient-btn"
+          className={cn('ozer-gradient-btn', compact && 'w-full')}
           disabled={pending}
           onClick={() => submit('approved')}
         >
@@ -145,6 +164,7 @@ function PageApproval({
           type="button"
           size="sm"
           variant="outline"
+          className={compact ? 'w-full' : undefined}
           disabled={pending}
           onClick={() => setShowNote((value) => !value)}
         >
@@ -158,17 +178,32 @@ function PageApproval({
             value={note}
             onChange={(event) => setNote(event.target.value)}
             placeholder="What should we change on this page?"
-            rows={3}
-            className="border-[color:var(--workspace-shell-border)] bg-white"
+            rows={compact ? 4 : 3}
+            className="border-[color:var(--workspace-shell-border)] bg-white text-sm"
+            autoFocus
           />
-          <Button
-            type="button"
-            size="sm"
-            disabled={pending || !note.trim()}
-            onClick={() => submit('blocked')}
-          >
-            Send feedback
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              disabled={pending || !note.trim()}
+              onClick={() => submit('blocked')}
+              className={compact ? 'flex-1' : undefined}
+            >
+              Send feedback
+            </Button>
+            {compact ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                disabled={pending}
+                onClick={() => setShowNote(false)}
+              >
+                Cancel
+              </Button>
+            ) : null}
+          </div>
         </div>
       ) : null}
     </div>
@@ -368,10 +403,22 @@ export function PortalWebsitePlanningView({
   websiteName?: string;
 }) {
   const [pages, setPages] = useState(sitemap);
+  const [wireframePagesState, setWireframePagesState] = useState(wireframes);
   const [selectedTab, setSelectedTab] = useState<PortalTab | null>(null);
   const [openWireframePageId, setOpenWireframePageId] = useState<string | null>(
     null,
   );
+  const commentSaveTimers = useRef<
+    Map<string, ReturnType<typeof setTimeout>>
+  >(new Map());
+  const pendingSectionComments = useRef<
+    Map<
+      string,
+      { pageId: string; sectionId: string; comment: string }
+    >
+  >(new Map());
+  const shareTokenRef = useRef(shareToken);
+  shareTokenRef.current = shareToken;
 
   const showWireframes = scopeShowsWireframes(scope);
   const showStyle = scopeShowsStyle(scope);
@@ -381,11 +428,11 @@ export function PortalWebsitePlanningView({
 
   const wireframeByPage = useMemo(() => {
     const map = new Map<string, WebsiteWireframePage>();
-    for (const page of wireframes) {
+    for (const page of wireframePagesState) {
       map.set(page.pageId, page);
     }
     return map;
-  }, [wireframes]);
+  }, [wireframePagesState]);
 
   const wireframePages = useMemo(
     () =>
@@ -433,6 +480,48 @@ export function PortalWebsitePlanningView({
     };
   }, [openWireframePageId]);
 
+  const flushPendingSectionComments = () => {
+    const token = shareTokenRef.current;
+    for (const timer of commentSaveTimers.current.values()) {
+      clearTimeout(timer);
+    }
+    commentSaveTimers.current.clear();
+
+    if (!token) {
+      pendingSectionComments.current.clear();
+      return;
+    }
+
+    const pending = [...pendingSectionComments.current.values()];
+    pendingSectionComments.current.clear();
+
+    for (const item of pending) {
+      void setWebsiteShareSectionComment({
+        token,
+        pageId: item.pageId,
+        sectionId: item.sectionId,
+        comment: item.comment,
+      }).catch((error) => {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'Could not save section comment',
+        );
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (openWireframePageId !== null) return;
+    flushPendingSectionComments();
+  }, [openWireframePageId]);
+
+  useEffect(() => {
+    return () => {
+      flushPendingSectionComments();
+    };
+  }, []);
+
   const handleApproval = (
     pageId: string,
     status: 'approved' | 'blocked',
@@ -441,9 +530,65 @@ export function PortalWebsitePlanningView({
     setPages((prev) =>
       prev.map((page) =>
         page.id === pageId
-          ? { ...page, status, approvalNote: note ?? page.approvalNote }
+          ? {
+              ...page,
+              status,
+              approvalNote:
+                status === 'approved'
+                  ? undefined
+                  : (note ?? page.approvalNote),
+            }
           : page,
       ),
+    );
+  };
+
+  const handleSectionComment = (
+    pageId: string,
+    sectionId: string,
+    comment: string,
+  ) => {
+    setWireframePagesState((prev) =>
+      prev.map((page) =>
+        page.pageId !== pageId
+          ? page
+          : {
+              ...page,
+              sections: page.sections.map((section) =>
+                section.id === sectionId
+                  ? { ...section, clientComment: comment }
+                  : section,
+              ),
+            },
+      ),
+    );
+
+    if (!shareToken) return;
+
+    const key = `${pageId}:${sectionId}`;
+    pendingSectionComments.current.set(key, { pageId, sectionId, comment });
+
+    const existing = commentSaveTimers.current.get(key);
+    if (existing) clearTimeout(existing);
+
+    commentSaveTimers.current.set(
+      key,
+      setTimeout(() => {
+        pendingSectionComments.current.delete(key);
+        commentSaveTimers.current.delete(key);
+        void setWebsiteShareSectionComment({
+          token: shareToken,
+          pageId,
+          sectionId,
+          comment,
+        }).catch((error) => {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : 'Could not save section comment',
+          );
+        });
+      }, 700),
     );
   };
 
@@ -690,21 +835,16 @@ export function PortalWebsitePlanningView({
             fullViewport
             className="min-h-0 flex-1"
             pageTitle={openPage.title}
-            pageDescription={openPage.description}
-            sections={openWireframe.sections.map((section) => {
-              const sitemapSection = openPage.sections.find(
-                (item) => item.id === section.sitemapSectionId,
-              );
-              return {
-                id: section.id,
-                title: section.title,
-                description:
-                  sitemapSection?.description ||
-                  section.copyOutline ||
-                  undefined,
-                notes: section.contentNotes || undefined,
-              };
-            })}
+            clientFeedbackMode
+            canEditClientComments={Boolean(shareToken)}
+            onClientCommentChange={(sectionId, comment) =>
+              handleSectionComment(openPage.id, sectionId, comment)
+            }
+            sections={openWireframe.sections.map((section) => ({
+              id: section.id,
+              title: section.title,
+              clientComment: section.clientComment,
+            }))}
             renderSection={(sectionId) => {
               const section = openWireframe.sections.find(
                 (item) => item.id === sectionId,
@@ -712,23 +852,19 @@ export function PortalWebsitePlanningView({
               if (!section) return null;
               return <WireframePreview section={section} />;
             }}
-            footer={
+            sidebarFooter={
               shareToken ? (
-                <div className="mx-auto w-full max-w-5xl">
-                  <p className="mb-2 text-sm font-medium text-[var(--ozer-plum-900)]">
-                    Feedback for this page
-                  </p>
-                  <PageApproval
-                    page={openPage}
-                    shareToken={shareToken}
-                    onUpdated={(pageId, status, note) => {
-                      handleApproval(pageId, status, note);
-                      if (status === 'approved') {
-                        setOpenWireframePageId(null);
-                      }
-                    }}
-                  />
-                </div>
+                <PageApproval
+                  compact
+                  page={openPage}
+                  shareToken={shareToken}
+                  onUpdated={(pageId, status, note) => {
+                    handleApproval(pageId, status, note);
+                    if (status === 'approved') {
+                      setOpenWireframePageId(null);
+                    }
+                  }}
+                />
               ) : null
             }
           />

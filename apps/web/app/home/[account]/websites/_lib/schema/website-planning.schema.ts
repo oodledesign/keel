@@ -73,6 +73,7 @@ const WireframeSectionSchema = z.object({
   libraryKey: z.string().max(100).nullable().optional(),
   copyOutline: z.string().max(10000).optional(),
   copy: WireframeCopySchema.optional(),
+  clientComment: z.string().max(2000).optional(),
 });
 
 const WireframePageSchema = z.object({

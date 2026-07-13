@@ -13,6 +13,8 @@ import {
 } from '@kit/scheduling/google';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
+
 import type {
   CreatePublicBookingInput,
   FetchSlotsInput,
@@ -75,6 +77,12 @@ export type PublicBookingPage = {
   timezone: string;
   brandColour: string | null;
   isActive: boolean;
+  /** Workspace logo for public booking chrome */
+  logoUrl: string | null;
+  /** Host display name */
+  hostName: string | null;
+  /** Host avatar URL */
+  hostPictureUrl: string | null;
 };
 
 export type PublicEventType = {
@@ -120,6 +128,7 @@ export type PublicBookingRecord = {
   inviteeName: string;
   inviteeEmail: string;
   inviteeTimezone: string;
+  inviteeNotes: string | null;
   status: string;
   cancellationReason: string | null;
   conferencingUrl: string | null;
@@ -148,6 +157,60 @@ function mapPage(row: Record<string, unknown>): PublicBookingPage {
     timezone: row.timezone as string,
     brandColour: (row.brand_colour as string | null) ?? null,
     isActive: Boolean(row.is_active),
+    logoUrl: null,
+    hostName: null,
+    hostPictureUrl: null,
+  };
+}
+
+async function enrichPublicBookingPage(
+  page: PublicBookingPage,
+): Promise<PublicBookingPage> {
+  const client = getSupabaseServerAdminClient();
+
+  const [{ data: accountRow }, { data: brandRow }, { data: hostRow }] =
+    await Promise.all([
+      table(client, 'accounts')
+        .select('picture_url, name')
+        .eq('id', page.accountId)
+        .maybeSingle(),
+      table(client, 'account_brand_settings')
+        .select('logo_url, primary_color')
+        .eq('account_id', page.accountId)
+        .maybeSingle(),
+      table(client, 'accounts')
+        .select('name, picture_url')
+        .eq('id', page.hostUserId)
+        .maybeSingle(),
+    ]);
+
+  const account = (accountRow ?? {}) as {
+    picture_url?: string | null;
+    name?: string | null;
+  };
+  const brand = (brandRow ?? {}) as {
+    logo_url?: string | null;
+    primary_color?: string | null;
+  };
+  const host = (hostRow ?? {}) as {
+    name?: string | null;
+    picture_url?: string | null;
+  };
+
+  const logoUrl =
+    toSupabasePublicStorageUrl(brand.logo_url?.trim()) ||
+    toSupabasePublicStorageUrl(account.picture_url?.trim()) ||
+    null;
+
+  const hostPictureUrl =
+    toSupabasePublicStorageUrl(host.picture_url?.trim()) || null;
+
+  return {
+    ...page,
+    brandColour: page.brandColour || brand.primary_color || null,
+    logoUrl,
+    hostName: host.name?.trim() || null,
+    hostPictureUrl,
   };
 }
 
@@ -202,7 +265,7 @@ export async function loadPublicBookingPage(pageSlug: string) {
   throwIfError(etError, 'Could not load event types');
 
   return {
-    page,
+    page: await enrichPublicBookingPage(page),
     eventTypes: ((eventRows ?? []) as Record<string, unknown>[]).map(
       mapEventType,
     ),
@@ -255,7 +318,11 @@ export async function loadPublicEventType(pageSlug: string, eventSlug: string) {
     sortOrder: Number(row.sort_order ?? 0),
   }));
 
-  return { page, eventType, formFields };
+  return {
+    page: await enrichPublicBookingPage(page),
+    eventType,
+    formFields,
+  };
 }
 
 async function loadScheduleBundle(scheduleId: string) {
@@ -767,6 +834,7 @@ export async function createPublicBooking(input: CreatePublicBookingInput) {
       invitee_name: input.inviteeName.trim(),
       invitee_email: input.inviteeEmail.trim().toLowerCase(),
       invitee_timezone: input.inviteeTimezone,
+      invitee_notes: input.inviteeNotes?.trim() || null,
       status: 'confirmed',
       management_token: managementToken,
     })
@@ -825,6 +893,7 @@ export async function createPublicBooking(input: CreatePublicBookingInput) {
     eventType,
     inviteeName: input.inviteeName,
     inviteeEmail: input.inviteeEmail,
+    inviteeNotes: input.inviteeNotes?.trim() || null,
     formFields,
     formResponses: input.formResponses,
     locationDetail: eventType.locationDetail,
@@ -947,6 +1016,7 @@ function buildEventDescription(input: {
   eventType: PublicEventType;
   inviteeName: string;
   inviteeEmail: string;
+  inviteeNotes?: string | null;
   formFields: PublicFormField[];
   formResponses: Array<{ formFieldId: string; value?: unknown }>;
   locationDetail: string | null;
@@ -958,6 +1028,10 @@ function buildEventDescription(input: {
 
   if (input.locationDetail) {
     lines.push(`Location: ${input.locationDetail}`);
+  }
+
+  if (input.inviteeNotes?.trim()) {
+    lines.push('', `Notes: ${input.inviteeNotes.trim()}`);
   }
 
   if (input.formResponses.length > 0) {
@@ -1017,6 +1091,7 @@ export async function loadBookingByManagementToken(
     inviteeName: row.invitee_name as string,
     inviteeEmail: row.invitee_email as string,
     inviteeTimezone: row.invitee_timezone as string,
+    inviteeNotes: (row.invitee_notes as string | null) ?? null,
     status: row.status as string,
     cancellationReason: (row.cancellation_reason as string | null) ?? null,
     conferencingUrl: (row.conferencing_url as string | null) ?? null,
@@ -1229,6 +1304,7 @@ export async function reschedulePublicBooking(input: {
       invitee_name: existing.inviteeName,
       invitee_email: existing.inviteeEmail,
       invitee_timezone: input.inviteeTimezone,
+      invitee_notes: existing.inviteeNotes,
       status: 'confirmed',
       reschedule_of: existing.id,
       management_token: managementToken,
@@ -1331,6 +1407,7 @@ export async function reschedulePublicBooking(input: {
     eventType,
     inviteeName: existing.inviteeName,
     inviteeEmail: existing.inviteeEmail,
+    inviteeNotes: existing.inviteeNotes,
     formFields,
     formResponses: oldResponses.map((row) => ({
       formFieldId: row.form_field_id,

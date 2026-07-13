@@ -1,7 +1,11 @@
 'use client';
 
 import type { WebsiteWireframeCopy } from '~/lib/websites/planning-types';
-import { getWireframeCopySpec } from '~/lib/websites/wireframe-copy';
+import {
+  displayWireframeSlotValue,
+  getWireframeCopySpec,
+  isWireframeLinkDump,
+} from '~/lib/websites/wireframe-copy';
 
 import {
   WfButton,
@@ -21,6 +25,10 @@ type Props = {
 };
 
 function slot(copy: WebsiteWireframeCopy, key: string) {
+  return displayWireframeSlotValue(copy.slots[key] ?? '');
+}
+
+function rawSlot(copy: WebsiteWireframeCopy, key: string) {
   return copy.slots[key] ?? '';
 }
 
@@ -39,35 +47,49 @@ export function WireframeLibrarySection({
   const key = libraryKey ?? 'custom';
 
   switch (key) {
-    case 'nav-standard':
+    case 'nav-standard': {
+      const links = (['link1', 'link2', 'link3', 'link4'] as const)
+        .map((linkKey) => ({
+          key: linkKey,
+          value: canEdit ? rawSlot(copy, linkKey) : slot(copy, linkKey),
+        }))
+        .filter((link) => canEdit || Boolean(link.value.trim()));
+      const ctaRaw = rawSlot(copy, 'cta');
+      const ctaValue = canEdit ? ctaRaw : slot(copy, 'cta');
+      const showCta =
+        canEdit || (Boolean(ctaValue.trim()) && !isWireframeLinkDump(ctaRaw));
+
       return (
         <WfSectionFrame padded={false} className="px-5 py-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <WfText
-              value={slot(copy, 'logo')}
+              value={canEdit ? rawSlot(copy, 'logo') : slot(copy, 'logo')}
               canEdit={canEdit}
               onChange={(v) => onSlotChange('logo', v)}
               className="text-sm font-semibold"
             />
             <div className="flex flex-wrap items-center gap-4">
-              {(['link1', 'link2', 'link3', 'link4'] as const).map((linkKey) => (
+              {links.map((link) => (
                 <WfText
-                  key={linkKey}
-                  value={slot(copy, linkKey)}
+                  key={link.key}
+                  value={link.value}
                   canEdit={canEdit}
-                  onChange={(v) => onSlotChange(linkKey, v)}
+                  onChange={(v) => onSlotChange(link.key, v)}
                   className="text-sm text-[#6b6b6b]"
                 />
               ))}
-              <WfButton
-                value={slot(copy, 'cta')}
-                canEdit={canEdit}
-                onChange={(v) => onSlotChange('cta', v)}
-              />
+              {showCta ? (
+                <WfButton
+                  value={ctaValue}
+                  canEdit={canEdit}
+                  onChange={(v) => onSlotChange('cta', v)}
+                />
+              ) : null}
             </div>
           </div>
         </WfSectionFrame>
       );
+    }
 
     case 'hero-split':
       return (

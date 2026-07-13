@@ -104,6 +104,8 @@ export type WebsiteWireframeSection = {
    * `slots` = named fields (headline, cta…); `items` = repeating cards/rows.
    */
   copy?: WebsiteWireframeCopy;
+  /** Client feedback left from portal / public share. */
+  clientComment?: string;
 };
 
 /** Structured copy bound to a library section preview. */

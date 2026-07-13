@@ -53,11 +53,9 @@ export function WfText({
   rows?: number;
 }) {
   if (!canEdit) {
-    return (
-      <p className={cn('whitespace-pre-wrap', className)}>
-        {value || placeholder}
-      </p>
-    );
+    const display = value.trim() || placeholder?.trim() || '';
+    if (!display) return null;
+    return <p className={cn('whitespace-pre-wrap', className)}>{display}</p>;
   }
 
   if (multiline) {
@@ -102,6 +100,8 @@ export function WfButton({
       : 'border-neutral-900 bg-white text-neutral-900';
 
   if (!canEdit) {
+    const label = value.trim();
+    if (!label) return null;
     return (
       <span
         className={cn(
@@ -110,7 +110,7 @@ export function WfButton({
           className,
         )}
       >
-        {value || 'Button'}
+        {label}
       </span>
     );
   }
