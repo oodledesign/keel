@@ -62,8 +62,8 @@ export async function WorkspaceBillingPanel({
   const [subscription, order, customerId] =
     await loadTeamAccountBillingPage(accountId);
 
-  const variantId = subscription?.items[0]?.variant_id;
-  const orderVariantId = order?.items[0]?.variant_id;
+  const variantId = subscription?.items?.[0]?.variant_id;
+  const orderVariantId = order?.items?.[0]?.variant_id;
 
   const subscriptionProductPlan = variantId
     ? await resolveProductPlan(billingConfig, variantId, subscription.currency)

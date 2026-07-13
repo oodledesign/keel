@@ -5,22 +5,30 @@ import { BillingSessionStatus } from '@kit/billing-gateway/components';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import billingConfig from '~/config/billing.config';
+import pathsConfig from '~/config/paths.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import { EmbeddedCheckoutForm } from '../_components/embedded-checkout-form';
 
 interface SessionPageProps {
+  params: Promise<{ account: string }>;
   searchParams: Promise<{
     session_id: string;
   }>;
 }
 
-async function ReturnCheckoutSessionPage({ searchParams }: SessionPageProps) {
+async function ReturnCheckoutSessionPage({
+  params,
+  searchParams,
+}: SessionPageProps) {
+  const account = (await params).account;
   const sessionId = (await searchParams).session_id;
 
   if (!sessionId) {
-    redirect('../');
+    redirect(
+      pathsConfig.app.accountBilling.replace('[account]', account),
+    );
   }
 
   const { customerEmail, checkoutToken } = await loadCheckoutSession(sessionId);
@@ -34,11 +42,16 @@ async function ReturnCheckoutSessionPage({ searchParams }: SessionPageProps) {
     );
   }
 
+  const billingPath = pathsConfig.app.accountBilling.replace(
+    '[account]',
+    account,
+  );
+
   return (
     <>
       <div className={'fixed top-48 left-0 z-50 mx-auto w-full'}>
         <BillingSessionStatus
-          redirectPath={'../billing'}
+          redirectPath={billingPath}
           customerEmail={customerEmail ?? ''}
         />
       </div>
