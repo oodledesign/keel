@@ -28,13 +28,14 @@ export function PaymentSettingsForm({
   accountSlug,
   initialSettings,
   canEdit,
-  hasInvoices,
+  highestInvoiceSequence,
 }: {
   accountId: string;
   accountSlug: string;
   initialSettings: AccountPaymentSettings;
   canEdit: boolean;
-  hasInvoices: boolean;
+  /** Highest INV-#### already issued (0 if none). */
+  highestInvoiceSequence: number;
 }) {
   const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
@@ -155,8 +156,9 @@ export function PaymentSettingsForm({
       <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
         <h2 className="text-base font-semibold">Invoice numbering</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          New invoices are numbered INV-0001, INV-0002, and so on. Set a custom
-          starting number before you create your first invoice.
+          New invoices are numbered INV-0001, INV-0002, and so on. You can jump
+          the sequence forward at any time — existing invoices keep their
+          numbers; only future invoices use the new starting point.
         </p>
         <div className="mt-4 max-w-xs">
           <Label htmlFor="invoice_starting_number">Next invoice number</Label>
@@ -165,10 +167,10 @@ export function PaymentSettingsForm({
             <Input
               id="invoice_starting_number"
               type="number"
-              min={1}
+              min={Math.max(1, highestInvoiceSequence + 1)}
               max={999999}
               value={settings.invoice_starting_number ?? 1}
-              disabled={!canEdit || hasInvoices}
+              disabled={!canEdit}
               onChange={(e) => {
                 const n = parseInt(e.target.value, 10);
                 setSettings((prev) => ({
@@ -181,9 +183,11 @@ export function PaymentSettingsForm({
               className="font-mono"
             />
           </div>
-          {hasInvoices ? (
+          {highestInvoiceSequence > 0 ? (
             <p className="mt-2 text-xs text-muted-foreground">
-              Numbering is locked after your first invoice has been created.
+              Highest existing invoice is INV-
+              {String(highestInvoiceSequence).padStart(4, '0')}. Choose a number
+              greater than {highestInvoiceSequence}.
             </p>
           ) : null}
         </div>

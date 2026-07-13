@@ -67,18 +67,49 @@ class InvoicePaymentSettingsService {
   }
 
   async getSettings(accountId: string): Promise<AccountPaymentSettings> {
-    const { data, error } = await this.db
-      .from('account_payment_settings')
-      .select('*')
-      .eq('account_id', accountId)
-      .maybeSingle();
+    const [{ data, error }, { data: counter }] = await Promise.all([
+      this.db
+        .from('account_payment_settings')
+        .select('*')
+        .eq('account_id', accountId)
+        .maybeSingle(),
+      this.db
+        .from('invoice_counters')
+        .select('next_number')
+        .eq('account_id', accountId)
+        .maybeSingle(),
+    ]);
     if (error) throw new Error(error.message);
+
+    const nextFromCounter =
+      typeof counter?.next_number === 'number' ? counter.next_number : null;
 
     return {
       account_id: accountId,
       ...DEFAULT_SETTINGS,
       ...(data ?? {}),
+      // Prefer live counter so the UI shows the real next number after invoices exist.
+      invoice_starting_number:
+        nextFromCounter ??
+        (data as { invoice_starting_number?: number } | null)
+          ?.invoice_starting_number ??
+        DEFAULT_SETTINGS.invoice_starting_number,
     };
+  }
+
+  async getHighestInvoiceSequence(accountId: string): Promise<number> {
+    const { data, error } = await this.db
+      .from('invoices')
+      .select('invoice_number')
+      .eq('account_id', accountId);
+    if (error) throw new Error(error.message);
+
+    let max = 0;
+    for (const row of (data ?? []) as Array<{ invoice_number?: string | null }>) {
+      const parsed = parseInvoiceSequence(row.invoice_number);
+      if (parsed != null && parsed > max) max = parsed;
+    }
+    return max;
   }
 
   async saveSettings(input: {
@@ -130,30 +161,33 @@ class InvoicePaymentSettingsService {
     if (error) throw new Error(error.message);
 
     if (input.invoice_starting_number !== undefined) {
-      await this.syncInvoiceCounterIfAllowed(
+      await this.syncInvoiceCounter(
         input.accountId,
         input.invoice_starting_number,
       );
     }
 
-    return data as AccountPaymentSettings;
+    return this.getSettings(input.accountId);
   }
 
-  private async syncInvoiceCounterIfAllowed(
-    accountId: string,
-    startingNumber: number,
-  ) {
-    const { count, error: countError } = await this.db
-      .from('invoices')
-      .select('id', { count: 'exact', head: true })
-      .eq('account_id', accountId);
-    if (countError) throw new Error(countError.message);
-    if ((count ?? 0) > 0) return;
+  /**
+   * Sets the next allocated invoice number. Existing invoices keep their numbers.
+   * The new value must be higher than any INV-#### already issued.
+   */
+  private async syncInvoiceCounter(accountId: string, startingNumber: number) {
+    const next = Math.max(1, Math.floor(startingNumber));
+    const highest = await this.getHighestInvoiceSequence(accountId);
+
+    if (next <= highest) {
+      throw new Error(
+        `Next invoice number must be greater than ${highest} (highest existing invoice). Existing invoices keep their numbers; only future invoices use the new sequence.`,
+      );
+    }
 
     const { error } = await this.db.from('invoice_counters').upsert(
       {
         account_id: accountId,
-        next_number: Math.max(1, Math.floor(startingNumber)),
+        next_number: next,
       },
       { onConflict: 'account_id' },
     );
@@ -229,4 +263,12 @@ export async function loadPaymentSettingsForPortal(
     .maybeSingle();
   if (error || !data) return null;
   return data as AccountPaymentSettings;
+}
+
+function parseInvoiceSequence(invoiceNumber: string | null | undefined): number | null {
+  if (!invoiceNumber) return null;
+  const match = /^INV-0*(\d+)$/i.exec(invoiceNumber.trim());
+  if (!match?.[1]) return null;
+  const value = parseInt(match[1], 10);
+  return Number.isFinite(value) ? value : null;
 }

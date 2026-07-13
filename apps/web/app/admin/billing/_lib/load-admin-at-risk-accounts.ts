@@ -14,6 +14,7 @@ import {
   BILLING_GRACE_PERIOD_DAYS,
   BILLING_SUSPEND_AFTER_DAYS,
 } from '~/lib/billing/account-billing-types';
+import { reconcileAccountBillingFromSubscriptions } from '~/lib/billing/reconcile-account-billing';
 
 const MS_DAY = 24 * 60 * 60 * 1000;
 
@@ -172,6 +173,17 @@ export const loadAdminAtRiskAccounts = cache(
     // account_billing / billing_events may not be in generated Database types yet
     const admin = getSupabaseServerAdminClient() as AnyClient;
     const now = new Date();
+
+    // Pull any MakerKit trials/active subs that never wrote account_billing
+    // (e.g. webhooks before lifecycle sync). Idempotent via stripe_event_id.
+    try {
+      await reconcileAccountBillingFromSubscriptions(admin);
+    } catch (error) {
+      console.error(
+        '[admin] reconcileAccountBillingFromSubscriptions failed',
+        error,
+      );
+    }
 
     const { data, error } = await admin
       .from('account_billing')

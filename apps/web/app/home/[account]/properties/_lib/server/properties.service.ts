@@ -15,6 +15,24 @@ export type Property = {
   purchaseDate: string | null;
   purchasePrice: number | null;
   currentValue: number | null;
+  mortgageLender: string | null;
+  mortgageBalance: number | null;
+  mortgageInterestRate: number | null;
+  mortgageMonthlyPayment: number | null;
+  mortgageStartDate: string | null;
+  mortgageEndDate: string | null;
+  mortgageNotes: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PropertyValuation = {
+  id: string;
+  propertyId: string;
+  accountId: string;
+  valuedMonth: string;
+  valueAmount: number;
   notes: string | null;
   createdAt: string;
   updatedAt: string;
@@ -33,12 +51,55 @@ type PropertyRow = {
   purchase_date?: string | null;
   purchase_price?: number | null;
   current_value?: number | null;
+  mortgage_lender?: string | null;
+  mortgage_balance?: number | null;
+  mortgage_interest_rate?: number | string | null;
+  mortgage_monthly_payment?: number | null;
+  mortgage_start_date?: string | null;
+  mortgage_end_date?: string | null;
+  mortgage_notes?: string | null;
   notes?: string | null;
   created_at: string;
   updated_at: string;
 };
 
+type ValuationRow = {
+  id: string;
+  property_id: string;
+  account_id: string;
+  valued_month: string;
+  value_amount: number;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PropertyMortgageInput = {
+  mortgageLender?: string | null;
+  mortgageBalance?: number | null;
+  mortgageInterestRate?: number | null;
+  mortgageMonthlyPayment?: number | null;
+  mortgageStartDate?: string | null;
+  mortgageEndDate?: string | null;
+  mortgageNotes?: string | null;
+};
+
+export type PropertyWriteInput = PropertyMortgageInput & {
+  name?: string;
+  address?: string | null;
+  propertyType?: string;
+  status?: string;
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  squareFootage?: number | null;
+  purchaseDate?: string | null;
+  purchasePrice?: number | null;
+  currentValue?: number | null;
+  notes?: string | null;
+};
+
 function mapProperty(row: PropertyRow): Property {
+  const rate = row.mortgage_interest_rate;
   return {
     id: row.id,
     accountId: row.account_id,
@@ -52,13 +113,137 @@ function mapProperty(row: PropertyRow): Property {
     purchaseDate: row.purchase_date ?? null,
     purchasePrice: row.purchase_price ?? null,
     currentValue: row.current_value ?? null,
+    mortgageLender: row.mortgage_lender ?? null,
+    mortgageBalance: row.mortgage_balance ?? null,
+    mortgageInterestRate:
+      rate == null || rate === '' ? null : Number(rate),
+    mortgageMonthlyPayment: row.mortgage_monthly_payment ?? null,
+    mortgageStartDate: row.mortgage_start_date ?? null,
+    mortgageEndDate: row.mortgage_end_date ?? null,
+    mortgageNotes: row.mortgage_notes ?? null,
     notes: row.notes ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
 }
 
+function mapValuation(row: ValuationRow): PropertyValuation {
+  return {
+    id: row.id,
+    propertyId: row.property_id,
+    accountId: row.account_id,
+    valuedMonth: row.valued_month,
+    valueAmount: row.value_amount,
+    notes: row.notes ?? null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+/** Normalize any date/month string to the first day of that month (YYYY-MM-DD). */
+export function toValuedMonth(input: string): string {
+  const trimmed = input.trim();
+  if (/^\d{4}-\d{2}$/.test(trimmed)) {
+    return `${trimmed}-01`;
+  }
+  const date = new Date(trimmed.includes('T') ? trimmed : `${trimmed}T12:00:00`);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error('Invalid valuation month');
+  }
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  return `${year}-${month}-01`;
+}
+
+function currentMonthStart(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+}
+
+function mortgageColumns(input: PropertyMortgageInput) {
+  return {
+    ...(input.mortgageLender !== undefined && {
+      mortgage_lender: input.mortgageLender,
+    }),
+    ...(input.mortgageBalance !== undefined && {
+      mortgage_balance: input.mortgageBalance,
+    }),
+    ...(input.mortgageInterestRate !== undefined && {
+      mortgage_interest_rate: input.mortgageInterestRate,
+    }),
+    ...(input.mortgageMonthlyPayment !== undefined && {
+      mortgage_monthly_payment: input.mortgageMonthlyPayment,
+    }),
+    ...(input.mortgageStartDate !== undefined && {
+      mortgage_start_date: input.mortgageStartDate,
+    }),
+    ...(input.mortgageEndDate !== undefined && {
+      mortgage_end_date: input.mortgageEndDate,
+    }),
+    ...(input.mortgageNotes !== undefined && {
+      mortgage_notes: input.mortgageNotes,
+    }),
+  };
+}
+
 export function createPropertiesService(client: SupabaseClient) {
+  async function syncCurrentValueFromLatest(propertyId: string) {
+    const { data: latest, error } = await client
+      .from('property_valuations')
+      .select('value_amount')
+      .eq('property_id', propertyId)
+      .order('valued_month', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const { error: updateError } = await client
+      .from('properties')
+      .update({ current_value: latest?.value_amount ?? null })
+      .eq('id', propertyId);
+
+    if (updateError) {
+      throw new Error(updateError.message);
+    }
+  }
+
+  async function upsertValuationRecord(input: {
+    propertyId: string;
+    accountId: string;
+    valuedMonth: string;
+    valueAmount: number;
+    notes?: string | null;
+    createdBy?: string | null;
+  }): Promise<PropertyValuation> {
+    const valuedMonth = toValuedMonth(input.valuedMonth);
+
+    const { data, error } = await client
+      .from('property_valuations')
+      .upsert(
+        {
+          property_id: input.propertyId,
+          account_id: input.accountId,
+          valued_month: valuedMonth,
+          value_amount: input.valueAmount,
+          notes: input.notes ?? null,
+          ...(input.createdBy ? { created_by: input.createdBy } : {}),
+        },
+        { onConflict: 'property_id,valued_month' },
+      )
+      .select('*')
+      .single();
+
+    if (error || !data) {
+      throw new Error(error?.message ?? 'Failed to save valuation');
+    }
+
+    await syncCurrentValueFromLatest(input.propertyId);
+    return mapValuation(data as ValuationRow);
+  }
+
   return {
     async listProperties(accountId: string): Promise<Property[]> {
       const { data, error } = await client
@@ -87,20 +272,24 @@ export function createPropertiesService(client: SupabaseClient) {
       return mapProperty(data as PropertyRow);
     },
 
-    async createProperty(input: {
-      accountId: string;
-      name: string;
-      address?: string | null;
-      propertyType?: string;
-      status?: string;
-      bedrooms?: number | null;
-      bathrooms?: number | null;
-      squareFootage?: number | null;
-      purchaseDate?: string | null;
-      purchasePrice?: number | null;
-      currentValue?: number | null;
-      notes?: string | null;
-    }): Promise<Property> {
+    async listValuations(propertyId: string): Promise<PropertyValuation[]> {
+      const { data, error } = await client
+        .from('property_valuations')
+        .select('*')
+        .eq('property_id', propertyId)
+        .order('valued_month', { ascending: false });
+
+      if (error) {
+        console.error('[properties] listValuations error:', error.message);
+        return [];
+      }
+
+      return ((data ?? []) as ValuationRow[]).map(mapValuation);
+    },
+
+    async createProperty(
+      input: PropertyWriteInput & { accountId: string; name: string },
+    ): Promise<Property> {
       const { count, error: countError } = await client
         .from('properties')
         .select('id', { count: 'exact', head: true })
@@ -138,51 +327,124 @@ export function createPropertiesService(client: SupabaseClient) {
           purchase_price: input.purchasePrice ?? null,
           current_value: input.currentValue ?? null,
           notes: input.notes ?? null,
+          ...mortgageColumns(input),
         })
         .select('*')
         .single();
 
       if (error || !data) throw new Error(error?.message ?? 'Failed to create property');
-      return mapProperty(data as PropertyRow);
+
+      const property = mapProperty(data as PropertyRow);
+
+      if (input.currentValue != null) {
+        const month = input.purchaseDate
+          ? toValuedMonth(input.purchaseDate)
+          : currentMonthStart();
+        await upsertValuationRecord({
+          propertyId: property.id,
+          accountId: property.accountId,
+          valuedMonth: month,
+          valueAmount: input.currentValue,
+        });
+      }
+
+      const refreshed = await client
+        .from('properties')
+        .select('*')
+        .eq('id', property.id)
+        .maybeSingle();
+      return refreshed.data
+        ? mapProperty(refreshed.data as PropertyRow)
+        : property;
     },
 
     async updateProperty(
       propertyId: string,
-      input: {
-        name?: string;
-        address?: string | null;
-        propertyType?: string;
-        status?: string;
-        bedrooms?: number | null;
-        bathrooms?: number | null;
-        squareFootage?: number | null;
-        purchaseDate?: string | null;
-        purchasePrice?: number | null;
-        currentValue?: number | null;
-        notes?: string | null;
-      },
+      input: PropertyWriteInput,
     ): Promise<Property> {
       const { data, error } = await client
         .from('properties')
         .update({
           ...(input.name !== undefined && { name: input.name }),
           ...(input.address !== undefined && { address: input.address }),
-          ...(input.propertyType !== undefined && { property_type: input.propertyType }),
+          ...(input.propertyType !== undefined && {
+            property_type: input.propertyType,
+          }),
           ...(input.status !== undefined && { status: input.status }),
           ...(input.bedrooms !== undefined && { bedrooms: input.bedrooms }),
           ...(input.bathrooms !== undefined && { bathrooms: input.bathrooms }),
-          ...(input.squareFootage !== undefined && { square_footage: input.squareFootage }),
-          ...(input.purchaseDate !== undefined && { purchase_date: input.purchaseDate }),
-          ...(input.purchasePrice !== undefined && { purchase_price: input.purchasePrice }),
-          ...(input.currentValue !== undefined && { current_value: input.currentValue }),
+          ...(input.squareFootage !== undefined && {
+            square_footage: input.squareFootage,
+          }),
+          ...(input.purchaseDate !== undefined && {
+            purchase_date: input.purchaseDate,
+          }),
+          ...(input.purchasePrice !== undefined && {
+            purchase_price: input.purchasePrice,
+          }),
+          ...(input.currentValue !== undefined && {
+            current_value: input.currentValue,
+          }),
           ...(input.notes !== undefined && { notes: input.notes }),
+          ...mortgageColumns(input),
         })
         .eq('id', propertyId)
         .select('*')
         .single();
 
       if (error || !data) throw new Error(error?.message ?? 'Failed to update property');
-      return mapProperty(data as PropertyRow);
+
+      const property = mapProperty(data as PropertyRow);
+
+      if (input.currentValue !== undefined) {
+        if (input.currentValue != null) {
+          await upsertValuationRecord({
+            propertyId: property.id,
+            accountId: property.accountId,
+            valuedMonth: currentMonthStart(),
+            valueAmount: input.currentValue,
+          });
+        } else {
+          // Keep current_value aligned with valuation history (source of truth).
+          await syncCurrentValueFromLatest(propertyId);
+        }
+
+        const refreshed = await client
+          .from('properties')
+          .select('*')
+          .eq('id', propertyId)
+          .maybeSingle();
+        return refreshed.data
+          ? mapProperty(refreshed.data as PropertyRow)
+          : property;
+      }
+
+      return property;
+    },
+
+    async upsertValuation(input: {
+      propertyId: string;
+      accountId: string;
+      valuedMonth: string;
+      valueAmount: number;
+      notes?: string | null;
+      createdBy?: string | null;
+    }): Promise<PropertyValuation> {
+      return upsertValuationRecord(input);
+    },
+
+    async deleteValuation(valuationId: string): Promise<void> {
+      const { data, error } = await client
+        .from('property_valuations')
+        .delete()
+        .eq('id', valuationId)
+        .select('property_id')
+        .maybeSingle();
+
+      if (error) throw new Error(error.message);
+      if (data?.property_id) {
+        await syncCurrentValueFromLatest(data.property_id as string);
+      }
     },
 
     async deleteProperty(propertyId: string): Promise<void> {

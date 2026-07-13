@@ -15,6 +15,10 @@ import {
   handleBillingLifecycleStripeEvent,
   isBillingLifecycleStripeEvent,
 } from '~/lib/billing/handle-billing-lifecycle-event';
+import {
+  applyAccountBillingTransition,
+  mapStripeSubscriptionStatus,
+} from '~/lib/billing/account-billing-lifecycle';
 import { flushBillingEmailJobs } from '~/lib/billing/billing-email-outbox';
 import { syncKeelPlanFromSubscription } from '~/lib/billing/sync-subscription-plan';
 
@@ -52,11 +56,44 @@ export const POST = enhanceRouteHandler(
       await syncKeelPlanFromSubscription(admin, subscription);
     };
 
+    /** Ensure account_billing mirrors MakerKit subscription upserts (trials included). */
+    const syncLifecycleFromSubscription = async (
+      subscription: UpsertSubscriptionParams,
+      source: string,
+    ) => {
+      const mapped = mapStripeSubscriptionStatus(subscription.status, null);
+      if (!mapped) return;
+
+      const admin = getSupabaseServerAdminClient();
+      const subscriptionId = subscription.target_subscription_id;
+      const trialEndsAt =
+        typeof subscription.trial_ends_at === 'string'
+          ? subscription.trial_ends_at
+          : subscription.trial_ends_at != null
+            ? new Date(Number(subscription.trial_ends_at) * 1000).toISOString()
+            : null;
+
+      const { emailJobIds } = await applyAccountBillingTransition(admin, {
+        stripeEventId: `mk-sub-sync:${source}:${subscriptionId}:${subscription.status}`,
+        accountId: subscription.target_account_id,
+        stripeCustomerId: subscription.target_customer_id,
+        stripeSubscriptionId: subscriptionId,
+        trialEndsAt,
+        toStatus: mapped,
+        forceEvent: true,
+        emailKind: null,
+      });
+      pendingEmailJobIds.push(...emailJobIds);
+    };
+
     const pendingEmailJobIds: string[] = [];
 
     try {
       await service.handleWebhookEvent(request, {
-        onSubscriptionUpdated: syncPlan,
+        onSubscriptionUpdated: async (payload) => {
+          await syncPlan(payload);
+          await syncLifecycleFromSubscription(payload, 'subscription.updated');
+        },
         onCheckoutSessionCompleted: async (payload) => {
           if ('target_order_id' in payload) {
             const admin = getSupabaseServerAdminClient();
@@ -66,7 +103,9 @@ export const POST = enhanceRouteHandler(
             );
             return;
           }
-          await syncPlan(payload as UpsertSubscriptionParams);
+          const subscription = payload as UpsertSubscriptionParams;
+          await syncPlan(subscription);
+          await syncLifecycleFromSubscription(subscription, 'checkout.completed');
         },
         onPaymentSucceeded: async (sessionId) => {
           const admin = getSupabaseServerAdminClient();
@@ -115,6 +154,7 @@ export const POST = enhanceRouteHandler(
         },
         onInvoicePaid: async (payload) => {
           await syncPlan(payload);
+          await syncLifecycleFromSubscription(payload, 'invoice.paid');
           const admin = getSupabaseServerAdminClient();
           await fulfillAiCreditPackFromSubscription(admin, payload);
         },

@@ -66,12 +66,15 @@ async function PropertyDetailPage({ params }: PropertyDetailPageProps) {
     notFound();
   }
 
-  const workspaceContent = await loadContextWorkspaceContent({
-    accountId: workspace.account.id as string,
-    spaceType: (workspace.account as { space_type?: string }).space_type,
-    businessType: workspace.businessType,
-    scope: { propertyId },
-  });
+  const [valuations, workspaceContent] = await Promise.all([
+    service.listValuations(propertyId),
+    loadContextWorkspaceContent({
+      accountId: workspace.account.id as string,
+      spaceType: (workspace.account as { space_type?: string }).space_type,
+      businessType: workspace.businessType,
+      scope: { propertyId },
+    }),
+  ]);
 
   return (
     <>
@@ -90,6 +93,7 @@ async function PropertyDetailPage({ params }: PropertyDetailPageProps) {
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 lg:px-6">
         <PropertyDetailContent
           property={property}
+          valuations={valuations}
           accountId={workspace.account.id as string}
           accountSlug={slug}
           workspaceNotes={workspaceContent.notes}

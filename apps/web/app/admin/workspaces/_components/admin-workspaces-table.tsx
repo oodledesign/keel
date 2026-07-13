@@ -144,7 +144,20 @@ const columns: ColumnDef<AdminWorkspaceRow>[] = [
   },
   {
     header: 'Created',
-    cell: ({ row }) =>
-      new Date(row.original.createdAt).toLocaleDateString('en-GB'),
+    cell: ({ row }) => {
+      const createdAt = row.original.createdAt;
+      if (!createdAt) {
+        return (
+          <span className="text-muted-foreground text-sm">—</span>
+        );
+      }
+      const date = new Date(createdAt);
+      if (Number.isNaN(date.getTime())) {
+        return (
+          <span className="text-muted-foreground text-sm">—</span>
+        );
+      }
+      return date.toLocaleDateString('en-GB');
+    },
   },
 ];

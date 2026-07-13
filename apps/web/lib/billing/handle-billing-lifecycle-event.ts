@@ -126,6 +126,30 @@ export async function handleBillingLifecycleStripeEvent(
       const previous = current?.subscription_status ?? null;
       const recovering = isBillingRecoveryStatus(previous);
 
+      // $0 subscription_create invoices fire for trial starts — do not mark active.
+      const billingReason = invoice.billing_reason;
+      const isTrialStartInvoice =
+        billingReason === 'subscription_create' &&
+        (invoice.amount_paid === 0 || invoice.total === 0);
+
+      if (isTrialStartInvoice && !recovering) {
+        const result = await applyAccountBillingTransition(admin, {
+          stripeEventId: event.id,
+          stripeCustomerId: customerId,
+          stripeSubscriptionId: subscriptionId,
+          toStatus: 'trialing',
+          forceEvent: previous !== 'trialing',
+          emailKind: null,
+        });
+        emailJobIds.push(...result.emailJobIds);
+        break;
+      }
+
+      // Keep an in-progress trial until Stripe subscription leaves "trialing".
+      if (previous === 'trialing' && !recovering) {
+        break;
+      }
+
       const result = await applyAccountBillingTransition(admin, {
         stripeEventId: event.id,
         stripeCustomerId: customerId,
@@ -138,7 +162,8 @@ export async function handleBillingLifecycleStripeEvent(
       break;
     }
 
-    case 'customer.subscription.updated': {
+    case 'customer.subscription.updated':
+    case 'customer.subscription.created': {
       const subscription = event.data.object as Stripe.Subscription;
       const customerId = customerIdFrom(subscription.customer);
       if (!customerId) break;
@@ -200,10 +225,11 @@ export async function handleBillingLifecycleStripeEvent(
 export function isBillingLifecycleStripeEvent(type: string): boolean {
   return (
     type === 'customer.subscription.trial_will_end' ||
+    type === 'customer.subscription.created' ||
+    type === 'customer.subscription.updated' ||
+    type === 'customer.subscription.deleted' ||
     type === 'invoice.payment_failed' ||
     type === 'invoice.paid' ||
-    type === 'invoice.payment_succeeded' ||
-    type === 'customer.subscription.updated' ||
-    type === 'customer.subscription.deleted'
+    type === 'invoice.payment_succeeded'
   );
 }

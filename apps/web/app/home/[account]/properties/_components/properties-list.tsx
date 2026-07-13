@@ -28,7 +28,11 @@ import {
 import type { Property } from '../_lib/server/properties.service';
 import { deleteProperty } from '../_lib/server/server-actions';
 import pathsConfig from '~/config/paths.config';
-import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
+import {
+  workspaceBtnPrimaryMd,
+  workspaceIconChip,
+  workspacePanelCard,
+} from '~/lib/workspace-ui';
 import { PropertyFormModal } from './property-form-modal';
 
 interface PropertiesListProps {
@@ -41,11 +45,31 @@ const statusStyles: Record<
   Property['status'],
   { bg: string; text: string; label: string }
 > = {
-  active: { bg: 'bg-[var(--ozer-accent-subtle)]', text: 'text-[var(--workspace-shell-accent-text)]', label: 'Active' },
-  vacant: { bg: 'bg-amber-500/15', text: 'text-amber-300', label: 'Vacant' },
-  maintenance: { bg: 'bg-orange-500/15', text: 'text-orange-300', label: 'Maintenance' },
-  sold: { bg: 'bg-sky-500/15', text: 'text-sky-300', label: 'Sold' },
-  archived: { bg: 'bg-[var(--workspace-shell-sidebar-accent)]', text: 'text-[var(--workspace-shell-text)]/40', label: 'Archived' },
+  active: {
+    bg: 'bg-[var(--ozer-accent-subtle)]',
+    text: 'text-[var(--workspace-shell-accent-text)]',
+    label: 'Active',
+  },
+  vacant: {
+    bg: 'bg-[var(--workspace-shell-sidebar-accent)]',
+    text: 'text-[var(--workspace-shell-text-muted)]',
+    label: 'Vacant',
+  },
+  maintenance: {
+    bg: 'bg-[var(--ozer-accent-subtle)]',
+    text: 'text-[var(--ozer-accent-muted)]',
+    label: 'Maintenance',
+  },
+  sold: {
+    bg: 'bg-[var(--workspace-shell-sidebar-accent)]',
+    text: 'text-[var(--workspace-shell-text)]/50',
+    label: 'Sold',
+  },
+  archived: {
+    bg: 'bg-[var(--workspace-shell-sidebar-accent)]',
+    text: 'text-[var(--workspace-shell-text)]/40',
+    label: 'Archived',
+  },
 };
 
 const typeIcons: Record<Property['propertyType'], React.ReactNode> = {
@@ -132,7 +156,7 @@ export function PropertiesList({
 
       {/* List */}
       {properties.length === 0 ? (
-        <Card className="rounded-[24px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+        <Card className={workspacePanelCard}>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <Building2 className="mb-4 h-12 w-12 text-[var(--workspace-shell-text)]/20" />
             <p className="text-[var(--workspace-shell-text)] font-medium">No properties yet</p>
@@ -155,12 +179,14 @@ export function PropertiesList({
             return (
               <Card
                 key={property.id}
-                className="group rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_8px_24px_rgba(4,10,24,0.18)] transition-all hover:border-[color:var(--workspace-shell-border)] hover:shadow-[0_12px_32px_rgba(4,10,24,0.24)]"
+                className={`group ${workspacePanelCard} transition-colors hover:border-[var(--ozer-accent)]/25`}
               >
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2.5">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/15 text-violet-400">
+                      <span
+                        className={`flex h-9 w-9 items-center justify-center rounded-lg ${workspaceIconChip}`}
+                      >
                         {typeIcons[property.propertyType]}
                       </span>
                       <div>
@@ -168,7 +194,7 @@ export function PropertiesList({
                           href={pathsConfig.app.accountPropertyDetail
                             .replace('[account]', accountSlug)
                             .replace('[id]', property.id)}
-                          className="text-sm font-semibold text-[var(--workspace-shell-text)] hover:text-violet-300 transition-colors"
+                          className="text-sm font-semibold text-[var(--workspace-shell-text)] hover:text-[var(--ozer-accent-muted)] transition-colors"
                         >
                           {property.name}
                         </Link>
@@ -233,7 +259,7 @@ export function PropertiesList({
 
                   {/* Value */}
                   {property.currentValue != null && (
-                    <p className="mt-3 text-sm font-semibold text-violet-300">
+                    <p className="mt-3 text-sm font-semibold text-[var(--workspace-shell-text)]">
                       {formatCurrency(property.currentValue / 100)}
                     </p>
                   )}

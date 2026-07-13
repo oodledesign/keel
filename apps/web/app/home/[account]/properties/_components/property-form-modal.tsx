@@ -21,6 +21,8 @@ import {
 } from '@kit/ui/select';
 import { Textarea } from '@kit/ui/textarea';
 
+import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
+
 import type { Property } from '../_lib/server/properties.service';
 import { createProperty, updateProperty } from '../_lib/server/server-actions';
 
@@ -30,6 +32,31 @@ interface PropertyFormModalProps {
   accountId: string;
   property?: Property | null;
   onSaved: () => void;
+}
+
+const emptyForm = {
+  name: '',
+  address: '',
+  propertyType: 'residential' as Property['propertyType'],
+  status: 'active' as Property['status'],
+  bedrooms: '',
+  bathrooms: '',
+  squareFootage: '',
+  purchaseDate: '',
+  purchasePrice: '',
+  currentValue: '',
+  mortgageLender: '',
+  mortgageBalance: '',
+  mortgageInterestRate: '',
+  mortgageMonthlyPayment: '',
+  mortgageStartDate: '',
+  mortgageEndDate: '',
+  mortgageNotes: '',
+  notes: '',
+};
+
+function poundsFromPence(value: number | null | undefined) {
+  return value != null ? String(value / 100) : '';
 }
 
 export function PropertyFormModal({
@@ -42,20 +69,7 @@ export function PropertyFormModal({
   const isEdit = Boolean(property);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-
-  const [form, setForm] = useState({
-    name: '',
-    address: '',
-    propertyType: 'residential' as const,
-    status: 'active' as const,
-    bedrooms: '',
-    bathrooms: '',
-    squareFootage: '',
-    purchaseDate: '',
-    purchasePrice: '',
-    currentValue: '',
-    notes: '',
-  });
+  const [form, setForm] = useState(emptyForm);
 
   useEffect(() => {
     if (property) {
@@ -66,26 +80,25 @@ export function PropertyFormModal({
         status: property.status,
         bedrooms: property.bedrooms != null ? String(property.bedrooms) : '',
         bathrooms: property.bathrooms != null ? String(property.bathrooms) : '',
-        squareFootage: property.squareFootage != null ? String(property.squareFootage) : '',
+        squareFootage:
+          property.squareFootage != null ? String(property.squareFootage) : '',
         purchaseDate: property.purchaseDate ?? '',
-        purchasePrice: property.purchasePrice != null ? String(property.purchasePrice / 100) : '',
-        currentValue: property.currentValue != null ? String(property.currentValue / 100) : '',
+        purchasePrice: poundsFromPence(property.purchasePrice),
+        currentValue: poundsFromPence(property.currentValue),
+        mortgageLender: property.mortgageLender ?? '',
+        mortgageBalance: poundsFromPence(property.mortgageBalance),
+        mortgageInterestRate:
+          property.mortgageInterestRate != null
+            ? String(property.mortgageInterestRate)
+            : '',
+        mortgageMonthlyPayment: poundsFromPence(property.mortgageMonthlyPayment),
+        mortgageStartDate: property.mortgageStartDate ?? '',
+        mortgageEndDate: property.mortgageEndDate ?? '',
+        mortgageNotes: property.mortgageNotes ?? '',
         notes: property.notes ?? '',
       });
     } else {
-      setForm({
-        name: '',
-        address: '',
-        propertyType: 'residential',
-        status: 'active',
-        bedrooms: '',
-        bathrooms: '',
-        squareFootage: '',
-        purchaseDate: '',
-        purchasePrice: '',
-        currentValue: '',
-        notes: '',
-      });
+      setForm(emptyForm);
     }
     setError(null);
   }, [property, open]);
@@ -103,7 +116,9 @@ export function PropertyFormModal({
           status: form.status,
           bedrooms: form.bedrooms ? parseInt(form.bedrooms, 10) : null,
           bathrooms: form.bathrooms ? parseFloat(form.bathrooms) : null,
-          squareFootage: form.squareFootage ? parseInt(form.squareFootage, 10) : null,
+          squareFootage: form.squareFootage
+            ? parseInt(form.squareFootage, 10)
+            : null,
           purchaseDate: form.purchaseDate || null,
           purchasePrice: form.purchasePrice
             ? Math.round(parseFloat(form.purchasePrice) * 100)
@@ -111,6 +126,19 @@ export function PropertyFormModal({
           currentValue: form.currentValue
             ? Math.round(parseFloat(form.currentValue) * 100)
             : null,
+          mortgageLender: form.mortgageLender.trim() || null,
+          mortgageBalance: form.mortgageBalance
+            ? Math.round(parseFloat(form.mortgageBalance) * 100)
+            : null,
+          mortgageInterestRate: form.mortgageInterestRate
+            ? parseFloat(form.mortgageInterestRate)
+            : null,
+          mortgageMonthlyPayment: form.mortgageMonthlyPayment
+            ? Math.round(parseFloat(form.mortgageMonthlyPayment) * 100)
+            : null,
+          mortgageStartDate: form.mortgageStartDate || null,
+          mortgageEndDate: form.mortgageEndDate || null,
+          mortgageNotes: form.mortgageNotes.trim() || null,
           notes: form.notes.trim() || null,
         };
 
@@ -128,14 +156,15 @@ export function PropertyFormModal({
     });
   };
 
-  const field = (
-    key: keyof typeof form,
-    value: string,
-  ) => setForm((prev) => ({ ...prev, [key]: value }));
+  const field = (key: keyof typeof form, value: string) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
+
+  const inputClass =
+    'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30';
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] border border-[color:var(--workspace-shell-border)]">
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
         <DialogHeader>
           <DialogTitle className="text-[var(--workspace-shell-text)]">
             {isEdit ? 'Edit Property' : 'Add Property'}
@@ -143,38 +172,39 @@ export function PropertyFormModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5 pt-2">
-          {/* Name */}
           <div className="space-y-1.5">
-            <Label className="text-[var(--workspace-shell-text)]/70">Property Name *</Label>
+            <Label className="text-[var(--workspace-shell-text)]/70">
+              Property Name *
+            </Label>
             <Input
               value={form.name}
               onChange={(e) => field('name', e.target.value)}
               placeholder="e.g. 12 Oak Lane"
               required
-              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30"
+              className={inputClass}
             />
           </div>
 
-          {/* Address */}
           <div className="space-y-1.5">
             <Label className="text-[var(--workspace-shell-text)]/70">Address</Label>
             <Input
               value={form.address}
               onChange={(e) => field('address', e.target.value)}
               placeholder="Full address"
-              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30"
+              className={inputClass}
             />
           </div>
 
-          {/* Type + Status */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label className="text-[var(--workspace-shell-text)]/70">Type</Label>
               <Select
                 value={form.propertyType}
-                onValueChange={(v) => field('propertyType', v)}
+                onValueChange={(v) =>
+                  field('propertyType', v as Property['propertyType'])
+                }
               >
-                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
+                <SelectTrigger className={inputClass}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -189,9 +219,9 @@ export function PropertyFormModal({
               <Label className="text-[var(--workspace-shell-text)]/70">Status</Label>
               <Select
                 value={form.status}
-                onValueChange={(v) => field('status', v)}
+                onValueChange={(v) => field('status', v as Property['status'])}
               >
-                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
+                <SelectTrigger className={inputClass}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -205,7 +235,6 @@ export function PropertyFormModal({
             </div>
           </div>
 
-          {/* Bedrooms, Bathrooms, SqFt */}
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <Label className="text-[var(--workspace-shell-text)]/70">Bedrooms</Label>
@@ -215,7 +244,7 @@ export function PropertyFormModal({
                 value={form.bedrooms}
                 onChange={(e) => field('bedrooms', e.target.value)}
                 placeholder="0"
-                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30"
+                className={inputClass}
               />
             </div>
             <div className="space-y-1.5">
@@ -227,7 +256,7 @@ export function PropertyFormModal({
                 value={form.bathrooms}
                 onChange={(e) => field('bathrooms', e.target.value)}
                 placeholder="0"
-                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30"
+                className={inputClass}
               />
             </div>
             <div className="space-y-1.5">
@@ -238,24 +267,27 @@ export function PropertyFormModal({
                 value={form.squareFootage}
                 onChange={(e) => field('squareFootage', e.target.value)}
                 placeholder="0"
-                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30"
+                className={inputClass}
               />
             </div>
           </div>
 
-          {/* Purchase date + prices */}
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-1.5">
-              <Label className="text-[var(--workspace-shell-text)]/70">Purchase Date</Label>
+              <Label className="text-[var(--workspace-shell-text)]/70">
+                Purchase Date
+              </Label>
               <Input
                 type="date"
                 value={form.purchaseDate}
                 onChange={(e) => field('purchaseDate', e.target.value)}
-                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
+                className={inputClass}
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[var(--workspace-shell-text)]/70">Purchase Price (£)</Label>
+              <Label className="text-[var(--workspace-shell-text)]/70">
+                Purchase Price (£)
+              </Label>
               <Input
                 type="number"
                 min={0}
@@ -263,11 +295,13 @@ export function PropertyFormModal({
                 value={form.purchasePrice}
                 onChange={(e) => field('purchasePrice', e.target.value)}
                 placeholder="0.00"
-                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30"
+                className={inputClass}
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[var(--workspace-shell-text)]/70">Current Value (£)</Label>
+              <Label className="text-[var(--workspace-shell-text)]/70">
+                Current Value (£)
+              </Label>
               <Input
                 type="number"
                 min={0}
@@ -275,12 +309,114 @@ export function PropertyFormModal({
                 value={form.currentValue}
                 onChange={(e) => field('currentValue', e.target.value)}
                 placeholder="0.00"
-                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30"
+                className={inputClass}
               />
+              <p className="text-[11px] text-[var(--workspace-shell-text)]/40">
+                Saves as this month&apos;s valuation on the property page.
+              </p>
             </div>
           </div>
 
-          {/* Notes */}
+          <div className="space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
+            <div>
+              <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                Mortgage
+              </p>
+              <p className="text-xs text-[var(--workspace-shell-text)]/45">
+                Optional lender and balance details for this property.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-[var(--workspace-shell-text)]/70">Lender</Label>
+                <Input
+                  value={form.mortgageLender}
+                  onChange={(e) => field('mortgageLender', e.target.value)}
+                  placeholder="e.g. Nationwide"
+                  className={inputClass}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[var(--workspace-shell-text)]/70">
+                  Balance (£)
+                </Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={form.mortgageBalance}
+                  onChange={(e) => field('mortgageBalance', e.target.value)}
+                  placeholder="0.00"
+                  className={inputClass}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[var(--workspace-shell-text)]/70">
+                  Interest rate (%)
+                </Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.001}
+                  value={form.mortgageInterestRate}
+                  onChange={(e) => field('mortgageInterestRate', e.target.value)}
+                  placeholder="4.250"
+                  className={inputClass}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[var(--workspace-shell-text)]/70">
+                  Monthly payment (£)
+                </Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={form.mortgageMonthlyPayment}
+                  onChange={(e) =>
+                    field('mortgageMonthlyPayment', e.target.value)
+                  }
+                  placeholder="0.00"
+                  className={inputClass}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[var(--workspace-shell-text)]/70">
+                  Start date
+                </Label>
+                <Input
+                  type="date"
+                  value={form.mortgageStartDate}
+                  onChange={(e) => field('mortgageStartDate', e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[var(--workspace-shell-text)]/70">
+                  End / term date
+                </Label>
+                <Input
+                  type="date"
+                  value={form.mortgageEndDate}
+                  onChange={(e) => field('mortgageEndDate', e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-[var(--workspace-shell-text)]/70">
+                  Mortgage notes
+                </Label>
+                <Textarea
+                  value={form.mortgageNotes}
+                  onChange={(e) => field('mortgageNotes', e.target.value)}
+                  placeholder="Product type, fixed period, remortgage notes…"
+                  rows={2}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-1.5">
             <Label className="text-[var(--workspace-shell-text)]/70">Notes</Label>
             <Textarea
@@ -288,12 +424,12 @@ export function PropertyFormModal({
               onChange={(e) => field('notes', e.target.value)}
               placeholder="Additional notes about the property…"
               rows={3}
-              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30"
+              className={inputClass}
             />
           </div>
 
           {error && (
-            <p className="rounded-lg bg-rose-500/15 px-4 py-2 text-sm text-rose-300">
+            <p className="rounded-lg bg-rose-500/15 px-4 py-2 text-sm text-rose-700 dark:text-rose-300">
               {error}
             </p>
           )}
@@ -310,7 +446,7 @@ export function PropertyFormModal({
             <Button
               type="submit"
               disabled={isPending || !form.name.trim()}
-              className="bg-violet-600 hover:bg-violet-700 text-[var(--workspace-shell-text)]"
+              className={workspaceBtnPrimaryMd}
             >
               {isPending ? 'Saving…' : isEdit ? 'Save changes' : 'Add property'}
             </Button>

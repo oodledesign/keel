@@ -21,6 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 
 import pathsConfig from '~/config/paths.config';
 import { FinanceTrendBarChart } from '~/components/finance/finance-charts';
+import { workspaceIconChip, workspacePanelCard } from '~/lib/workspace-ui';
 
 import type { FinanceDashboardSummary } from '../_lib/server/property-dashboard.loader';
 
@@ -38,14 +39,15 @@ interface PropertyBusinessDashboardProps {
   financeSummary?: FinanceDashboardSummary;
 }
 
-const panelClass =
-  'rounded-[24px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]';
+const panelClass = workspacePanelCard;
+
+const iconChip = workspaceIconChip;
 
 const priorityColour: Record<string, string> = {
-  urgent: 'bg-rose-500/15 text-rose-300',
-  high: 'bg-orange-500/15 text-orange-300',
-  medium: 'bg-amber-500/15 text-amber-300',
-  low: 'bg-sky-500/15 text-sky-300',
+  urgent: 'bg-rose-500/15 text-rose-700 dark:text-rose-300',
+  high: 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]',
+  medium: 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]',
+  low: 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/50',
 };
 
 function accountPath(accountSlug: string, template: string) {
@@ -69,43 +71,31 @@ export function PropertyBusinessDashboard({
       label: 'Total Properties',
       value: propertyCounts.total,
       icon: Building2,
-      colour: 'text-[var(--ozer-accent-muted)]',
-      bg: 'bg-[var(--ozer-accent-subtle)]',
     },
     {
       label: 'Active',
       value: propertyCounts.active,
       icon: Building2,
-      colour: 'text-[var(--ozer-accent-muted)]',
-      bg: 'bg-[var(--ozer-accent-subtle)]',
     },
     {
       label: 'Vacant',
       value: propertyCounts.vacant,
       icon: Building2,
-      colour: 'text-amber-400',
-      bg: 'bg-amber-500/15',
     },
     {
       label: 'Open Maintenance',
       value: openMaintenanceJobs,
       icon: Wrench,
-      colour: 'text-orange-400',
-      bg: 'bg-orange-500/15',
     },
     {
       label: 'Open Tasks',
       value: openTasksCount,
       icon: CheckSquare,
-      colour: 'text-sky-400',
-      bg: 'bg-sky-500/15',
     },
     {
       label: 'Team Members',
       value: members.length,
       icon: Users,
-      colour: 'text-[var(--workspace-shell-text-muted)]',
-      bg: 'bg-white/8',
     },
   ];
 
@@ -116,9 +106,9 @@ export function PropertyBusinessDashboard({
           <Card key={c.label} className={panelClass}>
             <CardContent className="p-3">
               <div
-                className={`mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg ${c.bg}`}
+                className={`mb-1.5 flex h-7 w-7 items-center justify-center rounded-md ${iconChip}`}
               >
-                <c.icon className={`h-3.5 w-3.5 ${c.colour}`} />
+                <c.icon className="h-3.5 w-3.5" />
               </div>
               <p className="text-xl font-bold tracking-tight text-[var(--workspace-shell-text)]">
                 {c.value}
@@ -137,21 +127,18 @@ export function PropertyBusinessDashboard({
           icon={Building2}
           title="Properties"
           description="Manage your property portfolio"
-          accent="teal"
         />
         <ShortcutCard
           href={accountPath(accountSlug, pathsConfig.app.accountClients)}
           icon={UserRound}
           title="Tenants"
           description="Active tenancies and contacts"
-          accent="emerald"
         />
         <ShortcutCard
           href={accountPath(accountSlug, pathsConfig.app.accountJobs)}
           icon={Wrench}
           title="Maintenance"
           description="Open jobs and work orders"
-          accent="orange"
         />
         {financesEnabled ? (
           <ShortcutCard
@@ -159,7 +146,6 @@ export function PropertyBusinessDashboard({
             icon={Wallet}
             title="Finances"
             description="Income, expenses, and FreeAgent sync"
-            accent="teal"
           />
         ) : null}
       </div>
@@ -241,19 +227,17 @@ function FinanceOverviewPanel({
             label="Income"
             value={formatCurrency(summary.financeIncomePence / 100)}
             icon={TrendingUp}
-            tone="teal"
           />
           <FinanceStatCard
             label="Expenses"
             value={formatCurrency(summary.financeExpensePence / 100)}
             icon={TrendingDown}
-            tone="amber"
           />
           <FinanceStatCard
             label="Net"
             value={formatCurrency(summary.financeNetPence / 100)}
             icon={Wallet}
-            tone={summary.financeNetPence >= 0 ? 'teal' : 'rose'}
+            muted={summary.financeNetPence < 0}
           />
         </div>
         {summary.financeTrend.length > 0 ? (
@@ -281,32 +265,34 @@ function FinanceStatCard({
   label,
   value,
   icon: Icon,
-  tone,
+  muted = false,
 }: {
   label: string;
   value: string;
   icon: React.ComponentType<{ className?: string }>;
-  tone: 'teal' | 'amber' | 'rose';
+  muted?: boolean;
 }) {
-  const styles = {
-    teal: { bg: 'bg-[var(--ozer-accent-subtle)]', text: 'text-[var(--ozer-accent-muted)]' },
-    amber: { bg: 'bg-amber-500/15', text: 'text-amber-400' },
-    rose: { bg: 'bg-rose-500/15', text: 'text-rose-300' },
-  }[tone];
-
   return (
     <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
       <div className="mb-2 flex items-center gap-2">
         <span
-          className={`flex h-7 w-7 items-center justify-center rounded-lg ${styles.bg}`}
+          className={`flex h-7 w-7 items-center justify-center rounded-md ${iconChip}`}
         >
-          <Icon className={`h-3.5 w-3.5 ${styles.text}`} />
+          <Icon className="h-3.5 w-3.5" />
         </span>
         <p className="text-[10px] font-medium uppercase tracking-wide text-[var(--workspace-shell-text)]/45">
           {label}
         </p>
       </div>
-      <p className="text-lg font-bold tracking-tight text-[var(--workspace-shell-text)]">{value}</p>
+      <p
+        className={`text-lg font-bold tracking-tight ${
+          muted
+            ? 'text-[var(--workspace-shell-text-muted)]'
+            : 'text-[var(--workspace-shell-text)]'
+        }`}
+      >
+        {value}
+      </p>
     </div>
   );
 }
@@ -324,28 +310,20 @@ function ShortcutCard({
   icon: Icon,
   title,
   description,
-  accent,
 }: {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   title: string;
   description: string;
-  accent: 'teal' | 'emerald' | 'orange';
 }) {
-  const styles = {
-    teal: { bg: 'bg-[var(--ozer-accent-subtle)]', text: 'text-[var(--ozer-accent-muted)]' },
-    emerald: { bg: 'bg-[var(--ozer-accent-subtle)]', text: 'text-[var(--ozer-accent-muted)]' },
-    orange: { bg: 'bg-orange-500/15', text: 'text-orange-400' },
-  }[accent];
-
   return (
     <Link href={href}>
       <Card className={`${panelClass} transition hover:border-[var(--ozer-accent)]/25`}>
         <CardContent className="flex items-center gap-3 p-4">
           <span
-            className={`flex h-10 w-10 items-center justify-center rounded-xl ${styles.bg}`}
+            className={`flex h-10 w-10 items-center justify-center rounded-lg ${iconChip}`}
           >
-            <Icon className={`h-5 w-5 ${styles.text}`} />
+            <Icon className="h-5 w-5" />
           </span>
           <div>
             <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">{title}</p>
