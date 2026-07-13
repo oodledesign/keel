@@ -15,9 +15,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
+import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
-import { toast } from '@kit/ui/sonner';
 
 import {
   workspaceBtnPrimaryMd,
@@ -25,6 +25,7 @@ import {
   workspaceTextMuted,
 } from '~/lib/workspace-ui';
 
+import { publicEventBookUrl } from '../_lib/public-book-url';
 import type {
   FormFieldType,
   LocationType,
@@ -74,6 +75,7 @@ type EventTypeInput = {
   allowGuestInvites: boolean;
   availabilityScheduleId: string;
   isActive: boolean;
+  isPrivate: boolean;
 };
 
 type DraftField = {
@@ -89,6 +91,7 @@ type DraftField = {
 type Props = {
   accountId: string;
   accountSlug: string;
+  pageSlug: string;
   canEdit: boolean;
   eventType: EventTypeRow;
   schedules: AvailabilityScheduleRow[];
@@ -112,6 +115,7 @@ type Props = {
 
 export function EventTypeEditor({
   canEdit,
+  pageSlug,
   eventType,
   schedules,
   formFields,
@@ -140,6 +144,7 @@ export function EventTypeEditor({
     allowGuestInvites: eventType.allowGuestInvites,
     availabilityScheduleId: eventType.availabilityScheduleId,
     isActive: eventType.isActive,
+    isPrivate: eventType.isPrivate,
   });
 
   const [fields, setFields] = useState<DraftField[]>(
@@ -223,7 +228,9 @@ export function EventTypeEditor({
         toast.success('Event type deleted');
       } catch (error) {
         toast.error(
-          error instanceof Error ? error.message : 'Could not delete event type',
+          error instanceof Error
+            ? error.message
+            : 'Could not delete event type',
         );
       }
     });
@@ -232,7 +239,9 @@ export function EventTypeEditor({
   return (
     <div className={`space-y-6 rounded-2xl border p-5 ${workspacePanelBorder}`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-base font-semibold">{draft.name || 'Event type'}</h3>
+        <h3 className="text-base font-semibold">
+          {draft.name || 'Event type'}
+        </h3>
         {canEdit ? (
           <div className="flex gap-2">
             <Button
@@ -277,9 +286,7 @@ export function EventTypeEditor({
             onChange={(e) =>
               setDraft((current) => ({
                 ...current,
-                slug: e.target.value
-                  .toLowerCase()
-                  .replace(/[^a-z0-9-]/g, ''),
+                slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''),
               }))
             }
           />
@@ -507,6 +514,30 @@ export function EventTypeEditor({
           />
           <Label>Event type active</Label>
         </div>
+        <div className="space-y-1.5 pt-6">
+          <div className="flex items-center gap-3">
+            <Switch
+              checked={draft.isPrivate}
+              disabled={!canEdit}
+              onCheckedChange={(isPrivate) =>
+                setDraft((current) => ({ ...current, isPrivate }))
+              }
+            />
+            <Label>Private meeting type</Label>
+          </div>
+          <p className={`text-xs ${workspaceTextMuted}`}>
+            Hidden from your public booking page list. People can still book
+            with the direct link.
+          </p>
+          {draft.isPrivate && draft.slug ? (
+            <p className={`text-xs break-all ${workspaceTextMuted}`}>
+              Direct link:{' '}
+              <span className="text-[var(--workspace-shell-text)]">
+                {publicEventBookUrl(pageSlug, draft.slug)}
+              </span>
+            </p>
+          ) : null}
+        </div>
       </div>
 
       <div className="space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-5">
@@ -645,9 +676,7 @@ export function EventTypeEditor({
                   onCheckedChange={(isRequired) =>
                     setFields((current) =>
                       current.map((item) =>
-                        item.key === field.key
-                          ? { ...item, isRequired }
-                          : item,
+                        item.key === field.key ? { ...item, isRequired } : item,
                       ),
                     )
                   }

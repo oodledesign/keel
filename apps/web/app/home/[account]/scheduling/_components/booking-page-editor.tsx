@@ -18,9 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
+import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
-import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
 import {
@@ -160,13 +160,16 @@ export function BookingPageEditor({
           allowGuestInvites: true,
           availabilityScheduleId: defaultSchedule.id,
           isActive: true,
+          isPrivate: false,
         });
         setEventTypes((current) => [...current, created]);
         setSelectedEventTypeId(created.id);
         toast.success('Event type created');
       } catch (error) {
         toast.error(
-          error instanceof Error ? error.message : 'Could not create event type',
+          error instanceof Error
+            ? error.message
+            : 'Could not create event type',
         );
       }
     });
@@ -191,7 +194,9 @@ export function BookingPageEditor({
         </Badge>
       </div>
 
-      <section className={`space-y-4 rounded-2xl border p-5 ${workspacePanelBorder}`}>
+      <section
+        className={`space-y-4 rounded-2xl border p-5 ${workspacePanelBorder}`}
+      >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-base font-semibold">Page settings</h2>
           {canEdit ? (
@@ -331,11 +336,24 @@ export function BookingPageEditor({
                 onClick={() => setSelectedEventTypeId(eventType.id)}
               >
                 <span className="truncate">{eventType.name}</span>
-                {!eventType.isActive ? (
-                  <Badge variant="outline" className="rounded-full text-[10px]">
-                    Off
-                  </Badge>
-                ) : null}
+                <span className="ml-2 flex shrink-0 items-center gap-1">
+                  {eventType.isPrivate ? (
+                    <Badge
+                      variant="outline"
+                      className="rounded-full text-[10px]"
+                    >
+                      Private
+                    </Badge>
+                  ) : null}
+                  {!eventType.isActive ? (
+                    <Badge
+                      variant="outline"
+                      className="rounded-full text-[10px]"
+                    >
+                      Off
+                    </Badge>
+                  ) : null}
+                </span>
               </button>
             ))}
             {eventTypes.length === 0 ? (
@@ -352,6 +370,7 @@ export function BookingPageEditor({
               key={selectedEventType.id}
               accountId={accountId}
               accountSlug={accountSlug}
+              pageSlug={page.slug}
               canEdit={canEdit}
               eventType={selectedEventType}
               schedules={schedules}
@@ -359,9 +378,7 @@ export function BookingPageEditor({
               conferencing={conferencing}
               onSaved={(saved) => {
                 setEventTypes((current) =>
-                  current.map((item) =>
-                    item.id === saved.id ? saved : item,
-                  ),
+                  current.map((item) => (item.id === saved.id ? saved : item)),
                 );
               }}
               onDeleted={(id) => {

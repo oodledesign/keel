@@ -2,6 +2,8 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import type { z } from 'zod';
+
 import type {
   AvailabilityOverrideInputSchema,
   AvailabilityRuleInputSchema,
@@ -12,14 +14,13 @@ import type {
   UpsertAvailabilityScheduleSchema,
   UpsertNotificationSettingsSchema,
 } from '../schema/scheduling.schema';
-import type { z } from 'zod';
 
 type AnyClient = SupabaseClient;
 
 function table(client: AnyClient, name: string) {
-  return (client as unknown as { from: (n: string) => ReturnType<AnyClient['from']> }).from(
-    name,
-  );
+  return (
+    client as unknown as { from: (n: string) => ReturnType<AnyClient['from']> }
+  ).from(name);
 }
 
 function throwIfError(error: { message: string } | null, fallback: string) {
@@ -62,6 +63,7 @@ export type EventTypeRow = {
   allowGuestInvites: boolean;
   availabilityScheduleId: string;
   isActive: boolean;
+  isPrivate: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -120,6 +122,19 @@ export type BookingListRow = {
   bookingPageTitle: string | null;
 };
 
+export type ClientBookingRow = {
+  id: string;
+  startAt: string;
+  endAt: string;
+  inviteeName: string;
+  inviteeEmail: string;
+  status: string;
+  conferencingUrl: string | null;
+  eventTypeName: string | null;
+  bookingPageTitle: string | null;
+  managementToken: string | null;
+};
+
 export type ConferencingConnectionRow = {
   id: string;
   provider: 'zoom' | 'teams';
@@ -164,13 +179,15 @@ function mapEventType(row: Record<string, unknown>): EventTypeRow {
     minimumNoticeMinutes: Number(row.minimum_notice_minutes ?? 240),
     bookingWindowDays: Number(row.booking_window_days ?? 60),
     maxBookingsPerDay:
-      row.max_bookings_per_day === null || row.max_bookings_per_day === undefined
+      row.max_bookings_per_day === null ||
+      row.max_bookings_per_day === undefined
         ? null
         : Number(row.max_bookings_per_day),
     slotIncrementMinutes: Number(row.slot_increment_minutes ?? 30),
     allowGuestInvites: row.allow_guest_invites !== false,
     availabilityScheduleId: row.availability_schedule_id as string,
     isActive: row.is_active !== false,
+    isPrivate: row.is_private === true,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -195,7 +212,9 @@ export function createSchedulingService(client: AnyClient) {
         .in('booking_page_id', ids);
 
       const counts = new Map<string, number>();
-      for (const et of (eventTypes ?? []) as Array<{ booking_page_id: string }>) {
+      for (const et of (eventTypes ?? []) as Array<{
+        booking_page_id: string;
+      }>) {
         counts.set(
           et.booking_page_id,
           (counts.get(et.booking_page_id) ?? 0) + 1,
@@ -352,6 +371,7 @@ export function createSchedulingService(client: AnyClient) {
           allow_guest_invites: input.allowGuestInvites,
           availability_schedule_id: input.availabilityScheduleId,
           is_active: input.isActive,
+          is_private: input.isPrivate,
         })
         .select('*')
         .single();
@@ -405,6 +425,7 @@ export function createSchedulingService(client: AnyClient) {
           allow_guest_invites: input.allowGuestInvites,
           availability_schedule_id: input.availabilityScheduleId,
           is_active: input.isActive,
+          is_private: input.isPrivate,
         })
         .eq('id', eventTypeId)
         .select('*')
@@ -460,7 +481,10 @@ export function createSchedulingService(client: AnyClient) {
           .order('date', { ascending: true }),
       ]);
 
-      const rulesBySchedule = new Map<string, AvailabilityScheduleRow['rules']>();
+      const rulesBySchedule = new Map<
+        string,
+        AvailabilityScheduleRow['rules']
+      >();
       for (const rule of (rules ?? []) as Record<string, unknown>[]) {
         const scheduleId = rule.schedule_id as string;
         const list = rulesBySchedule.get(scheduleId) ?? [];
@@ -564,12 +588,12 @@ export function createSchedulingService(client: AnyClient) {
             (rule: z.infer<typeof AvailabilityRuleInputSchema>) => ({
               schedule_id: scheduleId,
               day_of_week: rule.dayOfWeek,
-              start_time: rule.startTime.length === 5
-                ? `${rule.startTime}:00`
-                : rule.startTime,
-              end_time: rule.endTime.length === 5
-                ? `${rule.endTime}:00`
-                : rule.endTime,
+              start_time:
+                rule.startTime.length === 5
+                  ? `${rule.startTime}:00`
+                  : rule.startTime,
+              end_time:
+                rule.endTime.length === 5 ? `${rule.endTime}:00` : rule.endTime,
             }),
           ),
         );
@@ -685,17 +709,16 @@ export function createSchedulingService(client: AnyClient) {
 
       if (fields.length === 0) return [];
 
-      const { error } = await table(client, 'booking_form_fields')
-        .insert(
-          fields.map((field, index) => ({
-            event_type_id: eventTypeId,
-            label: field.label,
-            field_type: field.fieldType,
-            options: field.options ?? null,
-            is_required: field.isRequired,
-            sort_order: field.sortOrder ?? index,
-          })),
-        );
+      const { error } = await table(client, 'booking_form_fields').insert(
+        fields.map((field, index) => ({
+          event_type_id: eventTypeId,
+          label: field.label,
+          field_type: field.fieldType,
+          options: field.options ?? null,
+          is_required: field.isRequired,
+          sort_order: field.sortOrder ?? index,
+        })),
+      );
 
       throwIfError(error, 'Could not save form fields');
       return this.listFormFields(eventTypeId);
@@ -746,7 +769,10 @@ export function createSchedulingService(client: AnyClient) {
           ? null
           : input.replyToEmail;
 
-      const { error } = await table(client, 'booking_notification_settings').upsert(
+      const { error } = await table(
+        client,
+        'booking_notification_settings',
+      ).upsert(
         {
           account_id: input.accountId,
           send_confirmation_to_invitee: input.sendConfirmationToInvitee,
@@ -852,6 +878,130 @@ export function createSchedulingService(client: AnyClient) {
           )
           .reverse(),
       };
+    },
+
+    async listUpcomingBookingsForClient(
+      accountId: string,
+      clientId: string,
+    ): Promise<ClientBookingRow[]> {
+      const { data: clientRow, error: clientError } = await table(
+        client,
+        'clients',
+      )
+        .select('id, email')
+        .eq('account_id', accountId)
+        .eq('id', clientId)
+        .maybeSingle();
+
+      throwIfError(clientError, 'Could not load client');
+      if (!clientRow) {
+        throw new Error('Client not found');
+      }
+
+      const emails = new Set<string>();
+      const clientEmail = ((clientRow as { email?: string | null }).email ?? '')
+        .trim()
+        .toLowerCase();
+      if (clientEmail) emails.add(clientEmail);
+
+      const { data: contactLinks } = await table(client, 'client_contacts')
+        .select('contact_id, contacts(email)')
+        .eq('client_id', clientId);
+
+      for (const link of (contactLinks ?? []) as Array<{
+        contacts?: { email?: string | null } | null;
+      }>) {
+        const contactEmail = (link.contacts?.email ?? '').trim().toLowerCase();
+        if (contactEmail) emails.add(contactEmail);
+      }
+
+      const nowIso = new Date().toISOString();
+      const emailList = [...emails];
+
+      const { data: linkedRows, error: linkedError } = await table(
+        client,
+        'bookings',
+      )
+        .select(
+          'id, start_at, end_at, invitee_name, invitee_email, status, conferencing_url, management_token, client_id, event_types(name), booking_pages(title)',
+        )
+        .eq('account_id', accountId)
+        .eq('client_id', clientId)
+        .eq('status', 'confirmed')
+        .gte('start_at', nowIso)
+        .order('start_at', { ascending: true });
+
+      throwIfError(linkedError, 'Could not load client bookings');
+
+      let emailRows: Record<string, unknown>[] = [];
+      if (emailList.length > 0) {
+        const { data, error } = await table(client, 'bookings')
+          .select(
+            'id, start_at, end_at, invitee_name, invitee_email, status, conferencing_url, management_token, client_id, event_types(name), booking_pages(title)',
+          )
+          .eq('account_id', accountId)
+          .is('client_id', null)
+          .eq('status', 'confirmed')
+          .gte('start_at', nowIso)
+          .in('invitee_email', emailList)
+          .order('start_at', { ascending: true });
+
+        throwIfError(error, 'Could not load bookings by email');
+        emailRows = (data ?? []) as Record<string, unknown>[];
+
+        // Backfill client_id for matched historical bookings.
+        const toLink = emailRows.map((row) => row.id as string).filter(Boolean);
+        if (toLink.length > 0) {
+          await table(client, 'bookings')
+            .update({ client_id: clientId })
+            .eq('account_id', accountId)
+            .is('client_id', null)
+            .in('id', toLink);
+        }
+      }
+
+      const byId = new Map<string, Record<string, unknown>>();
+      for (const row of [
+        ...((linkedRows ?? []) as Record<string, unknown>[]),
+        ...emailRows,
+      ]) {
+        byId.set(row.id as string, row);
+      }
+
+      return [...byId.values()]
+        .map((row) => {
+          const eventTypes = row.event_types as
+            | { name?: string }
+            | { name?: string }[]
+            | null;
+          const pages = row.booking_pages as
+            | { title?: string }
+            | { title?: string }[]
+            | null;
+          const eventTypeName = Array.isArray(eventTypes)
+            ? (eventTypes[0]?.name ?? null)
+            : (eventTypes?.name ?? null);
+          const bookingPageTitle = Array.isArray(pages)
+            ? (pages[0]?.title ?? null)
+            : (pages?.title ?? null);
+
+          return {
+            id: row.id as string,
+            startAt: row.start_at as string,
+            endAt: row.end_at as string,
+            inviteeName: row.invitee_name as string,
+            inviteeEmail: row.invitee_email as string,
+            status: row.status as string,
+            conferencingUrl: (row.conferencing_url as string | null) ?? null,
+            eventTypeName,
+            bookingPageTitle,
+            managementToken: (row.management_token as string | null) ?? null,
+          } satisfies ClientBookingRow;
+        })
+        .sort(
+          (a, b) =>
+            new Date(a.startAt).getTime() - new Date(b.startAt).getTime(),
+        );
     },
 
     async cancelBooking(

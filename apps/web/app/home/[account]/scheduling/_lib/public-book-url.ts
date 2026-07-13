@@ -10,3 +10,10 @@ export function publicBookUrl(slug: string): string {
 
   return `${base}/book/${slug}`;
 }
+
+export function publicEventBookUrl(
+  pageSlug: string,
+  eventSlug: string,
+): string {
+  return `${publicBookUrl(pageSlug)}/${eventSlug}`;
+}

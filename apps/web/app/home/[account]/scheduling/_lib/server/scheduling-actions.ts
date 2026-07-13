@@ -161,10 +161,7 @@ export const upsertAvailabilityScheduleAction = enhanceAction(
 export const deleteAvailabilityScheduleAction = enhanceAction(
   async (input) => {
     const service = getService();
-    await service.deleteAvailabilitySchedule(
-      input.accountId,
-      input.scheduleId,
-    );
+    await service.deleteAvailabilitySchedule(input.accountId, input.scheduleId);
     revalidateScheduling(input.accountSlug);
     return { success: true as const };
   },
@@ -244,6 +241,22 @@ export const disconnectConferencingAction = enhanceAction(
     schema: z.object({
       accountSlug: z.string().min(1),
       provider: z.enum(['zoom', 'teams']),
+    }),
+  },
+);
+
+export const listClientUpcomingBookingsAction = enhanceAction(
+  async (input) => {
+    const service = getService();
+    return service.listUpcomingBookingsForClient(
+      input.accountId,
+      input.clientId,
+    );
+  },
+  {
+    schema: z.object({
+      accountId: z.string().uuid(),
+      clientId: z.string().uuid(),
     }),
   },
 );

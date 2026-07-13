@@ -1,6 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import {
+  type ComponentProps,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from 'react';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -15,6 +21,7 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { Calendar, CalendarDayButton } from '@kit/ui/calendar';
 import { Checkbox } from '@kit/ui/checkbox';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
@@ -25,8 +32,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
+import { cn } from '@kit/ui/utils';
 
 import {
   buildBookingIcs,
@@ -39,10 +47,10 @@ import {
   fetchPublicSlotsAction,
 } from '../_lib/server/public-booking-actions';
 import type {
+  PublicBookingPage,
   PublicBookingRecord,
   PublicEventType,
   PublicFormField,
-  PublicBookingPage,
 } from '../_lib/server/public-booking.service';
 
 const TIMEZONES = [
@@ -68,38 +76,6 @@ type Props = {
 
 type Step = 'slots' | 'details' | 'confirmed';
 
-function startOfWeek(date: Date, timeZone: string) {
-  // Approximate week start (Monday) using locale parts in invitee TZ
-  const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    weekday: 'short',
-  }).formatToParts(date);
-
-  const y = Number(parts.find((p) => p.type === 'year')?.value);
-  const m = Number(parts.find((p) => p.type === 'month')?.value);
-  const d = Number(parts.find((p) => p.type === 'day')?.value);
-  const weekday = parts.find((p) => p.type === 'weekday')?.value ?? 'Mon';
-  const map: Record<string, number> = {
-    Mon: 0,
-    Tue: 1,
-    Wed: 2,
-    Thu: 3,
-    Fri: 4,
-    Sat: 5,
-    Sun: 6,
-  };
-  const offset = map[weekday] ?? 0;
-  const utcGuess = Date.UTC(y, m - 1, d - offset, 12, 0, 0);
-  return new Date(utcGuess);
-}
-
-function addDays(date: Date, days: number) {
-  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
-}
-
 function ymdInTz(date: Date, timeZone: string) {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone,
@@ -107,6 +83,59 @@ function ymdInTz(date: Date, timeZone: string) {
     month: '2-digit',
     day: '2-digit',
   }).format(date);
+}
+
+function ymdLocal(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function startOfLocalDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function monthFetchRange(month: Date, bookingWindowDays: number) {
+  const monthStart = new Date(month.getFullYear(), month.getMonth(), 1);
+  const monthEnd = new Date(
+    month.getFullYear(),
+    month.getMonth() + 1,
+    0,
+    23,
+    59,
+    59,
+    999,
+  );
+  const now = new Date();
+  const windowEnd = new Date(
+    now.getTime() + bookingWindowDays * 24 * 60 * 60 * 1000,
+  );
+  const rangeStart = monthStart < now ? now : monthStart;
+  const rangeEnd = monthEnd > windowEnd ? windowEnd : monthEnd;
+  return { rangeStart, rangeEnd, windowEnd };
+}
+
+function AvailabilityDayButton({
+  className,
+  modifiers,
+  ...props
+}: ComponentProps<typeof CalendarDayButton>) {
+  return (
+    <CalendarDayButton
+      className={cn(className, 'relative pb-2')}
+      modifiers={modifiers}
+      {...props}
+    >
+      {props.children}
+      {modifiers.available ? (
+        <span
+          aria-hidden
+          className="absolute bottom-1 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-emerald-500"
+        />
+      ) : null}
+    </CalendarDayButton>
+  );
 }
 
 export function BookingWizard({ page, eventType, formFields }: Props) {
@@ -119,7 +148,8 @@ export function BookingWizard({ page, eventType, formFields }: Props) {
   const [durationMinutes, setDurationMinutes] = useState(
     eventType.defaultDuration,
   );
-  const [weekAnchor, setWeekAnchor] = useState(() => new Date());
+  const [month, setMonth] = useState(() => startOfLocalDay(new Date()));
+  const [selectedDay, setSelectedDay] = useState<Date | undefined>(undefined);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [selectedStart, setSelectedStart] = useState<string | null>(null);
@@ -140,30 +170,23 @@ export function BookingWizard({ page, eventType, formFields }: Props) {
     }
   }, []);
 
-  const weekStart = useMemo(
-    () => startOfWeek(weekAnchor, inviteeTimezone),
-    [weekAnchor, inviteeTimezone],
+  const monthRange = useMemo(
+    () => monthFetchRange(month, eventType.bookingWindowDays),
+    [month, eventType.bookingWindowDays],
   );
-
-  const days = useMemo(
-    () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
-    [weekStart],
-  );
-
-  const windowEnd = useMemo(
-    () =>
-      new Date(
-        Date.now() + eventType.bookingWindowDays * 24 * 60 * 60 * 1000,
-      ),
-    [eventType.bookingWindowDays],
-  );
+  const { windowEnd } = monthRange;
 
   useEffect(() => {
     let cancelled = false;
     setLoadingSlots(true);
 
-    const rangeStart = weekStart;
-    const rangeEnd = addDays(weekStart, 7);
+    const { rangeStart, rangeEnd } = monthRange;
+
+    if (rangeStart > rangeEnd) {
+      setSlots([]);
+      setLoadingSlots(false);
+      return;
+    }
 
     startTransition(async () => {
       try {
@@ -198,21 +221,53 @@ export function BookingWizard({ page, eventType, formFields }: Props) {
     eventType.slug,
     durationMinutes,
     inviteeTimezone,
-    weekStart,
+    monthRange,
   ]);
 
   const slotsByDay = useMemo(() => {
     const map = new Map<string, Slot[]>();
-    for (const day of days) {
-      map.set(ymdInTz(day, inviteeTimezone), []);
-    }
     for (const slot of slots) {
       const key = ymdInTz(new Date(slot.start), inviteeTimezone);
-      const list = map.get(key);
-      if (list) list.push(slot);
+      const list = map.get(key) ?? [];
+      list.push(slot);
+      map.set(key, list);
     }
     return map;
-  }, [slots, days, inviteeTimezone]);
+  }, [slots, inviteeTimezone]);
+
+  const availableDays = useMemo(() => {
+    return Array.from(slotsByDay.entries())
+      .filter(([, daySlots]) => daySlots.length > 0)
+      .map(([key]) => {
+        const [year, monthNum, day] = key.split('-').map(Number);
+        return new Date(year!, monthNum! - 1, day!);
+      });
+  }, [slotsByDay]);
+
+  const availableDayKeys = useMemo(
+    () => new Set(slotsByDay.keys()),
+    [slotsByDay],
+  );
+
+  useEffect(() => {
+    if (loadingSlots) return;
+
+    const selectedKey = selectedDay ? ymdLocal(selectedDay) : null;
+    if (selectedKey && availableDayKeys.has(selectedKey)) return;
+
+    const first = availableDays[0];
+    if (first) {
+      setSelectedDay(first);
+      setSelectedStart(null);
+      return;
+    }
+
+    setSelectedDay(undefined);
+    setSelectedStart(null);
+  }, [loadingSlots, availableDays, availableDayKeys, selectedDay]);
+
+  const selectedDayKey = selectedDay ? ymdLocal(selectedDay) : null;
+  const daySlots = selectedDayKey ? (slotsByDay.get(selectedDayKey) ?? []) : [];
 
   function addGuest() {
     const next = guestInput.trim().toLowerCase();
@@ -405,18 +460,26 @@ export function BookingWizard({ page, eventType, formFields }: Props) {
     );
   }
 
+  const today = startOfLocalDay(new Date());
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <Link
-            href={`/book/${page.slug}`}
-            className="inline-flex items-center gap-2 text-sm text-[color:var(--ozer-text-muted,#6B5B63)] hover:text-inherit"
+          {!eventType.isPrivate ? (
+            <Link
+              href={`/book/${page.slug}`}
+              className="inline-flex items-center gap-2 text-sm text-[color:var(--ozer-text-muted,#6B5B63)] hover:text-inherit"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              All meeting types
+            </Link>
+          ) : null}
+          <h2
+            className={`text-2xl font-semibold ${eventType.isPrivate ? '' : 'mt-2'}`}
           >
-            <ArrowLeft className="h-4 w-4" />
-            All meeting types
-          </Link>
-          <h2 className="mt-2 text-2xl font-semibold">{eventType.name}</h2>
+            {eventType.name}
+          </h2>
           {eventType.description ? (
             <p className="mt-1 text-sm text-[color:var(--ozer-text-muted,#6B5B63)]">
               {eventType.description}
@@ -455,113 +518,112 @@ export function BookingWizard({ page, eventType, formFields }: Props) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {[inviteeTimezone, ...TIMEZONES.filter((tz) => tz !== inviteeTimezone)].map(
-                (tz) => (
-                  <SelectItem key={tz} value={tz}>
-                    {tz}
-                  </SelectItem>
-                ),
-              )}
+              {[
+                inviteeTimezone,
+                ...TIMEZONES.filter((tz) => tz !== inviteeTimezone),
+              ].map((tz) => (
+                <SelectItem key={tz} value={tz}>
+                  {tz}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-3">
-        <Button
-          type="button"
-          variant="outline"
-          className="rounded-full"
-          disabled={weekStart.getTime() <= Date.now() - 7 * 24 * 60 * 60 * 1000}
-          onClick={() => setWeekAnchor(addDays(weekStart, -7))}
-        >
-          Previous
-        </Button>
-        <p className="text-sm font-medium">
-          {formatInTimezone(weekStart.toISOString(), inviteeTimezone, {
-            day: 'numeric',
-            month: 'short',
-          })}{' '}
-          –{' '}
-          {formatInTimezone(
-            addDays(weekStart, 6).toISOString(),
-            inviteeTimezone,
-            { day: 'numeric', month: 'short', year: 'numeric' },
-          )}
-        </p>
-        <Button
-          type="button"
-          variant="outline"
-          className="rounded-full"
-          disabled={addDays(weekStart, 7) > windowEnd}
-          onClick={() => setWeekAnchor(addDays(weekStart, 7))}
-        >
-          Next
-        </Button>
-      </div>
+      <div className="grid gap-4 rounded-2xl border border-black/10 bg-white p-4 md:grid-cols-[minmax(0,1fr)_minmax(220px,280px)] md:p-5">
+        <div className="flex flex-col items-center">
+          <Calendar
+            mode="single"
+            month={month}
+            onMonthChange={(next) => {
+              setMonth(startOfLocalDay(next));
+              setSelectedStart(null);
+            }}
+            selected={selectedDay}
+            onSelect={(date) => {
+              if (!date) return;
+              setSelectedDay(startOfLocalDay(date));
+              setSelectedStart(null);
+            }}
+            disabled={(date) => {
+              const key = ymdLocal(date);
+              if (startOfLocalDay(date) < today) return true;
+              if (date > windowEnd) return true;
+              if (loadingSlots) return true;
+              return !availableDayKeys.has(key);
+            }}
+            modifiers={{ available: availableDays }}
+            modifiersClassNames={{
+              available: 'font-medium',
+            }}
+            components={{
+              DayButton: AvailabilityDayButton,
+            }}
+            className="w-full bg-transparent p-0 [--cell-size:2.75rem]"
+          />
+          {loadingSlots ? (
+            <p className="mt-3 flex items-center gap-2 text-sm text-[color:var(--ozer-text-muted,#6B5B63)]">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Finding open days…
+            </p>
+          ) : null}
+        </div>
 
-      {loadingSlots ? (
-        <div className="flex items-center justify-center gap-2 rounded-2xl border border-black/10 bg-white p-12 text-sm text-[color:var(--ozer-text-muted,#6B5B63)]">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Finding open times…
-        </div>
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
-          {days.map((day) => {
-            const key = ymdInTz(day, inviteeTimezone);
-            const daySlots = slotsByDay.get(key) ?? [];
-            return (
-              <div
-                key={key}
-                className="rounded-2xl border border-black/10 bg-white p-3"
-              >
-                <p className="text-center text-xs font-semibold uppercase tracking-wide text-[color:var(--ozer-text-muted,#6B5B63)]">
-                  {formatInTimezone(day.toISOString(), inviteeTimezone, {
-                    weekday: 'short',
-                  })}
-                </p>
-                <p className="mb-3 text-center text-sm font-medium">
-                  {formatInTimezone(day.toISOString(), inviteeTimezone, {
-                    day: 'numeric',
-                    month: 'short',
-                  })}
-                </p>
-                <div className="space-y-1.5">
-                  {daySlots.length === 0 ? (
-                    <p className="py-4 text-center text-xs text-[color:var(--ozer-text-muted,#6B5B63)]">
-                      —
-                    </p>
-                  ) : (
-                    daySlots.map((slot) => {
-                      const selected = selectedStart === slot.start;
-                      return (
-                        <button
-                          key={slot.start}
-                          type="button"
-                          className={`w-full rounded-full border px-2 py-1.5 text-xs font-medium transition ${
-                            selected
-                              ? 'border-transparent text-white'
-                              : 'border-black/10 hover:border-black/30'
-                          }`}
-                          style={
-                            selected ? { backgroundColor: accent } : undefined
-                          }
-                          onClick={() => setSelectedStart(slot.start)}
-                        >
-                          {formatInTimezone(slot.start, inviteeTimezone, {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </button>
-                      );
-                    })
-                  )}
-                </div>
+        <div className="flex min-h-[280px] flex-col border-t border-black/10 pt-4 md:border-t-0 md:border-l md:pt-0 md:pl-5">
+          <p className="text-sm font-semibold">
+            {selectedDay
+              ? selectedDay.toLocaleDateString(undefined, {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                })
+              : 'Select a day'}
+          </p>
+          <p className="mt-1 text-xs text-[color:var(--ozer-text-muted,#6B5B63)]">
+            Times shown in {inviteeTimezone}
+          </p>
+
+          <div className="mt-4 flex-1 space-y-2 overflow-y-auto pr-1">
+            {loadingSlots ? (
+              <div className="flex items-center justify-center gap-2 py-10 text-sm text-[color:var(--ozer-text-muted,#6B5B63)]">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading times…
               </div>
-            );
-          })}
+            ) : !selectedDay ? (
+              <p className="py-10 text-center text-sm text-[color:var(--ozer-text-muted,#6B5B63)]">
+                Choose an available day on the calendar.
+              </p>
+            ) : daySlots.length === 0 ? (
+              <p className="py-10 text-center text-sm text-[color:var(--ozer-text-muted,#6B5B63)]">
+                No times left on this day.
+              </p>
+            ) : (
+              daySlots.map((slot) => {
+                const selected = selectedStart === slot.start;
+                return (
+                  <button
+                    key={slot.start}
+                    type="button"
+                    className={`w-full rounded-full border px-3 py-2.5 text-sm font-medium transition ${
+                      selected
+                        ? 'border-transparent text-white'
+                        : 'border-black/10 hover:border-black/30'
+                    }`}
+                    style={selected ? { backgroundColor: accent } : undefined}
+                    onClick={() => setSelectedStart(slot.start)}
+                  >
+                    {formatInTimezone(slot.start, inviteeTimezone, {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </button>
+                );
+              })
+            )}
+          </div>
         </div>
-      )}
+      </div>
 
       <div className="flex justify-end">
         <Button

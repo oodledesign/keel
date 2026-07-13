@@ -40,9 +40,7 @@ const hexColourSchema = z
   .nullable()
   .optional();
 
-const timeSchema = z
-  .string()
-  .regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Use HH:mm');
+const timeSchema = z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Use HH:mm');
 
 export const CreateBookingPageSchema = z.object({
   accountId: z.string().uuid(),
@@ -94,6 +92,7 @@ export const CreateEventTypeSchema = z.object({
   allowGuestInvites: z.boolean().default(true),
   availabilityScheduleId: z.string().uuid(),
   isActive: z.boolean().default(true),
+  isPrivate: z.boolean().default(false),
 });
 
 export const UpdateEventTypeSchema = CreateEventTypeSchema.extend({

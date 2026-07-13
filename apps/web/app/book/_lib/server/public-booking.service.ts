@@ -2,28 +2,31 @@ import 'server-only';
 
 import { randomUUID } from 'node:crypto';
 
-import { getBusyIntervals, getGoogleClientForWorkspace } from '@kit/scheduling/google';
 import { computeAvailableSlots } from '@kit/scheduling';
 import {
   GoogleCalendarNotConnectedError,
   GoogleCalendarReconnectRequiredError,
 } from '@kit/scheduling';
+import {
+  getBusyIntervals,
+  getGoogleClientForWorkspace,
+} from '@kit/scheduling/google';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import type {
   CreatePublicBookingInput,
   FetchSlotsInput,
 } from '../schema/public-booking.schema';
-import { createGoogleBookingCalendarEvent } from './google-booking-event';
-import {
-  tryCreateProviderMeeting,
-  tryDeleteProviderMeeting,
-} from './conferencing-meeting';
 import {
   sendBookingCancellationEmails,
   sendBookingConfirmationEmails,
   sendBookingRescheduleEmails,
 } from './booking-emails';
+import {
+  tryCreateProviderMeeting,
+  tryDeleteProviderMeeting,
+} from './conferencing-meeting';
+import { createGoogleBookingCalendarEvent } from './google-booking-event';
 
 // Scheduling tables are not yet in generated Database types — use a loose query builder.
 type LooseQuery = {
@@ -53,7 +56,10 @@ function table(client: unknown, name: string): LooseQuery {
   return (client as { from: (n: string) => LooseQuery }).from(name);
 }
 
-function throwIfError(error: { message: string; code?: string } | null, fallback: string) {
+function throwIfError(
+  error: { message: string; code?: string } | null,
+  fallback: string,
+) {
   if (error) {
     throw new Error(error.message || fallback);
   }
@@ -90,6 +96,7 @@ export type PublicEventType = {
   allowGuestInvites: boolean;
   availabilityScheduleId: string;
   isActive: boolean;
+  isPrivate: boolean;
 };
 
 export type PublicFormField = {
@@ -151,7 +158,9 @@ function mapEventType(row: Record<string, unknown>): PublicEventType {
     name: row.name as string,
     slug: row.slug as string,
     description: (row.description as string | null) ?? null,
-    durations: Array.isArray(row.durations) ? (row.durations as number[]) : [30],
+    durations: Array.isArray(row.durations)
+      ? (row.durations as number[])
+      : [30],
     defaultDuration: Number(row.default_duration ?? 30),
     locationType: String(row.location_type ?? 'google_meet'),
     locationDetail: (row.location_detail as string | null) ?? null,
@@ -160,11 +169,14 @@ function mapEventType(row: Record<string, unknown>): PublicEventType {
     minimumNoticeMinutes: Number(row.minimum_notice_minutes ?? 240),
     bookingWindowDays: Number(row.booking_window_days ?? 60),
     maxBookingsPerDay:
-      row.max_bookings_per_day == null ? null : Number(row.max_bookings_per_day),
+      row.max_bookings_per_day == null
+        ? null
+        : Number(row.max_bookings_per_day),
     slotIncrementMinutes: Number(row.slot_increment_minutes ?? 30),
     allowGuestInvites: row.allow_guest_invites !== false,
     availabilityScheduleId: row.availability_schedule_id as string,
     isActive: row.is_active !== false,
+    isPrivate: row.is_private === true,
   };
 }
 
@@ -184,30 +196,53 @@ export async function loadPublicBookingPage(pageSlug: string) {
     .select('*')
     .eq('booking_page_id', page.id)
     .eq('is_active', true)
+    .eq('is_private', false)
     .order('created_at', { ascending: true });
 
   throwIfError(etError, 'Could not load event types');
 
   return {
     page,
-    eventTypes: ((eventRows ?? []) as Record<string, unknown>[]).map(mapEventType),
+    eventTypes: ((eventRows ?? []) as Record<string, unknown>[]).map(
+      mapEventType,
+    ),
   };
 }
 
 export async function loadPublicEventType(pageSlug: string, eventSlug: string) {
-  const loaded = await loadPublicBookingPage(pageSlug);
-  if (!loaded) return null;
-
-  const eventType = loaded.eventTypes.find((et) => et.slug === eventSlug) ?? null;
-  if (!eventType) return null;
-
   const client = getSupabaseServerAdminClient();
-  const { data: fields, error } = await table(client, 'booking_form_fields')
+  const { data, error } = await table(client, 'booking_pages')
+    .select('*')
+    .eq('slug', pageSlug)
+    .eq('is_active', true)
+    .maybeSingle();
+
+  throwIfError(error, 'Could not load booking page');
+  if (!data) return null;
+
+  const page = mapPage(data as Record<string, unknown>);
+
+  const { data: eventRow, error: etError } = await table(client, 'event_types')
+    .select('*')
+    .eq('booking_page_id', page.id)
+    .eq('slug', eventSlug)
+    .eq('is_active', true)
+    .maybeSingle();
+
+  throwIfError(etError, 'Could not load event type');
+  if (!eventRow) return null;
+
+  const eventType = mapEventType(eventRow as Record<string, unknown>);
+
+  const { data: fields, error: fieldsError } = await table(
+    client,
+    'booking_form_fields',
+  )
     .select('*')
     .eq('event_type_id', eventType.id)
     .order('sort_order', { ascending: true });
 
-  throwIfError(error, 'Could not load form fields');
+  throwIfError(fieldsError, 'Could not load form fields');
 
   const formFields: PublicFormField[] = (
     (fields ?? []) as Record<string, unknown>[]
@@ -220,12 +255,15 @@ export async function loadPublicEventType(pageSlug: string, eventSlug: string) {
     sortOrder: Number(row.sort_order ?? 0),
   }));
 
-  return { page: loaded.page, eventType, formFields };
+  return { page, eventType, formFields };
 }
 
 async function loadScheduleBundle(scheduleId: string) {
   const client = getSupabaseServerAdminClient();
-  const { data: schedule, error } = await table(client, 'availability_schedules')
+  const { data: schedule, error } = await table(
+    client,
+    'availability_schedules',
+  )
     .select('*')
     .eq('id', scheduleId)
     .maybeSingle();
@@ -253,13 +291,17 @@ async function loadScheduleBundle(scheduleId: string) {
       startTime: String(rule.start_time).slice(0, 5),
       endTime: String(rule.end_time).slice(0, 5),
     })),
-    overrides: ((overrides ?? []) as Record<string, unknown>[]).map((override) => ({
-      date: String(override.date),
-      startTime: override.start_time
-        ? String(override.start_time).slice(0, 5)
-        : null,
-      endTime: override.end_time ? String(override.end_time).slice(0, 5) : null,
-    })),
+    overrides: ((overrides ?? []) as Record<string, unknown>[]).map(
+      (override) => ({
+        date: String(override.date),
+        startTime: override.start_time
+          ? String(override.start_time).slice(0, 5)
+          : null,
+        endTime: override.end_time
+          ? String(override.end_time).slice(0, 5)
+          : null,
+      }),
+    ),
   };
 }
 
@@ -343,13 +385,15 @@ export async function fetchPublicAvailableSlots(input: FetchSlotsInput) {
   const from = rangeStart < now ? now : rangeStart;
   const to = rangeEnd > windowEnd ? windowEnd : rangeEnd;
   if (!(to > from)) {
-    return { slots: [] as Array<{ start: string; end: string }>, eventType, page };
+    return {
+      slots: [] as Array<{ start: string; end: string }>,
+      eventType,
+      page,
+    };
   }
 
   const excludeBookingId = input.excludeManagementToken
-    ? (
-        await loadBookingByManagementToken(input.excludeManagementToken)
-      )?.id
+    ? (await loadBookingByManagementToken(input.excludeManagementToken))?.id
     : undefined;
 
   const [scheduleBundle, busyIntervals, existingBookings] = await Promise.all([
@@ -437,9 +481,10 @@ function validateFormResponses(
 
 /**
  * Match invitee email to an existing workspace client.
+ * Checks the client record email first, then linked contact emails.
+ * Returns null when there is no match or multiple clients share the email.
  *
  * TODO(product): auto-create clients from public bookings needs product sign-off.
- * Extension point: replace this lookup with `findOrCreateClientFromBooking(...)`.
  */
 async function findClientIdByEmail(
   accountId: string,
@@ -447,20 +492,87 @@ async function findClientIdByEmail(
 ): Promise<string | null> {
   const client = getSupabaseServerAdminClient();
   const normalised = email.trim().toLowerCase();
+  if (!normalised) return null;
 
-  const { data, error } = await table(client, 'clients')
+  const matchedIds = new Set<string>();
+
+  const { data: clientRows, error: clientsError } = await table(
+    client,
+    'clients',
+  )
     .select('id, email')
     .eq('account_id', accountId)
     .ilike('email', normalised)
-    .limit(5);
+    .limit(10);
 
-  throwIfError(error, 'Could not look up client');
+  throwIfError(clientsError, 'Could not look up client');
 
-  const match = ((data ?? []) as Array<{ id: string; email: string | null }>).find(
-    (row) => (row.email ?? '').trim().toLowerCase() === normalised,
-  );
+  for (const row of (clientRows ?? []) as Array<{
+    id: string;
+    email: string | null;
+  }>) {
+    if ((row.email ?? '').trim().toLowerCase() === normalised) {
+      matchedIds.add(row.id);
+    }
+  }
 
-  return match?.id ?? null;
+  const { data: contactRows, error: contactsError } = await table(
+    client,
+    'contacts',
+  )
+    .select('id, email')
+    .eq('account_id', accountId)
+    .ilike('email', normalised)
+    .limit(20);
+
+  if (!contactsError) {
+    const contactIds = (
+      (contactRows ?? []) as Array<{ id: string; email: string | null }>
+    )
+      .filter((row) => (row.email ?? '').trim().toLowerCase() === normalised)
+      .map((row) => row.id);
+
+    if (contactIds.length > 0) {
+      const { data: links, error: linksError } = await table(
+        client,
+        'client_contacts',
+      )
+        .select('client_id')
+        .in('contact_id', contactIds);
+
+      if (!linksError) {
+        const linkedClientIds = [
+          ...new Set(
+            ((links ?? []) as Array<{ client_id: string | null }>)
+              .map((row) => row.client_id)
+              .filter((id): id is string => Boolean(id)),
+          ),
+        ];
+
+        if (linkedClientIds.length > 0) {
+          const { data: linkedClients, error: linkedError } = await table(
+            client,
+            'clients',
+          )
+            .select('id')
+            .eq('account_id', accountId)
+            .in('id', linkedClientIds);
+
+          if (!linkedError) {
+            for (const row of (linkedClients ?? []) as Array<{ id: string }>) {
+              matchedIds.add(row.id);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (matchedIds.size !== 1) {
+    return null;
+  }
+
+  return [...matchedIds][0] ?? null;
 }
 
 async function getNotificationSettings(accountId: string) {
@@ -641,7 +753,10 @@ export async function createPublicBooking(input: CreatePublicBookingInput) {
   const client = getSupabaseServerAdminClient();
   const managementToken = randomUUID();
 
-  const { data: bookingRow, error: insertError } = await table(client, 'bookings')
+  const { data: bookingRow, error: insertError } = await table(
+    client,
+    'bookings',
+  )
     .insert({
       event_type_id: eventType.id,
       booking_page_id: page.id,
@@ -685,7 +800,10 @@ export async function createPublicBooking(input: CreatePublicBookingInput) {
   }
 
   if (input.formResponses.length > 0) {
-    const { error: formError } = await table(client, 'booking_form_responses').insert(
+    const { error: formError } = await table(
+      client,
+      'booking_form_responses',
+    ).insert(
       input.formResponses.map((response) => ({
         booking_id: bookingId,
         form_field_id: response.formFieldId,
@@ -882,9 +1000,7 @@ export async function loadBookingByManagementToken(
       .select('slug')
       .eq('id', accountId)
       .maybeSingle();
-    accountSlug = String(
-      (account as { slug?: string } | null)?.slug ?? '',
-    );
+    accountSlug = String((account as { slug?: string } | null)?.slug ?? '');
   } catch {
     accountSlug = '';
   }
@@ -939,10 +1055,12 @@ async function loadBookingFormResponsesForEmail(bookingId: string) {
     .select('value, booking_form_fields(label)')
     .eq('booking_id', bookingId);
 
-  return ((data ?? []) as Array<{
-    value: unknown;
-    booking_form_fields: { label?: string } | { label?: string }[] | null;
-  }>).map((row) => {
+  return (
+    (data ?? []) as Array<{
+      value: unknown;
+      booking_form_fields: { label?: string } | { label?: string }[] | null;
+    }>
+  ).map((row) => {
     const field = Array.isArray(row.booking_form_fields)
       ? row.booking_form_fields[0]
       : row.booking_form_fields;
@@ -1069,7 +1187,10 @@ export async function reschedulePublicBooking(input: {
     throw new Error('Only confirmed bookings can be rescheduled');
   }
 
-  const loaded = await loadPublicEventType(existing.pageSlug, existing.eventSlug);
+  const loaded = await loadPublicEventType(
+    existing.pageSlug,
+    existing.eventSlug,
+  );
   if (!loaded) {
     throw new Error('Event type not found');
   }
@@ -1155,7 +1276,10 @@ export async function reschedulePublicBooking(input: {
     );
   }
 
-  const { data: oldResponsesRaw } = await table(client, 'booking_form_responses')
+  const { data: oldResponsesRaw } = await table(
+    client,
+    'booking_form_responses',
+  )
     .select('form_field_id, value')
     .eq('booking_id', existing.id);
 
@@ -1195,7 +1319,10 @@ export async function reschedulePublicBooking(input: {
         eventId: existing.googleEventId,
       });
     } catch (error) {
-      console.error('[public-booking] Google delete on reschedule failed', error);
+      console.error(
+        '[public-booking] Google delete on reschedule failed',
+        error,
+      );
     }
   }
 

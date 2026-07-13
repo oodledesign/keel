@@ -1,6 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 
 import Link from 'next/link';
 
@@ -8,8 +14,8 @@ import {
   Archive,
   Building2,
   Calendar,
-  Eye,
   ExternalLink,
+  Eye,
   FileText,
   Mail,
   MapPin,
@@ -33,6 +39,25 @@ import { Skeleton } from '@kit/ui/skeleton';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
+import pathsConfig from '~/config/paths.config';
+
+import { MeetingTranscriptsBlock } from '../../_components/meeting-transcripts-block';
+import { ContextWorkspaceNotes } from '../../_components/workspace-content/context-workspace-notes';
+import type { LinkValue } from '../../_components/workspace-content/link-to-select';
+import type {
+  RanklyClientImportOption,
+  RanklyProjectRow,
+} from '../../_lib/server/rankly-account-data';
+import type {
+  DocListItem,
+  LinkOption,
+  NoteListItem,
+  WorkspaceNotesVariant,
+} from '../../_lib/workspace-content/types';
+import { listMeetingTranscripts } from '../../meeting-transcripts/_lib/server/server-actions';
+import { meetingDisplayDate } from '../../meetings/_lib/format-meeting-date';
+import { listClientUpcomingBookingsAction } from '../../scheduling/_lib/server/scheduling-actions';
+import type { ClientBookingRow } from '../../scheduling/_lib/server/scheduling.service';
 import {
   deleteClient,
   getClient,
@@ -40,33 +65,16 @@ import {
   getJobHistory,
   listNotes,
 } from '../_lib/server/server-actions';
-import { ClientFinancePanel } from './client-finance-panel';
 import { ClientContactsBlock } from './client-contacts-block';
-import { ClientImageUploader } from './client-image-uploader';
+import { ClientFinancePanel } from './client-finance-panel';
 import { ClientForm } from './client-form';
+import { ClientImageUploader } from './client-image-uploader';
 import { ClientInvoicesBlock } from './client-invoices-block';
 import { ClientJobHistoryBlock } from './client-job-history-block';
-import { ContextWorkspaceNotes } from '../../_components/workspace-content/context-workspace-notes';
-import { MeetingTranscriptsBlock } from '../../_components/meeting-transcripts-block';
-import { listMeetingTranscripts } from '../../meeting-transcripts/_lib/server/server-actions';
-import { meetingDisplayDate } from '../../meetings/_lib/format-meeting-date';
-import type { LinkValue } from '../../_components/workspace-content/link-to-select';
-import type {
-  DocListItem,
-  LinkOption,
-  NoteListItem,
-  WorkspaceNotesVariant,
-} from '../../_lib/workspace-content/types';
 import { ClientNotesBlock } from './client-notes-block';
 import { ClientRanklyBlock } from './client-rankly-block';
 import { ClientTasksBlock } from './client-tasks-block';
-
-import type {
-  RanklyClientImportOption,
-  RanklyProjectRow,
-} from '../../_lib/server/rankly-account-data';
-
-import pathsConfig from '~/config/paths.config';
+import { ClientUpcomingBookingsBlock } from './client-upcoming-bookings-block';
 
 type Client = {
   id: string;
@@ -127,6 +135,11 @@ type ClientMeetingPreview = {
   meetingDate: string | null;
   createdAt: string;
 };
+
+type ClientBookingPreview = Pick<
+  ClientBookingRow,
+  'id' | 'startAt' | 'eventTypeName' | 'inviteeName'
+>;
 
 function formatNotePreview(note: string, maxLength = 120) {
   const trimmed = note.trim().replace(/\s+/g, ' ');
@@ -212,7 +225,9 @@ function OverviewMetric({
         <Icon className="h-3.5 w-3.5 shrink-0" />
         {label}
       </p>
-      <p className="mt-1 text-sm font-medium text-[var(--workspace-shell-text)]">{value}</p>
+      <p className="mt-1 text-sm font-medium text-[var(--workspace-shell-text)]">
+        {value}
+      </p>
     </div>
   );
 }
@@ -268,20 +283,36 @@ export function ClientDetailSidebar({
   const [loading, setLoading] = useState(true);
   const [showEditForm, setShowEditForm] = useState(false);
   const [portalStatus, setPortalStatus] = useState<PortalStatus | null>(null);
-  const [overviewClientNotes, setOverviewClientNotes] = useState<ClientNotePreview[]>([]);
-  const [overviewMeetings, setOverviewMeetings] = useState<ClientMeetingPreview[]>([]);
+  const [overviewClientNotes, setOverviewClientNotes] = useState<
+    ClientNotePreview[]
+  >([]);
+  const [overviewMeetings, setOverviewMeetings] = useState<
+    ClientMeetingPreview[]
+  >([]);
+  const [overviewBookings, setOverviewBookings] = useState<
+    ClientBookingPreview[]
+  >([]);
 
   const fetchClient = useCallback(async () => {
     setLoading(true);
     try {
-      const data = (await getClient({ accountId, clientId })) as unknown as Client;
+      const data = (await getClient({
+        accountId,
+        clientId,
+      })) as unknown as Client;
       setClient(data);
-      const [jobHistory, notesData, meetingsData] = await Promise.all([
-        getJobHistory({ accountId, clientId }),
-        listNotes({ accountId, clientId }).catch(() => []),
-        listMeetingTranscripts({ accountId, clientId }).catch(() => []),
-      ]);
-      setJobs(Array.isArray(jobHistory) ? (jobHistory as ClientJobSummary[]) : []);
+      const [jobHistory, notesData, meetingsData, bookingsData] =
+        await Promise.all([
+          getJobHistory({ accountId, clientId }),
+          listNotes({ accountId, clientId }).catch(() => []),
+          listMeetingTranscripts({ accountId, clientId }).catch(() => []),
+          listClientUpcomingBookingsAction({ accountId, clientId }).catch(
+            () => [],
+          ),
+        ]);
+      setJobs(
+        Array.isArray(jobHistory) ? (jobHistory as ClientJobSummary[]) : [],
+      );
       setOverviewClientNotes((notesData ?? []) as ClientNotePreview[]);
       setOverviewMeetings(
         (meetingsData ?? []).map(
@@ -297,6 +328,14 @@ export function ClientDetailSidebar({
             createdAt: meeting.createdAt,
           }),
         ),
+      );
+      setOverviewBookings(
+        ((bookingsData ?? []) as ClientBookingRow[]).map((booking) => ({
+          id: booking.id,
+          startAt: booking.startAt,
+          eventTypeName: booking.eventTypeName,
+          inviteeName: booking.inviteeName,
+        })),
       );
 
       if (data.email) {
@@ -318,6 +357,7 @@ export function ClientDetailSidebar({
       setPortalStatus(null);
       setOverviewClientNotes([]);
       setOverviewMeetings([]);
+      setOverviewBookings([]);
     } finally {
       setLoading(false);
     }
@@ -348,7 +388,9 @@ export function ClientDetailSidebar({
     if (workspaceNotes?.length) {
       return [...workspaceNotes]
         .sort((a, b) =>
-          (b.updatedAt || b.createdAt).localeCompare(a.updatedAt || a.createdAt),
+          (b.updatedAt || b.createdAt).localeCompare(
+            a.updatedAt || a.createdAt,
+          ),
         )
         .slice(0, 3)
         .map((note) => ({
@@ -388,7 +430,9 @@ export function ClientDetailSidebar({
     return (
       [
         ['overview', 'Overview'],
-        ...(client.client_type === 'business' ? [['contacts', 'Contacts']] : []),
+        ...(client.client_type === 'business'
+          ? [['contacts', 'Contacts']]
+          : []),
         ['projects', 'Projects'],
         ['invoices', 'Invoices'],
         ['finance', 'Finance'],
@@ -588,14 +632,18 @@ export function ClientDetailSidebar({
 
             <div className="mt-5 border-t border-[color:var(--workspace-shell-border)] pt-5">
               <div className="flex items-center justify-between gap-3">
-                <h2 className="text-sm font-medium text-[var(--workspace-shell-text)]">Projects</h2>
+                <h2 className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                  Projects
+                </h2>
                 <span className="text-xs text-[var(--workspace-shell-text-muted)]">
                   {jobsCount} total · {formatPence(totalValuePence)}
                 </span>
               </div>
 
               {jobs.length === 0 ? (
-                <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">No projects yet.</p>
+                <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">
+                  No projects yet.
+                </p>
               ) : (
                 <ul className="mt-3 divide-y divide-[color:var(--workspace-shell-border)]">
                   {jobs.map((job) => (
@@ -607,7 +655,7 @@ export function ClientDetailSidebar({
                         <span className="truncate text-sm text-[var(--workspace-shell-text)]">
                           {job.title ?? 'Untitled project'}
                         </span>
-                        <span className="shrink-0 text-xs capitalize text-[var(--workspace-shell-text-muted)]">
+                        <span className="shrink-0 text-xs text-[var(--workspace-shell-text-muted)] capitalize">
                           {job.status.replace(/_/g, ' ')}
                         </span>
                       </Link>
@@ -631,13 +679,56 @@ export function ClientDetailSidebar({
 
           <div className="grid gap-4 lg:grid-cols-2">
             <OverviewPreviewPanel
-              title="Recent meetings"
+              title="Upcoming bookings"
+              icon={Calendar}
+              viewAllLabel="View all"
+              onViewAll={() => setActiveTab('meetings')}
+            >
+              {overviewBookings.length === 0 ? (
+                <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                  No upcoming bookings.
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {overviewBookings.slice(0, 4).map((booking) => (
+                    <li key={booking.id}>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('meetings')}
+                        className="block w-full rounded-md px-1 py-1 text-left transition hover:bg-[var(--workspace-shell-panel-hover)]"
+                      >
+                        <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+                          {booking.eventTypeName ?? 'Meeting'}
+                        </p>
+                        <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
+                          {new Date(booking.startAt).toLocaleString('en-GB', {
+                            weekday: 'short',
+                            day: 'numeric',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                          {booking.inviteeName
+                            ? ` · ${booking.inviteeName}`
+                            : ''}
+                        </p>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </OverviewPreviewPanel>
+
+            <OverviewPreviewPanel
+              title="Recent recordings"
               icon={Mic}
               viewAllLabel="View all"
               onViewAll={() => setActiveTab('meetings')}
             >
               {recentMeetingsPreview.length === 0 ? (
-                <p className="text-sm text-[var(--workspace-shell-text-muted)]">No meetings yet.</p>
+                <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                  No recordings yet.
+                </p>
               ) : (
                 <ul className="space-y-2">
                   {recentMeetingsPreview.map((meeting) => (
@@ -650,7 +741,10 @@ export function ClientDetailSidebar({
                           {meeting.title}
                         </p>
                         <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
-                          {meetingDisplayDate(meeting.meetingDate, meeting.createdAt)}
+                          {meetingDisplayDate(
+                            meeting.meetingDate,
+                            meeting.createdAt,
+                          )}
                         </p>
                       </Link>
                     </li>
@@ -666,7 +760,9 @@ export function ClientDetailSidebar({
               onViewAll={() => setActiveTab('notes')}
             >
               {recentNotesPreview.length === 0 ? (
-                <p className="text-sm text-[var(--workspace-shell-text-muted)]">No notes yet.</p>
+                <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                  No notes yet.
+                </p>
               ) : (
                 <ul className="space-y-2">
                   {recentNotesPreview.map((note) => (
@@ -684,7 +780,9 @@ export function ClientDetailSidebar({
                         <p
                           className={cn(
                             'text-sm text-[var(--workspace-shell-text-muted)]',
-                            note.title ? 'mt-0.5 line-clamp-2 text-xs' : 'line-clamp-2',
+                            note.title
+                              ? 'mt-0.5 line-clamp-2 text-xs'
+                              : 'line-clamp-2',
                           )}
                         >
                           {note.preview}
@@ -707,7 +805,7 @@ export function ClientDetailSidebar({
           <div className="space-y-3">
             {client.email && portalStatus ? (
               <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 text-sm">
-                <p className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+                <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
                   Portal access
                 </p>
                 <p className="mt-1 text-[var(--workspace-shell-text)]">
@@ -776,13 +874,25 @@ export function ClientDetailSidebar({
 
     if (activeTab === 'meetings') {
       return (
-        <MeetingTranscriptsBlock
-          accountId={accountId}
-          accountSlug={accountSlug}
-          clientId={client.id}
-          canEdit={canEditClients}
-          variant="list"
-        />
+        <div className="space-y-8">
+          <ClientUpcomingBookingsBlock
+            accountSlug={accountSlug}
+            accountId={accountId}
+            clientId={client.id}
+          />
+          <div className="space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-6">
+            <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+              Recordings
+            </h3>
+            <MeetingTranscriptsBlock
+              accountId={accountId}
+              accountSlug={accountSlug}
+              clientId={client.id}
+              canEdit={canEditClients}
+              variant="list"
+            />
+          </div>
+        </div>
       );
     }
 
@@ -790,7 +900,9 @@ export function ClientDetailSidebar({
       if (workspaceNotes && linkOptions && defaultLink) {
         return (
           <section>
-            <h3 className="mb-3 text-sm font-medium text-[var(--workspace-shell-text-muted)]">Notes and files</h3>
+            <h3 className="mb-3 text-sm font-medium text-[var(--workspace-shell-text-muted)]">
+              Notes and files
+            </h3>
             <ContextWorkspaceNotes
               accountId={accountId}
               accountSlug={accountSlug}
@@ -866,7 +978,9 @@ export function ClientDetailSidebar({
                     {displayName}
                   </h1>
                   {subtitle ? (
-                    <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">{subtitle}</p>
+                    <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">
+                      {subtitle}
+                    </p>
                   ) : null}
                 </div>
               </div>

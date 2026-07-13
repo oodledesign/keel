@@ -64,29 +64,27 @@ export function SignInMethodsContainer(props: {
       <LastAuthMethodHint />
 
       <If condition={showMethodTabs}>
-        <div className="rounded-[22px] border border-white/10 bg-[var(--workspace-shell-panel)] p-1.5 shadow-[0_16px_34px_rgba(2,8,23,0.35)]">
-          <Tabs
-            value={selectedMethod}
-            onValueChange={(value) =>
-              setSelectedMethod(value as 'password' | 'magic-link')
-            }
-          >
-            <TabsList className="grid h-auto w-full grid-cols-2 rounded-[18px] bg-[#0b132b]/80 p-0">
-              <TabsTrigger
-                value="password"
-                className="rounded-[16px] px-4 py-2.5 text-[15px] font-medium text-zinc-300 transition-colors data-[state=active]:bg-[var(--ozer-accent)] data-[state=active]:text-white data-[state=active]:shadow-none"
-              >
-                <Trans i18nKey="auth:signInMethodPassword" />
-              </TabsTrigger>
-              <TabsTrigger
-                value="magic-link"
-                className="rounded-[16px] px-4 py-2.5 text-[15px] font-medium text-zinc-300 transition-colors data-[state=active]:bg-[var(--ozer-accent)] data-[state=active]:text-white data-[state=active]:shadow-none"
-              >
-                <Trans i18nKey="auth:signInMethodMagicLink" />
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+        <Tabs
+          value={selectedMethod}
+          onValueChange={(value) =>
+            setSelectedMethod(value as 'password' | 'magic-link')
+          }
+        >
+          <TabsList className="bg-muted/70 text-muted-foreground h-9 w-full rounded-full border border-black/5 p-0.5 shadow-none">
+            <TabsTrigger
+              value="password"
+              className="text-muted-foreground data-[state=active]:text-foreground h-8 flex-1 rounded-full px-3 text-xs font-medium shadow-none transition-colors data-[state=active]:bg-white data-[state=active]:shadow-none"
+            >
+              <Trans i18nKey="auth:signInMethodPassword" />
+            </TabsTrigger>
+            <TabsTrigger
+              value="magic-link"
+              className="text-muted-foreground data-[state=active]:text-foreground h-8 flex-1 rounded-full px-3 text-xs font-medium shadow-none transition-colors data-[state=active]:bg-white data-[state=active]:shadow-none"
+            >
+              <Trans i18nKey="auth:signInMethodMagicLink" />
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </If>
 
       <If condition={props.providers.password && selectedMethod === 'password'}>
