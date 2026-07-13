@@ -129,39 +129,39 @@ class TeamBillingService {
       action: 'create checkout',
     });
 
-    // here we have confirmed that the user has permission to manage billing for the account
-    // so we go on and create a checkout session
-    const service = await getBillingGatewayProvider(this.client);
-
-    // retrieve the plan from the configuration
-    // so we can assign the correct checkout data
-    const { plan, product } = getPlanDetails(params.productId, params.planId);
-
-    // find the customer ID for the account if it exists
-    // (eg. if the account has been billed before)
-    const customerId = await api.getCustomerId(accountId);
-    const customerEmail = user.email;
-
-    // the return URL for the checkout session
-    const returnUrl = getCheckoutSessionReturnUrl(params.slug);
-
-    // get variant quantities
-    // useful for setting an initial quantity value for certain line items
-    // such as per seat
-    const variantQuantities = await this.getVariantQuantities(
-      plan.lineItems,
-      accountId,
-    );
-
-    logger.info(
-      {
-        ...ctx,
-        planId: plan.id,
-      },
-      `Creating checkout session...`,
-    );
-
     try {
+      // here we have confirmed that the user has permission to manage billing for the account
+      // so we go on and create a checkout session
+      const service = await getBillingGatewayProvider(this.client);
+
+      // retrieve the plan from the configuration
+      // so we can assign the correct checkout data
+      const { plan, product } = getPlanDetails(params.productId, params.planId);
+
+      // find the customer ID for the account if it exists
+      // (eg. if the account has been billed before)
+      const customerId = await api.getCustomerId(accountId);
+      const customerEmail = user.email;
+
+      // the return URL for the checkout session
+      const returnUrl = getCheckoutSessionReturnUrl(params.slug);
+
+      // get variant quantities
+      // useful for setting an initial quantity value for certain line items
+      // such as per seat
+      const variantQuantities = await this.getVariantQuantities(
+        plan.lineItems,
+        accountId,
+      );
+
+      logger.info(
+        {
+          ...ctx,
+          planId: plan.id,
+        },
+        `Creating checkout session...`,
+      );
+
       // call the payment gateway to create the checkout session
       const { checkoutToken } = await service.createCheckoutSession({
         accountId,
@@ -186,6 +186,14 @@ class TeamBillingService {
         },
         `Error creating the checkout session`,
       );
+
+      if (error instanceof Error && error.message.startsWith('Product not found')) {
+        throw error;
+      }
+
+      if (error instanceof Error && error.message.startsWith('Plan not found')) {
+        throw error;
+      }
 
       throw new Error(
         'Could not start checkout. Please try again, or contact support if this keeps happening.',

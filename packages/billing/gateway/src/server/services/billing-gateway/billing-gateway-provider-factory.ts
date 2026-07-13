@@ -20,13 +20,16 @@ export async function getBillingGatewayProvider(
 }
 
 async function getBillingProvider(client: SupabaseClient<Database>) {
+  // `public.config` is a single-row settings table, but some environments have
+  // accidentally duplicated rows. Always take the first row instead of .single().
   const { data, error } = await client
     .from('config')
     .select('billing_provider')
-    .single();
+    .limit(1)
+    .maybeSingle();
 
-  if (error ?? !data.billing_provider) {
-    throw error;
+  if (error ?? !data?.billing_provider) {
+    throw error ?? new Error('Billing provider is not configured');
   }
 
   return data.billing_provider;

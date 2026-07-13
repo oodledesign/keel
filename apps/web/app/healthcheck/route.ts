@@ -29,7 +29,8 @@ async function getSupabaseHealthCheck() {
     const { data, error } = await client
       .from('config')
       .select('billing_provider')
-      .single();
+      .limit(1)
+      .maybeSingle();
 
     return !error && Boolean(data?.billing_provider);
   } catch {
