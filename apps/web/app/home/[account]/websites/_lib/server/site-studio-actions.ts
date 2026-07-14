@@ -3,11 +3,7 @@
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { createJobsService } from '~/home/[account]/jobs/_lib/server/jobs.service';
-import { createProjectPhasesService } from '~/home/[account]/jobs/_lib/server/project-phases.service';
-import { WEBSITE_DESIGN_TEMPLATE_NAME } from '~/lib/websites/website-design-template';
-
-import { isMissingColumnError } from '../../../_lib/server/supabase-errors';
+import { normalizeWebsiteBrief } from '~/lib/websites/brief-types';
 
 import {
   CreateWebsiteProjectSchema,
@@ -18,6 +14,8 @@ import {
   GetSiteStudioBundleSchema,
   RevokeWebsiteShareSchema,
   SaveWebsiteBriefSchema,
+  PatchWebsiteBriefSchema,
+  ConfirmWebsiteBriefAiSchema,
   SaveWebsiteSeoPageSchema,
   SaveWebsiteStyleSystemSchema,
   SetShareApprovalSchema,
@@ -43,15 +41,42 @@ export const getSiteStudioBundle = enhanceAction(
 
 export const saveWebsiteBrief = enhanceAction(
   async (input) =>
-    getService().saveBrief(input.accountId, input.websiteId, input.brief),
+    getService().saveBrief(
+      input.accountId,
+      input.websiteId,
+      normalizeWebsiteBrief(input.brief),
+    ),
   { schema: SaveWebsiteBriefSchema },
+);
+
+export const patchWebsiteBrief = enhanceAction(
+  async (input) =>
+    getService().patchBrief(
+      input.accountId,
+      input.websiteId,
+      input.patch,
+      input.editedPaths ?? [],
+    ),
+  { schema: PatchWebsiteBriefSchema },
+);
+
+export const confirmWebsiteBriefAi = enhanceAction(
+  async (input) =>
+    getService().confirmBriefAiFields(
+      input.accountId,
+      input.websiteId,
+      input.paths,
+    ),
+  { schema: ConfirmWebsiteBriefAiSchema },
 );
 
 export const suggestWebsiteBrief = enhanceAction(
   async (input) =>
     getService().suggestBrief(input.accountId, input.websiteId, {
+      source: input.source,
       notes: input.notes,
       websiteUrl: input.websiteUrl,
+      confirmOverwritePaths: input.confirmOverwritePaths,
     }),
   { schema: SuggestWebsiteBriefSchema },
 );
@@ -102,7 +127,12 @@ export const generateWebsiteSeoPage = enhanceAction(
 
 export const createWebsiteShare = enhanceAction(
   async (input) =>
-    getService().createShare(input.accountId, input.websiteId, input.scope),
+    getService().createShare(
+      input.accountId,
+      input.websiteId,
+      input.scope,
+      input.expiresAt ?? null,
+    ),
   { schema: CreateWebsiteShareSchema },
 );
 
@@ -147,112 +177,11 @@ export const setWebsiteShareSectionComment = enhanceAction(
  * Website design phase template, then deep-link the job to the website.
  */
 export const createWebsiteProject = enhanceAction(
-  async (input) => {
-    const client = getSupabaseServerClient();
-    const jobsService = createJobsService(client);
-    const phasesService = createProjectPhasesService(client);
-    const planningService = createWebsitePlanningService(client);
-
-    const websiteQuery = await client
-      .from('websites')
-      .select('id, name, client_org_id, job_id, business_id')
-      .eq('id', input.websiteId)
-      .eq('business_id', input.accountId)
-      .maybeSingle();
-
-    let website = websiteQuery.data as {
-      id: string;
-      name: string | null;
-      client_org_id: string | null;
-      job_id: string | null;
-      business_id: string;
-    } | null;
-
-    if (websiteQuery.error) {
-      if (!isMissingColumnError(websiteQuery.error)) {
-        throw websiteQuery.error;
-      }
-
-      const fallback = await client
-        .from('websites')
-        .select('id, name, client_org_id, business_id')
-        .eq('id', input.websiteId)
-        .eq('business_id', input.accountId)
-        .maybeSingle();
-
-      if (fallback.error) throw fallback.error;
-      if (!fallback.data) throw new Error('Website not found');
-
-      website = {
-        ...(fallback.data as {
-          id: string;
-          name: string | null;
-          client_org_id: string | null;
-          business_id: string;
-        }),
-        job_id: null,
-      };
-    }
-
-    if (!website) throw new Error('Website not found');
-
-    const { data: account } = await client
-      .from('accounts')
-      .select('slug')
-      .eq('id', input.accountId)
-      .maybeSingle();
-
-    const accountSlug = (account as { slug?: string } | null)?.slug ?? '';
-
-    let jobId = input.existingJobId ?? null;
-
-    if (!jobId) {
-      // Resolve CRM client from the linked client org (if any).
-      let clientId: string | null = null;
-      if (website.client_org_id) {
-        const { data: clientRow } = await client
-          .from('clients')
-          .select('id')
-          .eq('account_id', input.accountId)
-          .eq('client_org_id', website.client_org_id)
-          .limit(1)
-          .maybeSingle();
-        clientId = (clientRow as { id?: string } | null)?.id ?? null;
-      }
-
-      const job = await jobsService.createJob({
-        accountId: input.accountId,
-        title: `${(website.name as string) ?? 'Website'} — website build`,
-        description:
-          'Website delivery project created from Site Studio. Phases deep-link to the website planning tabs.',
-        client_id: clientId ?? undefined,
-        status: 'in_progress',
-        priority: 'medium',
-      });
-
-      jobId = String((job as Record<string, unknown>).id ?? '');
-
-      // Ensure templates exist (also seeds/refreshes Website design), then apply it.
-      const templates = await phasesService.listPhaseTemplates({
-        accountId: input.accountId,
-      });
-      const template = templates.find(
-        (item) => item.name === WEBSITE_DESIGN_TEMPLATE_NAME,
-      );
-
-      if (template && accountSlug) {
-        await phasesService.applyPhaseTemplate({
-          accountId: input.accountId,
-          accountSlug,
-          jobId,
-          templateId: template.id,
-        });
-      }
-    }
-
-    await planningService.linkJob(input.accountId, input.websiteId, jobId);
-
-    return { jobId };
-  },
+  async (input) =>
+    createWebsitePlanningService(getSupabaseServerClient()).createOrLinkDeliveryProject({
+      accountId: input.accountId,
+      websiteId: input.websiteId,
+      existingJobId: input.existingJobId,
+    }),
   { schema: CreateWebsiteProjectSchema },
 );

@@ -122,7 +122,11 @@ export default async function PortalWebsitePage({
               Planning review
             </h3>
             <p className="mt-1 text-sm text-[var(--ozer-text-on-light-muted)]">
-              Brief, sitemap, and wireframes for your site.
+              {website.portalShareScope === 'sitemap'
+                ? 'Read-only sitemap for your site.'
+                : website.portalShareScope === 'wireframes'
+                  ? 'Read-only sitemap and wireframes for your site.'
+                  : 'Read-only planning review for your site.'}
             </p>
           </div>
           <PortalWebsitePlanningView

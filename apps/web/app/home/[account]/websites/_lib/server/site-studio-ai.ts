@@ -1,63 +1,63 @@
 import 'server-only';
 
-import type {
-  WebsiteBrief,
-  WebsiteSitemapPage,
-} from '~/lib/websites/planning-types';
+import type { WebsiteSitemapPage } from '~/lib/websites/planning-types';
+import { briefContextText } from '~/lib/websites/brief-types';
+import type { WebsiteBrief } from '~/lib/websites/brief-types';
 import { WEBSITE_SECTION_LIBRARY } from '~/lib/websites/section-library';
 
 export { extractJson } from '~/lib/websites/extract-json';
 
 export function briefContextBlock(brief: WebsiteBrief | null): string {
-  if (!brief) return 'No structured brief captured yet.';
-
-  const refs = brief.references
-    .map((ref) => `- ${ref.url} — ${ref.why}`)
-    .join('\n');
-
-  return [
-    `Organisation: ${brief.orgName || 'n/a'}`,
-    `Brand summary: ${brief.brandSummary || 'n/a'}`,
-    `Offer: ${brief.offer || 'n/a'}`,
-    `Audience: ${brief.audience || 'n/a'}`,
-    `Geography: ${brief.geography || 'n/a'}`,
-    `Jobs-to-be-done: ${brief.jobsToBeDone || 'n/a'}`,
-    `Objections to answer: ${brief.objections || 'n/a'}`,
-    `Competitors: ${brief.competitors || 'n/a'}`,
-    `Reference sites:\n${refs || '- none'}`,
-    `Tone: ${brief.tone || 'n/a'}`,
-    `Constraints: ${brief.constraints || 'n/a'}`,
-    `Conversion goals: ${brief.conversionGoals || 'n/a'}`,
-    `Target stack: ${brief.targetStack}`,
-    `CMS needed: ${brief.cmsNeeded ? 'yes' : 'no'}`,
-  ].join('\n');
+  return briefContextText(brief);
 }
 
-export const BRIEF_SUGGEST_SYSTEM = `You are a senior web strategist at a design agency. From raw discovery notes and/or a client website URL, you draft a structured website brief.
+export const BRIEF_EXTRACT_SYSTEM = `You extract factual website-brief signals from raw source material (notes, page text, or CRM fields).
 
-Respond with ONLY a JSON object matching exactly this shape (all string values, keep each under 800 characters, references max 3 items):
+Respond with ONLY a JSON object:
 {
-  "orgName": "",
-  "brandSummary": "",
-  "offer": "",
-  "audience": "",
+  "facts": ["short factual bullets"],
+  "services": ["service names mentioned"],
+  "audiences": ["audience labels mentioned"],
   "geography": "",
-  "jobsToBeDone": "",
-  "objections": "",
-  "competitors": "",
-  "references": [{ "url": "", "why": "" }],
-  "tone": "",
-  "constraints": "",
-  "conversionGoals": "",
-  "targetStack": "webflow" | "astro" | "next" | "undecided",
-  "cmsNeeded": true | false
+  "toneWords": [""],
+  "competitorsNamed": [""],
+  "urlsMentioned": [""],
+  "conversionHints": [""],
+  "openQuestions": [""],
+  "unknowns": ["what is not evidenced"]
 }
 
 Rules:
-- Only include facts stated or strongly implied by the input; write "" when unknown, never invent specifics like awards or figures.
-- references: suggest realistic well-known sites in the client's industry worth studying, with one line on why.
-- jobsToBeDone: the conversation the site must answer for a visitor.
-- Prefer "undecided" for targetStack unless the input names one.`;
+- Extract only what is explicitly present or strongly evidenced.
+- Prefer empty arrays / "" over invention.
+- Keep each string under 200 characters.`;
+
+export const BRIEF_SUGGEST_SYSTEM = `You are a senior web strategist at a design agency. Using extracted facts (and raw source context), draft a structured website brief.
+
+Respond with ONLY a JSON object matching this shape (schemaVersion must be "1.0"):
+{
+  "schemaVersion": "1.0",
+  "org": { "name": "", "oneLiner": "", "sector": "", "geography": "" },
+  "brand": { "tone": [""], "constraints": [""], "existingSiteUrl": "" },
+  "offer": {
+    "services": [{ "name": "", "description": "" }],
+    "primaryConversionGoals": [""]
+  },
+  "audience": {
+    "segments": [{ "name": "", "jobsToBeDone": "", "objections": [""] }]
+  },
+  "conversation": { "questionsTheSiteMustAnswer": [""] },
+  "competitors": [{ "name": "", "url": "", "notes": "" }],
+  "references": [{ "url": "", "whyThisWorks": "" }],
+  "stackPreference": "webflow" | "astro" | "next" | "ozer_sites" | "undecided"
+}
+
+Rules:
+- Only include facts stated or strongly implied by the input; use empty strings/arrays when unknown — never invent awards, figures, or clients.
+- references: up to 3 realistic industry sites worth studying, with one line on whyThisWorks.
+- conversation.questionsTheSiteMustAnswer: the visitor questions the site must answer.
+- Prefer "undecided" for stackPreference unless the input names a stack.
+- Keep string values concise (under 800 characters each).`;
 
 export const SITEMAP_GENERATE_SYSTEM = `You are a senior information architect. You design website sitemaps that convert and rank (SEO + local + LLM answer engines).
 

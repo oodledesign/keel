@@ -10,6 +10,10 @@ import type {
   WebsiteSitemapPage,
   WebsiteWireframePage,
 } from '~/lib/websites/planning-types';
+import { WEBSITE_DESIGN_TEMPLATE_NAME } from '~/lib/websites/website-design-template';
+
+import { createJobsService } from '~/home/[account]/jobs/_lib/server/jobs.service';
+import { createProjectPhasesService } from '~/home/[account]/jobs/_lib/server/project-phases.service';
 
 import {
   isMissingColumnError,
@@ -100,9 +104,10 @@ class WebsitePlanningService {
 
     if (error) throw error;
     const role = data?.account_role;
-    if (role !== 'owner' && role !== 'admin') {
-      throw new Error('Only account owners and admins can perform this action');
+    if (role !== 'owner' && role !== 'admin' && role !== 'staff') {
+      throw new Error('Permission denied');
     }
+    return user;
   }
 
   private mapContentDoc(row: ContentDocRow): WebsiteContentDoc {
@@ -298,6 +303,132 @@ class WebsitePlanningService {
       throw error;
     }
     return { ok: true as const };
+  }
+
+  /**
+   * Create or link a delivery project, apply the Website design template when
+   * the project has no phases yet, then store websites.job_id.
+   */
+  async createOrLinkDeliveryProject(input: {
+    accountId: string;
+    websiteId: string;
+    existingJobId?: string;
+  }): Promise<{ jobId: string }> {
+    await this.ensureCanEdit(input.accountId);
+
+    const websiteQuery = await this.client
+      .from('websites')
+      .select('id, name, client_org_id, job_id, business_id')
+      .eq('id', input.websiteId)
+      .eq('business_id', input.accountId)
+      .maybeSingle();
+
+    type WebsiteLinkRow = {
+      id: string;
+      name: string | null;
+      client_org_id: string | null;
+      job_id: string | null;
+      business_id: string;
+    };
+
+    let website = websiteQuery.data as WebsiteLinkRow | null;
+
+    if (websiteQuery.error) {
+      if (!isMissingColumnError(websiteQuery.error)) {
+        throw websiteQuery.error;
+      }
+
+      const fallback = await this.client
+        .from('websites')
+        .select('id, name, client_org_id, business_id')
+        .eq('id', input.websiteId)
+        .eq('business_id', input.accountId)
+        .maybeSingle();
+
+      if (fallback.error) throw fallback.error;
+      if (!fallback.data) throw new Error('Website not found');
+
+      website = {
+        ...(fallback.data as Omit<WebsiteLinkRow, 'job_id'>),
+        job_id: null,
+      };
+    }
+
+    if (!website) throw new Error('Website not found');
+
+    const { data: account } = await this.client
+      .from('accounts')
+      .select('slug')
+      .eq('id', input.accountId)
+      .maybeSingle();
+
+    const accountSlug =
+      (account as { slug?: string | null } | null)?.slug?.trim() ?? '';
+
+    const jobsService = createJobsService(this.client);
+    const phasesService = createProjectPhasesService(this.client);
+
+    let jobId = input.existingJobId ?? null;
+    let createdNew = false;
+
+    if (!jobId) {
+      let clientId: string | null = null;
+      if (website.client_org_id) {
+        const { data: clientRow } = await this.client
+          .from('clients')
+          .select('id')
+          .eq('account_id', input.accountId)
+          .eq('client_org_id', website.client_org_id)
+          .limit(1)
+          .maybeSingle();
+        clientId = (clientRow as { id?: string } | null)?.id ?? null;
+      }
+
+      const job = await jobsService.createJob({
+        accountId: input.accountId,
+        title: `${website.name ?? 'Website'} — website build`,
+        description:
+          'Website delivery project created from Site Studio. Phases deep-link to the website planning tabs.',
+        client_id: clientId ?? undefined,
+        status: 'in_progress',
+        priority: 'medium',
+      });
+
+      jobId = String((job as { id?: string }).id ?? '');
+      createdNew = true;
+    }
+
+    if (!jobId) throw new Error('Could not resolve delivery project');
+
+    if (accountSlug) {
+      const existingPhases = createdNew
+        ? []
+        : await phasesService.listPhasesForJob({
+            accountId: input.accountId,
+            jobId,
+          });
+
+      if (existingPhases.length === 0) {
+        const templates = await phasesService.listPhaseTemplates({
+          accountId: input.accountId,
+        });
+        const template = templates.find(
+          (item) => item.name === WEBSITE_DESIGN_TEMPLATE_NAME,
+        );
+
+        if (template) {
+          await phasesService.applyPhaseTemplate({
+            accountId: input.accountId,
+            accountSlug,
+            jobId,
+            templateId: template.id,
+          });
+        }
+      }
+    }
+
+    await this.linkJob(input.accountId, input.websiteId, jobId);
+    return { jobId };
   }
 
   async createContentDoc(

@@ -1,8 +1,11 @@
 import { redirect } from 'next/navigation';
 
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody } from '@kit/ui/page';
 
+import { createClientsService } from '~/home/[account]/clients/_lib/server/clients.service';
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { hasSiteStudio } from '~/lib/websites/has-site-studio';
 
 import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
 import { getDefaultAccountPath } from '../../_lib/role-access';
@@ -50,6 +53,24 @@ async function WebsiteNewPage({ params }: WebsiteNewPageProps) {
     );
   }
 
+  const siteStudioEnabled = await hasSiteStudio(accountId);
+  const clientsResult = await createClientsService(getSupabaseServerClient())
+    .listClients({ accountId, page: 1, pageSize: 100 })
+    .catch(() => ({ data: [] as Array<Record<string, unknown>> }));
+
+  const clientOptions = (clientsResult.data ?? []).map(
+    (row: {
+      id: string;
+      display_name?: string | null;
+      company_name?: string | null;
+    }) => ({
+      id: String(row.id),
+      label:
+        String(row.display_name ?? row.company_name ?? 'Untitled').trim() ||
+        'Untitled',
+    }),
+  );
+
   return (
     <>
       <TeamAccountLayoutPageHeader
@@ -59,7 +80,13 @@ async function WebsiteNewPage({ params }: WebsiteNewPageProps) {
       />
 
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
-        <WebsiteForm mode="create" accountId={accountId} accountSlug={accountSlug} />
+        <WebsiteForm
+          mode="create"
+          accountId={accountId}
+          accountSlug={accountSlug}
+          siteStudioEnabled={siteStudioEnabled}
+          initialClients={clientOptions}
+        />
       </PageBody>
     </>
   );

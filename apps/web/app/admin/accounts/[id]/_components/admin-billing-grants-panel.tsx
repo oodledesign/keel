@@ -66,7 +66,7 @@ const QUICK_PLANS = [
     planId: 'signatures-starter-monthly',
   },
   {
-    label: 'Site Studio add-on',
+    label: 'Site Studio add-on (dev)',
     productId: 'ozer-addon-site-studio',
     planId: 'site-studio-monthly',
   },

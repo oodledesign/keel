@@ -4,30 +4,35 @@ import { useMemo, useState } from 'react';
 
 import Link from 'next/link';
 
+import { Lock } from 'lucide-react';
+
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 import {
-  CORE_PLANNING_TABS,
   SITE_STUDIO_PLANNING_TABS,
   type SiteStudioBundle,
   type WebsitePlanningTab,
   type WebsiteSitemapPage,
   type WebsiteWireframePage,
 } from '~/lib/websites/planning-types';
+import { isSiteStudioGatedTab } from '~/lib/websites/site-studio-tabs';
 
 import type { WebsitePlanningBundle } from '../_lib/server/website-planning.service';
 
 import { WebsiteContentDocsPanel } from './website-content-docs-panel';
 import { WebsiteSitemapEditor } from './website-sitemap-editor';
 import { WebsiteWireframeEditor } from './website-wireframe-editor';
+import { useSiteStudioAccess } from './site-studio/site-studio-access';
 import { WebsiteBriefEditor } from './site-studio/website-brief-editor';
 import { WebsiteDesignEditor } from './site-studio/website-design-editor';
 import { WebsiteExportPanel } from './site-studio/website-export-panel';
 import { WebsiteSeoEditor } from './site-studio/website-seo-editor';
 import { WebsiteSharePanel } from './site-studio/website-share-panel';
+import { WebsiteDeliveryOverview } from './site-studio/website-delivery-overview';
 import { WebsiteSitemapCanvas } from './site-studio/website-sitemap-canvas';
 import { SiteStudioUpsell } from './site-studio/site-studio-upsell';
+import type { PhaseListItem } from '~/home/[account]/jobs/_lib/schema/project-phases.schema';
 
 const TAB_LABELS: Record<WebsitePlanningTab, string> = {
   overview: 'Overview',
@@ -50,6 +55,9 @@ export function WebsitePlanningPanel({
   canEdit,
   initialTab = 'overview',
   linkedJobTitle,
+  clientName,
+  clientHref,
+  phases = [],
 }: {
   accountId: string;
   accountSlug: string;
@@ -60,14 +68,14 @@ export function WebsitePlanningPanel({
   canEdit: boolean;
   initialTab?: WebsitePlanningTab;
   linkedJobTitle?: string | null;
+  clientName?: string | null;
+  clientHref?: string | null;
+  phases?: PhaseListItem[];
 }) {
-  const tabs = siteStudio.enabled
-    ? SITE_STUDIO_PLANNING_TABS
-    : CORE_PLANNING_TABS;
-
+  const siteStudioEnabled = useSiteStudioAccess();
+  const tabs = SITE_STUDIO_PLANNING_TABS;
   const safeInitial = tabs.includes(initialTab) ? initialTab : 'overview';
   const [tab, setTab] = useState<WebsitePlanningTab>(safeInitial);
-  // Lifted so sitemap/wireframes survive tab switches (children unmount otherwise).
   const [sitemap, setSitemap] = useState<WebsiteSitemapPage[]>(
     () => planning.sitemap,
   );
@@ -82,6 +90,9 @@ export function WebsitePlanningPanel({
       .replace('[id]', planning.jobId);
   }, [accountSlug, planning.jobId]);
 
+  const locked =
+    !siteStudioEnabled && isSiteStudioGatedTab(tab);
+
   return (
     <section className="w-full rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
       <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-4 md:px-6">
@@ -91,9 +102,9 @@ export function WebsitePlanningPanel({
               Website planning
             </h2>
             <p className="mt-1 text-sm text-[var(--workspace-shell-text)]/60">
-              {siteStudio.enabled
+              {siteStudioEnabled
                 ? 'Site Studio — brief, canvas sitemap, wireframes, design, SEO, and export.'
-                : 'Sitemap, wireframes, and content docs for this build.'}
+                : 'Core planning is free. Brief, Design, Search, and Export unlock with Site Studio.'}
             </p>
           </div>
           {jobHref ? (
@@ -112,33 +123,59 @@ export function WebsitePlanningPanel({
             role="tablist"
             aria-label="Website planning tabs"
           >
-            {tabs.map((item) => (
-              <button
-                key={item}
-                type="button"
-                role="tab"
-                aria-selected={tab === item}
-                onClick={() => setTab(item)}
-                className={cn(
-                  'shrink-0 rounded-full px-3 py-1.5 text-sm transition-colors',
-                  tab === item
-                    ? 'bg-[var(--ozer-accent)] text-[var(--ozer-white)]'
-                    : 'border border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
-                )}
-              >
-                {TAB_LABELS[item]}
-              </button>
-            ))}
+            {tabs.map((item) => {
+              const gated = isSiteStudioGatedTab(item);
+              const itemLocked = gated && !siteStudioEnabled;
+
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === item}
+                  aria-disabled={itemLocked || undefined}
+                  onClick={() => setTab(item)}
+                  className={cn(
+                    'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition-colors',
+                    tab === item
+                      ? 'bg-[var(--ozer-accent)] text-[var(--ozer-white)]'
+                      : 'border border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
+                    itemLocked && tab !== item && 'opacity-70',
+                  )}
+                >
+                  {TAB_LABELS[item]}
+                  {itemLocked ? (
+                    <Lock className="h-3 w-3 opacity-80" aria-hidden />
+                  ) : null}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
 
       <div className="w-full min-w-0 px-4 py-5 md:px-6">
-        {tab === 'overview' ? (
-          <div className="space-y-6">
-            {!siteStudio.enabled ? <SiteStudioUpsell accountSlug={accountSlug} /> : null}
+        {locked ? (
+          <SiteStudioUpsell lockedTabLabel={TAB_LABELS[tab]} />
+        ) : null}
 
-            {siteStudio.enabled ? (
+        {!locked && tab === 'overview' ? (
+          <div className="space-y-6">
+            {!siteStudioEnabled ? <SiteStudioUpsell /> : null}
+
+            <WebsiteDeliveryOverview
+              accountId={accountId}
+              accountSlug={accountSlug}
+              websiteId={planning.websiteId}
+              clientName={clientName ?? null}
+              clientHref={clientHref ?? null}
+              jobId={planning.jobId}
+              jobTitle={linkedJobTitle ?? null}
+              phases={phases}
+              canEdit={canEdit}
+            />
+
+            {siteStudioEnabled ? (
               <WebsiteSharePanel
                 accountId={accountId}
                 websiteId={planning.websiteId}
@@ -151,33 +188,35 @@ export function WebsitePlanningPanel({
             ) : (
               <div className="space-y-4 text-sm text-[var(--workspace-shell-text)]/75">
                 <p>
-                  Follow the <strong className="text-[var(--workspace-shell-text)]">Website design</strong>{' '}
-                  project template: business context → sitemap → wireframes →
-                  client content → design → build.
+                  Follow the{' '}
+                  <strong className="text-[var(--workspace-shell-text)]">
+                    Website design
+                  </strong>{' '}
+                  project template: Brief → Sitemap → Wireframes → Design → SEO
+                  → Export → Build.
                 </p>
-                {!planning.jobId ? (
-                  <p className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-amber-100/90">
-                    Tip: link this website to a project in Edit, or add Site
-                    Studio to create a delivery project from the Overview tab.
-                  </p>
-                ) : null}
               </div>
             )}
           </div>
         ) : null}
 
-        {tab === 'brief' && siteStudio.enabled ? (
+        {!locked && tab === 'brief' && siteStudioEnabled ? (
           <WebsiteBriefEditor
             accountId={accountId}
             websiteId={planning.websiteId}
             initialBrief={siteStudio.brief}
+            initialProvenance={siteStudio.briefProvenance}
             canEdit={canEdit}
           />
         ) : null}
 
-        {/* Keep sitemap + wireframes mounted so autosave and local edits survive tab switches. */}
-        <div className={cn(tab === 'sitemap' ? 'block' : 'hidden')}>
-          {siteStudio.enabled ? (
+        {/* Keep core editors mounted so edits survive tab switches. */}
+        <div
+          className={cn(
+            !locked && tab === 'sitemap' ? 'block' : 'hidden',
+          )}
+        >
+          {siteStudioEnabled ? (
             <WebsiteSitemapCanvas
               accountId={accountId}
               websiteId={planning.websiteId}
@@ -197,7 +236,11 @@ export function WebsitePlanningPanel({
           )}
         </div>
 
-        <div className={cn(tab === 'wireframe' ? 'block' : 'hidden')}>
+        <div
+          className={cn(
+            !locked && tab === 'wireframe' ? 'block' : 'hidden',
+          )}
+        >
           <WebsiteWireframeEditor
             accountId={accountId}
             websiteId={planning.websiteId}
@@ -205,11 +248,11 @@ export function WebsitePlanningPanel({
             initialWireframes={wireframes}
             onWireframesChange={setWireframes}
             canEdit={canEdit}
-            siteStudioEnabled={siteStudio.enabled}
+            siteStudioEnabled={siteStudioEnabled}
           />
         </div>
 
-        {tab === 'design' && siteStudio.enabled ? (
+        {!locked && tab === 'design' && siteStudioEnabled ? (
           <WebsiteDesignEditor
             accountId={accountId}
             websiteId={planning.websiteId}
@@ -218,7 +261,7 @@ export function WebsitePlanningPanel({
           />
         ) : null}
 
-        {tab === 'seo' && siteStudio.enabled ? (
+        {!locked && tab === 'seo' && siteStudioEnabled ? (
           <WebsiteSeoEditor
             accountId={accountId}
             websiteId={planning.websiteId}
@@ -228,7 +271,7 @@ export function WebsitePlanningPanel({
           />
         ) : null}
 
-        {tab === 'export' && siteStudio.enabled ? (
+        {!locked && tab === 'export' && siteStudioEnabled ? (
           <WebsiteExportPanel
             websiteName={websiteName}
             domain={websiteDomain}
@@ -240,7 +283,9 @@ export function WebsitePlanningPanel({
           />
         ) : null}
 
-        <div className={cn(tab === 'content' ? 'block' : 'hidden')}>
+        <div
+          className={cn(!locked && tab === 'content' ? 'block' : 'hidden')}
+        >
           <WebsiteContentDocsPanel
             accountId={accountId}
             websiteId={planning.websiteId}

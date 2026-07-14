@@ -14,7 +14,6 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 
-import pathsConfig from '~/config/paths.config';
 import type {
   WebsitePortalShareScope,
   WebsiteShareLink,
@@ -22,7 +21,6 @@ import type {
 } from '~/lib/websites/planning-types';
 
 import {
-  createWebsiteProject,
   createWebsiteShare,
   revokeWebsiteShare,
   setWebsitePortalScope,
@@ -50,13 +48,33 @@ const PORTAL_SCOPES: Array<{ value: WebsitePortalShareScope; label: string }> =
     { value: 'full', label: 'Full planning' },
   ];
 
+type ExpiryPreset = 'never' | '7d' | '30d' | '90d';
+
+const EXPIRY_PRESETS: Array<{ value: ExpiryPreset; label: string }> = [
+  { value: 'never', label: 'No expiry' },
+  { value: '7d', label: 'Expires in 7 days' },
+  { value: '30d', label: 'Expires in 30 days' },
+  { value: '90d', label: 'Expires in 90 days' },
+];
+
+function expiresAtFromPreset(preset: ExpiryPreset): string | null {
+  if (preset === 'never') return null;
+  const days = preset === '7d' ? 7 : preset === '30d' ? 30 : 90;
+  return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+}
+
+function formatExpiry(expiresAt: string | null): string {
+  if (!expiresAt) return 'No expiry';
+  return `Expires ${new Date(expiresAt).toLocaleDateString('en-GB')}`;
+}
+
 export function WebsiteSharePanel({
   accountId,
   websiteId,
-  accountSlug,
+  accountSlug: _accountSlug,
   shares,
   portalScope,
-  hasJob,
+  hasJob: _hasJob,
   canEdit,
 }: {
   accountId: string;
@@ -68,6 +86,7 @@ export function WebsiteSharePanel({
   canEdit: boolean;
 }) {
   const [shareScope, setShareScope] = useState<WebsiteShareScope>('sitemap');
+  const [expiryPreset, setExpiryPreset] = useState<ExpiryPreset>('never');
   const [portal, setPortal] = useState<WebsitePortalShareScope>(portalScope);
   const [links, setLinks] = useState(shares);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -87,6 +106,7 @@ export function WebsiteSharePanel({
           accountId,
           websiteId,
           scope: shareScope,
+          expiresAt: expiresAtFromPreset(expiryPreset),
         });
         setLinks((prev) => [
           {
@@ -135,47 +155,8 @@ export function WebsiteSharePanel({
     });
   };
 
-  const createProject = () => {
-    startTransition(async () => {
-      try {
-        const result = await createWebsiteProject({ accountId, websiteId });
-        toast.success('Delivery project created');
-        window.location.assign(
-          pathsConfig.app.accountJobDetail
-            .replace('[account]', accountSlug)
-            .replace('[id]', result.jobId),
-        );
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : 'Could not create project',
-        );
-      }
-    });
-  };
-
   return (
     <div className="space-y-6">
-      {!hasJob && canEdit ? (
-        <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-          <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-            Delivery project
-          </p>
-          <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-            Create a project with the Website design phase template — each phase
-            deep-links back to this planning workspace.
-          </p>
-          <Button
-            type="button"
-            size="sm"
-            className="mt-3"
-            disabled={pending}
-            onClick={createProject}
-          >
-            Create project from website
-          </Button>
-        </div>
-      ) : null}
-
       <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
         <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
           Client portal
@@ -231,6 +212,23 @@ export function WebsiteSharePanel({
                 ))}
               </SelectContent>
             </Select>
+            <Select
+              value={expiryPreset}
+              onValueChange={(value) =>
+                setExpiryPreset(value as ExpiryPreset)
+              }
+            >
+              <SelectTrigger className="w-48 border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {EXPIRY_PRESETS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button type="button" size="sm" disabled={pending} onClick={createLink}>
               <Link2 className="mr-2 h-4 w-4" />
               Generate link
@@ -248,6 +246,8 @@ export function WebsiteSharePanel({
                 <span className="text-[var(--workspace-shell-text-muted)]">
                   {SHARE_SCOPES.find((item) => item.value === link.scope)?.label ??
                     link.scope}
+                  {' · '}
+                  {formatExpiry(link.expiresAt)}
                   {' · '}
                   {new Date(link.createdAt).toLocaleDateString('en-GB')}
                 </span>

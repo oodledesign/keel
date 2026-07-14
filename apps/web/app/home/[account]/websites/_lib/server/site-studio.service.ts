@@ -6,12 +6,27 @@ import { randomBytes } from 'crypto';
 
 import { requireUser } from '@kit/supabase/require-user';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
-import { callAI } from '~/lib/ai/router';
+import { callAI, FEATURE_CONFIG } from '~/lib/ai/router';
 import { canUseAddon } from '~/lib/billing/entitlements';
 import {
-  type SiteStudioBundle,
+  type BriefAiSource,
   type WebsiteBrief,
+  type WebsiteBriefAiProvenance,
+  applyBriefPatch,
+  confirmBriefAiPaths,
+  emptyBriefAiProvenance,
+  emptyWebsiteBrief,
+  markBriefPathsHumanEdited,
+  mergeBriefSuggestion,
+  normalizeBriefAiProvenance,
+  normalizeWebsiteBrief,
+} from '~/lib/websites/brief-types';
+import { fetchUrlContentForBrief } from '~/lib/websites/fetch-url-for-brief';
+import { hasSiteStudio } from '~/lib/websites/has-site-studio';
+import {
+  type SiteStudioBundle,
   type WebsitePlanningStatus,
   type WebsitePortalShareScope,
   type WebsiteSeoPageFields,
@@ -24,7 +39,6 @@ import {
   type WebsiteWireframeSection,
   createPlanningId,
   emptySiteStudioBundle,
-  emptyWebsiteBrief,
   emptyWebsiteSeoPageFields,
   emptyWebsiteStyleSystem,
   slugifyPageTitle,
@@ -38,6 +52,7 @@ import {
   logMissingRelation,
 } from '../../../_lib/server/supabase-errors';
 import {
+  BRIEF_EXTRACT_SYSTEM,
   BRIEF_SUGGEST_SYSTEM,
   SEO_GENERATE_SYSTEM,
   SITEMAP_GENERATE_SYSTEM,
@@ -61,34 +76,6 @@ function siteUrl() {
 
 export function websiteShareUrl(token: string) {
   return `${siteUrl()}/portal/websites/${encodeURIComponent(token)}`;
-}
-
-/** Fetch a URL and reduce to plain text for AI context (best effort). */
-async function fetchUrlText(url: string): Promise<string> {
-  const normalized = /^https?:\/\//i.test(url) ? url : `https://${url}`;
-
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 10_000);
-    const response = await fetch(normalized, {
-      signal: controller.signal,
-      headers: { 'user-agent': 'OzerSiteStudio/1.0 (+https://ozer.so)' },
-    });
-    clearTimeout(timer);
-
-    if (!response.ok) return '';
-
-    const html = await response.text();
-    return html
-      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .slice(0, 12_000);
-  } catch {
-    return '';
-  }
 }
 
 export function createSiteStudioService(client: SupabaseClient) {
@@ -127,6 +114,18 @@ class SiteStudioService {
 
   private async ensureCanEdit(accountId: string) {
     const user = await this.ensureUser();
+    const api = createTeamAccountsApi(this.client);
+    const allowed = await api.hasPermission({
+      userId: user.id,
+      accountId,
+      permission: 'jobs.edit',
+    });
+
+    if (!allowed) {
+      throw new Error('Permission denied');
+    }
+
+    // Match website_briefs RLS: contractors cannot write even with jobs.edit.
     const { data, error } = await this.client
       .from('accounts_memberships')
       .select('account_role')
@@ -135,10 +134,10 @@ class SiteStudioService {
       .maybeSingle();
 
     if (error) throw error;
-    const role = data?.account_role;
-    if (role !== 'owner' && role !== 'admin') {
-      throw new Error('Only account owners and admins can perform this action');
+    if (data?.account_role === 'contractor' || data?.account_role === 'client') {
+      throw new Error('Permission denied');
     }
+
     return user;
   }
 
@@ -158,12 +157,6 @@ class SiteStudioService {
     }
 
     return user;
-  }
-
-  async hasSiteStudioAccess(accountId: string): Promise<boolean> {
-    const { data: user } = await requireUser(this.client);
-    if (!user) return false;
-    return canUseAddon(this.client, user.id, accountId, 'addon_site_studio');
   }
 
   private async verifyWebsite(accountId: string, websiteId: string) {
@@ -221,9 +214,12 @@ class SiteStudioService {
   async getBundle(
     accountId: string,
     websiteId: string,
+    /** Pre-resolved entitlement — avoids a second hasSiteStudio() round-trip. */
+    siteStudioEnabled?: boolean,
   ): Promise<SiteStudioBundle> {
     await this.ensureCanView(accountId);
-    const enabled = await this.hasSiteStudioAccess(accountId);
+    const enabled =
+      siteStudioEnabled ?? (await hasSiteStudio(accountId));
 
     const bundle = emptySiteStudioBundle();
     bundle.enabled = enabled;
@@ -232,7 +228,7 @@ class SiteStudioService {
       await Promise.all([
         this.client
           .from('website_briefs')
-          .select('brief')
+          .select('brief, ai_provenance')
           .eq('website_id', websiteId)
           .eq('account_id', accountId)
           .maybeSingle(),
@@ -270,10 +266,17 @@ class SiteStudioService {
     }
 
     if (briefRes.data?.brief && typeof briefRes.data.brief === 'object') {
-      bundle.brief = {
-        ...emptyWebsiteBrief(),
-        ...(briefRes.data.brief as Partial<WebsiteBrief>),
-      };
+      bundle.brief = normalizeWebsiteBrief(briefRes.data.brief);
+    }
+
+    if (
+      briefRes.data &&
+      'ai_provenance' in briefRes.data &&
+      briefRes.data.ai_provenance
+    ) {
+      bundle.briefProvenance = normalizeBriefAiProvenance(
+        briefRes.data.ai_provenance,
+      );
     }
 
     if (styleRes.data?.style && typeof styleRes.data.style === 'object') {
@@ -334,114 +337,271 @@ class SiteStudioService {
     const user = await this.ensureSiteStudio(accountId);
     await this.verifyWebsite(accountId, websiteId);
 
+    const normalized = normalizeWebsiteBrief(brief);
     const { error } = await this.adminDb.from('website_briefs').upsert(
       {
         account_id: accountId,
         website_id: websiteId,
-        brief,
+        brief: normalized,
         created_by: user.id,
       },
       { onConflict: 'website_id' },
     );
 
     if (error) throw error;
-    return { ok: true as const };
+    return { ok: true as const, brief: normalized };
+  }
+
+  async patchBrief(
+    accountId: string,
+    websiteId: string,
+    patch: Record<string, unknown>,
+    editedPaths: string[] = [],
+  ) {
+    const user = await this.ensureSiteStudio(accountId);
+    await this.verifyWebsite(accountId, websiteId);
+
+    const loaded = await this.loadBriefRow(accountId, websiteId);
+    const current = loaded?.brief ?? emptyWebsiteBrief();
+    const next = applyBriefPatch(current, patch);
+    const provenance = markBriefPathsHumanEdited(
+      loaded?.provenance ?? emptyBriefAiProvenance(),
+      editedPaths,
+    );
+
+    const { error } = await this.adminDb.from('website_briefs').upsert(
+      {
+        account_id: accountId,
+        website_id: websiteId,
+        brief: next,
+        ai_provenance: provenance,
+        created_by: user.id,
+      },
+      { onConflict: 'website_id' },
+    );
+
+    if (error) throw error;
+    return { ok: true as const, brief: next, provenance };
+  }
+
+  async confirmBriefAiFields(
+    accountId: string,
+    websiteId: string,
+    paths: string[],
+  ) {
+    const user = await this.ensureSiteStudio(accountId);
+    await this.verifyWebsite(accountId, websiteId);
+
+    const loaded = await this.loadBriefRow(accountId, websiteId);
+    if (!loaded) {
+      throw new Error('Brief not found');
+    }
+
+    const provenance = confirmBriefAiPaths(loaded.provenance, paths);
+    const { error } = await this.adminDb.from('website_briefs').upsert(
+      {
+        account_id: accountId,
+        website_id: websiteId,
+        brief: loaded.brief,
+        ai_provenance: provenance,
+        created_by: user.id,
+      },
+      { onConflict: 'website_id' },
+    );
+
+    if (error) throw error;
+    return { ok: true as const, provenance };
+  }
+
+  private async loadBriefRow(
+    accountId: string,
+    websiteId: string,
+  ): Promise<{
+    brief: WebsiteBrief;
+    provenance: WebsiteBriefAiProvenance;
+  } | null> {
+    const { data } = await this.client
+      .from('website_briefs')
+      .select('brief, ai_provenance')
+      .eq('website_id', websiteId)
+      .eq('account_id', accountId)
+      .maybeSingle();
+
+    if (!data?.brief || typeof data.brief !== 'object') return null;
+    return {
+      brief: normalizeWebsiteBrief(data.brief),
+      provenance: normalizeBriefAiProvenance(data.ai_provenance),
+    };
   }
 
   private async loadBrief(
     accountId: string,
     websiteId: string,
   ): Promise<WebsiteBrief | null> {
-    const { data } = await this.client
-      .from('website_briefs')
-      .select('brief')
-      .eq('website_id', websiteId)
-      .eq('account_id', accountId)
-      .maybeSingle();
-
-    if (!data?.brief || typeof data.brief !== 'object') return null;
-    return { ...emptyWebsiteBrief(), ...(data.brief as Partial<WebsiteBrief>) };
+    const row = await this.loadBriefRow(accountId, websiteId);
+    return row?.brief ?? null;
   }
 
   async suggestBrief(
     accountId: string,
     websiteId: string,
-    input: { notes?: string; websiteUrl?: string },
-  ): Promise<WebsiteBrief> {
+    input: {
+      source: BriefAiSource;
+      notes?: string;
+      websiteUrl?: string;
+      confirmOverwritePaths?: string[];
+    },
+  ): Promise<{
+    brief: WebsiteBrief;
+    provenance: WebsiteBriefAiProvenance;
+    appliedPaths: string[];
+    skippedPaths: string[];
+  }> {
     const user = await this.ensureSiteStudio(accountId);
     const website = await this.verifyWebsite(accountId, websiteId);
+    const existing = await this.loadBriefRow(accountId, websiteId);
+    const current = existing?.brief ?? emptyWebsiteBrief();
+    const provenance = existing?.provenance ?? emptyBriefAiProvenance();
 
-    const urlText = input.websiteUrl
-      ? await fetchUrlText(input.websiteUrl)
-      : '';
+    let sourceContext = '';
+    let scrapeMeta = '';
 
-    let clientOrgName: string | null = null;
-    if (website.client_org_id) {
-      const { data } = await this.client
+    if (input.source === 'notes') {
+      if (!input.notes?.trim()) {
+        throw new Error('Paste discovery notes before suggesting from notes');
+      }
+      sourceContext = `Discovery notes:\n${input.notes.trim()}`;
+    } else if (input.source === 'url') {
+      const url = input.websiteUrl?.trim() || website.domain || '';
+      if (!url) {
+        throw new Error('Provide a website URL to suggest from');
+      }
+      const scraped = await fetchUrlContentForBrief(url);
+      if (!scraped.text) {
+        throw new Error('Could not extract content from that URL');
+      }
+      scrapeMeta = `Fetched via ${scraped.method}${scraped.title ? ` — ${scraped.title}` : ''}`;
+      sourceContext = `Website URL: ${scraped.normalizedUrl}\n${scrapeMeta}\n\nExtracted page text:\n${scraped.text}`;
+    } else {
+      if (!website.client_org_id) {
+        throw new Error(
+          'Link a client organisation to this website first (Edit website)',
+        );
+      }
+      const { data: org } = await this.client
         .from('client_orgs')
-        .select('name')
+        .select('name, industry, notes, website')
         .eq('id', website.client_org_id)
         .maybeSingle();
-      clientOrgName = (data as { name?: string } | null)?.name ?? null;
+
+      if (!org) {
+        throw new Error('Linked client organisation not found');
+      }
+
+      const orgRow = org as {
+        name?: string | null;
+        industry?: string | null;
+        notes?: string | null;
+        website?: string | null;
+      };
+
+      sourceContext = [
+        'CRM / client organisation fields:',
+        `Name: ${orgRow.name ?? 'n/a'}`,
+        `Industry / sector: ${orgRow.industry ?? 'n/a'}`,
+        `Website: ${orgRow.website ?? 'n/a'}`,
+        `Notes: ${orgRow.notes ?? 'n/a'}`,
+        website.name ? `Website record name: ${website.name}` : null,
+        website.domain ? `Website domain: ${website.domain}` : null,
+      ]
+        .filter(Boolean)
+        .join('\n');
     }
 
-    const userPrompt = [
-      `Website record name: ${website.name ?? 'Untitled'}`,
-      clientOrgName ? `Client organisation: ${clientOrgName}` : null,
-      website.domain ? `Domain: ${website.domain}` : null,
-      input.notes ? `Discovery notes:\n${input.notes}` : null,
-      urlText ? `Extracted text from ${input.websiteUrl}:\n${urlText}` : null,
-      'Draft the structured brief JSON now.',
+    const extractPrompt = [
+      `Suggest source: ${input.source}`,
+      website.name ? `Website record name: ${website.name}` : null,
+      sourceContext,
+      'Extract factual brief signals as JSON now.',
     ]
       .filter(Boolean)
       .join('\n\n');
 
-    const text = await callAI({
-      feature: 'website_brief_suggest',
-      systemPrompt: BRIEF_SUGGEST_SYSTEM,
-      userPrompt,
+    const extractText = await callAI({
+      feature: 'website_brief_extract',
+      systemPrompt: BRIEF_EXTRACT_SYSTEM,
+      userPrompt: extractPrompt,
       accountId,
       supabase: this.client,
     });
 
-    const suggested = extractJson<Partial<WebsiteBrief>>(text);
-    const brief: WebsiteBrief = {
-      ...emptyWebsiteBrief(),
-      ...suggested,
-      references: Array.isArray(suggested.references)
-        ? suggested.references
-            .filter((ref) => ref && typeof ref.url === 'string')
-            .slice(0, 10)
-            .map((ref) => ({
-              url: String(ref.url).slice(0, 500),
-              why: String(ref.why ?? '').slice(0, 1000),
-            }))
-        : [],
-      targetStack: ['webflow', 'astro', 'next', 'undecided'].includes(
-        String(suggested.targetStack),
-      )
-        ? (suggested.targetStack as WebsiteBrief['targetStack'])
-        : 'undecided',
-      cmsNeeded: Boolean(suggested.cmsNeeded),
+    const extractModel = FEATURE_CONFIG.website_brief_extract.model;
+    const synthesizeModel = FEATURE_CONFIG.website_brief_suggest.model;
+
+    const synthesizePrompt = [
+      `Suggest source: ${input.source}`,
+      scrapeMeta || null,
+      'Extracted signals JSON:',
+      extractText,
+      'Raw source context (for grounding):',
+      sourceContext.slice(0, 8000),
+      'Draft the structured WebsiteBrief JSON (schemaVersion 1.0) now.',
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+
+    const synthesizeText = await callAI({
+      feature: 'website_brief_suggest',
+      systemPrompt: BRIEF_SUGGEST_SYSTEM,
+      userPrompt: synthesizePrompt,
+      accountId,
+      supabase: this.client,
+    });
+
+    const suggestedRaw = extractJson<unknown>(synthesizeText);
+    const suggested = normalizeWebsiteBrief(suggestedRaw);
+
+    if (input.source === 'url' && input.websiteUrl?.trim()) {
+      if (!suggested.brand.existingSiteUrl) {
+        suggested.brand.existingSiteUrl = input.websiteUrl.trim();
+      }
+    }
+
+    const merge = mergeBriefSuggestion({
+      current,
+      suggested,
+      source: input.source,
+      model: synthesizeModel,
+      provenance,
+      confirmOverwritePaths: input.confirmOverwritePaths,
+    });
+
+    merge.provenance.lastRun = {
+      source: input.source,
+      extractModel,
+      synthesizeModel,
+      at: new Date().toISOString(),
     };
 
     const { error } = await this.adminDb.from('website_briefs').upsert(
       {
         account_id: accountId,
         website_id: websiteId,
-        brief,
-        ai_provenance: {
-          feature: 'website_brief_suggest',
-          sourceUrl: input.websiteUrl ?? null,
-          generatedAt: new Date().toISOString(),
-        },
+        brief: merge.brief,
+        ai_provenance: merge.provenance,
         created_by: user.id,
       },
       { onConflict: 'website_id' },
     );
 
     if (error) throw error;
-    return brief;
+
+    return {
+      brief: merge.brief,
+      provenance: merge.provenance,
+      appliedPaths: merge.appliedPaths,
+      skippedPaths: merge.skippedPaths,
+    };
   }
 
   /* ---------------------------------------------------------------- */
@@ -995,11 +1155,23 @@ class SiteStudioService {
     accountId: string,
     websiteId: string,
     scope: WebsiteShareScope,
+    expiresAt: string | null = null,
   ): Promise<WebsiteShareLink & { url: string }> {
     const user = await this.ensureSiteStudio(accountId);
     await this.verifyWebsite(accountId, websiteId);
 
     const token = generateShareToken();
+    let resolvedExpiresAt: string | null = null;
+    if (expiresAt) {
+      const parsed = new Date(expiresAt);
+      if (Number.isNaN(parsed.getTime())) {
+        throw new Error('Invalid expiry date');
+      }
+      if (parsed.getTime() <= Date.now()) {
+        throw new Error('Expiry must be in the future');
+      }
+      resolvedExpiresAt = parsed.toISOString();
+    }
 
     const { data, error } = await this.adminDb
       .from('website_shares')
@@ -1008,6 +1180,7 @@ class SiteStudioService {
         website_id: websiteId,
         token,
         scope,
+        expires_at: resolvedExpiresAt,
         created_by: user.id,
       })
       .select('id, token, scope, expires_at, created_at')
@@ -1084,9 +1257,28 @@ export type PublicWebsiteShare = {
   brief: WebsiteBrief | null;
 };
 
-export async function getWebsiteShareByToken(
+type ResolvedWebsiteShare = {
+  websiteId: string;
+  accountId: string;
+  scope: WebsiteShareScope;
+};
+
+function shareScopeAllowsWireframes(scope: WebsiteShareScope) {
+  return scope === 'wireframes' || scope === 'design' || scope === 'full';
+}
+
+function shareScopeAllowsStyle(scope: WebsiteShareScope) {
+  return scope === 'design' || scope === 'full';
+}
+
+function shareScopeAllowsBrief(scope: WebsiteShareScope) {
+  return scope === 'full';
+}
+
+/** Validate an active (non-revoked, non-expired) share token row. */
+async function resolveActiveWebsiteShare(
   token: string,
-): Promise<PublicWebsiteShare | null> {
+): Promise<ResolvedWebsiteShare | null> {
   const admin = getSupabaseServerAdminClient() as SupabaseClient;
 
   const { data: share, error } = await admin
@@ -1113,39 +1305,62 @@ export async function getWebsiteShareByToken(
     return null;
   }
 
-  const scope = shareRow.scope as WebsiteShareScope;
-  const loadStyle = scope === 'design' || scope === 'full';
+  return {
+    websiteId: shareRow.website_id,
+    accountId: shareRow.account_id,
+    scope: shareRow.scope as WebsiteShareScope,
+  };
+}
 
-  // Brief is always loaded for client review (alongside sitemap/wireframes).
+export async function getWebsiteShareByToken(
+  token: string,
+): Promise<PublicWebsiteShare | null> {
+  const shareRow = await resolveActiveWebsiteShare(token);
+  if (!shareRow) return null;
+
+  const admin = getSupabaseServerAdminClient() as SupabaseClient;
+  const { scope } = shareRow;
+  const loadWireframes = shareScopeAllowsWireframes(scope);
+  const loadStyle = shareScopeAllowsStyle(scope);
+  const loadBrief = shareScopeAllowsBrief(scope);
+
   const [websiteRes, briefRes, styleRes] = await Promise.all([
     admin
       .from('websites')
       .select('id, name, sitemap, wireframes')
-      .eq('id', shareRow.website_id)
+      .eq('id', shareRow.websiteId)
       .maybeSingle(),
-    admin
-      .from('website_briefs')
-      .select('brief')
-      .eq('website_id', shareRow.website_id)
-      .maybeSingle(),
+    loadBrief
+      ? admin
+          .from('website_briefs')
+          .select('brief')
+          .eq('website_id', shareRow.websiteId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
     loadStyle
       ? admin
           .from('website_style_systems')
           .select('style')
-          .eq('website_id', shareRow.website_id)
+          .eq('website_id', shareRow.websiteId)
           .maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
 
-  const website = websiteRes.data;
+  const website = websiteRes.data as {
+    id: string;
+    name?: string | null;
+    sitemap?: unknown;
+    wireframes?: unknown;
+  } | null;
   if (!website) return null;
 
   let brief: WebsiteBrief | null = null;
-  if (briefRes.data?.brief && typeof briefRes.data.brief === 'object') {
-    brief = {
-      ...emptyWebsiteBrief(),
-      ...(briefRes.data.brief as Partial<WebsiteBrief>),
-    };
+  if (
+    loadBrief &&
+    briefRes.data?.brief &&
+    typeof briefRes.data.brief === 'object'
+  ) {
+    brief = normalizeWebsiteBrief(briefRes.data.brief);
   }
 
   let style: WebsiteStyleSystem | null = null;
@@ -1162,24 +1377,19 @@ export async function getWebsiteShareByToken(
     }
   }
 
-  const websiteRow = website as {
-    id: string;
-    name?: string | null;
-    sitemap?: unknown;
-    wireframes?: unknown;
-  };
-
   return {
     scope,
-    websiteName: websiteRow.name ?? 'Website',
-    accountId: shareRow.account_id,
-    websiteId: websiteRow.id,
-    sitemap: Array.isArray(websiteRow.sitemap)
-      ? (websiteRow.sitemap as WebsiteSitemapPage[])
+    websiteName: website.name ?? 'Website',
+    accountId: shareRow.accountId,
+    websiteId: website.id,
+    sitemap: Array.isArray(website.sitemap)
+      ? (website.sitemap as WebsiteSitemapPage[])
       : [],
-    wireframes: Array.isArray(websiteRow.wireframes)
-      ? (websiteRow.wireframes as WebsiteWireframePage[])
-      : [],
+    // Scope strip: never return wireframes for sitemap-only shares.
+    wireframes:
+      loadWireframes && Array.isArray(website.wireframes)
+        ? (website.wireframes as WebsiteWireframePage[])
+        : [],
     style,
     brief,
   };
@@ -1192,12 +1402,24 @@ export async function setShareApprovalByToken(input: {
   status: 'approved' | 'blocked';
   note?: string;
 }): Promise<{ ok: true }> {
-  const share = await getWebsiteShareByToken(input.token);
+  const share = await resolveActiveWebsiteShare(input.token);
   if (!share) throw new Error('Share link not found or expired');
 
   const admin = getSupabaseServerAdminClient();
+  const { data: website, error: loadError } = await admin
+    .from('websites')
+    .select('sitemap')
+    .eq('id', share.websiteId)
+    .maybeSingle();
 
-  const nextSitemap = share.sitemap.map((page) =>
+  if (loadError) throw loadError;
+  if (!website) throw new Error('Website not found');
+
+  const sitemap = Array.isArray(website.sitemap)
+    ? (website.sitemap as WebsiteSitemapPage[])
+    : [];
+
+  const nextSitemap = sitemap.map((page) =>
     page.id === input.pageId
       ? {
           ...page,
@@ -1230,14 +1452,29 @@ export async function setShareSectionCommentByToken(input: {
   sectionId: string;
   comment: string;
 }): Promise<{ ok: true }> {
-  const share = await getWebsiteShareByToken(input.token);
+  const share = await resolveActiveWebsiteShare(input.token);
   if (!share) throw new Error('Share link not found or expired');
+  if (!shareScopeAllowsWireframes(share.scope)) {
+    throw new Error('This share link does not include wireframes');
+  }
 
   const admin = getSupabaseServerAdminClient();
+  const { data: website, error: loadError } = await admin
+    .from('websites')
+    .select('wireframes')
+    .eq('id', share.websiteId)
+    .maybeSingle();
+
+  if (loadError) throw loadError;
+  if (!website) throw new Error('Website not found');
+
+  const wireframes = Array.isArray(website.wireframes)
+    ? (website.wireframes as WebsiteWireframePage[])
+    : [];
   const comment = input.comment.trim().slice(0, 2000);
 
   let found = false;
-  const nextWireframes = share.wireframes.map((page) => {
+  const nextWireframes = wireframes.map((page) => {
     if (page.pageId !== input.pageId) return page;
     return {
       ...page,

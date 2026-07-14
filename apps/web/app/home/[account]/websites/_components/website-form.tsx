@@ -15,23 +15,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
+import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
+import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
+import { listJobs } from '~/home/[account]/jobs/_lib/server/server-actions';
+import { deliveryProjectTitle } from '~/lib/projects/project-types';
 
 import type { Website } from '../_lib/server/websites.service';
 import type { WebsiteStack, WebsiteStatus } from '../_lib/schema/websites.schema';
 import {
   createWebsite,
-  listWebsiteClientOrgs,
   updateWebsite,
 } from '../_lib/server/server-actions';
 
-type ClientOrgOption = {
+type ClientOption = {
   id: string;
-  name: string;
+  label: string;
+};
+
+type JobOption = {
+  id: string;
+  label: string;
 };
 
 const stackOptions: { value: WebsiteStack; label: string }[] = [
@@ -54,15 +62,22 @@ export function WebsiteForm({
   accountId,
   accountSlug,
   website,
+  siteStudioEnabled = false,
+  initialClients,
 }: {
   mode: 'create' | 'edit';
   accountId: string;
   accountSlug: string;
   website?: Website | null;
+  /** When true, create defaults to Client + Website design project. */
+  siteStudioEnabled?: boolean;
+  /** Optional SSR-fetched CRM clients (create flow). */
+  initialClients?: ClientOption[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [clientOrgs, setClientOrgs] = useState<ClientOrgOption[]>([]);
+  const [clients, setClients] = useState<ClientOption[]>(initialClients ?? []);
+  const [jobs, setJobs] = useState<JobOption[]>([]);
 
   const [form, setForm] = useState({
     name: website?.name ?? '',
@@ -70,7 +85,7 @@ export function WebsiteForm({
     staging_url: website?.stagingUrl ?? '',
     stack: (website?.stack ?? 'other') as WebsiteStack,
     status: (website?.status ?? 'in-progress') as WebsiteStatus,
-    client_org_id: website?.clientOrgId ?? '',
+    client_id: website?.linkedClientId ?? '',
     cms_admin_url: website?.cmsAdminUrl ?? '',
     vercel_project_id: website?.vercelProjectId ?? '',
     github_repo_url: website?.githubRepoUrl ?? '',
@@ -82,11 +97,62 @@ export function WebsiteForm({
       : '',
   });
 
+  const [createDeliveryProject, setCreateDeliveryProject] = useState(
+    mode === 'create' && siteStudioEnabled,
+  );
+  const [linkExistingJob, setLinkExistingJob] = useState(false);
+  const [existingJobId, setExistingJobId] = useState('');
+
   useEffect(() => {
-    listWebsiteClientOrgs({ accountId })
-      .then((rows) => setClientOrgs(rows ?? []))
-      .catch(() => setClientOrgs([]));
-  }, [accountId]);
+    if (initialClients && initialClients.length > 0) return;
+    listClients({ accountId, page: 1, pageSize: 100 })
+      .then((result) => {
+        const rows = result.data ?? [];
+        setClients(
+          rows.map(
+            (row: {
+              id: string;
+              display_name?: string | null;
+              company_name?: string | null;
+            }) => ({
+              id: String(row.id),
+              label:
+                String(
+                  row.display_name ?? row.company_name ?? 'Untitled',
+                ).trim() || 'Untitled',
+            }),
+          ),
+        );
+      })
+      .catch(() => setClients([]));
+  }, [accountId, initialClients]);
+
+  useEffect(() => {
+    if (!linkExistingJob) return;
+    listJobs({
+      accountId,
+      tab: 'active',
+      page: 1,
+      pageSize: 100,
+      query: undefined,
+      status: undefined,
+      priority: undefined,
+    })
+      .then((result) => {
+        setJobs(
+          (result.data ?? []).map((row) => {
+            const id = String(
+              (row as { id?: unknown }).id ?? '',
+            );
+            return {
+              id,
+              label: deliveryProjectTitle(row) || 'Untitled project',
+            };
+          }),
+        );
+      })
+      .catch(() => setJobs([]));
+  }, [accountId, linkExistingJob]);
 
   const listHref = pathsConfig.app.accountWebsites.replace(
     '[account]',
@@ -101,32 +167,51 @@ export function WebsiteForm({
       return;
     }
 
+    if (mode === 'create' && (siteStudioEnabled || createDeliveryProject)) {
+      if (!form.client_id) {
+        toast.error('Pick a CRM client so the website can link to the portal');
+        return;
+      }
+    }
+
+    if (createDeliveryProject && linkExistingJob && !existingJobId) {
+      toast.error('Pick an existing project to link');
+      return;
+    }
+
     startTransition(async () => {
       try {
-        const payload = {
-          name: form.name.trim(),
-          domain: form.domain.trim() || null,
-          staging_url: form.staging_url.trim() || null,
-          stack: form.stack,
-          status: form.status,
-          client_org_id: form.client_org_id || null,
-          cms_admin_url: form.cms_admin_url.trim() || null,
-          vercel_project_id: form.vercel_project_id.trim() || null,
-          github_repo_url: form.github_repo_url.trim() || null,
-          supabase_schema: form.supabase_schema.trim() || null,
-          notes: form.notes.trim() || null,
-          hosting_notes: form.hosting_notes.trim() || null,
-          launched_at: form.launched_at || null,
-        };
-
         if (mode === 'create') {
           const created = await createWebsite({
             accountId,
-            ...payload,
+            name: form.name.trim(),
+            domain: form.domain.trim() || null,
+            staging_url: form.staging_url.trim() || null,
+            stack: form.stack,
+            status: form.status,
+            client_id: form.client_id || null,
+            client_org_id: null,
+            cms_admin_url: form.cms_admin_url.trim() || null,
+            vercel_project_id: form.vercel_project_id.trim() || null,
+            github_repo_url: form.github_repo_url.trim() || null,
+            supabase_schema: form.supabase_schema.trim() || null,
+            notes: form.notes.trim() || null,
+            hosting_notes: form.hosting_notes.trim() || null,
+            launched_at: form.launched_at || null,
+            create_delivery_project: createDeliveryProject,
+            existing_job_id:
+              createDeliveryProject && linkExistingJob
+                ? existingJobId || null
+                : null,
           });
           const detailHref = pathsConfig.app.accountWebsiteDetail
             .replace('[account]', accountSlug)
             .replace('[id]', created.id);
+          toast.success(
+            createDeliveryProject
+              ? 'Website created with Website design project'
+              : 'Website created',
+          );
           router.push(detailHref);
           router.refresh();
           return;
@@ -137,7 +222,19 @@ export function WebsiteForm({
         await updateWebsite({
           accountId,
           websiteId: website.id,
-          ...payload,
+          name: form.name.trim(),
+          domain: form.domain.trim() || null,
+          staging_url: form.staging_url.trim() || null,
+          stack: form.stack,
+          status: form.status,
+          client_org_id: website.clientOrgId,
+          cms_admin_url: form.cms_admin_url.trim() || null,
+          vercel_project_id: form.vercel_project_id.trim() || null,
+          github_repo_url: form.github_repo_url.trim() || null,
+          supabase_schema: form.supabase_schema.trim() || null,
+          notes: form.notes.trim() || null,
+          hosting_notes: form.hosting_notes.trim() || null,
+          launched_at: form.launched_at || null,
         });
 
         toast.success('Website updated');
@@ -158,7 +255,9 @@ export function WebsiteForm({
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-3xl space-y-8">
       <section className="space-y-4 rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 md:p-6">
-        <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">Basics</h2>
+        <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">
+          Basics
+        </h2>
 
         <div className="space-y-2">
           <Label htmlFor="name">Name</Label>
@@ -180,7 +279,10 @@ export function WebsiteForm({
               id="domain"
               value={form.domain}
               onChange={(event) =>
-                setForm((current) => ({ ...current, domain: event.target.value }))
+                setForm((current) => ({
+                  ...current,
+                  domain: event.target.value,
+                }))
               }
               placeholder="example.com"
             />
@@ -252,28 +354,36 @@ export function WebsiteForm({
         </div>
 
         <div className="space-y-2">
-          <Label>Client org</Label>
+          <Label>CRM client</Label>
           <Select
-            value={form.client_org_id || '__none__'}
+            value={form.client_id || '__none__'}
             onValueChange={(value) =>
               setForm((current) => ({
                 ...current,
-                client_org_id: value === '__none__' ? '' : value,
+                client_id: value === '__none__' ? '' : value,
               }))
             }
+            disabled={mode === 'edit'}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Link to a client org" />
+              <SelectValue placeholder="Link a CRM client" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__none__">No client linked</SelectItem>
-              {clientOrgs.map((org) => (
-                <SelectItem key={org.id} value={org.id}>
-                  {org.name}
+              {clients.map((client) => (
+                <SelectItem key={client.id} value={client.id}>
+                  {client.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+            {mode === 'create'
+              ? 'Resolves (or creates) the portal client organisation used for share/portal access.'
+              : website?.clientOrgName
+                ? `Portal org: ${website.clientOrgName}`
+                : 'Change the linked client org from Edit metadata later if needed.'}
+          </p>
         </div>
 
         <div className="space-y-2">
@@ -292,8 +402,85 @@ export function WebsiteForm({
         </div>
       </section>
 
+      {mode === 'create' ? (
+        <section className="space-y-4 rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 md:p-6">
+          <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">
+            Delivery project
+          </h2>
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+            Apply the Website design template (Brief → Sitemap → Wireframes →
+            Design → SEO → Export → Build). Each phase deep-links to Site Studio
+            tabs.
+          </p>
+
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                {siteStudioEnabled
+                  ? 'Create Website design project'
+                  : 'Create delivery project (opt in)'}
+              </p>
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                {siteStudioEnabled
+                  ? 'Recommended when Site Studio is active.'
+                  : 'Optional without Site Studio.'}
+              </p>
+            </div>
+            <Switch
+              checked={createDeliveryProject}
+              onCheckedChange={(checked) => {
+                setCreateDeliveryProject(checked);
+                if (!checked) {
+                  setLinkExistingJob(false);
+                  setExistingJobId('');
+                }
+              }}
+            />
+          </div>
+
+          {createDeliveryProject ? (
+            <div className="space-y-3 rounded-lg border border-[color:var(--workspace-shell-border)] p-3">
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-sm text-[var(--workspace-shell-text)]">
+                  Link an existing project instead
+                </p>
+                <Switch
+                  checked={linkExistingJob}
+                  onCheckedChange={(checked) => {
+                    setLinkExistingJob(checked);
+                    if (!checked) setExistingJobId('');
+                  }}
+                />
+              </div>
+              {linkExistingJob ? (
+                <Select
+                  value={existingJobId || '__none__'}
+                  onValueChange={(value) =>
+                    setExistingJobId(value === '__none__' ? '' : value)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Select project…</SelectItem>
+                    {jobs.map((job) => (
+                      <SelectItem key={job.id} value={job.id}>
+                        {job.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : null}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
       <section className="space-y-4 rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 md:p-6">
-        <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">Technical</h2>
+        <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">
+          Technical
+        </h2>
 
         <div className="space-y-2">
           <Label htmlFor="cms_admin_url">CMS admin URL</Label>
@@ -350,13 +537,8 @@ export function WebsiteForm({
                 github_repo_url: event.target.value,
               }))
             }
-            placeholder="https://github.com/org/repo"
           />
         </div>
-      </section>
-
-      <section className="space-y-4 rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 md:p-6">
-        <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">Notes</h2>
 
         <div className="space-y-2">
           <Label htmlFor="notes">Notes</Label>
@@ -366,7 +548,7 @@ export function WebsiteForm({
             onChange={(event) =>
               setForm((current) => ({ ...current, notes: event.target.value }))
             }
-            rows={4}
+            rows={3}
           />
         </div>
 
@@ -381,7 +563,7 @@ export function WebsiteForm({
                 hosting_notes: event.target.value,
               }))
             }
-            rows={4}
+            rows={2}
           />
         </div>
       </section>
@@ -394,7 +576,7 @@ export function WebsiteForm({
               ? 'Create website'
               : 'Save changes'}
         </Button>
-        <Button type="button" variant="ghost" asChild>
+        <Button asChild type="button" variant="ghost">
           <Link href={listHref}>Cancel</Link>
         </Button>
       </div>

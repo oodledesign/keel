@@ -8,13 +8,16 @@ type TargetStack = 'webflow' | 'astro' | 'next';
 function briefSummary(input: WebsiteExportInput): string {
   const brief = input.brief ?? emptyWebsiteBrief();
   return [
-    `Business: ${brief.orgName || input.websiteName}. ${brief.brandSummary}`,
-    `Offer: ${brief.offer}`,
-    `Audience: ${brief.audience}`,
-    brief.geography ? `Geography: ${brief.geography}` : '',
-    `Tone: ${brief.tone}`,
-    `Conversion goals: ${brief.conversionGoals}`,
-    brief.constraints ? `Constraints: ${brief.constraints}` : '',
+    `Business: ${brief.org.name || input.websiteName}. ${brief.org.oneLiner}`,
+    `Sector: ${brief.org.sector}`,
+    `Offer: ${brief.offer.services.map((s) => s.name).join(', ') || 'TBD'}`,
+    `Audience: ${brief.audience.segments.map((s) => s.name).join(', ')}`,
+    brief.org.geography ? `Geography: ${brief.org.geography}` : '',
+    `Tone: ${brief.brand.tone.join(', ')}`,
+    `Conversion goals: ${brief.offer.primaryConversionGoals.join('; ')}`,
+    brief.brand.constraints.length
+      ? `Constraints: ${brief.brand.constraints.join('; ')}`
+      : '',
   ]
     .filter(Boolean)
     .join('\n');

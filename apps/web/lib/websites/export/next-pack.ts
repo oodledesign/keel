@@ -8,9 +8,11 @@ export function buildNextPack(input: WebsiteExportInput): WebsiteExportFile[] {
   const style = input.style ?? emptyWebsiteStyleSystem();
   const { tokens } = style;
   const files: WebsiteExportFile[] = [];
-  const cmsNote = input.brief?.cmsNeeded
-    ? '\n- Brief flags a CMS requirement: wire the content config to Payload or Sanity (stub in `content/README.md`).'
-    : '';
+  const cmsNote =
+    input.brief?.stackPreference === 'webflow' ||
+    input.brief?.stackPreference === 'ozer_sites'
+      ? '\n- Brief prefers a CMS-friendly stack: wire content to Webflow CMS, Payload, or Sanity (stub in `content/README.md`).'
+      : '';
 
   files.push({
     path: 'next/README.md',

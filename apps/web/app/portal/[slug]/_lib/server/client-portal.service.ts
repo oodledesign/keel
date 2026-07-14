@@ -5,8 +5,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { requireUser } from '@kit/supabase/require-user';
 
 import {
-  emptyWebsiteBrief,
   emptyWebsiteStyleSystem,
+  normalizeWebsiteBrief,
   type WebsiteBrief,
   type WebsitePortalShareScope,
   type WebsiteSitemapPage,
@@ -175,6 +175,9 @@ class ClientPortalService {
         ? portalScope
         : 'off';
 
+    const allowPlanning = scope !== 'off';
+    const allowWireframes = scope === 'wireframes' || scope === 'full';
+
     return {
       id: String(row.id),
       name: String(row.name ?? 'Website'),
@@ -183,12 +186,14 @@ class ClientPortalService {
       stack: (row.stack as string | null) ?? null,
       cmsAdminUrl: (row.cms_admin_url as string | null) ?? null,
       portalShareScope: scope,
-      sitemap: Array.isArray(row.sitemap)
-        ? (row.sitemap as WebsiteSitemapPage[])
-        : [],
-      wireframes: Array.isArray(row.wireframes)
-        ? (row.wireframes as WebsiteWireframePage[])
-        : [],
+      sitemap:
+        allowPlanning && Array.isArray(row.sitemap)
+          ? (row.sitemap as WebsiteSitemapPage[])
+          : [],
+      wireframes:
+        allowWireframes && Array.isArray(row.wireframes)
+          ? (row.wireframes as WebsiteWireframePage[])
+          : [],
       style: null,
       brief: null,
     };
@@ -206,10 +211,7 @@ class ClientPortalService {
       .maybeSingle();
 
     if (!data?.brief || typeof data.brief !== 'object') return null;
-    return {
-      ...emptyWebsiteBrief(),
-      ...(data.brief as Partial<WebsiteBrief>),
-    };
+    return normalizeWebsiteBrief(data.brief);
   }
 
   private async loadWebsiteStyle(
@@ -322,10 +324,14 @@ class ClientPortalService {
         (data as { business_id?: string }).business_id ?? '',
       );
       if (accountId) {
-        website.brief = await this.loadWebsiteBrief(website.id, accountId);
-        if (website.portalShareScope === 'full') {
-          website.style = await this.loadWebsiteStyle(website.id, accountId);
-        }
+        const [brief, style] = await Promise.all([
+          this.loadWebsiteBrief(website.id, accountId),
+          website.portalShareScope === 'full'
+            ? this.loadWebsiteStyle(website.id, accountId)
+            : Promise.resolve(null),
+        ]);
+        website.brief = brief;
+        website.style = style;
       }
     }
 

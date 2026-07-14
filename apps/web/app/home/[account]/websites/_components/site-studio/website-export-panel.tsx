@@ -51,11 +51,13 @@ export function WebsiteExportPanel({
   style: WebsiteStyleSystem | null;
   seoPages: Record<string, WebsiteSeoPageFields>;
 }) {
-  const [target, setTarget] = useState<WebsiteExportTarget>(
-    brief?.targetStack && brief.targetStack !== 'undecided'
-      ? brief.targetStack
-      : 'webflow',
-  );
+  const [target, setTarget] = useState<WebsiteExportTarget>(() => {
+    const stack = brief?.stackPreference;
+    if (stack === 'webflow' || stack === 'astro' || stack === 'next') {
+      return stack;
+    }
+    return 'webflow';
+  });
   const [activePath, setActivePath] = useState<string | null>(null);
   const [copiedPath, setCopiedPath] = useState<string | null>(null);
 

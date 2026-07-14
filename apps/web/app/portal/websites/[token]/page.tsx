@@ -17,6 +17,15 @@ export default async function PortalWebsiteSharePage({
   const share = await getWebsiteShareByToken(token);
   if (!share) notFound();
 
+  const scopeCopy =
+    share.scope === 'sitemap'
+      ? 'Review the sitemap. Approve each page or send change requests — no Ozer login required.'
+      : share.scope === 'wireframes'
+        ? 'Review the sitemap and wireframes. Approve each page or send change requests — no Ozer login required.'
+        : share.scope === 'design'
+          ? 'Review the sitemap, wireframes, and design tokens. Approve each page or send change requests — no Ozer login required.'
+          : 'Review the full planning pack. Approve each page or send change requests — no Ozer login required.';
+
   return (
     <div className="min-h-svh w-full bg-[var(--ozer-cream-50)]">
       <div className="w-full px-4 py-6 sm:px-6 lg:px-8 xl:px-10">
@@ -28,8 +37,7 @@ export default async function PortalWebsiteSharePage({
             {share.websiteName}
           </h1>
           <p className="max-w-3xl text-sm leading-relaxed text-[var(--workspace-shell-text-muted)] sm:text-base">
-            Review the brief, sitemap, and wireframes. Approve each page or send
-            change requests — no Ozer login required.
+            {scopeCopy}
           </p>
         </header>
 

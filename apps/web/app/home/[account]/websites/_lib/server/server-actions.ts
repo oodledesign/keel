@@ -12,6 +12,7 @@ import {
   UpdateWebsiteSchema,
   WebsiteInputSchema,
 } from '../schema/websites.schema';
+import { createWebsitePlanningService } from './website-planning.service';
 import { createWebsitesService } from './websites.service';
 
 const UpdateWebsiteActionSchema = UpdateWebsiteSchema.extend({
@@ -51,7 +52,22 @@ export const listWebsiteClientOrgs = enhanceAction(
 export const createWebsite = enhanceAction(
   async (input) => {
     const service = getService();
-    return service.createWebsite(input);
+    const created = await service.createWebsite(input);
+
+    const shouldCreateProject =
+      Boolean(input.create_delivery_project) || Boolean(input.existing_job_id);
+
+    if (shouldCreateProject) {
+      await createWebsitePlanningService(
+        getSupabaseServerClient(),
+      ).createOrLinkDeliveryProject({
+        accountId: input.accountId,
+        websiteId: created.id,
+        existingJobId: input.existing_job_id ?? undefined,
+      });
+    }
+
+    return created;
   },
   { schema: WebsiteInputSchema },
 );

@@ -24,6 +24,7 @@ export const OzerAIFeature = {
   meeting_recap: 'meeting_recap',
   weekly_digest: 'weekly_digest',
   complex_analysis: 'complex_analysis',
+  website_brief_extract: 'website_brief_extract',
   website_brief_suggest: 'website_brief_suggest',
   website_sitemap_generate: 'website_sitemap_generate',
   website_wireframe_generate: 'website_wireframe_generate',
@@ -141,12 +142,20 @@ export const FEATURE_CONFIG: Record<OzerAIFeatureKey, FeatureConfig> = {
     maxOutputTokens: 2048,
     structuredOutput: false,
   },
-  website_brief_suggest: {
+  website_brief_extract: {
     provider: 'anthropic',
     model: HAIKU_MODEL,
-    credits: 5,
+    credits: 2,
     batchable: false,
     maxOutputTokens: 2048,
+    structuredOutput: true,
+  },
+  website_brief_suggest: {
+    provider: 'anthropic',
+    model: SONNET_MODEL,
+    credits: 8,
+    batchable: false,
+    maxOutputTokens: 4096,
     structuredOutput: true,
   },
   website_sitemap_generate: {

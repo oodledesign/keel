@@ -8,8 +8,12 @@ import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 
 import pathsConfig from '~/config/paths.config';
+import type { PhaseListItem } from '~/home/[account]/jobs/_lib/schema/project-phases.schema';
 import { workspaceBtnPrimaryMd, workspaceLinkAccent } from '~/lib/workspace-ui';
-import type { WebsitePlanningTab, SiteStudioBundle } from '~/lib/websites/planning-types';
+import type {
+  WebsitePlanningTab,
+  SiteStudioBundle,
+} from '~/lib/websites/planning-types';
 
 import type { WebsitePlanningBundle } from '../_lib/server/website-planning.service';
 import type { Website } from '../_lib/server/websites.service';
@@ -19,6 +23,7 @@ import {
   externalHref,
   formatWebsiteDate,
 } from './website-badges';
+import { SiteStudioAccessProvider } from './site-studio/site-studio-access';
 import { WebsitePlanningPanel } from './website-planning-panel';
 
 function DetailField({
@@ -59,7 +64,10 @@ export function WebsiteDetailContent({
   canEditWebsites,
   planning,
   siteStudio,
+  siteStudioEnabled,
   planningTab,
+  linkedJobTitle,
+  phases = [],
 }: {
   website: Website;
   accountSlug: string;
@@ -67,7 +75,11 @@ export function WebsiteDetailContent({
   canEditWebsites: boolean;
   planning: WebsitePlanningBundle;
   siteStudio: SiteStudioBundle;
+  /** Server-resolved `addon_site_studio` access for the tab shell. */
+  siteStudioEnabled: boolean;
   planningTab?: WebsitePlanningTab;
+  linkedJobTitle?: string | null;
+  phases?: PhaseListItem[];
 }) {
   const editHref = pathsConfig.app.accountWebsiteEdit
     .replace('[account]', accountSlug)
@@ -84,7 +96,8 @@ export function WebsiteDetailContent({
     : null;
 
   return (
-    <div className="flex w-full flex-col gap-6 px-4 md:px-0">
+    <SiteStudioAccessProvider enabled={siteStudioEnabled}>
+      <div className="flex w-full flex-col gap-6 px-4 md:px-0">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-3">
           <Link
@@ -140,6 +153,10 @@ export function WebsiteDetailContent({
         siteStudio={siteStudio}
         canEdit={canEditWebsites}
         initialTab={planningTab ?? 'overview'}
+        linkedJobTitle={linkedJobTitle}
+        clientName={website.clientOrgName}
+        clientHref={clientHref}
+        phases={phases}
       />
 
       <Card className="rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
@@ -230,5 +247,6 @@ export function WebsiteDetailContent({
         </CardContent>
       </Card>
     </div>
+    </SiteStudioAccessProvider>
   );
 }

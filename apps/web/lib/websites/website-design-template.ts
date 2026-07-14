@@ -1,4 +1,4 @@
-import type { PhaseTemplatePhase } from '~/app/home/[account]/jobs/_lib/schema/project-phases.schema';
+import type { PhaseTemplatePhase } from '~/home/[account]/jobs/_lib/schema/project-phases.schema';
 import type { WebsitePlanningTab } from '~/lib/websites/planning-types';
 
 export const WEBSITE_DESIGN_TEMPLATE_NAME = 'Website design';

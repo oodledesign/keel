@@ -35,7 +35,6 @@ import {
   isFeedflowModuleEnabled,
   isRanklyModuleEnabled,
   isSignaturesModuleEnabled,
-  isSiteStudioModuleEnabled,
   isVideosModuleEnabled,
   isWorkNavModuleEnabled,
 } from '~/home/[account]/_lib/server/account-modules';
@@ -91,15 +90,7 @@ function buildWorkAppsGroup(
     });
   }
 
-  if (isSiteStudioModuleEnabled(ms)) {
-    children.push({
-      label: 'Site Studio',
-      path: createPath(pathsConfig.app.accountWebsites, account),
-      Icon: <Sparkles className={iconClasses} />,
-      description:
-        'AI website planning — brief, sitemap, wireframes, design, SEO, and export.',
-    });
-  }
+  // Site Studio gates advanced tabs on Websites — no separate Apps nav item.
 
   if (isFeedflowModuleEnabled(ms)) {
     children.push(

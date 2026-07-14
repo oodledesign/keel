@@ -7,17 +7,22 @@ export function buildLlmsTxt(input: WebsiteExportInput): WebsiteExportFile {
   const origin = input.domain ? `https://${input.domain.replace(/^https?:\/\//, '')}` : '';
 
   const lines: string[] = [
-    `# ${brief?.orgName || input.websiteName}`,
+    `# ${brief?.org.name || input.websiteName}`,
     '',
-    `> ${brief?.brandSummary || brief?.offer || 'Website summary.'}`,
+    `> ${brief?.org.oneLiner || brief?.offer.services[0]?.description || 'Website summary.'}`,
     '',
   ];
 
-  if (brief?.offer) {
-    lines.push(brief.offer, '');
+  if (brief?.offer.services.length) {
+    lines.push(
+      brief.offer.services
+        .map((service) => `${service.name}: ${service.description}`)
+        .join('\n'),
+      '',
+    );
   }
-  if (brief?.geography) {
-    lines.push(`Serving: ${brief.geography}`, '');
+  if (brief?.org.geography) {
+    lines.push(`Serving: ${brief.org.geography}`, '');
   }
 
   lines.push('## Pages', '');
@@ -56,14 +61,14 @@ export function buildJsonLd(input: WebsiteExportInput): WebsiteExportFile {
 
   const blocks: Array<Record<string, unknown>> = [];
 
-  const isLocal = Boolean(brief?.geography?.trim());
+  const isLocal = Boolean(brief?.org.geography?.trim());
   blocks.push({
     '@context': 'https://schema.org',
     '@type': isLocal ? 'LocalBusiness' : 'Organization',
-    name: brief?.orgName || input.websiteName,
+    name: brief?.org.name || input.websiteName,
     url: origin,
-    description: brief?.brandSummary || undefined,
-    areaServed: brief?.geography || undefined,
+    description: brief?.org.oneLiner || undefined,
+    areaServed: brief?.org.geography || undefined,
   });
 
   for (const page of input.sitemap) {

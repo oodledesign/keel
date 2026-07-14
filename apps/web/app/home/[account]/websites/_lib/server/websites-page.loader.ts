@@ -37,6 +37,7 @@ export async function loadWebsitesPageData(accountSlug: string) {
     user: workspace.user,
     canViewWebsites: access.canViewDashboard && websitesModuleEnabled,
     canEditWebsites:
-      (access.isOwner || access.isAdmin) && websitesModuleEnabled,
+      (access.isOwner || access.isAdmin || access.isStaff) &&
+      websitesModuleEnabled,
   };
 }

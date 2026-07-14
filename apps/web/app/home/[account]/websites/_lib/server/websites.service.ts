@@ -19,6 +19,17 @@ import {
   logMissingRelation,
 } from '../../../_lib/server/supabase-errors';
 
+function slugifyClientOrg(name: string): string {
+  const base =
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 40) || 'client';
+
+  return `${base}-${crypto.randomUUID().slice(0, 8)}`;
+}
+
 export type Website = {
   id: string;
   businessId: string;
@@ -168,7 +179,23 @@ function mapWebsite(row: WebsiteRow, linkedClientId: string | null = null): Webs
   };
 }
 
-function toDbPayload(input: Omit<WebsiteInput, 'accountId'> | UpdateWebsiteInput) {
+function toDbPayload(input: {
+  name?: string;
+  domain?: string | null;
+  staging_url?: string | null;
+  stack?: WebsiteStack;
+  status?: WebsiteStatus;
+  client_org_id?: string | null;
+  cms_admin_url?: string | null;
+  vercel_project_id?: string | null;
+  github_repo_url?: string | null;
+  supabase_schema?: string | null;
+  notes?: string | null;
+  hosting_notes?: string | null;
+  launched_at?: string | null;
+  umami_website_id?: string | null;
+  umami_share_url?: string | null;
+}) {
   return {
     ...(input.name !== undefined && { name: input.name }),
     ...(input.domain !== undefined && { domain: input.domain }),
@@ -307,7 +334,7 @@ class WebsitesService {
     return user;
   }
 
-  private async ensureOwnerOrAdmin(accountId: string) {
+  private async ensureCanEdit(accountId: string) {
     const user = await this.ensureUser();
     const { data, error } = await this.db
       .from('accounts_memberships')
@@ -318,8 +345,8 @@ class WebsitesService {
 
     if (error) this.throwErr(error);
     const role = data?.account_role;
-    if (role !== 'owner' && role !== 'admin') {
-      throw new Error('Only account owners and admins can perform this action');
+    if (role !== 'owner' && role !== 'admin' && role !== 'staff') {
+      throw new Error('Permission denied');
     }
 
     return user;
@@ -480,17 +507,37 @@ class WebsitesService {
   }
 
   async createWebsite(input: WebsiteInput): Promise<Website> {
-    await this.ensureOwnerOrAdmin(input.accountId);
+    await this.ensureCanEdit(input.accountId);
 
-    const { accountId, ...fields } = input;
-    return this.saveWebsiteRow(accountId, toDbPayload(fields), 'insert');
+    const {
+      accountId,
+      client_id: clientId,
+      create_delivery_project: _createDelivery,
+      existing_job_id: _existingJobId,
+      ...fields
+    } = input;
+
+    let clientOrgId = fields.client_org_id ?? null;
+    if (clientId) {
+      const resolved = await this.resolveOrCreateClientOrgForCrmClient(
+        accountId,
+        clientId,
+      );
+      clientOrgId = resolved.clientOrgId;
+    }
+
+    return this.saveWebsiteRow(
+      accountId,
+      toDbPayload({ ...fields, client_org_id: clientOrgId }),
+      'insert',
+    );
   }
 
   async updateWebsite(
     accountId: string,
     input: UpdateWebsiteInput,
   ): Promise<Website> {
-    await this.ensureOwnerOrAdmin(accountId);
+    await this.ensureCanEdit(accountId);
 
     const { websiteId, ...fields } = input;
     return this.saveWebsiteRow(
@@ -502,7 +549,7 @@ class WebsitesService {
   }
 
   async deleteWebsite(accountId: string, websiteId: string): Promise<void> {
-    await this.ensureOwnerOrAdmin(accountId);
+    await this.ensureCanEdit(accountId);
 
     const { error } = await this.adminDb
       .from('websites')
@@ -511,5 +558,69 @@ class WebsitesService {
       .eq('business_id', accountId);
 
     if (error) throw mapWebsiteWriteError(error);
+  }
+
+  /**
+   * Resolve the portal `client_org` for a CRM client, creating an org when the
+   * client is not yet linked. Reuses the same org→client bridge as
+   * `resolveLinkedClientIds` / `createWebsiteProject`.
+   */
+  async resolveOrCreateClientOrgForCrmClient(
+    accountId: string,
+    clientId: string,
+  ): Promise<{ clientOrgId: string; created: boolean }> {
+    await this.ensureCanEdit(accountId);
+
+    const { data: clientRow, error: clientError } = await this.db
+      .from('clients')
+      .select('id, client_org_id, display_name, company_name')
+      .eq('id', clientId)
+      .eq('account_id', accountId)
+      .maybeSingle();
+
+    if (clientError) throw clientError;
+    if (!clientRow) throw new Error('CRM client not found');
+
+    const existingOrgId = (
+      clientRow as { client_org_id?: string | null }
+    ).client_org_id;
+
+    if (existingOrgId) {
+      return { clientOrgId: existingOrgId, created: false };
+    }
+
+    const displayName =
+      (clientRow as { company_name?: string | null }).company_name?.trim() ||
+      (clientRow as { display_name?: string | null }).display_name?.trim() ||
+      'Client';
+
+    const slug = slugifyClientOrg(displayName);
+
+    const { data: org, error: orgError } = await this.adminDb
+      .from('client_orgs')
+      .insert({
+        business_id: accountId,
+        name: displayName,
+        slug,
+        status: 'active',
+      })
+      .select('id')
+      .single();
+
+    if (orgError || !org) {
+      throw orgError ?? new Error('Could not create client organisation');
+    }
+
+    const clientOrgId = String((org as { id: string }).id);
+
+    const { error: linkError } = await this.adminDb
+      .from('clients')
+      .update({ client_org_id: clientOrgId })
+      .eq('id', clientId)
+      .eq('account_id', accountId);
+
+    if (linkError) throw linkError;
+
+    return { clientOrgId, created: true };
   }
 }

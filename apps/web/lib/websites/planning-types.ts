@@ -1,3 +1,9 @@
+import {
+  emptyBriefAiProvenance,
+  type WebsiteBrief,
+  type WebsiteBriefAiProvenance,
+} from './brief-types';
+
 export type WebsitePlanningTab =
   | 'overview'
   | 'brief'
@@ -136,53 +142,32 @@ export type WebsiteContentDoc = {
 };
 
 /* ------------------------------------------------------------------ */
-/* Site Studio: brief                                                  */
+/* Site Studio: brief — re-export A2 model                             */
 /* ------------------------------------------------------------------ */
 
-export type WebsiteBriefReference = {
-  url: string;
-  why: string;
-};
+export type {
+  WebsiteBrief,
+  WebsiteBriefReference,
+  WebsiteBriefAiProvenance,
+  WebsiteBriefStackPreference,
+  BriefAiSource,
+  BriefFieldPath,
+  BriefSectionKey,
+} from './brief-types';
+export {
+  WEBSITE_BRIEF_SCHEMA_VERSION,
+  emptyWebsiteBrief,
+  emptyBriefAiProvenance,
+  normalizeWebsiteBrief,
+  normalizeBriefAiProvenance,
+  briefContextText,
+  BRIEF_SECTIONS,
+  sectionCompleteness,
+  overallBriefCompleteness,
+} from './brief-types';
 
-export type WebsiteTargetStack = 'webflow' | 'astro' | 'next' | 'undecided';
-
-export type WebsiteBrief = {
-  orgName: string;
-  brandSummary: string;
-  offer: string;
-  audience: string;
-  geography: string;
-  /** Jobs-to-be-done — the conversation the site answers. */
-  jobsToBeDone: string;
-  objections: string;
-  competitors: string;
-  references: WebsiteBriefReference[];
-  tone: string;
-  constraints: string;
-  conversionGoals: string;
-  targetStack: WebsiteTargetStack;
-  /** Does the client need a CMS with editors outside git? */
-  cmsNeeded: boolean;
-};
-
-export function emptyWebsiteBrief(): WebsiteBrief {
-  return {
-    orgName: '',
-    brandSummary: '',
-    offer: '',
-    audience: '',
-    geography: '',
-    jobsToBeDone: '',
-    objections: '',
-    competitors: '',
-    references: [],
-    tone: '',
-    constraints: '',
-    conversionGoals: '',
-    targetStack: 'undecided',
-    cmsNeeded: false,
-  };
-}
+/** @deprecated Prefer WebsiteBriefStackPreference */
+export type WebsiteTargetStack = import('./brief-types').WebsiteBriefStackPreference;
 
 /* ------------------------------------------------------------------ */
 /* Site Studio: style system                                           */
@@ -304,6 +289,7 @@ export type WebsitePortalShareScope = 'off' | 'sitemap' | 'wireframes' | 'full';
 export type SiteStudioBundle = {
   enabled: boolean;
   brief: WebsiteBrief | null;
+  briefProvenance: WebsiteBriefAiProvenance;
   style: WebsiteStyleSystem | null;
   seoPages: Record<string, WebsiteSeoPageFields>;
   shares: WebsiteShareLink[];
@@ -314,6 +300,7 @@ export function emptySiteStudioBundle(): SiteStudioBundle {
   return {
     enabled: false,
     brief: null,
+    briefProvenance: emptyBriefAiProvenance(),
     style: null,
     seoPages: {},
     shares: [],

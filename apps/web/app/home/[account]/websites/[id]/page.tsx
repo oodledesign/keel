@@ -15,6 +15,10 @@ import {
 } from '../_lib/server/website-planning.service';
 import { createSiteStudioService } from '../_lib/server/site-studio.service';
 import { createWebsitesService } from '../_lib/server/websites.service';
+import { createProjectPhasesService } from '~/home/[account]/jobs/_lib/server/project-phases.service';
+import { createJobsService } from '~/home/[account]/jobs/_lib/server/jobs.service';
+import { deliveryProjectTitle } from '~/lib/projects/project-types';
+import { hasSiteStudio } from '~/lib/websites/has-site-studio';
 import {
   ALL_PLANNING_TABS,
   emptySiteStudioBundle,
@@ -56,9 +60,10 @@ async function WebsiteDetailPage({
     );
   }
 
-  const service = createWebsitesService(getSupabaseServerClient());
-  const planningService = createWebsitePlanningService(getSupabaseServerClient());
-  const siteStudioService = createSiteStudioService(getSupabaseServerClient());
+  const client = getSupabaseServerClient();
+  const service = createWebsitesService(client);
+  const planningService = createWebsitePlanningService(client);
+  const siteStudioService = createSiteStudioService(client);
   const website = await service.getWebsite({ accountId, websiteId });
 
   if (!website) {
@@ -69,9 +74,32 @@ async function WebsiteDetailPage({
     (await planningService.getPlanningBundle(accountId, websiteId)) ??
     emptyWebsitePlanningBundle(websiteId);
 
+  const siteStudioEnabled = await hasSiteStudio(accountId);
   const siteStudio = await siteStudioService
-    .getBundle(accountId, websiteId)
+    .getBundle(accountId, websiteId, siteStudioEnabled)
     .catch(() => emptySiteStudioBundle());
+
+  let linkedJobTitle: string | null = null;
+  let phases: Awaited<
+    ReturnType<
+      ReturnType<typeof createProjectPhasesService>['listPhasesForJob']
+    >
+  > = [];
+
+  if (planning.jobId) {
+    const [job, phaseRows] = await Promise.all([
+      createJobsService(client)
+        .getJob({ accountId, jobId: planning.jobId })
+        .catch(() => null),
+      createProjectPhasesService(client)
+        .listPhasesForJob({ accountId, jobId: planning.jobId })
+        .catch(() => []),
+    ]);
+    if (job) {
+      linkedJobTitle = deliveryProjectTitle(job);
+    }
+    phases = phaseRows;
+  }
 
   const planningTab =
     plan && ALL_PLANNING_TABS.includes(plan as WebsitePlanningTab)
@@ -87,7 +115,10 @@ async function WebsiteDetailPage({
         canEditWebsites={canEditWebsites}
         planning={planning}
         siteStudio={siteStudio}
+        siteStudioEnabled={siteStudioEnabled}
         planningTab={planningTab}
+        linkedJobTitle={linkedJobTitle}
+        phases={phases}
       />
     </PageBody>
   );

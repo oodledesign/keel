@@ -25,8 +25,8 @@ function isEntitlementActive(row: {
 }
 
 /**
- * Turn Rankly / Feedflow / Videos (and Apps when any add-on is active) on or off
- * based on `account_entitlements`. Business workspaces only.
+ * Sync add-on modules from `account_entitlements` (work_design only).
+ * Apps nav toggles for signatures/rankly/feedflow/videos; Site Studio is Websites-only.
  */
 export async function syncAddonModulesFromEntitlements(
   admin: SupabaseClient,
@@ -70,11 +70,21 @@ export async function syncAddonModulesFromEntitlements(
 
   let anyAddonActive = false;
 
+  /** Add-ons that should surface the Apps nav group (Site Studio is Websites-only). */
+  const APPS_NAV_ADDON_KEYS = new Set<OzerAddonKey>([
+    'addon_signatures',
+    'addon_rankly',
+    'addon_feedflow',
+    'addon_videos',
+  ]);
+
   for (const [entitlementKey, moduleKeys] of Object.entries(
     ADDON_ENTITLEMENT_MODULES,
   ) as Array<[OzerAddonKey, string[]]>) {
     const enabled = activeKeys.has(entitlementKey);
-    if (enabled) anyAddonActive = true;
+    if (enabled && APPS_NAV_ADDON_KEYS.has(entitlementKey)) {
+      anyAddonActive = true;
+    }
 
     for (const moduleKey of moduleKeys) {
       await admin.from('account_module_settings').upsert(

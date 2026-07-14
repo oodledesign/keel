@@ -36,6 +36,8 @@ export const WebsiteInputSchema = z.object({
   stack: WebsiteStackSchema.default('other'),
   status: WebsiteStatusSchema.default('in-progress'),
   client_org_id: optionalNullableUuid,
+  /** CRM client — resolved to (or creates) a portal client_org before save. */
+  client_id: optionalNullableUuid,
   cms_admin_url: optionalNullableString,
   vercel_project_id: optionalNullableString,
   github_repo_url: optionalNullableString,
@@ -45,11 +47,21 @@ export const WebsiteInputSchema = z.object({
   launched_at: optionalNullableString,
   umami_website_id: optionalNullableString,
   umami_share_url: optionalNullableString,
+  /** When true (typical for Site Studio), create/link a delivery project after save. */
+  create_delivery_project: z.boolean().optional().default(false),
+  /** Link an existing delivery project instead of creating one. */
+  existing_job_id: optionalNullableUuid,
 });
 
 export const UpdateWebsiteSchema = WebsiteInputSchema.extend({
   websiteId: z.string().uuid(),
-}).omit({ accountId: true });
+})
+  .omit({
+    accountId: true,
+    create_delivery_project: true,
+    existing_job_id: true,
+    client_id: true,
+  });
 
 export const DeleteWebsiteSchema = z.object({
   accountId: z.string().uuid(),

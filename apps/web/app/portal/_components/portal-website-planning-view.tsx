@@ -2,6 +2,7 @@
 
 import {
   type ReactNode,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -314,34 +315,63 @@ function BriefField({ label, value }: { label: string; value: string }) {
 
 function BriefTab({ brief }: { brief: WebsiteBrief }) {
   const stackLabel =
-    brief.targetStack === 'undecided'
+    brief.stackPreference === 'undecided'
       ? 'Undecided'
-      : brief.targetStack === 'webflow'
+      : brief.stackPreference === 'webflow'
         ? 'Webflow (Client-First)'
-        : brief.targetStack === 'astro'
+        : brief.stackPreference === 'astro'
           ? 'Astro'
-          : brief.targetStack === 'next'
+          : brief.stackPreference === 'next'
             ? 'Next.js'
-            : brief.targetStack;
+            : brief.stackPreference === 'ozer_sites'
+              ? 'Ozer Sites'
+              : brief.stackPreference;
 
   return (
     <div className="grid gap-3 md:grid-cols-2">
-      <BriefField label="Organisation" value={brief.orgName} />
-      <BriefField label="Geography" value={brief.geography} />
-      <BriefField label="Brand summary" value={brief.brandSummary} />
-      <BriefField label="Offer" value={brief.offer} />
-      <BriefField label="Audience" value={brief.audience} />
-      <BriefField label="Jobs to be done" value={brief.jobsToBeDone} />
-      <BriefField label="Objections" value={brief.objections} />
-      <BriefField label="Competitors" value={brief.competitors} />
-      <BriefField label="Tone of voice" value={brief.tone} />
-      <BriefField label="Constraints" value={brief.constraints} />
-      <BriefField label="Conversion goals" value={brief.conversionGoals} />
-      <BriefField label="Target stack" value={stackLabel} />
+      <BriefField label="Organisation" value={brief.org.name} />
+      <BriefField label="Sector" value={brief.org.sector} />
+      <BriefField label="One-liner" value={brief.org.oneLiner} />
+      <BriefField label="Geography" value={brief.org.geography} />
+      <BriefField label="Tone" value={brief.brand.tone.join(', ')} />
       <BriefField
-        label="CMS needed"
-        value={brief.cmsNeeded ? 'Yes — editors outside git' : 'No'}
+        label="Constraints"
+        value={brief.brand.constraints.join('; ')}
       />
+      <BriefField
+        label="Services"
+        value={brief.offer.services
+          .map((service) => `${service.name}: ${service.description}`)
+          .join('\n')}
+      />
+      <BriefField
+        label="Conversion goals"
+        value={brief.offer.primaryConversionGoals.join('; ')}
+      />
+      <BriefField
+        label="Audience"
+        value={brief.audience.segments
+          .map(
+            (segment) =>
+              `${segment.name} — ${segment.jobsToBeDone}${
+                segment.objections.length
+                  ? ` (objections: ${segment.objections.join(', ')})`
+                  : ''
+              }`,
+          )
+          .join('\n')}
+      />
+      <BriefField
+        label="Questions the site must answer"
+        value={brief.conversation.questionsTheSiteMustAnswer.join('\n')}
+      />
+      <BriefField
+        label="Competitors"
+        value={brief.competitors
+          .map((row) => `${row.name} (${row.url}): ${row.notes}`)
+          .join('\n')}
+      />
+      <BriefField label="Target stack" value={stackLabel} />
       <div className="space-y-2 rounded-xl border border-[color:var(--workspace-shell-border)] bg-white p-4 md:col-span-2">
         <p className="text-xs font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
           References
@@ -351,7 +381,7 @@ function BriefTab({ brief }: { brief: WebsiteBrief }) {
             {brief.references.map((ref) => {
               const href = safeExternalHref(ref.url);
               return (
-                <li key={`${ref.url}-${ref.why}`} className="text-sm">
+                <li key={`${ref.url}-${ref.whyThisWorks}`} className="text-sm">
                   {href ? (
                     <a
                       href={href}
@@ -366,9 +396,9 @@ function BriefTab({ brief }: { brief: WebsiteBrief }) {
                       {ref.url}
                     </span>
                   )}
-                  {ref.why ? (
+                  {ref.whyThisWorks ? (
                     <p className="text-[var(--workspace-shell-text-muted)]">
-                      {ref.why}
+                      {ref.whyThisWorks}
                     </p>
                   ) : null}
                 </li>
@@ -418,13 +448,15 @@ export function PortalWebsitePlanningView({
     >
   >(new Map());
   const shareTokenRef = useRef(shareToken);
-  shareTokenRef.current = shareToken;
+  useEffect(() => {
+    shareTokenRef.current = shareToken;
+  }, [shareToken]);
 
   const showWireframes = scopeShowsWireframes(scope);
   const showStyle = scopeShowsStyle(scope);
-  // Brief is intentionally included on client share links when present
-  // (not gated by sitemap/wireframes/design scope) so clients can review intent.
-  const showBrief = Boolean(brief);
+  // Authenticated portal can show brief whenever the workspace shared planning;
+  // public token shares only include brief for `full` scope (server-stripped).
+  const showBrief = Boolean(brief) && (scope === 'full' || !shareToken);
 
   const wireframeByPage = useMemo(() => {
     const map = new Map<string, WebsiteWireframePage>();
@@ -480,7 +512,7 @@ export function PortalWebsitePlanningView({
     };
   }, [openWireframePageId]);
 
-  const flushPendingSectionComments = () => {
+  const flushPendingSectionComments = useCallback(() => {
     const token = shareTokenRef.current;
     for (const timer of commentSaveTimers.current.values()) {
       clearTimeout(timer);
@@ -509,18 +541,18 @@ export function PortalWebsitePlanningView({
         );
       });
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (openWireframePageId !== null) return;
     flushPendingSectionComments();
-  }, [openWireframePageId]);
+  }, [openWireframePageId, flushPendingSectionComments]);
 
   useEffect(() => {
     return () => {
       flushPendingSectionComments();
     };
-  }, []);
+  }, [flushPendingSectionComments]);
 
   const handleApproval = (
     pageId: string,
