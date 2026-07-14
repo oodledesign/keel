@@ -55,6 +55,48 @@ function applyFinanceSearchFilter<T extends { ilike: (col: string, pattern: stri
   return query.ilike('description', `%${escaped}%`);
 }
 
+/** Load every matching summary row (paginated past PostgREST max_rows). */
+async function loadFinanceSummaryRows(
+  client: ReturnType<typeof getSupabaseServerClient>,
+  accountId: string,
+  dateFrom?: string,
+  dateTo?: string,
+) {
+  const pageSize = 1000;
+  const hardCap = 20000;
+  const rows: Array<{
+    transaction_date: string;
+    amount_pence: number;
+    is_transfer: boolean | null;
+  }> = [];
+
+  for (let offset = 0; offset < hardCap; offset += pageSize) {
+    let query = client
+      .from('finance_transactions')
+      .select('transaction_date, amount_pence, is_transfer')
+      .eq('account_id', accountId)
+      .order('transaction_date', { ascending: true })
+      .order('id', { ascending: true })
+      .range(offset, offset + pageSize - 1);
+
+    query = applyFinanceDateFilters(query, dateFrom, dateTo);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const batch = (data ?? []) as Array<{
+      transaction_date: string;
+      amount_pence: number;
+      is_transfer: boolean | null;
+    }>;
+    rows.push(...batch);
+
+    if (batch.length < pageSize) break;
+  }
+
+  return rows;
+}
+
 const DEFAULT_CATEGORIES = [
   { name: 'Sales', kind: 'income' as const },
   { name: 'Other income', kind: 'income' as const },
@@ -158,12 +200,6 @@ export const loadFinancesDashboardAction = enhanceAction(
     countQuery = applyFinanceDateFilters(countQuery, from, to);
     countQuery = applyFinanceSearchFilter(countQuery, search);
 
-    let summaryQuery = client
-      .from('finance_transactions')
-      .select('transaction_date, amount_pence, is_transfer')
-      .eq('account_id', input.accountId);
-    summaryQuery = applyFinanceDateFilters(summaryQuery, from, to);
-
     let uncategorizedQuery = client
       .from('finance_transactions')
       .select('id', { count: 'exact', head: true })
@@ -175,7 +211,7 @@ export const loadFinancesDashboardAction = enhanceAction(
     const [
       { data: transactions, error: txError },
       { count: transactionTotalCount, error: countError },
-      { data: summaryRows, error: summaryError },
+      summaryRows,
       { count: uncategorizedCount, error: uncategorizedError },
       categories,
       { data: bankAccounts },
@@ -185,7 +221,7 @@ export const loadFinancesDashboardAction = enhanceAction(
     ] = await Promise.all([
       txQuery,
       countQuery,
-      summaryQuery,
+      loadFinanceSummaryRows(client, input.accountId, from, to),
       uncategorizedQuery,
       loadFinanceCategoriesForAccount(client, input.accountId),
       client
@@ -217,13 +253,12 @@ export const loadFinancesDashboardAction = enhanceAction(
 
     if (txError) throw txError;
     if (countError) throw countError;
-    if (summaryError) throw summaryError;
     if (uncategorizedError) throw uncategorizedError;
 
     const totals = accumulateFinanceTotals(
-      (summaryRows ?? []).map((tx) => ({
-        amount_pence: tx.amount_pence as number,
-        is_transfer: tx.is_transfer as boolean | null | undefined,
+      summaryRows.map((tx) => ({
+        amount_pence: tx.amount_pence,
+        is_transfer: tx.is_transfer,
       })),
     );
 
@@ -235,7 +270,7 @@ export const loadFinancesDashboardAction = enhanceAction(
 
     return {
       transactions: transactions ?? [],
-      summaryRows: summaryRows ?? [],
+      summaryRows,
       transactionTotalCount: transactionTotalCount ?? 0,
       uncategorizedCount: uncategorizedCount ?? 0,
       page,

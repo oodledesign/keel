@@ -50,8 +50,11 @@ export type AvailableSlot = {
 export type GoogleCalendarClient = {
   workspaceId: string;
   userId: string;
+  connectionId: string;
   accessToken: string;
   calendarId: string;
   busyCalendarIds: string[];
   personalCalendarIds: string[];
+  accountEmail: string | null;
+  isPrimary: boolean;
 };

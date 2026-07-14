@@ -24,6 +24,8 @@ async function PersonalNotesPage() {
         accountId={data.accountId}
         accountSlug={data.accountSlug}
         notes={data.notes}
+        folders={data.folders}
+        foldersAvailable={data.foldersAvailable}
         tableAvailable={data.tableAvailable}
         customCategories={data.customCategories}
       />

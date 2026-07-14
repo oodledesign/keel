@@ -15,6 +15,8 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
 
 import {
+  workspaceComboboxInputClass,
+  workspaceComboboxItemClass,
   workspaceComboboxListClass,
   workspaceComboboxPopoverClass,
 } from '~/components/workspace-shell/workspace-combobox-styles';
@@ -61,7 +63,7 @@ export function ClientCombobox({
             aria-expanded={open}
             disabled={disabled || loading}
             className={cn(
-              'w-full justify-between border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel-hover)] hover:text-[var(--workspace-shell-text)]',
+              'w-full justify-between border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel-hover)] hover:text-[var(--workspace-shell-text)] focus-visible:ring-0 focus-visible:ring-offset-0',
               !displayValue && 'text-[var(--workspace-shell-text-muted)]',
             )}
           >
@@ -70,10 +72,10 @@ export function ClientCombobox({
           </Button>
         </PopoverTrigger>
         <PopoverContent className={workspaceComboboxPopoverClass} align="start">
-          <Command className="bg-[var(--workspace-shell-panel)]">
+          <Command className="bg-[var(--workspace-shell-panel)] [&_[cmdk-input-wrapper]]:border-[color:var(--workspace-shell-border)]">
             <CommandInput
               placeholder="Search clients…"
-              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+              className={workspaceComboboxInputClass}
             />
             <CommandList className={workspaceComboboxListClass}>
               <CommandEmpty>{emptyMessage}</CommandEmpty>
@@ -84,7 +86,10 @@ export function ClientCombobox({
                     onValueChange('');
                     setOpen(false);
                   }}
-                  className="text-[var(--workspace-shell-text-muted)] aria-selected:bg-[var(--workspace-control-surface)]"
+                  className={cn(
+                    workspaceComboboxItemClass,
+                    'text-[var(--workspace-shell-text-muted)]',
+                  )}
                 >
                   <Check className={cn('mr-2 h-4 w-4', !value ? 'opacity-100' : 'opacity-0')} />
                   None
@@ -99,7 +104,7 @@ export function ClientCombobox({
                         onValueChange(c.id);
                         setOpen(false);
                       }}
-                      className="text-[var(--workspace-shell-text-muted)] aria-selected:bg-[var(--workspace-control-surface)]"
+                      className={workspaceComboboxItemClass}
                     >
                       <Check className={cn('mr-2 h-4 w-4', value === c.id ? 'opacity-100' : 'opacity-0')} />
                       {label}

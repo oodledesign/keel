@@ -42,85 +42,116 @@ function Calendar({
         ...formatters,
       }}
       classNames={{
-        root: cn('w-fit', defaultClassNames.root),
+        root: cn('w-fit', defaultClassNames.root, classNames?.root),
         months: cn(
           'relative flex flex-col gap-4 md:flex-row',
           defaultClassNames.months,
+          classNames?.months,
         ),
-        month: cn('flex w-full flex-col gap-4', defaultClassNames.month),
+        month: cn(
+          'flex w-full flex-col gap-4',
+          defaultClassNames.month,
+          classNames?.month,
+        ),
         nav: cn(
           'absolute inset-x-0 top-0 flex w-full items-center justify-between gap-1',
           defaultClassNames.nav,
+          classNames?.nav,
         ),
         button_previous: cn(
           buttonVariants({ variant: buttonVariant }),
           'size-(--cell-size) p-0 select-none aria-disabled:opacity-50',
           defaultClassNames.button_previous,
+          classNames?.button_previous,
         ),
         button_next: cn(
           buttonVariants({ variant: buttonVariant }),
           'size-(--cell-size) p-0 select-none aria-disabled:opacity-50',
           defaultClassNames.button_next,
+          classNames?.button_next,
         ),
         month_caption: cn(
           'flex h-(--cell-size) w-full items-center justify-center px-(--cell-size)',
           defaultClassNames.month_caption,
+          classNames?.month_caption,
         ),
         dropdowns: cn(
           'flex h-(--cell-size) w-full items-center justify-center gap-1.5 text-sm font-medium',
           defaultClassNames.dropdowns,
+          classNames?.dropdowns,
         ),
         dropdown_root: cn(
           'has-focus:border-ring border-input has-focus:ring-ring/50 relative rounded-md border shadow-xs has-focus:ring-[3px]',
           defaultClassNames.dropdown_root,
+          classNames?.dropdown_root,
         ),
-        dropdown: cn('absolute inset-0 opacity-0', defaultClassNames.dropdown),
+        dropdown: cn(
+          'absolute inset-0 opacity-0',
+          defaultClassNames.dropdown,
+          classNames?.dropdown,
+        ),
         caption_label: cn(
           'font-medium select-none',
           captionLayout === 'label'
             ? 'text-sm'
             : '[&>svg]:text-muted-foreground flex h-8 items-center gap-1 rounded-md pr-1 pl-2 text-sm [&>svg]:size-3.5',
           defaultClassNames.caption_label,
+          classNames?.caption_label,
         ),
-        table: 'w-full border-collapse',
-        weekdays: cn('flex', defaultClassNames.weekdays),
+        table: cn('w-full border-collapse', defaultClassNames.table, classNames?.table),
+        weekdays: cn('flex', defaultClassNames.weekdays, classNames?.weekdays),
         weekday: cn(
-          'text-muted-foreground flex-1 rounded-md text-[0.8rem] font-normal select-none',
+          'text-muted-foreground flex-1 rounded-md text-center text-[0.8rem] font-normal select-none',
           defaultClassNames.weekday,
+          classNames?.weekday,
         ),
-        week: cn('mt-2 flex w-full', defaultClassNames.week),
+        week: cn('mt-2 flex w-full', defaultClassNames.week, classNames?.week),
         week_number_header: cn(
           'w-(--cell-size) select-none',
           defaultClassNames.week_number_header,
+          classNames?.week_number_header,
         ),
         week_number: cn(
           'text-muted-foreground text-[0.8rem] select-none',
           defaultClassNames.week_number,
+          classNames?.week_number,
         ),
         day: cn(
           'group/day relative aspect-square h-full w-full p-0 text-center select-none [&:first-child[data-selected=true]_button]:rounded-l-md [&:last-child[data-selected=true]_button]:rounded-r-md',
           defaultClassNames.day,
+          classNames?.day,
         ),
         range_start: cn(
           'bg-accent rounded-l-md',
           defaultClassNames.range_start,
+          classNames?.range_start,
         ),
-        range_middle: cn('rounded-none', defaultClassNames.range_middle),
-        range_end: cn('bg-accent rounded-r-md', defaultClassNames.range_end),
+        range_middle: cn(
+          'rounded-none',
+          defaultClassNames.range_middle,
+          classNames?.range_middle,
+        ),
+        range_end: cn(
+          'bg-accent rounded-r-md',
+          defaultClassNames.range_end,
+          classNames?.range_end,
+        ),
         today: cn(
           'bg-accent text-accent-foreground rounded-md data-[selected=true]:rounded-none',
           defaultClassNames.today,
+          classNames?.today,
         ),
         outside: cn(
           'text-muted-foreground aria-selected:text-muted-foreground',
           defaultClassNames.outside,
+          classNames?.outside,
         ),
         disabled: cn(
           'text-muted-foreground opacity-50',
           defaultClassNames.disabled,
+          classNames?.disabled,
         ),
-        hidden: cn('invisible', defaultClassNames.hidden),
-        ...classNames,
+        hidden: cn('invisible', defaultClassNames.hidden, classNames?.hidden),
       }}
       components={{
         Root: ({ className, rootRef, ...props }) => {

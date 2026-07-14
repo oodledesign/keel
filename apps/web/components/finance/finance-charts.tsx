@@ -39,11 +39,23 @@ const tooltipStyle = {
   boxShadow: '0 12px 30px rgba(15, 23, 42, 0.12)',
 };
 
+const tooltipLabelStyle = {
+  color: 'var(--workspace-shell-text)',
+  fontWeight: 600,
+  marginBottom: 4,
+};
+
+const tooltipItemStyle = {
+  color: 'var(--workspace-shell-text)',
+  fontWeight: 500,
+};
+
 const WORKSPACE_CHART_TICK = 'var(--workspace-shell-text-muted)';
 const WORKSPACE_CHART_GRID = 'color-mix(in srgb, var(--workspace-shell-border) 70%, transparent)';
 
 const GROUPED_INCOME_COLOR = '#FF5C34';
 const GROUPED_EXPENSES_COLOR = '#94A3B8';
+const NET_TREND_COLOR = GROUPED_INCOME_COLOR;
 
 function FinanceGroupedTooltip({
   active,
@@ -92,11 +104,51 @@ function FinanceGroupedTooltip({
           </span>
         </div>
         <div className="flex items-center justify-between gap-6 border-t border-[color:var(--workspace-shell-border)] pt-1.5">
-          <span className="text-[var(--workspace-shell-text-muted)]">Net</span>
-          <span className="font-medium text-[var(--ozer-accent-muted)]">
+          <span className="flex items-center gap-2 text-[var(--workspace-shell-text)]">
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ backgroundColor: NET_TREND_COLOR }}
+            />
+            Net
+          </span>
+          <span className="font-semibold text-[var(--workspace-shell-text)]">
             {formatCurrency(point.net)}
           </span>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function FinanceNetTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{ value?: number }>;
+  label?: string;
+}) {
+  if (!active || !payload?.length) {
+    return null;
+  }
+
+  const value = Number(payload[0]?.value ?? 0);
+
+  return (
+    <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 py-2.5 text-xs shadow-lg">
+      <p className="mb-2 font-medium text-[var(--workspace-shell-text)]">{label}</p>
+      <div className="flex items-center justify-between gap-6">
+        <span className="flex items-center gap-2 text-[var(--workspace-shell-text)]">
+          <span
+            className="h-2 w-2 rounded-full"
+            style={{ backgroundColor: NET_TREND_COLOR }}
+          />
+          Net
+        </span>
+        <span className="font-semibold text-[var(--workspace-shell-text)]">
+          {formatCurrency(value)}
+        </span>
       </div>
     </div>
   );
@@ -154,6 +206,8 @@ export function FinanceTrendBarChart({
               tickLine={false}
               axisLine={false}
               tick={{ fill: axisTickFill, fontSize: compact ? 11 : 12 }}
+              interval="preserveStartEnd"
+              minTickGap={20}
             />
             <YAxis
               tickLine={false}
@@ -227,35 +281,62 @@ export function FinanceTrendBarChart({
 }
 
 export function FinanceNetLineChart({ data }: { data: MonthlyFinancePoint[] }) {
-  if (!data.length) return null;
+  if (!data.length) {
+    return (
+      <p className="flex h-56 items-center justify-center text-sm text-[var(--workspace-shell-text-muted)]">
+        No finance data for this period yet.
+      </p>
+    );
+  }
 
   return (
     <div className="h-56">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data}>
-          <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.05)" />
+          <CartesianGrid
+            vertical={false}
+            stroke="color-mix(in srgb, var(--workspace-shell-border) 70%, transparent)"
+          />
           <XAxis
             dataKey="month"
             tickLine={false}
             axisLine={false}
-            tick={{ fill: '#8FA1BC', fontSize: 12 }}
+            tick={{ fill: 'var(--workspace-shell-text-muted)', fontSize: 12 }}
+            interval="preserveStartEnd"
+            minTickGap={24}
           />
           <YAxis
             tickLine={false}
             axisLine={false}
-            tick={{ fill: '#8FA1BC', fontSize: 11 }}
+            tick={{ fill: 'var(--workspace-shell-text-muted)', fontSize: 11 }}
             tickFormatter={(v) => formatCurrency(v)}
           />
           <Tooltip
+            content={<FinanceNetTooltip />}
             contentStyle={tooltipStyle}
-            formatter={(value: number) => [formatCurrency(Number(value)), 'Net']}
+            labelStyle={tooltipLabelStyle}
+            itemStyle={tooltipItemStyle}
           />
           <Line
             type="monotone"
             dataKey="net"
-            stroke="#FFE3DA"
-            strokeWidth={2}
-            dot={{ fill: '#FFE3DA', r: 3 }}
+            name="Net"
+            stroke={NET_TREND_COLOR}
+            strokeWidth={3.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            dot={{
+              fill: NET_TREND_COLOR,
+              stroke: NET_TREND_COLOR,
+              strokeWidth: 2,
+              r: 4,
+            }}
+            activeDot={{
+              fill: NET_TREND_COLOR,
+              stroke: 'var(--workspace-shell-panel)',
+              strokeWidth: 2,
+              r: 6,
+            }}
           />
         </LineChart>
       </ResponsiveContainer>

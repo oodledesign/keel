@@ -16,6 +16,7 @@ export type Property = {
   purchasePrice: number | null;
   currentValue: number | null;
   mortgageLender: string | null;
+  mortgageReference: string | null;
   mortgageBalance: number | null;
   mortgageInterestRate: number | null;
   mortgageMonthlyPayment: number | null;
@@ -52,6 +53,7 @@ type PropertyRow = {
   purchase_price?: number | null;
   current_value?: number | null;
   mortgage_lender?: string | null;
+  mortgage_reference?: string | null;
   mortgage_balance?: number | null;
   mortgage_interest_rate?: number | string | null;
   mortgage_monthly_payment?: number | null;
@@ -76,6 +78,7 @@ type ValuationRow = {
 
 export type PropertyMortgageInput = {
   mortgageLender?: string | null;
+  mortgageReference?: string | null;
   mortgageBalance?: number | null;
   mortgageInterestRate?: number | null;
   mortgageMonthlyPayment?: number | null;
@@ -114,6 +117,7 @@ function mapProperty(row: PropertyRow): Property {
     purchasePrice: row.purchase_price ?? null,
     currentValue: row.current_value ?? null,
     mortgageLender: row.mortgage_lender ?? null,
+    mortgageReference: row.mortgage_reference ?? null,
     mortgageBalance: row.mortgage_balance ?? null,
     mortgageInterestRate:
       rate == null || rate === '' ? null : Number(rate),
@@ -164,6 +168,9 @@ function mortgageColumns(input: PropertyMortgageInput) {
   return {
     ...(input.mortgageLender !== undefined && {
       mortgage_lender: input.mortgageLender,
+    }),
+    ...(input.mortgageReference !== undefined && {
+      mortgage_reference: input.mortgageReference,
     }),
     ...(input.mortgageBalance !== undefined && {
       mortgage_balance: input.mortgageBalance,

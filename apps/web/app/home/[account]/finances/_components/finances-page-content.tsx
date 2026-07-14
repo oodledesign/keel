@@ -50,6 +50,7 @@ import {
   type DateRangeSelection,
 } from '~/components/date-range/analytics-date-range-picker';
 import { resolveAnalyticsDateRange } from '~/lib/date-range/analytics-date-range';
+import { buildFinanceChartSeries, isDailyFinanceChartRange } from '~/lib/finance/build-finance-chart-series';
 import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
 
 const FinanceNetLineChart = dynamic(
@@ -158,8 +159,16 @@ export function FinancesPageContent({
   const [aiSuggestions, setAiSuggestions] = useState<CategorySuggestion[]>([]);
 
   const refresh = useCallback(
-    async (options?: { background?: boolean }) => {
+    async (options?: {
+      background?: boolean;
+      dateFrom?: string;
+      dateTo?: string;
+      page?: number;
+    }) => {
       const requestId = ++refreshRequestIdRef.current;
+      const from = options?.dateFrom ?? dateFrom;
+      const to = options?.dateTo ?? dateTo;
+      const pageArg = options?.page ?? page;
 
       if (options?.background) {
         setRefreshing(true);
@@ -170,9 +179,9 @@ export function FinancesPageContent({
       try {
         const result = await loadFinancesDashboardAction({
           accountId,
-          dateFrom,
-          dateTo,
-          page,
+          dateFrom: from,
+          dateTo: to,
+          page: pageArg,
           pageSize,
           search: searchQuery || undefined,
         });
@@ -237,39 +246,11 @@ export function FinancesPageContent({
     }
   }, [accountId, accountSlug, refresh, router, searchParams]);
 
-  const chartData = useMemo(() => {
-    const rows = data?.summaryRows ?? [];
-    if (!rows.length) return [];
-    const months = new Map<
-      string,
-      { month: string; income: number; expenses: number; net: number }
-    >();
-    const formatter = new Intl.DateTimeFormat('en-GB', { month: 'short' });
-
-    for (const tx of rows) {
-      if (tx.is_transfer) continue;
-
-      const key = String(tx.transaction_date).slice(0, 7);
-      if (!months.has(key)) {
-        const [y, m] = key.split('-').map(Number);
-        months.set(key, {
-          month: formatter.format(new Date(y!, m! - 1, 1)),
-          income: 0,
-          expenses: 0,
-          net: 0,
-        });
-      }
-      const row = months.get(key)!;
-      const p = tx.amount_pence as number;
-      if (p >= 0) row.income += p / 100;
-      else row.expenses += Math.abs(p) / 100;
-      row.net = row.income - row.expenses;
-    }
-
-    return [...months.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([, v]) => v);
-  }, [data?.summaryRows]);
+  const chartData = useMemo(
+    () =>
+      buildFinanceChartSeries(data?.summaryRows ?? [], dateFrom, dateTo),
+    [data?.summaryRows, dateFrom, dateTo],
+  );
 
   const uncategorizedCount = data?.uncategorizedCount ?? 0;
 
@@ -288,6 +269,7 @@ export function FinancesPageContent({
     setDateTo(to);
     setPage(1);
     setAiSuggestions([]);
+    void refresh({ dateFrom: from, dateTo: to, page: 1 });
   };
 
   const forecast = useMemo(() => {
@@ -633,14 +615,32 @@ export function FinancesPageContent({
           {chartData.length > 0 ? (
             <div className="grid gap-4 lg:grid-cols-2">
               <div className={cn(panelClass, 'p-4')}>
-                <h3 className="text-sm font-medium text-[var(--workspace-shell-text)]">Income vs expenses</h3>
-                <p className="mb-4 text-xs text-[var(--workspace-shell-text-muted)]">By month in selected range</p>
-                <FinanceTrendBarChart data={chartData} variant="grouped" />
+                <h3 className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                  Income vs expenses
+                </h3>
+                <p className="mb-4 text-xs text-[var(--workspace-shell-text-muted)]">
+                  {isDailyFinanceChartRange(dateFrom, dateTo)
+                    ? 'By day in the selected range'
+                    : 'By month in the selected range'}
+                </p>
+                <FinanceTrendBarChart
+                  key={`bars-${dateFrom}-${dateTo}`}
+                  data={chartData}
+                  variant="grouped"
+                  surface="workspace"
+                />
               </div>
               <div className={cn(panelClass, 'p-4')}>
-                <h3 className="text-sm font-medium text-[var(--workspace-shell-text)]">Net trend</h3>
-                <p className="mb-4 text-xs text-[var(--workspace-shell-text-muted)]">Monthly net after expenses</p>
-                <FinanceNetLineChart data={chartData} />
+                <h3 className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                  Net trend
+                </h3>
+                <p className="mb-4 text-xs text-[var(--workspace-shell-text-muted)]">
+                  Net over the selected date range
+                </p>
+                <FinanceNetLineChart
+                  key={`net-${dateFrom}-${dateTo}`}
+                  data={chartData}
+                />
               </div>
             </div>
           ) : null}

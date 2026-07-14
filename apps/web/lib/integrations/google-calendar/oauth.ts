@@ -10,6 +10,8 @@ const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 
 const SCOPES = [
+  'openid',
+  'email',
   'https://www.googleapis.com/auth/calendar.readonly',
   'https://www.googleapis.com/auth/calendar.events',
 ];
@@ -31,7 +33,8 @@ export function buildGoogleCalendarAuthUrl(input: {
   url.searchParams.set('response_type', 'code');
   url.searchParams.set('scope', SCOPES.join(' '));
   url.searchParams.set('access_type', 'offline');
-  url.searchParams.set('prompt', 'consent');
+  // consent keeps refresh tokens; select_account lets users add a second inbox
+  url.searchParams.set('prompt', 'consent select_account');
   url.searchParams.set('state', state);
   return url.toString();
 }
@@ -88,6 +91,37 @@ export async function refreshGoogleCalendarToken(refreshToken: string) {
   }
 
   return (await res.json()) as GoogleTokenResponse;
+}
+
+export async function fetchGoogleAccountIdentity(accessToken: string): Promise<{
+  sub: string;
+  email: string | null;
+}> {
+  const res = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
+    headers: { authorization: `Bearer ${accessToken}` },
+    signal: AbortSignal.timeout(15_000),
+  });
+
+  if (!res.ok) {
+    throw new Error(
+      `Google userinfo failed (${res.status}): ${(await res.text()).slice(0, 400)}`,
+    );
+  }
+
+  const body = (await res.json()) as {
+    sub?: string;
+    email?: string;
+  };
+
+  const sub = body.sub?.trim();
+  if (!sub) {
+    throw new Error('Google userinfo did not return an account id');
+  }
+
+  return {
+    sub,
+    email: body.email?.trim().toLowerCase() || null,
+  };
 }
 
 export function stateReturnPath(

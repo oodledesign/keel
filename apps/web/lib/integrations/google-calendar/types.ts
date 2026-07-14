@@ -1,4 +1,5 @@
 export type GoogleCalendarConnection = {
+  id: string;
   userId: string;
   accessToken: string;
   refreshToken: string | null;
@@ -8,6 +9,10 @@ export type GoogleCalendarConnection = {
   busyCalendarIds: string[];
   personalCalendarIds: string[];
   scopes: string | null;
+  googleAccountEmail: string | null;
+  googleAccountSub: string;
+  isPrimary: boolean;
+  connectedAt: string | null;
 };
 
 export type GoogleCalendarListItem = {
@@ -15,11 +20,14 @@ export type GoogleCalendarListItem = {
   summary: string;
   primary: boolean;
   selected: boolean;
+  connectionId: string;
+  accountEmail: string | null;
 };
 
 export type GoogleCalendarConnectionStatus = {
   connected: boolean;
   configured: boolean;
+  accountCount: number;
 };
 
 export type PlannerCalendarEvent = {

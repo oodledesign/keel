@@ -10,8 +10,19 @@ import {
 import type { NoteFileCategory, NoteListItem } from './types';
 import { NOTE_FILE_CATEGORY_OPTIONS } from './types';
 
-const NOTES_SELECT = `
+const NOTES_SELECT_BASE = `
   id, title, content, is_pinned, category, tags,
+  is_public, public_token,
+  project_id, client_id, client_org_id, property_id, task_id,
+  created_at, updated_at,
+  projects(name),
+  clients(display_name),
+  properties(name),
+  tasks(title)
+`;
+
+const NOTES_SELECT = `
+  id, title, content, is_pinned, category, tags, folder_id,
   is_public, public_token,
   project_id, client_id, client_org_id, property_id, task_id,
   created_at, updated_at,
@@ -52,6 +63,7 @@ function mapNoteRow(row: Record<string, unknown>): NoteListItem {
     isPinned: Boolean(row.is_pinned),
     category: parseCategory(row.category),
     tags: parseTags(row.tags),
+    folderId: (row.folder_id as string | null) ?? null,
     projectId: (row.project_id as string | null) ?? null,
     jobId: (row.project_id as string | null) ?? null,
     clientOrgId: (row.client_org_id as string | null) ?? null,
@@ -82,23 +94,35 @@ export async function loadAccountNotes(
 ): Promise<{ notes: NoteListItem[]; tableAvailable: boolean }> {
   const client = getSupabaseServerClient();
 
-  let query = client
-    .from('notes')
-    .select(NOTES_SELECT)
-    .eq('account_id', accountId)
-    .order('updated_at', { ascending: false });
+  const run = async (select: string) => {
+    let query = client
+      .from('notes')
+      .select(select)
+      .eq('account_id', accountId)
+      .order('updated_at', { ascending: false });
 
-  if (scope?.projectId) query = query.eq('project_id', scope.projectId);
-  if (scope?.jobId) query = query.eq('project_id', scope.jobId);
-  if (scope?.clientOrgId) {
-    query = query.or(
-      `client_org_id.eq.${scope.clientOrgId},client_id.eq.${scope.clientOrgId}`,
-    );
+    if (scope?.projectId) query = query.eq('project_id', scope.projectId);
+    if (scope?.jobId) query = query.eq('project_id', scope.jobId);
+    if (scope?.clientOrgId) {
+      query = query.or(
+        `client_org_id.eq.${scope.clientOrgId},client_id.eq.${scope.clientOrgId}`,
+      );
+    }
+    if (scope?.propertyId) query = query.eq('property_id', scope.propertyId);
+    if (scope?.taskId) query = query.eq('task_id', scope.taskId);
+
+    return query.limit(NOTES_LIST_LIMIT);
+  };
+
+  let { data, error } = await run(NOTES_SELECT);
+
+  if (
+    error &&
+    !isTableMissing(error) &&
+    (error.message ?? '').toLowerCase().includes('folder_id')
+  ) {
+    ({ data, error } = await run(NOTES_SELECT_BASE));
   }
-  if (scope?.propertyId) query = query.eq('property_id', scope.propertyId);
-  if (scope?.taskId) query = query.eq('task_id', scope.taskId);
-
-  const { data, error } = await query.limit(NOTES_LIST_LIMIT);
 
   if (error && !isTableMissing(error)) {
     throw error;

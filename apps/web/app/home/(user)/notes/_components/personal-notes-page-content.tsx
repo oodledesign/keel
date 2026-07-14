@@ -1,36 +1,38 @@
 'use client';
 
+import type { NoteFolderListItem } from '~/home/[account]/_lib/workspace-content/note-folders.loader';
 import type {
   CustomNoteCategory,
   NoteListItem,
 } from '~/home/[account]/_lib/workspace-content/types';
-import { WorkspaceNotesPage } from '~/home/[account]/_components/workspace-content/workspace-notes-page';
+import { NotesLibraryClient } from '~/home/[account]/notes/_components/notes-library-client';
 
 export function PersonalNotesPageContent({
   accountId,
   accountSlug,
   notes,
+  folders = [],
+  foldersAvailable = true,
   tableAvailable,
-  customCategories,
 }: {
   accountId: string;
   accountSlug: string;
   notes: NoteListItem[];
+  folders?: NoteFolderListItem[];
+  foldersAvailable?: boolean;
   tableAvailable: boolean;
-  customCategories: CustomNoteCategory[];
+  customCategories?: CustomNoteCategory[];
 }) {
   return (
-    <WorkspaceNotesPage
+    <NotesLibraryClient
       accountId={accountId}
       accountSlug={accountSlug}
       notes={notes}
-      docs={[]}
+      folders={folders}
       tableAvailable={tableAvailable}
-      docsTableAvailable={false}
-      variant="work"
-      linkOptions={[]}
-      hideFilters
-      customCategories={customCategories}
+      foldersAvailable={foldersAvailable}
+      canEdit
+      personalScope
     />
   );
 }

@@ -98,6 +98,7 @@ const typeLabels: Record<Property['propertyType'], string> = {
 function hasMortgageDetails(property: Property) {
   return Boolean(
     property.mortgageLender ||
+      property.mortgageReference ||
       property.mortgageBalance != null ||
       property.mortgageInterestRate != null ||
       property.mortgageMonthlyPayment != null ||
@@ -255,6 +256,13 @@ export function PropertyDetailContent({
                   icon={Landmark}
                   label="Lender"
                   value={property.mortgageLender}
+                />
+              ) : null}
+              {property.mortgageReference ? (
+                <StatPill
+                  icon={Landmark}
+                  label="Reference"
+                  value={property.mortgageReference}
                 />
               ) : null}
               {property.mortgageBalance != null ? (

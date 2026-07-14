@@ -36,13 +36,27 @@ function modeLabel(mode: AccountTaskAutomationSettings['meetingTasksMode']) {
 
 export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
   const [settings, setSettings] = useState(data.settings);
-  const [busyCalendarIds, setBusyCalendarIds] = useState<string[]>(
-    data.calendar.busyCalendarIds.length > 0
-      ? data.calendar.busyCalendarIds
-      : data.calendar.calendars.filter((calendar) => calendar.selected).map((calendar) => calendar.id),
-  );
-  const [personalCalendarIds, setPersonalCalendarIds] = useState<string[]>(
-    data.calendar.personalCalendarIds,
+  const [selections, setSelections] = useState<
+    Record<string, { busyCalendarIds: string[]; personalCalendarIds: string[] }>
+  >(() =>
+    Object.fromEntries(
+      data.calendar.accounts.map((account) => [
+        account.connectionId,
+        {
+          busyCalendarIds:
+            account.busyCalendarIds.length > 0
+              ? account.busyCalendarIds
+              : data.calendar.calendars
+                  .filter(
+                    (calendar) =>
+                      calendar.connectionId === account.connectionId &&
+                      calendar.selected,
+                  )
+                  .map((calendar) => calendar.id),
+          personalCalendarIds: account.personalCalendarIds,
+        },
+      ]),
+    ),
   );
   const [pending, startTransition] = useTransition();
 
@@ -51,31 +65,63 @@ export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
     data.accountSlug,
   );
 
-  const calendarOptions = useMemo(
-    () =>
-      data.calendar.calendars.map((calendar) => ({
-        ...calendar,
-        busy: busyCalendarIds.includes(calendar.id),
-        personal: personalCalendarIds.includes(calendar.id),
-      })),
-    [data.calendar.calendars, busyCalendarIds, personalCalendarIds],
-  );
+  const calendarsByAccount = useMemo(() => {
+    const map = new Map<string, typeof data.calendar.calendars>();
+    for (const calendar of data.calendar.calendars) {
+      const list = map.get(calendar.connectionId) ?? [];
+      list.push(calendar);
+      map.set(calendar.connectionId, list);
+    }
+    return map;
+  }, [data.calendar.calendars]);
 
-  function toggleBusyCalendar(calendarId: string, checked: boolean) {
-    setBusyCalendarIds((current) => {
-      if (checked) {
-        return current.includes(calendarId) ? current : [...current, calendarId];
-      }
-      return current.filter((id) => id !== calendarId);
+  function toggleBusyCalendar(
+    connectionId: string,
+    calendarId: string,
+    checked: boolean,
+  ) {
+    setSelections((current) => {
+      const existing = current[connectionId] ?? {
+        busyCalendarIds: [],
+        personalCalendarIds: [],
+      };
+      return {
+        ...current,
+        [connectionId]: {
+          busyCalendarIds: checked
+            ? existing.busyCalendarIds.includes(calendarId)
+              ? existing.busyCalendarIds
+              : [...existing.busyCalendarIds, calendarId]
+            : existing.busyCalendarIds.filter((id) => id !== calendarId),
+          personalCalendarIds: checked
+            ? existing.personalCalendarIds
+            : existing.personalCalendarIds.filter((id) => id !== calendarId),
+        },
+      };
     });
   }
 
-  function togglePersonalCalendar(calendarId: string, checked: boolean) {
-    setPersonalCalendarIds((current) => {
-      if (checked) {
-        return current.includes(calendarId) ? current : [...current, calendarId];
-      }
-      return current.filter((id) => id !== calendarId);
+  function togglePersonalCalendar(
+    connectionId: string,
+    calendarId: string,
+    checked: boolean,
+  ) {
+    setSelections((current) => {
+      const existing = current[connectionId] ?? {
+        busyCalendarIds: [],
+        personalCalendarIds: [],
+      };
+      return {
+        ...current,
+        [connectionId]: {
+          ...existing,
+          personalCalendarIds: checked
+            ? existing.personalCalendarIds.includes(calendarId)
+              ? existing.personalCalendarIds
+              : [...existing.personalCalendarIds, calendarId]
+            : existing.personalCalendarIds.filter((id) => id !== calendarId),
+        },
+      };
     });
   }
 
@@ -100,8 +146,13 @@ export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
         if (data.calendar.connected) {
           await saveGoogleCalendarSelectionAction({
             accountSlug: data.accountSlug,
-            busyCalendarIds,
-            personalCalendarIds,
+            selections: Object.entries(selections).map(
+              ([connectionId, selection]) => ({
+                connectionId,
+                busyCalendarIds: selection.busyCalendarIds,
+                personalCalendarIds: selection.personalCalendarIds,
+              }),
+            ),
           });
         }
 
@@ -112,15 +163,20 @@ export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
     });
   }
 
-  function disconnectCalendar() {
+  function disconnectCalendar(connectionId?: string) {
     if (!canEdit) return;
 
     startTransition(async () => {
       try {
         await disconnectGoogleCalendarFromWorkspaceAction({
           accountSlug: data.accountSlug,
+          connectionId,
         });
-        toast.success('Google Calendar disconnected');
+        toast.success(
+          connectionId
+            ? 'Google account disconnected'
+            : 'Google Calendar disconnected',
+        );
       } catch (error) {
         toast.error(
           error instanceof Error ? error.message : 'Could not disconnect Google Calendar',
@@ -282,7 +338,7 @@ export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
           <div>
             <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">Google Calendar connection</h2>
             <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-              Connect your Google account for busy-time checks, public booking slots, and
+              Connect work and personal Google accounts for busy-time checks, public booking slots, and
               auto-scheduling tasks assigned to you.
             </p>
           </div>
@@ -295,23 +351,22 @@ export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
                   : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]'
               }
             >
-              {data.calendar.connected ? 'Connected' : 'Not connected'}
+              {data.calendar.connected
+                ? `${data.calendar.accountCount} connected`
+                : 'Not connected'}
             </Badge>
-            {data.calendar.connected && canEdit ? (
+            {data.calendar.configured && canEdit ? (
               <Button
                 type="button"
-                variant="outline"
-                size="sm"
-                className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
-                disabled={pending}
-                onClick={disconnectCalendar}
+                className="ozer-gradient-btn text-[var(--ozer-white)]"
+                onClick={() => {
+                  window.location.href = data.calendar.connectHref;
+                }}
               >
-                {pending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Unplug className="mr-2 h-4 w-4" />
-                )}
-                Disconnect
+                <Calendar className="mr-2 h-4 w-4" />
+                {data.calendar.connected
+                  ? 'Add Google account'
+                  : 'Connect Google Calendar'}
               </Button>
             ) : null}
           </div>
@@ -322,56 +377,111 @@ export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
             Google Calendar OAuth is not configured on this server yet.
           </p>
         ) : !data.calendar.connected ? (
-          <Button
-            type="button"
-            className="ozer-gradient-btn text-[var(--ozer-white)]"
-            onClick={() => {
-              window.location.href = data.calendar.connectHref;
-            }}
-          >
-            <Calendar className="mr-2 h-4 w-4" />
-            Connect Google Calendar
-          </Button>
-        ) : calendarOptions.length === 0 ? (
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+            No Google accounts connected yet.
+          </p>
+        ) : data.calendar.accounts.length === 0 ? (
           <p className="text-sm text-[var(--workspace-shell-text-muted)]">No calendars returned from Google.</p>
         ) : (
-          <div className="space-y-3">
-            {calendarOptions.map((calendar) => (
-              <div
-                key={calendar.id}
-                className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4"
-              >
-                <div className="flex flex-wrap items-center gap-3">
-                  <Checkbox
-                    id={`busy-${calendar.id}`}
-                    checked={calendar.busy}
-                    disabled={!canEdit || pending}
-                    onCheckedChange={(checked) =>
-                      toggleBusyCalendar(calendar.id, checked === true)
-                    }
-                  />
-                  <Label htmlFor={`busy-${calendar.id}`} className="text-sm text-[var(--workspace-shell-text)]">
-                    {calendar.summary}
-                    {calendar.primary ? ' (primary)' : ''}
-                  </Label>
-                </div>
-                {calendar.busy ? (
-                  <div className="mt-3 ml-7 flex items-center gap-2">
-                    <Checkbox
-                      id={`personal-${calendar.id}`}
-                      checked={calendar.personal}
-                      disabled={!canEdit || pending}
-                      onCheckedChange={(checked) =>
-                        togglePersonalCalendar(calendar.id, checked === true)
-                      }
-                    />
-                    <Label htmlFor={`personal-${calendar.id}`} className="text-xs text-[var(--workspace-shell-text-muted)]">
-                      Treat as personal calendar
-                    </Label>
+          <div className="space-y-4">
+            {data.calendar.accounts.map((account) => {
+              const selection = selections[account.connectionId] ?? {
+                busyCalendarIds: [],
+                personalCalendarIds: [],
+              };
+              const calendars =
+                calendarsByAccount.get(account.connectionId) ?? [];
+
+              return (
+                <div
+                  key={account.connectionId}
+                  className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4"
+                >
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                      {account.email ?? 'Google account'}
+                      {account.isPrimary ? ' · primary' : ''}
+                    </p>
+                    {canEdit ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel)]"
+                        disabled={pending}
+                        onClick={() => disconnectCalendar(account.connectionId)}
+                      >
+                        {pending ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Unplug className="mr-2 h-4 w-4" />
+                        )}
+                        Disconnect
+                      </Button>
+                    ) : null}
                   </div>
-                ) : null}
-              </div>
-            ))}
+                  <div className="space-y-3">
+                    {calendars.map((calendar) => {
+                      const key = `${account.connectionId}:${calendar.id}`;
+                      const busy = selection.busyCalendarIds.includes(calendar.id);
+                      const personal = selection.personalCalendarIds.includes(
+                        calendar.id,
+                      );
+                      return (
+                        <div
+                          key={key}
+                          className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4"
+                        >
+                          <div className="flex flex-wrap items-center gap-3">
+                            <Checkbox
+                              id={`busy-${key}`}
+                              checked={busy}
+                              disabled={!canEdit || pending}
+                              onCheckedChange={(checked) =>
+                                toggleBusyCalendar(
+                                  account.connectionId,
+                                  calendar.id,
+                                  checked === true,
+                                )
+                              }
+                            />
+                            <Label
+                              htmlFor={`busy-${key}`}
+                              className="text-sm text-[var(--workspace-shell-text)]"
+                            >
+                              {calendar.summary}
+                              {calendar.primary ? ' (primary)' : ''}
+                            </Label>
+                          </div>
+                          {busy ? (
+                            <div className="mt-3 ml-7 flex items-center gap-2">
+                              <Checkbox
+                                id={`personal-${key}`}
+                                checked={personal}
+                                disabled={!canEdit || pending}
+                                onCheckedChange={(checked) =>
+                                  togglePersonalCalendar(
+                                    account.connectionId,
+                                    calendar.id,
+                                    checked === true,
+                                  )
+                                }
+                              />
+                              <Label
+                                htmlFor={`personal-${key}`}
+                                className="text-xs text-[var(--workspace-shell-text-muted)]"
+                              >
+                                Treat as personal calendar
+                              </Label>
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </section>

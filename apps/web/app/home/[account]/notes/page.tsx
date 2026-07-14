@@ -28,7 +28,7 @@ interface NotesPageProps {
 }
 
 export const generateMetadata = async () => ({
-  title: 'Notes and files',
+  title: 'Notes',
 });
 
 async function NotesPage({ params }: NotesPageProps) {
@@ -67,15 +67,15 @@ async function NotesPage({ params }: NotesPageProps) {
     <>
       <TeamAccountLayoutPageHeader
         account={data.accountSlug}
-        title="Notes and files"
+        title="Notes"
         description={
           spaceType === 'family'
-            ? 'Shared notes and files for your family.'
+            ? 'Shared notes for your family.'
             : spaceType === 'community'
-              ? 'Shared notes and files for your homegroup.'
+              ? 'Shared notes for your homegroup.'
               : spaceType === 'property'
-                ? 'Notes and files linked to your properties.'
-                : 'Text notes and uploaded files linked to projects and clients.'
+                ? 'Notes linked to your properties.'
+                : 'Write and organise notes with folders and full formatting.'
         }
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-[var(--workspace-shell-text)] lg:px-8">
@@ -84,12 +84,9 @@ async function NotesPage({ params }: NotesPageProps) {
             accountId={data.accountId}
             accountSlug={data.accountSlug}
             notes={data.notes}
-            docs={data.docs}
+            folders={data.folders}
+            foldersAvailable={data.foldersAvailable}
             tableAvailable={data.tableAvailable}
-            docsTableAvailable={data.docsTableAvailable}
-            variant={data.variant}
-            linkOptions={data.linkOptions}
-            customCategories={data.customCategories}
           />
         </Suspense>
       </PageBody>

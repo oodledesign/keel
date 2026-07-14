@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
-import { Copy, Download, Link2, Loader2, Send } from 'lucide-react';
+import { ArrowLeft, Copy, Download, Link2, Loader2, Send } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -37,6 +37,7 @@ export function InvoiceSendPanel({
   initialSubject,
   initialBody,
   initialSignature,
+  pdfQuery,
   onSent,
   onClose,
 }: {
@@ -48,15 +49,25 @@ export function InvoiceSendPanel({
   initialSubject?: string | null;
   initialBody?: string | null;
   initialSignature?: string | null;
+  pdfQuery?: string;
   onSent: () => void;
   onClose: () => void;
 }) {
   const [email, setEmail] = useState(defaultEmail);
-  const [subject, setSubject] = useState(initialSubject ?? DEFAULT_INVOICE_EMAIL_SUBJECT);
+  const [subject, setSubject] = useState(
+    initialSubject ?? DEFAULT_INVOICE_EMAIL_SUBJECT,
+  );
   const [body, setBody] = useState(initialBody ?? DEFAULT_INVOICE_EMAIL_BODY);
-  const [signature, setSignature] = useState(initialSignature ?? DEFAULT_INVOICE_EMAIL_SIGNATURE);
+  const [signature, setSignature] = useState(
+    initialSignature ?? DEFAULT_INVOICE_EMAIL_SIGNATURE,
+  );
   const [portalUrl, setPortalUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState<'send' | 'test' | 'link' | null>(null);
+
+  const pdfHref = useMemo(() => {
+    const base = `/api/invoices/pdf?invoiceId=${encodeURIComponent(invoiceId)}`;
+    return pdfQuery ? `${base}&${pdfQuery}` : base;
+  }, [invoiceId, pdfQuery]);
 
   const loadPortalLink = async () => {
     if (portalUrl) return portalUrl;
@@ -100,17 +111,35 @@ export function InvoiceSendPanel({
     }
   };
 
-  const insertField = (field: string, target: 'body' | 'subject' | 'signature') => {
-    const setter = target === 'body' ? setBody : target === 'subject' ? setSubject : setSignature;
-    setter((prev) => `${prev}${prev.endsWith(' ') || prev.length === 0 ? '' : ' '}${field}`);
+  const insertField = (
+    field: string,
+    target: 'body' | 'subject' | 'signature',
+  ) => {
+    const setter =
+      target === 'body'
+        ? setBody
+        : target === 'subject'
+          ? setSubject
+          : setSignature;
+    setter((prev) =>
+      `${prev}${prev.endsWith(' ') || prev.length === 0 ? '' : ' '}${field}`,
+    );
   };
 
   return (
     <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">Send invoice {invoiceNumber}</h2>
-        <Button variant="ghost" size="sm" onClick={onClose}>
-          Close
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
+          Send invoice {invoiceNumber}
+        </h2>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onClose}
+          className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+        >
+          <ArrowLeft className="mr-1.5 h-4 w-4" />
+          Back to edit invoice
         </Button>
       </div>
 
@@ -124,23 +153,44 @@ export function InvoiceSendPanel({
         <TabsContent value="email" className="mt-4 space-y-4">
           <div>
             <Label>To</Label>
-            <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="client@example.com" />
+            <Input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="client@example.com"
+            />
           </div>
           <div>
             <Label>Subject</Label>
-            <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
+            <Input
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+            />
           </div>
           <div>
             <Label>Body</Label>
-            <Textarea rows={6} value={body} onChange={(e) => setBody(e.target.value)} />
+            <Textarea
+              rows={6}
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+            />
           </div>
           <div>
             <Label>Signature</Label>
-            <Textarea rows={3} value={signature} onChange={(e) => setSignature(e.target.value)} />
+            <Textarea
+              rows={3}
+              value={signature}
+              onChange={(e) => setSignature(e.target.value)}
+            />
           </div>
           <div className="flex flex-wrap gap-2">
             {SMART_FIELDS.map((field) => (
-              <Button key={field} type="button" size="sm" variant="outline" onClick={() => insertField(field, 'body')}>
+              <Button
+                key={field}
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => insertField(field, 'body')}
+              >
                 {field}
               </Button>
             ))}
@@ -157,10 +207,18 @@ export function InvoiceSendPanel({
               disabled={loading != null}
               onClick={() => void handleSend(false)}
             >
-              {loading === 'send' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+              {loading === 'send' ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="mr-2 h-4 w-4" />
+              )}
               Send invoice
             </Button>
-            <Button variant="outline" disabled={loading != null} onClick={() => void handleSend(true)}>
+            <Button
+              variant="outline"
+              disabled={loading != null}
+              onClick={() => void handleSend(true)}
+            >
               Send yourself a test
             </Button>
           </div>
@@ -174,20 +232,44 @@ export function InvoiceSendPanel({
             variant="outline"
             disabled={loading === 'link'}
             onClick={async () => {
-              const url = await loadPortalLink();
-              await navigator.clipboard.writeText(url);
-              toast.success('Link copied');
+              try {
+                const url = await loadPortalLink();
+                await navigator.clipboard.writeText(url);
+                toast.success('Link copied');
+              } catch (error) {
+                toast.error(getErrorMessage(error));
+              }
             }}
           >
             <Link2 className="mr-2 h-4 w-4" />
             Copy shareable link
           </Button>
-          {portalUrl ? <Input readOnly value={portalUrl} /> : null}
+          {portalUrl ? (
+            <div className="space-y-2">
+              <Input readOnly value={portalUrl} />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(portalUrl);
+                  toast.success('Link copied');
+                }}
+              >
+                <Copy className="mr-2 h-4 w-4" />
+                Copy again
+              </Button>
+            </div>
+          ) : null}
         </TabsContent>
 
-        <TabsContent value="pdf" className="mt-4">
+        <TabsContent value="pdf" className="mt-4 space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Draft PDFs include the due date, reference, and payment link when
+            those fields are enabled in invoice settings.
+          </p>
           <Button asChild variant="outline">
-            <a href={`/api/invoices/pdf?invoiceId=${invoiceId}`} download>
+            <a href={pdfHref} download>
               <Download className="mr-2 h-4 w-4" />
               Download PDF
             </a>

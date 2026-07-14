@@ -21,6 +21,7 @@ const GetPropertySchema = z.object({
 
 const MortgageFieldsSchema = z.object({
   mortgageLender: z.string().optional().nullable(),
+  mortgageReference: z.string().optional().nullable(),
   mortgageBalance: z.number().int().min(0).optional().nullable(),
   mortgageInterestRate: z.number().min(0).max(100).optional().nullable(),
   mortgageMonthlyPayment: z.number().int().min(0).optional().nullable(),

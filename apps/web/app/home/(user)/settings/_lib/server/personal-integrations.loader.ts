@@ -14,6 +14,8 @@ export type PersonalIntegrationsData = {
     configured: boolean;
     connected: boolean;
     connectedAt: string | null;
+    accountCount: number;
+    emails: string[];
   };
   gmail: {
     configured: boolean;
@@ -33,9 +35,10 @@ export const loadPersonalIntegrationsData = cache(
       await Promise.all([
         client
           .from('google_calendar_connections')
-          .select('user_id, connected_at')
+          .select('user_id, connected_at, google_account_email')
           .eq('user_id', user.id)
-          .maybeSingle(),
+          .order('is_primary', { ascending: false })
+          .limit(5),
         client
           .from('google_connections')
           .select('google_email, connected_at')
@@ -44,9 +47,10 @@ export const loadPersonalIntegrationsData = cache(
         canUseEmailAssistant(client, user.id),
       ]);
 
-    const calendarRow = calendarConnection.data as
-      | { connected_at?: string | null }
-      | null;
+    const calendarRows = (calendarConnection.data ?? []) as Array<{
+      connected_at?: string | null;
+      google_account_email?: string | null;
+    }>;
 
     const gmailRow = gmailConnection.data as
       | { google_email?: string | null; connected_at?: string | null }
@@ -55,8 +59,12 @@ export const loadPersonalIntegrationsData = cache(
     return {
       calendar: {
         configured: Boolean(getOptionalGoogleCalendarEnv()),
-        connected: Boolean(calendarRow),
-        connectedAt: calendarRow?.connected_at ?? null,
+        connected: calendarRows.length > 0,
+        connectedAt: calendarRows[0]?.connected_at ?? null,
+        accountCount: calendarRows.length,
+        emails: calendarRows
+          .map((row) => row.google_account_email?.trim())
+          .filter((email): email is string => Boolean(email)),
       },
       gmail: {
         configured: Boolean(getOptionalGoogleAuthEnv()),

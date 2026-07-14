@@ -48,24 +48,11 @@ async function loadClientsPageDataImpl(accountSlug: string) {
       const client = getSupabaseServerClient();
       const service = createClientsService(client);
 
-      const { data: membersData } = await client.rpc('get_account_members', {
-        account_slug: account.slug ?? accountSlug,
-      });
-      const members = ((membersData ?? []) as Array<{
-        user_id: string;
-        name: string | null;
-        picture_url?: string | null;
-      }>).map((row) => ({
-        user_id: row.user_id,
-        name: row.name,
-        picture_url: row.picture_url,
-      }));
-
       const result = await service.listClientsOverview({
         accountId: account.id,
+        accountSlug: account.slug ?? accountSlug,
         page: 1,
         pageSize: 20,
-        members,
       });
       initialOverview = result.data;
       initialTotal = result.total ?? 0;

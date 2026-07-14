@@ -9,7 +9,28 @@ import type {
   RanklyClientImportOption,
   RanklyProjectRow,
 } from '../../_lib/server/rankly-account-data';
+import type { ClientDetailOverviewSeed } from '../_lib/client-detail.types';
 import { ClientDetailSidebar } from './client-detail-sidebar';
+
+type ClientSeed = {
+  id: string;
+  account_id: string;
+  client_type?: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  display_name: string | null;
+  company_name: string | null;
+  email: string | null;
+  phone: string | null;
+  address_line_1: string | null;
+  address_line_2: string | null;
+  city: string | null;
+  postcode: string | null;
+  country: string | null;
+  picture_url: string | null;
+  created_at: string;
+  updated_at: string;
+};
 
 type Props = {
   accountSlug: string;
@@ -30,6 +51,8 @@ type Props = {
   ranklyProject?: RanklyProjectRow | null;
   ranklyImportSeed?: RanklyClientImportOption | null;
   ranklyClientImportOptions?: RanklyClientImportOption[];
+  initialClient?: ClientSeed | null;
+  overviewSeed?: ClientDetailOverviewSeed;
 };
 
 export function ClientDetailPageContent({
@@ -51,6 +74,8 @@ export function ClientDetailPageContent({
   ranklyProject = null,
   ranklyImportSeed = null,
   ranklyClientImportOptions = [],
+  initialClient = null,
+  overviewSeed,
 }: Props) {
   const router = useRouter();
 
@@ -79,6 +104,8 @@ export function ClientDetailPageContent({
       ranklyProject={ranklyProject}
       ranklyImportSeed={ranklyImportSeed}
       ranklyClientImportOptions={ranklyClientImportOptions}
+      initialClient={initialClient}
+      overviewSeed={overviewSeed}
     />
   );
 }

@@ -36,6 +36,7 @@ const SaveNoteSchema = z.object({
     .optional(),
   personalScope: z.boolean().optional(),
   tags: z.array(z.string()).optional(),
+  folderId: z.string().uuid().nullable().optional(),
   link: LinkSchema,
 });
 
@@ -82,6 +83,7 @@ export const saveWorkspaceNoteAction = enhanceAction(
       category: data.category ?? 'idea',
       tags,
       user_id: user.id,
+      ...(data.folderId !== undefined ? { folder_id: data.folderId } : {}),
       ...linkCols,
     };
 
@@ -159,6 +161,42 @@ export const deleteWorkspaceNoteAction = enhanceAction(
       personalScope: z.boolean().optional(),
     }),
   },
+);
+
+const CreateBlankNoteSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1),
+  folderId: z.string().uuid().nullable().optional(),
+  personalScope: z.boolean().optional(),
+});
+
+/** Create an empty note and return its id for navigating to the full editor. */
+export const createBlankWorkspaceNoteAction = enhanceAction(
+  async (data, user) => {
+    const client = getSupabaseServerClient();
+    const { data: inserted, error } = await client
+      .from('notes')
+      .insert({
+        account_id: data.accountId,
+        title: '',
+        content: '',
+        is_pinned: false,
+        category: 'idea',
+        tags: [],
+        folder_id: data.folderId ?? null,
+        user_id: user.id,
+        created_by: user.id,
+      })
+      .select('id')
+      .single();
+
+    if (error) throw error;
+    const noteId = inserted.id as string;
+    queueBrainIndexSource(data.accountId, 'note', noteId);
+    revalidateNotesPaths(data.accountSlug, noteId, data.personalScope);
+    return { noteId };
+  },
+  { schema: CreateBlankNoteSchema },
 );
 
 function revalidateNotesPaths(

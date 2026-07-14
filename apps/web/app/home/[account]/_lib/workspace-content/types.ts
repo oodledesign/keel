@@ -53,6 +53,7 @@ export type NoteListItem = {
   isPinned: boolean;
   category: NoteFileCategory;
   tags: string[];
+  folderId: string | null;
   projectId: string | null;
   jobId: string | null;
   clientOrgId: string | null;

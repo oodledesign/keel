@@ -5,11 +5,12 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import pathsConfig from '~/config/paths.config';
 import {
   exchangeGoogleCalendarCode,
+  fetchGoogleAccountIdentity,
   stateReturnPath,
   verifyGoogleCalendarState,
 } from '~/lib/integrations/google-calendar/oauth';
 import {
-  loadGoogleCalendarConnection,
+  loadGoogleCalendarConnections,
   saveGoogleCalendarConnection,
 } from '~/lib/integrations/google-calendar/connection';
 
@@ -59,12 +60,19 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const existing = await loadGoogleCalendarConnection(client, user.id);
     const tokens = await exchangeGoogleCalendarCode(code);
+    const identity = await fetchGoogleAccountIdentity(tokens.access_token);
+    const existing = await loadGoogleCalendarConnections(client, user.id);
+    const matching = existing.find(
+      (row) => row.googleAccountSub === identity.sub,
+    );
+
     await saveGoogleCalendarConnection(client, {
       userId: user.id,
       tokens,
-      existingRefreshToken: existing?.refreshToken ?? null,
+      googleAccountEmail: identity.email,
+      googleAccountSub: identity.sub,
+      existingRefreshToken: matching?.refreshToken ?? null,
     });
   } catch (err) {
     const message =

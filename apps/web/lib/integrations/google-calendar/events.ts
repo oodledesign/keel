@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import {
-  loadGoogleCalendarConnection,
+  loadGoogleCalendarConnections,
   updateGoogleCalendarAccessToken,
   updatePlannerCalendarId,
 } from './connection';
@@ -78,8 +78,13 @@ function isExpiringSoon(iso: string | null) {
 async function validConnection(
   client: SupabaseClient,
   userId: string,
+  connectionId?: string,
 ): Promise<GoogleCalendarConnection | null> {
-  const connection = await loadGoogleCalendarConnection(client, userId);
+  const connections = await loadGoogleCalendarConnections(client, userId);
+  const connection = connectionId
+    ? (connections.find((row) => row.id === connectionId) ?? null)
+    : (connections.find((row) => row.isPrimary) ?? connections[0] ?? null);
+
   if (!connection) return null;
 
   if (!isExpiringSoon(connection.tokenExpiresAt)) {
@@ -93,11 +98,31 @@ async function validConnection(
   const tokens = await refreshGoogleCalendarToken(connection.refreshToken);
   await updateGoogleCalendarAccessToken(client, {
     userId,
+    connectionId: connection.id,
     tokens,
     refreshToken: connection.refreshToken,
   });
 
-  return loadGoogleCalendarConnection(client, userId);
+  return (
+    (await loadGoogleCalendarConnections(client, userId)).find(
+      (row) => row.id === connection.id,
+    ) ?? null
+  );
+}
+
+async function validConnections(
+  client: SupabaseClient,
+  userId: string,
+): Promise<GoogleCalendarConnection[]> {
+  const connections = await loadGoogleCalendarConnections(client, userId);
+  const refreshed: GoogleCalendarConnection[] = [];
+
+  for (const connection of connections) {
+    const next = await validConnection(client, userId, connection.id);
+    if (next) refreshed.push(next);
+  }
+
+  return refreshed;
 }
 
 async function googleJson<T>(
@@ -661,30 +686,70 @@ export async function listUserGoogleCalendars(
   client: SupabaseClient,
   userId: string,
 ) {
-  const connection = await validConnection(client, userId);
-  if (!connection) {
-    return { connected: false as const, calendars: [] };
+  const connections = await validConnections(client, userId);
+  if (connections.length === 0) {
+    return {
+      connected: false as const,
+      calendars: [],
+      accounts: [] as Array<{
+        connectionId: string;
+        email: string | null;
+        isPrimary: boolean;
+        busyCalendarIds: string[];
+        personalCalendarIds: string[];
+      }>,
+    };
   }
 
-  const body = await googleJson<{ items?: GoogleCalendarListEntry[] }>(
-    connection,
-    '/users/me/calendarList',
-  );
+  const perAccount = await Promise.all(
+    connections.map(async (connection) => {
+      try {
+        const body = await googleJson<{ items?: GoogleCalendarListEntry[] }>(
+          connection,
+          '/users/me/calendarList',
+        );
 
-  const calendars = (body.items ?? [])
-    .filter((calendar) => calendar.id)
-    .map((calendar) => ({
-      id: calendar.id,
-      summary: calendar.summary?.trim() || calendar.id,
-      primary: Boolean(calendar.primary),
-      selected: calendar.selected !== false || Boolean(calendar.primary),
-    }));
+        const calendars = (body.items ?? [])
+          .filter((calendar) => calendar.id)
+          .map((calendar) => ({
+            id: calendar.id,
+            summary: calendar.summary?.trim() || calendar.id,
+            primary: Boolean(calendar.primary),
+            selected: calendar.selected !== false || Boolean(calendar.primary),
+            connectionId: connection.id,
+            accountEmail: connection.googleAccountEmail,
+          }));
+
+        return {
+          connectionId: connection.id,
+          email: connection.googleAccountEmail,
+          isPrimary: connection.isPrimary,
+          busyCalendarIds: connection.busyCalendarIds,
+          personalCalendarIds: connection.personalCalendarIds,
+          calendars,
+        };
+      } catch {
+        return {
+          connectionId: connection.id,
+          email: connection.googleAccountEmail,
+          isPrimary: connection.isPrimary,
+          busyCalendarIds: connection.busyCalendarIds,
+          personalCalendarIds: connection.personalCalendarIds,
+          calendars: [],
+        };
+      }
+    }),
+  );
 
   return {
     connected: true as const,
-    calendars,
-    busyCalendarIds: connection.busyCalendarIds,
-    personalCalendarIds: connection.personalCalendarIds,
+    calendars: perAccount.flatMap((account) => account.calendars),
+    accounts: perAccount.map(
+      ({ calendars: _calendars, ...account }) => account,
+    ),
+    // Backward-compatible aggregates for single-account UIs
+    busyCalendarIds: connections.flatMap((row) => row.busyCalendarIds),
+    personalCalendarIds: connections.flatMap((row) => row.personalCalendarIds),
   };
 }
 
@@ -711,26 +776,9 @@ export async function listBusyIntervalsForScheduling(
     excludePersonalCalendarBusy: boolean;
   },
 ): Promise<Array<{ start: string; end: string }>> {
-  const connection = await validConnection(client, input.userId);
-  if (!connection) {
+  const connections = await validConnections(client, input.userId);
+  if (connections.length === 0) {
     return [];
-  }
-
-  const calendarList = await googleJson<{ items?: GoogleCalendarListEntry[] }>(
-    connection,
-    '/users/me/calendarList',
-  );
-
-  const available = calendarList.items ?? [];
-  let calendarIds = resolveBusyCalendarIds(connection, available);
-
-  if (input.excludePersonalCalendarBusy && connection.personalCalendarIds.length > 0) {
-    const personal = new Set(connection.personalCalendarIds);
-    calendarIds = calendarIds.filter((id) => !personal.has(id));
-  }
-
-  if (calendarIds.length === 0) {
-    calendarIds = [connection.calendarId];
   }
 
   const params = new URLSearchParams({
@@ -742,17 +790,46 @@ export async function listBusyIntervalsForScheduling(
   });
 
   const batches = await Promise.all(
-    calendarIds.slice(0, MAX_RECORDER_CALENDARS).map(async (calendarId) => {
+    connections.map(async (connection) => {
       try {
-        const body = await googleJson<{ items?: GoogleEvent[] }>(
-          connection,
-          `/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
+        const calendarList = await googleJson<{
+          items?: GoogleCalendarListEntry[];
+        }>(connection, '/users/me/calendarList');
+
+        const available = calendarList.items ?? [];
+        let calendarIds = resolveBusyCalendarIds(connection, available);
+
+        if (
+          input.excludePersonalCalendarBusy &&
+          connection.personalCalendarIds.length > 0
+        ) {
+          const personal = new Set(connection.personalCalendarIds);
+          calendarIds = calendarIds.filter((id) => !personal.has(id));
+        }
+
+        if (calendarIds.length === 0) {
+          calendarIds = [connection.calendarId];
+        }
+
+        const perCalendar = await Promise.all(
+          calendarIds.slice(0, MAX_RECORDER_CALENDARS).map(async (calendarId) => {
+            try {
+              const body = await googleJson<{ items?: GoogleEvent[] }>(
+                connection,
+                `/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
+              );
+
+              return (body.items ?? [])
+                .map((item) => mapGoogleEvent(item, calendarId))
+                .filter((event): event is PlannerCalendarEvent => Boolean(event))
+                .map((event) => ({ start: event.start, end: event.end }));
+            } catch {
+              return [];
+            }
+          }),
         );
 
-        return (body.items ?? [])
-          .map((item) => mapGoogleEvent(item, calendarId))
-          .filter((event): event is PlannerCalendarEvent => Boolean(event))
-          .map((event) => ({ start: event.start, end: event.end }));
+        return perCalendar.flat();
       } catch {
         return [];
       }

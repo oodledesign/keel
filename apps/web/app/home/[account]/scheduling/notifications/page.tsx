@@ -1,6 +1,7 @@
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 
 import { NotificationsForm } from '../_components/notifications-form';
 import { loadSchedulingAccess } from '../_lib/server/scheduling-page.loader';
@@ -19,8 +20,15 @@ async function NotificationsPage({ params }: Props) {
   const { accountId, accountSlug, canEditScheduling } =
     await loadSchedulingAccess(accountSlugParam);
 
-  const service = createSchedulingService(getSupabaseServerClient());
-  const settings = await service.getNotificationSettings(accountId);
+  const client = getSupabaseServerClient();
+  const service = createSchedulingService(client);
+  const [settings, brand, accountResult] = await Promise.all([
+    service.getNotificationSettings(accountId),
+    loadAccountBrandResolved(accountId),
+    client.from('accounts').select('name').eq('id', accountId).maybeSingle(),
+  ]);
+
+  const workspaceName = accountResult.data?.name?.trim() || accountSlug;
 
   return (
     <NotificationsForm
@@ -28,6 +36,12 @@ async function NotificationsPage({ params }: Props) {
       accountSlug={accountSlug}
       canEdit={canEditScheduling}
       settings={settings}
+      brand={{
+        primaryColor: brand.primary_color,
+        accentColor: brand.accent_color,
+        logoUrl: brand.logo_url,
+        workspaceName,
+      }}
     />
   );
 }

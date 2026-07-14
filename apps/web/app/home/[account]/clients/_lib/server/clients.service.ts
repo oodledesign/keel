@@ -175,14 +175,20 @@ class ClientsService {
 
   async listClients(params: ListClientsInput) {
     const readDb = await this.dbForClientReads(params.accountId);
+    return this.listClientsWithDb(readDb, params);
+  }
 
+  private async listClientsWithDb(readDb: any, params: ListClientsInput) {
     const { page = 1, pageSize = 20, search } = params;
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
     let query = readDb
       .from('clients')
-      .select('*', { count: 'exact' })
+      .select(
+        'id, display_name, company_name, email, phone, city, picture_url, created_at, updated_at, first_name, last_name, client_type',
+        { count: 'exact' },
+      )
       .eq('account_id', params.accountId)
       .order('created_at', { ascending: false })
       .range(from, to);
@@ -207,11 +213,47 @@ class ClientsService {
         name: string | null;
         picture_url?: string | null;
       }>;
+      accountSlug?: string;
     },
   ) {
-    const { members = [], ...listParams } = params;
-    const { data, total } = await this.listClients(listParams);
+    const { members: providedMembers, accountSlug, ...listParams } = params;
     const readDb = await this.dbForClientReads(params.accountId);
+
+    const membersPromise = (async () => {
+      if (providedMembers && providedMembers.length > 0) {
+        return providedMembers;
+      }
+
+      if (!accountSlug) {
+        return providedMembers ?? [];
+      }
+
+      try {
+        const { data } = await this.client.rpc('get_account_members', {
+          account_slug: accountSlug,
+        });
+        return ((data ?? []) as Array<{
+          user_id: string;
+          name: string | null;
+          picture_url?: string | null;
+        }>).map((row) => ({
+          user_id: row.user_id,
+          name: row.name,
+          picture_url: row.picture_url,
+        }));
+      } catch {
+        return [] as Array<{
+          user_id: string;
+          name: string | null;
+          picture_url?: string | null;
+        }>;
+      }
+    })();
+
+    const [{ data, total }, members] = await Promise.all([
+      this.listClientsWithDb(readDb, listParams),
+      membersPromise,
+    ]);
 
     const overview = await buildClientsOverview({
       db: readDb,
@@ -241,7 +283,7 @@ class ClientsService {
       .select('*')
       .eq('id', params.clientId)
       .eq('account_id', params.accountId)
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     return data;

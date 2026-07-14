@@ -1,7 +1,7 @@
 import 'server-only';
 
 import type { BusyInterval } from '../types';
-import { getGoogleClientForWorkspace } from './client';
+import { getGoogleClientsForWorkspace } from './client';
 
 const GOOGLE_CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
 
@@ -48,36 +48,22 @@ async function listCalendarIds(
   return ids.length > 0 ? ids : [fallbackCalendarId];
 }
 
-/**
- * Google Calendar free/busy across the host's connected calendars.
- */
-export async function getBusyIntervals(
-  workspaceId: string,
-  from: Date,
-  to: Date,
-  options?: { hostUserId?: string },
-): Promise<BusyInterval[]> {
-  if (!(to.getTime() > from.getTime())) {
-    return [];
-  }
-
-  const client = await getGoogleClientForWorkspace(workspaceId, options);
-  const calendarIds = await listCalendarIds(
-    client.accessToken,
-    client.busyCalendarIds,
-    client.calendarId,
-  );
-
+async function freeBusyForClient(input: {
+  accessToken: string;
+  calendarIds: string[];
+  from: Date;
+  to: Date;
+}): Promise<BusyInterval[]> {
   const res = await fetch(`${GOOGLE_CALENDAR_API}/freeBusy`, {
     method: 'POST',
     headers: {
-      authorization: `Bearer ${client.accessToken}`,
+      authorization: `Bearer ${input.accessToken}`,
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      timeMin: from.toISOString(),
-      timeMax: to.toISOString(),
-      items: calendarIds.map((id) => ({ id })),
+      timeMin: input.from.toISOString(),
+      timeMax: input.to.toISOString(),
+      items: input.calendarIds.map((id) => ({ id })),
     }),
     signal: AbortSignal.timeout(20_000),
   });
@@ -102,5 +88,47 @@ export async function getBusyIntervals(
     }
   }
 
-  return intervals.sort((a, b) => a.start.getTime() - b.start.getTime());
+  return intervals;
+}
+
+/**
+ * Google Calendar free/busy across every Google account the host has connected
+ * (work + personal, etc.).
+ */
+export async function getBusyIntervals(
+  workspaceId: string,
+  from: Date,
+  to: Date,
+  options?: { hostUserId?: string },
+): Promise<BusyInterval[]> {
+  if (!(to.getTime() > from.getTime())) {
+    return [];
+  }
+
+  const clients = await getGoogleClientsForWorkspace(workspaceId, options);
+
+  const batches = await Promise.all(
+    clients.map(async (client) => {
+      try {
+        const calendarIds = await listCalendarIds(
+          client.accessToken,
+          client.busyCalendarIds,
+          client.calendarId,
+        );
+        return await freeBusyForClient({
+          accessToken: client.accessToken,
+          calendarIds,
+          from,
+          to,
+        });
+      } catch {
+        // One broken secondary account shouldn't wipe availability entirely.
+        return [];
+      }
+    }),
+  );
+
+  return batches
+    .flat()
+    .sort((a, b) => a.start.getTime() - b.start.getTime());
 }

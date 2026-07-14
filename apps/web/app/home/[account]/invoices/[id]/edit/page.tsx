@@ -2,6 +2,9 @@ import { notFound } from 'next/navigation';
 
 import { AppBreadcrumbs } from '@kit/ui/app-breadcrumbs';
 import { PageBody } from '@kit/ui/page';
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
+
+import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 
 import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
 import { isWorkModuleEnabled } from '../../../_lib/server/account-modules';
@@ -46,6 +49,15 @@ async function InvoiceEditPage({ params }: InvoiceEditPageProps) {
   }
   if (!invoice) notFound();
 
+  const [brand, accountResult] = await Promise.all([
+    loadAccountBrandResolved(accountId).catch(() => null),
+    getSupabaseServerClient()
+      .from('accounts')
+      .select('name')
+      .eq('id', accountId)
+      .maybeSingle(),
+  ]);
+
   return (
     <>
       <TeamAccountLayoutPageHeader
@@ -61,6 +73,11 @@ async function InvoiceEditPage({ params }: InvoiceEditPageProps) {
           invoice={invoice as Record<string, unknown>}
           canEditInvoices={canEditInvoices}
           canManageInvoiceStatus={canManageInvoiceStatus}
+          brandLogoUrl={brand?.logo_url ?? null}
+          brandName={
+            (accountResult.data?.name as string | null | undefined)?.trim() ||
+            null
+          }
         />
       </PageBody>
     </>

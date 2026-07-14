@@ -91,6 +91,9 @@ export function AnalyticsDateRangePicker({
     from: parseIsoDate(fromIso),
     to: parseIsoDate(toIso),
   }));
+  const [displayMonth, setDisplayMonth] = useState<Date>(() =>
+    parseIsoDate(fromIso),
+  );
 
   const appliedLabel = useMemo(
     () => formatDateRangeLabel(selectionFromIso(fromIso, toIso)),
@@ -108,27 +111,36 @@ export function AnalyticsDateRangePicker({
     return `${fmt.format(draftResolved.from)} – ${fmt.format(draftResolved.to)}`;
   }, [draftResolved.from, draftResolved.to]);
 
+  // Keep calendar highlight + month preview in sync with the left-side preset.
+  useEffect(() => {
+    setCalendarRange({
+      from: draftResolved.from,
+      to: draftResolved.to,
+    });
+    setDisplayMonth(draftResolved.from);
+  }, [draftResolved.fromIso, draftResolved.toIso]);
+
   const openPicker = () => {
     const sel = selectionFromIso(fromIso, toIso);
+    const from = parseIsoDate(fromIso);
+    const to = parseIsoDate(toIso);
     setDraft(sel);
-    setCalendarRange({
-      from: parseIsoDate(fromIso),
-      to: parseIsoDate(toIso),
-    });
+    setCalendarRange({ from, to });
+    setDisplayMonth(from);
     setView('main');
     setOpen(true);
   };
 
   const apply = () => {
-    let next = draft;
-    if (draft.preset === 'custom' && calendarRange.from) {
-      next = {
-        ...draft,
-        preset: 'custom',
-        customFrom: calendarRange.from,
-        customTo: calendarRange.to ?? calendarRange.from,
-      };
-    }
+    const next =
+      draft.preset === 'custom' && calendarRange.from
+        ? {
+            ...draft,
+            preset: 'custom' as const,
+            customFrom: calendarRange.from,
+            customTo: calendarRange.to ?? calendarRange.from,
+          }
+        : draft;
     const resolved = resolveAnalyticsDateRange(next);
     setIsApplying(true);
     onApply(resolved.fromIso, resolved.toIso, next);
@@ -160,8 +172,6 @@ export function AnalyticsDateRangePicker({
     setDraft({ preset: 'period_to_date', periodSubPreset: id });
     setView('main');
   };
-
-  const showLastControls = draft.preset === 'last' && !draft.lastSubPreset;
 
   return (
     <Popover
@@ -263,6 +273,21 @@ export function AnalyticsDateRangePicker({
                     {p.label}
                   </SidebarItem>
                 ))}
+                <SidebarItem
+                  active={draft.preset === 'last' && !draft.lastSubPreset}
+                  onClick={() => {
+                    setDraft({
+                      preset: 'last',
+                      lastSubPreset: undefined,
+                      lastCount: draft.lastCount ?? 30,
+                      lastUnit: draft.lastUnit ?? 'days',
+                      includeToday: draft.includeToday ?? true,
+                    });
+                    setView('main');
+                  }}
+                >
+                  Custom…
+                </SidebarItem>
               </div>
             ) : null}
 
@@ -282,7 +307,7 @@ export function AnalyticsDateRangePicker({
           </aside>
 
           <div className="flex min-w-0 flex-1 flex-col">
-            {(showLastControls || draft.preset === 'last') && draft.preset === 'last' ? (
+            {draft.preset === 'last' && !draft.lastSubPreset ? (
               <div className="flex flex-wrap items-center gap-2 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
                 <span className="text-sm text-[var(--workspace-shell-text-muted)]">Last</span>
                 <Input
@@ -335,11 +360,34 @@ export function AnalyticsDateRangePicker({
               </div>
             ) : null}
 
+            {draft.preset === 'last' && draft.lastSubPreset ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
+                <p className="text-sm text-[var(--workspace-shell-text)]">
+                  {LAST_PRESETS.find((p) => p.id === draft.lastSubPreset)?.label ??
+                    'Last'}
+                </p>
+                <label className="flex items-center gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
+                  <Checkbox
+                    checked={draft.includeToday !== false}
+                    onCheckedChange={(checked) =>
+                      setDraft({
+                        ...draft,
+                        includeToday: checked === true,
+                      })
+                    }
+                  />
+                  Include today
+                </label>
+              </div>
+            ) : null}
+
             <div className="p-3">
               <Calendar
                 mode="range"
                 numberOfMonths={2}
                 selected={calendarRange}
+                month={displayMonth}
+                onMonthChange={setDisplayMonth}
                 onSelect={(range) => {
                   setCalendarRange(range ?? { from: undefined, to: undefined });
                   if (range?.from) {
@@ -350,7 +398,6 @@ export function AnalyticsDateRangePicker({
                     });
                   }
                 }}
-                defaultMonth={calendarRange.from}
                 className={cn(
                   'rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] text-[var(--workspace-shell-text)]',
                   '[&_.text-muted-foreground]:text-[var(--workspace-shell-text-muted)]',
@@ -366,7 +413,8 @@ export function AnalyticsDateRangePicker({
                     'rounded-md bg-[var(--workspace-shell-sidebar-accent)] font-medium text-[var(--workspace-shell-text)]',
                   outside:
                     'text-[var(--workspace-shell-text-muted)] opacity-50 aria-selected:text-[var(--workspace-shell-text-muted)]',
-                  weekday: 'text-[var(--workspace-shell-text-muted)]',
+                  weekday:
+                    'flex-1 text-center text-[var(--workspace-shell-text-muted)]',
                   caption_label: 'text-[var(--workspace-shell-text)]',
                 }}
               />

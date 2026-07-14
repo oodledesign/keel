@@ -1,5 +1,6 @@
 'use client';
 
+import type { NoteFolderListItem } from '../../_lib/workspace-content/note-folders.loader';
 import type {
   CustomNoteCategory,
   DocListItem,
@@ -7,7 +8,7 @@ import type {
   NoteListItem,
   WorkspaceNotesVariant,
 } from '../../_lib/workspace-content/types';
-import { WorkspaceNotesPage } from '../../_components/workspace-content/workspace-notes-page';
+import { NotesLibraryClient } from './notes-library-client';
 
 export type { NoteListItem as WorkNoteListItem };
 
@@ -15,34 +16,34 @@ export function NotesPageContent({
   accountId,
   accountSlug,
   notes,
-  docs = [],
+  folders = [],
+  foldersAvailable = true,
   tableAvailable,
-  docsTableAvailable = true,
-  variant,
-  linkOptions,
-  customCategories = [],
+  canEdit = true,
 }: {
   accountSlug: string;
   notes: NoteListItem[];
+  folders?: NoteFolderListItem[];
+  foldersAvailable?: boolean;
   docs?: DocListItem[];
   tableAvailable: boolean;
   docsTableAvailable?: boolean;
-  variant: WorkspaceNotesVariant;
+  variant?: WorkspaceNotesVariant;
   accountId: string;
-  linkOptions: LinkOption[];
+  linkOptions?: LinkOption[];
   customCategories?: CustomNoteCategory[];
+  canEdit?: boolean;
 }) {
   return (
-    <WorkspaceNotesPage
+    <NotesLibraryClient
       accountId={accountId}
       accountSlug={accountSlug}
       notes={notes}
-      docs={docs}
+      folders={folders}
       tableAvailable={tableAvailable}
-      docsTableAvailable={docsTableAvailable}
-      variant={variant}
-      linkOptions={linkOptions}
-      customCategories={customCategories}
+      foldersAvailable={foldersAvailable}
+      canEdit={canEdit}
+      personalScope={false}
     />
   );
 }

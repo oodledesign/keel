@@ -58,6 +58,7 @@ import { listMeetingTranscripts } from '../../meeting-transcripts/_lib/server/se
 import { meetingDisplayDate } from '../../meetings/_lib/format-meeting-date';
 import { listClientUpcomingBookingsAction } from '../../scheduling/_lib/server/scheduling-actions';
 import type { ClientBookingRow } from '../../scheduling/_lib/server/scheduling.service';
+import type { ClientDetailOverviewSeed } from '../_lib/client-detail.types';
 import {
   deleteClient,
   getClient,
@@ -138,8 +139,10 @@ type ClientMeetingPreview = {
 
 type ClientBookingPreview = Pick<
   ClientBookingRow,
-  'id' | 'startAt' | 'eventTypeName' | 'inviteeName'
->;
+  'id' | 'startAt' | 'eventTypeName'
+> & {
+  inviteeName: string | null;
+};
 
 function formatNotePreview(note: string, maxLength = 120) {
   const trimmed = note.trim().replace(/\s+/g, ' ');
@@ -254,6 +257,8 @@ export function ClientDetailSidebar({
   ranklyProject = null,
   ranklyImportSeed = null,
   ranklyClientImportOptions = [],
+  initialClient = null,
+  overviewSeed,
 }: {
   accountSlug: string;
   accountId: string;
@@ -276,96 +281,119 @@ export function ClientDetailSidebar({
   ranklyProject?: RanklyProjectRow | null;
   ranklyImportSeed?: RanklyClientImportOption | null;
   ranklyClientImportOptions?: RanklyClientImportOption[];
+  initialClient?: Client | null;
+  overviewSeed?: ClientDetailOverviewSeed;
 }) {
-  const [client, setClient] = useState<Client | null>(null);
-  const [jobs, setJobs] = useState<ClientJobSummary[]>([]);
+  const hasServerSeed = Boolean(initialClient);
+  const [client, setClient] = useState<Client | null>(initialClient ?? null);
+  const [jobs, setJobs] = useState<ClientJobSummary[]>(
+    (overviewSeed?.jobs as ClientJobSummary[] | undefined) ?? [],
+  );
   const [activeTab, setActiveTab] = useState<DetailTab>('overview');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!hasServerSeed);
   const [showEditForm, setShowEditForm] = useState(false);
   const [portalStatus, setPortalStatus] = useState<PortalStatus | null>(null);
   const [overviewClientNotes, setOverviewClientNotes] = useState<
     ClientNotePreview[]
-  >([]);
+  >(overviewSeed?.notes ?? []);
   const [overviewMeetings, setOverviewMeetings] = useState<
     ClientMeetingPreview[]
-  >([]);
+  >(overviewSeed?.meetings ?? []);
   const [overviewBookings, setOverviewBookings] = useState<
     ClientBookingPreview[]
-  >([]);
+  >(overviewSeed?.bookings ?? []);
 
-  const fetchClient = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = (await getClient({
-        accountId,
-        clientId,
-      })) as unknown as Client;
-      setClient(data);
-      const [jobHistory, notesData, meetingsData, bookingsData] =
-        await Promise.all([
-          getJobHistory({ accountId, clientId }),
-          listNotes({ accountId, clientId }).catch(() => []),
-          listMeetingTranscripts({ accountId, clientId }).catch(() => []),
-          listClientUpcomingBookingsAction({ accountId, clientId }).catch(
-            () => [],
+  const fetchClient = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      const silent = opts?.silent ?? false;
+      if (!silent) setLoading(true);
+      try {
+        const data = (await getClient({
+          accountId,
+          clientId,
+        })) as unknown as Client;
+        setClient(data);
+        const [jobHistory, notesData, meetingsData, bookingsData] =
+          await Promise.all([
+            getJobHistory({ accountId, clientId }),
+            listNotes({ accountId, clientId }).catch(() => []),
+            listMeetingTranscripts({ accountId, clientId }).catch(() => []),
+            listClientUpcomingBookingsAction({ accountId, clientId }).catch(
+              () => [],
+            ),
+          ]);
+        setJobs(
+          Array.isArray(jobHistory) ? (jobHistory as ClientJobSummary[]) : [],
+        );
+        setOverviewClientNotes((notesData ?? []) as ClientNotePreview[]);
+        setOverviewMeetings(
+          (meetingsData ?? []).map(
+            (meeting: {
+              id: string;
+              title: string;
+              meetingDate: string | null;
+              createdAt: string;
+            }) => ({
+              id: meeting.id,
+              title: meeting.title,
+              meetingDate: meeting.meetingDate,
+              createdAt: meeting.createdAt,
+            }),
           ),
-        ]);
-      setJobs(
-        Array.isArray(jobHistory) ? (jobHistory as ClientJobSummary[]) : [],
-      );
-      setOverviewClientNotes((notesData ?? []) as ClientNotePreview[]);
-      setOverviewMeetings(
-        (meetingsData ?? []).map(
-          (meeting: {
-            id: string;
-            title: string;
-            meetingDate: string | null;
-            createdAt: string;
-          }) => ({
-            id: meeting.id,
-            title: meeting.title,
-            meetingDate: meeting.meetingDate,
-            createdAt: meeting.createdAt,
-          }),
-        ),
-      );
-      setOverviewBookings(
-        ((bookingsData ?? []) as ClientBookingRow[]).map((booking) => ({
-          id: booking.id,
-          startAt: booking.startAt,
-          eventTypeName: booking.eventTypeName,
-          inviteeName: booking.inviteeName,
-        })),
-      );
+        );
+        setOverviewBookings(
+          ((bookingsData ?? []) as ClientBookingRow[]).map((booking) => ({
+            id: booking.id,
+            startAt: booking.startAt,
+            eventTypeName: booking.eventTypeName,
+            inviteeName: booking.inviteeName,
+          })),
+        );
 
-      if (data.email) {
-        try {
-          const status = (await getClientPortalStatus({
-            accountSlug,
-            email: data.email,
-          })) as unknown as PortalStatus;
-          setPortalStatus(status);
-        } catch {
+        if (data.email) {
+          try {
+            const status = (await getClientPortalStatus({
+              accountSlug,
+              email: data.email,
+            })) as unknown as PortalStatus;
+            setPortalStatus(status);
+          } catch {
+            setPortalStatus(null);
+          }
+        } else {
           setPortalStatus(null);
         }
-      } else {
-        setPortalStatus(null);
+      } catch (e) {
+        if (!silent) {
+          toast.error(
+            e instanceof Error ? e.message : 'Failed to load client',
+          );
+          setClient(null);
+          setPortalStatus(null);
+          setOverviewClientNotes([]);
+          setOverviewMeetings([]);
+          setOverviewBookings([]);
+        }
+      } finally {
+        if (!silent) setLoading(false);
       }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to load client');
-      setClient(null);
-      setPortalStatus(null);
-      setOverviewClientNotes([]);
-      setOverviewMeetings([]);
-      setOverviewBookings([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [accountId, accountSlug, clientId]);
+    },
+    [accountId, accountSlug, clientId],
+  );
 
   useEffect(() => {
-    fetchClient();
-  }, [fetchClient]);
+    if (hasServerSeed) {
+      const email = initialClient?.email;
+      if (email) {
+        void getClientPortalStatus({ accountSlug, email })
+          .then((status) => setPortalStatus(status as unknown as PortalStatus))
+          .catch(() => setPortalStatus(null));
+      }
+      return;
+    }
+
+    void fetchClient();
+  }, [accountSlug, fetchClient, hasServerSeed, initialClient]);
 
   const jobsCount = jobs.length;
   const activeJobsCount = jobs.filter(
@@ -492,7 +520,7 @@ export function ClientDetailSidebar({
 
       if ((result as { success?: boolean }).success) {
         toast.success('Portal invitation sent');
-        fetchClient();
+        void fetchClient({ silent: true });
       } else {
         toast.error('Failed to send portal invitation');
       }
@@ -955,7 +983,7 @@ export function ClientDetailSidebar({
             canEdit={canEditClients}
             onSaved={() => {
               setShowEditForm(false);
-              fetchClient();
+              void fetchClient({ silent: true });
               onSaved();
             }}
             onDeleted={onDeleted}

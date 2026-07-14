@@ -12,6 +12,14 @@ import {
 import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
+export type TaskAutomationGoogleAccount = {
+  connectionId: string;
+  email: string | null;
+  isPrimary: boolean;
+  busyCalendarIds: string[];
+  personalCalendarIds: string[];
+};
+
 export type TaskAutomationSettingsPageData = {
   accountId: string;
   accountSlug: string;
@@ -19,14 +27,16 @@ export type TaskAutomationSettingsPageData = {
   calendar: {
     configured: boolean;
     connected: boolean;
+    accountCount: number;
+    accounts: TaskAutomationGoogleAccount[];
     calendars: Array<{
       id: string;
       summary: string;
       primary: boolean;
       selected: boolean;
+      connectionId: string;
+      accountEmail: string | null;
     }>;
-    busyCalendarIds: string[];
-    personalCalendarIds: string[];
     connectHref: string;
   };
 };
@@ -56,11 +66,9 @@ export async function loadTaskAutomationSettingsPageData(
     calendar: {
       configured: Boolean(getOptionalGoogleCalendarEnv()),
       connected: calendarStatus.connected,
+      accountCount: calendarStatus.accountCount,
+      accounts: calendarList.connected ? calendarList.accounts : [],
       calendars: calendarList.connected ? calendarList.calendars : [],
-      busyCalendarIds: calendarList.connected ? calendarList.busyCalendarIds : [],
-      personalCalendarIds: calendarList.connected
-        ? calendarList.personalCalendarIds
-        : [],
       connectHref: `/api/integrations/google-calendar/start?returnPath=${settingsReturnPath}`,
     },
   };

@@ -46,6 +46,7 @@ const emptyForm = {
   purchasePrice: '',
   currentValue: '',
   mortgageLender: '',
+  mortgageReference: '',
   mortgageBalance: '',
   mortgageInterestRate: '',
   mortgageMonthlyPayment: '',
@@ -86,6 +87,7 @@ export function PropertyFormModal({
         purchasePrice: poundsFromPence(property.purchasePrice),
         currentValue: poundsFromPence(property.currentValue),
         mortgageLender: property.mortgageLender ?? '',
+        mortgageReference: property.mortgageReference ?? '',
         mortgageBalance: poundsFromPence(property.mortgageBalance),
         mortgageInterestRate:
           property.mortgageInterestRate != null
@@ -127,6 +129,7 @@ export function PropertyFormModal({
             ? Math.round(parseFloat(form.currentValue) * 100)
             : null,
           mortgageLender: form.mortgageLender.trim() || null,
+          mortgageReference: form.mortgageReference.trim() || null,
           mortgageBalance: form.mortgageBalance
             ? Math.round(parseFloat(form.mortgageBalance) * 100)
             : null,
@@ -327,12 +330,23 @@ export function PropertyFormModal({
               </p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5 sm:col-span-2">
+              <div className="space-y-1.5">
                 <Label className="text-[var(--workspace-shell-text)]/70">Lender</Label>
                 <Input
                   value={form.mortgageLender}
                   onChange={(e) => field('mortgageLender', e.target.value)}
                   placeholder="e.g. Nationwide"
+                  className={inputClass}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[var(--workspace-shell-text)]/70">
+                  Reference number
+                </Label>
+                <Input
+                  value={form.mortgageReference}
+                  onChange={(e) => field('mortgageReference', e.target.value)}
+                  placeholder="Account / mortgage reference"
                   className={inputClass}
                 />
               </div>

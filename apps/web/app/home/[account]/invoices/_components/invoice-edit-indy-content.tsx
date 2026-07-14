@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 
 import {
   ArrowLeft,
+  ExternalLink,
   Eye,
   Loader2,
   PlusCircle,
@@ -36,6 +37,7 @@ import {
   type LateFeeType,
 } from '../_lib/invoice-totals';
 import {
+  getInvoicePortalLink,
   setInvoiceStatus,
   updateInvoice,
   upsertInvoiceItems,
@@ -147,12 +149,16 @@ export function InvoiceEditIndyContent({
   invoice: initialInvoice,
   canEditInvoices,
   canManageInvoiceStatus,
+  brandLogoUrl = null,
+  brandName = null,
 }: {
   accountSlug: string;
   accountId: string;
   invoice: Record<string, unknown>;
   canEditInvoices: boolean;
   canManageInvoiceStatus: boolean;
+  brandLogoUrl?: string | null;
+  brandName?: string | null;
 }) {
   const router = useRouter();
   const invoice = initialInvoice as unknown as InvoiceData;
@@ -169,10 +175,11 @@ export function InvoiceEditIndyContent({
   const [previewMode, setPreviewMode] = useState(false);
   const [showSendPanel, setShowSendPanel] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
 
   const [title, setTitle] = useState(invoice.title ?? '');
   const [referenceNumber, setReferenceNumber] = useState(
-    invoice.reference_number ?? '',
+    invoice.reference_number?.trim() || invoice.invoice_number || '',
   );
   const [issuedAt, setIssuedAt] = useState(
     toDateInputValue(invoice.issued_at) ||
@@ -224,6 +231,14 @@ export function InvoiceEditIndyContent({
   const [showLateFee, setShowLateFee] = useState(
     Boolean(invoice.late_fee_type && (invoice.late_fee_value ?? 0) > 0),
   );
+
+  const [showReferenceField, setShowReferenceField] = useState(true);
+  const [showIssuedField, setShowIssuedField] = useState(true);
+  const [showDueField, setShowDueField] = useState(true);
+  const [showNotesField, setShowNotesField] = useState(true);
+  const [showFooterField, setShowFooterField] = useState(true);
+  const [showLogoField, setShowLogoField] = useState(true);
+  const [showPaymentLinkField, setShowPaymentLinkField] = useState(true);
 
   const [emailSubject, setEmailSubject] = useState(invoice.email_subject ?? '');
   const [emailBody, setEmailBody] = useState(invoice.email_body ?? '');
@@ -412,6 +427,54 @@ export function InvoiceEditIndyContent({
       .finally(() => setJobsLoading(false));
   }, [accountId]);
 
+  useEffect(() => {
+    const openStatuses = new Set(['draft', 'sent', 'read', 'overdue']);
+    if (!openStatuses.has(invoice.status)) return;
+
+    let cancelled = false;
+    void getInvoicePortalLink({ accountId, invoiceId: invoice.id })
+      .then((result) => {
+        if (cancelled) return;
+        const token =
+          (result as { token?: string } | null)?.token ??
+          (result as { data?: { token?: string } } | null)?.data?.token;
+        if (!token) return;
+        setPaymentUrl(
+          `${window.location.origin}/portal/invoices/${encodeURIComponent(token)}`,
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setPaymentUrl(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accountId, invoice.id, invoice.status]);
+
+  const resolvedReference =
+    referenceNumber.trim() || invoice.invoice_number;
+
+  const pdfQuery = useMemo(() => {
+    const params = new URLSearchParams({
+      showReference: showReferenceField ? '1' : '0',
+      showDueDate: showDueField ? '1' : '0',
+      showIssuedDate: showIssuedField ? '1' : '0',
+      showNotes: showNotesField ? '1' : '0',
+      showFooter: showFooterField ? '1' : '0',
+      showLogo: showLogoField ? '1' : '0',
+      showPaymentLink: showPaymentLinkField ? '1' : '0',
+    });
+    return params.toString();
+  }, [
+    showReferenceField,
+    showDueField,
+    showIssuedField,
+    showNotesField,
+    showFooterField,
+    showLogoField,
+    showPaymentLinkField,
+  ]);
+
   const updateItem = useCallback(
     (index: number, updates: Partial<InvoiceItem>) => {
       setItems((prev) => {
@@ -447,10 +510,10 @@ export function InvoiceEditIndyContent({
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (!canModifyInvoice) return;
+    if (!canModifyInvoice) return false;
     if (!clientId.trim()) {
       toast.error('Please select a client');
-      return;
+      return false;
     }
 
     setSaving(true);
@@ -462,7 +525,7 @@ export function InvoiceEditIndyContent({
         due_at: dueAt ? new Date(dueAt).toISOString() : null,
         notes: notes.trim() || null,
         title: title.trim() || null,
-        reference_number: referenceNumber.trim() || null,
+        reference_number: referenceNumber.trim() || invoice.invoice_number,
         footer_message: footerMessage.trim() || null,
         private_note: privateNote.trim() || null,
         discount_type: showDiscount && discountType ? discountType : null,
@@ -500,8 +563,10 @@ export function InvoiceEditIndyContent({
 
       toast.success('Invoice saved');
       router.refresh();
+      return true;
     } catch (err) {
       toast.error(getErrorMessage(err));
+      return false;
     } finally {
       setSaving(false);
     }
@@ -515,6 +580,7 @@ export function InvoiceEditIndyContent({
     emailSubject,
     footerMessage,
     invoice.id,
+    invoice.invoice_number,
     items,
     notes,
     parsedDepositValue,
@@ -560,7 +626,7 @@ export function InvoiceEditIndyContent({
         auto_send: false,
         template: {
           title: title.trim() || null,
-          reference_number: referenceNumber.trim() || null,
+          reference_number: referenceNumber.trim() || invoice.invoice_number,
           due_at: dueAt ? new Date(dueAt).toISOString() : null,
           notes: notes.trim() || null,
           footer_message: footerMessage.trim() || null,
@@ -726,9 +792,9 @@ export function InvoiceEditIndyContent({
                   <span
                     className={`rounded-full px-2.5 py-1 font-medium ${
                       active
-                        ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]'
+                        ? 'bg-[var(--ozer-accent)] text-[var(--ozer-text-on-dark)]'
                         : complete
-                          ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]'
+                          ? 'bg-[color-mix(in_srgb,var(--ozer-accent)_22%,transparent)] text-[var(--ozer-accent)]'
                           : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]'
                     }`}
                   >
@@ -755,27 +821,69 @@ export function InvoiceEditIndyContent({
       ) : null}
 
       {showSendPanel && isDraft ? (
-        <InvoiceSendPanel
-          accountId={accountId}
-          invoiceId={invoice.id}
-          invoiceNumber={invoice.invoice_number}
-          totalPence={totals.total_pence}
-          defaultEmail={defaultSendEmail}
-          initialSubject={emailSubject}
-          initialBody={emailBody}
-          initialSignature={emailSignature}
-          onSent={() => {
-            setShowSendPanel(false);
-            router.refresh();
-          }}
-          onClose={() => setShowSendPanel(false)}
-        />
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <InvoiceSendPanel
+            accountId={accountId}
+            invoiceId={invoice.id}
+            invoiceNumber={invoice.invoice_number}
+            totalPence={totals.total_pence}
+            defaultEmail={defaultSendEmail}
+            initialSubject={emailSubject}
+            initialBody={emailBody}
+            initialSignature={emailSignature}
+            pdfQuery={pdfQuery}
+            onSent={() => {
+              setShowSendPanel(false);
+              router.refresh();
+            }}
+            onClose={() => setShowSendPanel(false)}
+          />
+          <aside className="space-y-4">
+            <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
+              <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                Continue editing
+              </h2>
+              <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+                Need to change line items or due date before sending?
+              </p>
+              <Button
+                className="mt-4 w-full border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+                variant="outline"
+                onClick={() => setShowSendPanel(false)}
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to edit invoice
+              </Button>
+            </section>
+            <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
+              <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                Private note
+              </h2>
+              <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+                Only visible to your team — not shown to clients.
+              </p>
+              <Textarea
+                value={privateNote}
+                onChange={(e) => setPrivateNote(e.target.value)}
+                disabled={readOnly}
+                rows={5}
+                placeholder="Internal notes about this invoice"
+                className="mt-3 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+              />
+            </section>
+          </aside>
+        </div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className={canvasClassName}>
             <div className="space-y-6">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="sm:col-span-2">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  {brandName && previewMode ? (
+                    <p className="mb-2 text-sm font-medium text-[var(--workspace-shell-text-muted)]">
+                      {brandName}
+                    </p>
+                  ) : null}
                   {readOnly ? (
                     <h2 className="text-2xl font-bold text-[var(--ozer-text-on-light)]">
                       {title.trim() || `Invoice ${invoice.invoice_number}`}
@@ -788,49 +896,104 @@ export function InvoiceEditIndyContent({
                       className={`text-2xl font-bold ${inputClassName}`}
                     />
                   )}
+                  <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
+                    Invoice #{invoice.invoice_number}
+                    {invoice.status === 'draft' ? ' · Draft' : ''}
+                  </p>
                 </div>
-
-                <div>
-                  <Label className="text-[var(--workspace-shell-text-muted)]">Reference</Label>
-                  <Input
-                    value={referenceNumber}
-                    onChange={(e) => setReferenceNumber(e.target.value)}
-                    disabled={readOnly}
-                    placeholder="PO-12345"
-                    className={`mt-1 ${inputClassName}`}
+                {showLogoField && brandLogoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={brandLogoUrl}
+                    alt=""
+                    className="h-12 w-auto max-w-[140px] object-contain object-right"
                   />
-                </div>
+                ) : showLogoField && brandName && !previewMode ? (
+                  <p className="max-w-[140px] text-right text-sm font-semibold text-[var(--ozer-text-on-light)]">
+                    {brandName}
+                  </p>
+                ) : null}
+              </div>
 
-                <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-4 sm:grid-cols-2">
+                {showReferenceField ? (
                   <div>
-                    <Label className="text-[var(--workspace-shell-text-muted)]">Issued</Label>
-                    <Input
-                      type="date"
-                      value={
-                        isLocked
-                          ? toDateInputValue(invoice.issued_at)
-                          : issuedAt
-                      }
-                      onChange={(e) => setIssuedAt(e.target.value)}
-                      disabled={readOnly || isLocked}
-                      className={`mt-1 ${inputClassName}`}
-                    />
-                    {!isLocked ? (
+                    <Label className="text-[var(--workspace-shell-text-muted)]">
+                      Reference
+                    </Label>
+                    {previewMode ? (
+                      <p className="mt-1 text-sm font-medium text-[var(--ozer-text-on-light)]">
+                        {resolvedReference}
+                      </p>
+                    ) : (
+                      <Input
+                        value={referenceNumber}
+                        onChange={(e) => setReferenceNumber(e.target.value)}
+                        disabled={readOnly}
+                        placeholder={invoice.invoice_number}
+                        className={`mt-1 ${inputClassName}`}
+                      />
+                    )}
+                    {!previewMode ? (
                       <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-                        Final issue date is set when you send.
+                        Defaults to the invoice number. Used for bank payments.
                       </p>
                     ) : null}
                   </div>
-                  <div>
-                    <Label className="text-[var(--workspace-shell-text-muted)]">Due</Label>
-                    <Input
-                      type="date"
-                      value={dueAt}
-                      onChange={(e) => setDueAt(e.target.value)}
-                      disabled={readOnly}
-                      className={`mt-1 ${inputClassName}`}
-                    />
-                  </div>
+                ) : null}
+
+                <div
+                  className={`grid gap-3 ${showReferenceField ? 'grid-cols-2' : 'sm:col-span-2 grid-cols-2'}`}
+                >
+                  {showIssuedField ? (
+                    <div>
+                      <Label className="text-[var(--workspace-shell-text-muted)]">
+                        Issued
+                      </Label>
+                      {previewMode ? (
+                        <p className="mt-1 text-sm text-[var(--ozer-text-on-light)]">
+                          {issuedAt || '—'}
+                        </p>
+                      ) : (
+                        <Input
+                          type="date"
+                          value={
+                            isLocked
+                              ? toDateInputValue(invoice.issued_at)
+                              : issuedAt
+                          }
+                          onChange={(e) => setIssuedAt(e.target.value)}
+                          disabled={readOnly || isLocked}
+                          className={`mt-1 ${inputClassName}`}
+                        />
+                      )}
+                      {!isLocked && !previewMode ? (
+                        <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+                          Final issue date is set when you send.
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {showDueField ? (
+                    <div>
+                      <Label className="text-[var(--workspace-shell-text-muted)]">
+                        Due
+                      </Label>
+                      {previewMode ? (
+                        <p className="mt-1 text-sm font-medium text-[var(--ozer-text-on-light)]">
+                          {dueAt || '—'}
+                        </p>
+                      ) : (
+                        <Input
+                          type="date"
+                          value={dueAt}
+                          onChange={(e) => setDueAt(e.target.value)}
+                          disabled={readOnly}
+                          className={`mt-1 ${inputClassName}`}
+                        />
+                      )}
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
@@ -1225,75 +1388,166 @@ export function InvoiceEditIndyContent({
               </div>
 
               <div className="grid gap-4 border-t border-[color:var(--ozer-border-on-light)] pt-4">
-                <div>
-                  <Label className="text-[var(--workspace-shell-text-muted)]">Notes</Label>
-                  <Textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    disabled={readOnly}
-                    rows={3}
-                    placeholder="Notes visible to your client"
-                    className={`mt-1 ${inputClassName}`}
-                  />
-                </div>
-                <div>
-                  <Label className="text-[var(--workspace-shell-text-muted)]">Footer message</Label>
-                  <Textarea
-                    value={footerMessage}
-                    onChange={(e) => setFooterMessage(e.target.value)}
-                    disabled={readOnly}
-                    rows={2}
-                    placeholder="Thank you for your business"
-                    className={`mt-1 ${inputClassName}`}
-                  />
-                </div>
+                {showNotesField ? (
+                  <div>
+                    <Label className="text-[var(--workspace-shell-text-muted)]">Notes</Label>
+                    {previewMode ? (
+                      notes.trim() ? (
+                        <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--ozer-text-on-light)]">
+                          {notes}
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
+                          —
+                        </p>
+                      )
+                    ) : (
+                      <Textarea
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        disabled={readOnly}
+                        rows={3}
+                        placeholder="Notes visible to your client"
+                        className={`mt-1 ${inputClassName}`}
+                      />
+                    )}
+                  </div>
+                ) : null}
+                {showFooterField ? (
+                  <div>
+                    <Label className="text-[var(--workspace-shell-text-muted)]">
+                      Footer message
+                    </Label>
+                    {previewMode ? (
+                      footerMessage.trim() ? (
+                        <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--ozer-text-on-light)]">
+                          {footerMessage}
+                        </p>
+                      ) : null
+                    ) : (
+                      <Textarea
+                        value={footerMessage}
+                        onChange={(e) => setFooterMessage(e.target.value)}
+                        disabled={readOnly}
+                        rows={2}
+                        placeholder="Thank you for your business"
+                        className={`mt-1 ${inputClassName}`}
+                      />
+                    )}
+                  </div>
+                ) : null}
+                {showPaymentLinkField ? (
+                  <div className="rounded-lg border border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-cream-50)] p-4">
+                    <p className="text-sm font-semibold text-[var(--ozer-text-on-light)]">
+                      Pay online
+                    </p>
+                    {paymentUrl ? (
+                      <div className="mt-2 space-y-2">
+                        <a
+                          href={paymentUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-md bg-[var(--ozer-accent)] px-3 py-2 text-sm font-medium text-[var(--ozer-text-on-dark)]"
+                        >
+                          Open payment page
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                        <p className="break-all text-xs text-[var(--workspace-shell-text-muted)]">
+                          {paymentUrl}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+                        Payment link will appear here once generated for preview
+                        and PDF export.
+                      </p>
+                    )}
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
 
           <aside className="space-y-4">
             <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
-              <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Settings</h2>
+              <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                Invoice settings
+              </h2>
               <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-                Email content used when sending this invoice.
+                Choose what appears on the invoice, preview, and PDF.
               </p>
 
               <div className="mt-4 space-y-3">
-                <div>
-                  <Label className="text-[var(--workspace-shell-text-muted)]">Email subject</Label>
-                  <Input
-                    value={emailSubject}
-                    onChange={(e) => setEmailSubject(e.target.value)}
-                    disabled={readOnly}
-                    className="mt-1 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
-                  />
-                </div>
-                <div>
-                  <Label className="text-[var(--workspace-shell-text-muted)]">Email body</Label>
-                  <Textarea
-                    value={emailBody}
-                    onChange={(e) => setEmailBody(e.target.value)}
-                    disabled={readOnly}
-                    rows={4}
-                    className="mt-1 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
-                  />
-                </div>
-                <div>
-                  <Label className="text-[var(--workspace-shell-text-muted)]">Email signature</Label>
-                  <Textarea
-                    value={emailSignature}
-                    onChange={(e) => setEmailSignature(e.target.value)}
-                    disabled={readOnly}
-                    rows={3}
-                    className="mt-1 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
-                  />
-                </div>
+                {(
+                  [
+                    ['Reference', showReferenceField, setShowReferenceField],
+                    ['Issue date', showIssuedField, setShowIssuedField],
+                    ['Due date', showDueField, setShowDueField],
+                    ['Notes', showNotesField, setShowNotesField],
+                    ['Footer', showFooterField, setShowFooterField],
+                    ['Company logo', showLogoField, setShowLogoField],
+                    [
+                      'Payment link',
+                      showPaymentLinkField,
+                      setShowPaymentLinkField,
+                    ],
+                  ] as const
+                ).map(([label, checked, setter]) => (
+                  <div
+                    key={label}
+                    className="flex items-center justify-between gap-3"
+                  >
+                    <Label className="text-sm text-[var(--workspace-shell-text)]">
+                      {label}
+                    </Label>
+                    <Switch
+                      checked={checked}
+                      onCheckedChange={setter}
+                      disabled={previewMode}
+                    />
+                  </div>
+                ))}
               </div>
+
+              {isDraft && canEditInvoices ? (
+                <Button
+                  className="mt-5 w-full bg-[var(--ozer-accent)] text-[var(--ozer-text-on-dark)] hover:bg-[var(--ozer-accent-hover)]"
+                  onClick={() => {
+                    void (async () => {
+                      const saved = await handleSave();
+                      if (saved) setShowSendPanel(true);
+                    })();
+                  }}
+                  disabled={saving || !canModifyInvoice}
+                >
+                  {saving ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="mr-2 h-4 w-4" />
+                  )}
+                  Send invoice
+                </Button>
+              ) : null}
+
+              <Button
+                asChild
+                variant="outline"
+                className="mt-2 w-full border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+              >
+                <a
+                  href={`/api/invoices/pdf?invoiceId=${encodeURIComponent(invoice.id)}&${pdfQuery}`}
+                  download
+                >
+                  Download PDF
+                </a>
+              </Button>
 
               {canManageInvoiceStatus &&
               ['sent', 'read'].includes(invoice.status) ? (
                 <div className="mt-4 space-y-2 border-t border-[color:var(--workspace-shell-border)] pt-4">
-                  <p className="text-xs text-[var(--workspace-shell-text-muted)]">Quick status</p>
+                  <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                    Quick status
+                  </p>
                   <Button
                     size="sm"
                     variant="outline"

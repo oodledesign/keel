@@ -9,6 +9,7 @@ import { getPersonalAccountId } from '~/lib/recorder/personal-account';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import { loadAccountNoteCategories } from '~/home/[account]/_lib/workspace-content/note-categories.loader';
+import { loadAccountNoteFolders } from '~/home/[account]/_lib/workspace-content/note-folders.loader';
 import {
   loadAccountNoteById,
   loadAccountNotes,
@@ -31,15 +32,19 @@ export async function requirePersonalAccountId() {
 export async function loadPersonalNotesPageData() {
   const { accountId } = await requirePersonalAccountId();
 
-  const [{ notes, tableAvailable }, categoryResult] = await Promise.all([
-    loadAccountNotes(accountId),
-    loadAccountNoteCategories(accountId),
-  ]);
+  const [{ notes, tableAvailable }, categoryResult, foldersResult] =
+    await Promise.all([
+      loadAccountNotes(accountId),
+      loadAccountNoteCategories(accountId),
+      loadAccountNoteFolders(accountId),
+    ]);
 
   return {
     accountId,
     accountSlug: PERSONAL_NOTES_ACCOUNT_SLUG,
     notes,
+    folders: foldersResult.folders,
+    foldersAvailable: foldersResult.tableAvailable,
     tableAvailable,
     customCategories: categoryResult.categories.map((c) => ({
       slug: c.slug,

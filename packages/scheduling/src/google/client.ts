@@ -19,6 +19,7 @@ import {
 const REFRESH_WINDOW_MS = 60_000;
 
 type ConnectionRow = {
+  id: string;
   user_id: string;
   access_token_encrypted: string;
   refresh_token_encrypted: string | null;
@@ -26,6 +27,8 @@ type ConnectionRow = {
   calendar_id: string | null;
   busy_calendar_ids: string[] | null;
   personal_calendar_ids: string[] | null;
+  google_account_email: string | null;
+  is_primary: boolean | null;
 };
 
 type DynamicQuery = PromiseLike<{
@@ -33,7 +36,8 @@ type DynamicQuery = PromiseLike<{
   error: { message: string } | null;
 }> & {
   select: (columns: string) => DynamicQuery;
-  eq: (column: string, value: string) => DynamicQuery;
+  eq: (column: string, value: string | boolean) => DynamicQuery;
+  order: (column: string, options?: Record<string, unknown>) => DynamicQuery;
   update: (values: Record<string, unknown>) => DynamicQuery;
   maybeSingle: () => Promise<{
     data: unknown;
@@ -104,6 +108,7 @@ async function resolveHostUserId(
 }
 
 async function persistAccessToken(input: {
+  connectionId: string;
   userId: string;
   tokens: GoogleTokenResponse;
   refreshToken: string;
@@ -122,6 +127,7 @@ async function persistAccessToken(input: {
       refresh_token_encrypted: encryptGoogleCalendarSecret(refreshToken),
       token_expires_at: expiresAt,
     })
+    .eq('id', input.connectionId)
     .eq('user_id', input.userId);
 
   if (error) {
@@ -129,36 +135,28 @@ async function persistAccessToken(input: {
   }
 }
 
-/**
- * Loads the workspace host's Google Calendar connection, refreshes the access
- * token when expired, and persists the new token.
- *
- * Connections are user-scoped (`google_calendar_connections.user_id`). The
- * workspace host defaults to `accounts.primary_owner_user_id`; pass
- * `hostUserId` (e.g. `booking_pages.host_user_id`) when the page host differs.
- */
-export async function getGoogleClientForWorkspace(
+function mapClient(
   workspaceId: string,
-  options?: { hostUserId?: string },
+  row: ConnectionRow,
+  accessToken: string,
+): GoogleCalendarClient {
+  return {
+    workspaceId,
+    userId: row.user_id,
+    connectionId: row.id,
+    accessToken,
+    calendarId: row.calendar_id || 'primary',
+    busyCalendarIds: normalizeIdList(row.busy_calendar_ids),
+    personalCalendarIds: normalizeIdList(row.personal_calendar_ids),
+    accountEmail: row.google_account_email,
+    isPrimary: Boolean(row.is_primary),
+  };
+}
+
+async function hydrateClient(
+  workspaceId: string,
+  row: ConnectionRow,
 ): Promise<GoogleCalendarClient> {
-  const userId = await resolveHostUserId(workspaceId, options?.hostUserId);
-
-  const { data, error } = await calendarConnectionsTable()
-    .select(
-      'user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at, calendar_id, busy_calendar_ids, personal_calendar_ids',
-    )
-    .eq('user_id', userId)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  if (!data) {
-    throw new GoogleCalendarNotConnectedError({ workspaceId, userId });
-  }
-
-  const row = data as ConnectionRow;
   let accessToken = decryptGoogleCalendarSecret(row.access_token_encrypted);
   const refreshToken = row.refresh_token_encrypted
     ? decryptGoogleCalendarSecret(row.refresh_token_encrypted)
@@ -168,7 +166,7 @@ export async function getGoogleClientForWorkspace(
     if (!refreshToken) {
       throw new GoogleCalendarReconnectRequiredError({
         workspaceId,
-        userId,
+        userId: row.user_id,
         message:
           'Google Calendar refresh token is missing. Reconnect Google Calendar in settings.',
       });
@@ -178,14 +176,15 @@ export async function getGoogleClientForWorkspace(
       const tokens = await refreshGoogleCalendarAccessToken(refreshToken);
       accessToken = tokens.access_token;
       await persistAccessToken({
-        userId,
+        connectionId: row.id,
+        userId: row.user_id,
         tokens,
         refreshToken,
       });
     } catch (err) {
       throw new GoogleCalendarReconnectRequiredError({
         workspaceId,
-        userId,
+        userId: row.user_id,
         message:
           err instanceof Error
             ? err.message
@@ -194,12 +193,57 @@ export async function getGoogleClientForWorkspace(
     }
   }
 
-  return {
-    workspaceId,
-    userId,
-    accessToken,
-    calendarId: row.calendar_id || 'primary',
-    busyCalendarIds: normalizeIdList(row.busy_calendar_ids),
-    personalCalendarIds: normalizeIdList(row.personal_calendar_ids),
-  };
+  return mapClient(workspaceId, row, accessToken);
+}
+
+/**
+ * Loads the workspace host's primary Google Calendar connection for writes
+ * (Meet links / event create). Busy checks should use
+ * `getGoogleClientsForWorkspace` to include every connected Google account.
+ */
+export async function getGoogleClientForWorkspace(
+  workspaceId: string,
+  options?: { hostUserId?: string },
+): Promise<GoogleCalendarClient> {
+  const clients = await getGoogleClientsForWorkspace(workspaceId, options);
+  const primary =
+    clients.find((client) => client.isPrimary) ?? clients[0] ?? null;
+
+  if (!primary) {
+    const userId = await resolveHostUserId(workspaceId, options?.hostUserId);
+    throw new GoogleCalendarNotConnectedError({ workspaceId, userId });
+  }
+
+  return primary;
+}
+
+/** All Google accounts connected by the workspace host (work + personal, etc.). */
+export async function getGoogleClientsForWorkspace(
+  workspaceId: string,
+  options?: { hostUserId?: string },
+): Promise<GoogleCalendarClient[]> {
+  const userId = await resolveHostUserId(workspaceId, options?.hostUserId);
+
+  const { data, error } = await calendarConnectionsTable()
+    .select(
+      'id, user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at, calendar_id, busy_calendar_ids, personal_calendar_ids, google_account_email, is_primary',
+    )
+    .eq('user_id', userId)
+    .order('is_primary', { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const rows = (data as ConnectionRow[] | null) ?? [];
+  if (rows.length === 0) {
+    throw new GoogleCalendarNotConnectedError({ workspaceId, userId });
+  }
+
+  const clients: GoogleCalendarClient[] = [];
+  for (const row of rows) {
+    clients.push(await hydrateClient(workspaceId, row));
+  }
+
+  return clients;
 }

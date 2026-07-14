@@ -337,7 +337,11 @@ export async function buildClientsOverview(params: {
   const clientIds = clients.map((c) => c.id);
   const membersById = new Map(members.map((m) => [m.user_id, m]));
 
-  const jobs = await loadDeliveryProjectsForClients(db, accountId, clientIds);
+  const [jobs, clientTasks, contactsResult] = await Promise.all([
+    loadDeliveryProjectsForClients(db, accountId, clientIds),
+    loadTasksByClientIds(db, clientIds),
+    db.from('client_contacts').select('client_id').in('client_id', clientIds),
+  ]);
 
   const jobsForClient = jobs.filter(
     (j) => j.client_id && j.status !== 'cancelled',
@@ -349,7 +353,7 @@ export async function buildClientsOverview(params: {
   const allProjectIds = jobsForClient.map((j) => j.id);
   const activeProjectIds = activeJobs.map((j) => j.id);
 
-  let tasks: TaskRow[] = [];
+  let tasks: TaskRow[] = clientTasks;
   let assignments: AssignmentRow[] = [];
   let contacts: ContactRow[] = [];
 
@@ -360,16 +364,9 @@ export async function buildClientsOverview(params: {
       loadTasksByProjectIds(db, scopedProjectIds),
       loadProjectAssignments(db, accountId, allProjectIds),
     ]);
-    tasks = projectTasks;
+    tasks = mergeTasks(tasks, projectTasks);
     assignments = assignmentRows;
   }
-
-  tasks = mergeTasks(tasks, await loadTasksByClientIds(db, clientIds));
-
-  const contactsResult = await db
-    .from('client_contacts')
-    .select('client_id')
-    .in('client_id', clientIds);
 
   if (contactsResult.error) {
     if (!isMissingRelationError(contactsResult.error)) {

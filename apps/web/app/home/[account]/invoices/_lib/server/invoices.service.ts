@@ -636,8 +636,13 @@ class InvoicesService {
       .single();
     if (error || !invoice) this.throwErr(error, 'Invoice not found');
 
-    if (invoice.status !== 'sent' && invoice.status !== 'read') {
-      throw new Error('You can only create a payment link for a sent invoice');
+    if (
+      invoice.status !== 'draft' &&
+      invoice.status !== 'sent' &&
+      invoice.status !== 'read' &&
+      invoice.status !== 'overdue'
+    ) {
+      throw new Error('You can only create a payment link for an open invoice');
     }
 
     let public_token = invoice.public_token as string | null;

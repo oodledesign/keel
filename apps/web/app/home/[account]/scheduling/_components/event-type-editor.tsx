@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 
-import { GripVertical, Plus, Trash2 } from 'lucide-react';
+import { Check, Copy, GripVertical, Plus, Trash2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Checkbox } from '@kit/ui/checkbox';
@@ -158,12 +158,25 @@ export function EventTypeEditor({
       sortOrder: field.sortOrder ?? index,
     })),
   );
+  const [copied, setCopied] = useState(false);
 
   const zoomConnected = conferencing.some((c) => c.provider === 'zoom');
   const teamsConnected = conferencing.some((c) => c.provider === 'teams');
   const needsConferencingHint =
     (draft.locationType === 'zoom' && !zoomConnected) ||
     (draft.locationType === 'teams' && !teamsConnected);
+  const eventUrl = publicEventBookUrl(pageSlug, draft.slug);
+
+  async function copyEventLink() {
+    try {
+      await navigator.clipboard.writeText(eventUrl);
+      setCopied(true);
+      toast.success('Event link copied');
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.error('Could not copy link');
+    }
+  }
 
   function toggleDuration(minutes: number, checked: boolean) {
     setDraft((current) => {
@@ -239,32 +252,53 @@ export function EventTypeEditor({
   return (
     <div className={`space-y-6 rounded-2xl border p-5 ${workspacePanelBorder}`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-base font-semibold">
-          {draft.name || 'Event type'}
-        </h3>
-        {canEdit ? (
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="rounded-full"
-              disabled={pending}
-              onClick={remove}
-            >
-              <Trash2 className="mr-2 h-3.5 w-3.5" />
-              Delete
-            </Button>
-            <Button
-              type="button"
-              className={workspaceBtnPrimaryMd}
-              disabled={pending}
-              onClick={save}
-            >
-              Save event type
-            </Button>
-          </div>
-        ) : null}
+        <div className="min-w-0">
+          <h3 className="text-base font-semibold">
+            {draft.name || 'Event type'}
+          </h3>
+          <p className={`mt-0.5 truncate text-xs ${workspaceTextMuted}`}>
+            {eventUrl}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="rounded-full"
+            onClick={() => void copyEventLink()}
+          >
+            {copied ? (
+              <Check className="mr-2 h-3.5 w-3.5" />
+            ) : (
+              <Copy className="mr-2 h-3.5 w-3.5" />
+            )}
+            Copy link
+          </Button>
+          {canEdit ? (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-full"
+                disabled={pending}
+                onClick={remove}
+              >
+                <Trash2 className="mr-2 h-3.5 w-3.5" />
+                Delete
+              </Button>
+              <Button
+                type="button"
+                className={workspaceBtnPrimaryMd}
+                disabled={pending}
+                onClick={save}
+              >
+                Save event type
+              </Button>
+            </>
+          ) : null}
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">

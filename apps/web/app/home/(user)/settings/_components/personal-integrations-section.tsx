@@ -226,14 +226,24 @@ export function PersonalIntegrationsSection({ data }: Props) {
         status={calendarStatus}
         statusLabel={
           calendarStatus === 'connected'
-            ? 'Connected'
+            ? data.calendar.accountCount > 1
+              ? `${data.calendar.accountCount} accounts`
+              : 'Connected'
             : calendarStatus === 'unavailable'
               ? 'Not configured'
               : 'Not connected'
         }
         connectedDetail={
           data.calendar.connected
-            ? `Connected${formatConnectedAt(data.calendar.connectedAt) ? ` · ${formatConnectedAt(data.calendar.connectedAt)}` : ''}`
+            ? `${
+                data.calendar.emails.length > 0
+                  ? data.calendar.emails.join(' · ')
+                  : 'Connected'
+              }${
+                formatConnectedAt(data.calendar.connectedAt)
+                  ? ` · ${formatConnectedAt(data.calendar.connectedAt)}`
+                  : ''
+              }. Add another Google login from Scheduling → Connected accounts.`
             : data.calendar.configured
               ? 'Connect to include calendar events in your plans.'
               : 'Google Calendar OAuth is not configured on this server yet.'

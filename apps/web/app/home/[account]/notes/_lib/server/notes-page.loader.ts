@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import pathsConfig from '~/config/paths.config';
 
 import { loadAccountNoteCategories } from '../../../_lib/workspace-content/note-categories.loader';
+import { loadAccountNoteFolders } from '../../../_lib/workspace-content/note-folders.loader';
 import {
   linkOptionsForProfile,
   loadWorkspaceLinkOptions,
@@ -40,18 +41,26 @@ export async function loadNotesPageData(accountSlug: string) {
     business_type: workspace.businessType,
   });
 
-  const [{ notes, tableAvailable }, docsResult, linkOpts, categoryResult] =
-    await Promise.all([
+  const [
+    { notes, tableAvailable },
+    docsResult,
+    linkOpts,
+    categoryResult,
+    foldersResult,
+  ] = await Promise.all([
     loadAccountNotes(accountId),
     loadAccountDocs(accountId),
     loadWorkspaceLinkOptions(accountId, profile),
     loadAccountNoteCategories(accountId),
+    loadAccountNoteFolders(accountId),
   ]);
 
   return {
     accountId,
     accountSlug: workspace.account.slug ?? accountSlug,
     notes,
+    folders: foldersResult.folders,
+    foldersAvailable: foldersResult.tableAvailable,
     docs: docsResult.docs,
     tableAvailable,
     docsTableAvailable: docsResult.tableAvailable,
