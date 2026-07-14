@@ -193,7 +193,8 @@ async function loadDashboardPageDataImpl(
     financeMonthResult,
     financeTrendResult,
     notesResult,
-    upcomingTasksResult,
+    clientIdsForTasksResult,
+    projectIdsForTasksResult,
   ] = await Promise.all([
     client
       .from('projects')
@@ -261,17 +262,35 @@ async function loadDashboardPageDataImpl(
       .eq('account_id', accountId)
       .order('updated_at', { ascending: false })
       .limit(8),
-    client
-      .from('tasks')
-      .select(
-        'id, title, status, due_date, project_id, client_id, projects(name, title), clients(display_name, first_name, last_name)',
-      )
-      .eq('account_id', accountId)
-      .is('parent_task_id', null)
-      .not('status', 'eq', 'done')
-      .order('due_date', { ascending: true, nullsFirst: false })
-      .limit(4),
+    // Task scope — many tasks are linked via client/project without account_id
+    client.from('clients').select('id').eq('account_id', accountId),
+    client.from('projects').select('id').eq('account_id', accountId),
   ]);
+
+  const projectIdsForTasks = (projectIdsForTasksResult.data ?? []).map(
+    (row) => row.id as string,
+  );
+  const clientIdsForTasks = (clientIdsForTasksResult.data ?? []).map(
+    (row) => row.id as string,
+  );
+  const upcomingTaskFilters = [`account_id.eq.${accountId}`];
+  if (projectIdsForTasks.length > 0) {
+    upcomingTaskFilters.push(`project_id.in.(${projectIdsForTasks.join(',')})`);
+  }
+  if (clientIdsForTasks.length > 0) {
+    upcomingTaskFilters.push(`client_id.in.(${clientIdsForTasks.join(',')})`);
+  }
+
+  const upcomingTasksResult = await client
+    .from('tasks')
+    .select(
+      'id, title, status, due_date, project_id, client_id, projects(name, title), clients(display_name, first_name, last_name)',
+    )
+    .or(upcomingTaskFilters.join(','))
+    .is('parent_task_id', null)
+    .not('status', 'in', '(done,cancelled)')
+    .order('due_date', { ascending: true, nullsFirst: false })
+    .limit(4);
 
   const jobsUnavailable = isTableMissingFromApi(activeJobsResult.error);
   const invoicesUnavailable = isTableMissingFromApi(

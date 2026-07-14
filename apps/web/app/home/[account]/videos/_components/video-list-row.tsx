@@ -36,21 +36,25 @@ export function VideoListRow(props: {
 
   return (
     <div className="flex items-center gap-4 border-b border-[color:var(--workspace-shell-border)] px-4 py-3 last:border-0">
-      <button
-        type="button"
+      <Link
+        href={playerConfigPath}
         className="relative h-14 w-24 shrink-0 overflow-hidden rounded-md bg-black/40"
-        onClick={() => props.onPreview(video)}
-        aria-label={`Play ${video.title}`}
+        aria-label={`Edit player config for ${video.title}`}
       >
         <VideoThumbnail
           candidates={video.thumbnail_candidates ?? []}
           alt={video.title}
           className="object-cover"
         />
-      </button>
+      </Link>
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{video.title}</p>
+        <Link
+          href={playerConfigPath}
+          className="block truncate text-sm font-medium hover:text-[var(--ozer-accent-muted)]"
+        >
+          {video.title}
+        </Link>
         <p className="text-muted-foreground text-xs">
           {formatDuration(video.duration_seconds)} ·{' '}
           {new Date(video.created_at).toLocaleDateString()}
@@ -78,14 +82,17 @@ export function VideoListRow(props: {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem asChild>
+              <Link href={playerConfigPath}>Edit player config</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => props.onPreview(video)}>
+              Preview
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => props.onCopyEmbed(video)}>
               Copy embed code
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => props.onCopyPublicLink(video)}>
               Copy public link
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href={playerConfigPath}>Edit player config</Link>
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => props.onMove(video)}>
               Move to folder

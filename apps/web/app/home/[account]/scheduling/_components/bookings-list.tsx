@@ -46,9 +46,10 @@ function formatWhen(iso: string) {
 }
 
 function statusLabel(status: string) {
+  if (status === 'confirmed') return 'Confirmed';
   if (status === 'cancelled') return 'Cancelled';
   if (status === 'rescheduled') return 'Rescheduled';
-  return 'Confirmed';
+  return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
 export function BookingsList({
@@ -196,7 +197,14 @@ function BookingSection({
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-medium">{row.inviteeName}</p>
-                  <Badge variant="outline" className="rounded-full">
+                  <Badge
+                    variant="outline"
+                    className={
+                      row.status === 'confirmed'
+                        ? 'rounded-full border-emerald-600/40 bg-emerald-500/15 text-emerald-700 dark:border-emerald-400/40 dark:bg-emerald-500/15 dark:text-emerald-300'
+                        : 'rounded-full'
+                    }
+                  >
                     {statusLabel(row.status)}
                   </Badge>
                   {row.needsHostAttention ? (

@@ -9,7 +9,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
-import { updateGoogleCalendarSelection } from '~/lib/integrations/google-calendar/connection';
+import { updateGoogleCalendarSelection, deleteGoogleCalendarConnection } from '~/lib/integrations/google-calendar/connection';
 import {
   upsertAccountTaskAutomationSettings,
   type AccountTaskAutomationSettings,
@@ -27,8 +27,13 @@ function revalidateTaskAutomationSurfaces(accountSlug: string) {
     workAccountPath(pathsConfig.app.accountTasksReview, slug),
     'page',
   );
+  revalidatePath(
+    workAccountPath(pathsConfig.app.accountSchedulingAccounts, slug),
+    'page',
+  );
   revalidatePath(`/home/${slug}/settings/task-automation`, 'page');
   revalidatePath(`/home/${slug}/tasks/review`, 'page');
+  revalidatePath(`/home/${slug}/scheduling/accounts`, 'page');
 }
 
 async function assertWorkspaceMember(accountId: string, userId: string) {
@@ -92,18 +97,27 @@ export const saveAccountTaskAutomationSettingsAction = enhanceAction(
 
 const saveCalendarSelectionSchema = z.object({
   accountSlug: z.string().min(1),
-  busyCalendarIds: z.array(z.string().min(1)),
-  personalCalendarIds: z.array(z.string().min(1)),
+  selections: z.array(
+    z.object({
+      connectionId: z.string().uuid(),
+      busyCalendarIds: z.array(z.string().min(1)),
+      personalCalendarIds: z.array(z.string().min(1)),
+    }),
+  ),
 });
 
 export const saveGoogleCalendarSelectionAction = enhanceAction(
   async (input, user) => {
     const client = getSupabaseServerClient();
-    await updateGoogleCalendarSelection(client, {
-      userId: user.id,
-      busyCalendarIds: input.busyCalendarIds,
-      personalCalendarIds: input.personalCalendarIds,
-    });
+
+    for (const selection of input.selections) {
+      await updateGoogleCalendarSelection(client, {
+        userId: user.id,
+        connectionId: selection.connectionId,
+        busyCalendarIds: selection.busyCalendarIds,
+        personalCalendarIds: selection.personalCalendarIds,
+      });
+    }
 
     revalidateTaskAutomationSurfaces(input.accountSlug);
     return { success: true as const };
@@ -113,19 +127,16 @@ export const saveGoogleCalendarSelectionAction = enhanceAction(
 
 const disconnectCalendarSchema = z.object({
   accountSlug: z.string().min(1),
+  connectionId: z.string().uuid().optional(),
 });
 
 export const disconnectGoogleCalendarFromWorkspaceAction = enhanceAction(
   async (input, user) => {
     const client = getSupabaseServerClient();
-    const { error } = await client
-      .from('google_calendar_connections')
-      .delete()
-      .eq('user_id', user.id);
-
-    if (error) {
-      throw new Error(error.message);
-    }
+    await deleteGoogleCalendarConnection(client, {
+      userId: user.id,
+      connectionId: input.connectionId,
+    });
 
     revalidateTaskAutomationSurfaces(input.accountSlug);
     revalidatePath(pathsConfig.app.personalAccountIntegrationsSettings, 'page');

@@ -281,7 +281,7 @@ export function BookingPagesList({
                         variant="outline"
                         className={
                           page.isActive
-                            ? 'rounded-full border-[var(--ozer-sage-500)]/40 bg-[var(--ozer-sage-100)]/20 text-[var(--ozer-sage-500)]'
+                            ? 'rounded-full border-emerald-600/40 bg-emerald-500/15 text-emerald-700 dark:border-emerald-400/40 dark:bg-emerald-500/15 dark:text-emerald-300'
                             : 'rounded-full'
                         }
                       >

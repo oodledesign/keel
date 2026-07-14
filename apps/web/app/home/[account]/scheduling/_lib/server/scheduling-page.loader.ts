@@ -8,6 +8,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import pathsConfig from '~/config/paths.config';
 import { getGoogleCalendarConnectionStatus } from '~/lib/integrations/google-calendar/connection';
 import { getOptionalGoogleCalendarEnv } from '~/lib/integrations/google-calendar/env';
+import { listUserGoogleCalendars } from '~/lib/integrations/google-calendar/events';
 
 import { getTeamAccountAccess } from '../../../_lib/role-access';
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
@@ -53,7 +54,10 @@ export async function loadGoogleCalendarStatusForScheduling(
   accountSlug: string,
 ) {
   const client = getSupabaseServerClient();
-  const status = await getGoogleCalendarConnectionStatus(client, userId);
+  const [status, calendarList] = await Promise.all([
+    getGoogleCalendarConnectionStatus(client, userId),
+    listUserGoogleCalendars(client, userId),
+  ]);
   const returnPath = encodeURIComponent(
     pathsConfig.app.accountSchedulingAccounts.replace('[account]', accountSlug),
   );
@@ -61,7 +65,10 @@ export async function loadGoogleCalendarStatusForScheduling(
   return {
     configured: Boolean(getOptionalGoogleCalendarEnv()) && status.configured,
     connected: status.connected,
+    accountCount: status.accountCount,
     connectHref: `/api/integrations/google-calendar/start?returnPath=${returnPath}`,
+    accounts: calendarList.connected ? calendarList.accounts : [],
+    calendars: calendarList.connected ? calendarList.calendars : [],
   };
 }
 

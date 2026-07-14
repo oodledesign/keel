@@ -1,7 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Folder, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronRight,
+  Folder,
+  FolderPlus,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
@@ -91,12 +98,13 @@ export function FolderSidebar(props: {
   collapsed: boolean;
   onToggleCollapsed: () => void;
   onSelectFolder: (folderId: string | null) => void;
+  onCreateFolder: () => void;
 }) {
   const tree = buildFolderTree(props.folders);
 
   if (props.collapsed) {
     return (
-      <div className="shrink-0">
+      <div className="flex shrink-0 flex-col gap-2">
         <Button
           type="button"
           variant="outline"
@@ -106,26 +114,48 @@ export function FolderSidebar(props: {
         >
           <PanelLeftOpen className="h-4 w-4" />
         </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={props.onCreateFolder}
+          aria-label="New folder"
+        >
+          <FolderPlus className="h-4 w-4" />
+        </Button>
       </div>
     );
   }
 
   return (
     <aside className="w-56 shrink-0 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between gap-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Folders
         </p>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7"
-          onClick={props.onToggleCollapsed}
-          aria-label="Hide folders"
-        >
-          <PanelLeftClose className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-0.5">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={props.onCreateFolder}
+            aria-label="New folder"
+            title="New folder"
+          >
+            <FolderPlus className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={props.onToggleCollapsed}
+            aria-label="Hide folders"
+          >
+            <PanelLeftClose className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <button
@@ -142,15 +172,28 @@ export function FolderSidebar(props: {
         All videos
       </button>
 
-      {tree.map((node) => (
-        <FolderTreeItem
-          key={node.id}
-          node={node}
-          depth={0}
-          selectedFolderId={props.selectedFolderId}
-          onSelect={props.onSelectFolder}
-        />
-      ))}
+      {tree.length === 0 ? (
+        <button
+          type="button"
+          onClick={props.onCreateFolder}
+          className="mt-2 w-full rounded-md border border-dashed border-[color:var(--workspace-shell-border)] px-2 py-3 text-left text-xs text-muted-foreground transition hover:border-[var(--ozer-accent)]/40 hover:text-[var(--workspace-shell-text)]"
+        >
+          <span className="inline-flex items-center gap-1.5">
+            <FolderPlus className="h-3.5 w-3.5" />
+            Create your first folder
+          </span>
+        </button>
+      ) : (
+        tree.map((node) => (
+          <FolderTreeItem
+            key={node.id}
+            node={node}
+            depth={0}
+            selectedFolderId={props.selectedFolderId}
+            onSelect={props.onSelectFolder}
+          />
+        ))
+      )}
     </aside>
   );
 }

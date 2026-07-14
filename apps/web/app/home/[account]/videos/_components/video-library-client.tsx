@@ -31,6 +31,8 @@ import type {
 } from '~/lib/videos/types';
 
 import { FolderSidebar } from './folder-sidebar';
+import { CreateFolderDialog } from './create-folder-dialog';
+import { MoveToFolderDialog } from './move-to-folder-dialog';
 import { VideoCard } from './video-card';
 import { VideoListRow } from './video-list-row';
 import { VideoPreviewDialog } from './video-preview-dialog';
@@ -84,6 +86,8 @@ export function VideoLibraryClient(props: {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [previewVideo, setPreviewVideo] = useState<VideoRow | null>(null);
+  const [moveVideoTarget, setMoveVideoTarget] = useState<VideoRow | null>(null);
+  const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const notifiedReady = useRef(new Set<string>());
 
   const encodingVideoIds = useMemo(
@@ -243,36 +247,48 @@ export function VideoLibraryClient(props: {
     }
   };
 
-  const moveVideo = async (video: VideoRow) => {
-    const options = [
-      { id: '', label: 'No folder' },
-      ...props.folders.map((folder) => ({ id: folder.id, label: folder.name })),
-    ];
-    const message = options
-      .map((option, index) => `${index}: ${option.label}`)
-      .join('\n');
-    const choice = window.prompt(`Move "${video.title}" — enter folder number:\n${message}`);
-    if (choice == null) return;
-    const index = Number(choice);
-    if (Number.isNaN(index) || index < 0 || index >= options.length) {
-      toast.error('Invalid folder selection');
-      return;
-    }
-
+  const createFolder = async (name: string) => {
     try {
-      const res = await fetch(`/api/videos/${video.id}`, {
-        method: 'PATCH',
+      const res = await fetch('/api/videos/folders', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          folderId: options[index]?.id ? options[index]!.id : null,
+          accountId: props.accountId,
+          name,
+          parentFolderId: selectedFolderId,
         }),
       });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error.message);
-      toast.success('Video moved');
+      toast.success('Folder created');
+      setCreateFolderOpen(false);
+      if (json.data?.folder?.id) {
+        setSelectedFolderId(json.data.folder.id as string);
+      }
       router.refresh();
     } catch (error) {
       toast.error(getErrorMessage(error));
+      throw error;
+    }
+  };
+
+  const moveVideo = async (folderId: string | null) => {
+    if (!moveVideoTarget) return;
+
+    try {
+      const res = await fetch(`/api/videos/${moveVideoTarget.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folderId }),
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error.message);
+      toast.success('Video moved');
+      setMoveVideoTarget(null);
+      router.refresh();
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+      throw error;
     }
   };
 
@@ -291,6 +307,12 @@ export function VideoLibraryClient(props: {
       toast.error(getErrorMessage(error));
     }
   };
+
+  const selectedFolderName =
+    selectedFolderId == null
+      ? null
+      : (props.folders.find((folder) => folder.id === selectedFolderId)?.name ??
+        null);
 
   return (
     <div className="space-y-6">
@@ -407,6 +429,7 @@ export function VideoLibraryClient(props: {
           collapsed={sidebarCollapsed}
           onToggleCollapsed={() => setSidebarCollapsed((value) => !value)}
           onSelectFolder={setSelectedFolderId}
+          onCreateFolder={() => setCreateFolderOpen(true)}
         />
 
         <div className="min-w-0 flex-1">
@@ -436,7 +459,7 @@ export function VideoLibraryClient(props: {
                   onCopyEmbed={copyEmbed}
                   onCopyPublicLink={copyPublicLink}
                   onRename={renameVideo}
-                  onMove={moveVideo}
+                  onMove={setMoveVideoTarget}
                   onDelete={deleteVideo}
                 />
               ))}
@@ -452,7 +475,7 @@ export function VideoLibraryClient(props: {
                   onCopyEmbed={copyEmbed}
                   onCopyPublicLink={copyPublicLink}
                   onRename={renameVideo}
-                  onMove={moveVideo}
+                  onMove={setMoveVideoTarget}
                   onDelete={deleteVideo}
                 />
               ))}
@@ -467,6 +490,23 @@ export function VideoLibraryClient(props: {
         accountId={props.accountId}
         folders={props.folders}
         defaultFolderId={selectedFolderId}
+      />
+
+      <CreateFolderDialog
+        open={createFolderOpen}
+        parentFolderName={selectedFolderName}
+        onOpenChange={setCreateFolderOpen}
+        onConfirm={createFolder}
+      />
+
+      <MoveToFolderDialog
+        open={moveVideoTarget != null}
+        video={moveVideoTarget}
+        folders={props.folders}
+        onOpenChange={(open) => {
+          if (!open) setMoveVideoTarget(null);
+        }}
+        onConfirm={moveVideo}
       />
 
       <VideoPreviewDialog

@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
 
-import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
 import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access';
 import { isWorkNavModuleEnabled } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
@@ -41,22 +40,15 @@ async function MeetingsPage({ params }: MeetingsPageProps) {
   const data = await loadMeetingsPageData(accountSlug);
 
   return (
-    <>
-      <TeamAccountLayoutPageHeader
-        account={accountSlug}
-        title="Meetings"
-        description="Meeting transcripts across your clients — extract tasks and feed proposals."
+    <PageBody className="bg-[var(--workspace-shell-canvas)]">
+      <MeetingsPageContent
+        accountId={data.accountId}
+        accountSlug={data.accountSlug}
+        transcripts={data.transcripts}
+        clients={data.clients}
+        canEdit={data.canEdit}
       />
-      <PageBody className="bg-[var(--workspace-shell-canvas)]">
-        <MeetingsPageContent
-          accountId={data.accountId}
-          accountSlug={data.accountSlug}
-          transcripts={data.transcripts}
-          clients={data.clients}
-          canEdit={data.canEdit}
-        />
-      </PageBody>
-    </>
+    </PageBody>
   );
 }
 

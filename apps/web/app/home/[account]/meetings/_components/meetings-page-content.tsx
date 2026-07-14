@@ -1,13 +1,29 @@
 'use client';
 
-import { useCallback, useEffect, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { Loader2, Mic, PlusCircle, Trash2, Upload } from 'lucide-react';
+import {
+  Copy,
+  Eye,
+  Loader2,
+  Mic,
+  MoreHorizontal,
+  PlusCircle,
+  Trash2,
+  Upload,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@kit/ui/dropdown-menu';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import {
@@ -43,8 +59,8 @@ type Props = {
   canEdit: boolean;
 };
 
-function mapTranscript(row: MeetingTranscriptListRow): TranscriptRow {
-  return row;
+function meetingSortKey(row: TranscriptRow) {
+  return row.meetingDate || row.createdAt.slice(0, 10);
 }
 
 export function MeetingsPageContent({
@@ -56,9 +72,7 @@ export function MeetingsPageContent({
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [rows, setRows] = useState(() =>
-    initialTranscripts.map((row) => mapTranscript(row)),
-  );
+  const [rows, setRows] = useState(initialTranscripts);
   const [showForm, setShowForm] = useState(false);
   const [pending, startTransition] = useTransition();
   const [title, setTitle] = useState('');
@@ -68,7 +82,7 @@ export function MeetingsPageContent({
   const [content, setContent] = useState('');
 
   useEffect(() => {
-    setRows(initialTranscripts.map((row) => mapTranscript(row)));
+    setRows(initialTranscripts);
   }, [initialTranscripts]);
 
   useEffect(() => {
@@ -112,6 +126,14 @@ export function MeetingsPageContent({
     setContent('');
     setShowForm(false);
   }, []);
+
+  const upcomingRows = useMemo(() => {
+    const today = todayIsoDate();
+    return [...rows]
+      .filter((row) => meetingSortKey(row) >= today)
+      .sort((a, b) => meetingSortKey(a).localeCompare(meetingSortKey(b)))
+      .slice(0, 8);
+  }, [rows]);
 
   const handleSave = () => {
     if (!canEdit) return;
@@ -168,6 +190,15 @@ export function MeetingsPageContent({
     });
   };
 
+  const handleCopyTranscript = async (row: TranscriptRow) => {
+    try {
+      await navigator.clipboard.writeText(row.content);
+      toast.success('Transcript copied');
+    } catch {
+      toast.error('Could not copy transcript');
+    }
+  };
+
   const contextLabel = (row: TranscriptRow) => {
     if (row.clientName) return row.clientName;
     if (row.dealTitle) return row.dealTitle;
@@ -180,11 +211,16 @@ export function MeetingsPageContent({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-2xl text-sm text-[var(--workspace-shell-text-muted)]">
-          All meeting transcripts across clients. Open a meeting to read the full
-          transcript and extract tasks with AI.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 max-w-2xl">
+          <h1 className="font-heading text-2xl font-bold tracking-tight text-[var(--workspace-shell-text)]">
+            Meetings
+          </h1>
+          <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
+            All meeting transcripts across clients. Open a meeting to read the full
+            transcript and extract tasks with AI.
+          </p>
+        </div>
         {canEdit ? (
           <Button
             size="sm"
@@ -284,73 +320,139 @@ export function MeetingsPageContent({
         </div>
       ) : null}
 
-      {rows.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-[color:var(--workspace-shell-border)] px-6 py-12 text-center">
-          <Mic className="mx-auto mb-3 h-8 w-8 text-[var(--workspace-shell-text-muted)]" />
-          <p className="text-sm text-[var(--workspace-shell-text-muted)]">No meetings yet.</p>
-          {canEdit ? (
-            <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-              Add a meeting or save transcripts from a client page.
-            </p>
-          ) : null}
-        </div>
-      ) : (
-        <ul className="space-y-2">
-          {rows.map((row) => (
-            <li
-              key={row.id}
-              className={cn(
-                'flex items-start justify-between gap-3 rounded-xl border border-[color:var(--workspace-shell-border)]',
-                'bg-[var(--workspace-shell-panel)] px-4 py-3 transition-colors hover:border-[var(--ozer-accent)]/30',
-              )}
-            >
-              <div className="min-w-0 flex-1">
-                <Link
-                  href={meetingDetailPath(row.id)}
-                  className="truncate text-sm font-medium text-[var(--workspace-shell-text)] hover:text-[var(--ozer-accent-muted)]"
-                >
-                  {row.title}
-                </Link>
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+        <div className="min-w-0 flex-1 space-y-2">
+          {rows.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-[color:var(--workspace-shell-border)] px-6 py-12 text-center">
+              <Mic className="mx-auto mb-3 h-8 w-8 text-[var(--workspace-shell-text-muted)]" />
+              <p className="text-sm text-[var(--workspace-shell-text-muted)]">No meetings yet.</p>
+              {canEdit ? (
                 <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-                  {meetingDisplayDate(row.meetingDate, row.createdAt)}
-                  {' · '}
-                  {row.clientId ? (
-                    <Link
-                      href={clientPath(row.clientId)}
-                      className="text-[var(--ozer-accent-muted)] hover:underline"
-                    >
-                      {contextLabel(row)}
-                    </Link>
-                  ) : (
-                    contextLabel(row)
-                  )}
-                  {' · '}
-                  {row.content.length.toLocaleString()} chars
+                  Add a meeting or save transcripts from a client page.
                 </p>
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <MeetingParticipantAvatars participants={row.participants} />
-                {canEdit ? (
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 text-red-400"
-                    disabled={pending}
-                    onClick={() => handleDelete(row.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                ) : null}
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+              ) : null}
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {rows.map((row) => (
+                <li
+                  key={row.id}
+                  className={cn(
+                    'flex items-start justify-between gap-3 rounded-xl border border-[color:var(--workspace-shell-border)]',
+                    'bg-[var(--workspace-shell-panel)] px-4 py-3 transition-colors hover:border-[var(--ozer-accent)]/30',
+                  )}
+                >
+                  <div className="min-w-0 flex-1">
+                    <Link
+                      href={meetingDetailPath(row.id)}
+                      className="truncate text-sm font-medium text-[var(--workspace-shell-text)] hover:text-[var(--ozer-accent)]"
+                    >
+                      {row.title}
+                    </Link>
+                    <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+                      {meetingDisplayDate(row.meetingDate, row.createdAt)}
+                      {' · '}
+                      {row.clientId ? (
+                        <Link
+                          href={clientPath(row.clientId)}
+                          className="font-medium text-[var(--workspace-shell-text)] hover:underline"
+                        >
+                          {contextLabel(row)}
+                        </Link>
+                      ) : (
+                        <span className="font-medium text-[var(--workspace-shell-text)]">
+                          {contextLabel(row)}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <MeetingParticipantAvatars participants={row.participants} />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-[var(--workspace-shell-text-muted)]"
+                          disabled={pending}
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Meeting actions</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link href={meetingDetailPath(row.id)}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            View meeting
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => void handleCopyTranscript(row)}
+                        >
+                          <Copy className="mr-2 h-4 w-4" />
+                          Copy transcript
+                        </DropdownMenuItem>
+                        {canEdit ? (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => handleDelete(row.id)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </>
+                        ) : null}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
 
-      <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-        Tip: you can also add meetings from a client&apos;s Meetings tab — they appear
-        here automatically.
-      </p>
+          <p className="pt-2 text-xs text-[var(--workspace-shell-text-muted)]">
+            Tip: you can also add meetings from a client&apos;s Meetings tab — they appear
+            here automatically.
+          </p>
+        </div>
+
+        <aside className="w-full shrink-0 lg:w-64 xl:w-72">
+          <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
+            <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+              Upcoming meetings
+            </h2>
+            {upcomingRows.length === 0 ? (
+              <p className="mt-3 text-xs text-[var(--workspace-shell-text-muted)]">
+                No upcoming meetings.
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-3">
+                {upcomingRows.map((row) => (
+                  <li key={row.id}>
+                    <Link
+                      href={meetingDetailPath(row.id)}
+                      className="block rounded-lg px-1 py-0.5 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                    >
+                      <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+                        {row.title}
+                      </p>
+                      <p className="mt-0.5 truncate text-xs text-[var(--workspace-shell-text-muted)]">
+                        {meetingDisplayDate(row.meetingDate, row.createdAt)}
+                      </p>
+                      <p className="truncate text-xs font-medium text-[var(--workspace-shell-text)]">
+                        {contextLabel(row)}
+                      </p>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }
