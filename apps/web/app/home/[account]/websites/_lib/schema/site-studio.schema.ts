@@ -86,10 +86,7 @@ export const WebsiteBriefPatchSchema = z
     offer: z
       .object({
         services: z.array(BriefServiceSchema).max(30).optional(),
-        primaryConversionGoals: z
-          .array(z.string().max(500))
-          .max(20)
-          .optional(),
+        primaryConversionGoals: z.array(z.string().max(500)).max(20).optional(),
       })
       .optional(),
     audience: z
@@ -159,31 +156,75 @@ export const SuggestWebsiteBriefSchema = z.object({
 
 export const GenerateWebsiteSitemapSchema = z.object({
   ...WebsiteIdFields,
-  mode: z.enum(['replace', 'add-missing-seo-pages']).default('replace'),
+  mode: z
+    .enum([
+      'from-brief',
+      'add-missing-seo-pages',
+      'local-service-variants',
+      // Legacy aliases
+      'replace',
+    ])
+    .default('from-brief'),
 });
+
+export const ProposeWebsiteSitemapSchema = GenerateWebsiteSitemapSchema;
 
 export const GenerateWebsiteWireframesSchema = z.object({
   ...WebsiteIdFields,
   pageId: z.string().uuid(),
 });
 
+export const ProposeWebsiteWireframesSchema = GenerateWebsiteWireframesSchema;
+
+export const ProposeWebsiteWireframeSectionSchema = z.object({
+  ...WebsiteIdFields,
+  pageId: z.string().uuid(),
+  sectionId: z.string().uuid(),
+});
+
 const StyleTokensSchema = z.object({
-  canvas: z.string().max(50),
-  atmosphere: z.string().max(50),
-  accent: z.string().max(50),
-  contrast: z.string().max(50),
-  secondary: z.string().max(50),
-  headingFont: z.string().max(100),
-  bodyFont: z.string().max(100),
-  typeScale: z.enum(['compact', 'regular', 'display']),
-  radius: z.enum(['sharp', 'soft', 'round']),
-  spacingDensity: z.enum(['tight', 'regular', 'airy']),
+  schemaVersion: z.literal('1.0'),
+  colors: z.object({
+    primary: z.string().max(50),
+    secondary: z.string().max(50),
+    accent: z.string().max(50),
+    neutrals: z.array(z.string().max(50)).min(5).max(7),
+    success: z.string().max(50),
+    warning: z.string().max(50),
+    danger: z.string().max(50),
+  }),
+  typography: z.object({
+    displayFamily: z.string().max(100),
+    bodyFamily: z.string().max(100),
+    typeScale: z.object({
+      base: z.number().min(12).max(24),
+      ratio: z.number().min(1.1).max(1.6),
+    }),
+    weights: z.object({
+      regular: z.number().int().min(100).max(900),
+      medium: z.number().int().min(100).max(900),
+      bold: z.number().int().min(100).max(900),
+    }),
+  }),
+  radius: z.object({
+    none: z.string().max(40),
+    sm: z.string().max(40),
+    md: z.string().max(40),
+    lg: z.string().max(40),
+    full: z.string().max(40),
+  }),
+  spacingDensity: z.enum(['compact', 'comfortable', 'spacious']),
   photographyDirection: z.string().max(2000),
+  buttons: z.object({
+    style: z.enum(['pill', 'rounded', 'square']),
+  }),
 });
 
 const MoodboardRefSchema = z.object({
   url: z.string().max(500),
   note: z.string().max(1000),
+  imageRefs: z.array(z.string().max(500)).max(20).optional(),
+  extractedPalette: z.array(z.string().max(50)).max(12).optional(),
 });
 
 export const WebsiteStyleSystemSchema = z.object({
@@ -201,37 +242,118 @@ export const SuggestWebsiteStyleSchema = z.object({ ...WebsiteIdFields });
 
 const AnswerBlockSchema = z.object({
   question: z.string().max(500),
-  answer: z.string().max(5000),
+  draftAnswer: z.string().max(5000),
 });
 
-export const WebsiteSeoPageFieldsSchema = z.object({
-  primaryKeyword: z.string().max(200),
-  secondaryKeywords: z.string().max(2000),
-  title: z.string().max(200),
-  metaDescription: z.string().max(500),
-  h1: z.string().max(300),
-  headingOutline: z.string().max(10000),
-  internalLinks: z.string().max(5000),
-  canonicalNotes: z.string().max(2000),
-  imageAltPlan: z.string().max(5000),
-  schemaTypes: z.array(z.string().max(100)).max(10),
-  localSeo: z.string().max(5000),
-  answerBlocks: z.array(AnswerBlockSchema).max(20),
-  entityNotes: z.string().max(5000),
+const HeadingOutlineItemSchema = z.object({
+  level: z.number().int().min(1).max(6),
+  text: z.string().max(500),
 });
+
+const InternalLinkSchema = z.object({
+  toSlug: z.string().max(200),
+  anchorSuggestion: z.string().max(300),
+});
+
+const ImageAltSchema = z.object({
+  imageRole: z.string().max(200),
+  altPattern: z.string().max(500),
+});
+
+export const WebsiteSeoPageSeoSchema = z.object({
+  schemaVersion: z.literal('1.0').or(z.string().max(20)).optional(),
+  keywords: z.object({
+    primary: z.string().max(200),
+    secondary: z.array(z.string().max(200)).max(20),
+  }),
+  meta: z.object({
+    title: z.string().max(200),
+    description: z.string().max(500),
+  }),
+  headingOutline: z.array(HeadingOutlineItemSchema).max(40),
+  internalLinks: z.array(InternalLinkSchema).max(40),
+  canonicalRule: z.string().max(2000),
+  slugRule: z.string().max(500),
+  imageAltPlan: z.array(ImageAltSchema).max(40),
+  schemaTypes: z.array(z.string().max(100)).max(12),
+  geo: z.object({
+    isLocationPage: z.boolean(),
+    nap: z.string().max(2000),
+    serviceArea: z.array(z.string().max(200)).max(40),
+    gbpCues: z.array(z.string().max(300)).max(40),
+    localFaq: z.array(AnswerBlockSchema).max(20),
+  }),
+  aeo: z.object({
+    answerBlocks: z.array(AnswerBlockSchema).max(20),
+    definitions: z.array(z.string().max(500)).max(20),
+    entityNotes: z.string().max(5000),
+  }),
+  technical: z.object({
+    indexable: z.boolean(),
+    ogImagePlan: z.string().max(2000),
+  }),
+});
+
+/** @deprecated Prefer WebsiteSeoPageSeoSchema */
+export const WebsiteSeoPageFieldsSchema = WebsiteSeoPageSeoSchema;
 
 export const SaveWebsiteSeoPageSchema = z.object({
   ...WebsiteIdFields,
   pageId: z.string().uuid(),
-  fields: WebsiteSeoPageFieldsSchema,
+  pageSlug: z.string().min(1).max(200).optional(),
+  seo: WebsiteSeoPageSeoSchema,
+  status: z.enum(['draft', 'approved']).optional(),
 });
 
-export const GenerateWebsiteSeoPageSchema = z.object({
+export const ApproveWebsiteSeoPageSchema = z.object({
   ...WebsiteIdFields,
   pageId: z.string().uuid(),
 });
 
+export const ProposeWebsiteSeoPageSchema = z.object({
+  ...WebsiteIdFields,
+  pageId: z.string().uuid(),
+});
+
+export const DraftWebsiteSeoAnswerBlocksSchema = z.object({
+  ...WebsiteIdFields,
+  pageId: z.string().uuid(),
+});
+
+/** @deprecated Prefer ProposeWebsiteSeoPageSchema (preview-then-apply). */
+export const GenerateWebsiteSeoPageSchema = ProposeWebsiteSeoPageSchema;
+
 export const GetSiteStudioBundleSchema = z.object({ ...WebsiteIdFields });
+
+/** Authenticated in-app SiteStudioExport document. */
+export const GetWebsiteExportSchema = z.object({ ...WebsiteIdFields });
+
+export const GeneratePromptPackSchema = z.object({
+  ...WebsiteIdFields,
+  target: z.enum(['webflow', 'astro', 'next', 'ozer_sites']),
+});
+
+/** Contract-backed Webflow / Astro / Next scaffold zip (Prompts D2 + E3). */
+export const GenerateScaffoldPackSchema = z.object({
+  ...WebsiteIdFields,
+  kind: z.enum(['webflow', 'astro', 'next']),
+});
+
+export const SaveWebsiteLlmsTxtSchema = z.object({
+  ...WebsiteIdFields,
+  llmsTxt: z.string().max(50_000),
+});
+
+export const PreviewWebsiteLlmsTxtSchema = z.object({
+  ...WebsiteIdFields,
+});
+
+/** Figma Tier 0 zip + Tier 1 chrome-less import URLs (Prompt D3). */
+export const GenerateFigmaPackSchema = z.object({
+  ...WebsiteIdFields,
+  /** Attempt Playwright PNG capture when Chromium is available. Default true. */
+  capturePngs: z.boolean().optional(),
+});
 
 export const CreateWebsiteShareSchema = z.object({
   ...WebsiteIdFields,
@@ -255,11 +377,49 @@ export const CreateWebsiteProjectSchema = z.object({
   existingJobId: z.string().uuid().optional(),
 });
 
-export const SetShareApprovalSchema = z.object({
-  token: z.string().min(16).max(200),
-  pageId: z.string().uuid(),
-  status: z.enum(['approved', 'blocked']),
-  note: z.string().max(2000).optional(),
+export const SetShareApprovalSchema = z
+  .object({
+    token: z.string().min(16).max(200),
+    targetType: z.enum(['page', 'section']),
+    targetId: z.string().uuid(),
+    /** Parent page for section approvals. */
+    pageId: z.string().uuid().optional(),
+    status: z.enum(['approved', 'blocked']),
+    note: z.string().max(2000).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.targetType === 'section' && !value.pageId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'pageId is required for section approvals',
+        path: ['pageId'],
+      });
+    }
+  });
+
+export const SetPortalWebsiteApprovalSchema = z
+  .object({
+    clientOrgId: z.string().uuid(),
+    websiteId: z.string().uuid(),
+    targetType: z.enum(['page', 'section']),
+    targetId: z.string().uuid(),
+    pageId: z.string().uuid().optional(),
+    status: z.enum(['approved', 'blocked']),
+    note: z.string().max(2000).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.targetType === 'section' && !value.pageId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'pageId is required for section approvals',
+        path: ['pageId'],
+      });
+    }
+  });
+
+export const ListWebsiteApprovalsSchema = z.object({
+  accountId: z.string().uuid(),
+  websiteId: z.string().uuid(),
 });
 
 export const SetShareSectionCommentSchema = z.object({
@@ -267,4 +427,49 @@ export const SetShareSectionCommentSchema = z.object({
   pageId: z.string().uuid(),
   sectionId: z.string().uuid(),
   comment: z.string().max(2000),
+});
+
+/* Ozer Sites (F1 / F2) */
+export const PublishOzerSitesSchema = z.object({
+  ...WebsiteIdFields,
+  subdomain: z
+    .string()
+    .max(48)
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+    .optional(),
+  resolveConflicts: z
+    .record(z.string().uuid(), z.enum(['overwrite', 'skip']))
+    .optional(),
+});
+
+export const GetOzerSiteBundleSchema = z.object({
+  ...WebsiteIdFields,
+  clientOrgId: z.string().uuid().optional(),
+});
+
+export const SaveOzerSitePageDraftSchema = z.object({
+  accountId: z.string().uuid(),
+  pageId: z.string().uuid(),
+  puckData: z.record(z.string(), z.unknown()),
+  title: z.string().max(300).optional(),
+  asHumanEdit: z.boolean().optional(),
+  /** Portal client edit path */
+  clientOrgId: z.string().uuid().optional(),
+});
+
+export const PublishOzerSitePageSchema = z.object({
+  accountId: z.string().uuid(),
+  pageId: z.string().uuid(),
+  clientOrgId: z.string().uuid().optional(),
+});
+
+export const UpdateOzerSiteSettingsSchema = z.object({
+  accountId: z.string().uuid(),
+  siteId: z.string().uuid(),
+  settings: z.object({
+    portalEditEnabled: z.boolean().optional(),
+    clientCanDelete: z.boolean().optional(),
+    clientCanInsert: z.boolean().optional(),
+    clientCanDrag: z.boolean().optional(),
+  }),
 });

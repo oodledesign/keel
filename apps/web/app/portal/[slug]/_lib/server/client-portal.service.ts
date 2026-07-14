@@ -12,7 +12,9 @@ import {
   type WebsiteSitemapPage,
   type WebsiteStyleSystem,
   type WebsiteWireframePage,
+  wireframesForClientShare,
 } from '~/lib/websites/planning-types';
+import { migrateSitemapPages } from '~/lib/websites/sitemap-document';
 
 import type {
   AddPortalTicketMessageInput,
@@ -186,13 +188,10 @@ class ClientPortalService {
       stack: (row.stack as string | null) ?? null,
       cmsAdminUrl: (row.cms_admin_url as string | null) ?? null,
       portalShareScope: scope,
-      sitemap:
-        allowPlanning && Array.isArray(row.sitemap)
-          ? (row.sitemap as WebsiteSitemapPage[])
-          : [],
+      sitemap: allowPlanning ? migrateSitemapPages(row.sitemap) : [],
       wireframes:
         allowWireframes && Array.isArray(row.wireframes)
-          ? (row.wireframes as WebsiteWireframePage[])
+          ? wireframesForClientShare(row.wireframes as WebsiteWireframePage[])
           : [],
       style: null,
       brief: null,

@@ -9,6 +9,7 @@ import { Lock } from 'lucide-react';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
+import type { PhaseListItem } from '~/home/[account]/jobs/_lib/schema/project-phases.schema';
 import {
   SITE_STUDIO_PLANNING_TABS,
   type SiteStudioBundle,
@@ -18,21 +19,24 @@ import {
 } from '~/lib/websites/planning-types';
 import { isSiteStudioGatedTab } from '~/lib/websites/site-studio-tabs';
 
+import type { WebsiteApprovalRecord } from '../_lib/server/website-approvals.service';
 import type { WebsitePlanningBundle } from '../_lib/server/website-planning.service';
-
+import { useSiteStudioAccess } from './site-studio/site-studio-access';
+import { SiteStudioUpsell } from './site-studio/site-studio-upsell';
+import { WebsiteApprovalFeed } from './site-studio/website-approval-feed';
+import { WebsiteBriefEditor } from './site-studio/website-brief-editor';
+import { WebsiteDeliveryOverview } from './site-studio/website-delivery-overview';
+import { WebsiteDesignEditor } from './site-studio/website-design-editor';
+import { WebsiteFigmaPackCard } from './site-studio/website-figma-pack-card';
+import { WebsiteOzerSitePanel } from './site-studio/website-ozer-site-panel';
+import { WebsitePromptPackCard } from './site-studio/website-prompt-pack-card';
+import { WebsiteScaffoldPackCard } from './site-studio/website-scaffold-pack-card';
+import { WebsiteSeoEditor } from './site-studio/website-seo-editor';
+import { WebsiteSharePanel } from './site-studio/website-share-panel';
+import { WebsiteSitemapCanvas } from './site-studio/website-sitemap-canvas';
 import { WebsiteContentDocsPanel } from './website-content-docs-panel';
 import { WebsiteSitemapEditor } from './website-sitemap-editor';
 import { WebsiteWireframeEditor } from './website-wireframe-editor';
-import { useSiteStudioAccess } from './site-studio/site-studio-access';
-import { WebsiteBriefEditor } from './site-studio/website-brief-editor';
-import { WebsiteDesignEditor } from './site-studio/website-design-editor';
-import { WebsiteExportPanel } from './site-studio/website-export-panel';
-import { WebsiteSeoEditor } from './site-studio/website-seo-editor';
-import { WebsiteSharePanel } from './site-studio/website-share-panel';
-import { WebsiteDeliveryOverview } from './site-studio/website-delivery-overview';
-import { WebsiteSitemapCanvas } from './site-studio/website-sitemap-canvas';
-import { SiteStudioUpsell } from './site-studio/site-studio-upsell';
-import type { PhaseListItem } from '~/home/[account]/jobs/_lib/schema/project-phases.schema';
 
 const TAB_LABELS: Record<WebsitePlanningTab, string> = {
   overview: 'Overview',
@@ -41,6 +45,7 @@ const TAB_LABELS: Record<WebsitePlanningTab, string> = {
   wireframe: 'Wireframes',
   design: 'Design',
   seo: 'Search',
+  site: 'Site',
   export: 'Export',
   content: 'Content docs',
 };
@@ -48,8 +53,8 @@ const TAB_LABELS: Record<WebsitePlanningTab, string> = {
 export function WebsitePlanningPanel({
   accountId,
   accountSlug,
-  websiteName,
-  websiteDomain,
+  websiteName: _websiteName,
+  websiteDomain: _websiteDomain,
   planning,
   siteStudio,
   canEdit,
@@ -58,6 +63,7 @@ export function WebsitePlanningPanel({
   clientName,
   clientHref,
   phases = [],
+  approvals = [],
 }: {
   accountId: string;
   accountSlug: string;
@@ -71,9 +77,15 @@ export function WebsitePlanningPanel({
   clientName?: string | null;
   clientHref?: string | null;
   phases?: PhaseListItem[];
+  approvals?: WebsiteApprovalRecord[];
 }) {
   const siteStudioEnabled = useSiteStudioAccess();
-  const tabs = SITE_STUDIO_PLANNING_TABS;
+  const showSiteTab =
+    siteStudio.hasOzerSite ||
+    siteStudio.brief?.stackPreference === 'ozer_sites';
+  const tabs = SITE_STUDIO_PLANNING_TABS.filter(
+    (item) => item !== 'site' || showSiteTab,
+  );
   const safeInitial = tabs.includes(initialTab) ? initialTab : 'overview';
   const [tab, setTab] = useState<WebsitePlanningTab>(safeInitial);
   const [sitemap, setSitemap] = useState<WebsiteSitemapPage[]>(
@@ -90,8 +102,7 @@ export function WebsitePlanningPanel({
       .replace('[id]', planning.jobId);
   }, [accountSlug, planning.jobId]);
 
-  const locked =
-    !siteStudioEnabled && isSiteStudioGatedTab(tab);
+  const locked = !siteStudioEnabled && isSiteStudioGatedTab(tab);
 
   return (
     <section className="w-full rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
@@ -155,9 +166,7 @@ export function WebsitePlanningPanel({
       </div>
 
       <div className="w-full min-w-0 px-4 py-5 md:px-6">
-        {locked ? (
-          <SiteStudioUpsell lockedTabLabel={TAB_LABELS[tab]} />
-        ) : null}
+        {locked ? <SiteStudioUpsell lockedTabLabel={TAB_LABELS[tab]} /> : null}
 
         {!locked && tab === 'overview' ? (
           <div className="space-y-6">
@@ -176,15 +185,18 @@ export function WebsitePlanningPanel({
             />
 
             {siteStudioEnabled ? (
-              <WebsiteSharePanel
-                accountId={accountId}
-                websiteId={planning.websiteId}
-                accountSlug={accountSlug}
-                shares={siteStudio.shares}
-                portalScope={siteStudio.portalScope}
-                hasJob={Boolean(planning.jobId)}
-                canEdit={canEdit}
-              />
+              <>
+                <WebsiteApprovalFeed approvals={approvals} />
+                <WebsiteSharePanel
+                  accountId={accountId}
+                  websiteId={planning.websiteId}
+                  accountSlug={accountSlug}
+                  shares={siteStudio.shares}
+                  portalScope={siteStudio.portalScope}
+                  hasJob={Boolean(planning.jobId)}
+                  canEdit={canEdit}
+                />
+              </>
             ) : (
               <div className="space-y-4 text-sm text-[var(--workspace-shell-text)]/75">
                 <p>
@@ -211,16 +223,13 @@ export function WebsitePlanningPanel({
         ) : null}
 
         {/* Keep core editors mounted so edits survive tab switches. */}
-        <div
-          className={cn(
-            !locked && tab === 'sitemap' ? 'block' : 'hidden',
-          )}
-        >
+        <div className={cn(!locked && tab === 'sitemap' ? 'block' : 'hidden')}>
           {siteStudioEnabled ? (
             <WebsiteSitemapCanvas
               accountId={accountId}
               websiteId={planning.websiteId}
               initialSitemap={sitemap}
+              initialComponents={planning.sitemapComponents}
               onSitemapChange={setSitemap}
               canEdit={canEdit}
               siteStudioEnabled
@@ -237,9 +246,7 @@ export function WebsitePlanningPanel({
         </div>
 
         <div
-          className={cn(
-            !locked && tab === 'wireframe' ? 'block' : 'hidden',
-          )}
+          className={cn(!locked && tab === 'wireframe' ? 'block' : 'hidden')}
         >
           <WebsiteWireframeEditor
             accountId={accountId}
@@ -257,6 +264,8 @@ export function WebsitePlanningPanel({
             accountId={accountId}
             websiteId={planning.websiteId}
             initialStyle={siteStudio.style}
+            sitemap={sitemap}
+            wireframes={wireframes}
             canEdit={canEdit}
           />
         ) : null}
@@ -267,25 +276,59 @@ export function WebsitePlanningPanel({
             websiteId={planning.websiteId}
             sitemap={sitemap}
             initialSeoPages={siteStudio.seoPages}
+            initialLlmsTxt={siteStudio.llmsTxt}
             canEdit={canEdit}
+            stackPreference={siteStudio.brief?.stackPreference ?? 'undecided'}
+          />
+        ) : null}
+
+        {!locked && tab === 'site' && siteStudioEnabled ? (
+          <WebsiteOzerSitePanel
+            accountId={accountId}
+            websiteId={planning.websiteId}
+            accountSlug={accountSlug}
+            canEdit={canEdit}
+            role="agency"
           />
         ) : null}
 
         {!locked && tab === 'export' && siteStudioEnabled ? (
-          <WebsiteExportPanel
-            websiteName={websiteName}
-            domain={websiteDomain}
-            brief={siteStudio.brief}
-            sitemap={sitemap}
-            wireframes={wireframes}
-            style={siteStudio.style}
-            seoPages={siteStudio.seoPages}
-          />
+          <div className="space-y-6">
+            <WebsitePromptPackCard
+              accountId={accountId}
+              websiteId={planning.websiteId}
+              defaultTarget={
+                siteStudio.brief?.stackPreference === 'webflow' ||
+                siteStudio.brief?.stackPreference === 'astro' ||
+                siteStudio.brief?.stackPreference === 'next' ||
+                siteStudio.brief?.stackPreference === 'ozer_sites'
+                  ? siteStudio.brief.stackPreference
+                  : 'next'
+              }
+            />
+            <WebsiteScaffoldPackCard
+              accountId={accountId}
+              websiteId={planning.websiteId}
+              kind="webflow"
+            />
+            <WebsiteScaffoldPackCard
+              accountId={accountId}
+              websiteId={planning.websiteId}
+              kind="astro"
+            />
+            <WebsiteScaffoldPackCard
+              accountId={accountId}
+              websiteId={planning.websiteId}
+              kind="next"
+            />
+            <WebsiteFigmaPackCard
+              accountId={accountId}
+              websiteId={planning.websiteId}
+            />
+          </div>
         ) : null}
 
-        <div
-          className={cn(!locked && tab === 'content' ? 'block' : 'hidden')}
-        >
+        <div className={cn(!locked && tab === 'content' ? 'block' : 'hidden')}>
           <WebsiteContentDocsPanel
             accountId={accountId}
             websiteId={planning.websiteId}

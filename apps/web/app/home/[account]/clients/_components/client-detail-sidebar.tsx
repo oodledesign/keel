@@ -40,6 +40,7 @@ import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
+import { ClientSubscriptionStatusList } from '~/home/[account]/_components/client-subscription-status-list';
 
 import { MeetingTranscriptsBlock } from '../../_components/meeting-transcripts-block';
 import { ContextWorkspaceNotes } from '../../_components/workspace-content/context-workspace-notes';
@@ -66,6 +67,7 @@ import {
   getJobHistory,
   listNotes,
 } from '../_lib/server/server-actions';
+import { AttachRetainerPlanButton } from './attach-retainer-plan-button';
 import { ClientContactsBlock } from './client-contacts-block';
 import { ClientFinancePanel } from './client-finance-panel';
 import { ClientForm } from './client-form';
@@ -365,9 +367,7 @@ export function ClientDetailSidebar({
         }
       } catch (e) {
         if (!silent) {
-          toast.error(
-            e instanceof Error ? e.message : 'Failed to load client',
-          );
+          toast.error(e instanceof Error ? e.message : 'Failed to load client');
           setClient(null);
           setPortalStatus(null);
           setOverviewClientNotes([]);
@@ -634,6 +634,30 @@ export function ClientDetailSidebar({
                     icon={Building2}
                     label="Total project value"
                     value={formatPence(totalValuePence)}
+                  />
+                </div>
+
+                <div className="mt-4 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                        Retainers
+                      </p>
+                      <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                        Recurring billing via Stripe Connect. Cancel + recreate
+                        to change price.
+                      </p>
+                    </div>
+                    <AttachRetainerPlanButton
+                      accountId={accountId}
+                      clientId={client.id}
+                      canEdit={canEditClients}
+                    />
+                  </div>
+                  <ClientSubscriptionStatusList
+                    accountId={accountId}
+                    clientId={client.id}
+                    canEdit={canEditClients}
                   />
                 </div>
 

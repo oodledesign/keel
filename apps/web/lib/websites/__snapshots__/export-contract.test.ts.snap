@@ -1,0 +1,322 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`buildExport > builds a contract for a brief-only seeded website > brief-only 1`] = `
+{
+  "brief": {
+    "audience": {
+      "segments": [],
+    },
+    "brand": {
+      "constraints": [],
+      "existingSiteUrl": "",
+      "tone": [],
+    },
+    "competitors": [],
+    "conversation": {
+      "questionsTheSiteMustAnswer": [],
+    },
+    "offer": {
+      "primaryConversionGoals": [],
+      "services": [],
+    },
+    "org": {
+      "geography": "",
+      "name": "Acme Chapel",
+      "oneLiner": "Local church with a clear gospel invitation",
+      "sector": "",
+    },
+    "references": [],
+    "schemaVersion": "1.0",
+    "stackPreference": "astro",
+  },
+  "contentDocs": [],
+  "generatedAt": "2026-07-14T12:00:00.000Z",
+  "repeatingComponents": [],
+  "schemaVersion": "3.0",
+  "sections": [],
+  "seo": null,
+  "sitemap": [],
+  "styleTokens": null,
+  "website": {
+    "domain": "acmechapel.example",
+    "id": "11111111-1111-1111-1111-111111111111",
+    "name": "Acme Chapel site",
+    "stackPreference": "astro",
+  },
+}
+`;
+
+exports[`buildExport > builds a full contract with nested sitemap, components, sections, seo > full-data 1`] = `
+{
+  "brief": {
+    "audience": {
+      "segments": [],
+    },
+    "brand": {
+      "constraints": [],
+      "existingSiteUrl": "",
+      "tone": [],
+    },
+    "competitors": [],
+    "conversation": {
+      "questionsTheSiteMustAnswer": [],
+    },
+    "offer": {
+      "primaryConversionGoals": [
+        "Book a visit",
+      ],
+      "services": [],
+    },
+    "org": {
+      "geography": "",
+      "name": "Acme Chapel",
+      "oneLiner": "",
+      "sector": "",
+    },
+    "references": [],
+    "schemaVersion": "1.0",
+    "stackPreference": "next",
+  },
+  "contentDocs": [
+    {
+      "title": "Homepage copy",
+      "url": "#content/doc-1",
+    },
+    {
+      "title": "About draft",
+      "url": "#content/doc-2",
+    },
+  ],
+  "generatedAt": "2026-07-14T12:00:00.000Z",
+  "repeatingComponents": [
+    {
+      "key": "site-header",
+      "layoutPreset": "nav-simple",
+      "props": {
+        "items": [],
+        "slots": {
+          "cta": "Visit",
+          "logoText": "Acme",
+        },
+      },
+      "sectionType": "nav",
+      "title": "Header",
+    },
+    {
+      "key": "site-footer",
+      "layoutPreset": "footer",
+      "props": {},
+      "sectionType": "footer",
+      "title": "Footer",
+    },
+  ],
+  "schemaVersion": "3.0",
+  "sections": [
+    {
+      "colorTag": "nav",
+      "componentKey": "site-header",
+      "copyOutline": "Logo + Visit + Give",
+      "id": "wf-nav",
+      "layoutPreset": "nav-simple",
+      "pageSlug": "home",
+      "props": {
+        "items": [],
+        "slots": {
+          "cta": "Visit",
+          "logoText": "Acme",
+        },
+      },
+      "sectionType": "nav",
+      "status": "approved",
+    },
+    {
+      "colorTag": "hero",
+      "componentKey": null,
+      "copyOutline": "Welcome headline + CTA",
+      "id": "wf-hero",
+      "layoutPreset": "hero-split",
+      "pageSlug": "home",
+      "props": {
+        "items": [],
+        "slots": {
+          "cta": "Plan a visit",
+          "headline": "You are welcome here",
+        },
+      },
+      "sectionType": "hero",
+      "status": "draft",
+    },
+    {
+      "colorTag": "footer",
+      "componentKey": "site-footer",
+      "copyOutline": "Address + links",
+      "id": "wf-footer",
+      "layoutPreset": "footer",
+      "pageSlug": "home",
+      "props": {},
+      "sectionType": "footer",
+      "status": "draft",
+    },
+    {
+      "colorTag": "content",
+      "componentKey": null,
+      "copyOutline": "Church story outline",
+      "id": "wf-about-content",
+      "layoutPreset": "full",
+      "pageSlug": "about",
+      "props": {},
+      "sectionType": "content",
+      "status": "draft",
+    },
+  ],
+  "seo": {
+    "pages": [
+      {
+        "aeo": {
+          "answerBlocks": [
+            {
+              "draftAnswer": "10:30am",
+              "question": "What time is Sunday?",
+            },
+          ],
+          "definitions": [],
+          "entityNotes": "Christian church",
+        },
+        "canonicalRule": "",
+        "geo": {
+          "gbpCues": [],
+          "isLocationPage": true,
+          "localFaq": [],
+          "nap": "",
+          "serviceArea": [],
+        },
+        "headingOutline": [
+          {
+            "level": 1,
+            "text": "Welcome to Acme Chapel",
+          },
+          {
+            "level": 2,
+            "text": "Welcome",
+          },
+          {
+            "level": 2,
+            "text": "Times",
+          },
+        ],
+        "imageAltPlan": [],
+        "internalLinks": [
+          {
+            "anchorSuggestion": "Visit us",
+            "toSlug": "about",
+          },
+          {
+            "anchorSuggestion": "Plan a visit",
+            "toSlug": "visit",
+          },
+        ],
+        "keywords": {
+          "primary": "church near me",
+          "secondary": [
+            "sunday service",
+            "gospel",
+          ],
+        },
+        "meta": {
+          "description": "A warm local church.",
+          "title": "Acme Chapel | Welcome",
+        },
+        "pageSlug": "home",
+        "schemaTypes": [
+          "Organization",
+          "FAQPage",
+        ],
+        "schemaVersion": "1.0",
+        "slugRule": "",
+        "status": "approved",
+        "technical": {
+          "indexable": true,
+          "ogImagePlan": "",
+        },
+      },
+    ],
+  },
+  "sitemap": [
+    {
+      "description": "Landing page",
+      "pageType": "home",
+      "parentId": null,
+      "sectionIds": [
+        "wf-nav",
+        "wf-hero",
+        "wf-footer",
+      ],
+      "slug": "home",
+      "status": "approved",
+      "title": "Home",
+    },
+    {
+      "description": "",
+      "pageType": "about",
+      "parentId": "page-home",
+      "sectionIds": [
+        "wf-about-content",
+      ],
+      "slug": "about",
+      "status": "draft",
+      "title": "About",
+    },
+  ],
+  "styleTokens": {
+    "buttons": {
+      "style": "rounded",
+    },
+    "colors": {
+      "accent": "#FF5C34",
+      "danger": "#B42318",
+      "neutrals": [
+        "#FAFAF8",
+        "#F3F2EF",
+        "#E8E6E1",
+        "#C9C5BD",
+        "#6B6862",
+        "#3F3D3A",
+        "#1C1B1A",
+      ],
+      "primary": "#2F5D50",
+      "secondary": "#6B8F71",
+      "success": "#2F7D4A",
+      "warning": "#C9852A",
+    },
+    "photographyDirection": "",
+    "radius": {
+      "full": "9999px",
+      "lg": "1.25rem",
+      "md": "0.75rem",
+      "none": "0px",
+      "sm": "0.375rem",
+    },
+    "schemaVersion": "1.0",
+    "spacingDensity": "comfortable",
+    "typography": {
+      "bodyFamily": "General Sans",
+      "displayFamily": "Fraunces",
+      "typeScale": {
+        "base": 16,
+        "ratio": 1.25,
+      },
+      "weights": {
+        "bold": 700,
+        "medium": 500,
+        "regular": 400,
+      },
+    },
+  },
+  "website": {
+    "domain": "acmechapel.example",
+    "id": "11111111-1111-1111-1111-111111111111",
+    "name": "Acme Chapel site",
+    "stackPreference": "next",
+  },
+}
+`;

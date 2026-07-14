@@ -1,17 +1,40 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
 
 import {
-  ArrowDown,
-  ArrowUp,
-  ChevronDown,
-  ChevronRight,
+  ReactFlow,
+  Background,
+  Controls,
+  MiniMap,
+  Handle,
+  Position,
+  addEdge,
+  useEdgesState,
+  useNodesState,
+  type Connection,
+  type Edge,
+  type Node,
+  type NodeProps,
+  type OnNodeDrag,
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+
+import {
   Component,
-  GripVertical,
+  PanelRightClose,
+  PanelRightOpen,
   Plus,
   Sparkles,
   Trash2,
+  Undo2,
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
@@ -33,205 +56,263 @@ import {
   SECTION_TYPE_OPTIONS,
   createPlanningId,
   planningStatusMeta,
+  sectionColor,
   sectionTypeMeta,
   slugifyPageTitle,
   type WebsitePageType,
   type WebsitePlanningStatus,
   type WebsiteSectionType,
+  WEBSITE_SITEMAP_SCHEMA_VERSION,
+  type WebsiteSitemapDocument,
   type WebsiteSitemapPage,
   type WebsiteSitemapSection,
+  type WebsiteSitemapSymbol,
 } from '~/lib/websites/planning-types';
+import {
+  SITE_STUDIO_AI_CREDITS,
+  siteStudioCreditLabel,
+} from '~/lib/websites/site-studio-credits';
+import type {
+  SitemapProposeMode,
+  SitemapProposal,
+} from '~/lib/websites/site-studio-ai-types';
+import {
+  DEFAULT_SITEMAP_SYMBOLS,
+  applySymbolToPages,
+  migrateSitemapDocument,
+} from '~/lib/websites/sitemap-document';
 
 import { saveWebsiteSitemap } from '../../_lib/server/planning-actions';
-import { generateWebsiteSitemap } from '../../_lib/server/site-studio-actions';
+import { proposeWebsiteSitemap } from '../../_lib/server/site-studio-actions';
+import {
+  SitemapAiPreview,
+  SitemapAiUndoBar,
+} from './sitemap-ai-preview';
 
 const inputClass =
   'border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]';
 
-function SectionRow({
-  section,
-  canEdit,
-  onChange,
-  onRemove,
-  onMove,
-}: {
-  section: WebsiteSitemapSection;
-  canEdit: boolean;
-  onChange: (patch: Partial<WebsiteSitemapSection>) => void;
-  onRemove: () => void;
-  onMove: (direction: -1 | 1) => void;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const typeMeta = sectionTypeMeta(section.sectionType);
+type PageNodeData = {
+  page: WebsiteSitemapPage;
+  selectedSectionId: string | null;
+  onSelectSection: (pageId: string, sectionId: string) => void;
+};
+
+type Selection =
+  | { kind: 'page'; pageId: string }
+  | { kind: 'section'; pageId: string; sectionId: string }
+  | null;
+
+function StatusPip({ status }: { status?: WebsitePlanningStatus }) {
+  const meta = planningStatusMeta(status ?? 'draft');
+  const pipClass =
+    status === 'approved'
+      ? 'bg-emerald-400'
+      : status === 'blocked'
+        ? 'bg-red-400'
+        : 'bg-[var(--workspace-shell-text-muted)]';
+  return (
+    <span
+      className={cn('inline-block h-1.5 w-1.5 rounded-full', pipClass)}
+      title={meta.label}
+    />
+  );
+}
+
+function SitemapPageNode({ data }: NodeProps<Node<PageNodeData>>) {
+  const { page, selectedSectionId, onSelectSection } = data;
 
   return (
-    <div
-      className={cn(
-        'rounded-lg border-l-4 border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]',
-      )}
-      style={{ borderLeftColor: 'transparent' }}
-    >
-      <div className="flex items-center gap-1.5 px-2 py-1.5">
-        <span className={cn('h-2 w-2 shrink-0 rounded-full', typeMeta.dotClass)} />
-        <button
-          type="button"
-          className="min-w-0 flex-1 truncate text-left text-sm text-[var(--workspace-shell-text)]"
-          onClick={() => setExpanded((current) => !current)}
-        >
-          {section.title || 'Untitled section'}
-        </button>
-        {section.componentKey ? (
-          <span
-            className="inline-flex items-center gap-1 rounded border border-[var(--ozer-accent)]/40 bg-[var(--ozer-accent)]/10 px-1.5 py-0.5 text-[10px] text-[var(--ozer-accent)]"
-            title={`Repeating component: ${section.componentKey}`}
-          >
-            <Component className="h-3 w-3" />
-            {section.componentKey}
-          </span>
-        ) : null}
-        <button
-          type="button"
-          className="text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
-          onClick={() => setExpanded((current) => !current)}
-        >
-          {expanded ? (
-            <ChevronDown className="h-3.5 w-3.5" />
-          ) : (
-            <ChevronRight className="h-3.5 w-3.5" />
-          )}
-        </button>
-      </div>
-
-      {expanded ? (
-        <div className="space-y-2 border-t border-[color:var(--workspace-shell-border)] p-2">
-          <Input
-            value={section.title}
-            readOnly={!canEdit}
-            onChange={(event) => onChange({ title: event.target.value })}
-            className={cn(inputClass, 'h-8 text-sm')}
-            placeholder="Section title"
-          />
-          <Textarea
-            value={section.description}
-            readOnly={!canEdit}
-            rows={2}
-            onChange={(event) => onChange({ description: event.target.value })}
-            className={cn(inputClass, 'text-sm')}
-            placeholder="What this section communicates…"
-          />
-          <div className="flex flex-wrap items-center gap-2">
-            <Select
-              value={section.sectionType ?? 'other'}
-              onValueChange={(value) =>
-                onChange({ sectionType: value as WebsiteSectionType })
-              }
-              disabled={!canEdit}
-            >
-              <SelectTrigger className={cn(inputClass, 'h-8 w-32 text-xs')}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SECTION_TYPE_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    <span className="flex items-center gap-2">
-                      <span className={cn('h-2 w-2 rounded-full', option.dotClass)} />
-                      {option.label}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {canEdit ? (
-              <Input
-                value={section.componentKey ?? ''}
-                onChange={(event) =>
-                  onChange({
-                    componentKey: event.target.value.trim()
-                      ? event.target.value
-                          .toLowerCase()
-                          .replace(/[^a-z0-9-]+/g, '-')
-                      : null,
-                  })
-                }
-                placeholder="Repeat key (e.g. site-header)"
-                className={cn(inputClass, 'h-8 w-44 text-xs')}
-                title="Sections sharing a repeat key stay in sync — edit once, update all instances"
-              />
-            ) : null}
-            {canEdit ? (
-              <div className="ml-auto flex items-center gap-1">
-                <button
-                  type="button"
-                  className="text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
-                  onClick={() => onMove(-1)}
-                >
-                  <ArrowUp className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  className="text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
-                  onClick={() => onMove(1)}
-                >
-                  <ArrowDown className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  className="text-[var(--workspace-shell-text-muted)] hover:text-red-400"
-                  onClick={onRemove}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            ) : null}
-          </div>
+    <div className="w-[260px] rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] shadow-sm">
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="!h-2 !w-2 !bg-[var(--ozer-accent)]"
+      />
+      <div className="border-b border-[color:var(--workspace-shell-border)] px-3 py-2">
+        <div className="flex items-center justify-between gap-2">
+          <p className="truncate text-sm font-semibold text-[var(--workspace-shell-text)]">
+            {page.title || 'Untitled'}
+          </p>
+          <StatusPip status={page.status} />
         </div>
-      ) : null}
+        <p className="truncate font-mono text-[10px] text-[var(--workspace-shell-text-muted)]">
+          /{page.slug}
+        </p>
+      </div>
+      <ul className="max-h-48 space-y-0.5 overflow-y-auto p-2">
+        {page.sections.length === 0 ? (
+          <li className="px-1 py-2 text-[11px] text-[var(--workspace-shell-text-muted)]">
+            No sections
+          </li>
+        ) : (
+          page.sections.map((section) => {
+            const color = sectionColor(section);
+            const meta = sectionTypeMeta(color);
+            const isSymbol = Boolean(section.componentKey);
+            const selected = selectedSectionId === section.id;
+            return (
+              <li key={section.id}>
+                <button
+                  type="button"
+                  onClick={() => onSelectSection(page.id, section.id)}
+                  className={cn(
+                    'flex w-full items-center gap-1.5 rounded-md border px-2 py-1 text-left text-[11px]',
+                    meta.colorClass,
+                    selected
+                      ? 'ring-1 ring-[var(--ozer-accent)]'
+                      : '',
+                    isSymbol && 'outline outline-1 outline-[var(--ozer-accent)]/40',
+                  )}
+                >
+                  <span
+                    className={cn('h-2 w-2 shrink-0 rounded-full', meta.dotClass)}
+                  />
+                  <span className="min-w-0 flex-1 truncate text-[var(--workspace-shell-text)]">
+                    {section.title || 'Untitled'}
+                  </span>
+                  {isSymbol ? (
+                    <Component className="h-3 w-3 shrink-0 text-[var(--ozer-accent)]" />
+                  ) : null}
+                  <StatusPip status={section.status} />
+                </button>
+              </li>
+            );
+          })
+        )}
+      </ul>
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="!h-2 !w-2 !bg-[var(--ozer-accent)]"
+      />
     </div>
   );
+}
+
+const nodeTypes = { sitemapPage: SitemapPageNode };
+
+function pagesToFlow(
+  pages: WebsiteSitemapPage[],
+  selectedSectionId: string | null,
+  onSelectSection: (pageId: string, sectionId: string) => void,
+): { nodes: Node<PageNodeData>[]; edges: Edge[] } {
+  const nodes: Node<PageNodeData>[] = pages.map((page) => ({
+    id: page.id,
+    type: 'sitemapPage',
+    position: { x: page.x ?? 0, y: page.y ?? 0 },
+    data: { page, selectedSectionId, onSelectSection },
+  }));
+
+  const pageIds = new Set(pages.map((page) => page.id));
+  const edges: Edge[] = pages
+    .filter(
+      (page) => page.parentId && pageIds.has(page.parentId) && page.parentId !== page.id,
+    )
+    .map((page) => ({
+      id: `e-${page.parentId}-${page.id}`,
+      source: page.parentId as string,
+      target: page.id,
+      animated: false,
+      style: { stroke: 'var(--ozer-accent)' },
+    }));
+
+  return { nodes, edges };
 }
 
 export function WebsiteSitemapCanvas({
   accountId,
   websiteId,
   initialSitemap,
+  initialComponents = [],
   onSitemapChange,
   canEdit,
-  siteStudioEnabled,
+  siteStudioEnabled: _siteStudioEnabled,
 }: {
   accountId: string;
   websiteId: string;
   initialSitemap: WebsiteSitemapPage[];
+  initialComponents?: WebsiteSitemapSymbol[];
   onSitemapChange?: (sitemap: WebsiteSitemapPage[]) => void;
   canEdit: boolean;
   siteStudioEnabled: boolean;
 }) {
-  const [pages, setPages] = useState(initialSitemap);
+  const seed = useMemo(
+    () =>
+      migrateSitemapDocument({
+        schemaVersion: WEBSITE_SITEMAP_SCHEMA_VERSION,
+        pages: initialSitemap,
+        components: initialComponents,
+      }),
+    [initialComponents, initialSitemap],
+  );
+
+  const [pages, setPages] = useState(seed.pages);
+  const [components, setComponents] = useState(() =>
+    seed.components.length > 0 ? seed.components : DEFAULT_SITEMAP_SYMBOLS,
+  );
+  const [selection, setSelection] = useState<Selection>(null);
+  const [symbolsOpen, setSymbolsOpen] = useState(true);
+  const [inspectorOpen, setInspectorOpen] = useState(true);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [isGenerating, startGenerating] = useTransition();
   const [, startTransition] = useTransition();
-  const dragPageId = useRef<string | null>(null);
+  const [proposal, setProposal] = useState<SitemapProposal | null>(null);
+  const [undoSnapshot, setUndoSnapshot] = useState<{
+    pages: WebsiteSitemapPage[];
+    components: WebsiteSitemapSymbol[];
+  } | null>(null);
   const skipNextSave = useRef(true);
   const onSitemapChangeRef = useRef(onSitemapChange);
   onSitemapChangeRef.current = onSitemapChange;
 
-  useEffect(() => {
-    setPages((current) => {
-      if (current === initialSitemap) return current;
-      skipNextSave.current = true;
-      return initialSitemap;
-    });
-  }, [initialSitemap]);
+  const selectedSectionId =
+    selection?.kind === 'section' ? selection.sectionId : null;
 
-  function updatePages(
-    next:
-      | WebsiteSitemapPage[]
-      | ((current: WebsiteSitemapPage[]) => WebsiteSitemapPage[]),
-  ) {
-    setPages((current) => {
-      const resolved = typeof next === 'function' ? next(current) : next;
-      queueMicrotask(() => onSitemapChangeRef.current?.(resolved));
-      return resolved;
+  const onSelectSection = useCallback((pageId: string, sectionId: string) => {
+    setSelection({ kind: 'section', pageId, sectionId });
+    setInspectorOpen(true);
+  }, []);
+
+  const { nodes: initialNodes, edges: initialEdges } = useMemo(
+    () => pagesToFlow(pages, selectedSectionId, onSelectSection),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- seed once; sync below
+    [],
+  );
+
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  useEffect(() => {
+    const next = migrateSitemapDocument({
+      schemaVersion: WEBSITE_SITEMAP_SCHEMA_VERSION,
+      pages: initialSitemap,
+      components: initialComponents,
     });
+    skipNextSave.current = true;
+    setPages(next.pages);
+    setComponents(
+      next.components.length > 0 ? next.components : DEFAULT_SITEMAP_SYMBOLS,
+    );
+  }, [initialComponents, initialSitemap]);
+
+  useEffect(() => {
+    const { nodes: nextNodes, edges: nextEdges } = pagesToFlow(
+      pages,
+      selectedSectionId,
+      onSelectSection,
+    );
+    setNodes(nextNodes);
+    setEdges(nextEdges);
+  }, [onSelectSection, pages, selectedSectionId, setEdges, setNodes]);
+
+  function commitDocument(
+    nextPages: WebsiteSitemapPage[],
+    nextComponents: WebsiteSitemapSymbol[] = components,
+  ) {
+    setPages(nextPages);
+    setComponents(nextComponents);
+    queueMicrotask(() => onSitemapChangeRef.current?.(nextPages));
   }
 
   useEffect(() => {
@@ -242,10 +323,19 @@ export function WebsiteSitemapCanvas({
     }
 
     setSaveState('saving');
+    const document: WebsiteSitemapDocument = {
+      schemaVersion: WEBSITE_SITEMAP_SCHEMA_VERSION,
+      pages,
+      components,
+    };
     const timer = setTimeout(() => {
       startTransition(async () => {
         try {
-          await saveWebsiteSitemap({ accountId, websiteId, sitemap: pages });
+          await saveWebsiteSitemap({
+            accountId,
+            websiteId,
+            sitemap: document,
+          });
           setSaveState('saved');
         } catch (error) {
           setSaveState('idle');
@@ -257,47 +347,80 @@ export function WebsiteSitemapCanvas({
     }, 800);
 
     return () => clearTimeout(timer);
-  }, [accountId, canEdit, pages, websiteId, startTransition]);
+  }, [accountId, canEdit, components, pages, websiteId, startTransition]);
 
-  const topLevelPages = useMemo(
-    () =>
-      pages.filter(
-        (page) => !page.parentId || !pages.some((p) => p.id === page.parentId),
-      ),
-    [pages],
+  const onNodeDragStop: OnNodeDrag = useCallback(
+    (_event, node) => {
+      if (!canEdit) return;
+      commitDocument(
+        pages.map((page) =>
+          page.id === node.id
+            ? { ...page, x: node.position.x, y: node.position.y }
+            : page,
+        ),
+      );
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [canEdit, pages],
   );
 
-  const childrenOf = useMemo(() => {
-    const map = new Map<string, WebsiteSitemapPage[]>();
-    for (const page of pages) {
-      if (page.parentId && pages.some((p) => p.id === page.parentId)) {
-        const list = map.get(page.parentId) ?? [];
-        list.push(page);
-        map.set(page.parentId, list);
-      }
-    }
-    return map;
-  }, [pages]);
+  const onConnect = useCallback(
+    (connection: Connection) => {
+      if (!canEdit || !connection.source || !connection.target) return;
+      if (connection.source === connection.target) return;
+      setEdges((eds) => addEdge(connection, eds));
+      commitDocument(
+        pages.map((page) =>
+          page.id === connection.target
+            ? { ...page, parentId: connection.source }
+            : page,
+        ),
+      );
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [canEdit, pages, setEdges],
+  );
 
-  function addPage(parentId: string | null = null) {
+  const onEdgesDelete = useCallback(
+    (deleted: Edge[]) => {
+      if (!canEdit) return;
+      const cleared = new Set(deleted.map((edge) => edge.target));
+      commitDocument(
+        pages.map((page) =>
+          cleared.has(page.id) ? { ...page, parentId: null } : page,
+        ),
+      );
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [canEdit, pages],
+  );
+
+  function addPage() {
     const title = 'New page';
-    updatePages((current) => [
-      ...current,
+    const id = createPlanningId();
+    const offset = pages.length;
+    commitDocument([
+      ...pages,
       {
-        id: createPlanningId(),
+        id,
         title,
         slug: slugifyPageTitle(title),
         sections: [],
+        description: '',
         pageType: 'other',
         status: 'draft',
-        parentId,
+        parentId: null,
+        x: 80 + (offset % 4) * 320,
+        y: 80 + Math.floor(offset / 4) * 280,
+        seoIntent: '',
       },
     ]);
+    setSelection({ kind: 'page', pageId: id });
   }
 
   function updatePage(pageId: string, patch: Partial<WebsiteSitemapPage>) {
-    updatePages((current) =>
-      current.map((page) => {
+    commitDocument(
+      pages.map((page) => {
         if (page.id !== pageId) return page;
         const next = { ...page, ...patch };
         if (patch.title !== undefined) {
@@ -309,53 +432,77 @@ export function WebsiteSitemapCanvas({
   }
 
   function removePage(pageId: string) {
-    updatePages((current) =>
-      current
+    commitDocument(
+      pages
         .filter((page) => page.id !== pageId)
         .map((page) =>
           page.parentId === pageId ? { ...page, parentId: null } : page,
         ),
     );
+    setSelection(null);
   }
 
-  /** Edit a section; propagate to all instances sharing its componentKey. */
   function updateSection(
     pageId: string,
     sectionId: string,
     patch: Partial<WebsiteSitemapSection>,
   ) {
-    updatePages((current) => {
-      const sourcePage = current.find((page) => page.id === pageId);
-      const source = sourcePage?.sections.find(
-        (section) => section.id === sectionId,
-      );
-      const sharedKey = source?.componentKey ?? null;
-      // Content fields propagate across component instances; the key itself doesn't.
-      const propagate =
-        sharedKey &&
-        (patch.title !== undefined ||
-          patch.description !== undefined ||
-          patch.sectionType !== undefined);
+    const color =
+      patch.color ??
+      (patch.sectionType !== undefined ? patch.sectionType : undefined);
+    const normalizedPatch =
+      color !== undefined
+        ? { ...patch, color, sectionType: color }
+        : patch;
 
-      return current.map((page) => ({
+    const source = pages
+      .find((page) => page.id === pageId)
+      ?.sections.find((section) => section.id === sectionId);
+    const sharedKey = source?.componentKey ?? null;
+    const propagate =
+      sharedKey &&
+      (normalizedPatch.title !== undefined ||
+        normalizedPatch.description !== undefined ||
+        normalizedPatch.color !== undefined ||
+        normalizedPatch.status !== undefined);
+
+    let nextComponents = components;
+    if (sharedKey && propagate) {
+      nextComponents = components.map((symbol) =>
+        symbol.key === sharedKey
+          ? {
+              ...symbol,
+              title: normalizedPatch.title ?? symbol.title,
+              description: normalizedPatch.description ?? symbol.description,
+              color: normalizedPatch.color ?? symbol.color,
+              status: normalizedPatch.status ?? symbol.status,
+            }
+          : symbol,
+      );
+    }
+
+    commitDocument(
+      pages.map((page) => ({
         ...page,
         sections: page.sections.map((section) => {
           if (page.id === pageId && section.id === sectionId) {
-            return { ...section, ...patch };
+            return { ...section, ...normalizedPatch };
           }
           if (propagate && section.componentKey === sharedKey) {
-            const { componentKey: _ignored, ...contentPatch } = patch;
-            return { ...section, ...contentPatch };
+            const { componentKey: _k, ...content } = normalizedPatch;
+            return { ...section, ...content };
           }
           return section;
         }),
-      }));
-    });
+      })),
+      nextComponents,
+    );
   }
 
   function addSection(pageId: string) {
-    updatePages((current) =>
-      current.map((page) =>
+    const sectionId = createPlanningId();
+    commitDocument(
+      pages.map((page) =>
         page.id !== pageId
           ? page
           : {
@@ -363,9 +510,10 @@ export function WebsiteSitemapCanvas({
               sections: [
                 ...page.sections,
                 {
-                  id: createPlanningId(),
+                  id: sectionId,
                   title: 'New section',
                   description: '',
+                  color: 'content' as WebsiteSectionType,
                   sectionType: 'content' as WebsiteSectionType,
                   componentKey: null,
                   status: 'draft' as WebsitePlanningStatus,
@@ -374,78 +522,73 @@ export function WebsiteSitemapCanvas({
             },
       ),
     );
-  }
-
-  function moveSection(pageId: string, sectionId: string, direction: -1 | 1) {
-    updatePages((current) =>
-      current.map((page) => {
-        if (page.id !== pageId) return page;
-        const index = page.sections.findIndex((s) => s.id === sectionId);
-        const target = index + direction;
-        if (index === -1 || target < 0 || target >= page.sections.length) {
-          return page;
-        }
-        const sections = [...page.sections];
-        const [moved] = sections.splice(index, 1);
-        sections.splice(target, 0, moved!);
-        return { ...page, sections };
-      }),
-    );
+    setSelection({ kind: 'section', pageId, sectionId });
   }
 
   function removeSection(pageId: string, sectionId: string) {
-    updatePages((current) =>
-      current.map((page) =>
+    commitDocument(
+      pages.map((page) =>
         page.id !== pageId
           ? page
           : {
               ...page,
-              sections: page.sections.filter((s) => s.id !== sectionId),
+              sections: page.sections.filter(
+                (section) => section.id !== sectionId,
+              ),
             },
       ),
     );
+    setSelection({ kind: 'page', pageId });
   }
 
-  function handleDrop(targetPageId: string) {
-    const sourceId = dragPageId.current;
-    dragPageId.current = null;
-    if (!sourceId || sourceId === targetPageId) return;
-
-    updatePages((current) => {
-      const sourceIndex = current.findIndex((page) => page.id === sourceId);
-      const targetIndex = current.findIndex((page) => page.id === targetPageId);
-      if (sourceIndex === -1 || targetIndex === -1) return current;
-      const next = [...current];
-      const [moved] = next.splice(sourceIndex, 1);
-      next.splice(targetIndex, 0, moved!);
-      return next;
-    });
+  function upsertSymbol(symbol: WebsiteSitemapSymbol) {
+    const exists = components.some((item) => item.key === symbol.key);
+    const nextComponents = exists
+      ? components.map((item) => (item.key === symbol.key ? symbol : item))
+      : [...components, symbol];
+    commitDocument(applySymbolToPages(pages, symbol), nextComponents);
   }
 
-  function generate(mode: 'replace' | 'add-missing-seo-pages') {
-    if (
-      mode === 'replace' &&
-      pages.length > 0 &&
-      !window.confirm(
-        'Replace the current sitemap with an AI-suggested one? This overwrites existing pages.',
-      )
-    ) {
-      return;
-    }
+  function applySymbolToPage(pageId: string, symbol: WebsiteSitemapSymbol) {
+    const sectionId = createPlanningId();
+    const nextComponents = components.some((item) => item.key === symbol.key)
+      ? components
+      : [...components, symbol];
+    commitDocument(
+      pages.map((page) =>
+        page.id !== pageId
+          ? page
+          : {
+              ...page,
+              sections: [
+                ...page.sections,
+                {
+                  id: sectionId,
+                  title: symbol.title,
+                  description: symbol.description,
+                  color: symbol.color,
+                  sectionType: symbol.color,
+                  componentKey: symbol.key,
+                  status: symbol.status,
+                },
+              ],
+            },
+      ),
+      nextComponents,
+    );
+  }
 
+  function propose(mode: SitemapProposeMode) {
     startGenerating(async () => {
       try {
-        const next = await generateWebsiteSitemap({
+        const next = await proposeWebsiteSitemap({
           accountId,
           websiteId,
           mode,
         });
-        skipNextSave.current = true;
-        updatePages(next);
+        setProposal(next);
         toast.success(
-          mode === 'replace'
-            ? 'Sitemap suggested from brief'
-            : 'Missing SEO pages added',
+          `Preview ready — ${next.pages.length} page${next.pages.length === 1 ? '' : 's'} (${siteStudioCreditLabel(next.creditsUsed)})`,
         );
       } catch (error) {
         toast.error(
@@ -455,270 +598,462 @@ export function WebsiteSitemapCanvas({
     });
   }
 
-  function renderPageCard(page: WebsiteSitemapPage, isChild = false) {
-    const statusMeta = planningStatusMeta(page.status);
-    const children = childrenOf.get(page.id) ?? [];
-
-    return (
-      <div
-        key={page.id}
-        className={cn('space-y-2', isChild ? '' : 'w-72 shrink-0')}
-      >
-        <div
-          draggable={canEdit && !isChild}
-          onDragStart={() => {
-            dragPageId.current = page.id;
-          }}
-          onDragOver={(event) => event.preventDefault()}
-          onDrop={() => handleDrop(page.id)}
-          className={cn(
-            'rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/40',
-            isChild && 'ml-4 border-dashed',
-          )}
-        >
-          <div className="space-y-2 p-3">
-            <div className="flex items-center gap-1.5">
-              {canEdit && !isChild ? (
-                <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-[var(--workspace-shell-text-muted)]" />
-              ) : null}
-              <Input
-                value={page.title}
-                readOnly={!canEdit}
-                onChange={(event) =>
-                  updatePage(page.id, { title: event.target.value })
-                }
-                className={cn(inputClass, 'h-8 font-medium')}
-                placeholder="Page title"
-              />
-              {canEdit ? (
-                <button
-                  type="button"
-                  className="shrink-0 text-[var(--workspace-shell-text-muted)] hover:text-red-400"
-                  onClick={() => removePage(page.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              ) : null}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-xs text-[var(--workspace-shell-text-muted)]">
-                /{page.slug}
-              </span>
-              <span
-                className={cn(
-                  'ml-auto rounded-full border px-2 py-0.5 text-[10px]',
-                  statusMeta.colorClass,
-                )}
-              >
-                {statusMeta.label}
-              </span>
-            </div>
-
-            <div className="flex flex-wrap gap-1.5">
-              <Select
-                value={page.pageType ?? 'other'}
-                onValueChange={(value) =>
-                  updatePage(page.id, { pageType: value as WebsitePageType })
-                }
-                disabled={!canEdit}
-              >
-                <SelectTrigger className={cn(inputClass, 'h-7 w-[7.5rem] text-xs')}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAGE_TYPE_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={page.status ?? 'draft'}
-                onValueChange={(value) =>
-                  updatePage(page.id, {
-                    status: value as WebsitePlanningStatus,
-                  })
-                }
-                disabled={!canEdit}
-              >
-                <SelectTrigger className={cn(inputClass, 'h-7 w-[7.5rem] text-xs')}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PLANNING_STATUS_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {canEdit ? (
-                <Select
-                  value={page.parentId ?? '__none__'}
-                  onValueChange={(value) =>
-                    updatePage(page.id, {
-                      parentId: value === '__none__' ? null : value,
-                    })
-                  }
-                >
-                  <SelectTrigger className={cn(inputClass, 'h-7 w-[7.5rem] text-xs')}>
-                    <SelectValue placeholder="Nest under…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">Top level</SelectItem>
-                    {pages
-                      .filter(
-                        (candidate) =>
-                          candidate.id !== page.id &&
-                          candidate.parentId !== page.id,
-                      )
-                      .map((candidate) => (
-                        <SelectItem key={candidate.id} value={candidate.id}>
-                          Under {candidate.title}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              ) : null}
-            </div>
-
-            {siteStudioEnabled ? (
-              <Input
-                value={page.seoIntent ?? ''}
-                readOnly={!canEdit}
-                onChange={(event) =>
-                  updatePage(page.id, { seoIntent: event.target.value })
-                }
-                className={cn(inputClass, 'h-7 text-xs')}
-                placeholder="Search intent (one line)"
-              />
-            ) : null}
-
-            {page.approvalNote ? (
-              <p className="rounded-md border border-amber-500/25 bg-amber-500/5 px-2 py-1 text-xs text-amber-200/90">
-                Client: {page.approvalNote}
-              </p>
-            ) : null}
-
-            <div className="space-y-1.5">
-              {page.sections.map((section) => (
-                <SectionRow
-                  key={section.id}
-                  section={section}
-                  canEdit={canEdit}
-                  onChange={(patch) => updateSection(page.id, section.id, patch)}
-                  onRemove={() => removeSection(page.id, section.id)}
-                  onMove={(direction) =>
-                    moveSection(page.id, section.id, direction)
-                  }
-                />
-              ))}
-              {canEdit ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 w-full text-xs text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
-                  onClick={() => addSection(page.id)}
-                >
-                  <Plus className="mr-1 h-3 w-3" />
-                  Section
-                </Button>
-              ) : null}
-            </div>
-          </div>
-        </div>
-
-        {children.map((child) => renderPageCard(child, true))}
-      </div>
-    );
+  function applyProposal() {
+    if (!proposal) return;
+    setUndoSnapshot({ pages, components });
+    if (proposal.mode === 'from-brief') {
+      commitDocument(proposal.pages, components);
+    } else {
+      const existingSlugs = new Set(pages.map((page) => page.slug));
+      const additions = proposal.pages.filter(
+        (page) => !existingSlugs.has(page.slug),
+      );
+      commitDocument([...pages, ...additions], components);
+    }
+    setProposal(null);
+    toast.success('Sitemap proposal applied');
   }
 
+  function undoLastApply() {
+    if (!undoSnapshot) return;
+    commitDocument(undoSnapshot.pages, undoSnapshot.components);
+    setUndoSnapshot(null);
+    toast.success('Sitemap restored');
+  }
+
+  const selectedPage =
+    selection == null
+      ? null
+      : (pages.find((page) => page.id === selection.pageId) ?? null);
+  const selectedSection =
+    selection?.kind === 'section' && selectedPage
+      ? (selectedPage.sections.find(
+          (section) => section.id === selection.sectionId,
+        ) ?? null)
+      : null;
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className="text-sm text-[var(--workspace-shell-text)]/70">
-            Pages as cards — drag to reorder, nest with the parent selector,
-            colour-code sections, and mark repeating components.
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+            Drag pages to layout, connect to nest. Symbols keep shared sections
+            in sync.
           </p>
-          {canEdit ? (
-            <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-              {saveState === 'saving'
-                ? 'Saving…'
-                : saveState === 'saved'
-                  ? 'Saved'
-                  : 'Autosaves'}
-            </p>
-          ) : null}
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+            {saveState === 'saving'
+              ? 'Saving…'
+              : saveState === 'saved'
+                ? 'Saved'
+                : `${pages.length} pages · ${components.length} symbols`}
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {canEdit && siteStudioEnabled ? (
-            <>
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => generate('replace')}
-                disabled={isGenerating}
-              >
-                <Sparkles className="mr-2 h-4 w-4" />
-                {isGenerating ? 'Generating…' : 'Suggest from brief'}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)]"
-                onClick={() => generate('add-missing-seo-pages')}
-                disabled={isGenerating || pages.length === 0}
-              >
-                <Sparkles className="mr-2 h-4 w-4" />
-                Add missing SEO pages
-              </Button>
-            </>
-          ) : null}
-          {canEdit ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={!canEdit || isGenerating}
+            onClick={() => propose('from-brief')}
+            title={siteStudioCreditLabel(SITE_STUDIO_AI_CREDITS.sitemapGenerate)}
+          >
+            <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+            {isGenerating
+              ? 'Suggesting…'
+              : `Suggest from brief (${siteStudioCreditLabel(SITE_STUDIO_AI_CREDITS.sitemapGenerate)})`}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={!canEdit || isGenerating}
+            onClick={() => propose('add-missing-seo-pages')}
+            title={siteStudioCreditLabel(SITE_STUDIO_AI_CREDITS.sitemapGenerate)}
+          >
+            Add SEO pages ({siteStudioCreditLabel(SITE_STUDIO_AI_CREDITS.sitemapGenerate)})
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={!canEdit || isGenerating}
+            onClick={() => propose('local-service-variants')}
+            title={siteStudioCreditLabel(SITE_STUDIO_AI_CREDITS.sitemapGenerate)}
+          >
+            Local/service variants ({siteStudioCreditLabel(SITE_STUDIO_AI_CREDITS.sitemapGenerate)})
+          </Button>
+          {undoSnapshot ? (
             <Button
               type="button"
               size="sm"
-              variant="outline"
-              className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)]"
-              onClick={() => addPage()}
+              variant="ghost"
+              disabled={!canEdit}
+              onClick={undoLastApply}
             >
-              <Plus className="mr-2 h-4 w-4" />
+              <Undo2 className="mr-1.5 h-3.5 w-3.5" />
+              Undo AI
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setSymbolsOpen((value) => !value)}
+          >
+            <Component className="mr-1.5 h-3.5 w-3.5" />
+            Symbols
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setInspectorOpen((value) => !value)}
+          >
+            {inspectorOpen ? (
+              <PanelRightClose className="mr-1.5 h-3.5 w-3.5" />
+            ) : (
+              <PanelRightOpen className="mr-1.5 h-3.5 w-3.5" />
+            )}
+            Inspector
+          </Button>
+          {canEdit ? (
+            <Button type="button" size="sm" onClick={addPage}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
               Add page
             </Button>
           ) : null}
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
-        {SECTION_TYPE_OPTIONS.map((option) => (
-          <span
-            key={option.value}
-            className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--workspace-shell-border)] px-2 py-0.5 text-[10px] text-[var(--workspace-shell-text-muted)]"
-          >
-            <span className={cn('h-1.5 w-1.5 rounded-full', option.dotClass)} />
-            {option.label}
-          </span>
-        ))}
-      </div>
+      {proposal ? (
+        <SitemapAiPreview
+          mode={proposal.mode}
+          pages={proposal.pages}
+          currentPageCount={proposal.currentPageCount}
+          skippedExistingSlugs={proposal.skippedExistingSlugs}
+          creditsUsed={proposal.creditsUsed}
+          busy={isGenerating}
+          onApply={applyProposal}
+          onDismiss={() => setProposal(null)}
+        />
+      ) : null}
 
-      {pages.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-10 text-center text-sm text-[var(--workspace-shell-text-muted)]">
-          {siteStudioEnabled
-            ? 'No pages yet. Fill in the Brief, then click Suggest from brief — or add pages manually.'
-            : 'No pages yet. Add Home, About, Services, Contact…'}
+      {undoSnapshot && !proposal ? (
+        <SitemapAiUndoBar onUndo={undoLastApply} disabled={!canEdit} />
+      ) : null}
+
+      <div className="flex min-h-[560px] overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)]">
+        {symbolsOpen ? (
+          <aside className="w-56 shrink-0 space-y-2 border-r border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
+            <p className="text-xs font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+              Symbols
+            </p>
+            <p className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+              Define once, drop onto pages. Instances share edits.
+            </p>
+            <ul className="space-y-1.5">
+              {components.map((symbol) => {
+                const meta = sectionTypeMeta(symbol.color);
+                return (
+                  <li
+                    key={symbol.key}
+                    className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] p-2"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={cn(
+                          'h-2 w-2 rounded-full',
+                          meta.dotClass,
+                        )}
+                      />
+                      <span className="truncate text-xs font-medium text-[var(--workspace-shell-text)]">
+                        {symbol.title}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 font-mono text-[10px] text-[var(--workspace-shell-text-muted)]">
+                      {symbol.key}
+                    </p>
+                    {canEdit && selectedPage ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="mt-1 h-7 w-full text-[11px]"
+                        onClick={() =>
+                          applySymbolToPage(selectedPage.id, symbol)
+                        }
+                      >
+                        Add to page
+                      </Button>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+            {canEdit ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  const key = `symbol-${createPlanningId().slice(0, 8)}`;
+                  upsertSymbol({
+                    key,
+                    title: 'New symbol',
+                    description: '',
+                    color: 'content',
+                    status: 'draft',
+                  });
+                }}
+              >
+                <Plus className="mr-1 h-3.5 w-3.5" />
+                New symbol
+              </Button>
+            ) : null}
+          </aside>
+        ) : null}
+
+        <div className="relative min-h-[560px] flex-1 bg-[var(--ozer-surface-canvas)]">
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={canEdit ? onNodesChange : undefined}
+            onEdgesChange={canEdit ? onEdgesChange : undefined}
+            onConnect={canEdit ? onConnect : undefined}
+            onEdgesDelete={canEdit ? onEdgesDelete : undefined}
+            onNodeDragStop={onNodeDragStop}
+            onNodeClick={(_event, node) => {
+              setSelection({ kind: 'page', pageId: node.id });
+              setInspectorOpen(true);
+            }}
+            nodeTypes={nodeTypes}
+            fitView
+            proOptions={{ hideAttribution: true }}
+            nodesDraggable={canEdit}
+            nodesConnectable={canEdit}
+            elementsSelectable
+          >
+            <Background gap={18} size={1} />
+            <Controls />
+            <MiniMap pannable zoomable />
+          </ReactFlow>
         </div>
-      ) : (
-        <div className="-mx-1 overflow-x-auto px-1 pb-2">
-          <div className="flex items-start gap-4">
-            {topLevelPages.map((page) => renderPageCard(page))}
-          </div>
-        </div>
-      )}
+
+        {inspectorOpen ? (
+          <aside className="w-72 shrink-0 space-y-3 overflow-y-auto border-l border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
+            {!selectedPage ? (
+              <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                Select a page or section to edit.
+              </p>
+            ) : selectedSection ? (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+                  Section
+                </p>
+                <Input
+                  value={selectedSection.title}
+                  readOnly={!canEdit}
+                  onChange={(event) =>
+                    updateSection(selectedPage.id, selectedSection.id, {
+                      title: event.target.value,
+                    })
+                  }
+                  className={inputClass}
+                  placeholder="Title"
+                />
+                <Textarea
+                  value={selectedSection.description}
+                  readOnly={!canEdit}
+                  rows={3}
+                  onChange={(event) =>
+                    updateSection(selectedPage.id, selectedSection.id, {
+                      description: event.target.value,
+                    })
+                  }
+                  className={inputClass}
+                  placeholder="Short description"
+                />
+                <Select
+                  value={sectionColor(selectedSection)}
+                  disabled={!canEdit}
+                  onValueChange={(value) =>
+                    updateSection(selectedPage.id, selectedSection.id, {
+                      color: value as WebsiteSectionType,
+                    })
+                  }
+                >
+                  <SelectTrigger className={cn(inputClass, 'h-9')}>
+                    <SelectValue placeholder="Colour tag" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SECTION_TYPE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={selectedSection.status ?? 'draft'}
+                  disabled={!canEdit}
+                  onValueChange={(value) =>
+                    updateSection(selectedPage.id, selectedSection.id, {
+                      status: value as WebsitePlanningStatus,
+                    })
+                  }
+                >
+                  <SelectTrigger className={cn(inputClass, 'h-9')}>
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PLANNING_STATUS_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  value={selectedSection.componentKey ?? ''}
+                  readOnly={!canEdit}
+                  onChange={(event) =>
+                    updateSection(selectedPage.id, selectedSection.id, {
+                      componentKey: event.target.value.trim() || null,
+                    })
+                  }
+                  className={cn(inputClass, 'font-mono text-xs')}
+                  placeholder="componentKey (symbol)"
+                />
+                {canEdit ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive"
+                    onClick={() =>
+                      removeSection(selectedPage.id, selectedSection.id)
+                    }
+                  >
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                    Remove section
+                  </Button>
+                ) : null}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+                  Page
+                </p>
+                <Input
+                  value={selectedPage.title}
+                  readOnly={!canEdit}
+                  onChange={(event) =>
+                    updatePage(selectedPage.id, { title: event.target.value })
+                  }
+                  className={inputClass}
+                  placeholder="Title"
+                />
+                <Input
+                  value={selectedPage.slug}
+                  readOnly={!canEdit}
+                  onChange={(event) =>
+                    updatePage(selectedPage.id, { slug: event.target.value })
+                  }
+                  className={cn(inputClass, 'font-mono text-xs')}
+                  placeholder="slug"
+                />
+                <Textarea
+                  value={selectedPage.description ?? ''}
+                  readOnly={!canEdit}
+                  rows={3}
+                  onChange={(event) =>
+                    updatePage(selectedPage.id, {
+                      description: event.target.value,
+                    })
+                  }
+                  className={inputClass}
+                  placeholder="Description"
+                />
+                <Select
+                  value={selectedPage.pageType ?? 'other'}
+                  disabled={!canEdit}
+                  onValueChange={(value) =>
+                    updatePage(selectedPage.id, {
+                      pageType: value as WebsitePageType,
+                    })
+                  }
+                >
+                  <SelectTrigger className={cn(inputClass, 'h-9')}>
+                    <SelectValue placeholder="Page type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAGE_TYPE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={selectedPage.status ?? 'draft'}
+                  disabled={!canEdit}
+                  onValueChange={(value) =>
+                    updatePage(selectedPage.id, {
+                      status: value as WebsitePlanningStatus,
+                    })
+                  }
+                >
+                  <SelectTrigger className={cn(inputClass, 'h-9')}>
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PLANNING_STATUS_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  value={selectedPage.seoIntent ?? ''}
+                  readOnly={!canEdit}
+                  onChange={(event) =>
+                    updatePage(selectedPage.id, {
+                      seoIntent: event.target.value,
+                    })
+                  }
+                  className={inputClass}
+                  placeholder="SEO intent"
+                />
+                {canEdit ? (
+                  <>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => addSection(selectedPage.id)}
+                    >
+                      <Plus className="mr-1.5 h-3.5 w-3.5" />
+                      Add section
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive"
+                      onClick={() => removePage(selectedPage.id)}
+                    >
+                      <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                      Delete page
+                    </Button>
+                  </>
+                ) : null}
+              </div>
+            )}
+          </aside>
+        ) : null}
+      </div>
     </div>
   );
 }

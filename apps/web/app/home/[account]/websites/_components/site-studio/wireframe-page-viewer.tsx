@@ -47,6 +47,11 @@ type WireframePageViewerProps = {
   onClientCommentChange?: (sectionId: string, comment: string) => void;
   /** Extra controls per section in the left rail (e.g. library picker). */
   renderSectionControls?: (sectionId: string) => ReactNode;
+  /**
+   * When set, replace per-section canvas renders with a single full-page
+   * render (Site Studio Puck wireframe mode).
+   */
+  renderFullPage?: () => ReactNode;
   className?: string;
   /** When true, fills a fixed modal viewport. */
   fullViewport?: boolean;
@@ -66,6 +71,7 @@ export function WireframePageViewer({
   canEditClientComments = false,
   onClientCommentChange,
   renderSectionControls,
+  renderFullPage,
   className,
   fullViewport = false,
 }: WireframePageViewerProps) {
@@ -337,6 +343,8 @@ export function WireframePageViewer({
               <div className="px-6 py-16 text-center text-sm text-[var(--workspace-shell-text-muted)]">
                 No wireframe sections to preview yet.
               </div>
+            ) : renderFullPage ? (
+              <div className="min-h-[24rem]">{renderFullPage()}</div>
             ) : (
               sections.map((section) => (
                 <section

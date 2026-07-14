@@ -68,6 +68,12 @@ export function buildWorkspaceSettingsNav(input: {
       href: settingsPath(pathsConfig.app.accountPaymentSettings, accountSlug),
     });
 
+    items.push({
+      id: 'services',
+      label: 'Services',
+      href: settingsPath(pathsConfig.app.accountServicesSettings, accountSlug),
+    });
+
     const financesEnabled =
       spaceType === 'property'
         ? isPropertyNavModuleEnabled(moduleSettings, 'finances')

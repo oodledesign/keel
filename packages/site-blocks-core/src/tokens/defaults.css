@@ -1,0 +1,111 @@
+/**
+ * Site Studio block tokens (Prompt D1).
+ * Components consume ONLY --sb-* variables; resolveTokens() sets them from StyleTokens.
+ * Wireframe mode (.sb-wireframe) forces greyscale regardless of brand tokens.
+ */
+:root {
+  --sb-color-primary: #2f5d50;
+  --sb-color-secondary: #6b8f71;
+  --sb-color-accent: #ff5c34;
+  --sb-color-success: #2f7d4a;
+  --sb-color-warning: #c9852a;
+  --sb-color-danger: #b42318;
+  --sb-color-neutral-0: #fafaf8;
+  --sb-color-neutral-1: #f3f2ef;
+  --sb-color-neutral-2: #e8e6e1;
+  --sb-color-neutral-3: #c9c5bd;
+  --sb-color-neutral-4: #6b6862;
+  --sb-color-neutral-5: #3f3d3a;
+  --sb-color-neutral-6: #1c1b1a;
+  --sb-color-primary-contrast: #fafaf8;
+
+  --sb-canvas: var(--sb-color-neutral-0);
+  --sb-surface: var(--sb-color-neutral-1);
+  --sb-atmosphere: var(--sb-color-neutral-2);
+  --sb-border: var(--sb-color-neutral-3);
+  --sb-ink-muted: var(--sb-color-neutral-4);
+  --sb-ink: var(--sb-color-neutral-6);
+  --sb-accent: var(--sb-color-accent);
+  --sb-accent-contrast: var(--sb-color-primary-contrast);
+
+  --sb-wire: #9a9690;
+  --sb-wire-soft: #c9c5bd;
+
+  --sb-radius-none: 0px;
+  --sb-radius-sm: 0.375rem;
+  --sb-radius-md: 0.75rem;
+  --sb-radius-lg: 1.25rem;
+  --sb-radius-full: 9999px;
+  --sb-button-radius: var(--sb-radius-md);
+
+  --sb-space-1: 0.25rem;
+  --sb-space-2: 0.5rem;
+  --sb-space-3: 0.75rem;
+  --sb-space-4: 1rem;
+  --sb-space-6: 1.5rem;
+  --sb-space-8: 2rem;
+  --sb-space-12: 3rem;
+  --sb-space-16: 4rem;
+
+  --sb-font-display: ui-sans-serif, system-ui, sans-serif;
+  --sb-font-heading: var(--sb-font-display);
+  --sb-font-body: ui-sans-serif, system-ui, sans-serif;
+  --sb-font-weight-regular: 400;
+  --sb-font-weight-medium: 500;
+  --sb-font-weight-bold: 700;
+  --sb-font-size-base: 16px;
+  --sb-font-size-sm: 12.8px;
+  --sb-font-size-lg: 20px;
+  --sb-font-size-xl: 25px;
+  --sb-font-size-2xl: 31.25px;
+  --sb-type-ratio: 1.25;
+
+  --sb-max: 72rem;
+}
+
+.sb-root {
+  color: var(--sb-ink);
+  background: var(--sb-canvas);
+  font-family: var(--sb-font-body);
+  font-size: var(--sb-font-size-base);
+  font-weight: var(--sb-font-weight-regular);
+}
+
+.sb-root h1,
+.sb-root h2,
+.sb-root h3,
+.sb-root h4 {
+  font-family: var(--sb-font-display);
+  font-weight: var(--sb-font-weight-bold);
+  letter-spacing: -0.02em;
+}
+
+.sb-root h1 {
+  font-size: var(--sb-font-size-2xl);
+}
+
+.sb-root h2 {
+  font-size: var(--sb-font-size-xl);
+}
+
+.sb-root h3 {
+  font-size: var(--sb-font-size-lg);
+}
+
+/** Greyscale wireframe fidelity — ignores brand tokens. */
+.sb-wireframe {
+  --sb-color-primary: #6b6862;
+  --sb-color-secondary: #9a9690;
+  --sb-color-accent: #6b6862;
+  --sb-accent: #6b6862;
+  --sb-ink: #3f3d3a;
+  --sb-ink-muted: #7a7670;
+  --sb-atmosphere: #e8e6e1;
+  --sb-surface: #f3f2ef;
+  --sb-canvas: #f7f6f3;
+  --sb-border: #c9c5bd;
+  --sb-color-neutral-0: #f7f6f3;
+  --sb-color-neutral-1: #f3f2ef;
+  --sb-color-neutral-2: #e8e6e1;
+  --sb-color-neutral-6: #3f3d3a;
+}

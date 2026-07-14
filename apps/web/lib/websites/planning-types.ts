@@ -1,8 +1,10 @@
 import {
-  emptyBriefAiProvenance,
   type WebsiteBrief,
   type WebsiteBriefAiProvenance,
+  emptyBriefAiProvenance,
 } from './brief-types';
+import type { WebsiteSeoPageRecord } from './seo-types';
+import type { WebsiteStyleSystem } from './style-tokens';
 
 export type WebsitePlanningTab =
   | 'overview'
@@ -11,6 +13,7 @@ export type WebsitePlanningTab =
   | 'wireframe'
   | 'design'
   | 'seo'
+  | 'site'
   | 'export'
   | 'content';
 
@@ -28,6 +31,7 @@ export const SITE_STUDIO_PLANNING_TABS: WebsitePlanningTab[] = [
   'wireframe',
   'design',
   'seo',
+  'site',
   'export',
   'content',
 ];
@@ -60,9 +64,17 @@ export type WebsiteSitemapSection = {
   id: string;
   title: string;
   description: string;
-  /** Site Studio: colour-coded section job. */
+  /**
+   * Relume-style colour tag (nav/hero/proof…). Canonical colour field (C1).
+   * Prefer this over sectionType going forward.
+   */
+  color?: WebsiteSectionType;
+  /**
+   * @deprecated Prefer `color`. Kept in sync by migrateSitemapDocument for
+   * portal + older clients.
+   */
   sectionType?: WebsiteSectionType;
-  /** Site Studio: repeating component symbol — edit once, update all instances. */
+  /** Repeating component symbol key — instances share edits via components[]. */
   componentKey?: string | null;
   status?: WebsitePlanningStatus;
 };
@@ -78,13 +90,34 @@ export type WebsiteSitemapPage = {
   status?: WebsitePlanningStatus;
   /** Parent page id for nesting (null/undefined = top level). */
   parentId?: string | null;
-  /** Reserved for free-form canvas positioning. */
+  /** Canvas position (React Flow). */
   x?: number;
   y?: number;
   /** One-line search intent for this page. */
   seoIntent?: string;
   /** Client approval note (set from portal / public share). */
   approvalNote?: string;
+};
+
+/** Shared symbol definition stored once in the sitemap document. */
+export type WebsiteSitemapSymbol = {
+  key: string;
+  title: string;
+  description: string;
+  color: WebsiteSectionType;
+  status: WebsitePlanningStatus;
+};
+
+export const WEBSITE_SITEMAP_SCHEMA_VERSION = '1.0' as const;
+
+/**
+ * Root sitemap JSONB document (Prompt C1). Legacy storage was a bare page array;
+ * migrateSitemapDocument upgrades on read.
+ */
+export type WebsiteSitemapDocument = {
+  schemaVersion: typeof WEBSITE_SITEMAP_SCHEMA_VERSION;
+  pages: WebsiteSitemapPage[];
+  components: WebsiteSitemapSymbol[];
 };
 
 export type WebsiteWireframeLayout =
@@ -95,6 +128,56 @@ export type WebsiteWireframeLayout =
   | 'cta'
   | 'footer';
 
+/**
+ * Site Studio C3 layout presets — map 1:1 to @kit/site-blocks-core blocks.
+ * Prefer this over coarse WebsiteWireframeLayout when set.
+ */
+export type WebsiteLayoutPreset =
+  | 'header'
+  | 'hero-split'
+  | 'hero-centered'
+  | 'hero-form'
+  | 'logo-cloud'
+  | 'feature-grid'
+  | 'feature-alternating'
+  | 'testimonials'
+  | 'stats-bar'
+  | 'pricing-table'
+  | 'team-grid'
+  | 'faq-accordion'
+  | 'cta-band'
+  | 'contact-form'
+  | 'map-section'
+  | 'blog-grid'
+  | 'content-prose'
+  | 'gallery-grid'
+  | 'footer';
+
+export const WEBSITE_LAYOUT_PRESET_OPTIONS: Array<{
+  value: WebsiteLayoutPreset;
+  label: string;
+}> = [
+  { value: 'header', label: 'Header' },
+  { value: 'hero-split', label: 'Hero — split' },
+  { value: 'hero-centered', label: 'Hero — centered' },
+  { value: 'hero-form', label: 'Hero — with form' },
+  { value: 'logo-cloud', label: 'Logo cloud' },
+  { value: 'feature-grid', label: 'Feature grid' },
+  { value: 'feature-alternating', label: 'Feature — alternating' },
+  { value: 'testimonials', label: 'Testimonials' },
+  { value: 'stats-bar', label: 'Stats bar' },
+  { value: 'pricing-table', label: 'Pricing table' },
+  { value: 'team-grid', label: 'Team grid' },
+  { value: 'faq-accordion', label: 'FAQ accordion' },
+  { value: 'cta-band', label: 'CTA band' },
+  { value: 'contact-form', label: 'Contact form' },
+  { value: 'map-section', label: 'Map / locations' },
+  { value: 'blog-grid', label: 'Blog grid' },
+  { value: 'content-prose', label: 'Content prose' },
+  { value: 'gallery-grid', label: 'Gallery grid' },
+  { value: 'footer', label: 'Footer' },
+];
+
 export type WebsiteWireframeSection = {
   id: string;
   sitemapSectionId: string | null;
@@ -103,6 +186,11 @@ export type WebsiteWireframeSection = {
   contentNotes: string;
   /** Site Studio: section library variant key (see section-library.ts). */
   libraryKey?: string | null;
+  /**
+   * Site Studio C3: preferred block identity (hero-split, faq-accordion…).
+   * When set, drives Puck Render over coarse `layout`.
+   */
+  layoutPreset?: WebsiteLayoutPreset | null;
   /** Site Studio: AI-suggested copy outline (client-friendly). */
   copyOutline?: string;
   /**
@@ -131,6 +219,22 @@ export type WebsiteWireframePage = {
   title: string;
   sections: WebsiteWireframeSection[];
 };
+
+/**
+ * Strip internal-only contentNotes for client-facing portal / public share
+ * payloads. Keeps copyOutline + structured copy (shareable).
+ */
+export function wireframesForClientShare(
+  pages: WebsiteWireframePage[],
+): WebsiteWireframePage[] {
+  return pages.map((page) => ({
+    ...page,
+    sections: page.sections.map((section) => ({
+      ...section,
+      contentNotes: '',
+    })),
+  }));
+}
 
 export type WebsiteContentDoc = {
   id: string;
@@ -167,106 +271,63 @@ export {
 } from './brief-types';
 
 /** @deprecated Prefer WebsiteBriefStackPreference */
-export type WebsiteTargetStack = import('./brief-types').WebsiteBriefStackPreference;
+export type WebsiteTargetStack =
+  import('./brief-types').WebsiteBriefStackPreference;
 
 /* ------------------------------------------------------------------ */
-/* Site Studio: style system                                           */
+/* Site Studio: style system — see style-tokens.ts (Prompt D1)         */
 /* ------------------------------------------------------------------ */
 
-export type WebsiteStyleTokens = {
-  /** Canvas — neutrals, base layer. */
-  canvas: string;
-  /** Atmosphere — subtle backgrounds / gradients. */
-  atmosphere: string;
-  /** Accent — buttons, icons, highlights. */
-  accent: string;
-  /** Contrast — headings, body text. */
-  contrast: string;
-  secondary: string;
-  headingFont: string;
-  bodyFont: string;
-  typeScale: 'compact' | 'regular' | 'display';
-  radius: 'sharp' | 'soft' | 'round';
-  spacingDensity: 'tight' | 'regular' | 'airy';
-  photographyDirection: string;
-};
-
-export type WebsiteMoodboardRef = {
-  url: string;
-  note: string;
-};
-
-export type WebsiteStyleSystem = {
-  tokens: WebsiteStyleTokens;
-  moodboard: WebsiteMoodboardRef[];
-  /** User locked the tokens — exports use them verbatim. */
-  locked: boolean;
-};
-
-export function emptyWebsiteStyleSystem(): WebsiteStyleSystem {
-  return {
-    tokens: {
-      canvas: '#FAFAF8',
-      atmosphere: '#EFEDE7',
-      accent: '#FF5C34',
-      contrast: '#191919',
-      secondary: '#2A9D8F',
-      headingFont: '',
-      bodyFont: '',
-      typeScale: 'regular',
-      radius: 'soft',
-      spacingDensity: 'regular',
-      photographyDirection: '',
-    },
-    moodboard: [],
-    locked: false,
-  };
-}
+export type {
+  WebsiteStyleTokens,
+  WebsiteStyleSystem,
+  WebsiteMoodboardRef,
+  WebsiteStyleColors,
+  WebsiteStyleTypography,
+  WebsiteStyleRadiusScale,
+  WebsiteStyleSpacingDensity,
+  WebsiteStyleButtonStyle,
+} from './style-tokens';
+export {
+  WEBSITE_STYLE_TOKENS_SCHEMA_VERSION,
+  emptyWebsiteStyleSystem,
+  emptyWebsiteStyleTokens,
+  normalizeWebsiteStyleSystem,
+  normalizeWebsiteStyleTokens,
+  seedStyleTokensBrandA,
+  seedStyleTokensBrandB,
+  styleSystemFromDbRow,
+} from './style-tokens';
 
 /* ------------------------------------------------------------------ */
 /* Site Studio: per-page search readiness (SEO / GEO / AEO)            */
 /* ------------------------------------------------------------------ */
 
-export type WebsiteAnswerBlock = {
-  question: string;
-  answer: string;
-};
+/* ------------------------------------------------------------------ */
+/* Site Studio: per-page search readiness — see seo-types.ts (E1)      */
+/* ------------------------------------------------------------------ */
 
-export type WebsiteSeoPageFields = {
-  primaryKeyword: string;
-  secondaryKeywords: string;
-  title: string;
-  metaDescription: string;
-  h1: string;
-  headingOutline: string;
-  internalLinks: string;
-  canonicalNotes: string;
-  imageAltPlan: string;
-  schemaTypes: string[];
-  /** GEO / local. */
-  localSeo: string;
-  /** AEO — FAQ / entity answer blocks for LLM citation. */
-  answerBlocks: WebsiteAnswerBlock[];
-  entityNotes: string;
-};
-
-export function emptyWebsiteSeoPageFields(): WebsiteSeoPageFields {
-  return {
-    primaryKeyword: '',
-    secondaryKeywords: '',
-    title: '',
-    metaDescription: '',
-    h1: '',
-    headingOutline: '',
-    internalLinks: '',
-    canonicalNotes: '',
-    imageAltPlan: '',
-    schemaTypes: [],
-    localSeo: '',
-    answerBlocks: [],
-    entityNotes: '',
-  };
-}
+export type {
+  WebsiteSeoPageSeo,
+  WebsiteSeoPageRecord,
+  WebsiteSeoStatus,
+  WebsiteSeoAnswerBlock,
+  WebsiteSeoHeadingItem,
+  WebsiteSeoInternalLink,
+  WebsiteSeoImageAlt,
+  WebsiteSeoPageFields,
+} from './seo-types';
+export {
+  WEBSITE_SEO_SCHEMA_VERSION,
+  emptyWebsiteSeoPageSeo,
+  emptyWebsiteSeoPageFields,
+  emptyWebsiteSeoPageRecord,
+  normalizeWebsiteSeoPageSeo,
+  normalizeWebsiteSeoPageRecord,
+  seoCompleteness,
+  seoHasMinimumPlan,
+  siteTechnicalChecklist,
+} from './seo-types';
 
 /* ------------------------------------------------------------------ */
 /* Site Studio: sharing                                                */
@@ -291,9 +352,13 @@ export type SiteStudioBundle = {
   brief: WebsiteBrief | null;
   briefProvenance: WebsiteBriefAiProvenance;
   style: WebsiteStyleSystem | null;
-  seoPages: Record<string, WebsiteSeoPageFields>;
+  seoPages: Record<string, WebsiteSeoPageRecord>;
+  /** Edit-before-export llms.txt override (Prompt E2). Null → generate on export. */
+  llmsTxt: string | null;
   shares: WebsiteShareLink[];
   portalScope: WebsitePortalShareScope;
+  /** F2: Site tab editor when a site_sites row is linked (or ozer_sites stack for first publish). */
+  hasOzerSite: boolean;
 };
 
 export function emptySiteStudioBundle(): SiteStudioBundle {
@@ -303,8 +368,10 @@ export function emptySiteStudioBundle(): SiteStudioBundle {
     briefProvenance: emptyBriefAiProvenance(),
     style: null,
     seoPages: {},
+    llmsTxt: null,
     shares: [],
     portalScope: 'off',
+    hasOzerSite: false,
   };
 }
 
@@ -315,6 +382,7 @@ export const ALL_PLANNING_TABS: WebsitePlanningTab[] = [
   'wireframe',
   'design',
   'seo',
+  'site',
   'export',
   'content',
 ];
@@ -426,6 +494,13 @@ export const PLANNING_STATUS_OPTIONS: Array<{
     colorClass: 'border-red-500/40 bg-red-500/10 text-red-300',
   },
 ];
+
+/** Resolve section colour tag (color preferred, sectionType fallback). */
+export function sectionColor(
+  section: Pick<WebsiteSitemapSection, 'color' | 'sectionType'> | undefined,
+): WebsiteSectionType {
+  return section?.color ?? section?.sectionType ?? 'other';
+}
 
 export function sectionTypeMeta(type: WebsiteSectionType | undefined) {
   return (

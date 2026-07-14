@@ -7,9 +7,12 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 
 import type {
   WebsiteContentDoc,
+  WebsiteSitemapDocument,
   WebsiteSitemapPage,
+  WebsiteSitemapSymbol,
   WebsiteWireframePage,
 } from '~/lib/websites/planning-types';
+import { migrateSitemapDocument } from '~/lib/websites/sitemap-document';
 import { WEBSITE_DESIGN_TEMPLATE_NAME } from '~/lib/websites/website-design-template';
 
 import { createJobsService } from '~/home/[account]/jobs/_lib/server/jobs.service';
@@ -21,9 +24,8 @@ import {
   logMissingRelation,
 } from '../../../_lib/server/supabase-errors';
 
-function parseSitemap(value: unknown): WebsiteSitemapPage[] {
-  if (!Array.isArray(value)) return [];
-  return value as WebsiteSitemapPage[];
+function parseSitemapDocument(value: unknown): WebsiteSitemapDocument {
+  return migrateSitemapDocument(value);
 }
 
 function parseWireframes(value: unknown): WebsiteWireframePage[] {
@@ -44,6 +46,7 @@ export type WebsitePlanningBundle = {
   websiteId: string;
   jobId: string | null;
   sitemap: WebsiteSitemapPage[];
+  sitemapComponents: WebsiteSitemapSymbol[];
   wireframes: WebsiteWireframePage[];
   contentDocs: WebsiteContentDoc[];
 };
@@ -55,6 +58,7 @@ export function emptyWebsitePlanningBundle(
     websiteId,
     jobId: null,
     sitemap: [],
+    sitemapComponents: [],
     wireframes: [],
     contentDocs: [],
   };
@@ -193,10 +197,13 @@ class WebsitePlanningService {
       );
     }
 
+    const sitemapDoc = parseSitemapDocument(row.sitemap);
+
     return {
       websiteId: row.id,
       jobId: row.job_id ?? null,
-      sitemap: parseSitemap(row.sitemap),
+      sitemap: sitemapDoc.pages,
+      sitemapComponents: sitemapDoc.components,
       wireframes: parseWireframes(row.wireframes),
       contentDocs,
     };
@@ -231,14 +238,17 @@ class WebsitePlanningService {
   async saveSitemap(
     accountId: string,
     websiteId: string,
-    sitemap: WebsiteSitemapPage[],
+    sitemap: WebsiteSitemapPage[] | WebsiteSitemapDocument,
   ) {
     await this.ensureCanEdit(accountId);
+
+    // Lazy upgrade: always persist the v1 document shape.
+    const document = migrateSitemapDocument(sitemap);
 
     const { error } = await this.adminDb
       .from('websites')
       .update({
-        sitemap,
+        sitemap: document,
         updated_at: new Date().toISOString(),
       })
       .eq('id', websiteId)

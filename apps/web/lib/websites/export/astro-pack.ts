@@ -1,5 +1,6 @@
 import { emptyWebsiteStyleSystem } from '../planning-types';
 import { findSectionLibraryEntry } from '../section-library';
+import { styleTokensRootCss } from './tokens-css';
 import type { WebsiteExportFile, WebsiteExportInput } from './types';
 import { pageRoute, pascalCase } from './types';
 
@@ -31,26 +32,15 @@ npm create astro@latest ${input.websiteName.toLowerCase().replace(/[^a-z0-9]+/g,
   files.push({
     path: 'astro/src/styles/tokens.css',
     language: 'css',
-    content: `:root {
-  --canvas: ${tokens.canvas};
-  --atmosphere: ${tokens.atmosphere};
-  --accent: ${tokens.accent};
-  --contrast: ${tokens.contrast};
-  --secondary: ${tokens.secondary};
-  --font-heading: '${tokens.headingFont || 'system-ui'}', sans-serif;
-  --font-body: '${tokens.bodyFont || 'system-ui'}', sans-serif;
-  --radius: ${tokens.radius === 'sharp' ? '0px' : tokens.radius === 'round' ? '16px' : '8px'};
-  --section-padding: ${tokens.spacingDensity === 'tight' ? '3rem' : tokens.spacingDensity === 'airy' ? '8rem' : '5rem'};
-}
-
+    content: `${styleTokensRootCss(tokens)}
 body {
-  background: var(--canvas);
-  color: var(--contrast);
-  font-family: var(--font-body);
+  background: var(--sb-canvas);
+  color: var(--sb-ink);
+  font-family: var(--sb-font-body);
 }
 
 h1, h2, h3, h4 {
-  font-family: var(--font-heading);
+  font-family: var(--sb-font-display);
 }
 `,
   });
@@ -118,7 +108,7 @@ const { heading, body, cta } = Astro.props;
 
 <style>
   .section {
-    padding-block: var(--section-padding);
+    padding-block: var(--sb-space-12);
   }
   .container {
     max-width: 72rem;
@@ -127,9 +117,9 @@ const { heading, body, cta } = Astro.props;
   }
   .button {
     display: inline-block;
-    background: var(--accent);
-    color: var(--canvas);
-    border-radius: var(--radius);
+    background: var(--sb-color-primary);
+    color: var(--sb-color-primary-contrast);
+    border-radius: var(--sb-button-radius);
     padding: 0.75rem 1.5rem;
   }
 </style>
@@ -142,7 +132,9 @@ const { heading, body, cta } = Astro.props;
     const seo = input.seoPages[page.id];
     const route = pageRoute(page);
     const filePath =
-      route === '/' ? 'astro/src/pages/index.astro' : `astro/src/pages${route}.astro`;
+      route === '/'
+        ? 'astro/src/pages/index.astro'
+        : `astro/src/pages${route}.astro`;
 
     const imports = new Set<string>();
     const sectionTags: string[] = [];

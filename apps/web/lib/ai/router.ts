@@ -30,6 +30,7 @@ export const OzerAIFeature = {
   website_wireframe_generate: 'website_wireframe_generate',
   website_style_suggest: 'website_style_suggest',
   website_seo_generate: 'website_seo_generate',
+  website_seo_answer_blocks: 'website_seo_answer_blocks',
 } as const;
 
 export type OzerAIFeatureKey = (typeof OzerAIFeature)[keyof typeof OzerAIFeature];
@@ -188,6 +189,14 @@ export const FEATURE_CONFIG: Record<OzerAIFeatureKey, FeatureConfig> = {
     credits: 8,
     batchable: false,
     maxOutputTokens: 4096,
+    structuredOutput: true,
+  },
+  website_seo_answer_blocks: {
+    provider: 'anthropic',
+    model: HAIKU_MODEL,
+    credits: 3,
+    batchable: false,
+    maxOutputTokens: 2048,
     structuredOutput: true,
   },
 };

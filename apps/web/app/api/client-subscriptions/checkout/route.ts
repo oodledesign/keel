@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+
+import { createPlanTemplatesService } from '~/home/[account]/settings/services/_lib/server/plan-templates.service';
 import {
   createClientSubscriptionCheckout,
   reconcileClientSubscriptionCheckoutSession,
@@ -7,7 +10,8 @@ import {
 
 /**
  * GET /api/client-subscriptions/checkout?subscriptionId=xxx
- * Public redirect to Stripe Checkout for a client subscription.
+ * Public redirect / success reconcile for client subscriptions.
+ * Prefers G2 connected-account reconcile when account_id is present.
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -25,10 +29,31 @@ export async function GET(request: Request) {
 
   if (completed === '1' && sessionId) {
     try {
-      await reconcileClientSubscriptionCheckoutSession(
-        sessionId,
-        subscriptionId,
-      );
+      const admin = getSupabaseServerAdminClient();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- G2 columns pending typegen
+      const { data: row } = await (admin as any)
+        .from('client_subscriptions')
+        .select('id, account_id, stripe_checkout_session_id')
+        .eq('id', subscriptionId)
+        .maybeSingle();
+
+      if (
+        row?.stripe_checkout_session_id &&
+        row.stripe_checkout_session_id !== sessionId
+      ) {
+        return NextResponse.json({ error: 'Invalid session' }, { status: 400 });
+      }
+
+      if (row?.account_id) {
+        await createPlanTemplatesService(
+          admin as never,
+        ).reconcileCheckoutSession(subscriptionId, sessionId);
+      } else {
+        await reconcileClientSubscriptionCheckoutSession(
+          sessionId,
+          subscriptionId,
+        );
+      }
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Could not confirm payment';
@@ -43,6 +68,21 @@ export async function GET(request: Request) {
   }
 
   try {
+    // G2 rows already store Checkout URL on stripe_payment_link
+    const admin = getSupabaseServerAdminClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- G2 columns pending typegen
+    const { data: row } = await (admin as any)
+      .from('client_subscriptions')
+      .select('stripe_payment_link, account_id')
+      .eq('id', subscriptionId)
+      .maybeSingle();
+
+    if (row?.stripe_payment_link && row?.account_id) {
+      return NextResponse.redirect(String(row.stripe_payment_link), {
+        status: 303,
+      });
+    }
+
     const url = await createClientSubscriptionCheckout(subscriptionId);
     return NextResponse.redirect(url, { status: 303 });
   } catch (error) {

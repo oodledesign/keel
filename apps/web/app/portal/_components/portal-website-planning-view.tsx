@@ -25,7 +25,11 @@ import { cn } from '@kit/ui/utils';
 
 import { WireframeLibrarySection } from '~/home/[account]/websites/_components/site-studio/wireframe-library-sections';
 import { WireframePageViewer } from '~/home/[account]/websites/_components/site-studio/wireframe-page-viewer';
-import { setWebsiteShareApproval, setWebsiteShareSectionComment } from '~/home/[account]/websites/_lib/server/site-studio-actions';
+import {
+  setPortalWebsiteApprovalAction,
+  setWebsiteShareApproval,
+  setWebsiteShareSectionComment,
+} from '~/home/[account]/websites/_lib/server/site-studio-actions';
 import {
   PLANNING_STATUS_OPTIONS,
   type WebsiteBrief,
@@ -37,6 +41,7 @@ import {
   type WebsiteWireframeSection,
   portalSectionChipClass,
   portalStatusChipClass,
+  sectionColor,
   sectionTypeMeta,
 } from '~/lib/websites/planning-types';
 import { ensureWireframeCopy } from '~/lib/websites/wireframe-copy';
@@ -44,7 +49,43 @@ import { ensureWireframeCopy } from '~/lib/websites/wireframe-copy';
 type PlanningScope = WebsiteShareScope | WebsitePortalShareScope;
 type PortalTab = 'brief' | 'sitemap' | 'wireframes' | 'design';
 
+export type PortalApprovalAuth =
+  | { mode: 'share'; token: string }
+  | { mode: 'portal'; clientOrgId: string; websiteId: string };
+
 const CARD_WIDTH = 'w-[min(100%,22rem)] shrink-0 sm:w-[22rem]';
+
+async function submitClientApproval(
+  auth: PortalApprovalAuth,
+  input: {
+    targetType: 'page' | 'section';
+    targetId: string;
+    pageId: string;
+    status: 'approved' | 'blocked';
+    note?: string;
+  },
+) {
+  if (auth.mode === 'share') {
+    return setWebsiteShareApproval({
+      token: auth.token,
+      targetType: input.targetType,
+      targetId: input.targetId,
+      pageId: input.pageId,
+      status: input.status,
+      note: input.note,
+    });
+  }
+
+  return setPortalWebsiteApprovalAction({
+    clientOrgId: auth.clientOrgId,
+    websiteId: auth.websiteId,
+    targetType: input.targetType,
+    targetId: input.targetId,
+    pageId: input.pageId,
+    status: input.status,
+    note: input.note,
+  });
+}
 
 function scopeShowsWireframes(scope: PlanningScope) {
   return scope === 'wireframes' || scope === 'design' || scope === 'full';
@@ -92,12 +133,12 @@ function statusMeta(status: WebsiteSitemapPage['status']) {
 
 function PageApproval({
   page,
-  shareToken,
+  approvalAuth,
   onUpdated,
   compact = false,
 }: {
   page: WebsiteSitemapPage;
-  shareToken: string;
+  approvalAuth: PortalApprovalAuth;
   onUpdated: (
     pageId: string,
     status: 'approved' | 'blocked',
@@ -113,8 +154,9 @@ function PageApproval({
   const submit = (status: 'approved' | 'blocked') => {
     startTransition(async () => {
       try {
-        await setWebsiteShareApproval({
-          token: shareToken,
+        await submitClientApproval(approvalAuth, {
+          targetType: 'page',
+          targetId: page.id,
           pageId: page.id,
           status,
           note: status === 'blocked' ? note : undefined,
@@ -205,6 +247,108 @@ function PageApproval({
               </Button>
             ) : null}
           </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SectionApproval({
+  pageId,
+  sectionId,
+  sectionTitle,
+  status,
+  approvalAuth,
+  onUpdated,
+}: {
+  pageId: string;
+  sectionId: string;
+  sectionTitle: string;
+  status?: string;
+  approvalAuth: PortalApprovalAuth;
+  onUpdated: (
+    pageId: string,
+    sectionId: string,
+    status: 'approved' | 'blocked',
+  ) => void;
+}) {
+  const [note, setNote] = useState('');
+  const [showNote, setShowNote] = useState(false);
+  const [pending, startTransition] = useTransition();
+
+  const submit = (next: 'approved' | 'blocked') => {
+    startTransition(async () => {
+      try {
+        await submitClientApproval(approvalAuth, {
+          targetType: 'section',
+          targetId: sectionId,
+          pageId,
+          status: next,
+          note: next === 'blocked' ? note : undefined,
+        });
+        onUpdated(pageId, sectionId, next);
+        toast.success(
+          next === 'approved'
+            ? `Approved “${sectionTitle || 'section'}”`
+            : 'Section change request sent',
+        );
+        setShowNote(false);
+        setNote('');
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not save approval',
+        );
+      }
+    });
+  };
+
+  return (
+    <div className="mt-2 space-y-2">
+      <p className="text-[10px] font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+        Section · {status ?? 'draft'}
+      </p>
+      <div className="flex flex-col gap-1.5">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-8 w-full justify-start px-2 text-xs"
+          disabled={pending}
+          onClick={() => submit('approved')}
+        >
+          <Check className="mr-1.5 h-3 w-3" />
+          Approve
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="h-8 w-full justify-start px-2 text-xs"
+          disabled={pending}
+          onClick={() => setShowNote((v) => !v)}
+        >
+          <MessageSquareWarning className="mr-1.5 h-3 w-3" />
+          Request changes
+        </Button>
+      </div>
+      {showNote ? (
+        <div className="space-y-2">
+          <Textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="What should change in this section?"
+            rows={3}
+            className="border-[color:var(--workspace-shell-border)] bg-white text-xs"
+          />
+          <Button
+            type="button"
+            size="sm"
+            className="h-8 w-full text-xs"
+            disabled={pending || !note.trim()}
+            onClick={() => submit('blocked')}
+          >
+            Send feedback
+          </Button>
         </div>
       ) : null}
     </div>
@@ -422,6 +566,7 @@ export function PortalWebsitePlanningView({
   style,
   brief = null,
   shareToken,
+  approvalAuth,
   websiteName,
 }: {
   scope: PlanningScope;
@@ -429,34 +574,45 @@ export function PortalWebsitePlanningView({
   wireframes: WebsiteWireframePage[];
   style: WebsiteStyleSystem | null;
   brief?: WebsiteBrief | null;
+  /** @deprecated Prefer approvalAuth — kept for token share callers. */
   shareToken?: string;
+  approvalAuth?: PortalApprovalAuth;
   websiteName?: string;
 }) {
+  const resolvedAuth = useMemo<PortalApprovalAuth | null>(
+    () =>
+      approvalAuth ??
+      (shareToken ? { mode: 'share', token: shareToken } : null),
+    [approvalAuth, shareToken],
+  );
+  const canEditClientComments = resolvedAuth?.mode === 'share';
+
   const [pages, setPages] = useState(sitemap);
   const [wireframePagesState, setWireframePagesState] = useState(wireframes);
   const [selectedTab, setSelectedTab] = useState<PortalTab | null>(null);
   const [openWireframePageId, setOpenWireframePageId] = useState<string | null>(
     null,
   );
-  const commentSaveTimers = useRef<
-    Map<string, ReturnType<typeof setTimeout>>
-  >(new Map());
+  const commentSaveTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(
+    new Map(),
+  );
   const pendingSectionComments = useRef<
-    Map<
-      string,
-      { pageId: string; sectionId: string; comment: string }
-    >
+    Map<string, { pageId: string; sectionId: string; comment: string }>
   >(new Map());
-  const shareTokenRef = useRef(shareToken);
+  const shareTokenRef = useRef(
+    resolvedAuth?.mode === 'share' ? resolvedAuth.token : undefined,
+  );
   useEffect(() => {
-    shareTokenRef.current = shareToken;
-  }, [shareToken]);
+    shareTokenRef.current =
+      resolvedAuth?.mode === 'share' ? resolvedAuth.token : undefined;
+  }, [resolvedAuth]);
 
   const showWireframes = scopeShowsWireframes(scope);
   const showStyle = scopeShowsStyle(scope);
   // Authenticated portal can show brief whenever the workspace shared planning;
   // public token shares only include brief for `full` scope (server-stripped).
-  const showBrief = Boolean(brief) && (scope === 'full' || !shareToken);
+  const showBrief =
+    Boolean(brief) && (scope === 'full' || resolvedAuth?.mode === 'portal');
 
   const wireframeByPage = useMemo(() => {
     const map = new Map<string, WebsiteWireframePage>();
@@ -566,9 +722,26 @@ export function PortalWebsitePlanningView({
               ...page,
               status,
               approvalNote:
-                status === 'approved'
-                  ? undefined
-                  : (note ?? page.approvalNote),
+                status === 'approved' ? undefined : (note ?? page.approvalNote),
+            }
+          : page,
+      ),
+    );
+  };
+
+  const handleSectionApproval = (
+    pageId: string,
+    sectionId: string,
+    status: 'approved' | 'blocked',
+  ) => {
+    setPages((prev) =>
+      prev.map((page) =>
+        page.id === pageId
+          ? {
+              ...page,
+              sections: page.sections.map((section) =>
+                section.id === sectionId ? { ...section, status } : section,
+              ),
             }
           : page,
       ),
@@ -595,7 +768,8 @@ export function PortalWebsitePlanningView({
       ),
     );
 
-    if (!shareToken) return;
+    const token = shareTokenRef.current;
+    if (!token) return;
 
     const key = `${pageId}:${sectionId}`;
     pendingSectionComments.current.set(key, { pageId, sectionId, comment });
@@ -609,7 +783,7 @@ export function PortalWebsitePlanningView({
         pendingSectionComments.current.delete(key);
         commentSaveTimers.current.delete(key);
         void setWebsiteShareSectionComment({
-          token: shareToken,
+          token,
           pageId,
           sectionId,
           comment,
@@ -713,13 +887,15 @@ export function PortalWebsitePlanningView({
                 {page.sections.length > 0 ? (
                   <ul className="mt-4 flex flex-1 flex-col gap-2">
                     {page.sections.map((section) => {
-                      const sectionMeta = sectionTypeMeta(section.sectionType);
+                      const sectionMeta = sectionTypeMeta(
+                        sectionColor(section),
+                      );
                       return (
                         <li
                           key={section.id}
                           className={cn(
                             'rounded-xl border px-3 py-2.5',
-                            portalSectionChipClass(section.sectionType),
+                            portalSectionChipClass(sectionColor(section)),
                           )}
                         >
                           <p className="text-sm font-semibold">
@@ -749,10 +925,10 @@ export function PortalWebsitePlanningView({
                   </p>
                 ) : null}
 
-                {shareToken ? (
+                {resolvedAuth ? (
                   <PageApproval
                     page={page}
-                    shareToken={shareToken}
+                    approvalAuth={resolvedAuth}
                     onUpdated={handleApproval}
                   />
                 ) : null}
@@ -806,10 +982,15 @@ export function PortalWebsitePlanningView({
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {(
               [
-                ['Canvas', style.tokens.canvas],
-                ['Atmosphere', style.tokens.atmosphere],
-                ['Accent', style.tokens.accent],
-                ['Contrast', style.tokens.contrast],
+                ['Primary', style.tokens.colors.primary],
+                ['Secondary', style.tokens.colors.secondary],
+                ['Accent', style.tokens.colors.accent],
+                [
+                  'Ink',
+                  style.tokens.colors.neutrals[
+                    style.tokens.colors.neutrals.length - 1
+                  ] ?? '#111',
+                ],
               ] as const
             ).map(([label, color]) => (
               <div
@@ -831,10 +1012,11 @@ export function PortalWebsitePlanningView({
               </div>
             ))}
           </div>
-          {style.tokens.headingFont || style.tokens.bodyFont ? (
+          {style.tokens.typography.displayFamily ||
+          style.tokens.typography.bodyFamily ? (
             <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-              Type: {style.tokens.headingFont || '—'} /{' '}
-              {style.tokens.bodyFont || '—'}
+              Type: {style.tokens.typography.displayFamily || '—'} /{' '}
+              {style.tokens.typography.bodyFamily || '—'}
             </p>
           ) : null}
         </div>
@@ -868,7 +1050,7 @@ export function PortalWebsitePlanningView({
             className="min-h-0 flex-1"
             pageTitle={openPage.title}
             clientFeedbackMode
-            canEditClientComments={Boolean(shareToken)}
+            canEditClientComments={canEditClientComments}
             onClientCommentChange={(sectionId, comment) =>
               handleSectionComment(openPage.id, sectionId, comment)
             }
@@ -884,12 +1066,38 @@ export function PortalWebsitePlanningView({
               if (!section) return null;
               return <WireframePreview section={section} />;
             }}
+            renderSectionControls={
+              resolvedAuth
+                ? (sectionId) => {
+                    const sitemapSection = openPage.sections.find(
+                      (section) => section.id === sectionId,
+                    );
+                    const wireSection = openWireframe.sections.find(
+                      (section) => section.id === sectionId,
+                    );
+                    return (
+                      <SectionApproval
+                        pageId={openPage.id}
+                        sectionId={sectionId}
+                        sectionTitle={
+                          sitemapSection?.title ??
+                          wireSection?.title ??
+                          'Section'
+                        }
+                        status={sitemapSection?.status}
+                        approvalAuth={resolvedAuth}
+                        onUpdated={handleSectionApproval}
+                      />
+                    );
+                  }
+                : undefined
+            }
             sidebarFooter={
-              shareToken ? (
+              resolvedAuth ? (
                 <PageApproval
                   compact
                   page={openPage}
-                  shareToken={shareToken}
+                  approvalAuth={resolvedAuth}
                   onUpdated={(pageId, status, note) => {
                     handleApproval(pageId, status, note);
                     if (status === 'approved') {

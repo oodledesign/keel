@@ -8,6 +8,7 @@ export const SITE_STUDIO_GATED_TABS: readonly WebsitePlanningTab[] = [
   'brief',
   'design',
   'seo',
+  'site',
   'export',
 ] as const;
 

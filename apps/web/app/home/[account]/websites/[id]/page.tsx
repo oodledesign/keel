@@ -3,36 +3,35 @@ import { notFound, redirect } from 'next/navigation';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody } from '@kit/ui/page';
 
-import { withI18n } from '~/lib/i18n/with-i18n';
-
-import { getDefaultAccountPath } from '../../_lib/role-access';
-import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
-import { WebsiteDetailContent } from '../_components/website-detail-content';
-import { loadWebsitesPageData } from '../_lib/server/websites-page.loader';
-import {
-  createWebsitePlanningService,
-  emptyWebsitePlanningBundle,
-} from '../_lib/server/website-planning.service';
-import { createSiteStudioService } from '../_lib/server/site-studio.service';
-import { createWebsitesService } from '../_lib/server/websites.service';
-import { createProjectPhasesService } from '~/home/[account]/jobs/_lib/server/project-phases.service';
 import { createJobsService } from '~/home/[account]/jobs/_lib/server/jobs.service';
+import { createProjectPhasesService } from '~/home/[account]/jobs/_lib/server/project-phases.service';
+import { withI18n } from '~/lib/i18n/with-i18n';
 import { deliveryProjectTitle } from '~/lib/projects/project-types';
 import { hasSiteStudio } from '~/lib/websites/has-site-studio';
 import {
   ALL_PLANNING_TABS,
-  emptySiteStudioBundle,
   type WebsitePlanningTab,
+  emptySiteStudioBundle,
 } from '~/lib/websites/planning-types';
+
+import { getDefaultAccountPath } from '../../_lib/role-access';
+import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
+import { WebsiteDetailContent } from '../_components/website-detail-content';
+import { createSiteStudioService } from '../_lib/server/site-studio.service';
+import { createWebsiteApprovalsService } from '../_lib/server/website-approvals.service';
+import {
+  createWebsitePlanningService,
+  emptyWebsitePlanningBundle,
+} from '../_lib/server/website-planning.service';
+import { loadWebsitesPageData } from '../_lib/server/websites-page.loader';
+import { createWebsitesService } from '../_lib/server/websites.service';
 
 interface WebsiteDetailPageProps {
   params: Promise<{ account: string; id: string }>;
   searchParams: Promise<{ plan?: string }>;
 }
 
-export const generateMetadata = async ({
-  params,
-}: WebsiteDetailPageProps) => {
+export const generateMetadata = async ({ params }: WebsiteDetailPageProps) => {
   const { id } = await params;
   return { title: `Website – ${id}` };
 };
@@ -106,6 +105,12 @@ async function WebsiteDetailPage({
       ? (plan as WebsitePlanningTab)
       : undefined;
 
+  const approvals = siteStudioEnabled
+    ? await createWebsiteApprovalsService(client)
+        .listForWebsite(accountId, websiteId)
+        .catch(() => [])
+    : [];
+
   return (
     <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
       <WebsiteDetailContent
@@ -119,6 +124,7 @@ async function WebsiteDetailPage({
         planningTab={planningTab}
         linkedJobTitle={linkedJobTitle}
         phases={phases}
+        approvals={approvals}
       />
     </PageBody>
   );

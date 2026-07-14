@@ -1,5 +1,6 @@
 import { emptyWebsiteStyleSystem } from '../planning-types';
 import { findSectionLibraryEntry } from '../section-library';
+import { styleTokensRootCss } from './tokens-css';
 import type { WebsiteExportFile, WebsiteExportInput } from './types';
 import { pageRoute, pascalCase } from './types';
 
@@ -36,16 +37,7 @@ npx create-next-app@latest --ts --app --tailwind
   files.push({
     path: 'next/app/tokens.css',
     language: 'css',
-    content: `:root {
-  --canvas: ${tokens.canvas};
-  --atmosphere: ${tokens.atmosphere};
-  --accent: ${tokens.accent};
-  --contrast: ${tokens.contrast};
-  --secondary: ${tokens.secondary};
-  --radius: ${tokens.radius === 'sharp' ? '0px' : tokens.radius === 'round' ? '16px' : '8px'};
-  --section-padding: ${tokens.spacingDensity === 'tight' ? '3rem' : tokens.spacingDensity === 'airy' ? '8rem' : '5rem'};
-}
-`,
+    content: styleTokensRootCss(tokens),
   });
 
   // Typed content config from wireframes + SEO.
@@ -113,14 +105,14 @@ export const pages: PageContent[] = ${JSON.stringify(pagesConfig, null, 2)};
   cta?: string;
 }) {
   return (
-    <section className="[padding-block:var(--section-padding)]">
+    <section className="[padding-block:var(--sb-space-12)]">
       <div className="mx-auto max-w-6xl px-6">
         {heading ? <h2 className="text-3xl font-semibold">{heading}</h2> : null}
         {body ? <p className="mt-4 max-w-2xl">{body}</p> : null}
         {cta ? (
           <a
             href="#"
-            className="mt-6 inline-block rounded-[var(--radius)] bg-[var(--accent)] px-6 py-3 text-[var(--canvas)]"
+            className="mt-6 inline-block rounded-[var(--sb-button-radius)] bg-[var(--sb-color-primary)] px-6 py-3 text-[var(--sb-color-primary-contrast)]"
           >
             {cta}
           </a>

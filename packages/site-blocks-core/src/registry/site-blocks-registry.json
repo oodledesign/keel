@@ -1,0 +1,648 @@
+{
+  "schemaVersion": "1.0",
+  "package": "@kit/site-blocks-core",
+  "generatedAt": "2026-07-14T21:09:21.910Z",
+  "blocks": [
+    {
+      "name": "Header",
+      "layoutPreset": "header",
+      "label": "Header",
+      "intendedUse": "Site-wide navigation / brand chrome",
+      "propsSchema": [
+        {
+          "name": "brandName",
+          "type": "text",
+          "label": "Brand name"
+        },
+        {
+          "name": "link1",
+          "type": "text",
+          "label": "Link 1"
+        },
+        {
+          "name": "link2",
+          "type": "text",
+          "label": "Link 2"
+        },
+        {
+          "name": "link3",
+          "type": "text",
+          "label": "Link 3"
+        },
+        {
+          "name": "ctaLabel",
+          "type": "text",
+          "label": "CTA label"
+        }
+      ],
+      "defaultProps": {
+        "brandName": "Brand",
+        "link1": "Services",
+        "link2": "Work",
+        "link3": "About",
+        "ctaLabel": "Get in touch"
+      }
+    },
+    {
+      "name": "HeroSplit",
+      "layoutPreset": "hero-split",
+      "label": "Hero — split",
+      "intendedUse": "Primary page hero with media + dual CTAs",
+      "propsSchema": [
+        {
+          "name": "eyebrow",
+          "type": "text",
+          "label": "Eyebrow"
+        },
+        {
+          "name": "headline",
+          "type": "text",
+          "label": "Headline"
+        },
+        {
+          "name": "subheadline",
+          "type": "textarea",
+          "label": "Subheadline"
+        },
+        {
+          "name": "primaryCta",
+          "type": "text",
+          "label": "Primary CTA"
+        },
+        {
+          "name": "secondaryCta",
+          "type": "text",
+          "label": "Secondary CTA"
+        }
+      ],
+      "defaultProps": {
+        "eyebrow": "",
+        "headline": "Headline that earns the scroll",
+        "subheadline": "Supporting line that clarifies the offer.",
+        "primaryCta": "Book a call",
+        "secondaryCta": "See work"
+      }
+    },
+    {
+      "name": "HeroCentered",
+      "layoutPreset": "hero-centered",
+      "label": "Hero — centered",
+      "intendedUse": "Centered hero for simple landing promises",
+      "propsSchema": [
+        {
+          "name": "headline",
+          "type": "text",
+          "label": "Headline"
+        },
+        {
+          "name": "subheadline",
+          "type": "textarea",
+          "label": "Subheadline"
+        },
+        {
+          "name": "primaryCta",
+          "type": "text",
+          "label": "Primary CTA"
+        }
+      ],
+      "defaultProps": {
+        "headline": "Centered promise",
+        "subheadline": "One clear line under the headline.",
+        "primaryCta": "Start here"
+      }
+    },
+    {
+      "name": "HeroWithForm",
+      "layoutPreset": "hero-form",
+      "label": "Hero — with form",
+      "intendedUse": "Lead-capture hero with inline form",
+      "propsSchema": [
+        {
+          "name": "headline",
+          "type": "text",
+          "label": "Headline"
+        },
+        {
+          "name": "subheadline",
+          "type": "textarea",
+          "label": "Subheadline"
+        },
+        {
+          "name": "field1",
+          "type": "text",
+          "label": "Field 1 label"
+        },
+        {
+          "name": "field2",
+          "type": "text",
+          "label": "Field 2 label"
+        },
+        {
+          "name": "submitLabel",
+          "type": "text",
+          "label": "Submit label"
+        }
+      ],
+      "defaultProps": {
+        "headline": "Get a free estimate",
+        "subheadline": "Tell us about the project.",
+        "field1": "Name",
+        "field2": "Email",
+        "submitLabel": "Send"
+      }
+    },
+    {
+      "name": "LogoCloud",
+      "layoutPreset": "logo-cloud",
+      "label": "Logo cloud",
+      "intendedUse": "Social proof logo strip",
+      "propsSchema": [
+        {
+          "name": "eyebrow",
+          "type": "text",
+          "label": "Eyebrow"
+        },
+        {
+          "name": "logos",
+          "type": "textarea",
+          "label": "Logos (comma-separated)"
+        }
+      ],
+      "defaultProps": {
+        "eyebrow": "Trusted by",
+        "logos": "Logo A, Logo B, Logo C, Logo D"
+      }
+    },
+    {
+      "name": "FeatureGrid",
+      "layoutPreset": "feature-grid",
+      "label": "Feature grid",
+      "intendedUse": "3–6 benefit / service cards",
+      "propsSchema": [
+        {
+          "name": "heading",
+          "type": "text",
+          "label": "Heading"
+        },
+        {
+          "name": "items",
+          "type": "array",
+          "label": "Features"
+        }
+      ],
+      "defaultProps": {
+        "heading": "Why choose us",
+        "items": [
+          {
+            "title": "Feature one",
+            "body": "Short benefit."
+          },
+          {
+            "title": "Feature two",
+            "body": "Short benefit."
+          },
+          {
+            "title": "Feature three",
+            "body": "Short benefit."
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeatureAlternating",
+      "layoutPreset": "feature-alternating",
+      "label": "Feature — alternating",
+      "intendedUse": "Split media + copy feature band",
+      "propsSchema": [
+        {
+          "name": "heading",
+          "type": "text",
+          "label": "Heading"
+        },
+        {
+          "name": "body",
+          "type": "textarea",
+          "label": "Body"
+        },
+        {
+          "name": "ctaLabel",
+          "type": "text",
+          "label": "CTA"
+        },
+        {
+          "name": "mediaSide",
+          "type": "radio",
+          "label": "Media side"
+        }
+      ],
+      "defaultProps": {
+        "heading": "Detail the next benefit",
+        "body": "Supporting copy for the alternating feature band.",
+        "ctaLabel": "Learn more",
+        "mediaSide": "left"
+      }
+    },
+    {
+      "name": "Testimonials",
+      "layoutPreset": "testimonials",
+      "label": "Testimonials",
+      "intendedUse": "Customer quotes with attribution",
+      "propsSchema": [
+        {
+          "name": "heading",
+          "type": "text",
+          "label": "Heading"
+        },
+        {
+          "name": "items",
+          "type": "array",
+          "label": "Quotes"
+        }
+      ],
+      "defaultProps": {
+        "heading": "What clients say",
+        "items": [
+          {
+            "quote": "Clear process and sharp delivery.",
+            "name": "Alex",
+            "role": "Founder"
+          },
+          {
+            "quote": "Our site finally ranks and converts.",
+            "name": "Sam",
+            "role": "Marketing"
+          },
+          {
+            "quote": "Best agency decision we made.",
+            "name": "Jordan",
+            "role": "Ops"
+          }
+        ]
+      }
+    },
+    {
+      "name": "StatsBar",
+      "layoutPreset": "stats-bar",
+      "label": "Stats bar",
+      "intendedUse": "Key numeric proof metrics",
+      "propsSchema": [
+        {
+          "name": "items",
+          "type": "array",
+          "label": "Stats"
+        }
+      ],
+      "defaultProps": {
+        "items": [
+          {
+            "value": "120+",
+            "label": "Projects"
+          },
+          {
+            "value": "98%",
+            "label": "Retention"
+          },
+          {
+            "value": "4.9",
+            "label": "Rating"
+          },
+          {
+            "value": "12yr",
+            "label": "Experience"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PricingTable",
+      "layoutPreset": "pricing-table",
+      "label": "Pricing table",
+      "intendedUse": "Tiered pricing with feature lists",
+      "propsSchema": [
+        {
+          "name": "heading",
+          "type": "text",
+          "label": "Heading"
+        },
+        {
+          "name": "tiers",
+          "type": "array",
+          "label": "Tiers"
+        }
+      ],
+      "defaultProps": {
+        "heading": "Pricing",
+        "tiers": [
+          {
+            "name": "Starter",
+            "price": "£899",
+            "features": "5 pages\nBasic SEO\n1 revision",
+            "ctaLabel": "Get started"
+          },
+          {
+            "name": "Growth",
+            "price": "£1,899",
+            "features": "12 pages\nLocal SEO\nCMS training",
+            "ctaLabel": "Choose Growth"
+          },
+          {
+            "name": "Custom",
+            "price": "Let's talk",
+            "features": "Bespoke scope\nIntegrations\nOngoing retainer",
+            "ctaLabel": "Book a call"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TeamGrid",
+      "layoutPreset": "team-grid",
+      "label": "Team grid",
+      "intendedUse": "People / team portraits",
+      "propsSchema": [
+        {
+          "name": "heading",
+          "type": "text",
+          "label": "Heading"
+        },
+        {
+          "name": "members",
+          "type": "array",
+          "label": "Members"
+        }
+      ],
+      "defaultProps": {
+        "heading": "The team",
+        "members": [
+          {
+            "name": "Taylor",
+            "role": "Strategy",
+            "bio": "Leads discovery and IA."
+          },
+          {
+            "name": "Casey",
+            "role": "Design",
+            "bio": "Systems and brand."
+          },
+          {
+            "name": "Riley",
+            "role": "Build",
+            "bio": "Webflow / Astro / Next."
+          }
+        ]
+      }
+    },
+    {
+      "name": "FAQAccordion",
+      "layoutPreset": "faq-accordion",
+      "label": "FAQ accordion",
+      "intendedUse": "FAQ / AEO answer blocks",
+      "propsSchema": [
+        {
+          "name": "heading",
+          "type": "text",
+          "label": "Heading"
+        },
+        {
+          "name": "items",
+          "type": "array",
+          "label": "FAQs"
+        }
+      ],
+      "defaultProps": {
+        "heading": "FAQs",
+        "items": [
+          {
+            "question": "How long does a build take?",
+            "answer": "Typical marketing sites ship in 3–6 weeks."
+          },
+          {
+            "question": "Do you handle SEO?",
+            "answer": "Yes — technical SEO and answer-engine blocks are included."
+          }
+        ]
+      }
+    },
+    {
+      "name": "CTABand",
+      "layoutPreset": "cta-band",
+      "label": "CTA band",
+      "intendedUse": "Full-width conversion strip",
+      "propsSchema": [
+        {
+          "name": "headline",
+          "type": "text",
+          "label": "Headline"
+        },
+        {
+          "name": "subhead",
+          "type": "textarea",
+          "label": "Subhead"
+        },
+        {
+          "name": "ctaLabel",
+          "type": "text",
+          "label": "CTA"
+        }
+      ],
+      "defaultProps": {
+        "headline": "Ready when you are",
+        "subhead": "Book a short discovery call.",
+        "ctaLabel": "Book a call"
+      }
+    },
+    {
+      "name": "ContactForm",
+      "layoutPreset": "contact-form",
+      "label": "Contact form",
+      "intendedUse": "Contact details + form",
+      "propsSchema": [
+        {
+          "name": "heading",
+          "type": "text",
+          "label": "Heading"
+        },
+        {
+          "name": "body",
+          "type": "textarea",
+          "label": "Body"
+        },
+        {
+          "name": "address",
+          "type": "text",
+          "label": "Address"
+        },
+        {
+          "name": "phone",
+          "type": "text",
+          "label": "Phone"
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "label": "Email"
+        },
+        {
+          "name": "submitLabel",
+          "type": "text",
+          "label": "Submit"
+        }
+      ],
+      "defaultProps": {
+        "heading": "Contact",
+        "body": "Tell us about the project.",
+        "address": "123 High Street",
+        "phone": "+44 0000 000000",
+        "email": "hello@example.com",
+        "submitLabel": "Send message"
+      }
+    },
+    {
+      "name": "MapSection",
+      "layoutPreset": "map-section",
+      "label": "Map / locations",
+      "intendedUse": "Locations / map / NAP",
+      "propsSchema": [
+        {
+          "name": "heading",
+          "type": "text",
+          "label": "Heading"
+        },
+        {
+          "name": "address",
+          "type": "text",
+          "label": "Address"
+        },
+        {
+          "name": "hours",
+          "type": "text",
+          "label": "Hours"
+        },
+        {
+          "name": "locations",
+          "type": "textarea",
+          "label": "Locations"
+        }
+      ],
+      "defaultProps": {
+        "heading": "Find us",
+        "address": "123 High Street",
+        "hours": "Mon–Fri 9–5",
+        "locations": "Service area: City + surrounds"
+      }
+    },
+    {
+      "name": "BlogGrid",
+      "layoutPreset": "blog-grid",
+      "label": "Blog grid",
+      "intendedUse": "Latest posts grid",
+      "propsSchema": [
+        {
+          "name": "heading",
+          "type": "text",
+          "label": "Heading"
+        },
+        {
+          "name": "posts",
+          "type": "array",
+          "label": "Posts"
+        }
+      ],
+      "defaultProps": {
+        "heading": "Latest writing",
+        "posts": [
+          {
+            "title": "Post one",
+            "excerpt": "Short excerpt."
+          },
+          {
+            "title": "Post two",
+            "excerpt": "Short excerpt."
+          },
+          {
+            "title": "Post three",
+            "excerpt": "Short excerpt."
+          }
+        ]
+      }
+    },
+    {
+      "name": "ContentProse",
+      "layoutPreset": "content-prose",
+      "label": "Content prose",
+      "intendedUse": "Long-form editorial prose",
+      "propsSchema": [
+        {
+          "name": "heading",
+          "type": "text",
+          "label": "Heading"
+        },
+        {
+          "name": "body",
+          "type": "textarea",
+          "label": "Body"
+        }
+      ],
+      "defaultProps": {
+        "heading": "Section heading",
+        "body": "Long-form copy lives here. Keep sentences concrete."
+      }
+    },
+    {
+      "name": "GalleryGrid",
+      "layoutPreset": "gallery-grid",
+      "label": "Gallery grid",
+      "intendedUse": "Image gallery / masonry",
+      "propsSchema": [
+        {
+          "name": "heading",
+          "type": "text",
+          "label": "Heading"
+        },
+        {
+          "name": "captions",
+          "type": "textarea",
+          "label": "Captions (comma-separated)"
+        }
+      ],
+      "defaultProps": {
+        "heading": "Gallery",
+        "captions": "Space one, Space two, Space three, Space four"
+      }
+    },
+    {
+      "name": "Footer",
+      "layoutPreset": "footer",
+      "label": "Footer",
+      "intendedUse": "Site footer columns + legal",
+      "propsSchema": [
+        {
+          "name": "brandName",
+          "type": "text",
+          "label": "Brand"
+        },
+        {
+          "name": "column1",
+          "type": "textarea",
+          "label": "Column 1"
+        },
+        {
+          "name": "column2",
+          "type": "textarea",
+          "label": "Column 2"
+        },
+        {
+          "name": "legal",
+          "type": "text",
+          "label": "Legal line"
+        }
+      ],
+      "defaultProps": {
+        "brandName": "Brand",
+        "column1": "Services\nAbout\nContact",
+        "column2": "Privacy\nTerms",
+        "legal": "© Brand. All rights reserved."
+      }
+    }
+  ]
+}

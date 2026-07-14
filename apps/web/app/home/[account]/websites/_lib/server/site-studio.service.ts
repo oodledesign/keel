@@ -8,7 +8,7 @@ import { requireUser } from '@kit/supabase/require-user';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
-import { callAI, FEATURE_CONFIG } from '~/lib/ai/router';
+import { FEATURE_CONFIG, callAI } from '~/lib/ai/router';
 import { canUseAddon } from '~/lib/billing/entitlements';
 import {
   type BriefAiSource,
@@ -27,24 +27,45 @@ import { fetchUrlContentForBrief } from '~/lib/websites/fetch-url-for-brief';
 import { hasSiteStudio } from '~/lib/websites/has-site-studio';
 import {
   type SiteStudioBundle,
-  type WebsitePlanningStatus,
   type WebsitePortalShareScope,
-  type WebsiteSeoPageFields,
   type WebsiteShareLink,
   type WebsiteShareScope,
   type WebsiteSitemapPage,
-  type WebsiteSitemapSection,
   type WebsiteStyleSystem,
   type WebsiteWireframePage,
-  type WebsiteWireframeSection,
   createPlanningId,
   emptySiteStudioBundle,
-  emptyWebsiteSeoPageFields,
   emptyWebsiteStyleSystem,
-  slugifyPageTitle,
+  normalizeWebsiteStyleSystem,
+  normalizeWebsiteStyleTokens,
+  styleSystemFromDbRow,
+  wireframesForClientShare,
 } from '~/lib/websites/planning-types';
-import { findSectionLibraryEntry } from '~/lib/websites/section-library';
-import { ensureWireframeCopy } from '~/lib/websites/wireframe-copy';
+import { toLegacyFlatSeoFields } from '~/lib/websites/seo-legacy-flat';
+import {
+  type WebsiteSeoPageRecord,
+  type WebsiteSeoPageSeo,
+  type WebsiteSeoStatus,
+  normalizeWebsiteSeoPageRecord,
+  normalizeWebsiteSeoPageSeo,
+} from '~/lib/websites/seo-types';
+import type {
+  SitemapProposal,
+  SitemapProposeMode,
+  WireframePageProposal,
+  WireframeSectionProposal,
+} from '~/lib/websites/site-studio-ai-types';
+import { SITE_STUDIO_AI_CREDITS } from '~/lib/websites/site-studio-credits';
+import {
+  AiSitemapPagesSchema,
+  AiWireframeSectionsSchema,
+  materialiseAiSitemapPages,
+  materialiseAiWireframeSections,
+} from '~/lib/websites/sitemap-ai-parse';
+import {
+  migrateSitemapDocument,
+  migrateSitemapPages,
+} from '~/lib/websites/sitemap-document';
 
 import {
   isMissingColumnError,
@@ -54,14 +75,26 @@ import {
 import {
   BRIEF_EXTRACT_SYSTEM,
   BRIEF_SUGGEST_SYSTEM,
+  SEO_ANSWER_BLOCKS_SYSTEM,
   SEO_GENERATE_SYSTEM,
   SITEMAP_GENERATE_SYSTEM,
+  SITEMAP_SEO_PAGES_SYSTEM,
+  SITEMAP_VARIANTS_SYSTEM,
   STYLE_SUGGEST_SYSTEM,
   WIREFRAME_GENERATE_SYSTEM,
+  WIREFRAME_SECTION_REGENERATE_SYSTEM,
   briefContextBlock,
+  callAIValidatedJson,
   extractJson,
   sitemapContextBlock,
 } from './site-studio-ai';
+
+export type {
+  SitemapProposeMode,
+  SitemapProposal,
+  WireframePageProposal,
+  WireframeSectionProposal,
+} from '~/lib/websites/site-studio-ai-types';
 
 export type { SiteStudioBundle } from '~/lib/websites/planning-types';
 export { emptySiteStudioBundle } from '~/lib/websites/planning-types';
@@ -76,6 +109,17 @@ function siteUrl() {
 
 export function websiteShareUrl(token: string) {
   return `${siteUrl()}/portal/websites/${encodeURIComponent(token)}`;
+}
+
+/** Chrome-less wireframe URL for html.to.design / PNG capture (Tier 1). */
+export function websiteShareFigmaPageUrl(token: string, pageSlug: string) {
+  const slug =
+    pageSlug
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '') || 'home';
+  return `${websiteShareUrl(token)}/figma/${encodeURIComponent(slug)}`;
 }
 
 export function createSiteStudioService(client: SupabaseClient) {
@@ -134,7 +178,10 @@ class SiteStudioService {
       .maybeSingle();
 
     if (error) throw error;
-    if (data?.account_role === 'contractor' || data?.account_role === 'client') {
+    if (
+      data?.account_role === 'contractor' ||
+      data?.account_role === 'client'
+    ) {
       throw new Error('Permission denied');
     }
 
@@ -218,8 +265,7 @@ class SiteStudioService {
     siteStudioEnabled?: boolean,
   ): Promise<SiteStudioBundle> {
     await this.ensureCanView(accountId);
-    const enabled =
-      siteStudioEnabled ?? (await hasSiteStudio(accountId));
+    const enabled = siteStudioEnabled ?? (await hasSiteStudio(accountId));
 
     const bundle = emptySiteStudioBundle();
     bundle.enabled = enabled;
@@ -228,19 +274,19 @@ class SiteStudioService {
       await Promise.all([
         this.client
           .from('website_briefs')
-          .select('brief, ai_provenance')
+          .select('brief, ai_provenance, llms_txt')
           .eq('website_id', websiteId)
           .eq('account_id', accountId)
           .maybeSingle(),
         this.client
           .from('website_style_systems')
-          .select('style')
+          .select('style, tokens, moodboard, locked')
           .eq('website_id', websiteId)
           .eq('account_id', accountId)
           .maybeSingle(),
         this.client
           .from('website_seo_pages')
-          .select('page_id, fields')
+          .select('page_id, page_slug, fields, seo, status')
           .eq('website_id', websiteId)
           .eq('account_id', accountId),
         this.client
@@ -258,45 +304,113 @@ class SiteStudioService {
           .maybeSingle(),
       ]);
 
-    for (const res of [briefRes, styleRes, seoRes, sharesRes]) {
+    for (const res of [styleRes, sharesRes]) {
       if (res.error && isMissingRelationError(res.error)) {
         logMissingRelation('site_studio.getBundle', res.error);
         return bundle;
       }
     }
 
-    if (briefRes.data?.brief && typeof briefRes.data.brief === 'object') {
-      bundle.brief = normalizeWebsiteBrief(briefRes.data.brief);
+    if (seoRes.error && isMissingRelationError(seoRes.error)) {
+      logMissingRelation('site_studio.getBundle', seoRes.error);
+      return bundle;
     }
 
-    if (
-      briefRes.data &&
-      'ai_provenance' in briefRes.data &&
-      briefRes.data.ai_provenance
-    ) {
+    let seoRows = (seoRes.data ?? []) as Array<{
+      page_id: string;
+      page_slug?: string | null;
+      fields?: unknown;
+      seo?: unknown;
+      status?: string | null;
+    }>;
+
+    if (seoRes.error && isMissingColumnError(seoRes.error)) {
+      const legacySeo = await this.client
+        .from('website_seo_pages')
+        .select('page_id, fields')
+        .eq('website_id', websiteId)
+        .eq('account_id', accountId);
+      if (legacySeo.error && isMissingRelationError(legacySeo.error)) {
+        logMissingRelation('site_studio.getBundle', legacySeo.error);
+        return bundle;
+      }
+      seoRows = (
+        (legacySeo.data ?? []) as Array<{
+          page_id: string;
+          fields?: unknown;
+        }>
+      ).map((row) => ({
+        page_id: row.page_id,
+        page_slug: null,
+        fields: row.fields,
+        seo: null,
+        status: 'draft',
+      }));
+    }
+
+    let briefRow = briefRes.data as {
+      brief?: unknown;
+      ai_provenance?: unknown;
+      llms_txt?: string | null;
+    } | null;
+
+    if (briefRes.error && isMissingColumnError(briefRes.error)) {
+      const legacyBrief = await this.client
+        .from('website_briefs')
+        .select('brief, ai_provenance')
+        .eq('website_id', websiteId)
+        .eq('account_id', accountId)
+        .maybeSingle();
+      if (legacyBrief.error && isMissingRelationError(legacyBrief.error)) {
+        logMissingRelation('site_studio.getBundle', legacyBrief.error);
+        return bundle;
+      }
+      briefRow = legacyBrief.data as {
+        brief?: unknown;
+        ai_provenance?: unknown;
+      } | null;
+    } else if (briefRes.error && isMissingRelationError(briefRes.error)) {
+      logMissingRelation('site_studio.getBundle', briefRes.error);
+      return bundle;
+    }
+
+    if (briefRow?.brief && typeof briefRow.brief === 'object') {
+      bundle.brief = normalizeWebsiteBrief(briefRow.brief);
+    }
+
+    if (briefRow?.ai_provenance) {
       bundle.briefProvenance = normalizeBriefAiProvenance(
-        briefRes.data.ai_provenance,
+        briefRow.ai_provenance,
       );
     }
 
-    if (styleRes.data?.style && typeof styleRes.data.style === 'object') {
-      const empty = emptyWebsiteStyleSystem();
-      const stored = styleRes.data.style as Partial<WebsiteStyleSystem>;
-      bundle.style = {
-        tokens: { ...empty.tokens, ...(stored.tokens ?? {}) },
-        moodboard: stored.moodboard ?? [],
-        locked: Boolean(stored.locked),
-      };
+    if (typeof briefRow?.llms_txt === 'string' && briefRow.llms_txt.trim()) {
+      bundle.llmsTxt = briefRow.llms_txt;
     }
 
-    for (const row of (seoRes.data ?? []) as Array<{
-      page_id: string;
-      fields: unknown;
-    }>) {
-      bundle.seoPages[row.page_id] = {
-        ...emptyWebsiteSeoPageFields(),
-        ...((row.fields ?? {}) as Partial<WebsiteSeoPageFields>),
-      };
+    if (styleRes.data) {
+      bundle.style = styleSystemFromDbRow(
+        styleRes.data as {
+          style?: unknown;
+          tokens?: unknown;
+          moodboard?: unknown;
+          locked?: unknown;
+        },
+      );
+    }
+
+    for (const row of seoRows) {
+      bundle.seoPages[row.page_id] = normalizeWebsiteSeoPageRecord(
+        {
+          page_id: row.page_id,
+          page_slug: row.page_slug,
+          seo: row.seo,
+          fields: row.fields,
+          status: row.status,
+        },
+        row.page_id,
+        row.page_slug ?? '',
+      );
     }
 
     bundle.shares = (
@@ -324,6 +438,18 @@ class SiteStudioService {
       portalScope === 'full'
     ) {
       bundle.portalScope = portalScope;
+    }
+
+    const siteRes = await this.client
+      .from('site_sites')
+      .select('id')
+      .eq('account_id', accountId)
+      .eq('website_id', websiteId)
+      .maybeSingle();
+    if (!siteRes.error && siteRes.data) {
+      bundle.hasOzerSite = true;
+    } else if (siteRes.error && isMissingRelationError(siteRes.error)) {
+      logMissingRelation('site_studio.getBundle.site_sites', siteRes.error);
     }
 
     return bundle;
@@ -605,325 +731,269 @@ class SiteStudioService {
   }
 
   /* ---------------------------------------------------------------- */
-  /* AI sitemap                                                        */
+  /* AI sitemap (propose only — client applies after preview)           */
   /* ---------------------------------------------------------------- */
 
+  async proposeSitemap(
+    accountId: string,
+    websiteId: string,
+    mode: SitemapProposeMode,
+  ): Promise<SitemapProposal> {
+    await this.ensureSiteStudio(accountId);
+    const website = await this.verifyWebsite(accountId, websiteId);
+    const brief = await this.loadBrief(accountId, websiteId);
+
+    const currentDoc = migrateSitemapDocument(website.sitemap);
+    const currentSitemap = currentDoc.pages;
+
+    const systemPrompt =
+      mode === 'add-missing-seo-pages'
+        ? SITEMAP_SEO_PAGES_SYSTEM
+        : mode === 'local-service-variants'
+          ? SITEMAP_VARIANTS_SYSTEM
+          : SITEMAP_GENERATE_SYSTEM;
+
+    const userPromptParts = [
+      `Brief:\n${briefContextBlock(brief)}`,
+      mode === 'from-brief'
+        ? currentSitemap.length > 0
+          ? `Current sitemap (for awareness — your proposal will REPLACE it if the user applies):\n${sitemapContextBlock(currentSitemap)}\n\nPropose a complete replacement sitemap.`
+          : 'Propose the full sitemap for this site.'
+        : `Current sitemap:\n${sitemapContextBlock(currentSitemap)}`,
+      mode === 'add-missing-seo-pages'
+        ? 'Propose ONLY missing SEO/local/legal/comparison pages with seoIntent filled. Return new pages only.'
+        : null,
+      mode === 'local-service-variants'
+        ? 'Propose the service × geography variant matrix as child pages (parentSlug required). Return new variant pages only.'
+        : null,
+    ];
+
+    const rawPages = await callAIValidatedJson({
+      feature: 'website_sitemap_generate',
+      systemPrompt,
+      userPrompt: userPromptParts.filter(Boolean).join('\n\n'),
+      accountId,
+      supabase: this.client,
+      schema: AiSitemapPagesSchema,
+    });
+
+    const existingForParents = mode === 'from-brief' ? [] : currentSitemap;
+
+    let pages = materialiseAiSitemapPages(rawPages, {
+      existingPages: existingForParents,
+    });
+
+    const skippedExistingSlugs: string[] = [];
+    if (mode !== 'from-brief') {
+      const existingSlugs = new Set(currentSitemap.map((page) => page.slug));
+      const filtered: WebsiteSitemapPage[] = [];
+      for (const page of pages) {
+        if (existingSlugs.has(page.slug)) {
+          skippedExistingSlugs.push(page.slug);
+        } else {
+          filtered.push(page);
+        }
+      }
+      pages = filtered;
+    }
+
+    if (pages.length === 0) {
+      throw new Error(
+        mode === 'from-brief'
+          ? 'AI did not return any pages'
+          : 'No new pages to add — sitemap already covers these intents',
+      );
+    }
+
+    return {
+      mode,
+      pages,
+      currentPageCount: currentSitemap.length,
+      skippedExistingSlugs,
+      creditsUsed: SITE_STUDIO_AI_CREDITS.sitemapGenerate,
+    };
+  }
+
+  /**
+   * @deprecated Prefer proposeSitemap + client apply. Kept for any callers
+   * expecting immediate persist — now proposes and refuses silent replace.
+   */
   async generateSitemap(
     accountId: string,
     websiteId: string,
     mode: 'replace' | 'add-missing-seo-pages',
   ): Promise<WebsiteSitemapPage[]> {
-    await this.ensureSiteStudio(accountId);
-    const website = await this.verifyWebsite(accountId, websiteId);
-    const brief = await this.loadBrief(accountId, websiteId);
-
-    const currentSitemap = Array.isArray(website.sitemap)
-      ? (website.sitemap as WebsiteSitemapPage[])
-      : [];
-
-    const userPrompt = [
-      `Brief:\n${briefContextBlock(brief)}`,
-      mode === 'add-missing-seo-pages'
-        ? `Current sitemap:\n${sitemapContextBlock(currentSitemap)}\n\nPropose ONLY the missing pages this site needs for SEO/local/answer-engine coverage (service pages, location pages, FAQ, comparison, legal). Return only new pages, not existing ones.`
-        : 'Propose the full sitemap for this site.',
-    ].join('\n\n');
-
-    const text = await callAI({
-      feature: 'website_sitemap_generate',
-      systemPrompt: SITEMAP_GENERATE_SYSTEM,
-      userPrompt,
-      accountId,
-      supabase: this.client,
-    });
-
-    type RawSection = {
-      title?: string;
-      description?: string;
-      sectionType?: string;
-      componentKey?: string | null;
-    };
-    type RawPage = {
-      title?: string;
-      slug?: string;
-      description?: string;
-      pageType?: string;
-      seoIntent?: string;
-      parentSlug?: string | null;
-      sections?: RawSection[];
-    };
-
-    let rawPages: RawPage[];
-    try {
-      rawPages = extractJson<RawPage[]>(text);
-    } catch (error) {
-      throw new Error(
-        error instanceof Error
-          ? error.message
-          : 'Failed to parse AI sitemap response',
-      );
-    }
-    if (!Array.isArray(rawPages) || rawPages.length === 0) {
-      throw new Error('AI did not return any pages');
-    }
-
-    const sectionTypes = new Set([
-      'nav',
-      'hero',
-      'proof',
-      'conversion',
-      'content',
-      'footer',
-    ]);
-    const pageTypes = new Set([
-      'home',
-      'service',
-      'location',
-      'about',
-      'contact',
-      'blog-index',
-      'blog-post',
-      'legal',
-      'landing',
-      'other',
-    ]);
-
-    // Shared component sections keep one canonical copy per componentKey.
-    const componentSections = new Map<string, WebsiteSitemapSection>();
-
-    const newPages: WebsiteSitemapPage[] = rawPages
-      .filter((page) => page && typeof page.title === 'string')
-      .slice(0, 30)
-      .map((page) => {
-        const sections: WebsiteSitemapSection[] = (page.sections ?? [])
-          .filter((section) => section && typeof section.title === 'string')
-          .slice(0, 20)
-          .map((section) => {
-            const componentKey =
-              typeof section.componentKey === 'string' &&
-              section.componentKey.trim()
-                ? section.componentKey.trim()
-                : null;
-
-            if (componentKey) {
-              const canonical = componentSections.get(componentKey);
-              if (canonical) {
-                return {
-                  ...canonical,
-                  id: createPlanningId(),
-                };
-              }
-            }
-
-            const mapped: WebsiteSitemapSection = {
-              id: createPlanningId(),
-              title: String(section.title).slice(0, 200),
-              description: String(section.description ?? '').slice(0, 5000),
-              sectionType: sectionTypes.has(String(section.sectionType))
-                ? (section.sectionType as WebsiteSitemapSection['sectionType'])
-                : 'other',
-              componentKey,
-              status: 'draft' as WebsitePlanningStatus,
-            };
-
-            if (componentKey) componentSections.set(componentKey, mapped);
-            return mapped;
-          });
-
-        return {
-          id: createPlanningId(),
-          title: String(page.title).slice(0, 200),
-          slug:
-            slugifyPageTitle(String(page.slug ?? page.title)) ||
-            slugifyPageTitle(String(page.title)),
-          sections,
-          description: String(page.description ?? '').slice(0, 2000),
-          pageType: pageTypes.has(String(page.pageType))
-            ? (page.pageType as WebsiteSitemapPage['pageType'])
-            : 'other',
-          status: 'draft' as WebsitePlanningStatus,
-          parentId: null,
-          seoIntent: String(page.seoIntent ?? '').slice(0, 500),
-          _parentSlug:
-            typeof page.parentSlug === 'string' ? page.parentSlug : null,
-        } as WebsiteSitemapPage & { _parentSlug: string | null };
-      });
-
-    // Resolve parentSlug → parentId (within new pages, then existing pages).
-    const allForParents =
-      mode === 'add-missing-seo-pages'
-        ? [...currentSitemap, ...newPages]
-        : newPages;
-    const bySlug = new Map(allForParents.map((page) => [page.slug, page.id]));
-
-    for (const page of newPages as Array<
-      WebsiteSitemapPage & { _parentSlug?: string | null }
-    >) {
-      if (page._parentSlug) {
-        const parentId = bySlug.get(slugifyPageTitle(page._parentSlug));
-        if (parentId && parentId !== page.id) page.parentId = parentId;
-      }
-      delete page._parentSlug;
-    }
-
-    const nextSitemap =
-      mode === 'add-missing-seo-pages'
-        ? [
-            ...currentSitemap,
-            ...newPages.filter(
-              (page) =>
-                !currentSitemap.some((existing) => existing.slug === page.slug),
-            ),
-          ]
-        : newPages;
-
-    const { error } = await this.adminDb
-      .from('websites')
-      .update({ sitemap: nextSitemap, updated_at: new Date().toISOString() })
-      .eq('id', websiteId)
-      .eq('business_id', accountId);
-
-    if (error) throw error;
-    return nextSitemap;
+    const mapped: SitemapProposeMode =
+      mode === 'replace' ? 'from-brief' : 'add-missing-seo-pages';
+    const proposal = await this.proposeSitemap(accountId, websiteId, mapped);
+    // Do not persist — return proposed pages so callers must apply explicitly.
+    return proposal.pages;
   }
 
   /* ---------------------------------------------------------------- */
-  /* AI wireframes                                                     */
+  /* AI wireframes (propose only — client applies after preview)       */
   /* ---------------------------------------------------------------- */
 
-  async generateWireframesForPage(
+  async proposeWireframesForPage(
     accountId: string,
     websiteId: string,
     pageId: string,
-  ): Promise<WebsiteWireframePage[]> {
+  ): Promise<WireframePageProposal> {
     await this.ensureSiteStudio(accountId);
     const website = await this.verifyWebsite(accountId, websiteId);
     const brief = await this.loadBrief(accountId, websiteId);
 
-    const sitemap = Array.isArray(website.sitemap)
-      ? (website.sitemap as WebsiteSitemapPage[])
-      : [];
+    const sitemap = migrateSitemapPages(website.sitemap);
     const page = sitemap.find((item) => item.id === pageId);
     if (!page) throw new Error('Sitemap page not found');
     if (page.sections.length === 0) {
       throw new Error('Add sections to this page in the sitemap first');
     }
 
-    const userPrompt = [
-      `Brief:\n${briefContextBlock(brief)}`,
-      `Page: ${page.title} (/${page.slug})${page.seoIntent ? ` — intent: ${page.seoIntent}` : ''}`,
-      `Sitemap sections (in order):\n${page.sections
-        .map((section) => `- ${section.title}: ${section.description}`)
-        .join('\n')}`,
-      'Produce the wireframe spec JSON now.',
-    ].join('\n\n');
-
-    const text = await callAI({
+    const rawSections = await callAIValidatedJson({
       feature: 'website_wireframe_generate',
       systemPrompt: WIREFRAME_GENERATE_SYSTEM,
-      userPrompt,
+      userPrompt: [
+        `Brief:\n${briefContextBlock(brief)}`,
+        `Page: ${page.title} (/${page.slug})${page.seoIntent ? ` — intent: ${page.seoIntent}` : ''}`,
+        `Sitemap sections (in order):\n${page.sections
+          .map((section) => `- ${section.title}: ${section.description}`)
+          .join('\n')}`,
+        'Produce the wireframe spec JSON now.',
+      ].join('\n\n'),
       accountId,
       supabase: this.client,
+      schema: AiWireframeSectionsSchema,
     });
-
-    type RawWireframeSection = {
-      sitemapSectionTitle?: string;
-      title?: string;
-      libraryKey?: string;
-      copyOutline?: string;
-      contentNotes?: string;
-      copy?: {
-        slots?: Record<string, string>;
-        items?: Array<{ slots?: Record<string, string> }>;
-      };
-    };
-
-    const rawSections = extractJson<RawWireframeSection[]>(text);
-    if (!Array.isArray(rawSections)) {
-      throw new Error('AI did not return wireframe sections');
-    }
-
-    const sections: WebsiteWireframeSection[] = page.sections.map(
-      (sitemapSection, index) => {
-        const match =
-          rawSections.find(
-            (raw) =>
-              raw.sitemapSectionTitle?.trim().toLowerCase() ===
-              sitemapSection.title.trim().toLowerCase(),
-          ) ?? rawSections[index];
-
-        const library = findSectionLibraryEntry(match?.libraryKey ?? null);
-
-        const section: WebsiteWireframeSection = {
-          id: createPlanningId(),
-          sitemapSectionId: sitemapSection.id,
-          title: String(match?.title ?? sitemapSection.title).slice(0, 200),
-          layout: library?.layout ?? 'full',
-          libraryKey: library?.key ?? null,
-          copyOutline: String(match?.copyOutline ?? '').slice(0, 10000),
-          contentNotes: String(
-            match?.contentNotes ?? sitemapSection.description,
-          ).slice(0, 10000),
-        };
-
-        const seeded = ensureWireframeCopy(section);
-        const aiSlots = match?.copy?.slots;
-        if (aiSlots && typeof aiSlots === 'object') {
-          for (const [key, value] of Object.entries(aiSlots)) {
-            if (typeof value === 'string' && value.trim()) {
-              seeded.slots[key] = value.slice(0, 10000);
-            }
-          }
-        }
-        const aiItems = match?.copy?.items;
-        if (Array.isArray(aiItems) && aiItems.length > 0 && seeded.items) {
-          seeded.items = seeded.items.map((item, itemIndex) => {
-            const rawItem = aiItems[itemIndex];
-            if (!rawItem?.slots) return item;
-            const nextSlots = { ...item.slots };
-            for (const [key, value] of Object.entries(rawItem.slots)) {
-              if (typeof value === 'string' && value.trim()) {
-                nextSlots[key] = value.slice(0, 10000);
-              }
-            }
-            return { ...item, slots: nextSlots };
-          });
-        }
-
-        return {
-          ...section,
-          copy: seeded,
-        };
-      },
-    );
 
     const existing = Array.isArray(website.wireframes)
       ? (website.wireframes as WebsiteWireframePage[])
       : [];
+    const existingPage = existing.find((item) => item.pageId === pageId);
+    const existingBySitemapSectionId = new Map(
+      (existingPage?.sections ?? [])
+        .filter((section) => section.sitemapSectionId)
+        .map((section) => [section.sitemapSectionId as string, section]),
+    );
 
-    const nextPage: WebsiteWireframePage = {
-      id:
-        existing.find((item) => item.pageId === pageId)?.id ??
-        createPlanningId(),
-      pageId,
-      title: page.title,
-      sections,
+    const sections = materialiseAiWireframeSections({
+      sitemapSections: page.sections.map((section) => ({
+        id: section.id,
+        title: section.title,
+        description: section.description,
+      })),
+      rawSections,
+      existingBySitemapSectionId,
+    });
+
+    return {
+      page: {
+        id: existingPage?.id ?? createPlanningId(),
+        pageId,
+        title: page.title,
+        sections,
+      },
+      creditsUsed: SITE_STUDIO_AI_CREDITS.wireframeGenerate,
     };
+  }
 
-    const nextWireframes = existing.some((item) => item.pageId === pageId)
-      ? existing.map((item) => (item.pageId === pageId ? nextPage : item))
-      : [...existing, nextPage];
+  async proposeWireframeSection(
+    accountId: string,
+    websiteId: string,
+    pageId: string,
+    sectionId: string,
+  ): Promise<WireframeSectionProposal> {
+    await this.ensureSiteStudio(accountId);
+    const website = await this.verifyWebsite(accountId, websiteId);
+    const brief = await this.loadBrief(accountId, websiteId);
 
-    const { error } = await this.adminDb
-      .from('websites')
-      .update({
-        wireframes: nextWireframes,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', websiteId)
-      .eq('business_id', accountId);
+    const sitemap = migrateSitemapPages(website.sitemap);
+    const page = sitemap.find((item) => item.id === pageId);
+    if (!page) throw new Error('Sitemap page not found');
 
-    if (error) throw error;
-    return nextWireframes;
+    const existing = Array.isArray(website.wireframes)
+      ? (website.wireframes as WebsiteWireframePage[])
+      : [];
+    const wireframePage = existing.find((item) => item.pageId === pageId);
+    const wireframeSection = wireframePage?.sections.find(
+      (section) => section.id === sectionId,
+    );
+    if (!wireframeSection) {
+      throw new Error('Wireframe section not found — generate the page first');
+    }
+
+    const sitemapSection =
+      page.sections.find(
+        (section) => section.id === wireframeSection.sitemapSectionId,
+      ) ?? null;
+
+    const targetTitle = sitemapSection?.title ?? wireframeSection.title;
+    const targetDescription =
+      sitemapSection?.description ?? wireframeSection.contentNotes;
+
+    const rawSections = await callAIValidatedJson({
+      feature: 'website_wireframe_generate',
+      systemPrompt: WIREFRAME_SECTION_REGENERATE_SYSTEM,
+      userPrompt: [
+        `Brief:\n${briefContextBlock(brief)}`,
+        `Page: ${page.title} (/${page.slug})`,
+        `Regenerate ONLY this section: ${targetTitle}`,
+        `Section purpose: ${targetDescription}`,
+        `Current layout: ${wireframeSection.layout}`,
+        `Current libraryKey: ${wireframeSection.libraryKey ?? 'none'}`,
+        'Produce a one-item wireframe JSON array now.',
+      ].join('\n\n'),
+      accountId,
+      supabase: this.client,
+      schema: AiWireframeSectionsSchema,
+    });
+
+    const [section] = materialiseAiWireframeSections({
+      sitemapSections: [
+        {
+          id: wireframeSection.sitemapSectionId ?? wireframeSection.id,
+          title: targetTitle,
+          description: targetDescription,
+        },
+      ],
+      rawSections,
+      existingBySitemapSectionId: new Map([
+        [
+          wireframeSection.sitemapSectionId ?? wireframeSection.id,
+          wireframeSection,
+        ],
+      ]),
+    });
+
+    if (!section) {
+      throw new Error('AI did not return a regenerated section');
+    }
+
+    return {
+      pageId,
+      section: { ...section, id: wireframeSection.id },
+      creditsUsed: SITE_STUDIO_AI_CREDITS.wireframeGenerate,
+    };
+  }
+
+  async generateWireframesForPage(
+    accountId: string,
+    websiteId: string,
+    pageId: string,
+  ): Promise<WebsiteWireframePage[]> {
+    const proposal = await this.proposeWireframesForPage(
+      accountId,
+      websiteId,
+      pageId,
+    );
+    const website = await this.verifyWebsite(accountId, websiteId);
+    const existing = Array.isArray(website.wireframes)
+      ? (website.wireframes as WebsiteWireframePage[])
+      : [];
+
+    return existing.some((item) => item.pageId === pageId)
+      ? existing.map((item) => (item.pageId === pageId ? proposal.page : item))
+      : [...existing, proposal.page];
   }
 
   /* ---------------------------------------------------------------- */
@@ -938,11 +1008,16 @@ class SiteStudioService {
     const user = await this.ensureSiteStudio(accountId);
     await this.verifyWebsite(accountId, websiteId);
 
+    const normalised = normalizeWebsiteStyleSystem(style);
+
     const { error } = await this.adminDb.from('website_style_systems').upsert(
       {
         account_id: accountId,
         website_id: websiteId,
-        style,
+        tokens: normalised.tokens,
+        moodboard: normalised.moodboard,
+        locked: normalised.locked,
+        style: normalised,
         created_by: user.id,
       },
       { onConflict: 'website_id' },
@@ -962,22 +1037,41 @@ class SiteStudioService {
 
     const { data: existingRow } = await this.client
       .from('website_style_systems')
-      .select('style')
+      .select('style, tokens, moodboard, locked')
       .eq('website_id', websiteId)
       .eq('account_id', accountId)
       .maybeSingle();
 
-    const existing = (existingRow?.style ?? null) as WebsiteStyleSystem | null;
-    const moodboard = existing?.moodboard ?? [];
+    const existing = styleSystemFromDbRow(
+      existingRow as {
+        style?: unknown;
+        tokens?: unknown;
+        moodboard?: unknown;
+        locked?: unknown;
+      } | null,
+    );
+
+    if (existing.locked) {
+      throw new Error(
+        'Style tokens are locked. Unlock them before running Suggest style system.',
+      );
+    }
+
+    const moodboard = existing.moodboard;
 
     const userPrompt = [
       `Brief:\n${briefContextBlock(brief)}`,
       moodboard.length
         ? `Moodboard references:\n${moodboard
-            .map((ref) => `- ${ref.url} — ${ref.note}`)
+            .map((ref) => {
+              const palette = ref.extractedPalette?.length
+                ? ` [palette: ${ref.extractedPalette.join(', ')}]`
+                : '';
+              return `- ${ref.url} — ${ref.note}${palette}`;
+            })
             .join('\n')}`
         : null,
-      'Propose the style system JSON now.',
+      'Propose the D1 StyleTokens JSON now (schemaVersion 1.0).',
     ]
       .filter(Boolean)
       .join('\n\n');
@@ -991,41 +1085,10 @@ class SiteStudioService {
     });
 
     const suggested = extractJson<Record<string, unknown>>(text);
-    const empty = emptyWebsiteStyleSystem();
-
-    const pick = (key: string, fallback: string) => {
-      const value = suggested[key];
-      return typeof value === 'string' && value.trim()
-        ? value.trim().slice(0, 100)
-        : fallback;
-    };
+    const tokens = normalizeWebsiteStyleTokens(suggested);
 
     const style: WebsiteStyleSystem = {
-      tokens: {
-        canvas: pick('canvas', empty.tokens.canvas),
-        atmosphere: pick('atmosphere', empty.tokens.atmosphere),
-        accent: pick('accent', empty.tokens.accent),
-        contrast: pick('contrast', empty.tokens.contrast),
-        secondary: pick('secondary', empty.tokens.secondary),
-        headingFont: pick('headingFont', ''),
-        bodyFont: pick('bodyFont', ''),
-        typeScale: ['compact', 'regular', 'display'].includes(
-          String(suggested.typeScale),
-        )
-          ? (suggested.typeScale as 'compact' | 'regular' | 'display')
-          : 'regular',
-        radius: ['sharp', 'soft', 'round'].includes(String(suggested.radius))
-          ? (suggested.radius as 'sharp' | 'soft' | 'round')
-          : 'soft',
-        spacingDensity: ['tight', 'regular', 'airy'].includes(
-          String(suggested.spacingDensity),
-        )
-          ? (suggested.spacingDensity as 'tight' | 'regular' | 'airy')
-          : 'regular',
-        photographyDirection: String(
-          suggested.photographyDirection ?? '',
-        ).slice(0, 2000),
-      },
+      tokens,
       moodboard,
       locked: false,
     };
@@ -1034,6 +1097,9 @@ class SiteStudioService {
       {
         account_id: accountId,
         website_id: websiteId,
+        tokens: style.tokens,
+        moodboard: style.moodboard,
+        locked: false,
         style,
         created_by: user.id,
       },
@@ -1045,55 +1111,146 @@ class SiteStudioService {
   }
 
   /* ---------------------------------------------------------------- */
-  /* SEO pages                                                         */
+  /* SEO pages (Prompt E1)                                             */
   /* ---------------------------------------------------------------- */
+
+  async saveLlmsTxt(accountId: string, websiteId: string, llmsTxt: string) {
+    await this.ensureSiteStudio(accountId);
+    await this.verifyWebsite(accountId, websiteId);
+
+    const trimmed = llmsTxt.trim();
+    const value = trimmed.length ? trimmed : null;
+
+    const { data: existing, error: findError } = await this.adminDb
+      .from('website_briefs')
+      .select('website_id')
+      .eq('website_id', websiteId)
+      .eq('account_id', accountId)
+      .maybeSingle();
+
+    if (findError) throw findError;
+
+    if (existing) {
+      const { error } = await this.adminDb
+        .from('website_briefs')
+        .update({ llms_txt: value })
+        .eq('website_id', websiteId)
+        .eq('account_id', accountId);
+      if (error) throw error;
+    } else {
+      const { error } = await this.adminDb.from('website_briefs').insert({
+        account_id: accountId,
+        website_id: websiteId,
+        brief: emptyWebsiteBrief(),
+        llms_txt: value,
+      });
+      if (error) throw error;
+    }
+
+    return { ok: true as const, llmsTxt: value };
+  }
 
   async saveSeoPage(
     accountId: string,
     websiteId: string,
     pageId: string,
-    fields: WebsiteSeoPageFields,
+    seo: WebsiteSeoPageSeo,
+    options?: { pageSlug?: string; status?: WebsiteSeoStatus },
   ) {
     await this.ensureSiteStudio(accountId);
-    await this.verifyWebsite(accountId, websiteId);
+    const website = await this.verifyWebsite(accountId, websiteId);
+    const sitemap = migrateSitemapPages(website.sitemap);
+    const page = sitemap.find((item) => item.id === pageId);
+    const pageSlug = options?.pageSlug ?? page?.slug ?? '';
+    const normalised = normalizeWebsiteSeoPageSeo(seo);
+    const status = options?.status ?? 'draft';
+    if (status === 'approved') {
+      if (
+        !normalised.keywords.primary.trim() ||
+        !normalised.meta.title.trim()
+      ) {
+        throw new Error('Approve requires primary keyword and meta title.');
+      }
+    }
+    const legacyFields = toLegacyFlatSeoFields(normalised);
 
     const { error } = await this.adminDb.from('website_seo_pages').upsert(
       {
         account_id: accountId,
         website_id: websiteId,
         page_id: pageId,
-        fields,
+        page_slug: pageSlug || null,
+        seo: normalised,
+        status,
+        fields: legacyFields,
       },
       { onConflict: 'website_id,page_id' },
     );
 
     if (error) throw error;
-    return { ok: true as const };
+    return {
+      ok: true as const,
+      record: {
+        pageId,
+        pageSlug,
+        seo: normalised,
+        status,
+      } satisfies WebsiteSeoPageRecord,
+    };
   }
 
-  async generateSeoPage(
+  async approveSeoPage(accountId: string, websiteId: string, pageId: string) {
+    await this.ensureSiteStudio(accountId);
+    await this.verifyWebsite(accountId, websiteId);
+
+    const { data, error } = await this.adminDb
+      .from('website_seo_pages')
+      .select('page_id, page_slug, fields, seo, status')
+      .eq('account_id', accountId)
+      .eq('website_id', websiteId)
+      .eq('page_id', pageId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) throw new Error('Search plan not found — save a draft first.');
+
+    const record = normalizeWebsiteSeoPageRecord(
+      data,
+      pageId,
+      (data as { page_slug?: string }).page_slug ?? '',
+    );
+    if (!record.seo.keywords.primary || !record.seo.meta.title) {
+      throw new Error('Approve requires primary keyword and meta title.');
+    }
+
+    return this.saveSeoPage(accountId, websiteId, pageId, record.seo, {
+      pageSlug: record.pageSlug,
+      status: 'approved',
+    });
+  }
+
+  /** Preview-only search plan (Sonnet). Does not write. */
+  async proposeSeoPage(
     accountId: string,
     websiteId: string,
     pageId: string,
-  ): Promise<WebsiteSeoPageFields> {
+  ): Promise<WebsiteSeoPageSeo> {
     await this.ensureSiteStudio(accountId);
     const website = await this.verifyWebsite(accountId, websiteId);
     const brief = await this.loadBrief(accountId, websiteId);
 
-    const sitemap = Array.isArray(website.sitemap)
-      ? (website.sitemap as WebsiteSitemapPage[])
-      : [];
+    const sitemap = migrateSitemapPages(website.sitemap);
     const page = sitemap.find((item) => item.id === pageId);
     if (!page) throw new Error('Sitemap page not found');
 
     const userPrompt = [
       `Brief:\n${briefContextBlock(brief)}`,
       `Full sitemap:\n${sitemapContextBlock(sitemap)}`,
-      `Target page: ${page.title} (/${page.slug})${page.pageType ? `, type: ${page.pageType}` : ''}${page.seoIntent ? `, intent: ${page.seoIntent}` : ''}`,
+      `Target page: ${page.title} (/${page.slug})${page.pageType ? `, type: ${page.pageType}` : ''}${page.description ? `\nDescription: ${page.description}` : ''}${page.seoIntent ? `\nIntent: ${page.seoIntent}` : ''}`,
       `Page sections:\n${page.sections
         .map((section) => `- ${section.title}: ${section.description}`)
         .join('\n')}`,
-      'Produce the search readiness JSON now.',
+      'Produce the E1 search readiness JSON now.',
     ].join('\n\n');
 
     const text = await callAI({
@@ -1104,47 +1261,53 @@ class SiteStudioService {
       supabase: this.client,
     });
 
-    const suggested = extractJson<Partial<WebsiteSeoPageFields>>(text);
-    const fields: WebsiteSeoPageFields = {
-      ...emptyWebsiteSeoPageFields(),
-      ...suggested,
-      schemaTypes: Array.isArray(suggested.schemaTypes)
-        ? suggested.schemaTypes
-            .map((type) => String(type).slice(0, 100))
-            .slice(0, 10)
-        : [],
-      answerBlocks: Array.isArray(suggested.answerBlocks)
-        ? suggested.answerBlocks
-            .filter((block) => block && typeof block.question === 'string')
-            .slice(0, 20)
-            .map((block) => ({
-              question: String(block.question).slice(0, 500),
-              answer: String(block.answer ?? '').slice(0, 5000),
-            }))
-        : [],
-    };
-
-    await this.saveSeoPageBypass(accountId, websiteId, pageId, fields);
-    return fields;
+    return normalizeWebsiteSeoPageSeo(extractJson(text));
   }
 
-  private async saveSeoPageBypass(
+  /** Preview-only AEO answer blocks (Haiku). Does not write. */
+  async draftSeoAnswerBlocks(
     accountId: string,
     websiteId: string,
     pageId: string,
-    fields: WebsiteSeoPageFields,
-  ) {
-    const { error } = await this.adminDb.from('website_seo_pages').upsert(
-      {
-        account_id: accountId,
-        website_id: websiteId,
-        page_id: pageId,
-        fields,
-      },
-      { onConflict: 'website_id,page_id' },
-    );
+  ): Promise<WebsiteSeoPageSeo['aeo']['answerBlocks']> {
+    await this.ensureSiteStudio(accountId);
+    const website = await this.verifyWebsite(accountId, websiteId);
+    const brief = await this.loadBrief(accountId, websiteId);
+    const sitemap = migrateSitemapPages(website.sitemap);
+    const page = sitemap.find((item) => item.id === pageId);
+    if (!page) throw new Error('Sitemap page not found');
 
-    if (error) throw error;
+    const userPrompt = [
+      `Brief:\n${briefContextBlock(brief)}`,
+      `Page: ${page.title} (/${page.slug}) — ${page.description || page.seoIntent || 'no description'}`,
+      'Draft answer blocks JSON now.',
+    ].join('\n\n');
+
+    const text = await callAI({
+      feature: 'website_seo_answer_blocks',
+      systemPrompt: SEO_ANSWER_BLOCKS_SYSTEM,
+      userPrompt,
+      accountId,
+      supabase: this.client,
+    });
+
+    const parsed = extractJson<{ answerBlocks?: unknown }>(text);
+    return normalizeWebsiteSeoPageSeo({
+      aeo: { answerBlocks: parsed.answerBlocks ?? [] },
+    }).aeo.answerBlocks;
+  }
+
+  /** @deprecated Prefer proposeSeoPage + saveSeoPage (preview-then-apply). */
+  async generateSeoPage(
+    accountId: string,
+    websiteId: string,
+    pageId: string,
+  ): Promise<WebsiteSeoPageSeo> {
+    const seo = await this.proposeSeoPage(accountId, websiteId, pageId);
+    await this.saveSeoPage(accountId, websiteId, pageId, seo, {
+      status: 'draft',
+    });
+    return seo;
   }
 
   /* ---------------------------------------------------------------- */
@@ -1206,6 +1369,57 @@ class SiteStudioService {
     };
   }
 
+  /**
+   * Reuse an active wireframes|design|full share, or mint a wireframes-scope share
+   * for Figma html.to.design / PNG capture URLs.
+   */
+  async ensureWireframesShareForFigma(
+    accountId: string,
+    websiteId: string,
+  ): Promise<WebsiteShareLink & { url: string }> {
+    await this.ensureSiteStudio(accountId);
+    await this.verifyWebsite(accountId, websiteId);
+
+    const { data, error } = await this.adminDb
+      .from('website_shares')
+      .select('id, token, scope, expires_at, created_at')
+      .eq('account_id', accountId)
+      .eq('website_id', websiteId)
+      .is('revoked_at', null)
+      .in('scope', ['wireframes', 'design', 'full'])
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (error) throw error;
+
+    const now = Date.now();
+    const active = (
+      (data ?? []) as Array<{
+        id: string;
+        token: string;
+        scope: string;
+        expires_at: string | null;
+        created_at: string;
+      }>
+    ).find((row) => {
+      if (!row.expires_at) return true;
+      return new Date(row.expires_at).getTime() > now;
+    });
+
+    if (active) {
+      return {
+        id: active.id,
+        token: active.token,
+        scope: active.scope as WebsiteShareScope,
+        expiresAt: active.expires_at,
+        createdAt: active.created_at,
+        url: websiteShareUrl(active.token),
+      };
+    }
+
+    return this.createShare(accountId, websiteId, 'wireframes', null);
+  }
+
   async revokeShare(accountId: string, websiteId: string, shareId: string) {
     await this.ensureSiteStudio(accountId);
 
@@ -1257,7 +1471,7 @@ export type PublicWebsiteShare = {
   brief: WebsiteBrief | null;
 };
 
-type ResolvedWebsiteShare = {
+export type ResolvedWebsiteShare = {
   websiteId: string;
   accountId: string;
   scope: WebsiteShareScope;
@@ -1275,8 +1489,10 @@ function shareScopeAllowsBrief(scope: WebsiteShareScope) {
   return scope === 'full';
 }
 
+export { shareScopeAllowsWireframes };
+
 /** Validate an active (non-revoked, non-expired) share token row. */
-async function resolveActiveWebsiteShare(
+export async function resolveActiveWebsiteShare(
   token: string,
 ): Promise<ResolvedWebsiteShare | null> {
   const admin = getSupabaseServerAdminClient() as SupabaseClient;
@@ -1340,7 +1556,7 @@ export async function getWebsiteShareByToken(
     loadStyle
       ? admin
           .from('website_style_systems')
-          .select('style')
+          .select('style, tokens, moodboard, locked')
           .eq('website_id', shareRow.websiteId)
           .maybeSingle()
       : Promise.resolve({ data: null }),
@@ -1365,15 +1581,14 @@ export async function getWebsiteShareByToken(
 
   let style: WebsiteStyleSystem | null = null;
   if (loadStyle) {
-    const styleData = styleRes.data as { style?: unknown } | null;
-    if (styleData?.style && typeof styleData.style === 'object') {
-      const empty = emptyWebsiteStyleSystem();
-      const stored = styleData.style as Partial<WebsiteStyleSystem>;
-      style = {
-        tokens: { ...empty.tokens, ...(stored.tokens ?? {}) },
-        moodboard: stored.moodboard ?? [],
-        locked: Boolean(stored.locked),
-      };
+    const styleData = styleRes.data as {
+      style?: unknown;
+      tokens?: unknown;
+      moodboard?: unknown;
+      locked?: unknown;
+    } | null;
+    if (styleData) {
+      style = styleSystemFromDbRow(styleData);
     }
   }
 
@@ -1382,67 +1597,35 @@ export async function getWebsiteShareByToken(
     websiteName: website.name ?? 'Website',
     accountId: shareRow.accountId,
     websiteId: website.id,
-    sitemap: Array.isArray(website.sitemap)
-      ? (website.sitemap as WebsiteSitemapPage[])
-      : [],
+    sitemap: migrateSitemapPages(website.sitemap),
     // Scope strip: never return wireframes for sitemap-only shares.
     wireframes:
       loadWireframes && Array.isArray(website.wireframes)
-        ? (website.wireframes as WebsiteWireframePage[])
+        ? wireframesForClientShare(website.wireframes as WebsiteWireframePage[])
         : [],
     style,
     brief,
   };
 }
 
-/** Client approval from a public share link: approve / request changes per page. */
+/** @deprecated Prefer website-approvals.service — kept for any residual imports. */
 export async function setShareApprovalByToken(input: {
   token: string;
   pageId: string;
   status: 'approved' | 'blocked';
   note?: string;
 }): Promise<{ ok: true }> {
-  const share = await resolveActiveWebsiteShare(input.token);
-  if (!share) throw new Error('Share link not found or expired');
-
-  const admin = getSupabaseServerAdminClient();
-  const { data: website, error: loadError } = await admin
-    .from('websites')
-    .select('sitemap')
-    .eq('id', share.websiteId)
-    .maybeSingle();
-
-  if (loadError) throw loadError;
-  if (!website) throw new Error('Website not found');
-
-  const sitemap = Array.isArray(website.sitemap)
-    ? (website.sitemap as WebsiteSitemapPage[])
-    : [];
-
-  const nextSitemap = sitemap.map((page) =>
-    page.id === input.pageId
-      ? {
-          ...page,
-          status: input.status,
-          approvalNote:
-            input.status === 'approved'
-              ? undefined
-              : (input.note?.slice(0, 2000) ?? page.approvalNote),
-        }
-      : page,
+  const { setShareApprovalByToken: apply } = await import(
+    './website-approvals.service'
   );
-
-  if (!nextSitemap.some((page) => page.id === input.pageId)) {
-    throw new Error('Page not found');
-  }
-
-  const { error } = await admin
-    .from('websites')
-    .update({ sitemap: nextSitemap, updated_at: new Date().toISOString() })
-    .eq('id', share.websiteId);
-
-  if (error) throw error;
-  return { ok: true };
+  return apply({
+    token: input.token,
+    targetType: 'page',
+    targetId: input.pageId,
+    pageId: input.pageId,
+    status: input.status,
+    note: input.note,
+  });
 }
 
 /** Client comment on a wireframe section from a public share link. */

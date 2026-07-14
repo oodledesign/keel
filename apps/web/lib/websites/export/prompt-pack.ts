@@ -25,10 +25,15 @@ function briefSummary(input: WebsiteExportInput): string {
 
 function tokensSummary(input: WebsiteExportInput): string {
   const { tokens } = input.style ?? emptyWebsiteStyleSystem();
+  const { colors, typography, radius } = tokens;
   return [
-    `Canvas ${tokens.canvas} · Atmosphere ${tokens.atmosphere} · Accent ${tokens.accent} · Contrast ${tokens.contrast} · Secondary ${tokens.secondary}`,
-    `Heading font: ${tokens.headingFont || 'TBD'} · Body font: ${tokens.bodyFont || 'TBD'}`,
-    `Type scale: ${tokens.typeScale} · Radius: ${tokens.radius} · Spacing: ${tokens.spacingDensity}`,
+    `Primary ${colors.primary} · Secondary ${colors.secondary} · Accent ${colors.accent}`,
+    `Neutrals ${colors.neutrals.join(' · ')}`,
+    `Success ${colors.success} · Warning ${colors.warning} · Danger ${colors.danger}`,
+    `Display font: ${typography.displayFamily || 'TBD'} · Body font: ${typography.bodyFamily || 'TBD'}`,
+    `Type scale: base ${typography.typeScale.base}px · ratio ${typography.typeScale.ratio}`,
+    `Radius: sm ${radius.sm} · md ${radius.md} · lg ${radius.lg} · Buttons: ${tokens.buttons.style}`,
+    `Spacing: ${tokens.spacingDensity}`,
     tokens.photographyDirection
       ? `Photography: ${tokens.photographyDirection}`
       : '',

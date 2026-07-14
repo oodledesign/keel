@@ -8,22 +8,43 @@ export function buildFigmaTokens(input: WebsiteExportInput): WebsiteExportFile {
   const { tokens } = style;
 
   const payload = {
-    $description: `Style tokens for ${input.websiteName} — exported from Ozer Site Studio`,
+    $description: `Style tokens for ${input.websiteName} — exported from Ozer Site Studio (D1)`,
+    schemaVersion: tokens.schemaVersion,
     color: {
-      canvas: { $type: 'color', $value: tokens.canvas },
-      atmosphere: { $type: 'color', $value: tokens.atmosphere },
-      accent: { $type: 'color', $value: tokens.accent },
-      contrast: { $type: 'color', $value: tokens.contrast },
-      secondary: { $type: 'color', $value: tokens.secondary },
+      primary: { $type: 'color', $value: tokens.colors.primary },
+      secondary: { $type: 'color', $value: tokens.colors.secondary },
+      accent: { $type: 'color', $value: tokens.colors.accent },
+      neutrals: tokens.colors.neutrals.map((hex, index) => ({
+        $type: 'color' as const,
+        $value: hex,
+        $description: `neutral-${index}`,
+      })),
+      success: { $type: 'color', $value: tokens.colors.success },
+      warning: { $type: 'color', $value: tokens.colors.warning },
+      danger: { $type: 'color', $value: tokens.colors.danger },
     },
     typography: {
-      headingFont: { $type: 'fontFamily', $value: tokens.headingFont || 'TBD' },
-      bodyFont: { $type: 'fontFamily', $value: tokens.bodyFont || 'TBD' },
-      scale: { $type: 'string', $value: tokens.typeScale },
+      displayFamily: {
+        $type: 'fontFamily',
+        $value: tokens.typography.displayFamily || 'TBD',
+      },
+      bodyFamily: {
+        $type: 'fontFamily',
+        $value: tokens.typography.bodyFamily || 'TBD',
+      },
+      typeScale: {
+        base: {
+          $type: 'dimension',
+          $value: `${tokens.typography.typeScale.base}px`,
+        },
+        ratio: { $type: 'number', $value: tokens.typography.typeScale.ratio },
+      },
+      weights: tokens.typography.weights,
     },
     shape: {
-      radius: { $type: 'string', $value: tokens.radius },
+      radius: tokens.radius,
       spacingDensity: { $type: 'string', $value: tokens.spacingDensity },
+      buttons: { $type: 'string', $value: tokens.buttons.style },
     },
     imagery: {
       photographyDirection: {
@@ -41,7 +62,9 @@ export function buildFigmaTokens(input: WebsiteExportInput): WebsiteExportFile {
 }
 
 /** Page/section outline + prompt for building frames in Figma from tokens. */
-export function buildFigmaOutline(input: WebsiteExportInput): WebsiteExportFile {
+export function buildFigmaOutline(
+  input: WebsiteExportInput,
+): WebsiteExportFile {
   const lines: string[] = [
     `# Figma build outline — ${input.websiteName}`,
     '',

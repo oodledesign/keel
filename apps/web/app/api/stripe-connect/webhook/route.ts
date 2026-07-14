@@ -4,6 +4,9 @@ import Stripe from 'stripe';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { createPlanTemplatesService } from '~/home/[account]/settings/services/_lib/server/plan-templates.service';
+import { mapStripeSubscriptionStatus } from '~/lib/billing/client-subscription-status';
+import { notifyConnectPaymentFailed } from '~/lib/billing/connect-payment-notifications';
 import { getStripeClientSecret } from '~/lib/billing/stripe-connect';
 import { reconcileClientSubscriptionCheckoutSession } from '~/lib/billing/subscription-checkout';
 
@@ -11,6 +14,9 @@ type ClientSubscriptionRow = {
   id: string;
   business_id: string;
   client_org_id: string | null;
+  client_id?: string | null;
+  account_id?: string | null;
+  website_id?: string | null;
   plan_name: string | null;
   monthly_amount: number | null;
   status: string | null;
@@ -22,6 +28,7 @@ type BusinessRow = {
 
 type ClientRow = {
   id: string;
+  display_name?: string | null;
 };
 
 type MaybeSingleQuery<T> = PromiseLike<{
@@ -49,12 +56,18 @@ type UpdateQuery = PromiseLike<{ error: { message: string } | null }> & {
   eq: (column: string, value: string) => UpdateQuery;
 };
 
+type DeleteQuery = PromiseLike<{ error: { message: string } | null }> & {
+  eq: (column: string, value: string) => DeleteQuery;
+};
+
 type DynamicAdmin = {
   from: (table: string) => {
     select: <T>(columns: string) => MaybeSingleQuery<T> | ListQuery<T>;
     update: (values: Record<string, unknown>) => UpdateQuery;
+    delete: () => DeleteQuery;
     insert: (values: Record<string, unknown>) => PromiseLike<{
-      error: { message: string } | null;
+      data: unknown;
+      error: { message: string; code?: string } | null;
     }>;
   };
   rpc: (
@@ -78,46 +91,61 @@ function getDb() {
   return getSupabaseServerAdminClient() as unknown as DynamicAdmin;
 }
 
-function mapStripeSubscriptionStatus(status: Stripe.Subscription.Status) {
-  switch (status) {
-    case 'active':
-    case 'trialing':
-      return 'active';
-    case 'past_due':
-    case 'unpaid':
-      return 'overdue';
-    case 'canceled':
-      return 'cancelled';
-    case 'incomplete':
-    case 'incomplete_expired':
-    case 'paused':
-      return 'pending';
-    default:
-      return status;
-  }
-}
-
 function getStripeSubscriptionId(invoice: SubscriptionInvoice) {
   const subscription = invoice.subscription;
   return typeof subscription === 'string'
     ? subscription
-    : subscription?.id ?? null;
+    : (subscription?.id ?? null);
 }
 
 function getStripePaymentIntentId(invoice: SubscriptionInvoice) {
   const paymentIntent = invoice.payment_intent;
   return typeof paymentIntent === 'string'
     ? paymentIntent
-    : paymentIntent?.id ?? null;
+    : (paymentIntent?.id ?? null);
+}
+
+function periodEndIso(subscription: Stripe.Subscription): string | null {
+  const periodEndUnix = (subscription as { current_period_end?: number })
+    .current_period_end;
+  return periodEndUnix ? new Date(periodEndUnix * 1000).toISOString() : null;
+}
+
+/**
+ * Claim Stripe event id for idempotency. Returns false if already processed.
+ */
+async function claimWebhookEvent(event: Stripe.Event): Promise<boolean> {
+  const db = getDb();
+  const stripeAccountId =
+    typeof event.account === 'string' ? event.account : null;
+
+  const { error } = await db.from('connect_webhook_events').insert({
+    stripe_event_id: event.id,
+    event_type: event.type,
+    stripe_account_id: stripeAccountId,
+  });
+
+  if (!error) return true;
+
+  // Unique violation → already processed
+  if (error.code === '23505' || /duplicate|unique/i.test(error.message)) {
+    return false;
+  }
+
+  // Table missing during rollout — proceed without dedupe rather than drop events
+  console.warn('[stripe-connect webhook] event claim failed', error);
+  return true;
 }
 
 async function loadSubscriptionByStripeId(stripeSubscriptionId: string) {
   const db = getDb();
-  const { data } = await (db
-    .from('client_subscriptions')
-    .select(
-      'id, business_id, client_org_id, plan_name, monthly_amount, status',
-    ) as MaybeSingleQuery<ClientSubscriptionRow>)
+  const { data } = await (
+    db
+      .from('client_subscriptions')
+      .select(
+        'id, business_id, client_org_id, client_id, account_id, website_id, plan_name, monthly_amount, status',
+      ) as MaybeSingleQuery<ClientSubscriptionRow>
+  )
     .eq('stripe_subscription_id', stripeSubscriptionId)
     .maybeSingle();
 
@@ -136,15 +164,31 @@ async function syncClientSubscriptionFromStripe(
     return;
   }
 
+  const periodEnd = periodEndIso(subscription);
+  const status = mapStripeSubscriptionStatus(subscription.status);
+
   await db
     .from('client_subscriptions')
     .update({
-      status: mapStripeSubscriptionStatus(subscription.status),
+      status,
       stripe_customer_id:
         typeof subscription.customer === 'string'
           ? subscription.customer
           : (subscription.customer?.id ?? null),
+      stripe_customer_id_connect:
+        typeof subscription.customer === 'string'
+          ? subscription.customer
+          : (subscription.customer?.id ?? null),
       stripe_subscription_id: subscription.id,
+      ...(periodEnd
+        ? {
+            current_period_end: periodEnd,
+            next_billing_date: periodEnd,
+          }
+        : {}),
+      ...(status === 'cancelled'
+        ? { cancelled_at: new Date().toISOString() }
+        : {}),
     })
     .eq('id', subscriptionId);
 }
@@ -157,29 +201,61 @@ async function activateClientSubscriptionFromCheckout(
     return;
   }
 
+  if (session.metadata?.ozer_account_id) {
+    const admin = getSupabaseServerAdminClient();
+    await createPlanTemplatesService(admin as never).reconcileCheckoutSession(
+      subscriptionId,
+      session.id,
+    );
+    return;
+  }
+
   await reconcileClientSubscriptionCheckoutSession(session.id, subscriptionId);
+}
+
+async function resolveAccountIdForSubscription(
+  subscription: ClientSubscriptionRow,
+  stripeInvoice?: SubscriptionInvoice,
+): Promise<string | null> {
+  const metaAccountId =
+    stripeInvoice?.subscription_details?.metadata?.ozer_account_id ??
+    stripeInvoice?.metadata?.ozer_account_id ??
+    null;
+
+  if (metaAccountId) return String(metaAccountId);
+  if (subscription.account_id) return String(subscription.account_id);
+
+  const db = getDb();
+  if (subscription.business_id) {
+    const { data: business } = await (
+      db
+        .from('businesses')
+        .select('account_id') as MaybeSingleQuery<BusinessRow>
+    )
+      .eq('id', subscription.business_id)
+      .maybeSingle();
+    if (business?.account_id) return String(business.account_id);
+  }
+
+  return null;
 }
 
 async function resolveClientIdForSubscription(
   subscription: ClientSubscriptionRow,
 ) {
-  const db = getDb();
-
-  const { data: business } = await (db
-    .from('businesses')
-    .select('account_id') as MaybeSingleQuery<BusinessRow>)
-    .eq('id', subscription.business_id)
-    .maybeSingle();
-
-  if (!business?.account_id) {
-    return null;
+  if (subscription.client_id) {
+    return subscription.client_id;
   }
 
+  const db = getDb();
+  const accountId = await resolveAccountIdForSubscription(subscription);
+  if (!accountId) return null;
+
   if (subscription.client_org_id) {
-    const { data: orgClients } = await (db
-      .from('clients')
-      .select('id') as ListQuery<ClientRow>)
-      .eq('account_id', business.account_id)
+    const { data: orgClients } = await (
+      db.from('clients').select('id') as ListQuery<ClientRow>
+    )
+      .eq('account_id', accountId)
       .eq('client_org_id', subscription.client_org_id)
       .limit(1);
 
@@ -188,13 +264,20 @@ async function resolveClientIdForSubscription(
     }
   }
 
-  const { data: fallbackClients } = await (db
-    .from('clients')
-    .select('id') as ListQuery<ClientRow>)
-    .eq('account_id', business.account_id)
-    .limit(1);
+  // Do not guess a workspace client — wrong attribution is worse than skipping.
+  return null;
+}
 
-  return fallbackClients?.[0]?.id ?? null;
+async function resolveAccountSlug(accountId: string): Promise<string | null> {
+  const db = getDb();
+  const { data } = await (
+    db.from('accounts').select('slug') as MaybeSingleQuery<{
+      slug: string | null;
+    }>
+  )
+    .eq('id', accountId)
+    .maybeSingle();
+  return data?.slug ? String(data.slug) : null;
 }
 
 async function createPaidInvoiceFromStripeInvoice(
@@ -207,13 +290,15 @@ async function createPaidInvoiceFromStripeInvoice(
 
   const db = getDb();
 
-  const { data: existing } = await (db
-    .from('invoices')
-    .select('id') as MaybeSingleQuery<{ id: string }>)
+  const { data: existing } = await (
+    db.from('invoices').select('id') as MaybeSingleQuery<{ id: string }>
+  )
     .eq('stripe_checkout_session_id', stripeInvoice.id)
     .maybeSingle();
 
   if (existing?.id) {
+    // Still sync subscription recovery even if invoice already mirrored
+    await markSubscriptionActiveFromInvoice(stripeInvoice);
     return;
   }
 
@@ -237,40 +322,47 @@ async function createPaidInvoiceFromStripeInvoice(
     return;
   }
 
-  const { data: business } = await (db
-    .from('businesses')
-    .select('account_id') as MaybeSingleQuery<BusinessRow>)
-    .eq('id', subscription.business_id)
-    .maybeSingle();
-
-  if (!business?.account_id) {
+  const accountId = await resolveAccountIdForSubscription(
+    subscription,
+    stripeInvoice,
+  );
+  if (!accountId) {
     return;
   }
 
   const clientId = await resolveClientIdForSubscription(subscription);
   if (!clientId) {
-    console.error('[stripe-connect webhook] no client_id for subscription invoice', {
-      subscriptionId: subscription.id,
-      stripeInvoiceId: stripeInvoice.id,
-    });
+    console.error(
+      '[stripe-connect webhook] no client_id for subscription invoice',
+      {
+        subscriptionId: subscription.id,
+        stripeInvoiceId: stripeInvoice.id,
+      },
+    );
+    await markSubscriptionActiveFromInvoice(stripeInvoice);
     return;
   }
 
   const { data: invoiceNumber, error: numberError } = await db.rpc(
     'allocate_invoice_number',
-    { p_account_id: business.account_id },
+    { p_account_id: accountId },
   );
 
   if (numberError || !invoiceNumber) {
-    console.error('[stripe-connect webhook] allocate_invoice_number failed', numberError);
+    console.error(
+      '[stripe-connect webhook] allocate_invoice_number failed',
+      numberError,
+    );
+    await markSubscriptionActiveFromInvoice(stripeInvoice);
     return;
   }
 
-  const totalPence = stripeInvoice.amount_paid ?? subscription.monthly_amount ?? 0;
+  const totalPence =
+    stripeInvoice.amount_paid ?? subscription.monthly_amount ?? 0;
   const paymentIntentId = getStripePaymentIntentId(stripeInvoice);
 
   const { error: insertError } = await db.from('invoices').insert({
-    account_id: business.account_id,
+    account_id: accountId,
     client_id: clientId,
     invoice_number: invoiceNumber,
     status: 'paid',
@@ -288,8 +380,57 @@ async function createPaidInvoiceFromStripeInvoice(
   });
 
   if (insertError) {
-    console.error('[stripe-connect webhook] failed to insert invoice', insertError);
+    throw new Error(
+      `[stripe-connect webhook] invoice insert failed: ${insertError.message}`,
+    );
   }
+
+  try {
+    const { invalidatePortalBillingInvoiceCache } =
+      await import('~/portal/[slug]/_lib/server/portal-billing.service');
+    await invalidatePortalBillingInvoiceCache({
+      stripeCustomerId:
+        typeof stripeInvoice.customer === 'string'
+          ? stripeInvoice.customer
+          : (stripeInvoice.customer?.id ?? null),
+    });
+  } catch (cacheError) {
+    console.error(
+      '[stripe-connect webhook] invoice cache invalidate',
+      cacheError,
+    );
+  }
+
+  await markSubscriptionActiveFromInvoice(stripeInvoice);
+}
+
+async function markSubscriptionActiveFromInvoice(
+  stripeInvoice: SubscriptionInvoice,
+) {
+  const stripeSubscriptionId = getStripeSubscriptionId(stripeInvoice);
+  if (!stripeSubscriptionId) return;
+
+  const subscription = await loadSubscriptionByStripeId(stripeSubscriptionId);
+  if (!subscription?.id) return;
+
+  const periodEndUnix = stripeInvoice.lines?.data?.[0]?.period?.end;
+  const periodEnd = periodEndUnix
+    ? new Date(periodEndUnix * 1000).toISOString()
+    : null;
+
+  const db = getDb();
+  await db
+    .from('client_subscriptions')
+    .update({
+      status: 'active',
+      ...(periodEnd
+        ? {
+            current_period_end: periodEnd,
+            next_billing_date: periodEnd,
+          }
+        : {}),
+    })
+    .eq('id', subscription.id);
 }
 
 async function markSubscriptionOverdueFromInvoice(
@@ -305,11 +446,49 @@ async function markSubscriptionOverdueFromInvoice(
     return;
   }
 
+  // Smart Retries re-fire payment_failed — notify once on transition to overdue.
+  const wasAlreadyOverdue = subscription.status === 'overdue';
+
   const db = getDb();
   await db
     .from('client_subscriptions')
     .update({ status: 'overdue' })
     .eq('id', subscription.id);
+
+  if (wasAlreadyOverdue) return;
+
+  const accountId = await resolveAccountIdForSubscription(
+    subscription,
+    stripeInvoice,
+  );
+  if (!accountId) return;
+
+  const clientId = await resolveClientIdForSubscription(subscription);
+  let clientName = 'Client';
+  if (clientId) {
+    const { data: client } = await (
+      db
+        .from('clients')
+        .select('id, display_name') as MaybeSingleQuery<ClientRow>
+    )
+      .eq('id', clientId)
+      .maybeSingle();
+    if (client?.display_name?.trim()) {
+      clientName = client.display_name.trim();
+    }
+  }
+
+  const accountSlug = await resolveAccountSlug(accountId);
+  const planName = subscription.plan_name?.trim() || 'Subscription';
+
+  await notifyConnectPaymentFailed({
+    accountId,
+    accountSlug,
+    clientId,
+    websiteId: subscription.website_id ?? null,
+    clientName,
+    planName,
+  });
 }
 
 /**
@@ -344,6 +523,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: 400 });
   }
 
+  const claimed = await claimWebhookEvent(event);
+  if (!claimed) {
+    return NextResponse.json({ received: true, duplicate: true });
+  }
+
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -354,6 +538,7 @@ export async function POST(request: Request) {
         break;
       }
 
+      case 'customer.subscription.created':
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
         await syncClientSubscriptionFromStripe(subscription);
@@ -370,7 +555,10 @@ export async function POST(request: Request) {
           const db = getDb();
           await db
             .from('client_subscriptions')
-            .update({ status: 'cancelled' })
+            .update({
+              status: 'cancelled',
+              cancelled_at: new Date().toISOString(),
+            })
             .eq('id', subscriptionId);
         }
         break;
@@ -407,7 +595,22 @@ export async function POST(request: Request) {
     }
   } catch (err) {
     console.error('[stripe-connect webhook] handler error:', err);
-    return NextResponse.json({ error: 'Webhook handler failed' }, { status: 500 });
+    // Release claim so Stripe can retry a failed handler.
+    try {
+      await getDb()
+        .from('connect_webhook_events')
+        .delete()
+        .eq('stripe_event_id', event.id);
+    } catch (releaseError) {
+      console.error(
+        '[stripe-connect webhook] failed to release claim',
+        releaseError,
+      );
+    }
+    return NextResponse.json(
+      { error: 'Webhook handler failed' },
+      { status: 500 },
+    );
   }
 
   return NextResponse.json({ received: true });

@@ -1,0 +1,29 @@
+{
+  "name": "sites",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --port 3011",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "clean": "git clean -xdf .next .turbo node_modules"
+  },
+  "dependencies": {
+    "@kit/site-blocks-core": "workspace:*",
+    "@puckeditor/core": "^0.22.1",
+    "@supabase/supabase-js": "catalog:",
+    "next": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@kit/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "typescript": "^5.9.3"
+  }
+}

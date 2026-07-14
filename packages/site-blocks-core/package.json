@@ -1,0 +1,49 @@
+{
+  "name": "@kit/site-blocks-core",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "clean": "git clean -xdf .turbo node_modules",
+    "format": "prettier --check \"**/*.{ts,tsx,css,json}\"",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "generate:registry": "tsx ./scripts/generate-registry.ts"
+  },
+  "prettier": "@kit/prettier-config",
+  "exports": {
+    ".": "./src/index.ts",
+    "./config": "./src/config.ts",
+    "./tokens.css": "./src/tokens/defaults.css",
+    "./registry.json": "./src/registry/site-blocks-registry.json",
+    "./mapping": "./src/mapping.ts"
+  },
+  "dependencies": {
+    "@puckeditor/core": "^0.22.1",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.4.0"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@kit/eslint-config": "workspace:*",
+    "@kit/prettier-config": "workspace:*",
+    "@kit/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "tsx": "^4.20.3",
+    "typescript": "^5.9.3"
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "src/*"
+      ]
+    }
+  }
+}

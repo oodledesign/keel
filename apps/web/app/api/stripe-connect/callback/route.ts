@@ -124,19 +124,49 @@ export async function GET(request: Request) {
     const db = admin as unknown as DynamicAdmin;
 
     if (state.accountId) {
-      const { error: upsertError } = await db.from('account_payment_settings').upsert(
-        {
-          account_id: state.accountId,
-          stripe_account_id: connectedAccountId,
-          stripe_connect_enabled: true,
-          stripe_pay_now_enabled: true,
-        },
-        { onConflict: 'account_id' },
-      );
+      const { error: upsertError } = await db
+        .from('account_payment_settings')
+        .upsert(
+          {
+            account_id: state.accountId,
+            stripe_account_id: connectedAccountId,
+            stripe_connect_enabled: true,
+            stripe_pay_now_enabled: true,
+          },
+          { onConflict: 'account_id' },
+        );
 
       if (upsertError) {
         console.error('Failed to save account payment settings:', upsertError);
         return redirectWithError('save_failed');
+      }
+
+      try {
+        const { configureConnectBillingPortal } =
+          await import('~/portal/[slug]/_lib/server/portal-billing.service');
+        await configureConnectBillingPortal(
+          state.accountId,
+          connectedAccountId,
+        );
+      } catch (portalError) {
+        console.error(
+          '[stripe-connect] billing portal configuration skipped:',
+          portalError,
+        );
+      }
+
+      try {
+        const { ensureConnectedAccountSmartRetries } =
+          await import('~/lib/billing/connect-smart-retries');
+        await ensureConnectedAccountSmartRetries(
+          state.accountId,
+          connectedAccountId,
+        );
+      } catch (retriesError) {
+        console.error(
+          '[stripe-connect] Smart Retries setup skipped:',
+          retriesError,
+        );
       }
     } else if (state.businessId) {
       const { error: upsertError } = await db.from('agency_stripe').upsert(

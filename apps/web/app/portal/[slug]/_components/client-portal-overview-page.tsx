@@ -1,5 +1,12 @@
 import Link from 'next/link';
-import { CreditCard, ExternalLink, Globe, LifeBuoy, Megaphone } from 'lucide-react';
+
+import {
+  CreditCard,
+  ExternalLink,
+  Globe,
+  LifeBuoy,
+  Megaphone,
+} from 'lucide-react';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { Button } from '@kit/ui/button';
@@ -8,14 +15,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import pathsConfig from '~/config/paths.config';
 import { WebsiteStatusBadge } from '~/home/[account]/websites/_components/website-badges';
 import type { WebsiteStatus } from '~/home/[account]/websites/_lib/schema/websites.schema';
+import { formatMinorUnits } from '~/lib/billing/plan-templates-types';
 
-import {
-  formatPortalDate,
-  formatPortalMoney,
-  portalExternalHref,
-} from './portal-badges';
 import { loadClientPortalContext } from '../_lib/server/client-portal.loader';
 import { createClientPortalService } from '../_lib/server/client-portal.service';
+import { formatPortalDate, portalExternalHref } from './portal-badges';
 
 export default async function ClientPortalOverviewPage({
   slug,
@@ -74,7 +78,11 @@ export default async function ClientPortalOverviewPage({
                 <div className="flex flex-wrap gap-2">
                   {cmsUrl ? (
                     <Button asChild size="sm" variant="outline">
-                      <a href={cmsUrl} target="_blank" rel="noopener noreferrer">
+                      <a
+                        href={cmsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
                         Open CMS
                         <ExternalLink className="ml-1 h-3 w-3" />
                       </a>
@@ -86,7 +94,9 @@ export default async function ClientPortalOverviewPage({
                 </div>
               </>
             ) : (
-              <p className="text-sm text-[var(--ozer-text-on-light-muted)]">No website linked yet.</p>
+              <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
+                No website linked yet.
+              </p>
             )}
           </CardContent>
         </Card>
@@ -111,7 +121,9 @@ export default async function ClientPortalOverviewPage({
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-base font-medium">Current plan</CardTitle>
+            <CardTitle className="text-base font-medium">
+              Current plan
+            </CardTitle>
             <CreditCard className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
           </CardHeader>
           <CardContent className="space-y-2">
@@ -121,9 +133,9 @@ export default async function ClientPortalOverviewPage({
                   {overview.subscription.planName}
                 </p>
                 <p className="text-sm text-slate-600">
-                  {formatPortalMoney(
-                    overview.subscription.monthlyAmount,
-                    overview.subscription.currency,
+                  {formatMinorUnits(
+                    overview.subscription.monthlyAmount ?? 0,
+                    overview.subscription.currency ?? 'gbp',
                   )}
                   /month
                 </p>
@@ -136,7 +148,9 @@ export default async function ClientPortalOverviewPage({
                 </Button>
               </>
             ) : (
-              <p className="text-sm text-[var(--ozer-text-on-light-muted)]">No active subscription.</p>
+              <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
+                No active subscription.
+              </p>
             )}
           </CardContent>
         </Card>
@@ -146,7 +160,9 @@ export default async function ClientPortalOverviewPage({
         <section className="space-y-4">
           <div className="flex items-center gap-2">
             <Megaphone className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
-            <h3 className="text-lg font-semibold text-[var(--ozer-text-on-light)]">Noticeboard</h3>
+            <h3 className="text-lg font-semibold text-[var(--ozer-text-on-light)]">
+              Noticeboard
+            </h3>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             {overview.notices.map((notice) => (
@@ -158,7 +174,7 @@ export default async function ClientPortalOverviewPage({
                   </p>
                 </CardHeader>
                 <CardContent>
-                  <p className="whitespace-pre-wrap text-sm text-slate-600">
+                  <p className="text-sm whitespace-pre-wrap text-slate-600">
                     {notice.content}
                   </p>
                 </CardContent>

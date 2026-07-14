@@ -28,6 +28,7 @@ const INTERNAL_PACKAGES = [
   '@kit/monitoring',
   '@kit/next',
   '@kit/notifications',
+  '@kit/site-blocks-core',
 ];
 
 /** @type {import('next').NextConfig} */

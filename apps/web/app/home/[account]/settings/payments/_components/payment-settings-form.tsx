@@ -10,18 +10,18 @@ import { CreditCard, Loader2 } from 'lucide-react';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
-import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
 import { stripeConnectErrorMessage } from '~/lib/billing/stripe-connect-messages';
 
+import type { AccountPaymentSettings } from '../../../invoices/_lib/server/invoice-payment-settings.service';
 import {
   disconnectStripeAction,
   savePaymentSettingsAction,
 } from '../../../invoices/_lib/server/server-actions';
-import type { AccountPaymentSettings } from '../../../invoices/_lib/server/invoice-payment-settings.service';
 
 export function PaymentSettingsForm({
   accountId,
@@ -84,7 +84,9 @@ export function PaymentSettingsForm({
         setSettings(saved as AccountPaymentSettings);
         toast.success('Stripe disconnected');
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Disconnect failed');
+        toast.error(
+          error instanceof Error ? error.message : 'Disconnect failed',
+        );
       }
     });
   };
@@ -93,7 +95,8 @@ export function PaymentSettingsForm({
     <div className="flex w-full flex-col gap-6">
       {stripeConnectedFlash ? (
         <div className="rounded-xl border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-4 py-3 text-sm text-[#97D9AA]">
-          Stripe connected successfully. Card payments are now enabled on invoices.
+          Stripe connected successfully. Card payments are now enabled on
+          invoices.
         </div>
       ) : null}
       {connectError ? (
@@ -106,9 +109,9 @@ export function PaymentSettingsForm({
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-base font-semibold">Stripe Connect</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Accept card payments on invoices. Funds go directly to your connected
-              Stripe account (destination charge, no platform fee).
+            <p className="text-muted-foreground mt-1 text-sm">
+              Accept card payments on invoices. Funds go directly to your
+              connected Stripe account (destination charge, no platform fee).
             </p>
           </div>
           {stripeConnected ? (
@@ -120,7 +123,10 @@ export function PaymentSettingsForm({
 
         <div className="mt-4 flex flex-wrap gap-2">
           {canEdit && !stripeConnected ? (
-            <Button asChild className="bg-[var(--ozer-accent)] text-[#09111F] hover:bg-[#6BD48F]">
+            <Button
+              asChild
+              className="bg-[var(--ozer-accent)] text-[#09111F] hover:bg-[#6BD48F]"
+            >
               <a
                 href={`/api/stripe-connect/account-authorize?accountId=${encodeURIComponent(accountId)}`}
               >
@@ -130,7 +136,11 @@ export function PaymentSettingsForm({
             </Button>
           ) : null}
           {canEdit && stripeConnected ? (
-            <Button variant="outline" disabled={pending} onClick={handleDisconnect}>
+            <Button
+              variant="outline"
+              disabled={pending}
+              onClick={handleDisconnect}
+            >
               Disconnect Stripe
             </Button>
           ) : null}
@@ -139,7 +149,7 @@ export function PaymentSettingsForm({
         <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-[color:var(--workspace-shell-border)] bg-white/3 p-4">
           <div>
             <p className="text-sm font-medium">Pay by card on portal</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Show the Pay now button when Stripe is connected.
             </p>
           </div>
@@ -147,15 +157,27 @@ export function PaymentSettingsForm({
             checked={settings.stripe_pay_now_enabled}
             disabled={!canEdit || !stripeConnected}
             onCheckedChange={(checked) =>
-              setSettings((prev) => ({ ...prev, stripe_pay_now_enabled: checked }))
+              setSettings((prev) => ({
+                ...prev,
+                stripe_pay_now_enabled: checked,
+              }))
             }
           />
         </div>
+
+        {stripeConnected ? (
+          <p className="text-muted-foreground mt-3 text-xs">
+            Failed subscription payments use Stripe Smart Retries on your
+            connected account (Billing → Revenue recovery → Retries in the
+            Stripe Dashboard). Ozer does not email clients about failures — you
+            get an in-app notification and a Past due status instead.
+          </p>
+        ) : null}
       </div>
 
       <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
         <h2 className="text-base font-semibold">Invoice numbering</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="text-muted-foreground mt-1 text-sm">
           New invoices are numbered INV-0001, INV-0002, and so on. You can jump
           the sequence forward at any time — existing invoices keep their
           numbers; only future invoices use the new starting point.
@@ -163,7 +185,7 @@ export function PaymentSettingsForm({
         <div className="mt-4 max-w-xs">
           <Label htmlFor="invoice_starting_number">Next invoice number</Label>
           <div className="mt-1 flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">INV-</span>
+            <span className="text-muted-foreground text-sm">INV-</span>
             <Input
               id="invoice_starting_number"
               type="number"
@@ -184,7 +206,7 @@ export function PaymentSettingsForm({
             />
           </div>
           {highestInvoiceSequence > 0 ? (
-            <p className="mt-2 text-xs text-muted-foreground">
+            <p className="text-muted-foreground mt-2 text-xs">
               Highest existing invoice is INV-
               {String(highestInvoiceSequence).padStart(4, '0')}. Choose a number
               greater than {highestInvoiceSequence}.
@@ -197,7 +219,7 @@ export function PaymentSettingsForm({
         <div className="flex items-center justify-between gap-4">
           <div>
             <h2 className="text-base font-semibold">Bank transfer</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="text-muted-foreground mt-1 text-sm">
               Shown on the invoice portal and PDF when enabled.
             </p>
           </div>
@@ -205,7 +227,10 @@ export function PaymentSettingsForm({
             checked={settings.bank_transfer_enabled}
             disabled={!canEdit}
             onCheckedChange={(checked) =>
-              setSettings((prev) => ({ ...prev, bank_transfer_enabled: checked }))
+              setSettings((prev) => ({
+                ...prev,
+                bank_transfer_enabled: checked,
+              }))
             }
           />
         </div>
@@ -260,7 +285,10 @@ export function PaymentSettingsForm({
               value={settings.bank_iban ?? ''}
               disabled={!canEdit}
               onChange={(e) =>
-                setSettings((prev) => ({ ...prev, bank_iban: e.target.value || null }))
+                setSettings((prev) => ({
+                  ...prev,
+                  bank_iban: e.target.value || null,
+                }))
               }
             />
           </div>
@@ -271,7 +299,10 @@ export function PaymentSettingsForm({
               value={settings.bank_bic ?? ''}
               disabled={!canEdit}
               onChange={(e) =>
-                setSettings((prev) => ({ ...prev, bank_bic: e.target.value || null }))
+                setSettings((prev) => ({
+                  ...prev,
+                  bank_bic: e.target.value || null,
+                }))
               }
             />
           </div>
@@ -294,7 +325,10 @@ export function PaymentSettingsForm({
       </div>
 
       <div className="flex items-center justify-between gap-4">
-        <Link href={settingsPath.replace('/payments', '')} className="text-sm text-muted-foreground hover:text-[var(--workspace-shell-text)]">
+        <Link
+          href={settingsPath.replace('/payments', '')}
+          className="text-muted-foreground text-sm hover:text-[var(--workspace-shell-text)]"
+        >
           ← Back to settings
         </Link>
         {canEdit ? (

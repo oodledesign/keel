@@ -47,8 +47,8 @@ export default async function PortalWebsiteSharePage({
           wireframes={share.wireframes}
           style={share.style}
           brief={share.brief}
-          shareToken={token}
           websiteName={share.websiteName}
+          approvalAuth={{ mode: 'share', token }}
         />
       </div>
     </div>

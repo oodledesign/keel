@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import { BarChart3, ExternalLink } from 'lucide-react';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
@@ -12,6 +14,7 @@ import type {
   WebsiteStack,
   WebsiteStatus,
 } from '~/home/[account]/websites/_lib/schema/websites.schema';
+import { createOzerSitesService } from '~/home/[account]/websites/_lib/server/ozer-sites.service';
 
 import { PortalWebsitePlanningView } from '../../_components/portal-website-planning-view';
 import { portalExternalHref } from '../_components/portal-badges';
@@ -36,6 +39,13 @@ export default async function PortalWebsitePage({
     website &&
     website.portalShareScope !== 'off' &&
     (website.sitemap.length > 0 || Boolean(website.brief));
+
+  const portalEdit =
+    website != null
+      ? await createOzerSitesService(
+          getSupabaseServerClient(),
+        ).getPortalEditAvailability(ctx.accountId, website.id, ctx.clientOrgId)
+      : { hasSite: false, portalEditEnabled: false };
 
   return (
     <div className="space-y-6">
@@ -88,6 +98,11 @@ export default async function PortalWebsitePage({
             </dl>
 
             <div className="flex flex-wrap gap-2">
+              {portalEdit.hasSite && portalEdit.portalEditEnabled ? (
+                <Button asChild variant="outline">
+                  <Link href={`/portal/${slug}/website/edit`}>Edit site</Link>
+                </Button>
+              ) : null}
               {cmsUrl ? (
                 <Button asChild variant="outline">
                   <a href={cmsUrl} target="_blank" rel="noopener noreferrer">
@@ -123,10 +138,10 @@ export default async function PortalWebsitePage({
             </h3>
             <p className="mt-1 text-sm text-[var(--ozer-text-on-light-muted)]">
               {website.portalShareScope === 'sitemap'
-                ? 'Read-only sitemap for your site.'
+                ? 'Review the sitemap — approve pages or request changes.'
                 : website.portalShareScope === 'wireframes'
-                  ? 'Read-only sitemap and wireframes for your site.'
-                  : 'Read-only planning review for your site.'}
+                  ? 'Review sitemap and wireframes — approve or request changes.'
+                  : 'Review planning and send approvals or change requests.'}
             </p>
           </div>
           <PortalWebsitePlanningView
@@ -136,6 +151,11 @@ export default async function PortalWebsitePage({
             style={website.style}
             brief={website.brief}
             websiteName={website.name}
+            approvalAuth={{
+              mode: 'portal',
+              clientOrgId: ctx.clientOrgId,
+              websiteId: website.id,
+            }}
           />
         </section>
       ) : null}

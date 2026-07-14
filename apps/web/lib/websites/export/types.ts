@@ -1,10 +1,17 @@
 import type {
   WebsiteBrief,
-  WebsiteSeoPageFields,
   WebsiteSitemapPage,
   WebsiteStyleSystem,
   WebsiteWireframePage,
 } from '../planning-types';
+import {
+  toLegacyFlatSeoFields,
+  type LegacyFlatSeoFields,
+} from '../seo-legacy-flat';
+import {
+  normalizeWebsiteSeoPageSeo,
+  type WebsiteSeoPageSeo,
+} from '../seo-types';
 
 export type WebsiteExportFile = {
   /** Relative path inside the pack, e.g. "src/pages/index.astro". */
@@ -21,7 +28,8 @@ export type WebsiteExportInput = {
   sitemap: WebsiteSitemapPage[];
   wireframes: WebsiteWireframePage[];
   style: WebsiteStyleSystem | null;
-  seoPages: Record<string, WebsiteSeoPageFields>;
+  /** Keyed by sitemap page id — E1 nested seo or record wrappers. */
+  seoPages: Record<string, WebsiteSeoPageSeo | { seo?: unknown } | null>;
 };
 
 export function wireframeForPage(
@@ -34,8 +42,13 @@ export function wireframeForPage(
 export function seoForPage(
   input: WebsiteExportInput,
   pageId: string,
-): WebsiteSeoPageFields | null {
-  return input.seoPages[pageId] ?? null;
+): LegacyFlatSeoFields | null {
+  const raw = input.seoPages[pageId];
+  if (!raw) return null;
+  if ('seo' in raw && raw.seo) {
+    return toLegacyFlatSeoFields(normalizeWebsiteSeoPageSeo(raw.seo));
+  }
+  return toLegacyFlatSeoFields(normalizeWebsiteSeoPageSeo(raw));
 }
 
 export function pageRoute(page: WebsiteSitemapPage): string {

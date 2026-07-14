@@ -16,6 +16,7 @@ import {
 import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
+import { ClientSubscriptionStatusList } from '~/home/[account]/_components/client-subscription-status-list';
 import type { PhaseListItem } from '~/home/[account]/jobs/_lib/schema/project-phases.schema';
 import { listJobs } from '~/home/[account]/jobs/_lib/server/server-actions';
 import { deliveryProjectTitle } from '~/lib/projects/project-types';
@@ -25,6 +26,7 @@ import {
 } from '~/lib/websites/website-design-template';
 
 import { createWebsiteProject } from '../../_lib/server/site-studio-actions';
+import { AttachHostingPlanButton } from '../attach-hosting-plan-button';
 
 type JobOption = { id: string; label: string };
 
@@ -148,15 +150,40 @@ export function WebsiteDeliveryOverview({
         </div>
         {jobId ? (
           <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-            {completedCount}/{phases.length || WEBSITE_DESIGN_TEMPLATE.phases.length}{' '}
-            phases · {overallPct}% progress
+            {completedCount}/
+            {phases.length || WEBSITE_DESIGN_TEMPLATE.phases.length} phases ·{' '}
+            {overallPct}% progress
           </p>
         ) : null}
       </div>
 
+      <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] px-3 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+              Hosting billing
+            </p>
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+              Attach a recurring hosting plan. Cancel + recreate to change price
+              (no prorations yet).
+            </p>
+          </div>
+          <AttachHostingPlanButton
+            accountId={accountId}
+            websiteId={websiteId}
+            canEdit={canEdit}
+          />
+        </div>
+        <ClientSubscriptionStatusList
+          accountId={accountId}
+          websiteId={websiteId}
+          canEdit={canEdit}
+        />
+      </div>
+
       <div className="grid gap-3 md:grid-cols-2">
         <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] px-3 py-2">
-          <p className="text-xs uppercase tracking-wide text-[var(--workspace-shell-text)]/40">
+          <p className="text-xs tracking-wide text-[var(--workspace-shell-text)]/40 uppercase">
             Client
           </p>
           {clientHref && clientName ? (
@@ -168,12 +195,13 @@ export function WebsiteDeliveryOverview({
             </Link>
           ) : (
             <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-              {clientName ?? 'No CRM client linked — edit the website to add one'}
+              {clientName ??
+                'No CRM client linked — edit the website to add one'}
             </p>
           )}
         </div>
         <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] px-3 py-2">
-          <p className="text-xs uppercase tracking-wide text-[var(--workspace-shell-text)]/40">
+          <p className="text-xs tracking-wide text-[var(--workspace-shell-text)]/40 uppercase">
             Project
           </p>
           {jobHref ? (

@@ -15,6 +15,11 @@ import {
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
+import {
+  type WebsiteExportTarget,
+  buildWebsiteExportPack,
+  bundleExportPack,
+} from '~/lib/websites/export';
 import type {
   WebsiteBrief,
   WebsiteSeoPageFields,
@@ -22,11 +27,6 @@ import type {
   WebsiteStyleSystem,
   WebsiteWireframePage,
 } from '~/lib/websites/planning-types';
-import {
-  buildWebsiteExportPack,
-  bundleExportPack,
-  type WebsiteExportTarget,
-} from '~/lib/websites/export';
 
 const TARGET_OPTIONS: Array<{ value: WebsiteExportTarget; label: string }> = [
   { value: 'webflow', label: 'Webflow (Client-First 3.0)' },
@@ -79,20 +79,31 @@ export function WebsiteExportPanel({
   );
 
   const activeFile =
-    pack.files.find((file) => file.path === activePath) ?? pack.files[0] ?? null;
+    pack.files.find((file) => file.path === activePath) ??
+    pack.files[0] ??
+    null;
 
   const readiness = useMemo(() => {
     const warnings: string[] = [];
     if (sitemap.length === 0) warnings.push('No sitemap pages yet.');
     if (wireframes.length === 0) warnings.push('No wireframes yet.');
     if (!style?.locked) warnings.push('Style tokens are not locked.');
-    const seoCovered = sitemap.filter((page) =>
-      Boolean(seoPages[page.id]?.title),
-    ).length;
+    const seoCovered = sitemap.filter((page) => {
+      const record = seoPages[page.id];
+      if (!record) return false;
+      if ('seo' in record && record.seo) {
+        return Boolean(
+          (record as { seo: { meta?: { title?: string } } }).seo.meta?.title,
+        );
+      }
+      const nested = record as {
+        meta?: { title?: string };
+        title?: string;
+      };
+      return Boolean(nested.meta?.title || nested.title);
+    }).length;
     if (sitemap.length > 0 && seoCovered < sitemap.length) {
-      warnings.push(
-        `SEO fields set on ${seoCovered}/${sitemap.length} pages.`,
-      );
+      warnings.push(`SEO fields set on ${seoCovered}/${sitemap.length} pages.`);
     }
     return warnings;
   }, [seoPages, sitemap, style, wireframes]);
@@ -218,7 +229,9 @@ export function WebsiteExportPanel({
                   size="sm"
                   variant="outline"
                   className="h-7 border-[color:var(--workspace-shell-border)] text-xs text-[var(--workspace-shell-text)]"
-                  onClick={() => downloadFile(activeFile.path, activeFile.content)}
+                  onClick={() =>
+                    downloadFile(activeFile.path, activeFile.content)
+                  }
                 >
                   <Download className="mr-1 h-3 w-3" />
                   Download

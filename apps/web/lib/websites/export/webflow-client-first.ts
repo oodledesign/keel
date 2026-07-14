@@ -20,7 +20,9 @@ function clientFirstName(
  * Webflow Client-First 3.0 (Finsweet) build guide: page/section structure,
  * class naming, and per-section HTML/class stubs to mirror in the Designer.
  */
-export function buildWebflowGuide(input: WebsiteExportInput): WebsiteExportFile {
+export function buildWebflowGuide(
+  input: WebsiteExportInput,
+): WebsiteExportFile {
   const style = input.style ?? emptyWebsiteStyleSystem();
   const { tokens } = style;
 
@@ -37,14 +39,14 @@ export function buildWebflowGuide(input: WebsiteExportInput): WebsiteExportFile 
     '',
     '| Variable | Value | Role |',
     '|----------|-------|------|',
-    `| \`--canvas\` | \`${tokens.canvas}\` | Page background |`,
-    `| \`--atmosphere\` | \`${tokens.atmosphere}\` | Alternate section background |`,
-    `| \`--accent\` | \`${tokens.accent}\` | Buttons, highlights |`,
-    `| \`--contrast\` | \`${tokens.contrast}\` | Headings + body text |`,
-    `| \`--secondary\` | \`${tokens.secondary}\` | Secondary accents |`,
+    `| \`--sb-color-primary\` | \`${tokens.colors.primary}\` | Brand primary |`,
+    `| \`--sb-color-secondary\` | \`${tokens.colors.secondary}\` | Brand secondary |`,
+    `| \`--sb-color-accent\` | \`${tokens.colors.accent}\` | Buttons, highlights |`,
+    `| \`--sb-canvas\` | \`${tokens.colors.neutrals[0]}\` | Page background (neutral-0) |`,
+    `| \`--sb-ink\` | \`${tokens.colors.neutrals[tokens.colors.neutrals.length - 1]}\` | Body / heading ink |`,
     '',
-    `- Fonts: **${tokens.headingFont || 'TBD'}** (headings), **${tokens.bodyFont || 'TBD'}** (body).`,
-    `- Radius scale: ${tokens.radius}. Spacing density: ${tokens.spacingDensity}.`,
+    `- Fonts: **${tokens.typography.displayFamily || 'TBD'}** (display), **${tokens.typography.bodyFamily || 'TBD'}** (body).`,
+    `- Radius: md \`${tokens.radius.md}\`. Buttons: ${tokens.buttons.style}. Spacing: ${tokens.spacingDensity}.`,
     '',
     '## 2. Class naming rules (Client-First)',
     '',

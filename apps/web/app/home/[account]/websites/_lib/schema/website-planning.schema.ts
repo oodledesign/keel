@@ -34,6 +34,7 @@ const SitemapSectionSchema = z.object({
   id: z.string().uuid(),
   title: z.string().min(1).max(200),
   description: z.string().max(5000),
+  color: SectionTypeSchema.optional(),
   sectionType: SectionTypeSchema.optional(),
   componentKey: z.string().max(100).nullable().optional(),
   status: PlanningStatusSchema.optional(),
@@ -54,6 +55,20 @@ const SitemapPageSchema = z.object({
   approvalNote: z.string().max(2000).optional(),
 });
 
+const SitemapSymbolSchema = z.object({
+  key: z.string().min(1).max(100),
+  title: z.string().min(1).max(200),
+  description: z.string().max(5000),
+  color: SectionTypeSchema,
+  status: PlanningStatusSchema,
+});
+
+const SitemapDocumentSchema = z.object({
+  schemaVersion: z.literal('1.0'),
+  pages: z.array(SitemapPageSchema),
+  components: z.array(SitemapSymbolSchema),
+});
+
 const WireframeCopyItemSchema = z.object({
   id: z.string().uuid(),
   slots: z.record(z.string(), z.string().max(10000)),
@@ -71,6 +86,30 @@ const WireframeSectionSchema = z.object({
   layout: z.enum(['full', 'split', 'grid', 'cards', 'cta', 'footer']),
   contentNotes: z.string().max(10000),
   libraryKey: z.string().max(100).nullable().optional(),
+  layoutPreset: z
+    .enum([
+      'header',
+      'hero-split',
+      'hero-centered',
+      'hero-form',
+      'logo-cloud',
+      'feature-grid',
+      'feature-alternating',
+      'testimonials',
+      'stats-bar',
+      'pricing-table',
+      'team-grid',
+      'faq-accordion',
+      'cta-band',
+      'contact-form',
+      'map-section',
+      'blog-grid',
+      'content-prose',
+      'gallery-grid',
+      'footer',
+    ])
+    .nullable()
+    .optional(),
   copyOutline: z.string().max(10000).optional(),
   copy: WireframeCopySchema.optional(),
   clientComment: z.string().max(2000).optional(),
@@ -87,7 +126,8 @@ export const GetWebsitePlanningSchema = z.object({ ...WebsiteIdFields });
 
 export const SaveWebsiteSitemapSchema = z.object({
   ...WebsiteIdFields,
-  sitemap: z.array(SitemapPageSchema),
+  /** Document (v1) or legacy page array — server migrates to document on write. */
+  sitemap: z.union([SitemapDocumentSchema, z.array(SitemapPageSchema)]),
 });
 
 export const SaveWebsiteWireframesSchema = z.object({
@@ -122,4 +162,9 @@ export const GetWebsiteForJobSchema = z.object({
   jobId: z.string().uuid(),
 });
 
-export { SitemapPageSchema, WireframePageSchema };
+export {
+  SitemapPageSchema,
+  SitemapDocumentSchema,
+  SitemapSymbolSchema,
+  WireframePageSchema,
+};
