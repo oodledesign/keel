@@ -10,14 +10,18 @@ Public renderer for **Publish to Ozer Sites** (Prompts F1 / F2).
 
 ## Vercel
 
-1. Create a Vercel project rooted at `apps/sites`.
-2. Env:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `SUPABASE_SERVICE_ROLE_KEY` (server-only — published pages only)
-   - `NEXT_PUBLIC_OZER_SITES_ROOT_DOMAIN=sites.ozer.so`
-3. Domains:
-   - Attach `sites.ozer.so` and wildcard `*.sites.ozer.so` (or Vercel wildcard for the preview root).
-   - Custom domains: add `site_domains` rows; after DNS verification set `verified_at`.
+Project: **`ozer-sites`** (team `oodle-designs-projects`), Git root `apps/sites`, same `oodledesign/keel` repo as `ozer`.
+
+Env (already set on the project for production / preview / development):
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY` (server-only — published pages only; `SUPABASE_SECRET_KEY` also accepted)
+- `NEXT_PUBLIC_OZER_SITES_ROOT_DOMAIN=sites.ozer.so`
+
+Domains (manual in Vercel + DNS):
+
+- Attach `sites.ozer.so` and wildcard `*.sites.ozer.so`.
+- Custom domains: add `site_domains` rows; after DNS verification set `verified_at`.
 
 ## Local
 
