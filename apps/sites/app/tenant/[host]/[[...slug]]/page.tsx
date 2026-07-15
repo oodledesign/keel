@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation';
 
-import { Render, buildConfig, resolveTokensStyle } from '@kit/site-blocks-core';
+import { resolveTokensStyle } from '@kit/site-blocks-core';
 
+import { PublishedSiteView } from '~/components/published-site-view';
 import { loadPublishedPage } from '~/lib/resolve-site';
 
 import '@kit/site-blocks-core/tokens.css';
@@ -19,7 +20,6 @@ export default async function SitesCatchAllPage({ params }: PageProps) {
     notFound();
   }
 
-  const config = buildConfig();
   const style = resolveTokensStyle(resolved.themeTokens as never);
 
   return (
@@ -28,8 +28,8 @@ export default async function SitesCatchAllPage({ params }: PageProps) {
         <title>{resolved.title || resolved.siteName}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
-      <body style={style}>
-        <Render config={config} data={resolved.data as never} />
+      <body className="sb-root" style={style}>
+        <PublishedSiteView data={resolved.data} />
       </body>
     </html>
   );
