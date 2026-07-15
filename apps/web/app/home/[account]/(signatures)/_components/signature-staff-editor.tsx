@@ -40,6 +40,7 @@ import type {
   SignatureTemplate,
 } from '../_lib/server/signatures-data';
 
+import { SignatureInstallActions } from './signature-install-actions';
 import {
   SignaturePreviewFrame,
   type SignaturePreviewTheme,
@@ -338,12 +339,21 @@ export function SignatureStaffEditor({
       </Card>
 
       <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-        <CardHeader className="space-y-1">
-          <CardTitle>Live preview</CardTitle>
-          <p className="text-xs text-muted-foreground">
-            Preview how this signature reads at mobile, tablet, and desktop
-            widths in light or dark inbox chrome.
-          </p>
+        <CardHeader className="space-y-3">
+          <div className="space-y-1">
+            <CardTitle>Live preview</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Preview how this signature reads at mobile, tablet, and desktop
+              widths in light or dark inbox chrome.
+            </p>
+          </div>
+          {templateId !== NO_TEMPLATE ? (
+            <SignatureInstallActions
+              accountId={accountId}
+              templateId={templateId}
+              staffId={staff.id}
+            />
+          ) : null}
         </CardHeader>
         <CardContent>
           {previewUrl ? (

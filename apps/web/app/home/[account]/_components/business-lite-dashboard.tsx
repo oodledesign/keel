@@ -6,11 +6,11 @@ import { Button } from '@kit/ui/button';
 
 import pathsConfig from '~/config/paths.config';
 import type { NavChild } from '~/config/work-account-navigation.config';
+import { workspacePanelCard } from '~/lib/workspace-ui';
 
 import { BusinessLiteUpgradeBanner } from './business-lite-upgrade-banner';
 
-const panelClass =
-  'rounded-[24px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]';
+const panelClass = `${workspacePanelCard} rounded-[24px]`;
 
 type BusinessLiteDashboardProps = {
   accountSlug: string;

@@ -23,6 +23,7 @@ export const PLATFORM_EMAIL_TYPES = [
   'account_deletion',
   'compose',
   'campaign',
+  'signature_install',
 ] as const;
 
 export type PlatformEmailType = (typeof PLATFORM_EMAIL_TYPES)[number];

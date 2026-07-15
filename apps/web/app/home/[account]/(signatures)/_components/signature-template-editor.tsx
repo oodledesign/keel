@@ -41,6 +41,7 @@ import type {
   SignatureTemplate,
 } from '../_lib/server/signatures-data';
 
+import { SignaturePreviewLinkButton } from './signature-preview-link-button';
 import {
   SignaturePreviewFrame,
   type SignaturePreviewTheme,
@@ -382,14 +383,21 @@ export function SignatureTemplateEditor({
       </Card>
 
       <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-        <CardHeader className="space-y-1">
-          <CardTitle>Live preview</CardTitle>
-          <p className="text-xs text-muted-foreground">
-            Check mobile, tablet, and desktop widths against light or dark inbox
-            chrome. Prefer mid-grey text (#333), underlined links, and
-            transparent logos — clients invert colours inconsistently unless you
-            set a signature background.
-          </p>
+        <CardHeader className="space-y-3">
+          <div className="space-y-1">
+            <CardTitle>Live preview</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Check mobile, tablet, and desktop widths against light or dark inbox
+              chrome. Prefer mid-grey text (#333), underlined links, and
+              transparent logos — clients invert colours inconsistently unless you
+              set a signature background.
+            </p>
+          </div>
+          <SignaturePreviewLinkButton
+            accountId={accountId}
+            templateId={template.id}
+            staffId={previewStaff?.id ?? null}
+          />
         </CardHeader>
         <CardContent>
           <SignaturePreviewFrame

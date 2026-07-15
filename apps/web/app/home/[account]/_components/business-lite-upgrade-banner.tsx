@@ -28,7 +28,7 @@ export function BusinessLiteUpgradeBanner({
   }
 
   return (
-    <section className="relative overflow-hidden rounded-[24px] border border-[var(--ozer-accent)]/25 bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)] md:p-8">
+    <section className="relative overflow-hidden rounded-[24px] border border-[var(--ozer-accent)]/25 bg-[var(--workspace-shell-panel)] p-6 shadow-[0_1px_2px_rgba(42,23,32,0.05),0_4px_14px_rgba(42,23,32,0.05)] md:p-8">
       <button
         type="button"
         aria-label="Dismiss upgrade notice"

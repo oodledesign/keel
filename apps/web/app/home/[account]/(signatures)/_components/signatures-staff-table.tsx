@@ -1,6 +1,9 @@
-import Link from 'next/link';
+'use client';
 
-import { Send } from 'lucide-react';
+import Link from 'next/link';
+import { useState } from 'react';
+
+import { Loader2, Mail, Pencil } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import {
@@ -11,9 +14,12 @@ import {
   TableHeader,
   TableRow,
 } from '@kit/ui/table';
+import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
+import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 
+import { sendSignatureInstallInstructionsAction } from '../_lib/server/signatures-module-actions';
 import type { SignatureStaff } from '../_lib/server/signatures-data';
 import { SignaturesStatusBadge } from './signatures-status-badge';
 
@@ -30,14 +36,18 @@ function formatDate(value: string | null) {
 }
 
 export function SignaturesStaffTable({
+  accountId,
   accountSlug,
   staff,
   compact = false,
 }: {
+  accountId: string;
   accountSlug: string;
   staff: SignatureStaff[];
   compact?: boolean;
 }) {
+  const [emailingId, setEmailingId] = useState<string | null>(null);
+
   if (!staff.length) {
     return (
       <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-black/10 p-8 text-sm text-muted-foreground">
@@ -47,6 +57,27 @@ export function SignaturesStaffTable({
   }
 
   const visibleStaff = compact ? staff.slice(0, 8) : staff;
+
+  const emailInstall = async (row: SignatureStaff) => {
+    if (!row.template_id) {
+      toast.error('Assign a template before sending install instructions');
+      return;
+    }
+
+    setEmailingId(row.id);
+    try {
+      const result = await sendSignatureInstallInstructionsAction({
+        accountId,
+        staffId: row.id,
+        templateId: row.template_id,
+      });
+      toast.success(`Install email sent to ${result.to}`);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setEmailingId(null);
+    }
+  };
 
   return (
     <div className="overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
@@ -92,12 +123,30 @@ export function SignaturesStaffTable({
                   {formatDate(row.signature_pushed_at)}
                 </TableCell>
                 <TableCell className="px-4 py-3 text-right">
-                  <Button asChild size="sm" variant="outline">
-                    <Link href={detailPath}>
-                      <Send className="mr-2 h-3.5 w-3.5" />
-                      Edit
-                    </Link>
-                  </Button>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    {row.template_id ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={emailingId === row.id}
+                        onClick={() => void emailInstall(row)}
+                      >
+                        {emailingId === row.id ? (
+                          <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Mail className="mr-2 h-3.5 w-3.5" />
+                        )}
+                        Email install
+                      </Button>
+                    ) : null}
+                    <Button asChild size="sm" variant="outline">
+                      <Link href={detailPath}>
+                        <Pencil className="mr-2 h-3.5 w-3.5" />
+                        Edit
+                      </Link>
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             );

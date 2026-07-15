@@ -13,7 +13,6 @@ import { FamilyDashboard } from './_components/family-dashboard';
 import { HomegroupDashboard } from './_components/homegroup-dashboard';
 import { PropertyBusinessDashboard } from './_components/property-business-dashboard';
 import { TeamAccountLayoutPageHeader } from './_components/team-account-layout-page-header';
-import { WorkspaceDashboardShortcutsBar } from './_components/workspace-dashboard-shortcuts-bar';
 import { getDefaultAccountPath, getTeamAccountAccess } from './_lib/role-access';
 import { buildWorkAppLinks } from '~/config/work-account-navigation.config';
 import { spaceTypeFromProfile } from './_lib/workspace-profile';
@@ -67,14 +66,6 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
       workspace.businessType,
     ));
 
-  const shortcutsBar = (
-    <WorkspaceDashboardShortcutsBar
-      accountId={accountId}
-      accountSlug={account}
-      accountName={accountLabel}
-    />
-  );
-
   if (spaceType === 'property') {
     const propertyData = await loadPropertyDashboardData(account);
     const financesEnabled = isPropertyNavModuleEnabled(
@@ -89,7 +80,6 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
           description="Overview of your property business."
         />
         <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
-          {shortcutsBar}
           <PropertyBusinessDashboard
             accountSlug={account}
             propertyCounts={propertyData.propertyCounts}
@@ -115,7 +105,6 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
           description="Overview of your family workspace."
         />
         <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
-          {shortcutsBar}
           <FamilyDashboard
             accountSlug={familyData.accountSlug}
             openTasksCount={familyData.openTasksCount}
@@ -141,7 +130,6 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
           description="Overview of your group workspace."
         />
         <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
-          {shortcutsBar}
           <HomegroupDashboard {...communityData} />
         </PageBody>
       </>
@@ -166,7 +154,6 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
           description="Your apps workspace — install add-ons or upgrade to full business."
         />
         <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
-          {shortcutsBar}
           <BusinessLiteDashboard
             accountSlug={account}
             accountName={accountLabel}
@@ -180,16 +167,6 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
   }
 
   const data = await loadDashboardPageData(account);
-
-  const businessShortcutsBar = (
-    <WorkspaceDashboardShortcutsBar
-      accountId={accountId}
-      accountSlug={account}
-      accountName={data.accountName}
-      compact
-      embedded
-    />
-  );
 
   return (
     <>
@@ -211,7 +188,6 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
           financeTrend={data.financeTrend}
           upcomingTasks={data.upcomingTasks}
           recentNotes={data.recentNotes}
-          shortcutsBar={businessShortcutsBar}
         />
       </PageBody>
     </>

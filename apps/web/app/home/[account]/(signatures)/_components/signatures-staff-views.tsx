@@ -72,7 +72,11 @@ export function SignaturesStaffViews({
           branches={branches}
         />
       ) : (
-        <SignaturesStaffTable accountSlug={accountSlug} staff={staff} />
+        <SignaturesStaffTable
+          accountId={accountId}
+          accountSlug={accountSlug}
+          staff={staff}
+        />
       )}
     </div>
   );

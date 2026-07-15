@@ -128,7 +128,9 @@ export function BusinessDashboardMobile({
         </div>
       </section>
 
-      <section className="xl:col-span-2">{shortcutsBar}</section>
+      {shortcutsBar ? (
+        <section className="xl:col-span-2">{shortcutsBar}</section>
+      ) : null}
 
       <section className={panelClass}>
         <div className="flex items-center justify-between border-b border-[color:var(--workspace-shell-border)] px-4 py-3">

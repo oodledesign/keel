@@ -256,3 +256,15 @@ export const revokeIntegrationInviteActionSchema = z.object({
   accountId: z.string().uuid(),
   inviteId: z.string().uuid(),
 });
+
+export const createSignaturePreviewShareActionSchema = z.object({
+  accountId: z.string().uuid(),
+  templateId: z.string().uuid(),
+  staffId: z.string().uuid().nullable().optional(),
+});
+
+export const sendSignatureInstallInstructionsActionSchema = z.object({
+  accountId: z.string().uuid(),
+  staffId: z.string().uuid(),
+  templateId: z.string().uuid().optional(),
+});

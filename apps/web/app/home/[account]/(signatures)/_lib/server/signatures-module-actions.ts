@@ -22,11 +22,14 @@ import {
   revokeIntegrationConnectInvite,
 } from '~/lib/signatures/integration-invite';
 import { getSignaturesSupabaseClient } from '~/lib/signatures/graph';
+import { buildSignatureInstallEmail } from '~/lib/signatures/install-instructions';
+import { ensureSignaturePreviewShare } from '~/lib/signatures/preview-share';
 import {
   pushAllSignatures,
   pushSignatureToStaff,
   syncStaffForAccount,
 } from '~/lib/signatures/signatures-provider';
+import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
 import {
   deleteSignatureAssetActionSchema,
@@ -34,10 +37,12 @@ import {
   connectGoogleWorkspaceActionSchema,
   disconnectGoogleActionSchema,
   createIntegrationInviteActionSchema,
+  createSignaturePreviewShareActionSchema,
   revokeIntegrationInviteActionSchema,
   pushAllActionSchema,
   pushStaffActionSchema,
   saveTemplateActionSchema,
+  sendSignatureInstallInstructionsActionSchema,
   syncStaffActionSchema,
   upsertSignatureAssetActionSchema,
   updateStaffActionSchema,
@@ -577,4 +582,154 @@ export const revokeSignaturesIntegrationInvite = enhanceAction(
     return { ok: true as const };
   },
   { schema: revokeIntegrationInviteActionSchema },
+);
+
+export const createSignaturePreviewShareAction = enhanceAction(
+  async (input, user) => {
+    await assertSignaturesAdmin(input.accountId, user.id);
+
+    const db = getSignaturesSupabaseClient();
+    const { data: template, error: templateError } = await db
+      .from('templates')
+      .select('id')
+      .eq('id', input.templateId)
+      .eq('account_id', input.accountId)
+      .maybeSingle();
+
+    if (templateError) {
+      throw new Error(templateError.message);
+    }
+    if (!template) {
+      throw new Error('Template not found');
+    }
+
+    if (input.staffId) {
+      const { data: staff, error: staffError } = await db
+        .from('staff')
+        .select('id')
+        .eq('id', input.staffId)
+        .eq('account_id', input.accountId)
+        .maybeSingle();
+
+      if (staffError) {
+        throw new Error(staffError.message);
+      }
+      if (!staff) {
+        throw new Error('Staff member not found');
+      }
+    }
+
+    return ensureSignaturePreviewShare({
+      accountId: input.accountId,
+      templateId: input.templateId,
+      staffId: input.staffId ?? null,
+      createdBy: user.id,
+    });
+  },
+  { schema: createSignaturePreviewShareActionSchema },
+);
+
+export const sendSignatureInstallInstructionsAction = enhanceAction(
+  async (input, user) => {
+    const { accountSlug } = await assertSignaturesAdmin(
+      input.accountId,
+      user.id,
+    );
+
+    const sender = process.env.EMAIL_SENDER?.trim();
+    if (!sender) {
+      throw new Error('EMAIL_SENDER is not configured');
+    }
+
+    const db = getSignaturesSupabaseClient();
+    const { data: staff, error: staffError } = await db
+      .from('staff')
+      .select('id, email, signature_email, full_name')
+      .eq('id', input.staffId)
+      .eq('account_id', input.accountId)
+      .maybeSingle();
+
+    if (staffError) {
+      throw new Error(staffError.message);
+    }
+    if (!staff) {
+      throw new Error('Staff member not found');
+    }
+
+    let templateId = input.templateId ?? null;
+    if (!templateId) {
+      const { data: assignment, error: assignmentError } = await db
+        .from('staff_templates')
+        .select('template_id')
+        .eq('staff_id', input.staffId)
+        .maybeSingle();
+
+      if (assignmentError) {
+        throw new Error(assignmentError.message);
+      }
+      templateId = (assignment?.template_id as string | undefined) ?? null;
+    }
+
+    if (!templateId) {
+      throw new Error('Assign a template before sending install instructions');
+    }
+
+    const { data: template, error: templateError } = await db
+      .from('templates')
+      .select('id')
+      .eq('id', templateId)
+      .eq('account_id', input.accountId)
+      .maybeSingle();
+
+    if (templateError) {
+      throw new Error(templateError.message);
+    }
+    if (!template) {
+      throw new Error('Template not found');
+    }
+
+    const share = await ensureSignaturePreviewShare({
+      accountId: input.accountId,
+      templateId,
+      staffId: input.staffId,
+      createdBy: user.id,
+    });
+
+    const client = getSupabaseServerClient() as SupabaseClient;
+    const { data: account } = await client
+      .from('accounts')
+      .select('name')
+      .eq('id', input.accountId)
+      .maybeSingle();
+
+    const to =
+      (staff.signature_email as string | null)?.trim() ||
+      (staff.email as string).trim();
+
+    const email = buildSignatureInstallEmail({
+      recipientName: (staff.full_name as string | null) ?? null,
+      accountName: (account?.name as string | null | undefined) ?? accountSlug,
+      installUrl: share.url,
+    });
+
+    await sendPlatformEmail({
+      type: 'signature_install',
+      accountId: input.accountId,
+      mail: {
+        to,
+        from: sender,
+        subject: email.subject,
+        html: email.html,
+        text: email.text,
+      },
+      metadata: {
+        staffId: input.staffId,
+        templateId,
+        previewToken: share.token,
+      },
+    });
+
+    return { ok: true as const, to, url: share.url };
+  },
+  { schema: sendSignatureInstallInstructionsActionSchema },
 );

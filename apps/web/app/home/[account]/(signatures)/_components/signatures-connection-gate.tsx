@@ -30,6 +30,7 @@ export function SignaturesConnectionGate({
     '[account]',
     accountSlug,
   );
+  const integrationsPath = `${settingsPath}?tab=integrations`;
 
   if (!connected && !isSettings) {
     const msHref = `/api/signatures/ms-auth?${new URLSearchParams({
@@ -38,7 +39,7 @@ export function SignaturesConnectionGate({
     }).toString()}`;
 
     return (
-      <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] shadow-2xl">
+      <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] shadow-[0_1px_2px_rgba(42,23,32,0.05),0_4px_14px_rgba(42,23,32,0.05)]">
         <CardHeader className="items-center text-center">
           <div className="mb-3 rounded-2xl border border-[var(--ozer-accent)]/20 bg-[var(--ozer-accent-subtle)] p-3 text-[var(--ozer-accent)]">
             <PlugZap className="h-7 w-7" />
@@ -47,17 +48,27 @@ export function SignaturesConnectionGate({
         </CardHeader>
         <CardContent className="mx-auto max-w-xl space-y-5 text-center">
           <p className="text-sm text-muted-foreground">
-            Sync staff from your directory and push HTML signatures to Outlook
-            or Gmail. Choose Microsoft 365 or Google Workspace below.
+            Sync staff from your directory to design and share HTML signatures
+            for Outlook or Gmail. Connect Microsoft 365 or Google Workspace
+            below.
           </p>
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
             <Button asChild>
               <a href={msHref}>Connect Microsoft 365</a>
             </Button>
             <Button asChild variant="outline">
-              <Link href={settingsPath}>Connect Google Workspace</Link>
+              <Link href={integrationsPath}>Connect Google Workspace</Link>
             </Button>
           </div>
+          <p className="text-sm text-muted-foreground">
+            Not the Microsoft or Google admin?{' '}
+            <Link
+              href={integrationsPath}
+              className="font-medium text-[var(--ozer-accent)] underline-offset-4 hover:underline"
+            >
+              Send them an invite link from Integrations
+            </Link>
+          </p>
         </CardContent>
       </Card>
     );

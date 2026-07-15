@@ -57,7 +57,12 @@ export default async function SignaturesDashboardPage({
         title="Staff signatures"
         description="A quick view of synced staff, assigned templates, and the last push state."
       >
-        <SignaturesStaffTable accountSlug={account} staff={staff} compact />
+        <SignaturesStaffTable
+          accountId={accountId}
+          accountSlug={account}
+          staff={staff}
+          compact
+        />
       </ModuleDataSection>
     </div>
   );
