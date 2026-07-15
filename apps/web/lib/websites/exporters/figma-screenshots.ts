@@ -7,8 +7,6 @@
  */
 import 'server-only';
 
-import { createRequire } from 'node:module';
-
 export type FigmaScreenshotResult = {
   png: Uint8Array | null;
   skippedReason?: string;
@@ -43,10 +41,13 @@ type PlaywrightModule = {
   };
 };
 
-function loadPlaywright(): PlaywrightModule | null {
+async function loadPlaywright(): Promise<PlaywrightModule | null> {
   try {
-    const require = createRequire(import.meta.url);
-    return require('playwright') as PlaywrightModule;
+    // webpackIgnore keeps Playwright (chromium-bidi / electron) out of the
+    // Next webpack graph — required for Vercel builds.
+    return (await import(
+      /* webpackIgnore: true */ 'playwright'
+    )) as PlaywrightModule;
   } catch {
     return null;
   }
@@ -74,7 +75,7 @@ export async function captureFigmaWireframePng(
     };
   }
 
-  const playwright = loadPlaywright();
+  const playwright = await loadPlaywright();
   if (!playwright?.chromium) {
     return {
       png: null,

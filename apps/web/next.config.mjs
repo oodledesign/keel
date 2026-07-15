@@ -1,4 +1,5 @@
 import withBundleAnalyzer from '@next/bundle-analyzer';
+
 import reservedWorkspaceUrlSegments from '../../packages/shared/reserved-workspace-url-segments.json' with { type: 'json' };
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
@@ -42,7 +43,9 @@ const config = {
       fullUrl: true,
     },
   },
-  serverExternalPackages: [],
+  // Playwright is optional (Figma PNG capture). Keep it out of the webpack graph —
+  // Vercel builds fail when webpack tries to resolve chromium-bidi / electron.
+  serverExternalPackages: ['playwright', 'playwright-core'],
   // needed for supporting dynamic imports for local content
   outputFileTracingIncludes: {
     '/*': ['./content/**/*'],
@@ -126,12 +129,10 @@ function getImagesConfig() {
     });
   }
 
-  remotePatterns.push(
-    {
-      protocol: 'https',
-      hostname: '**.b-cdn.net',
-    },
-  );
+  remotePatterns.push({
+    protocol: 'https',
+    hostname: '**.b-cdn.net',
+  });
 
   if (IS_PRODUCTION) {
     return {
@@ -169,7 +170,9 @@ function workspaceAccountUrlSegmentPattern(segments) {
 }
 
 async function getRewrites() {
-  const account = workspaceAccountUrlSegmentPattern(reservedWorkspaceUrlSegments);
+  const account = workspaceAccountUrlSegmentPattern(
+    reservedWorkspaceUrlSegments,
+  );
 
   return {
     beforeFiles: [

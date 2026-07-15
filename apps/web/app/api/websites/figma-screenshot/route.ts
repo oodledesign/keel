@@ -6,7 +6,6 @@ import {
   websiteShareFigmaPageUrl,
 } from '~/home/[account]/websites/_lib/server/site-studio.service';
 import { rateLimitApiRequest } from '~/lib/rate-limit/api-rate-limit';
-import { captureFigmaWireframePng } from '~/lib/websites/exporters/figma-screenshots';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -56,6 +55,8 @@ export async function GET(request: NextRequest) {
   );
   const importUrl = `${site}${path.startsWith('/') ? path : `/${path}`}`;
 
+  const { captureFigmaWireframePng } =
+    await import('~/lib/websites/exporters/figma-screenshots');
   const result = await captureFigmaWireframePng(importUrl);
   if (!result.png) {
     return NextResponse.json(

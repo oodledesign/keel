@@ -13,7 +13,6 @@ import {
   figmaPackZipFilename,
   generateFigmaPack,
 } from '~/lib/websites/exporters/figma-pack';
-import { captureFigmaWireframePngMap } from '~/lib/websites/exporters/figma-screenshots';
 import {
   generateNextPack,
   nextPackZipFilename,
@@ -224,6 +223,9 @@ export const generateWebsiteFigmaPack = enhanceAction(
     let pagePngs: Record<string, Uint8Array> = {};
     let pngNotes: string[] = [];
     if (shouldCapture && Object.keys(importUrls).length > 0) {
+      // Lazy-load so Playwright stays out of the server-actions webpack graph.
+      const { captureFigmaWireframePngMap } =
+        await import('~/lib/websites/exporters/figma-screenshots');
       const capture = await captureFigmaWireframePngMap(importUrls);
       pagePngs = capture.pagePngs;
       pngNotes = capture.notes;
