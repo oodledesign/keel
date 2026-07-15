@@ -3,13 +3,9 @@ import { AlertCircle, CheckCircle2, Clock, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 
 import { ModuleDataSection } from '../../_components/module-data-section';
-import { SignaturesActionsBar } from '../_components/signatures-actions-bar';
 import { SignaturesStaffTable } from '../_components/signatures-staff-table';
-import { isSignaturesUxPreviewEnabled } from '~/lib/signatures/ux-preview';
 
 import {
-  getSignaturesMailProvider,
-  isSignaturesMailConnected,
   loadSignaturesDashboard,
   loadSignaturesWorkspace,
 } from '../_lib/server/signatures-data';
@@ -33,36 +29,8 @@ export default async function SignaturesDashboardPage({
   const accountId = workspace.account.id as string;
   const { summary, staff } = await loadSignaturesDashboard(accountId);
 
-  const uxPreview = isSignaturesUxPreviewEnabled();
-  let mailActionsDisabled = false;
-  let mailProvider: Awaited<ReturnType<typeof getSignaturesMailProvider>> = null;
-
-  if (uxPreview) {
-    try {
-      mailActionsDisabled = !(await isSignaturesMailConnected(accountId));
-    } catch {
-      mailActionsDisabled = true;
-    }
-  } else {
-    mailProvider = await getSignaturesMailProvider(accountId);
-  }
-
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-semibold">Dashboard</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Monitor staff signature status and push templates to Gmail or Outlook.
-          </p>
-        </div>
-        <SignaturesActionsBar
-          accountId={accountId}
-          mailProvider={mailProvider}
-          mailActionsDisabled={mailActionsDisabled}
-        />
-      </div>
-
       <div className="grid gap-4 md:grid-cols-4">
         {cards.map((card) => {
           const Icon = card.icon;

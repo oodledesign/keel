@@ -178,11 +178,18 @@ export function WebsitePlanningPanel({
       </div>
 
       <div className="w-full min-w-0 px-4 py-5 md:px-6">
-        {locked ? <SiteStudioUpsell lockedTabLabel={TAB_LABELS[tab]} /> : null}
+        {locked ? (
+          <SiteStudioUpsell
+            accountSlug={accountSlug}
+            lockedTabLabel={TAB_LABELS[tab]}
+          />
+        ) : null}
 
         {!locked && tab === 'overview' ? (
           <div className="space-y-6">
-            {!siteStudioEnabled ? <SiteStudioUpsell /> : null}
+            {!siteStudioEnabled ? (
+              <SiteStudioUpsell accountSlug={accountSlug} />
+            ) : null}
 
             <WebsiteDeliveryOverview
               accountId={accountId}

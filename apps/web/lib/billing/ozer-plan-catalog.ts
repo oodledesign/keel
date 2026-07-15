@@ -440,11 +440,10 @@ export const OZER_ADDON_CATALOG: Array<{
 
 /**
  * Workspace add-ons shown in billing checkout and apps marketplace.
- * Site Studio (`addon_site_studio`) stays off this list until launch — grantable
- * via Super Admin / catalog / sync for development only.
  */
 export const LAUNCHED_WORKSPACE_ADDON_KEYS: OzerAddonKey[] = [
   'addon_signatures',
+  'addon_site_studio',
 ];
 
 export function launchedWorkspaceAddons() {

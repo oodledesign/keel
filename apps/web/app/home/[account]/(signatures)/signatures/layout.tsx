@@ -81,20 +81,35 @@ export default async function SignaturesLayout({
     throw err;
   }
 
+  const connected = hasRealConnection || uxPreview;
+  const connectionDescription =
+    hasRealConnection && mailProvider
+      ? `Connected via ${
+          mailProvider === 'google' ? 'Google Workspace' : 'Microsoft 365'
+        }.`
+      : undefined;
+
   return (
     <>
       <TeamAccountLayoutPageHeader
         account={account}
         title={<Trans i18nKey="signatures:title" />}
-        description={<Trans i18nKey="signatures:description" />}
+        description={
+          connectionDescription ?? <Trans i18nKey="signatures:description" />
+        }
       />
       <PageBody className="space-y-8 bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
-        <SignaturesNav accountSlug={account} />
+        <SignaturesNav
+          accountSlug={account}
+          accountId={accountId}
+          showActions={connected}
+          mailProvider={mailProvider}
+          mailActionsDisabled={uxPreview && !hasRealConnection}
+        />
         <SignaturesConnectionGate
           accountId={accountId}
           accountSlug={account}
-          connected={hasRealConnection || uxPreview}
-          mailProvider={mailProvider ?? undefined}
+          connected={connected}
           showUxPreviewBanner={uxPreview && !hasRealConnection}
         >
           {children}

@@ -10,20 +10,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 
 import pathsConfig from '~/config/paths.config';
 
-import type { SignaturesMailProvider } from '../_lib/server/signatures-data';
-
 export function SignaturesConnectionGate({
   accountId,
   accountSlug,
   connected,
-  mailProvider,
   showUxPreviewBanner,
   children,
 }: React.PropsWithChildren<{
   accountId: string;
   accountSlug: string;
   connected: boolean;
-  mailProvider?: SignaturesMailProvider;
   showUxPreviewBanner?: boolean;
   children: React.ReactNode;
 }>) {
@@ -85,12 +81,6 @@ export function SignaturesConnectionGate({
             ).
           </p>
         </div>
-      ) : null}
-      {connected && mailProvider ? (
-        <p className="text-xs text-muted-foreground">
-          Connected via{' '}
-          {mailProvider === 'google' ? 'Google Workspace' : 'Microsoft 365'}.
-        </p>
       ) : null}
       {children}
     </>

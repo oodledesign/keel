@@ -20,10 +20,13 @@ export function SignaturesActionsBar({
   accountId,
   mailProvider,
   mailActionsDisabled,
+  compact = false,
 }: {
   accountId: string;
   mailProvider?: SignaturesMailProvider | null;
   mailActionsDisabled?: boolean;
+  /** Hide the blocked helper line (e.g. when inline with tab nav). */
+  compact?: boolean;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState<'sync' | 'push-all' | null>(null);
@@ -72,8 +75,14 @@ export function SignaturesActionsBar({
   const blocked = Boolean(mailActionsDisabled);
 
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-      {blocked ? (
+    <div
+      className={
+        compact
+          ? 'flex flex-wrap items-center gap-2'
+          : 'flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center'
+      }
+    >
+      {!compact && blocked ? (
         <p className="text-xs text-muted-foreground">
           Connect Microsoft 365 or Google Workspace to sync staff and push
           signatures.
@@ -83,6 +92,7 @@ export function SignaturesActionsBar({
         <Button
           type="button"
           variant="outline"
+          size={compact ? 'sm' : 'default'}
           onClick={sync}
           disabled={pending !== null || blocked}
           title={
@@ -96,6 +106,7 @@ export function SignaturesActionsBar({
         </Button>
         <Button
           type="button"
+          size={compact ? 'sm' : 'default'}
           onClick={pushAll}
           disabled={pending !== null || blocked}
           title={

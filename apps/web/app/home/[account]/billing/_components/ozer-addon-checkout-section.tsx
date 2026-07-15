@@ -53,6 +53,9 @@ function defaultProductForAddon(key: OzerAddonKey): string {
 
 function addonKeyFromHighlight(value: string | null | undefined): OzerAddonKey | null {
   if (value === 'signatures') return 'addon_signatures';
+  if (value === 'site_studio' || value === 'site-studio') {
+    return 'addon_site_studio';
+  }
   if (value === 'rankly') return 'addon_rankly';
   if (value === 'feedflow') return 'addon_feedflow';
   if (value === 'videos') return 'addon_videos';
@@ -109,10 +112,10 @@ export function OzerAddonCheckoutSection({
     return (
       <Card id="addons">
         <CardHeader>
-          <CardTitle>Signatures</CardTitle>
+          <CardTitle>Add-ons</CardTitle>
           <CardDescription>
             Activate this workspace (Business Lite is free) before subscribing to
-            Signatures.
+            workspace add-ons.
           </CardDescription>
         </CardHeader>
       </Card>
