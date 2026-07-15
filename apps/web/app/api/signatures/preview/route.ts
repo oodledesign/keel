@@ -77,7 +77,23 @@ export async function GET(request: NextRequest) {
       renderOptions,
     );
 
-    return new NextResponse(html, {
+    const themeParam = request.nextUrl.searchParams.get('theme');
+    const theme = themeParam === 'dark' ? 'dark' : 'light';
+    const chrome = theme === 'dark' ? '#1c1c1e' : '#ffffff';
+    const documentHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="color-scheme" content="light dark" />
+<style>
+  html, body { margin: 0; padding: 0; background: ${chrome}; }
+  body { padding: 12px; }
+</style>
+</head>
+<body>${html}</body>
+</html>`;
+
+    return new NextResponse(documentHtml, {
       status: 200,
       headers: {
         'Content-Type': 'text/html; charset=utf-8',

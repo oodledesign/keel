@@ -65,9 +65,13 @@ export function SignatureTemplatePreviewCard({
         </div>
         {previewSrc ? (
           <iframe
+            key={`${previewSrc}-${theme}`}
             title={`${template.name} preview`}
-            src={previewSrc}
-            className="h-36 w-full rounded-md border-0 bg-transparent"
+            src={`${previewSrc}${previewSrc.includes('?') ? '&' : '?'}theme=${theme}`}
+            className={cn(
+              'h-36 w-full rounded-md border-0',
+              theme === 'light' ? 'bg-white' : 'bg-[#1c1c1e]',
+            )}
           />
         ) : template.preview_image_url ? (
           // eslint-disable-next-line @next/next/no-img-element

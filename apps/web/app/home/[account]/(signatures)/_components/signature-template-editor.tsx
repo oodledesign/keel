@@ -89,8 +89,24 @@ export function SignatureTemplateEditor({
       );
     }
 
-    return `<div style="color:#333333;font-family:Arial,Calibri,Georgia,sans-serif;line-height:1.4;">${output}</div>`;
-  }, [previewHtml, previewStaff]);
+    // Match inbox chrome (browsers default iframe documents to white otherwise).
+    const chrome = previewTheme === 'dark' ? '#1c1c1e' : '#ffffff';
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="color-scheme" content="light dark" />
+<style>
+  html, body { margin: 0; padding: 0; background: ${chrome}; }
+  body { padding: 16px; }
+</style>
+</head>
+<body>
+<div style="color:#333333;font-family:Arial,Calibri,Georgia,sans-serif;line-height:1.4;">${output}</div>
+</body>
+</html>`;
+  }, [previewHtml, previewStaff, previewTheme]);
 
   const lintIssues = useMemo(() => lintSignatureTemplateHtml(html), [html]);
   const lintWarnings = lintIssues.filter((issue) => issue.severity === 'warn');
@@ -385,9 +401,13 @@ export function SignatureTemplateEditor({
             )}
           >
             <iframe
+              key={previewTheme}
               title="Template preview"
               srcDoc={renderedPreview}
-              className="h-[680px] w-full rounded-lg border-0 bg-white"
+              className={cn(
+                'h-[680px] w-full rounded-lg border-0',
+                previewTheme === 'light' ? 'bg-white' : 'bg-[#1c1c1e]',
+              )}
             />
           </div>
         </CardContent>
