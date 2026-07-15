@@ -5,6 +5,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createNotificationsApi } from '@kit/notifications/api';
 
 import pathsConfig from '~/config/paths.config';
+import {
+  escapeEmailHtml,
+  renderOzerTransactionalEmail,
+} from '~/lib/email/ozer-transactional-shell';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
 export type PeopleReminderType =
@@ -18,7 +22,18 @@ type ReminderCandidate = {
   userId: string;
   accountId: string;
   personId: string;
+  /** Display name (nickname preferred). */
   personName: string;
+  fullName: string;
+  nickname: string | null;
+  relationshipLabel: string | null;
+  email: string | null;
+  phone: string | null;
+  lastCatchupOn: string | null;
+  catchupCadenceDays: number | null;
+  daysSinceLastCatchup: number | null;
+  lastCatchupLocation: string | null;
+  lastCatchupNote: string | null;
   reminderType: PeopleReminderType;
   referenceDate: string;
   userEmail: string;
@@ -53,72 +68,207 @@ function daysBetween(fromYmd: string, toYmd: string): number {
   return Math.round((b - a) / (1000 * 60 * 60 * 24));
 }
 
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+function formatGbDate(ymd: string | null | undefined): string | null {
+  if (!ymd) return null;
+  try {
+    return new Intl.DateTimeFormat('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    }).format(parseYmd(ymd));
+  } catch {
+    return ymd;
+  }
 }
 
-function wrapEmail(body: string) {
-  return `<!DOCTYPE html><html><body style="font-family:system-ui,sans-serif;line-height:1.5;color:#111">${body}</body></html>`;
+function truncatePlain(value: string, max: number) {
+  const trimmed = value.replace(/\s+/g, ' ').trim();
+  if (trimmed.length <= max) return trimmed;
+  return `${trimmed.slice(0, max - 1).trimEnd()}…`;
+}
+
+function detailRow(label: string, value: string | null | undefined) {
+  if (!value?.trim()) return '';
+  return `<tr>
+    <td style="padding:6px 0;font-size:13px;color:#9B8590;width:120px;vertical-align:top;">${escapeEmailHtml(label)}</td>
+    <td style="padding:6px 0;font-size:14px;color:#2A1720;vertical-align:top;">${escapeEmailHtml(value)}</td>
+  </tr>`;
+}
+
+function personDetailsBlock(input: {
+  fullName: string;
+  personName: string;
+  nickname: string | null;
+  relationshipLabel: string | null;
+  email: string | null;
+  phone: string | null;
+  lastCatchupOn: string | null;
+  daysSinceLastCatchup: number | null;
+  catchupCadenceDays: number | null;
+  lastCatchupLocation: string | null;
+  lastCatchupNote: string | null;
+  includeCatchupContext: boolean;
+}) {
+  const showLegalName =
+    Boolean(input.nickname?.trim()) &&
+    input.fullName.trim().toLowerCase() !== input.personName.trim().toLowerCase();
+
+  const lastMet =
+    input.lastCatchupOn && input.daysSinceLastCatchup != null
+      ? `${formatGbDate(input.lastCatchupOn)} · ${input.daysSinceLastCatchup} day${
+          input.daysSinceLastCatchup === 1 ? '' : 's'
+        } ago`
+      : formatGbDate(input.lastCatchupOn);
+
+  const cadence =
+    input.catchupCadenceDays && input.catchupCadenceDays > 0
+      ? `Every ${input.catchupCadenceDays} day${input.catchupCadenceDays === 1 ? '' : 's'}`
+      : null;
+
+  const rows = [
+    showLegalName ? detailRow('Full name', input.fullName) : '',
+    detailRow('Relationship', input.relationshipLabel),
+    detailRow('Email', input.email),
+    detailRow('Phone', input.phone),
+    input.includeCatchupContext ? detailRow('Last met', lastMet) : '',
+    input.includeCatchupContext ? detailRow('Cadence', cadence) : '',
+    input.includeCatchupContext
+      ? detailRow('Last place', input.lastCatchupLocation)
+      : '',
+  ]
+    .filter(Boolean)
+    .join('');
+
+  if (!rows && !input.lastCatchupNote) return '';
+
+  const note =
+    input.includeCatchupContext && input.lastCatchupNote
+      ? `<p style="margin:14px 0 0;padding:12px 14px;background:#FBF6EC;border:1px solid #E7DECF;border-radius:10px;font-size:13px;line-height:1.55;color:#5A4450;"><strong style="color:#2A1720;">Last catch-up note</strong><br />${escapeEmailHtml(
+          truncatePlain(input.lastCatchupNote, 280),
+        )}</p>`
+      : '';
+
+  return `
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:16px 0 4px;border-collapse:collapse;">
+  ${rows}
+</table>
+${note}`.trim();
 }
 
 function buildReminderEmail(input: {
   productName: string;
   personName: string;
+  fullName: string;
+  nickname: string | null;
+  relationshipLabel: string | null;
+  email: string | null;
+  phone: string | null;
+  lastCatchupOn: string | null;
+  daysSinceLastCatchup: number | null;
+  catchupCadenceDays: number | null;
+  lastCatchupLocation: string | null;
+  lastCatchupNote: string | null;
   reminderType: PeopleReminderType;
   profileUrl: string;
 }) {
-  const name = escapeHtml(input.personName);
+  const name = escapeEmailHtml(input.personName);
+  const details = personDetailsBlock({
+    ...input,
+    includeCatchupContext: input.reminderType === 'catchup_due',
+  });
+
+  const footerNote = `You're receiving this because you set People reminders in ${escapeEmailHtml(input.productName)}.`;
 
   switch (input.reminderType) {
-    case 'catchup_due':
+    case 'catchup_due': {
+      const overdueLabel =
+        input.daysSinceLastCatchup != null
+          ? `It's been ${input.daysSinceLastCatchup} day${
+              input.daysSinceLastCatchup === 1 ? '' : 's'
+            } since you last connected.`
+          : `It's been a while since you connected.`;
+
       return {
         subject: `Time to catch up with ${input.personName}`,
-        html: wrapEmail(
-          `<p>It's been a while since you connected with <strong>${name}</strong>.</p>
-          <p>Schedule a catchup while it's on your mind.</p>
-          <p><a href="${input.profileUrl}">Open their profile in ${escapeHtml(input.productName)}</a></p>`,
-        ),
+        preview: `${overdueLabel} Open their profile to schedule a catch-up.`,
+        html: renderOzerTransactionalEmail({
+          productName: input.productName,
+          title: `Time to catch up with ${input.personName}`,
+          preview: `Catch up with ${input.personName}`,
+          heading: `Time to catch up with ${input.personName}`,
+          bodyHtml: `<p style="margin:0 0 12px;">${escapeEmailHtml(overdueLabel)}</p>
+            <p style="margin:0;">Schedule a catch-up while it's on your mind — log a meetup or add a quick note so nothing slips.</p>
+            ${details}`,
+          cta: { label: 'Open their profile', href: input.profileUrl },
+          footerNote,
+        }),
         body: `Time to catch up with ${input.personName}. Open their profile to log a meetup or add a note.`,
       };
+    }
     case 'birthday_today':
       return {
         subject: `${input.personName}'s birthday is today`,
-        html: wrapEmail(
-          `<p><strong>${name}</strong>'s birthday is today.</p>
-          <p>Check their profile for gift ideas and notes.</p>
-          <p><a href="${input.profileUrl}">Open profile</a></p>`,
-        ),
+        preview: `Wish ${input.personName} a happy birthday.`,
+        html: renderOzerTransactionalEmail({
+          productName: input.productName,
+          title: `${input.personName}'s birthday is today`,
+          preview: `Birthday today — ${input.personName}`,
+          heading: `${input.personName}'s birthday is today`,
+          bodyHtml: `<p style="margin:0 0 12px;"><strong>${name}</strong>'s birthday is today.</p>
+            <p style="margin:0;">Check their profile for gift ideas and notes before you message them.</p>
+            ${details}`,
+          cta: { label: 'Open profile', href: input.profileUrl },
+          footerNote,
+        }),
         body: `${input.personName}'s birthday is today.`,
       };
     case 'birthday_7d':
       return {
         subject: `${input.personName}'s birthday is in 7 days`,
-        html: wrapEmail(
-          `<p><strong>${name}</strong>'s birthday is coming up in a week.</p>
-          <p><a href="${input.profileUrl}">View gift ideas and notes</a></p>`,
-        ),
+        preview: `A week to plan something thoughtful for ${input.personName}.`,
+        html: renderOzerTransactionalEmail({
+          productName: input.productName,
+          title: `${input.personName}'s birthday is in 7 days`,
+          preview: `Birthday in 7 days — ${input.personName}`,
+          heading: `${input.personName}'s birthday is in a week`,
+          bodyHtml: `<p style="margin:0 0 12px;"><strong>${name}</strong>'s birthday is coming up in seven days.</p>
+            <p style="margin:0;">Open their profile for gift ideas and anything you've already noted.</p>
+            ${details}`,
+          cta: { label: 'View gift ideas', href: input.profileUrl },
+          footerNote,
+        }),
         body: `${input.personName}'s birthday is in 7 days.`,
       };
     case 'anniversary_today':
       return {
         subject: `${input.personName}'s anniversary is today`,
-        html: wrapEmail(
-          `<p>Today is <strong>${name}</strong>'s anniversary.</p>
-          <p><a href="${input.profileUrl}">Open profile</a></p>`,
-        ),
+        preview: `Today is ${input.personName}'s anniversary.`,
+        html: renderOzerTransactionalEmail({
+          productName: input.productName,
+          title: `${input.personName}'s anniversary is today`,
+          preview: `Anniversary today — ${input.personName}`,
+          heading: `Today is ${input.personName}'s anniversary`,
+          bodyHtml: `<p style="margin:0;">A quick moment to celebrate <strong>${name}</strong> — check notes on their profile if you want ideas.</p>
+            ${details}`,
+          cta: { label: 'Open profile', href: input.profileUrl },
+          footerNote,
+        }),
         body: `${input.personName}'s anniversary is today.`,
       };
     case 'anniversary_7d':
       return {
         subject: `${input.personName}'s anniversary is in 7 days`,
-        html: wrapEmail(
-          `<p><strong>${name}</strong>'s anniversary is in a week.</p>
-          <p><a href="${input.profileUrl}">Open profile</a></p>`,
-        ),
+        preview: `${input.personName}'s anniversary is in a week.`,
+        html: renderOzerTransactionalEmail({
+          productName: input.productName,
+          title: `${input.personName}'s anniversary is in 7 days`,
+          preview: `Anniversary in 7 days — ${input.personName}`,
+          heading: `${input.personName}'s anniversary is in a week`,
+          bodyHtml: `<p style="margin:0;">You've got a week to plan something for <strong>${name}</strong>.</p>
+            ${details}`,
+          cta: { label: 'Open profile', href: input.profileUrl },
+          footerNote,
+        }),
         body: `${input.personName}'s anniversary is in 7 days.`,
       };
   }
@@ -143,7 +293,7 @@ async function loadReminderCandidates(
   const { data: people, error } = await admin
     .from('personal_people')
     .select(
-      'id, user_id, account_id, full_name, nickname, catchup_cadence_days, last_catchup_on, created_at',
+      'id, user_id, account_id, full_name, nickname, relationship_label, email, phone, catchup_cadence_days, last_catchup_on, created_at',
     );
 
   if (error || !people?.length) return [];
@@ -154,12 +304,40 @@ async function loadReminderCandidates(
     .select('person_id, kind, month, day')
     .in('person_id', personIds);
 
+  const { data: recentCatchups } = await admin
+    .from('personal_person_catchups')
+    .select('person_id, met_on, location, conversation_notes')
+    .in('person_id', personIds)
+    .order('met_on', { ascending: false });
+
+  const latestCatchupByPerson = new Map<
+    string,
+    { location: string | null; note: string | null }
+  >();
+  for (const row of recentCatchups ?? []) {
+    const r = row as {
+      person_id: string;
+      location: string | null;
+      conversation_notes: string | null;
+    };
+    if (latestCatchupByPerson.has(r.person_id)) continue;
+    latestCatchupByPerson.set(r.person_id, {
+      location: r.location,
+      note: r.conversation_notes,
+    });
+  }
+
   const datesByPerson = new Map<
     string,
     Array<{ kind: string; month: number; day: number }>
   >();
   for (const row of dates ?? []) {
-    const r = row as { person_id: string; kind: string; month: number; day: number };
+    const r = row as {
+      person_id: string;
+      kind: string;
+      month: number;
+      day: number;
+    };
     const list = datesByPerson.get(r.person_id) ?? [];
     list.push({ kind: r.kind, month: r.month, day: r.day });
     datesByPerson.set(r.person_id, list);
@@ -175,12 +353,39 @@ async function loadReminderCandidates(
       account_id: string;
       full_name: string;
       nickname: string | null;
+      relationship_label: string | null;
+      email: string | null;
+      phone: string | null;
       catchup_cadence_days: number | null;
       last_catchup_on: string | null;
       created_at: string;
     };
 
     const personName = p.nickname?.trim() || p.full_name;
+    const lastCatchup =
+      p.last_catchup_on ??
+      (p.created_at ? p.created_at.slice(0, 10) : null);
+    const daysSinceLastCatchup = lastCatchup
+      ? daysBetween(lastCatchup, today)
+      : null;
+    const catchupMeta = latestCatchupByPerson.get(p.id);
+
+    const baseFields = {
+      userId: p.user_id,
+      accountId: p.account_id,
+      personId: p.id,
+      personName,
+      fullName: p.full_name,
+      nickname: p.nickname,
+      relationshipLabel: p.relationship_label,
+      email: p.email,
+      phone: p.phone,
+      lastCatchupOn: p.last_catchup_on,
+      catchupCadenceDays: p.catchup_cadence_days,
+      daysSinceLastCatchup,
+      lastCatchupLocation: catchupMeta?.location ?? null,
+      lastCatchupNote: catchupMeta?.note ?? null,
+    };
 
     if (p.catchup_cadence_days && p.catchup_cadence_days > 0) {
       const anchor = p.last_catchup_on ?? p.created_at.slice(0, 10);
@@ -193,10 +398,7 @@ async function loadReminderCandidates(
         }
         if (email) {
           candidates.push({
-            userId: p.user_id,
-            accountId: p.account_id,
-            personId: p.id,
-            personName,
+            ...baseFields,
             reminderType: 'catchup_due',
             referenceDate: dueOn,
             userEmail: email,
@@ -229,10 +431,7 @@ async function loadReminderCandidates(
       if (!email) continue;
 
       candidates.push({
-        userId: p.user_id,
-        accountId: p.account_id,
-        personId: p.id,
-        personName,
+        ...baseFields,
         reminderType,
         referenceDate: ref,
         userEmail: email,
@@ -286,6 +485,16 @@ export async function runPersonalPeopleReminders(
     const { subject, html, body } = buildReminderEmail({
       productName,
       personName: row.personName,
+      fullName: row.fullName,
+      nickname: row.nickname,
+      relationshipLabel: row.relationshipLabel,
+      email: row.email,
+      phone: row.phone,
+      lastCatchupOn: row.lastCatchupOn,
+      daysSinceLastCatchup: row.daysSinceLastCatchup,
+      catchupCadenceDays: row.catchupCadenceDays,
+      lastCatchupLocation: row.lastCatchupLocation,
+      lastCatchupNote: row.lastCatchupNote,
       reminderType: row.reminderType,
       profileUrl,
     });
