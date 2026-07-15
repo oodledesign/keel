@@ -1,0 +1,40 @@
+{
+  "type": "TemplateFeatureBand",
+  "label": "Feature band (template)",
+  "category": "template",
+  "fields": [
+    { "key": "eyebrow", "type": "text", "label": "Eyebrow" },
+    { "key": "heading", "type": "text", "label": "Heading" },
+    { "key": "body", "type": "textarea", "label": "Body" },
+    { "key": "ctaLabel", "type": "text", "label": "CTA label" },
+    { "key": "ctaHref", "type": "link", "label": "CTA link" },
+    {
+      "key": "items",
+      "type": "array",
+      "label": "Highlights",
+      "itemLabel": "Highlight",
+      "itemFields": [
+        { "key": "title", "type": "text", "label": "Title" },
+        { "key": "description", "type": "textarea", "label": "Description" }
+      ]
+    }
+  ],
+  "defaults": {
+    "eyebrow": "Why us",
+    "heading": "Built for your workspace",
+    "body": "This block was designed in Cursor and mapped back into Site Studio via block.manifest.json.",
+    "ctaLabel": "Get started",
+    "ctaHref": "/contact",
+    "items": [
+      { "title": "On brand", "description": "Uses your workspace tokens." },
+      {
+        "title": "Editable",
+        "description": "Fields declared in the manifest."
+      },
+      {
+        "title": "Reusable",
+        "description": "Available on every site in this workspace."
+      }
+    ]
+  }
+}

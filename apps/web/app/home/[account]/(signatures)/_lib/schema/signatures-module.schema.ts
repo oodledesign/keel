@@ -268,3 +268,9 @@ export const sendSignatureInstallInstructionsActionSchema = z.object({
   staffId: z.string().uuid(),
   templateId: z.string().uuid().optional(),
 });
+
+export const updateSignatureChangeRequestStatusActionSchema = z.object({
+  accountId: z.string().uuid(),
+  requestId: z.string().uuid(),
+  status: z.enum(['resolved', 'dismissed']),
+});

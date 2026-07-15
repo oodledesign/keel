@@ -1,11 +1,13 @@
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
 
-import { Loader2, Mail, Pencil } from 'lucide-react';
+import Link from 'next/link';
+
+import { AlertTriangle, Loader2, Mail, Pencil } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { toast } from '@kit/ui/sonner';
 import {
   Table,
   TableBody,
@@ -14,13 +16,12 @@ import {
   TableHeader,
   TableRow,
 } from '@kit/ui/table';
-import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 
-import { sendSignatureInstallInstructionsAction } from '../_lib/server/signatures-module-actions';
 import type { SignatureStaff } from '../_lib/server/signatures-data';
+import { sendSignatureInstallInstructionsAction } from '../_lib/server/signatures-module-actions';
 import { SignaturesStatusBadge } from './signatures-status-badge';
 
 function formatDate(value: string | null) {
@@ -39,18 +40,20 @@ export function SignaturesStaffTable({
   accountId,
   accountSlug,
   staff,
+  openRequestCounts = {},
   compact = false,
 }: {
   accountId: string;
   accountSlug: string;
   staff: SignatureStaff[];
+  openRequestCounts?: Record<string, number>;
   compact?: boolean;
 }) {
   const [emailingId, setEmailingId] = useState<string | null>(null);
 
   if (!staff.length) {
     return (
-      <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-black/10 p-8 text-sm text-muted-foreground">
+      <div className="text-muted-foreground rounded-2xl border border-[color:var(--workspace-shell-border)] bg-black/10 p-8 text-sm">
         No staff synced yet. Connect Microsoft 365, then sync staff from M365.
       </div>
     );
@@ -89,6 +92,7 @@ export function SignaturesStaffTable({
             <TableHead className="px-4 py-3">Branch</TableHead>
             <TableHead className="px-4 py-3">Template</TableHead>
             <TableHead className="px-4 py-3">Status</TableHead>
+            <TableHead className="px-4 py-3">Requests</TableHead>
             <TableHead className="px-4 py-3">Last Pushed</TableHead>
             <TableHead className="px-4 py-3 text-right">Actions</TableHead>
           </TableRow>
@@ -98,28 +102,48 @@ export function SignaturesStaffTable({
             const detailPath = pathsConfig.app.accountSignaturesStaffDetail
               .replace('[account]', accountSlug)
               .replace('[staffId]', row.id);
+            const requestCount = openRequestCounts[row.id] ?? 0;
+            const requestsPath = `${pathsConfig.app.accountSignaturesRequests.replace('[account]', accountSlug)}#staff-${row.id}`;
 
             return (
-              <TableRow key={row.id} className="border-[color:var(--workspace-shell-border)]">
+              <TableRow
+                key={row.id}
+                className="border-[color:var(--workspace-shell-border)]"
+              >
                 <TableCell className="px-4 py-3">
                   <div className="font-medium text-[var(--workspace-shell-text)]">
                     {row.full_name || row.email}
                   </div>
-                  <div className="text-xs text-muted-foreground">{row.email}</div>
+                  <div className="text-muted-foreground text-xs">
+                    {row.email}
+                  </div>
                 </TableCell>
-                <TableCell className="px-4 py-3 text-muted-foreground">
+                <TableCell className="text-muted-foreground px-4 py-3">
                   {row.job_title || '-'}
                 </TableCell>
-                <TableCell className="px-4 py-3 text-muted-foreground">
+                <TableCell className="text-muted-foreground px-4 py-3">
                   {row.branch || '-'}
                 </TableCell>
-                <TableCell className="px-4 py-3 text-muted-foreground">
+                <TableCell className="text-muted-foreground px-4 py-3">
                   {row.template_name || 'Unassigned'}
                 </TableCell>
                 <TableCell className="px-4 py-3">
                   <SignaturesStatusBadge status={row.signature_status} />
                 </TableCell>
-                <TableCell className="px-4 py-3 text-muted-foreground">
+                <TableCell className="px-4 py-3">
+                  {requestCount > 0 ? (
+                    <Link
+                      href={requestsPath}
+                      className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/35 bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-800 dark:text-amber-200"
+                    >
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      {requestCount} open
+                    </Link>
+                  ) : (
+                    <span className="text-muted-foreground text-xs">—</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-muted-foreground px-4 py-3">
                   {formatDate(row.signature_pushed_at)}
                 </TableCell>
                 <TableCell className="px-4 py-3 text-right">

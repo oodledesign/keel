@@ -125,7 +125,17 @@ export const generateWebsitePromptPack = enhanceAction(
 
     const exp = await buildExport(input.websiteId);
     const options = await seoPackOptions(input.accountId, input.websiteId);
-    const pack = generatePromptPack(exp, input.target, options);
+
+    const { data: account } = await getSupabaseServerClient()
+      .from('accounts')
+      .select('slug')
+      .eq('id', input.accountId)
+      .maybeSingle();
+
+    const pack = generatePromptPack(exp, input.target, {
+      ...options,
+      accountSlug: account?.slug ?? null,
+    });
     const zipBase64 = zipPromptPackToBase64(pack.files);
     const slug =
       website.name

@@ -24,6 +24,7 @@ export const PLATFORM_EMAIL_TYPES = [
   'compose',
   'campaign',
   'signature_install',
+  'signature_sync',
 ] as const;
 
 export type PlatformEmailType = (typeof PLATFORM_EMAIL_TYPES)[number];
@@ -65,10 +66,8 @@ export async function sendPlatformEmail(params: {
       const mailer = await getMailer();
       await mailer.sendEmail(mail);
     } else {
-      const htmlBody =
-        'html' in mail ? mail.html : `<pre>${mail.text}</pre>`;
-      const textBody =
-        'text' in mail ? mail.text : htmlToPlainText(htmlBody);
+      const htmlBody = 'html' in mail ? mail.html : `<pre>${mail.text}</pre>`;
+      const textBody = 'text' in mail ? mail.text : htmlToPlainText(htmlBody);
 
       const result = await sendTransactionalEmail({
         to: mail.to,

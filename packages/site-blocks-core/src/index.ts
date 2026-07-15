@@ -37,4 +37,12 @@ export type { SiteMediaUploader } from './context/site-media';
 
 export { Render } from '@puckeditor/core';
 
+export {
+  CtaButton,
+  ItemCard,
+  MediaPlaceholder,
+  OutlineText,
+  SectionShell,
+} from './primitives';
+
 export const siteBlocksRegistry = registryJson;

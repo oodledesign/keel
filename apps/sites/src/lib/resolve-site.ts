@@ -44,11 +44,15 @@ export async function loadPublishedPage(hostname: string, slugPath: string) {
 
   const { data: site } = await admin
     .from('site_sites')
-    .select('id, name, theme_tokens, status')
+    .select('id, name, theme_tokens, status, accounts(slug)')
     .eq('id', siteId)
     .maybeSingle();
 
   if (!site || site.status !== 'live') return null;
+
+  // Workspace slug selects the account's custom block pack (if registered).
+  const account = site.accounts as { slug?: string | null } | null;
+  const accountSlug = account?.slug ? String(account.slug) : null;
 
   const slug =
     !slugPath || slugPath === '/' || slugPath === 'index'
@@ -69,5 +73,6 @@ export async function loadPublishedPage(hostname: string, slugPath: string) {
     title: String(page.title ?? slug),
     themeTokens: (site.theme_tokens ?? {}) as Record<string, unknown>,
     data: page.published_data as Record<string, unknown>,
+    accountSlug,
   };
 }

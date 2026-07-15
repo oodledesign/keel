@@ -254,6 +254,9 @@ importers:
       '@kit/site-blocks-core':
         specifier: workspace:*
         version: link:../../packages/site-blocks-core
+      '@kit/site-blocks-workspaces':
+        specifier: workspace:*
+        version: link:../../packages/site-blocks-workspaces
       '@puckeditor/core':
         specifier: ^0.22.1
         version: 0.22.1(@floating-ui/dom@1.7.5)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(immer@9.0.21)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(use-sync-external-store@1.6.0(react@19.2.4))
@@ -276,6 +279,9 @@ importers:
       '@kit/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/typescript
+      '@tailwindcss/postcss':
+        specifier: 'catalog:'
+        version: 4.1.18
       '@types/node':
         specifier: 'catalog:'
         version: 25.2.3
@@ -285,6 +291,9 @@ importers:
       '@types/react-dom':
         specifier: 'catalog:'
         version: 19.2.3(@types/react@19.2.14)
+      tailwindcss:
+        specifier: 'catalog:'
+        version: 4.1.18
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -402,6 +411,9 @@ importers:
       '@kit/site-blocks-core':
         specifier: workspace:*
         version: link:../../packages/site-blocks-core
+      '@kit/site-blocks-workspaces':
+        specifier: workspace:*
+        version: link:../../packages/site-blocks-workspaces
       '@kit/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
@@ -1891,6 +1903,40 @@ importers:
       tsx:
         specifier: ^4.20.3
         version: 4.21.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/site-blocks-workspaces:
+    dependencies:
+      '@kit/site-blocks-core':
+        specifier: workspace:*
+        version: link:../site-blocks-core
+      '@puckeditor/core':
+        specifier: ^0.22.1
+        version: 0.22.1(@floating-ui/dom@1.7.5)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(immer@9.0.21)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(use-sync-external-store@1.6.0(react@19.2.4))
+    devDependencies:
+      '@kit/eslint-config':
+        specifier: workspace:*
+        version: link:../../tooling/eslint
+      '@kit/prettier-config':
+        specifier: workspace:*
+        version: link:../../tooling/prettier
+      '@kit/tsconfig':
+        specifier: workspace:*
+        version: link:../../tooling/typescript
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: 'catalog:'
+        version: 19.2.3(@types/react@19.2.14)
+      react:
+        specifier: 'catalog:'
+        version: 19.2.4
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.2.4(react@19.2.4)
       typescript:
         specifier: ^5.9.3
         version: 5.9.3

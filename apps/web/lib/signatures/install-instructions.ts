@@ -1,4 +1,5 @@
 export type SignatureInstallStep = {
+  id: string;
   title: string;
   body: string;
 };
@@ -6,22 +7,27 @@ export type SignatureInstallStep = {
 /** Outlook (classic + new) install steps for self-serve HTML signatures. */
 export const OUTLOOK_INSTALL_STEPS: SignatureInstallStep[] = [
   {
-    title: 'Open your personal install page',
-    body: 'Use the link in your email. You’ll see a mock message with your signature applied — check it looks right before installing.',
+    id: 'open',
+    title: 'Check your signature',
+    body: 'You’re on your personal install page. Use the mock email on the right to confirm name, title, and details look right before you install.',
   },
   {
+    id: 'download',
     title: 'Download your signature',
-    body: 'Click “Download signature HTML”. Keep the .htm file handy — you’ll open or paste from it in the next steps.',
+    body: 'Copy the HTML below or download the .htm file. You’ll paste it into Outlook in the next steps.',
   },
   {
+    id: 'outlook',
     title: 'Open Outlook signature settings',
-    body: 'In Outlook desktop: File → Options → Mail → Signatures. In the new Outlook or Outlook on the web: Settings (gear) → Accounts → Signatures (or Mail → Compose and reply → Email signature).',
+    body: 'Find Signatures in Outlook using the path that matches your app version.',
   },
   {
+    id: 'paste',
     title: 'Create or replace your signature',
     body: 'Create a new signature (or edit your current one). Open the downloaded .htm file in a browser, select the signature block, copy it, and paste it into the Outlook signature editor. Avoid pasting into plain-text mode.',
   },
   {
+    id: 'default',
     title: 'Set it as default',
     body: 'Choose this signature for new messages and replies/forwards if you want it everywhere. Send a test email to yourself to confirm spacing and images look correct.',
   },
@@ -33,8 +39,7 @@ export function buildSignatureInstallEmail(params: {
   installUrl: string;
   fromWorkspaceName?: string | null;
 }): { subject: string; text: string; html: string } {
-  const first =
-    params.recipientName?.trim().split(/\s+/)[0] || 'there';
+  const first = params.recipientName?.trim().split(/\s+/)[0] || 'there';
   const workspace =
     params.accountName?.trim() ||
     params.fromWorkspaceName?.trim() ||

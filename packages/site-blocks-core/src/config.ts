@@ -1,6 +1,25 @@
-import type { Config } from '@puckeditor/core';
+import type { ComponentConfig, Config } from '@puckeditor/core';
 
 import {
+  type BlogGridProps,
+  type CTABandProps,
+  type ContactFormProps,
+  type ContentProseProps,
+  type FAQAccordionProps,
+  type FeatureAlternatingProps,
+  type FeatureGridProps,
+  type FooterProps,
+  type GalleryGridProps,
+  type HeaderProps,
+  type HeroCenteredProps,
+  type HeroSplitProps,
+  type HeroWithFormProps,
+  type LogoCloudProps,
+  type MapSectionProps,
+  type PricingTableProps,
+  type StatsBarProps,
+  type TeamGridProps,
+  type TestimonialsProps,
   blogGridConfig,
   contactFormConfig,
   contentProseConfig,
@@ -20,25 +39,6 @@ import {
   statsBarConfig,
   teamGridConfig,
   testimonialsConfig,
-  type BlogGridProps,
-  type ContactFormProps,
-  type ContentProseProps,
-  type CTABandProps,
-  type FAQAccordionProps,
-  type FeatureAlternatingProps,
-  type FeatureGridProps,
-  type FooterProps,
-  type GalleryGridProps,
-  type HeaderProps,
-  type HeroCenteredProps,
-  type HeroSplitProps,
-  type HeroWithFormProps,
-  type LogoCloudProps,
-  type MapSectionProps,
-  type PricingTableProps,
-  type StatsBarProps,
-  type TeamGridProps,
-  type TestimonialsProps,
 } from './blocks/components';
 import type { SiteBlockType } from './mapping';
 import { SITE_BLOCK_TYPES } from './mapping';
@@ -76,6 +76,13 @@ export type BuildConfigOptions = {
   extensions?: Partial<{
     [K in SiteBlockType]: SiteBlocksConfig['components'][K];
   }>;
+  /**
+   * Register additional (non-core) Puck components, e.g. workspace custom
+   * blocks. Keys must not collide with core SITE_BLOCK_TYPES.
+   */
+  extraComponents?: Record<string, ComponentConfig>;
+  /** Extra sidebar categories for extraComponents (merged after core). */
+  extraCategories?: Config['categories'];
 };
 
 const ALL_COMPONENTS: SiteBlocksConfig['components'] = {
@@ -104,7 +111,9 @@ const ALL_COMPONENTS: SiteBlocksConfig['components'] = {
  * Build a Puck config registering Site Studio block library v1.
  * Client packages can subset/merge via include/exclude/extensions.
  */
-export function buildConfig(options: BuildConfigOptions = {}): SiteBlocksConfig {
+export function buildConfig(
+  options: BuildConfigOptions = {},
+): SiteBlocksConfig {
   const include = new Set(options.include ?? SITE_BLOCK_TYPES);
   for (const key of options.exclude ?? []) {
     include.delete(key);
@@ -118,36 +127,49 @@ export function buildConfig(options: BuildConfigOptions = {}): SiteBlocksConfig 
     components[key] = extension ? { ...base, ...extension } : base;
   }
 
+  const coreTypes = new Set<string>(SITE_BLOCK_TYPES);
+  for (const [key, config] of Object.entries(options.extraComponents ?? {})) {
+    if (coreTypes.has(key)) {
+      throw new Error(
+        `extraComponents key "${key}" collides with a core block type — use extensions to override core blocks`,
+      );
+    }
+    components[key] = config;
+  }
+
+  const categories: NonNullable<Config['categories']> = {
+    navigation: { title: 'Navigation', components: ['Header', 'Footer'] },
+    heroes: {
+      title: 'Heroes',
+      components: ['HeroSplit', 'HeroCentered', 'HeroWithForm'],
+    },
+    proof: {
+      title: 'Proof',
+      components: ['LogoCloud', 'Testimonials', 'StatsBar'],
+    },
+    content: {
+      title: 'Content',
+      components: [
+        'FeatureGrid',
+        'FeatureAlternating',
+        'TeamGrid',
+        'FAQAccordion',
+        'BlogGrid',
+        'ContentProse',
+        'GalleryGrid',
+        'MapSection',
+      ],
+    },
+    conversion: {
+      title: 'Conversion',
+      components: ['PricingTable', 'CTABand', 'ContactForm'],
+    },
+    ...options.extraCategories,
+  };
+
   return {
     components: components as SiteBlocksConfig['components'],
-    categories: {
-      navigation: { title: 'Navigation', components: ['Header', 'Footer'] },
-      heroes: {
-        title: 'Heroes',
-        components: ['HeroSplit', 'HeroCentered', 'HeroWithForm'],
-      },
-      proof: {
-        title: 'Proof',
-        components: ['LogoCloud', 'Testimonials', 'StatsBar'],
-      },
-      content: {
-        title: 'Content',
-        components: [
-          'FeatureGrid',
-          'FeatureAlternating',
-          'TeamGrid',
-          'FAQAccordion',
-          'BlogGrid',
-          'ContentProse',
-          'GalleryGrid',
-          'MapSection',
-        ],
-      },
-      conversion: {
-        title: 'Conversion',
-        components: ['PricingTable', 'CTABand', 'ContactForm'],
-      },
-    },
+    categories: categories as SiteBlocksConfig['categories'],
   };
 }
 

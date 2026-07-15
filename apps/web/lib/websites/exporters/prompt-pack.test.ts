@@ -264,4 +264,36 @@ describe('generatePromptPack', () => {
     )!.content;
     expect(home).toContain('@kit/site-blocks-core');
   });
+
+  it('includes ROUNDTRIP.md with workspace pack path for ozer_sites target', () => {
+    const pack = generatePromptPack(fullExport(), 'ozer_sites', {
+      accountSlug: 'ybb',
+    });
+    const roundtrip = pack.files.find((file) => file.path === 'ROUNDTRIP.md');
+    expect(roundtrip).toBeTruthy();
+    expect(roundtrip!.content).toContain(
+      'packages/site-blocks-workspaces/src/workspaces/ybb/',
+    );
+    expect(roundtrip!.content).toContain('block.manifest.json');
+    expect(roundtrip!.content).toContain('manifestToPuckConfig');
+
+    const home = pack.files.find(
+      (file) => file.path === 'pages/10-home.md',
+    )!.content;
+    expect(home).toContain('Round-trip');
+
+    // Missing slug degrades to a placeholder, never an empty path.
+    const noSlug = generatePromptPack(fullExport(), 'ozer_sites');
+    const noSlugRoundtrip = noSlug.files.find(
+      (file) => file.path === 'ROUNDTRIP.md',
+    )!;
+    expect(noSlugRoundtrip.content).toContain('{accountSlug}');
+  });
+
+  it('does not emit ROUNDTRIP.md for non-ozer_sites targets', () => {
+    const pack = generatePromptPack(fullExport(), 'next', {
+      accountSlug: 'ybb',
+    });
+    expect(pack.files.some((file) => file.path === 'ROUNDTRIP.md')).toBe(false);
+  });
 });

@@ -2,9 +2,10 @@ import { AlertCircle, CheckCircle2, Clock, Users } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 
+import { countOpenChangeRequestsByStaff } from '~/lib/signatures/change-requests';
+
 import { ModuleDataSection } from '../../_components/module-data-section';
 import { SignaturesStaffTable } from '../_components/signatures-staff-table';
-
 import {
   loadSignaturesDashboard,
   loadSignaturesWorkspace,
@@ -16,7 +17,12 @@ type SignaturesDashboardPageProps = {
 
 const cards = [
   { key: 'total', label: 'Total Staff', icon: Users, tone: 'text-[#39AEB3]' },
-  { key: 'pushed', label: 'Pushed', icon: CheckCircle2, tone: 'text-[var(--ozer-accent)]' },
+  {
+    key: 'pushed',
+    label: 'Pushed',
+    icon: CheckCircle2,
+    tone: 'text-[var(--ozer-accent)]',
+  },
   { key: 'pending', label: 'Pending', icon: Clock, tone: 'text-[#F2C94C]' },
   { key: 'errors', label: 'Errors', icon: AlertCircle, tone: 'text-[#E85D75]' },
 ] as const;
@@ -27,7 +33,10 @@ export default async function SignaturesDashboardPage({
   const { account } = await params;
   const workspace = await loadSignaturesWorkspace(account);
   const accountId = workspace.account.id as string;
-  const { summary, staff } = await loadSignaturesDashboard(accountId);
+  const [{ summary, staff }, openRequestCounts] = await Promise.all([
+    loadSignaturesDashboard(accountId),
+    countOpenChangeRequestsByStaff(accountId),
+  ]);
 
   return (
     <div className="space-y-8">
@@ -40,13 +49,15 @@ export default async function SignaturesDashboardPage({
               className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
             >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+                <CardTitle className="text-muted-foreground text-sm font-medium">
                   {card.label}
                 </CardTitle>
                 <Icon className={`h-4 w-4 ${card.tone}`} />
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-semibold">{summary[card.key]}</div>
+                <div className="text-3xl font-semibold">
+                  {summary[card.key]}
+                </div>
               </CardContent>
             </Card>
           );
@@ -61,6 +72,7 @@ export default async function SignaturesDashboardPage({
           accountId={accountId}
           accountSlug={account}
           staff={staff}
+          openRequestCounts={Object.fromEntries(openRequestCounts)}
           compact
         />
       </ModuleDataSection>

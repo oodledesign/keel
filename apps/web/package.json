@@ -90,6 +90,7 @@
     "@kit/scheduling": "workspace:*",
     "@kit/shared": "workspace:*",
     "@kit/site-blocks-core": "workspace:*",
+    "@kit/site-blocks-workspaces": "workspace:*",
     "@kit/supabase": "workspace:*",
     "@kit/tasks": "workspace:*",
     "@kit/team-accounts": "workspace:*",

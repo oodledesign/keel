@@ -1,18 +1,21 @@
 import 'server-only';
 
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+
+import { findPlanByProductAndPlanId } from '~/lib/billing/ozer-plan-catalog';
+
 import {
   loadGoogleConnection,
   pushSignatureToGoogleStaff,
   syncStaffFromGoogleWorkspace,
 } from './google-workspace';
-import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
-import { findPlanByProductAndPlanId } from '~/lib/billing/ozer-plan-catalog';
 import {
   getSignaturesSupabaseClient,
   pushAllSignatures as pushAllMicrosoftSignatures,
   pushSignatureToStaff as pushMicrosoftSignature,
   syncStaffFromM365,
 } from './graph';
+import { sendSignatureSyncCompletedEmail } from './sync-notifications';
 
 export type SignaturesMailProvider = 'google' | 'microsoft' | null;
 
@@ -49,16 +52,27 @@ export async function syncStaffForAccount(
 ): Promise<{ synced: number; errors: string[] }> {
   const provider = await getSignaturesMailProvider(accountId);
 
-  if (provider === 'google') {
-    return syncStaffFromGoogleWorkspace(accountId);
-  }
-  if (provider === 'microsoft') {
-    return syncStaffFromM365(accountId);
+  if (provider !== 'google' && provider !== 'microsoft') {
+    throw new Error(
+      'Connect Microsoft 365 or Google Workspace in Signatures settings first',
+    );
   }
 
-  throw new Error(
-    'Connect Microsoft 365 or Google Workspace in Signatures settings first',
-  );
+  const result =
+    provider === 'google'
+      ? await syncStaffFromGoogleWorkspace(accountId)
+      : await syncStaffFromM365(accountId);
+
+  // Confirmation to workspace owners/admins; fire-and-forget — the
+  // notification never throws and must not delay the sync response.
+  void sendSignatureSyncCompletedEmail({
+    accountId,
+    provider,
+    synced: result.synced,
+    errors: result.errors,
+  });
+
+  return result;
 }
 
 export async function pushSignatureToStaff(
@@ -88,7 +102,10 @@ export async function pushSignatureToStaff(
     return { ...result, warning };
   }
 
-  return { success: false, error: 'No mail provider connected for this workspace' };
+  return {
+    success: false,
+    error: 'No mail provider connected for this workspace',
+  };
 }
 
 export async function pushAllSignatures(

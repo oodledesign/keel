@@ -25,7 +25,9 @@ export async function generateMetadata({ params }: PageProps) {
   };
 }
 
-export default async function SignaturePublicPreviewPage({ params }: PageProps) {
+export default async function SignaturePublicPreviewPage({
+  params,
+}: PageProps) {
   const { token } = await params;
   if (!token) {
     notFound();
@@ -44,6 +46,7 @@ export default async function SignaturePublicPreviewPage({ params }: PageProps) 
       fromEmail={preview.fromEmail}
       signatureHtml={preview.signatureHtml}
       isPersonalShare={preview.isPersonalShare}
+      token={token}
     />
   );
 }

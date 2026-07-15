@@ -3,7 +3,14 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { FileText, LayoutDashboard, Settings, Users } from 'lucide-react';
+import {
+  Database,
+  FileText,
+  Inbox,
+  LayoutDashboard,
+  Plug,
+  Users,
+} from 'lucide-react';
 
 import { Tabs, TabsList, TabsTrigger } from '@kit/ui/tabs';
 
@@ -32,10 +39,22 @@ const items = [
     match: '/signatures/templates',
   },
   {
-    label: 'Settings',
-    icon: Settings,
-    href: pathsConfig.app.accountSignaturesSettings,
-    match: '/signatures/settings',
+    label: 'Custom data',
+    icon: Database,
+    href: pathsConfig.app.accountSignaturesCustomData,
+    match: '/signatures/custom-data',
+  },
+  {
+    label: 'Integrations',
+    icon: Plug,
+    href: pathsConfig.app.accountSignaturesIntegrations,
+    match: '/signatures/integrations',
+  },
+  {
+    label: 'Requests',
+    icon: Inbox,
+    href: pathsConfig.app.accountSignaturesRequests,
+    match: '/signatures/requests',
   },
 ];
 
@@ -55,7 +74,15 @@ export function SignaturesNav({
   const pathname = usePathname();
   const active =
     items
-      .filter((item) => pathname.includes(item.match))
+      .filter((item) => {
+        if (item.match === '/signatures') {
+          return (
+            pathname.endsWith('/signatures') ||
+            pathname.includes('/signatures?')
+          );
+        }
+        return pathname.includes(item.match);
+      })
       .sort((a, b) => b.match.length - a.match.length)[0]?.label ?? 'Dashboard';
 
   return (

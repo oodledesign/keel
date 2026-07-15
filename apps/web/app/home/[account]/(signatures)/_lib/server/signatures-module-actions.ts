@@ -46,8 +46,10 @@ import {
   syncStaffActionSchema,
   upsertSignatureAssetActionSchema,
   updateStaffActionSchema,
+  updateSignatureChangeRequestStatusActionSchema,
   bulkUpdateStaffActionSchema,
 } from '../schema/signatures-module.schema';
+import { updateSignatureChangeRequestStatus } from '~/lib/signatures/change-requests';
 import { uploadBadgeFromDataUrl, uploadPhotoFromDataUrl } from './signatures-data';
 
 function workPath(template: string, accountSlug: string) {
@@ -403,6 +405,9 @@ const connectGoogleWorkspaceActionImpl = enhanceAction(
       });
 
       revalidatePath(workPath(pathsConfig.app.accountSignaturesSettings, accountSlug));
+      revalidatePath(
+        workPath(pathsConfig.app.accountSignaturesIntegrations, accountSlug),
+      );
       revalidatePath(workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug));
       revalidatePath(workPath(pathsConfig.app.accountSignaturesStaff, accountSlug));
       return { ok: true as const };
@@ -507,6 +512,9 @@ export const upsertSignatureAssetAction = enhanceAction(
 
     revalidatePath(
       workPath(pathsConfig.app.accountSignaturesSettings, accountSlug),
+    );
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesCustomData, accountSlug),
     );
     revalidatePath(
       workPath(pathsConfig.app.accountSignaturesStaff, accountSlug),
@@ -732,4 +740,33 @@ export const sendSignatureInstallInstructionsAction = enhanceAction(
     return { ok: true as const, to, url: share.url };
   },
   { schema: sendSignatureInstallInstructionsActionSchema },
+);
+
+export const updateSignatureChangeRequestStatusAction = enhanceAction(
+  async (input, user) => {
+    const { accountSlug } = await assertSignaturesAdmin(
+      input.accountId,
+      user.id,
+    );
+
+    await updateSignatureChangeRequestStatus({
+      accountId: input.accountId,
+      requestId: input.requestId,
+      status: input.status,
+      resolvedBy: user.id,
+    });
+
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesRequests, accountSlug),
+    );
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesStaff, accountSlug),
+    );
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug),
+    );
+
+    return { ok: true as const };
+  },
+  { schema: updateSignatureChangeRequestStatusActionSchema },
 );

@@ -1,3 +1,6 @@
+import { loadAccountBranches } from '~/lib/brand/account-branches';
+import { countOpenChangeRequestsByStaff } from '~/lib/signatures/change-requests';
+
 import { ModuleDataSection } from '../../../_components/module-data-section';
 import { SignaturesStaffFilters } from '../../_components/signatures-staff-filters';
 import { SignaturesStaffViews } from '../../_components/signatures-staff-views';
@@ -7,7 +10,6 @@ import {
   loadStaffRows,
   loadTemplates,
 } from '../../_lib/server/signatures-data';
-import { loadAccountBranches } from '~/lib/brand/account-branches';
 
 type SignaturesStaffPageProps = {
   params: Promise<{ account: string }>;
@@ -26,13 +28,16 @@ export default async function SignaturesStaffPage({
   const filters = await searchParams;
   const workspace = await loadSignaturesWorkspace(account);
   const accountId = workspace.account.id as string;
-  const [allStaff, staff, branches, templates] = await Promise.all([
-    loadStaffRows(accountId),
-    loadStaffRows(accountId, filters),
-    loadAccountBranches(accountId),
-    loadTemplates(accountId),
-  ]);
+  const [allStaff, staff, branches, templates, openRequestCounts] =
+    await Promise.all([
+      loadStaffRows(accountId),
+      loadStaffRows(accountId, filters),
+      loadAccountBranches(accountId),
+      loadTemplates(accountId),
+      countOpenChangeRequestsByStaff(accountId),
+    ]);
   const options = getFilterOptions(allStaff);
+  const openRequestCountsRecord = Object.fromEntries(openRequestCounts);
 
   return (
     <div className="space-y-6">
@@ -51,6 +56,7 @@ export default async function SignaturesStaffPage({
         staff={staff}
         templates={templates}
         branches={branches}
+        openRequestCounts={openRequestCountsRecord}
       />
     </div>
   );

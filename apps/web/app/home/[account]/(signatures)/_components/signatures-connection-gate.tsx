@@ -24,15 +24,18 @@ export function SignaturesConnectionGate({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
-  const isSettings = pathname.endsWith('/signatures/settings');
+  const isIntegrationsArea =
+    pathname.includes('/signatures/settings') ||
+    pathname.includes('/signatures/integrations') ||
+    pathname.includes('/signatures/custom-data');
 
-  const settingsPath = pathsConfig.app.accountSignaturesSettings.replace(
-    '[account]',
-    accountSlug,
-  );
-  const integrationsPath = `${settingsPath}?tab=integrations`;
+  const integrationsPath =
+    pathsConfig.app.accountSignaturesIntegrations.replace(
+      '[account]',
+      accountSlug,
+    );
 
-  if (!connected && !isSettings) {
+  if (!connected && !isIntegrationsArea) {
     const msHref = `/api/signatures/ms-auth?${new URLSearchParams({
       account_id: accountId,
       account_slug: accountSlug,
@@ -47,7 +50,7 @@ export function SignaturesConnectionGate({
           <CardTitle className="text-2xl">Connect your mail provider</CardTitle>
         </CardHeader>
         <CardContent className="mx-auto max-w-xl space-y-5 text-center">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Sync staff from your directory to design and share HTML signatures
             for Outlook or Gmail. Connect Microsoft 365 or Google Workspace
             below.
@@ -60,7 +63,7 @@ export function SignaturesConnectionGate({
               <Link href={integrationsPath}>Connect Google Workspace</Link>
             </Button>
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Not the Microsoft or Google admin?{' '}
             <Link
               href={integrationsPath}

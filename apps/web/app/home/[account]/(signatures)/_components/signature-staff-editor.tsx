@@ -1,9 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+
 import { useRouter } from 'next/navigation';
 
-import { Send, Upload } from 'lucide-react';
+import { AlertTriangle, Send, Upload } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
@@ -30,16 +31,17 @@ import { cn } from '@kit/ui/utils';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import type { AccountBranch } from '~/lib/brand/account-branches';
+import type { SignatureChangeRequest } from '~/lib/signatures/change-request-fields';
+import { labelForChangeRequestField } from '~/lib/signatures/change-request-fields';
 
-import {
-  pushStaffSignatureAction,
-  updateSignatureStaff,
-} from '../_lib/server/signatures-module-actions';
 import type {
   SignatureStaff,
   SignatureTemplate,
 } from '../_lib/server/signatures-data';
-
+import {
+  pushStaffSignatureAction,
+  updateSignatureStaff,
+} from '../_lib/server/signatures-module-actions';
 import { SignatureInstallActions } from './signature-install-actions';
 import {
   SignaturePreviewFrame,
@@ -93,17 +95,28 @@ export function SignatureStaffEditor({
   staff,
   templates,
   branches,
+  openRequests = [],
 }: {
   accountId: string;
   staff: SignatureStaff;
   templates: SignatureTemplate[];
   branches: AccountBranch[];
+  openRequests?: SignatureChangeRequest[];
 }) {
+  const requestedFields = useMemo(() => {
+    const keys = new Set<string>();
+    for (const request of openRequests) {
+      for (const key of request.field_keys) keys.add(key);
+    }
+    return keys;
+  }, [openRequests]);
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [pushing, setPushing] = useState(false);
   const [processingPhoto, setProcessingPhoto] = useState(false);
-  const [templateId, setTemplateId] = useState(staff.template_id ?? NO_TEMPLATE);
+  const [templateId, setTemplateId] = useState(
+    staff.template_id ?? NO_TEMPLATE,
+  );
   const [branchId, setBranchId] = useState(staff.branch_id ?? NO_BRANCH);
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const [previewTheme, setPreviewTheme] =
@@ -202,10 +215,51 @@ export function SignatureStaffEditor({
         </CardHeader>
         <CardContent>
           <form action={save} className="space-y-5">
+            {openRequests.length ? (
+              <div className="space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+                <p className="flex items-center gap-2 text-sm font-semibold text-amber-900 dark:text-amber-100">
+                  <AlertTriangle className="h-4 w-4" />
+                  {openRequests.length} open change request
+                  {openRequests.length === 1 ? '' : 's'}
+                </p>
+                {openRequests.map((request) => (
+                  <div
+                    key={request.id}
+                    id={`request-${request.id}`}
+                    className="rounded-lg border border-amber-500/20 bg-[var(--workspace-shell-panel)] p-3 text-sm"
+                  >
+                    <p className="text-muted-foreground text-xs">
+                      {request.field_keys
+                        .map((key) => labelForChangeRequestField(key))
+                        .join(' · ')}
+                    </p>
+                    <p className="mt-1 text-[var(--workspace-shell-text)]">
+                      {request.message}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
             <div className="grid gap-4 md:grid-cols-2">
-              <Field name="full_name" label="Full name" defaultValue={staff.full_name} />
-              <Field name="job_title" label="Job title" defaultValue={staff.job_title} />
-              <Field name="department" label="Department" defaultValue={staff.department} />
+              <Field
+                name="full_name"
+                label="Full name"
+                defaultValue={staff.full_name}
+                hasRequest={requestedFields.has('full_name')}
+              />
+              <Field
+                name="job_title"
+                label="Job title"
+                defaultValue={staff.job_title}
+                hasRequest={requestedFields.has('job_title')}
+              />
+              <Field
+                name="department"
+                label="Department"
+                defaultValue={staff.department}
+                hasRequest={requestedFields.has('department')}
+              />
               <div className="space-y-2">
                 <Label>Branch</Label>
                 <Select value={branchId} onValueChange={setBranchId}>
@@ -213,9 +267,7 @@ export function SignatureStaffEditor({
                     <SelectValue placeholder="Select branch" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={NO_BRANCH}>
-                      Default branch
-                    </SelectItem>
+                    <SelectItem value={NO_BRANCH}>Default branch</SelectItem>
                     {branches.map((branch) => (
                       <SelectItem key={branch.id} value={branch.id}>
                         {branch.name}
@@ -225,14 +277,15 @@ export function SignatureStaffEditor({
                   </SelectContent>
                 </Select>
                 {selectedBranch ? (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     {selectedBranch.address || 'No branch address set'}
                     {selectedBranch.phone ? ` · ${selectedBranch.phone}` : ''}
                     {selectedBranch.email ? ` · ${selectedBranch.email}` : ''}
                   </p>
                 ) : (
-                  <p className="text-xs text-muted-foreground">
-                    Uses the default branch from Brand settings when none is selected.
+                  <p className="text-muted-foreground text-xs">
+                    Uses the default branch from Brand settings when none is
+                    selected.
                   </p>
                 )}
               </div>
@@ -241,32 +294,50 @@ export function SignatureStaffEditor({
                 label="Direct phone (override)"
                 defaultValue={staff.phone_direct}
                 hint="Leave blank to use the branch phone number."
+                hasRequest={requestedFields.has('phone_direct')}
               />
-              <Field name="phone_mobile" label="Mobile phone" defaultValue={staff.phone_mobile} />
+              <Field
+                name="phone_mobile"
+                label="Mobile phone"
+                defaultValue={staff.phone_mobile}
+                hasRequest={requestedFields.has('phone_mobile')}
+              />
               <Field
                 name="signature_email"
                 label="Signature email (override)"
                 defaultValue={staff.signature_email}
                 hint="Leave blank to use synced email, then branch email."
+                hasRequest={requestedFields.has('signature_email')}
               />
             </div>
 
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Synced login email: {staff.email}
             </p>
 
-            <div className="space-y-2">
-              <Label>Photo upload</Label>
+            <div
+              className={cn(
+                'space-y-2 rounded-lg p-1',
+                requestedFields.has('photo') &&
+                  'border border-amber-500/35 bg-amber-500/5 p-3',
+              )}
+            >
+              <Label className="inline-flex items-center gap-1.5">
+                Photo upload
+                {requestedFields.has('photo') ? (
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                ) : null}
+              </Label>
               <div className="flex flex-wrap items-center gap-4">
                 {photoPreview ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={photoPreview}
                     alt={staff.full_name ?? 'Staff photo'}
-                    className="h-20 w-20 rounded-lg object-cover border border-[color:var(--workspace-shell-border)]"
+                    className="h-20 w-20 rounded-lg border border-[color:var(--workspace-shell-border)] object-cover"
                   />
                 ) : (
-                  <div className="flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-[color:var(--workspace-shell-border)] text-xs text-muted-foreground">
+                  <div className="text-muted-foreground flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-[color:var(--workspace-shell-border)] text-xs">
                     No photo
                   </div>
                 )}
@@ -279,7 +350,7 @@ export function SignatureStaffEditor({
                       void onPhoto(event.target.files?.[0] ?? null)
                     }
                   />
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     {processingPhoto
                       ? 'Preparing photo…'
                       : photoDataUrl
@@ -342,7 +413,7 @@ export function SignatureStaffEditor({
         <CardHeader className="space-y-3">
           <div className="space-y-1">
             <CardTitle>Live preview</CardTitle>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Preview how this signature reads at mobile, tablet, and desktop
               widths in light or dark inbox chrome.
             </p>
@@ -374,7 +445,7 @@ export function SignatureStaffEditor({
               />
             </SignaturePreviewFrame>
           ) : (
-            <div className="flex h-[420px] items-center justify-center rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] text-sm text-muted-foreground">
+            <div className="text-muted-foreground flex h-[420px] items-center justify-center rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] text-sm">
               <Upload className="mr-2 h-4 w-4" />
               Assign a template to preview this signature.
             </div>
@@ -390,17 +461,38 @@ function Field({
   label,
   defaultValue,
   hint,
+  hasRequest = false,
 }: {
   name: string;
   label: string;
   defaultValue: string | null;
   hint?: string;
+  hasRequest?: boolean;
 }) {
   return (
-    <div className="space-y-2">
-      <Label htmlFor={name}>{label}</Label>
-      <Input id={name} name={name} defaultValue={defaultValue ?? ''} />
-      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+    <div
+      className={cn(
+        'space-y-2 rounded-lg',
+        hasRequest && 'border border-amber-500/35 bg-amber-500/5 p-3',
+      )}
+    >
+      <Label htmlFor={name} className="inline-flex items-center gap-1.5">
+        {label}
+        {hasRequest ? (
+          <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+        ) : null}
+      </Label>
+      <Input
+        id={name}
+        name={name}
+        defaultValue={defaultValue ?? ''}
+        className={
+          hasRequest
+            ? 'border-amber-500/40 focus-visible:ring-amber-500/30'
+            : undefined
+        }
+      />
+      {hint ? <p className="text-muted-foreground text-xs">{hint}</p> : null}
     </div>
   );
 }

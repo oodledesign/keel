@@ -16,9 +16,9 @@ import { ExternalLink, Loader2, X } from 'lucide-react';
 
 import {
   SiteMediaUploadProvider,
-  buildConfig,
   resolveTokensStyle,
 } from '@kit/site-blocks-core';
+import { resolveSiteBlocksConfig } from '@kit/site-blocks-workspaces';
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
@@ -42,6 +42,7 @@ import {
   saveOzerSitePageDraft,
   updateOzerSiteSettings,
 } from '../../_lib/server/ozer-sites-actions';
+import { WebsiteBlockLibraryCard } from './website-block-library-card';
 
 type Props = {
   accountId: string;
@@ -69,6 +70,7 @@ async function uploadSiteMedia(accountId: string, file: File): Promise<string> {
 
 function OzerSitePuckEditor({
   accountId,
+  accountSlug,
   page,
   role,
   clientOrgId,
@@ -78,6 +80,7 @@ function OzerSitePuckEditor({
   onSaved,
 }: {
   accountId: string;
+  accountSlug: string;
   page: OzerSitePageRecord;
   role: OzerSiteEditorRole;
   clientOrgId?: string;
@@ -97,7 +100,10 @@ function OzerSitePuckEditor({
     latestData.current = data;
   }, [data]);
 
-  const config = useMemo(() => buildConfig(), []);
+  const config = useMemo(
+    () => resolveSiteBlocksConfig(accountSlug),
+    [accountSlug],
+  );
   const tokenStyle = useMemo(
     () => resolveTokensStyle(themeTokens as never),
     [themeTokens],
@@ -237,7 +243,7 @@ function OzerSitePuckEditor({
 export function WebsiteOzerSitePanel({
   accountId,
   websiteId,
-  accountSlug: _accountSlug,
+  accountSlug,
   canEdit,
   role = 'agency',
   clientOrgId,
@@ -474,10 +480,15 @@ export function WebsiteOzerSitePanel({
         ))}
       </div>
 
+      {role === 'agency' ? (
+        <WebsiteBlockLibraryCard accountSlug={accountSlug} />
+      ) : null}
+
       {activePage && canEdit && bundle.site ? (
         <OzerSitePuckEditor
           key={activePage.id}
           accountId={accountId}
+          accountSlug={accountSlug}
           page={activePage}
           role={role}
           clientOrgId={clientOrgId}

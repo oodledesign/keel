@@ -33,6 +33,14 @@ export type PromptPack = {
   files: PromptPackFile[];
 };
 
+export type PromptPackOptions = SeoGeneratorOptions & {
+  /**
+   * Workspace account slug — targets the workspace custom-block pack path
+   * in ROUNDTRIP.md for the ozer_sites target.
+   */
+  accountSlug?: string | null;
+};
+
 const NOT_DEFINED = '_Not yet defined in Site Studio — do not invent values._';
 
 function pageRoute(page: ExportPage): string {
@@ -221,6 +229,7 @@ function stackConventions(target: PromptPackTarget): string {
         '- Shared symbols (`repeatingComponents`) become shared block instances',
         '- Tokens from StyleTokens map onto `--sb-*` / theme bridge — no ad-hoc hex when tokens exist',
         '- Wireframe mode uses the **same** React components with greyscale placeholders',
+        '- Custom workspace blocks: follow `ROUNDTRIP.md` — declare fields in `block.manifest.json` and build the Puck config with `manifestToPuckConfig` from `@kit/site-blocks-workspaces`; never hand-write Puck fields',
       ].join('\n');
     default: {
       const _exhaustive: never = target;
@@ -418,6 +427,7 @@ function sectionBuildInstructions(
   }
 
   if (target === 'ozer_sites') {
+    const copySlots = Object.keys(section.props ?? {});
     lines.push(
       '',
       '**@kit/site-blocks-core**',
@@ -428,6 +438,16 @@ function sectionBuildInstructions(
           : ''
       } (see registry/site-blocks-registry.json)`,
       '- Pass typed props from the JSON above; do not invent prop keys',
+      '',
+      '**Round-trip (if promoting to a workspace custom block — see ROUNDTRIP.md)**',
+      '',
+      `- Stock block this wireframe used: \`${section.layoutPreset}\` — start from its structure, do not lose content`,
+      `- Copy slots to preserve as editable manifest fields: ${
+        copySlots.length
+          ? copySlots.map((key) => `\`${key}\``).join(', ')
+          : 'derive from the copy outline above'
+      }`,
+      '- Do not break: `--sb-*` token usage (no hard-coded colours/fonts), semantic headings, keyboard/a11y behaviour, responsive layout at 375/768/1440',
     );
   }
 
@@ -506,6 +526,65 @@ function webflowSectionFile(
   };
 }
 
+function roundtripMd(
+  exp: SiteStudioExport,
+  accountSlug: string | null,
+): string {
+  const slug = accountSlug?.trim() || '{accountSlug}';
+  const packPath = `packages/site-blocks-workspaces/src/workspaces/${slug}/`;
+
+  return [
+    `# ROUNDTRIP.md — custom blocks for ${exp.website.name}`,
+    '',
+    'How to take a wireframed section from this pack, design it as a custom',
+    'React block in Cursor, and return it to Site Studio as a Puck-editable',
+    'block. Full contract: `packages/site-blocks-workspaces/README.md` in keel.',
+    '',
+    '## Workflow',
+    '',
+    '1. **Wireframe first.** The per-page prompts in `pages/` describe every section built from stock blocks. Only promote a section to a custom block when the stock block cannot express the design.',
+    '2. **Build in Cursor.** Create the component in the keel monorepo at:',
+    '',
+    `   \`${packPath}{block-name}/component.tsx\``,
+    '',
+    "   - `'use client'` at the top; style exclusively with `--sb-*` CSS variables",
+    '   - Reuse `SectionShell` / `CtaButton` / `MediaPlaceholder` from `@kit/site-blocks-core`',
+    '   - Start from the stock block noted in each section\'s "Round-trip" notes',
+    '3. **Map editable fields.** Next to the component, write:',
+    '',
+    `   \`${packPath}{block-name}/block.manifest.json\``,
+    '',
+    '   - `type`: PascalCase, workspace-prefixed (never a core block name)',
+    '   - `fields`: every prop a client should edit in Puck — use the "copy slots" listed per section',
+    '   - `defaults`: initial props when the block is dropped on the canvas',
+    '   - Field types: `text`, `textarea`, `number`, `select`, `image`, `link`, `array`',
+    '4. **Register the pack.** In the pack `index.ts`, build components with `manifestToPuckConfig(manifest, Component)` from `@kit/site-blocks-workspaces`, then add the pack to `WORKSPACE_PACKS` in `packages/site-blocks-workspaces/src/registry.ts` (key = workspace account slug).',
+    '5. **Reopen Puck.** Deploy `ozer` + `ozer-sites`, refresh the Site Studio editor — the custom blocks appear in their own sidebar category. Replace wireframe sections with the custom blocks and publish.',
+    '',
+    '## Editable-field checklist (per promoted block)',
+    '',
+    '- [ ] Every visible copy string is a manifest field (no hard-coded copy)',
+    '- [ ] Images/links exposed as `image` / `link` fields',
+    '- [ ] Repeating items (cards, logos, FAQs) modelled as one `array` field',
+    '- [ ] `defaults` reproduce the wireframe content so the block drops in looking finished',
+    '- [ ] New props have fallbacks in `render` so already-published pages keep working',
+    '',
+    '## Do not break',
+    '',
+    '- `--sb-*` tokens only — no new hex values or font families',
+    '- Semantic heading order (one H1 per page, sections start at H2)',
+    '- Keyboard and screen-reader accessibility of interactive elements',
+    '- Responsive behaviour at 375 / 768 / 1440',
+    '',
+    `Workspace pack path: \`${packPath}\``,
+    accountSlug?.trim()
+      ? ''
+      : '_Account slug was not available at export time — replace `{accountSlug}` with the workspace slug from Ozer._',
+  ]
+    .filter((line, index, arr) => !(line === '' && index === arr.length - 1))
+    .join('\n');
+}
+
 /**
  * Generate the Cursor / Claude prompt pack from a SiteStudioExport.
  * Never reads the database — contract data only.
@@ -513,7 +592,7 @@ function webflowSectionFile(
 export function generatePromptPack(
   exp: SiteStudioExport,
   target: PromptPackTarget,
-  options?: SeoGeneratorOptions,
+  options?: PromptPackOptions,
 ): PromptPack {
   assertCompatibleExportSchemaVersion(exp.schemaVersion);
 
@@ -561,6 +640,10 @@ export function generatePromptPack(
   }
 
   if (target === 'ozer_sites') {
+    files.push({
+      path: 'ROUNDTRIP.md',
+      content: roundtripMd(exp, options?.accountSlug ?? null),
+    });
     files.push({
       path: 'registry/site-blocks-registry.json',
       content: `${JSON.stringify(siteBlocksRegistry, null, 2)}\n`,

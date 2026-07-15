@@ -22,19 +22,21 @@ export function SignaturesStaffViews({
   staff,
   templates,
   branches,
+  openRequestCounts = {},
 }: {
   accountId: string;
   accountSlug: string;
   staff: SignatureStaff[];
   templates: SignatureTemplate[];
   branches: AccountBranch[];
+  openRequestCounts?: Record<string, number>;
 }) {
   const [mode, setMode] = useState<'list' | 'bulk'>('bulk');
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           {mode === 'bulk'
             ? 'Spreadsheet edit — change many people, then save once.'
             : 'List view — open a person for full detail and push.'}
@@ -44,7 +46,9 @@ export function SignaturesStaffViews({
             type="button"
             size="sm"
             variant="ghost"
-            className={cn(mode === 'bulk' && 'bg-[var(--workspace-shell-sidebar-accent)]')}
+            className={cn(
+              mode === 'bulk' && 'bg-[var(--workspace-shell-sidebar-accent)]',
+            )}
             onClick={() => setMode('bulk')}
           >
             <Table2 className="mr-2 h-4 w-4" />
@@ -54,7 +58,9 @@ export function SignaturesStaffViews({
             type="button"
             size="sm"
             variant="ghost"
-            className={cn(mode === 'list' && 'bg-[var(--workspace-shell-sidebar-accent)]')}
+            className={cn(
+              mode === 'list' && 'bg-[var(--workspace-shell-sidebar-accent)]',
+            )}
             onClick={() => setMode('list')}
           >
             <LayoutGrid className="mr-2 h-4 w-4" />
@@ -76,6 +82,7 @@ export function SignaturesStaffViews({
           accountId={accountId}
           accountSlug={accountSlug}
           staff={staff}
+          openRequestCounts={openRequestCounts}
         />
       )}
     </div>
