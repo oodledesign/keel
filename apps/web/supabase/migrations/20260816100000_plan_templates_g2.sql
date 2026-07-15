@@ -67,6 +67,8 @@ BEGIN
     EXECUTE 'UPDATE public.plan_templates SET active = COALESCE(active, is_active, true) WHERE active IS NULL';
   END IF;
 
+  -- Never assign business_id as account_id unless it exists in accounts
+  -- (legacy seeds used a1000000-… business ids that are not accounts).
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'plan_templates'
@@ -77,12 +79,35 @@ BEGIN
   ) THEN
     EXECUTE $u$
       UPDATE public.plan_templates pt
-      SET account_id = COALESCE(
-        pt.account_id,
-        (SELECT b.account_id FROM public.businesses b WHERE b.id = pt.business_id),
-        pt.business_id
-      )
+      SET account_id = b.account_id
+      FROM public.businesses b
       WHERE pt.account_id IS NULL
+        AND b.id = pt.business_id
+        AND EXISTS (
+          SELECT 1 FROM public.accounts a WHERE a.id = b.account_id
+        )
+    $u$;
+
+    EXECUTE $u$
+      UPDATE public.plan_templates pt
+      SET account_id = pt.business_id
+      WHERE pt.account_id IS NULL
+        AND EXISTS (
+          SELECT 1 FROM public.accounts a WHERE a.id = pt.business_id
+        )
+    $u$;
+  ELSIF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'plan_templates'
+      AND column_name = 'business_id'
+  ) THEN
+    EXECUTE $u$
+      UPDATE public.plan_templates pt
+      SET account_id = pt.business_id
+      WHERE pt.account_id IS NULL
+        AND EXISTS (
+          SELECT 1 FROM public.accounts a WHERE a.id = pt.business_id
+        )
     $u$;
   END IF;
 END $$;
@@ -167,21 +192,34 @@ ALTER TABLE public.client_subscriptions
 ALTER TABLE public.client_subscriptions
   ALTER COLUMN client_org_id DROP NOT NULL;
 
--- Prefer account-scoped RLS (websites already key business_id ≈ accounts.id)
+-- Prefer account-scoped RLS; only set account_id when the target exists
 DO $$
 BEGIN
   UPDATE public.client_subscriptions cs
-  SET account_id = COALESCE(
-    cs.account_id,
-    (SELECT b.account_id FROM public.businesses b WHERE b.id = cs.business_id),
-    cs.business_id
-  )
-  WHERE cs.account_id IS NULL;
+  SET account_id = b.account_id
+  FROM public.businesses b
+  WHERE cs.account_id IS NULL
+    AND b.id = cs.business_id
+    AND EXISTS (
+      SELECT 1 FROM public.accounts a WHERE a.id = b.account_id
+    );
+
+  UPDATE public.client_subscriptions cs
+  SET account_id = cs.business_id
+  WHERE cs.account_id IS NULL
+    AND cs.business_id IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM public.accounts a WHERE a.id = cs.business_id
+    );
 EXCEPTION
   WHEN undefined_table THEN
-    UPDATE public.client_subscriptions
-    SET account_id = COALESCE(account_id, business_id)
-    WHERE account_id IS NULL;
+    UPDATE public.client_subscriptions cs
+    SET account_id = cs.business_id
+    WHERE cs.account_id IS NULL
+      AND cs.business_id IS NOT NULL
+      AND EXISTS (
+        SELECT 1 FROM public.accounts a WHERE a.id = cs.business_id
+      );
 END $$;
 
 COMMENT ON COLUMN public.client_subscriptions.current_period_end IS
