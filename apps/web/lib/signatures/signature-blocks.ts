@@ -378,6 +378,8 @@ function canvasShellStyles(background: SignatureBackground): {
   bgcolor: string | null;
   style: string;
   forceCanvas: boolean;
+  /** Inner cell padding when a painted canvas is present (email-safe). */
+  canvasPadding: string | null;
 } {
   const bg = resolveSignatureBackground(background);
   if (bg.mode === 'none') {
@@ -386,6 +388,7 @@ function canvasShellStyles(background: SignatureBackground): {
       style:
         'border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;color:#333333;max-width:560px;',
       forceCanvas: false,
+      canvasPadding: null,
     };
   }
 
@@ -397,7 +400,7 @@ function canvasShellStyles(background: SignatureBackground): {
 
   // color-scheme:light only — ask clients not to invert fills/text when a
   // deliberate canvas is present. bgcolor remains the solid fallback (Outlook).
-  // border-radius is ignored by Outlook desktop (cosmetic elsewhere).
+  // Padding belongs on the inner <td> — table padding is ignored in most clients.
   return {
     bgcolor: bg.color,
     style: [
@@ -407,11 +410,11 @@ function canvasShellStyles(background: SignatureBackground): {
       'max-width:560px',
       `background-color:${bg.color}`,
       gradient,
-      'padding:16px',
       'border-radius:8px',
       'color-scheme:light only',
     ].join(';'),
     forceCanvas: true,
+    canvasPadding: '16px',
   };
 }
 
@@ -506,6 +509,16 @@ export function signatureBlocksToHtml(doc: SignatureBuilderDocument): string {
     ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" bgcolor="${shell.bgcolor}" style="${shell.style}">`
     : `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="${shell.style}">`;
 
+  const photoPad = shell.canvasPadding
+    ? `${shell.canvasPadding} 16px ${shell.canvasPadding} ${shell.canvasPadding}`
+    : '0 16px 0 0';
+  const contentPad = shell.canvasPadding
+    ? `${shell.canvasPadding} ${shell.canvasPadding} ${shell.canvasPadding} 0`
+    : '0';
+  const stackedPad = shell.canvasPadding ?? '0';
+
+  let body: string;
+
   if (doc.layout === 'photo_left') {
     const photo = doc.blocks.find((block) => block.type === 'photo');
     const rest = doc.blocks.filter((block) => block.type !== 'photo');
@@ -513,40 +526,32 @@ export function signatureBlocksToHtml(doc: SignatureBuilderDocument): string {
     const photoCell = photo
       ? [
           `<!-- ozer-block id="${photo.id}" type="photo" -->`,
-          `<td style="padding:0 16px 0 0;vertical-align:top;width:80px;">`,
+          `<td style="padding:${photoPad};vertical-align:top;width:80px;">`,
           blockInnerHtml(photo, palette),
           `</td>`,
           `<!-- /ozer-block -->`,
         ].join('\n')
       : '';
 
-    return [
-      header,
-      note,
-      tableOpen,
+    body = [
       `<tr>`,
       photoCell,
-      `<td style="vertical-align:top;color:${palette.primary};">`,
+      `<td style="padding:${contentPad};vertical-align:top;color:${palette.primary};">`,
       renderBlockTable(rest, palette),
       `</td>`,
       `</tr>`,
-      `</table>`,
-      footer,
     ]
       .filter(Boolean)
       .join('\n');
+  } else {
+    body = [
+      `<tr><td style="padding:${stackedPad};vertical-align:top;color:${palette.primary};">`,
+      renderBlockTable(doc.blocks, palette),
+      `</td></tr>`,
+    ].join('\n');
   }
 
-  return [
-    header,
-    note,
-    tableOpen,
-    `<tr><td style="vertical-align:top;color:${palette.primary};">`,
-    renderBlockTable(doc.blocks, palette),
-    `</td></tr>`,
-    `</table>`,
-    footer,
-  ].join('\n');
+  return [header, note, tableOpen, body, `</table>`, footer].join('\n');
 }
 
 const BUILDER_OPEN =

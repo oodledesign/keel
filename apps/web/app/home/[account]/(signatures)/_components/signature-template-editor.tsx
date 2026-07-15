@@ -61,13 +61,23 @@ export function SignatureTemplateEditor({
   const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [name, setName] = useState(template.name);
-  const [html, setHtml] = useState(template.html_template);
   const [visualDoc, setVisualDoc] = useState<SignatureBuilderDocument | null>(
     () => htmlToSignatureBlocks(template.html_template),
   );
+  const [html, setHtml] = useState(() => {
+    const parsed = htmlToSignatureBlocks(template.html_template);
+    return parsed
+      ? signatureBlocksToHtml(parsed)
+      : template.html_template;
+  });
   const [mode, setMode] = useState<EditorMode>('visual');
   const [isDefault, setIsDefault] = useState(template.is_default);
-  const [previewHtml, setPreviewHtml] = useState(template.html_template);
+  const [previewHtml, setPreviewHtml] = useState(() => {
+    const parsed = htmlToSignatureBlocks(template.html_template);
+    return parsed
+      ? signatureBlocksToHtml(parsed)
+      : template.html_template;
+  });
   const [saving, setSaving] = useState(false);
   const [previewTheme, setPreviewTheme] =
     useState<SignaturePreviewTheme>('light');
