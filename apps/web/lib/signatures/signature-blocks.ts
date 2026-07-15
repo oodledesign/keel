@@ -36,6 +36,11 @@ export type SignatureBlock = {
   type: SignatureBlockType;
   /** Only used by `custom_text` blocks. */
   text?: string;
+  /**
+   * Name block only — append `{{credentials}}` on the same line as the name
+   * (lighter weight, wraps with the name text).
+   */
+  includeCredentials?: boolean;
 };
 
 export type SignatureBuilderDocument = {
@@ -83,19 +88,13 @@ export const SIGNATURE_BLOCK_LIBRARY: SignatureBlockDefinition[] = [
   {
     type: 'name',
     label: 'Full name',
-    description: 'Primary name line',
+    description: 'Primary name line (optional credentials)',
     max: 1,
   },
   {
     type: 'title',
     label: 'Job title',
     description: 'Role / title',
-    max: 1,
-  },
-  {
-    type: 'credentials',
-    label: 'Credentials',
-    description: 'Letters after the name',
     max: 1,
   },
   {
@@ -174,12 +173,29 @@ export const SIGNATURE_BLOCK_LIBRARY: SignatureBlockDefinition[] = [
 
 const BLOCK_BY_TYPE = Object.fromEntries(
   SIGNATURE_BLOCK_LIBRARY.map((item) => [item.type, item]),
-) as Record<SignatureBlockType, SignatureBlockDefinition>;
+) as Partial<Record<SignatureBlockType, SignatureBlockDefinition>>;
+
+/** Legacy standalone credentials block — folded into the name block checkbox. */
+const LEGACY_CREDENTIALS_DEFINITION: SignatureBlockDefinition = {
+  type: 'credentials',
+  label: 'Credentials',
+  description: 'Letters after the name',
+  max: 1,
+};
 
 export function getSignatureBlockDefinition(
   type: SignatureBlockType,
 ): SignatureBlockDefinition {
-  return BLOCK_BY_TYPE[type];
+  if (type === 'credentials') {
+    return LEGACY_CREDENTIALS_DEFINITION;
+  }
+
+  const definition = BLOCK_BY_TYPE[type];
+  if (!definition) {
+    throw new Error(`Unknown signature block type: ${type}`);
+  }
+
+  return definition;
 }
 
 export function createSignatureBlockId(): string {
@@ -192,7 +208,7 @@ export function createSignatureBlockId(): string {
 
 export function createSignatureBlock(
   type: SignatureBlockType,
-  overrides?: Partial<Pick<SignatureBlock, 'text'>>,
+  overrides?: Partial<Pick<SignatureBlock, 'text' | 'includeCredentials'>>,
 ): SignatureBlock {
   return {
     id: createSignatureBlockId(),
@@ -200,7 +216,41 @@ export function createSignatureBlock(
     ...(type === 'custom_text'
       ? { text: overrides?.text?.trim() || 'Add your text' }
       : {}),
+    ...(type === 'name' && overrides?.includeCredentials
+      ? { includeCredentials: true }
+      : {}),
   };
+}
+
+/** Fold legacy standalone credentials blocks into the name checkbox. */
+export function normalizeSignatureBlocks(
+  blocks: SignatureBlock[],
+): SignatureBlock[] {
+  const hasCredentialsBlock = blocks.some(
+    (block) => block.type === 'credentials',
+  );
+
+  return blocks
+    .filter((block) => block.type !== 'credentials')
+    .map((block) => {
+      if (block.type !== 'name') {
+        return block;
+      }
+
+      if (hasCredentialsBlock || block.includeCredentials) {
+        return { ...block, includeCredentials: true };
+      }
+
+      if (block.includeCredentials === undefined) {
+        return block;
+      }
+
+      return {
+        id: block.id,
+        type: block.type,
+        ...(block.text !== undefined ? { text: block.text } : {}),
+      };
+    });
 }
 
 export function createMinimalSignatureDocument(): SignatureBuilderDocument {
@@ -226,8 +276,7 @@ export function createExecutiveSignatureDocument(): SignatureBuilderDocument {
     background: { ...DEFAULT_SIGNATURE_BACKGROUND },
     blocks: [
       createSignatureBlock('photo'),
-      createSignatureBlock('name'),
-      createSignatureBlock('credentials'),
+      createSignatureBlock('name', { includeCredentials: true }),
       createSignatureBlock('title'),
       createSignatureBlock('email'),
       createSignatureBlock('website'),
@@ -432,11 +481,18 @@ function blockInnerHtml(
   switch (block.type) {
     case 'photo':
       return `<img src="{{photo_url}}" alt="{{full_name}}" width="80" height="80" style="display:block;width:80px;height:80px;border-radius:999px;object-fit:cover;border:0;" />`;
-    case 'name':
-      return `<div style="font-size:18px;font-weight:700;line-height:1.25;color:${palette.primary};">{{full_name}}</div>`;
+    case 'name': {
+      // Same font-size as the name so credentials wrap as part of that line;
+      // lighter weight keeps them secondary. Leading space lives in the span.
+      const credentials = block.includeCredentials
+        ? `<span style="font-weight:400;"> {{credentials}}</span>`
+        : '';
+      return `<div style="font-size:18px;font-weight:700;line-height:1.25;color:${palette.primary};">{{full_name}}${credentials}</div>`;
+    }
     case 'title':
       return `<div style="font-size:14px;line-height:1.4;color:${palette.muted};">{{job_title}}</div>`;
     case 'credentials':
+      // Legacy standalone block — prefer name.includeCredentials going forward.
       return `<div style="font-size:13px;line-height:1.4;color:${palette.muted};">{{credentials}}</div>`;
     case 'email':
       return `<div style="font-size:13px;line-height:1.5;color:${palette.primary};"><a href="mailto:{{email}}" style="color:${palette.link};text-decoration:underline;">{{email}}</a></div>`;
@@ -469,13 +525,30 @@ function blockInnerHtml(
   }
 }
 
+function blockOpenComment(block: SignatureBlock): string {
+  const attrs = [
+    `id="${block.id}"`,
+    `type="${block.type}"`,
+  ];
+
+  if (block.type === 'custom_text') {
+    attrs.push(`text="${escapeHtml(block.text ?? '')}"`);
+  }
+
+  if (block.type === 'name' && block.includeCredentials) {
+    attrs.push('include_credentials="1"');
+  }
+
+  return `<!-- ozer-block ${attrs.join(' ')} -->`;
+}
+
 function wrapBlock(
   block: SignatureBlock,
   palette: SignatureTextPalette,
   padding = '0 0 6px 0',
 ): string {
   return [
-    `<!-- ozer-block id="${block.id}" type="${block.type}"${block.type === 'custom_text' ? ` text="${escapeHtml(block.text ?? '')}"` : ''} -->`,
+    blockOpenComment(block),
     `<tr><td style="padding:${padding};vertical-align:top;">`,
     blockInnerHtml(block, palette),
     `</td></tr>`,
@@ -534,7 +607,7 @@ export function signatureBlocksToHtml(doc: SignatureBuilderDocument): string {
 
     const photoCell = photo
       ? [
-          `<!-- ozer-block id="${photo.id}" type="photo" -->`,
+          blockOpenComment(photo),
           `<td style="padding:${photoPad};vertical-align:top;width:80px;">`,
           blockInnerHtml(photo, palette),
           `</td>`,
@@ -566,8 +639,7 @@ export function signatureBlocksToHtml(doc: SignatureBuilderDocument): string {
 const BUILDER_OPEN =
   /<!--\s*ozer-sig-builder:v(\d+)\s+layout="(stacked|photo_left)"(?:\s+bg="([^"]*)")?\s*-->/i;
 const BUILDER_CLOSE = /<!--\s*\/ozer-sig-builder\s*-->/i;
-const BLOCK_OPEN =
-  /<!--\s*ozer-block\s+id="([^"]+)"\s+type="([a-z_]+)"(?:\s+text="([^"]*)")?\s*-->/gi;
+const BLOCK_OPEN = /<!--\s*ozer-block\s+([^>]*?)\s*-->/gi;
 
 function unescapeHtmlAttr(value: string): string {
   return value
@@ -577,9 +649,20 @@ function unescapeHtmlAttr(value: string): string {
     .replaceAll('&amp;', '&');
 }
 
-const KNOWN_TYPES = new Set(
-  SIGNATURE_BLOCK_LIBRARY.map((item) => item.type),
-);
+function parseBlockOpenAttrs(raw: string): Record<string, string> {
+  const attrs: Record<string, string> = {};
+  for (const match of raw.matchAll(/([a-z_]+)="([^"]*)"/gi)) {
+    const key = match[1]?.toLowerCase();
+    if (!key) continue;
+    attrs[key] = match[2] ?? '';
+  }
+  return attrs;
+}
+
+const KNOWN_TYPES = new Set<SignatureBlockType>([
+  ...SIGNATURE_BLOCK_LIBRARY.map((item) => item.type),
+  'credentials',
+]);
 
 /** Best-effort parse of builder HTML. Returns null if not builder-managed. */
 export function htmlToSignatureBlocks(
@@ -599,11 +682,11 @@ export function htmlToSignatureBlocks(
 
   const blocks: SignatureBlock[] = [];
   for (const match of html.matchAll(BLOCK_OPEN)) {
-    const id = match[1];
-    const type = match[2] as SignatureBlockType;
-    const text = match[3];
+    const attrs = parseBlockOpenAttrs(match[1] ?? '');
+    const id = attrs.id;
+    const type = attrs.type as SignatureBlockType | undefined;
 
-    if (!id || !KNOWN_TYPES.has(type)) {
+    if (!id || !type || !KNOWN_TYPES.has(type)) {
       continue;
     }
 
@@ -611,12 +694,19 @@ export function htmlToSignatureBlocks(
       id,
       type,
       ...(type === 'custom_text'
-        ? { text: unescapeHtmlAttr(text ?? '') }
+        ? { text: unescapeHtmlAttr(attrs.text ?? '') }
+        : {}),
+      ...(type === 'name' &&
+      (attrs.include_credentials === '1' ||
+        attrs.include_credentials === 'true')
+        ? { includeCredentials: true }
         : {}),
     });
   }
 
-  if (blocks.length === 0) {
+  const normalized = normalizeSignatureBlocks(blocks);
+
+  if (normalized.length === 0) {
     return null;
   }
 
@@ -624,7 +714,7 @@ export function htmlToSignatureBlocks(
     version: SIGNATURE_BUILDER_VERSION,
     layout,
     background,
-    blocks,
+    blocks: normalized,
   };
 }
 
@@ -636,6 +726,11 @@ export function canAddSignatureBlock(
   blocks: SignatureBlock[],
   type: SignatureBlockType,
 ): boolean {
+  // Credentials belong on the name block checkbox, not as a separate addable field.
+  if (type === 'credentials') {
+    return false;
+  }
+
   const def = getSignatureBlockDefinition(type);
   if (def.max == null) {
     return true;

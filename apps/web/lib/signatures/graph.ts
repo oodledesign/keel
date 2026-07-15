@@ -29,10 +29,13 @@ export { renderTemplate } from './render-template';
 
 function getAzureCreds(): { clientId: string; clientSecret: string } {
   const clientId = process.env.AZURE_CLIENT_ID?.trim();
-  const clientSecret = process.env.AZURE_CLIENT_SECRET?.trim();
+  // Live Vercel historically used AZURE_SECRET_VALUE; prefer AZURE_CLIENT_SECRET.
+  const clientSecret =
+    process.env.AZURE_CLIENT_SECRET?.trim() ||
+    process.env.AZURE_SECRET_VALUE?.trim();
   if (!clientId || !clientSecret) {
     throw new Error(
-      'AZURE_CLIENT_ID and AZURE_CLIENT_SECRET are required for Microsoft Graph',
+      'AZURE_CLIENT_ID and AZURE_CLIENT_SECRET (or AZURE_SECRET_VALUE) are required for Microsoft Graph',
     );
   }
   return { clientId, clientSecret };

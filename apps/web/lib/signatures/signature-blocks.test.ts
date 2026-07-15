@@ -39,6 +39,44 @@ describe('signatureBlocksToHtml / htmlToSignatureBlocks', () => {
     expect(parsed?.blocks[0]?.text).toBe('Hello & welcome');
   });
 
+  it('puts credentials on the name line when enabled', () => {
+    const doc = {
+      version: 1 as const,
+      layout: 'stacked' as const,
+      blocks: [createSignatureBlock('name', { includeCredentials: true })],
+    };
+
+    const html = signatureBlocksToHtml(doc);
+    expect(html).toContain('include_credentials="1"');
+    expect(html).toMatch(
+      /\{\{full_name\}\}<span style="font-weight:400;"> \{\{credentials\}\}<\/span>/,
+    );
+
+    const parsed = htmlToSignatureBlocks(html);
+    expect(parsed?.blocks).toHaveLength(1);
+    expect(parsed?.blocks[0]).toMatchObject({
+      type: 'name',
+      includeCredentials: true,
+    });
+  });
+
+  it('folds a legacy credentials block into the name checkbox', () => {
+    const name = createSignatureBlock('name');
+    const credentials = createSignatureBlock('credentials');
+    const html = [
+      `<!-- ozer-sig-builder:v1 layout="stacked" -->`,
+      `<!-- /ozer-sig-builder -->`,
+      `<!-- ozer-block id="${name.id}" type="name" -->`,
+      `<!-- /ozer-block -->`,
+      `<!-- ozer-block id="${credentials.id}" type="credentials" -->`,
+      `<!-- /ozer-block -->`,
+    ].join('\n');
+
+    const parsed = htmlToSignatureBlocks(html);
+    expect(parsed?.blocks.map((block) => block.type)).toEqual(['name']);
+    expect(parsed?.blocks[0]?.includeCredentials).toBe(true);
+  });
+
   it('returns null for legacy HTML without builder markers', () => {
     expect(
       htmlToSignatureBlocks(

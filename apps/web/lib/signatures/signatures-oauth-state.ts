@@ -17,6 +17,7 @@ function stateSecret() {
 
   const tokenKey =
     process.env.AZURE_CLIENT_SECRET?.trim() ||
+    process.env.AZURE_SECRET_VALUE?.trim() ||
     process.env.TOKEN_ENCRYPTION_KEY?.trim();
 
   if (!tokenKey || tokenKey.length < 16) {

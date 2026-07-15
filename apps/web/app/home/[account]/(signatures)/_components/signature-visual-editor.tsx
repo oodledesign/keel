@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { Checkbox } from '@kit/ui/checkbox';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { cn } from '@kit/ui/utils';
@@ -49,10 +50,12 @@ function SortableBlockRow({
   block,
   onRemove,
   onTextChange,
+  onIncludeCredentialsChange,
 }: {
   block: SignatureBlock;
   onRemove: () => void;
   onTextChange: (text: string) => void;
+  onIncludeCredentialsChange: (include: boolean) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: block.id });
@@ -99,6 +102,21 @@ function SortableBlockRow({
           <Trash2 className="h-4 w-4" />
         </Button>
       </div>
+      {block.type === 'name' ? (
+        <label className="mt-2 flex cursor-pointer items-start gap-2 pl-6 text-xs text-[var(--workspace-shell-text-muted)]">
+          <Checkbox
+            checked={Boolean(block.includeCredentials)}
+            onCheckedChange={(value) =>
+              onIncludeCredentialsChange(value === true)
+            }
+            className="mt-0.5"
+            aria-label="Include credentials after the name"
+          />
+          <span>
+            Include credentials after the name (same line, wraps with the name)
+          </span>
+        </label>
+      ) : null}
       {block.type === 'custom_text' ? (
         <div className="mt-2 pl-6">
           <Label htmlFor={`custom-text-${block.id}`} className="sr-only">
@@ -261,6 +279,25 @@ export function SignatureVisualEditor({
       blocks: document.blocks.map((block) =>
         block.id === id ? { ...block, text } : block,
       ),
+    });
+  };
+
+  const updateIncludeCredentials = (id: string, includeCredentials: boolean) => {
+    onChange({
+      ...document,
+      blocks: document.blocks.map((block) => {
+        if (block.id !== id || block.type !== 'name') {
+          return block;
+        }
+
+        if (!includeCredentials) {
+          const { includeCredentials: _drop, ...rest } = block;
+          void _drop;
+          return rest;
+        }
+
+        return { ...block, includeCredentials: true };
+      }),
     });
   };
 
@@ -456,6 +493,9 @@ export function SignatureVisualEditor({
                     block={block}
                     onRemove={() => removeBlock(block.id)}
                     onTextChange={(text) => updateBlockText(block.id, text)}
+                    onIncludeCredentialsChange={(include) =>
+                      updateIncludeCredentials(block.id, include)
+                    }
                   />
                 ))}
               </div>

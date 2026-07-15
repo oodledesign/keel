@@ -207,7 +207,9 @@ export async function GET(request: NextRequest) {
   }
 
   const clientId = process.env.AZURE_CLIENT_ID?.trim();
-  const clientSecret = process.env.AZURE_CLIENT_SECRET?.trim();
+  const clientSecret =
+    process.env.AZURE_CLIENT_SECRET?.trim() ||
+    process.env.AZURE_SECRET_VALUE?.trim();
   const redirectUri =
     process.env.AZURE_REDIRECT_URI?.trim() ??
     absoluteUrl('/api/signatures/ms-callback');
