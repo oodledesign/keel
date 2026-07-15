@@ -14,7 +14,9 @@ const TAB_LABELS: Record<WebsitePlanningTab, string> = {
   wireframe: 'Wireframes',
   design: 'Design',
   seo: 'Search',
+  site: 'Site',
   export: 'Export',
+  build: 'Build',
   content: 'Content docs',
 };
 

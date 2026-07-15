@@ -25,6 +25,7 @@ import { useSiteStudioAccess } from './site-studio/site-studio-access';
 import { SiteStudioUpsell } from './site-studio/site-studio-upsell';
 import { WebsiteApprovalFeed } from './site-studio/website-approval-feed';
 import { WebsiteBriefEditor } from './site-studio/website-brief-editor';
+import { WebsiteBuildPanel } from './site-studio/website-build-panel';
 import { WebsiteDeliveryOverview } from './site-studio/website-delivery-overview';
 import { WebsiteDesignEditor } from './site-studio/website-design-editor';
 import { WebsiteFigmaPackCard } from './site-studio/website-figma-pack-card';
@@ -47,6 +48,7 @@ const TAB_LABELS: Record<WebsitePlanningTab, string> = {
   seo: 'Search',
   site: 'Site',
   export: 'Export',
+  build: 'Build',
   content: 'Content docs',
 };
 
@@ -54,7 +56,10 @@ export function WebsitePlanningPanel({
   accountId,
   accountSlug,
   websiteName: _websiteName,
-  websiteDomain: _websiteDomain,
+  websiteDomain,
+  websiteStagingUrl = null,
+  websiteStack = null,
+  websiteGithubRepoUrl = null,
   planning,
   siteStudio,
   canEdit,
@@ -69,6 +74,9 @@ export function WebsitePlanningPanel({
   accountSlug: string;
   websiteName: string;
   websiteDomain: string | null;
+  websiteStagingUrl?: string | null;
+  websiteStack?: string | null;
+  websiteGithubRepoUrl?: string | null;
   planning: WebsitePlanningBundle;
   siteStudio: SiteStudioBundle;
   canEdit: boolean;
@@ -80,7 +88,11 @@ export function WebsitePlanningPanel({
   approvals?: WebsiteApprovalRecord[];
 }) {
   const siteStudioEnabled = useSiteStudioAccess();
+  const [forceSiteTab, setForceSiteTab] = useState(
+    () => initialTab === 'site' || initialTab === 'build',
+  );
   const showSiteTab =
+    forceSiteTab ||
     siteStudio.hasOzerSite ||
     siteStudio.brief?.stackPreference === 'ozer_sites';
   const tabs = SITE_STUDIO_PLANNING_TABS.filter(
@@ -114,8 +126,8 @@ export function WebsitePlanningPanel({
             </h2>
             <p className="mt-1 text-sm text-[var(--workspace-shell-text)]/60">
               {siteStudioEnabled
-                ? 'Site Studio — brief, canvas sitemap, wireframes, design, SEO, and export.'
-                : 'Core planning is free. Brief, Design, Search, and Export unlock with Site Studio.'}
+                ? 'Site Studio — brief, sitemap, wireframes, design, search, export, and build.'
+                : 'Core planning is free. Brief, Design, Search, Export, and Build unlock with Site Studio.'}
             </p>
           </div>
           {jobHref ? (
@@ -326,6 +338,25 @@ export function WebsitePlanningPanel({
               websiteId={planning.websiteId}
             />
           </div>
+        ) : null}
+
+        {!locked && tab === 'build' && siteStudioEnabled ? (
+          <WebsiteBuildPanel
+            accountSlug={accountSlug}
+            websiteId={planning.websiteId}
+            domain={websiteDomain}
+            stagingUrl={websiteStagingUrl}
+            stack={websiteStack}
+            githubRepoUrl={websiteGithubRepoUrl}
+            stackPreference={siteStudio.brief?.stackPreference}
+            hasOzerSite={siteStudio.hasOzerSite}
+            canEdit={canEdit}
+            onOpenExport={() => setTab('export')}
+            onOpenSite={() => {
+              setForceSiteTab(true);
+              setTab('site');
+            }}
+          />
         ) : null}
 
         <div className={cn(!locked && tab === 'content' ? 'block' : 'hidden')}>

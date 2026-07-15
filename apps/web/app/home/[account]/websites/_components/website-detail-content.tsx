@@ -160,6 +160,9 @@ export function WebsiteDetailContent({
           accountSlug={accountSlug}
           websiteName={website.name}
           websiteDomain={website.domain}
+          websiteStagingUrl={website.stagingUrl}
+          websiteStack={website.stack}
+          websiteGithubRepoUrl={website.githubRepoUrl}
           planning={planning}
           siteStudio={siteStudio}
           canEdit={canEditWebsites}

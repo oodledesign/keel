@@ -62,7 +62,9 @@ const PhaseTemplatePhaseSchema = z.object({
       'wireframe',
       'design',
       'seo',
+      'site',
       'export',
+      'build',
       'content',
     ])
     .nullable()

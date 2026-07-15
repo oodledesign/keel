@@ -15,6 +15,7 @@ export type WebsitePlanningTab =
   | 'seo'
   | 'site'
   | 'export'
+  | 'build'
   | 'content';
 
 export const CORE_PLANNING_TABS: WebsitePlanningTab[] = [
@@ -33,6 +34,7 @@ export const SITE_STUDIO_PLANNING_TABS: WebsitePlanningTab[] = [
   'seo',
   'site',
   'export',
+  'build',
   'content',
 ];
 
@@ -384,6 +386,7 @@ export const ALL_PLANNING_TABS: WebsitePlanningTab[] = [
   'seo',
   'site',
   'export',
+  'build',
   'content',
 ];
 

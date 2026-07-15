@@ -10,6 +10,7 @@ export const SITE_STUDIO_GATED_TABS: readonly WebsitePlanningTab[] = [
   'seo',
   'site',
   'export',
+  'build',
 ] as const;
 
 export function isSiteStudioGatedTab(tab: WebsitePlanningTab): boolean {
