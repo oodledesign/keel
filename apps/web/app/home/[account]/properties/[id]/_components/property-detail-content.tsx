@@ -11,25 +11,19 @@ import {
   Calendar,
   Edit2,
   Home,
+  KeyRound,
   Landmark,
   MapPin,
   Maximize2,
+  User,
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent } from '@kit/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 
-import {
-  workspaceIconChip,
-  workspacePanelCard,
-} from '~/lib/workspace-ui';
+import { workspaceIconChip, workspacePanelCard } from '~/lib/workspace-ui';
 
-import type {
-  Property,
-  PropertyValuation,
-} from '../../_lib/server/properties.service';
-import { PropertyFormModal } from '../../_components/property-form-modal';
 import { ContextWorkspaceNotes } from '../../../_components/workspace-content/context-workspace-notes';
 import type { LinkValue } from '../../../_components/workspace-content/link-to-select';
 import type {
@@ -38,6 +32,11 @@ import type {
   NoteListItem,
   WorkspaceNotesVariant,
 } from '../../../_lib/workspace-content/types';
+import { PropertyFormModal } from '../../_components/property-form-modal';
+import type {
+  Property,
+  PropertyValuation,
+} from '../../_lib/server/properties.service';
 import { PropertyValueHistory } from './property-value-history';
 
 interface PropertyDetailContentProps {
@@ -98,14 +97,19 @@ const typeLabels: Record<Property['propertyType'], string> = {
 function hasMortgageDetails(property: Property) {
   return Boolean(
     property.mortgageLender ||
-      property.mortgageReference ||
-      property.mortgageBalance != null ||
-      property.mortgageInterestRate != null ||
-      property.mortgageMonthlyPayment != null ||
-      property.mortgageStartDate ||
-      property.mortgageEndDate ||
-      property.mortgageNotes,
+    property.mortgageReference ||
+    property.mortgageBalance != null ||
+    property.mortgageInterestRate != null ||
+    property.mortgageMonthlyPayment != null ||
+    property.mortgageStartDate ||
+    property.mortgageEndDate ||
+    property.remortgageDate ||
+    property.mortgageNotes,
   );
+}
+
+function yesNo(value: boolean | null): string | null {
+  return value == null ? null : value ? 'Yes' : 'No';
 }
 
 export function PropertyDetailContent({
@@ -165,6 +169,13 @@ export function PropertyDetailContent({
                   <span className="text-xs text-[var(--workspace-shell-text)]/40">
                     {typeLabels[property.propertyType]}
                   </span>
+                  {property.buildingType || property.propertyStyle ? (
+                    <span className="text-xs text-[var(--workspace-shell-text)]/40">
+                      {[property.buildingType, property.propertyStyle]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </span>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -180,7 +191,11 @@ export function PropertyDetailContent({
 
           <div className="mt-6 grid grid-cols-2 gap-3 border-t border-[color:var(--workspace-shell-border)] pt-5 sm:grid-cols-4">
             {property.bedrooms != null && (
-              <StatPill icon={Bed} label="Bedrooms" value={String(property.bedrooms)} />
+              <StatPill
+                icon={Bed}
+                label="Bedrooms"
+                value={String(property.bedrooms)}
+              />
             )}
             {property.bathrooms != null && (
               <StatPill
@@ -215,6 +230,48 @@ export function PropertyDetailContent({
                 icon={Building2}
                 label="Purchase Price"
                 value={formatCurrency(property.purchasePrice / 100)}
+              />
+            )}
+            {property.registeredOwner && (
+              <StatPill
+                icon={User}
+                label="Registered owner"
+                value={property.registeredOwner}
+              />
+            )}
+            {property.monthlyRent != null && (
+              <StatPill
+                icon={KeyRound}
+                label="Monthly rent"
+                value={formatCurrency(property.monthlyRent / 100)}
+              />
+            )}
+            {yesNo(property.isTenanted) && (
+              <StatPill
+                icon={KeyRound}
+                label="Tenanted"
+                value={yesNo(property.isTenanted)!}
+              />
+            )}
+            {yesNo(property.isHmo) && (
+              <StatPill
+                icon={Home}
+                label="HMO"
+                value={yesNo(property.isHmo)!}
+              />
+            )}
+            {yesNo(property.isFamilyLet) && (
+              <StatPill
+                icon={User}
+                label="Family let"
+                value={yesNo(property.isFamilyLet)!}
+              />
+            )}
+            {yesNo(property.isLimitedCompany) && (
+              <StatPill
+                icon={Building2}
+                label="Limited company"
+                value={yesNo(property.isLimitedCompany)!}
               />
             )}
           </div>
@@ -300,6 +357,13 @@ export function PropertyDetailContent({
                   value={formatDate(property.mortgageEndDate)}
                 />
               ) : null}
+              {property.remortgageDate ? (
+                <StatPill
+                  icon={Calendar}
+                  label="Remortgage / further advance"
+                  value={formatDate(property.remortgageDate)}
+                />
+              ) : null}
               {equity != null ? (
                 <StatPill
                   icon={Building2}
@@ -324,7 +388,7 @@ export function PropertyDetailContent({
           )}
 
           {property.mortgageNotes ? (
-            <p className="mt-4 whitespace-pre-wrap rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] p-3 text-sm text-[var(--workspace-shell-text)]/70">
+            <p className="mt-4 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] p-3 text-sm whitespace-pre-wrap text-[var(--workspace-shell-text)]/70">
               {property.mortgageNotes}
             </p>
           ) : null}
@@ -435,7 +499,7 @@ function PropertyNotesTab({ property }: { property: Property }) {
     <div className="prose prose-sm max-w-none">
       {property.notes ? (
         <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] p-4">
-          <p className="whitespace-pre-wrap text-sm text-[var(--workspace-shell-text)]/80">
+          <p className="text-sm whitespace-pre-wrap text-[var(--workspace-shell-text)]/80">
             {property.notes}
           </p>
         </div>
@@ -463,11 +527,14 @@ function formatCurrency(value: number): string {
 
 function formatDate(iso: string): string {
   try {
-    return new Date(`${iso.slice(0, 10)}T12:00:00`).toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
+    return new Date(`${iso.slice(0, 10)}T12:00:00`).toLocaleDateString(
+      'en-GB',
+      {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      },
+    );
   } catch {
     return iso;
   }

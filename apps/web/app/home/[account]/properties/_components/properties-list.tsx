@@ -1,9 +1,14 @@
 'use client';
 
 import { useCallback, useState, useTransition } from 'react';
+import { useEffect } from 'react';
+
+import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import {
   Building2,
+  Download,
   Edit2,
   Home,
   MapPin,
@@ -11,9 +16,6 @@ import {
   Plus,
   Trash2,
 } from 'lucide-react';
-import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useEffect } from 'react';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent } from '@kit/ui/card';
@@ -25,14 +27,15 @@ import {
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
 
-import type { Property } from '../_lib/server/properties.service';
-import { deleteProperty } from '../_lib/server/server-actions';
 import pathsConfig from '~/config/paths.config';
 import {
   workspaceBtnPrimaryMd,
   workspaceIconChip,
   workspacePanelCard,
 } from '~/lib/workspace-ui';
+
+import type { Property } from '../_lib/server/properties.service';
+import { deleteProperty } from '../_lib/server/server-actions';
 import { PropertyFormModal } from './property-form-modal';
 
 interface PropertiesListProps {
@@ -116,22 +119,23 @@ export function PropertiesList({
     router.refresh();
   }, [router]);
 
-  const handleDelete = useCallback(
-    (propertyId: string) => {
-      if (!confirm('Are you sure you want to delete this property? This cannot be undone.')) {
-        return;
+  const handleDelete = useCallback((propertyId: string) => {
+    if (
+      !confirm(
+        'Are you sure you want to delete this property? This cannot be undone.',
+      )
+    ) {
+      return;
+    }
+    startTransition(async () => {
+      try {
+        await deleteProperty({ propertyId });
+        setProperties((prev) => prev.filter((p) => p.id !== propertyId));
+      } catch (err) {
+        console.error(err);
       }
-      startTransition(async () => {
-        try {
-          await deleteProperty({ propertyId });
-          setProperties((prev) => prev.filter((p) => p.id !== propertyId));
-        } catch (err) {
-          console.error(err);
-        }
-      });
-    },
-    [],
-  );
+    });
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -142,16 +146,28 @@ export function PropertiesList({
             Properties
           </h2>
           <p className="text-sm text-[var(--workspace-shell-text)]/50">
-            {properties.length} {properties.length === 1 ? 'property' : 'properties'}
+            {properties.length}{' '}
+            {properties.length === 1 ? 'property' : 'properties'}
           </p>
         </div>
-        <Button
-          onClick={openCreate}
-          className={workspaceBtnPrimaryMd}
-        >
-          <Plus className="h-4 w-4" />
-          Add Property
-        </Button>
+        <div className="flex items-center gap-2">
+          {properties.length > 0 ? (
+            <Button
+              asChild
+              variant="outline"
+              className="gap-2 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/70 hover:text-[var(--workspace-shell-text)]"
+            >
+              <a href={`/api/properties/export?accountId=${accountId}`}>
+                <Download className="h-4 w-4" />
+                Export CSV
+              </a>
+            </Button>
+          ) : null}
+          <Button onClick={openCreate} className={workspaceBtnPrimaryMd}>
+            <Plus className="h-4 w-4" />
+            Add Property
+          </Button>
+        </div>
       </div>
 
       {/* List */}
@@ -159,7 +175,9 @@ export function PropertiesList({
         <Card className={workspacePanelCard}>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <Building2 className="mb-4 h-12 w-12 text-[var(--workspace-shell-text)]/20" />
-            <p className="text-[var(--workspace-shell-text)] font-medium">No properties yet</p>
+            <p className="font-medium text-[var(--workspace-shell-text)]">
+              No properties yet
+            </p>
             <p className="mt-1 text-sm text-[var(--workspace-shell-text)]/50">
               Add your first property to get started.
             </p>
@@ -194,12 +212,12 @@ export function PropertiesList({
                           href={pathsConfig.app.accountPropertyDetail
                             .replace('[account]', accountSlug)
                             .replace('[id]', property.id)}
-                          className="text-sm font-semibold text-[var(--workspace-shell-text)] hover:text-[var(--ozer-accent-muted)] transition-colors"
+                          className="text-sm font-semibold text-[var(--workspace-shell-text)] transition-colors hover:text-[var(--ozer-accent-muted)]"
                         >
                           {property.name}
                         </Link>
                         {property.address && (
-                          <p className="mt-0.5 text-xs text-[var(--workspace-shell-text)]/50 line-clamp-1">
+                          <p className="mt-0.5 line-clamp-1 text-xs text-[var(--workspace-shell-text)]/50">
                             {property.address}
                           </p>
                         )}
@@ -242,7 +260,7 @@ export function PropertiesList({
                     >
                       {status.label}
                     </span>
-                    <span className="text-[11px] capitalize text-[var(--workspace-shell-text)]/40">
+                    <span className="text-[11px] text-[var(--workspace-shell-text)]/40 capitalize">
                       {property.propertyType}
                     </span>
                     {property.bedrooms != null && (
@@ -270,7 +288,7 @@ export function PropertiesList({
                       href={pathsConfig.app.accountPropertyDetail
                         .replace('[account]', accountSlug)
                         .replace('[id]', property.id)}
-                      className="text-xs font-medium text-[var(--workspace-shell-text)]/50 hover:text-[var(--workspace-shell-text)] transition-colors"
+                      className="text-xs font-medium text-[var(--workspace-shell-text)]/50 transition-colors hover:text-[var(--workspace-shell-text)]"
                     >
                       View details →
                     </Link>

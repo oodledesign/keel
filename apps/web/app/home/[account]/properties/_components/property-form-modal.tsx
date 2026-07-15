@@ -37,14 +37,22 @@ interface PropertyFormModalProps {
 const emptyForm = {
   name: '',
   address: '',
+  registeredOwner: '',
   propertyType: 'residential' as Property['propertyType'],
   status: 'active' as Property['status'],
+  buildingType: '',
+  propertyStyle: '',
   bedrooms: '',
   bathrooms: '',
   squareFootage: '',
   purchaseDate: '',
   purchasePrice: '',
   currentValue: '',
+  monthlyRent: '',
+  isTenanted: '',
+  isHmo: '',
+  isFamilyLet: '',
+  isLimitedCompany: '',
   mortgageLender: '',
   mortgageReference: '',
   mortgageBalance: '',
@@ -52,12 +60,22 @@ const emptyForm = {
   mortgageMonthlyPayment: '',
   mortgageStartDate: '',
   mortgageEndDate: '',
+  remortgageDate: '',
   mortgageNotes: '',
   notes: '',
 };
 
 function poundsFromPence(value: number | null | undefined) {
   return value != null ? String(value / 100) : '';
+}
+
+/** Tri-state boolean <-> select value ('' = unknown). */
+function triStateFromBool(value: boolean | null | undefined) {
+  return value == null ? '' : value ? 'yes' : 'no';
+}
+
+function boolFromTriState(value: string): boolean | null {
+  return value === 'yes' ? true : value === 'no' ? false : null;
 }
 
 export function PropertyFormModal({
@@ -77,8 +95,11 @@ export function PropertyFormModal({
       setForm({
         name: property.name,
         address: property.address ?? '',
+        registeredOwner: property.registeredOwner ?? '',
         propertyType: property.propertyType,
         status: property.status,
+        buildingType: property.buildingType ?? '',
+        propertyStyle: property.propertyStyle ?? '',
         bedrooms: property.bedrooms != null ? String(property.bedrooms) : '',
         bathrooms: property.bathrooms != null ? String(property.bathrooms) : '',
         squareFootage:
@@ -86,6 +107,11 @@ export function PropertyFormModal({
         purchaseDate: property.purchaseDate ?? '',
         purchasePrice: poundsFromPence(property.purchasePrice),
         currentValue: poundsFromPence(property.currentValue),
+        monthlyRent: poundsFromPence(property.monthlyRent),
+        isTenanted: triStateFromBool(property.isTenanted),
+        isHmo: triStateFromBool(property.isHmo),
+        isFamilyLet: triStateFromBool(property.isFamilyLet),
+        isLimitedCompany: triStateFromBool(property.isLimitedCompany),
         mortgageLender: property.mortgageLender ?? '',
         mortgageReference: property.mortgageReference ?? '',
         mortgageBalance: poundsFromPence(property.mortgageBalance),
@@ -93,9 +119,12 @@ export function PropertyFormModal({
           property.mortgageInterestRate != null
             ? String(property.mortgageInterestRate)
             : '',
-        mortgageMonthlyPayment: poundsFromPence(property.mortgageMonthlyPayment),
+        mortgageMonthlyPayment: poundsFromPence(
+          property.mortgageMonthlyPayment,
+        ),
         mortgageStartDate: property.mortgageStartDate ?? '',
         mortgageEndDate: property.mortgageEndDate ?? '',
+        remortgageDate: property.remortgageDate ?? '',
         mortgageNotes: property.mortgageNotes ?? '',
         notes: property.notes ?? '',
       });
@@ -114,8 +143,19 @@ export function PropertyFormModal({
         const shared = {
           name: form.name.trim(),
           address: form.address.trim() || null,
+          registeredOwner: form.registeredOwner.trim() || null,
           propertyType: form.propertyType,
           status: form.status,
+          buildingType: form.buildingType.trim() || null,
+          propertyStyle: form.propertyStyle.trim() || null,
+          monthlyRent: form.monthlyRent
+            ? Math.round(parseFloat(form.monthlyRent) * 100)
+            : null,
+          isTenanted: boolFromTriState(form.isTenanted),
+          isHmo: boolFromTriState(form.isHmo),
+          isFamilyLet: boolFromTriState(form.isFamilyLet),
+          isLimitedCompany: boolFromTriState(form.isLimitedCompany),
+          remortgageDate: form.remortgageDate || null,
           bedrooms: form.bedrooms ? parseInt(form.bedrooms, 10) : null,
           bathrooms: form.bathrooms ? parseFloat(form.bathrooms) : null,
           squareFootage: form.squareFootage
@@ -189,7 +229,9 @@ export function PropertyFormModal({
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-[var(--workspace-shell-text)]/70">Address</Label>
+            <Label className="text-[var(--workspace-shell-text)]/70">
+              Address
+            </Label>
             <Input
               value={form.address}
               onChange={(e) => field('address', e.target.value)}
@@ -198,9 +240,23 @@ export function PropertyFormModal({
             />
           </div>
 
+          <div className="space-y-1.5">
+            <Label className="text-[var(--workspace-shell-text)]/70">
+              Registered owner
+            </Label>
+            <Input
+              value={form.registeredOwner}
+              onChange={(e) => field('registeredOwner', e.target.value)}
+              placeholder="Person or limited company name"
+              className={inputClass}
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label className="text-[var(--workspace-shell-text)]/70">Type</Label>
+              <Label className="text-[var(--workspace-shell-text)]/70">
+                Type
+              </Label>
               <Select
                 value={form.propertyType}
                 onValueChange={(v) =>
@@ -219,7 +275,9 @@ export function PropertyFormModal({
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[var(--workspace-shell-text)]/70">Status</Label>
+              <Label className="text-[var(--workspace-shell-text)]/70">
+                Status
+              </Label>
               <Select
                 value={form.status}
                 onValueChange={(v) => field('status', v as Property['status'])}
@@ -238,9 +296,36 @@ export function PropertyFormModal({
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-[var(--workspace-shell-text)]/70">
+                Building type
+              </Label>
+              <Input
+                value={form.buildingType}
+                onChange={(e) => field('buildingType', e.target.value)}
+                placeholder="e.g. House, Flat, Bungalow"
+                className={inputClass}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[var(--workspace-shell-text)]/70">
+                Property style
+              </Label>
+              <Input
+                value={form.propertyStyle}
+                onChange={(e) => field('propertyStyle', e.target.value)}
+                placeholder="e.g. Terrace, Semi-detached"
+                className={inputClass}
+              />
+            </div>
+          </div>
+
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-1.5">
-              <Label className="text-[var(--workspace-shell-text)]/70">Bedrooms</Label>
+              <Label className="text-[var(--workspace-shell-text)]/70">
+                Bedrooms
+              </Label>
               <Input
                 type="number"
                 min={0}
@@ -251,7 +336,9 @@ export function PropertyFormModal({
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[var(--workspace-shell-text)]/70">Bathrooms</Label>
+              <Label className="text-[var(--workspace-shell-text)]/70">
+                Bathrooms
+              </Label>
               <Input
                 type="number"
                 min={0}
@@ -263,7 +350,9 @@ export function PropertyFormModal({
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[var(--workspace-shell-text)]/70">Sq ft</Label>
+              <Label className="text-[var(--workspace-shell-text)]/70">
+                Sq ft
+              </Label>
               <Input
                 type="number"
                 min={0}
@@ -323,6 +412,60 @@ export function PropertyFormModal({
           <div className="space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
             <div>
               <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                Letting
+              </p>
+              <p className="text-xs text-[var(--workspace-shell-text)]/45">
+                Rent and tenancy details for this property.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-[var(--workspace-shell-text)]/70">
+                  Monthly rent (£)
+                </Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={form.monthlyRent}
+                  onChange={(e) => field('monthlyRent', e.target.value)}
+                  placeholder="0.00"
+                  className={inputClass}
+                />
+              </div>
+              {(
+                [
+                  ['isTenanted', 'Currently tenanted?'],
+                  ['isHmo', 'HMO?'],
+                  ['isFamilyLet', 'Family let?'],
+                  ['isLimitedCompany', 'Limited company?'],
+                ] as const
+              ).map(([key, label]) => (
+                <div key={key} className="space-y-1.5">
+                  <Label className="text-[var(--workspace-shell-text)]/70">
+                    {label}
+                  </Label>
+                  <Select
+                    value={form[key] || 'unknown'}
+                    onValueChange={(v) => field(key, v === 'unknown' ? '' : v)}
+                  >
+                    <SelectTrigger className={inputClass}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unknown">—</SelectItem>
+                      <SelectItem value="yes">Yes</SelectItem>
+                      <SelectItem value="no">No</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
+            <div>
+              <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
                 Mortgage
               </p>
               <p className="text-xs text-[var(--workspace-shell-text)]/45">
@@ -331,7 +474,9 @@ export function PropertyFormModal({
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label className="text-[var(--workspace-shell-text)]/70">Lender</Label>
+                <Label className="text-[var(--workspace-shell-text)]/70">
+                  Lender
+                </Label>
                 <Input
                   value={form.mortgageLender}
                   onChange={(e) => field('mortgageLender', e.target.value)}
@@ -373,7 +518,9 @@ export function PropertyFormModal({
                   min={0}
                   step={0.001}
                   value={form.mortgageInterestRate}
-                  onChange={(e) => field('mortgageInterestRate', e.target.value)}
+                  onChange={(e) =>
+                    field('mortgageInterestRate', e.target.value)
+                  }
                   placeholder="4.250"
                   className={inputClass}
                 />
@@ -416,6 +563,17 @@ export function PropertyFormModal({
                   className={inputClass}
                 />
               </div>
+              <div className="space-y-1.5">
+                <Label className="text-[var(--workspace-shell-text)]/70">
+                  Remortgage / further advance date
+                </Label>
+                <Input
+                  type="date"
+                  value={form.remortgageDate}
+                  onChange={(e) => field('remortgageDate', e.target.value)}
+                  className={inputClass}
+                />
+              </div>
               <div className="space-y-1.5 sm:col-span-2">
                 <Label className="text-[var(--workspace-shell-text)]/70">
                   Mortgage notes
@@ -432,7 +590,9 @@ export function PropertyFormModal({
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-[var(--workspace-shell-text)]/70">Notes</Label>
+            <Label className="text-[var(--workspace-shell-text)]/70">
+              Notes
+            </Label>
             <Textarea
               value={form.notes}
               onChange={(e) => field('notes', e.target.value)}

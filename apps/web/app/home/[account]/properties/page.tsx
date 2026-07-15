@@ -7,7 +7,10 @@ import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
-import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access';
+import {
+  getDefaultAccountPath,
+  getTeamAccountAccess,
+} from '../_lib/role-access';
 import { getSpaceTypeFromAccount } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import { PropertiesList } from './_components/properties-list';

@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from 'react';
 
-import { Plus, Trash2, TrendingUp } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+
+import { Plus, Trash2, TrendingUp } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -30,10 +31,13 @@ function currentMonthInput() {
 
 function formatMonth(iso: string) {
   try {
-    return new Date(`${iso.slice(0, 10)}T12:00:00`).toLocaleDateString('en-GB', {
-      month: 'long',
-      year: 'numeric',
-    });
+    return new Date(`${iso.slice(0, 10)}T12:00:00`).toLocaleDateString(
+      'en-GB',
+      {
+        month: 'long',
+        year: 'numeric',
+      },
+    );
   } catch {
     return iso;
   }
@@ -82,7 +86,9 @@ export function PropertyValueHistory({
         setNotes('');
         router.refresh();
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to save valuation');
+        setError(
+          err instanceof Error ? err.message : 'Failed to save valuation',
+        );
       }
     });
   };
@@ -95,7 +101,9 @@ export function PropertyValueHistory({
         await deletePropertyValuation({ valuationId });
         router.refresh();
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to delete valuation');
+        setError(
+          err instanceof Error ? err.message : 'Failed to delete valuation',
+        );
       }
     });
   };
@@ -127,8 +135,8 @@ export function PropertyValueHistory({
                 <span
                   className={
                     change >= 0
-                      ? ' text-[var(--ozer-accent-muted)]'
-                      : ' text-[var(--workspace-shell-text-muted)]'
+                      ? 'text-[var(--ozer-accent-muted)]'
+                      : 'text-[var(--workspace-shell-text-muted)]'
                   }
                 >
                   {' '}
@@ -206,7 +214,8 @@ export function PropertyValueHistory({
             No valuations yet
           </p>
           <p className="mt-1 text-xs text-[var(--workspace-shell-text)]/35">
-            Add this month&apos;s value, then another later to see change over time.
+            Add this month&apos;s value, then another later to see change over
+            time.
           </p>
         </div>
       ) : (

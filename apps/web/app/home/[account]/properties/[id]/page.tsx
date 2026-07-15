@@ -1,9 +1,8 @@
+import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 
-import Link from 'next/link';
-
-import { PageBody } from '@kit/ui/page';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { PageBody } from '@kit/ui/page';
 
 import pathsConfig from '~/config/paths.config';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
@@ -11,11 +10,14 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
-import { getDefaultAccountPath, getTeamAccountAccess } from '../../_lib/role-access';
+import {
+  getDefaultAccountPath,
+  getTeamAccountAccess,
+} from '../../_lib/role-access';
 import { getSpaceTypeFromAccount } from '../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
-import { loadContextWorkspaceContent } from '../../_lib/workspace-content/context-loader';
 import { notesVariantFromProfile } from '../../_lib/server/workspace-profile';
+import { loadContextWorkspaceContent } from '../../_lib/workspace-content/context-loader';
 import { createPropertiesService } from '../_lib/server/properties.service';
 import { PropertyDetailContent } from './_components/property-detail-content';
 
@@ -23,9 +25,7 @@ interface PropertyDetailPageProps {
   params: Promise<{ account: string; id: string }>;
 }
 
-export const generateMetadata = async ({
-  params,
-}: PropertyDetailPageProps) => {
+export const generateMetadata = async ({ params }: PropertyDetailPageProps) => {
   const { account } = await params;
   const i18n = await createI18nServerInstance();
   const title = i18n.t('teams:home.pageTitle');

@@ -15,6 +15,15 @@ export type Property = {
   purchaseDate: string | null;
   purchasePrice: number | null;
   currentValue: number | null;
+  registeredOwner: string | null;
+  remortgageDate: string | null;
+  monthlyRent: number | null;
+  isLimitedCompany: boolean | null;
+  isHmo: boolean | null;
+  isFamilyLet: boolean | null;
+  isTenanted: boolean | null;
+  buildingType: string | null;
+  propertyStyle: string | null;
   mortgageLender: string | null;
   mortgageReference: string | null;
   mortgageBalance: number | null;
@@ -52,6 +61,15 @@ type PropertyRow = {
   purchase_date?: string | null;
   purchase_price?: number | null;
   current_value?: number | null;
+  registered_owner?: string | null;
+  remortgage_date?: string | null;
+  monthly_rent?: number | null;
+  is_limited_company?: boolean | null;
+  is_hmo?: boolean | null;
+  is_family_let?: boolean | null;
+  is_tenanted?: boolean | null;
+  building_type?: string | null;
+  property_style?: string | null;
   mortgage_lender?: string | null;
   mortgage_reference?: string | null;
   mortgage_balance?: number | null;
@@ -87,19 +105,32 @@ export type PropertyMortgageInput = {
   mortgageNotes?: string | null;
 };
 
-export type PropertyWriteInput = PropertyMortgageInput & {
-  name?: string;
-  address?: string | null;
-  propertyType?: string;
-  status?: string;
-  bedrooms?: number | null;
-  bathrooms?: number | null;
-  squareFootage?: number | null;
-  purchaseDate?: string | null;
-  purchasePrice?: number | null;
-  currentValue?: number | null;
-  notes?: string | null;
+export type PropertyPortfolioInput = {
+  registeredOwner?: string | null;
+  remortgageDate?: string | null;
+  monthlyRent?: number | null;
+  isLimitedCompany?: boolean | null;
+  isHmo?: boolean | null;
+  isFamilyLet?: boolean | null;
+  isTenanted?: boolean | null;
+  buildingType?: string | null;
+  propertyStyle?: string | null;
 };
+
+export type PropertyWriteInput = PropertyMortgageInput &
+  PropertyPortfolioInput & {
+    name?: string;
+    address?: string | null;
+    propertyType?: string;
+    status?: string;
+    bedrooms?: number | null;
+    bathrooms?: number | null;
+    squareFootage?: number | null;
+    purchaseDate?: string | null;
+    purchasePrice?: number | null;
+    currentValue?: number | null;
+    notes?: string | null;
+  };
 
 function mapProperty(row: PropertyRow): Property {
   const rate = row.mortgage_interest_rate;
@@ -108,7 +139,8 @@ function mapProperty(row: PropertyRow): Property {
     accountId: row.account_id,
     name: row.name ?? 'Untitled',
     address: row.address ?? null,
-    propertyType: (row.property_type as Property['propertyType']) ?? 'residential',
+    propertyType:
+      (row.property_type as Property['propertyType']) ?? 'residential',
     status: (row.status as Property['status']) ?? 'active',
     bedrooms: row.bedrooms ?? null,
     bathrooms: row.bathrooms ?? null,
@@ -116,11 +148,19 @@ function mapProperty(row: PropertyRow): Property {
     purchaseDate: row.purchase_date ?? null,
     purchasePrice: row.purchase_price ?? null,
     currentValue: row.current_value ?? null,
+    registeredOwner: row.registered_owner ?? null,
+    remortgageDate: row.remortgage_date ?? null,
+    monthlyRent: row.monthly_rent ?? null,
+    isLimitedCompany: row.is_limited_company ?? null,
+    isHmo: row.is_hmo ?? null,
+    isFamilyLet: row.is_family_let ?? null,
+    isTenanted: row.is_tenanted ?? null,
+    buildingType: row.building_type ?? null,
+    propertyStyle: row.property_style ?? null,
     mortgageLender: row.mortgage_lender ?? null,
     mortgageReference: row.mortgage_reference ?? null,
     mortgageBalance: row.mortgage_balance ?? null,
-    mortgageInterestRate:
-      rate == null || rate === '' ? null : Number(rate),
+    mortgageInterestRate: rate == null || rate === '' ? null : Number(rate),
     mortgageMonthlyPayment: row.mortgage_monthly_payment ?? null,
     mortgageStartDate: row.mortgage_start_date ?? null,
     mortgageEndDate: row.mortgage_end_date ?? null,
@@ -150,7 +190,9 @@ export function toValuedMonth(input: string): string {
   if (/^\d{4}-\d{2}$/.test(trimmed)) {
     return `${trimmed}-01`;
   }
-  const date = new Date(trimmed.includes('T') ? trimmed : `${trimmed}T12:00:00`);
+  const date = new Date(
+    trimmed.includes('T') ? trimmed : `${trimmed}T12:00:00`,
+  );
   if (Number.isNaN(date.getTime())) {
     throw new Error('Invalid valuation month');
   }
@@ -162,6 +204,34 @@ export function toValuedMonth(input: string): string {
 function currentMonthStart(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+}
+
+function portfolioColumns(input: PropertyPortfolioInput) {
+  return {
+    ...(input.registeredOwner !== undefined && {
+      registered_owner: input.registeredOwner,
+    }),
+    ...(input.remortgageDate !== undefined && {
+      remortgage_date: input.remortgageDate,
+    }),
+    ...(input.monthlyRent !== undefined && {
+      monthly_rent: input.monthlyRent,
+    }),
+    ...(input.isLimitedCompany !== undefined && {
+      is_limited_company: input.isLimitedCompany,
+    }),
+    ...(input.isHmo !== undefined && { is_hmo: input.isHmo }),
+    ...(input.isFamilyLet !== undefined && {
+      is_family_let: input.isFamilyLet,
+    }),
+    ...(input.isTenanted !== undefined && { is_tenanted: input.isTenanted }),
+    ...(input.buildingType !== undefined && {
+      building_type: input.buildingType,
+    }),
+    ...(input.propertyStyle !== undefined && {
+      property_style: input.propertyStyle,
+    }),
+  };
 }
 
 function mortgageColumns(input: PropertyMortgageInput) {
@@ -268,6 +338,21 @@ export function createPropertiesService(client: SupabaseClient) {
       return ((data ?? []) as PropertyRow[]).map(mapProperty);
     },
 
+    /** Every property including sold/archived — for portfolio export. */
+    async listAllPropertiesForExport(accountId: string): Promise<Property[]> {
+      const { data, error } = await client
+        .from('properties')
+        .select('*')
+        .eq('account_id', accountId)
+        .order('name');
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      return ((data ?? []) as PropertyRow[]).map(mapProperty);
+    },
+
     async getProperty(propertyId: string): Promise<Property | null> {
       const { data, error } = await client
         .from('properties')
@@ -307,9 +392,8 @@ export function createPropertiesService(client: SupabaseClient) {
         throw new Error(countError.message);
       }
 
-      const { assertPropertyCreateAllowed } = await import(
-        '~/lib/billing/entitlements'
-      );
+      const { assertPropertyCreateAllowed } =
+        await import('~/lib/billing/entitlements');
       const gate = await assertPropertyCreateAllowed(
         client,
         input.accountId,
@@ -334,12 +418,14 @@ export function createPropertiesService(client: SupabaseClient) {
           purchase_price: input.purchasePrice ?? null,
           current_value: input.currentValue ?? null,
           notes: input.notes ?? null,
+          ...portfolioColumns(input),
           ...mortgageColumns(input),
         })
         .select('*')
         .single();
 
-      if (error || !data) throw new Error(error?.message ?? 'Failed to create property');
+      if (error || !data)
+        throw new Error(error?.message ?? 'Failed to create property');
 
       const property = mapProperty(data as PropertyRow);
 
@@ -393,13 +479,15 @@ export function createPropertiesService(client: SupabaseClient) {
             current_value: input.currentValue,
           }),
           ...(input.notes !== undefined && { notes: input.notes }),
+          ...portfolioColumns(input),
           ...mortgageColumns(input),
         })
         .eq('id', propertyId)
         .select('*')
         .single();
 
-      if (error || !data) throw new Error(error?.message ?? 'Failed to update property');
+      if (error || !data)
+        throw new Error(error?.message ?? 'Failed to update property');
 
       const property = mapProperty(data as PropertyRow);
 

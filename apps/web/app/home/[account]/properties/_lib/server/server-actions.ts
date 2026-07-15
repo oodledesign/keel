@@ -19,6 +19,18 @@ const GetPropertySchema = z.object({
   propertyId: z.string().uuid(),
 });
 
+const PortfolioFieldsSchema = z.object({
+  registeredOwner: z.string().optional().nullable(),
+  remortgageDate: z.string().optional().nullable(),
+  monthlyRent: z.number().int().min(0).optional().nullable(),
+  isLimitedCompany: z.boolean().optional().nullable(),
+  isHmo: z.boolean().optional().nullable(),
+  isFamilyLet: z.boolean().optional().nullable(),
+  isTenanted: z.boolean().optional().nullable(),
+  buildingType: z.string().optional().nullable(),
+  propertyStyle: z.string().optional().nullable(),
+});
+
 const MortgageFieldsSchema = z.object({
   mortgageLender: z.string().optional().nullable(),
   mortgageReference: z.string().optional().nullable(),
@@ -49,6 +61,7 @@ const PropertyInputSchema = z
     currentValue: z.number().int().min(0).optional().nullable(),
     notes: z.string().optional().nullable(),
   })
+  .merge(PortfolioFieldsSchema)
   .merge(MortgageFieldsSchema);
 
 const UpdatePropertySchema = PropertyInputSchema.extend({
