@@ -85,6 +85,29 @@ describe('resolveAppSubdomainRedirect', () => {
     ).toBeNull();
   });
 
+  it('serves public signature preview links on the app host without redirecting to /app', () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://app.ozer.so');
+    vi.stubEnv('NEXT_PUBLIC_MARKETING_SITE_URL', 'https://www.ozer.so');
+
+    expect(
+      resolveAppSubdomainRedirect(
+        new URL(
+          'https://app.ozer.so/preview/signatures/fc1b904adf6515e791949d181e36e1e1f3a8f239afa6ee6a3336b3e4cffe8881',
+        ),
+      ),
+    ).toBeNull();
+
+    expect(
+      resolveAppSubdomainRedirect(
+        new URL(
+          'https://www.ozer.so/preview/signatures/fc1b904adf6515e791949d181e36e1e1f3a8f239afa6ee6a3336b3e4cffe8881',
+        ),
+      ),
+    ).toBe(
+      'https://app.ozer.so/preview/signatures/fc1b904adf6515e791949d181e36e1e1f3a8f239afa6ee6a3336b3e4cffe8881',
+    );
+  });
+
   it('serves public booking flows on the app host without redirecting to /app', () => {
     vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://app.ozer.so');
     vi.stubEnv('NEXT_PUBLIC_MARKETING_SITE_URL', 'https://www.ozer.so');
