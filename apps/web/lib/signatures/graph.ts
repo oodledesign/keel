@@ -335,24 +335,12 @@ export async function loadDepartmentBadgeUrl(
   accountId: string,
   department: string | null | undefined,
 ): Promise<string | null> {
-  const normalized = department?.trim();
-  if (!normalized) {
-    return null;
-  }
-
-  const db = getSignaturesSupabaseClient();
-  const { data, error } = await db
-    .from('department_badges')
-    .select('award_badge_url')
-    .eq('account_id', accountId)
-    .eq('department', normalized)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return (data?.award_badge_url as string | null | undefined)?.trim() || null;
+  const { loadResolvedSignatureAssets } = await import('./signature-assets');
+  const resolved = await loadResolvedSignatureAssets(accountId, {
+    department,
+    branch_id: null,
+  });
+  return resolved.awardBadgeUrl;
 }
 
 /**

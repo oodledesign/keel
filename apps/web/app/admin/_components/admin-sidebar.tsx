@@ -13,6 +13,7 @@ import {
   LifeBuoy,
   Mail,
   Palette,
+  PiggyBank,
   ScrollText,
   Users,
 } from 'lucide-react';
@@ -86,6 +87,16 @@ export function AdminSidebar() {
                 <Link className={'flex gap-2.5'} href={'/admin/billing'}>
                   <CreditCard className={'h-4'} />
                   <span>Billing</span>
+                </Link>
+              </SidebarMenuButton>
+
+              <SidebarMenuButton
+                isActive={path.includes('/admin/finances')}
+                asChild
+              >
+                <Link className={'flex gap-2.5'} href={'/admin/finances'}>
+                  <PiggyBank className={'h-4'} />
+                  <span>Finances</span>
                 </Link>
               </SidebarMenuButton>
 

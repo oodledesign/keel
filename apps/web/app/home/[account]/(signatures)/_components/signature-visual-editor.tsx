@@ -108,10 +108,21 @@ function SortableBlockRow({
             id={`custom-text-${block.id}`}
             value={block.text ?? ''}
             onChange={(event) => onTextChange(event.target.value)}
-            placeholder="Custom text line"
+            placeholder="Fixed text for this template only"
             className="h-8 text-sm"
           />
         </div>
+      ) : null}
+      {block.type === 'shared_text' ? (
+        <p className="mt-2 pl-6 text-xs text-[var(--workspace-shell-text-muted)]">
+          Uses shared snippets from Signatures → Settings (all / department /
+          branch).
+        </p>
+      ) : null}
+      {block.type === 'award_badge' ? (
+        <p className="mt-2 pl-6 text-xs text-[var(--workspace-shell-text-muted)]">
+          Uses matching award badges from Signatures → Settings.
+        </p>
       ) : null}
     </div>
   );

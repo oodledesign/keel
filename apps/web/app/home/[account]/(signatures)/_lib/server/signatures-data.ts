@@ -83,7 +83,7 @@ export const DEFAULT_SIGNATURE_TEMPLATE = `<!-- Ozer Signatures — executive ba
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin-top:12px;">
         <tr>
           <td style="text-align:right;padding:0;vertical-align:bottom;line-height:0;">
-            <img src="{{award_badge_url}}" alt="" width="112" style="display:inline-block;max-width:132px;height:auto;border:0;" />
+            {{award_badges}}
           </td>
         </tr>
       </table>
@@ -448,47 +448,97 @@ export async function uploadPhotoFromDataUrl(
   staffId: string,
   dataUrl: string,
 ): Promise<string> {
+  return uploadSignaturesImageFromDataUrl(
+    accountId,
+    `${staffId}`,
+    dataUrl,
+    'Photo',
+  );
+}
+
+export async function uploadBadgeFromDataUrl(
+  accountId: string,
+  department: string,
+  dataUrl: string,
+): Promise<string> {
+  const slug =
+    department
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 60) || 'badge';
+
+  return uploadSignaturesImageFromDataUrl(
+    accountId,
+    `badges/${slug}`,
+    dataUrl,
+    'Badge',
+  );
+}
+
+const ALLOWED_IMAGE_MIME_TYPES: ReadonlySet<string> = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+  'image/gif',
+]);
+
+async function uploadSignaturesImageFromDataUrl(
+  accountId: string,
+  objectKey: string,
+  dataUrl: string,
+  label: string,
+): Promise<string> {
   const match = dataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
   if (!match) {
-    throw new Error('Invalid image upload');
+    throw new Error(`Invalid ${label.toLowerCase()} upload`);
   }
 
   const mimeType = match[1];
   const base64 = match[2];
-  if (!mimeType || !base64) {
-    throw new Error('Invalid image upload');
+  if (!mimeType || !base64 || !ALLOWED_IMAGE_MIME_TYPES.has(mimeType)) {
+    throw new Error(
+      `Invalid ${label.toLowerCase()} upload. Only PNG, JPEG, WebP, and GIF are accepted.`,
+    );
   }
 
-  const ext = mimeType.includes('png')
+  const ext = mimeType === 'image/png'
     ? 'png'
-    : mimeType.includes('webp')
+    : mimeType === 'image/webp'
       ? 'webp'
-      : 'jpg';
-  const path = `${accountId}/${staffId}-${Date.now()}.${ext}`;
+      : mimeType === 'image/gif'
+        ? 'gif'
+        : 'jpg';
+  const path = `${accountId}/${objectKey}.${ext}`;
   const bytes = Buffer.from(base64, 'base64');
 
   // Keep uploads under typical server-action body limits after client resize.
   if (bytes.byteLength > 2_500_000) {
     throw new Error(
-      'Photo is too large after processing. Try a smaller image (under ~2MB).',
+      `${label} is too large after processing. Try a smaller image (under ~2MB).`,
     );
   }
 
   const admin = getSupabaseServerAdminClient();
 
-  const { error } = await admin.storage.from('signatures-photos').upload(path, bytes, {
-    contentType: mimeType,
-    upsert: true,
-  });
+  const { error } = await admin.storage
+    .from('signatures-photos')
+    .upload(path, bytes, {
+      contentType: mimeType,
+      upsert: true,
+    });
 
   if (error) {
-    throw new Error(`Photo upload failed: ${error.message}`);
+    throw new Error(`${label} upload failed: ${error.message}`);
   }
 
   const { data } = admin.storage.from('signatures-photos').getPublicUrl(path);
   if (!data.publicUrl) {
-    throw new Error('Photo uploaded but public URL could not be created');
+    throw new Error(`${label} uploaded but public URL could not be created`);
   }
 
-  return data.publicUrl;
+  // Bust CDN/browser caches when upsert replaces the same object key.
+  const separator = data.publicUrl.includes('?') ? '&' : '?';
+  return `${data.publicUrl}${separator}v=${Date.now()}`;
 }

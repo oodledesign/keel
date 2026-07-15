@@ -29,7 +29,7 @@ import {
 } from '~/lib/signatures/signatures-provider';
 
 import {
-  deleteDepartmentBadgeActionSchema,
+  deleteSignatureAssetActionSchema,
   disconnectM365ActionSchema,
   connectGoogleWorkspaceActionSchema,
   disconnectGoogleActionSchema,
@@ -39,11 +39,11 @@ import {
   pushStaffActionSchema,
   saveTemplateActionSchema,
   syncStaffActionSchema,
-  upsertDepartmentBadgeActionSchema,
+  upsertSignatureAssetActionSchema,
   updateStaffActionSchema,
   bulkUpdateStaffActionSchema,
 } from '../schema/signatures-module.schema';
-import { uploadPhotoFromDataUrl } from './signatures-data';
+import { uploadBadgeFromDataUrl, uploadPhotoFromDataUrl } from './signatures-data';
 
 function workPath(template: string, accountSlug: string) {
   return template.replace('[account]', accountSlug);
@@ -433,55 +433,116 @@ export const disconnectGoogleWorkspaceAction = enhanceAction(
   { schema: disconnectGoogleActionSchema },
 );
 
-export const upsertDepartmentBadgeAction = enhanceAction(
+export const upsertSignatureAssetAction = enhanceAction(
   async (input, user) => {
     const { accountSlug } = await assertSignaturesAdmin(input.accountId, user.id);
     const db = getSignaturesSupabaseClient();
-    const department = input.department.trim();
 
-    const { error } = await db.from('department_badges').upsert(
-      {
-        account_id: input.accountId,
-        department,
-        award_badge_url: input.award_badge_url.trim(),
-      },
-      {
-        onConflict: 'account_id,department',
-      },
-    );
+    const scope = input.scope;
+    const department =
+      scope === 'department' ? (input.department?.trim() ?? null) : null;
+    const branchId = scope === 'branch' ? (input.branchId ?? null) : null;
 
-    if (error) {
-      throw new Error(error.message);
+    if (scope === 'branch' && branchId) {
+      const branch = await loadAccountBranchById(input.accountId, branchId);
+      if (!branch) {
+        throw new Error('Branch not found');
+      }
     }
 
-    revalidatePath(workPath(pathsConfig.app.accountSignaturesSettings, accountSlug));
-    revalidatePath(workPath(pathsConfig.app.accountSignaturesStaff, accountSlug));
-    revalidatePath(workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug));
+    let imageUrl: string | null = null;
+    let body: string | null = null;
+
+    if (input.kind === 'custom_text') {
+      body = input.body?.trim() ?? null;
+      if (!body) {
+        throw new Error('Enter the shared text');
+      }
+    } else {
+      imageUrl = input.award_badge_url?.trim() || null;
+      if (input.badgeDataUrl?.startsWith('data:image/')) {
+        imageUrl = await uploadBadgeFromDataUrl(
+          input.accountId,
+          input.label || department || 'badge',
+          input.badgeDataUrl,
+        );
+      }
+      if (!imageUrl) {
+        throw new Error('Upload a badge image or paste a valid image URL');
+      }
+    }
+
+    const payload = {
+      account_id: input.accountId,
+      kind: input.kind,
+      scope,
+      department,
+      branch_id: branchId,
+      label: input.label.trim(),
+      body,
+      image_url: imageUrl,
+      sort_order: input.sortOrder ?? 0,
+    };
+
+    if (input.id) {
+      const { error } = await db
+        .from('signature_assets')
+        .update(payload)
+        .eq('id', input.id)
+        .eq('account_id', input.accountId);
+      if (error) {
+        throw new Error(error.message);
+      }
+    } else {
+      const { error } = await db.from('signature_assets').insert(payload);
+      if (error) {
+        throw new Error(error.message);
+      }
+    }
+
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesSettings, accountSlug),
+    );
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesStaff, accountSlug),
+    );
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug),
+    );
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesTemplates, accountSlug),
+    );
     return { ok: true as const };
   },
-  { schema: upsertDepartmentBadgeActionSchema },
+  { schema: upsertSignatureAssetActionSchema },
 );
 
-export const deleteDepartmentBadgeAction = enhanceAction(
+export const deleteSignatureAssetAction = enhanceAction(
   async (input, user) => {
     const { accountSlug } = await assertSignaturesAdmin(input.accountId, user.id);
     const db = getSignaturesSupabaseClient();
     const { error } = await db
-      .from('department_badges')
+      .from('signature_assets')
       .delete()
       .eq('account_id', input.accountId)
-      .eq('department', input.department.trim());
+      .eq('id', input.assetId);
 
     if (error) {
       throw new Error(error.message);
     }
 
-    revalidatePath(workPath(pathsConfig.app.accountSignaturesSettings, accountSlug));
-    revalidatePath(workPath(pathsConfig.app.accountSignaturesStaff, accountSlug));
-    revalidatePath(workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug));
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesSettings, accountSlug),
+    );
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesStaff, accountSlug),
+    );
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug),
+    );
     return { ok: true as const };
   },
-  { schema: deleteDepartmentBadgeActionSchema },
+  { schema: deleteSignatureAssetActionSchema },
 );
 
 export const createSignaturesIntegrationInvite = enhanceAction(

@@ -53,10 +53,16 @@ export function SignatureTemplateEditor({
   accountId,
   template,
   previewStaff,
+  previewAssetHtml,
 }: {
   accountId: string;
   template: SignatureTemplate;
   previewStaff: SignatureStaff | null;
+  previewAssetHtml?: {
+    awardBadgesHtml: string;
+    signatureCustomTextHtml: string;
+    awardBadgeUrl: string | null;
+  };
 }) {
   const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -96,6 +102,15 @@ export function SignatureTemplateEditor({
       if (staff && token in staff) {
         value = String(staff[token as keyof SignatureStaff] ?? '');
       }
+      if (token === 'award_badges') {
+        value = previewAssetHtml?.awardBadgesHtml ?? '';
+      } else if (token === 'signature_custom_text') {
+        value = previewAssetHtml?.signatureCustomTextHtml ?? '';
+      } else if (token === 'award_badge_url') {
+        value =
+          previewAssetHtml?.awardBadgeUrl ??
+          'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+      }
       output = output.replace(
         new RegExp(`\\{\\{\\s*${token}\\s*\\}\\}`, 'gi'),
         value,
@@ -119,7 +134,7 @@ export function SignatureTemplateEditor({
 <div style="color:#333333;font-family:Arial,Calibri,Georgia,sans-serif;line-height:1.4;">${output}</div>
 </body>
 </html>`;
-  }, [previewHtml, previewStaff, previewTheme]);
+  }, [previewHtml, previewStaff, previewTheme, previewAssetHtml]);
 
   const lintIssues = useMemo(() => lintSignatureTemplateHtml(html), [html]);
   const lintWarnings = lintIssues.filter((issue) => issue.severity === 'warn');

@@ -45,6 +45,8 @@ const OPTIONAL_TEMPLATE_KEYS = [
   'company_logo_url',
   'brand_logo_url',
   'award_badge_url',
+  'award_badges',
+  'signature_custom_text',
   'brand_primary_color',
   'brand_secondary_color',
   'brand_accent_color',
@@ -57,6 +59,10 @@ type TokenKey = (typeof TOKEN_KEYS)[number];
 
 export type RenderTemplateOptions = {
   awardBadgeUrl?: string | null;
+  /** Pre-rendered HTML for one or more matching award badge images. */
+  awardBadgesHtml?: string | null;
+  /** Pre-rendered HTML for matching shared custom-text snippets. */
+  signatureCustomTextHtml?: string | null;
   brand?: AccountBrandResolved | null;
   branch?: AccountBranch | null;
 };
@@ -115,6 +121,10 @@ export function renderTemplate(
       replacement = logo;
     } else if (key === 'award_badge_url') {
       replacement = options?.awardBadgeUrl?.trim() || TRANSPARENT_PIXEL_GIF;
+    } else if (key === 'award_badges') {
+      replacement = options?.awardBadgesHtml?.trim() || '';
+    } else if (key === 'signature_custom_text') {
+      replacement = options?.signatureCustomTextHtml?.trim() || '';
     } else if (key === 'brand_primary_color') {
       replacement = options?.brand?.primary_color ?? DEFAULT_BRAND_PRIMARY;
     } else if (key === 'brand_secondary_color') {

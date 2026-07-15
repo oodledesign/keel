@@ -28,7 +28,8 @@ export type SignatureBlockType =
   | 'logo'
   | 'award_badge'
   | 'divider'
-  | 'custom_text';
+  | 'custom_text'
+  | 'shared_text';
 
 export type SignatureBlock = {
   id: string;
@@ -147,8 +148,8 @@ export const SIGNATURE_BLOCK_LIBRARY: SignatureBlockDefinition[] = [
   },
   {
     type: 'award_badge',
-    label: 'Award badge',
-    description: 'Optional badge image',
+    label: 'Award badges',
+    description: 'Scoped badges from Signatures settings',
     max: 1,
   },
   {
@@ -160,8 +161,14 @@ export const SIGNATURE_BLOCK_LIBRARY: SignatureBlockDefinition[] = [
   {
     type: 'custom_text',
     label: 'Custom text',
-    description: 'Free text line',
+    description: 'Fixed text for this template only',
     max: null,
+  },
+  {
+    type: 'shared_text',
+    label: 'Shared text',
+    description: 'Scoped snippets from Signatures settings',
+    max: 1,
   },
 ];
 
@@ -448,11 +455,13 @@ function blockInnerHtml(
     case 'logo':
       return `<img src="{{brand_logo_url}}" alt="" width="120" style="display:block;max-width:120px;height:auto;border:0;" />`;
     case 'award_badge':
-      return `<img src="{{award_badge_url}}" alt="" width="96" style="display:block;max-width:96px;height:auto;border:0;" />`;
+      return `{{award_badges}}`;
     case 'divider':
       return `<div style="border-top:1px solid ${palette.divider};line-height:0;font-size:0;height:1px;">&nbsp;</div>`;
     case 'custom_text':
       return `<div style="font-size:13px;line-height:1.5;color:${palette.primary};">${escapeHtml(block.text ?? '')}</div>`;
+    case 'shared_text':
+      return `{{signature_custom_text}}`;
     default: {
       const _exhaustive: never = block.type;
       return _exhaustive;
@@ -649,6 +658,8 @@ export const SIGNATURE_TEMPLATE_TOKENS = [
   'website',
   'brand_logo_url',
   'award_badge_url',
+  'award_badges',
+  'signature_custom_text',
   'brand_primary_color',
   'brand_secondary_color',
   'brand_accent_color',

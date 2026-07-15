@@ -7,6 +7,7 @@ import {
   loadTemplateDetail,
   loadTemplatePreviewStaff,
 } from '../../../_lib/server/signatures-data';
+import { loadResolvedSignatureAssets } from '~/lib/signatures/signature-assets';
 
 type SignatureTemplateDetailPageProps = {
   params: Promise<{ account: string; id: string }>;
@@ -27,6 +28,13 @@ export default async function SignatureTemplateDetailPage({
     notFound();
   }
 
+  const resolvedAssets = previewStaff
+    ? await loadResolvedSignatureAssets(accountId, {
+        department: previewStaff.department,
+        branch_id: previewStaff.branch_id,
+      })
+    : null;
+
   return (
     <ModuleDataSection
       title={template.name}
@@ -36,6 +44,15 @@ export default async function SignatureTemplateDetailPage({
         accountId={accountId}
         template={template}
         previewStaff={previewStaff}
+        previewAssetHtml={
+          resolvedAssets
+            ? {
+                awardBadgesHtml: resolvedAssets.awardBadgesHtml,
+                signatureCustomTextHtml: resolvedAssets.customTextHtml,
+                awardBadgeUrl: resolvedAssets.awardBadgeUrl,
+              }
+            : undefined
+        }
       />
     </ModuleDataSection>
   );

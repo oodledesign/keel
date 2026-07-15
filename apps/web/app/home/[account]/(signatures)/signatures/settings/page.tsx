@@ -1,14 +1,16 @@
 import { ModuleDataSection } from '../../../_components/module-data-section';
+import { SignaturesAssetsPanel } from '../../_components/signatures-assets-panel';
 import { SignaturesSettingsPanel } from '../../_components/signatures-settings-panel';
 import { SignaturesIntegrationLinksCard } from '../../_components/signatures-integration-links-card';
 import {
-  loadDepartmentBadges,
   loadDepartments,
   loadGoogleConnection,
   loadMsConnection,
   loadSignaturesWorkspace,
 } from '../../_lib/server/signatures-data';
+import { loadAccountBranches } from '~/lib/brand/account-branches';
 import { listIntegrationConnectInvites } from '~/lib/signatures/integration-invite';
+import { loadSignatureAssets } from '~/lib/signatures/signature-assets';
 
 type SignaturesSettingsPageProps = {
   params: Promise<{ account: string }>;
@@ -23,14 +25,21 @@ export default async function SignaturesSettingsPage({
   const sp = await searchParams;
   const workspace = await loadSignaturesWorkspace(account);
   const accountId = workspace.account.id as string;
-  const [msConnection, googleConnection, departmentBadges, departments, integrationInvites] =
-    await Promise.all([
-      loadMsConnection(accountId),
-      loadGoogleConnection(accountId),
-      loadDepartmentBadges(accountId),
-      loadDepartments(accountId),
-      listIntegrationConnectInvites(accountId),
-    ]);
+  const [
+    msConnection,
+    googleConnection,
+    assets,
+    departments,
+    branches,
+    integrationInvites,
+  ] = await Promise.all([
+    loadMsConnection(accountId),
+    loadGoogleConnection(accountId),
+    loadSignatureAssets(accountId),
+    loadDepartments(accountId),
+    loadAccountBranches(accountId),
+    listIntegrationConnectInvites(accountId),
+  ]);
 
   return (
     <ModuleDataSection
@@ -47,14 +56,18 @@ export default async function SignaturesSettingsPage({
           initialInvites={integrationInvites}
         />
         <SignaturesSettingsPanel
-        accountId={accountId}
-        accountSlug={account}
-        msConnection={msConnection}
-        googleConnection={googleConnection}
-        connected={sp.connected === 'true'}
-        departmentBadges={departmentBadges}
-        departments={departments}
-      />
+          accountId={accountId}
+          accountSlug={account}
+          msConnection={msConnection}
+          googleConnection={googleConnection}
+          connected={sp.connected === 'true'}
+        />
+        <SignaturesAssetsPanel
+          accountId={accountId}
+          assets={assets}
+          departments={departments}
+          branches={branches}
+        />
       </div>
     </ModuleDataSection>
   );
