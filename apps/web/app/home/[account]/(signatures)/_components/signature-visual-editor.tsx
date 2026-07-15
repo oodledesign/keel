@@ -30,11 +30,15 @@ import { Label } from '@kit/ui/label';
 import { cn } from '@kit/ui/utils';
 
 import {
+  DEFAULT_SIGNATURE_BACKGROUND,
   SIGNATURE_BLOCK_LIBRARY,
   canAddSignatureBlock,
   createMinimalSignatureDocument,
   createSignatureBlock,
   getSignatureBlockDefinition,
+  normalizeHexColor,
+  resolveSignatureBackground,
+  type SignatureBackgroundMode,
   type SignatureBlock,
   type SignatureBlockType,
   type SignatureBuilderDocument,
@@ -161,6 +165,49 @@ export function SignatureVisualEditor({
     onChange({ ...document, layout });
   };
 
+  const background = resolveSignatureBackground(document.background);
+
+  const setBackgroundMode = (mode: SignatureBackgroundMode) => {
+    onChange({
+      ...document,
+      background: {
+        ...background,
+        mode,
+        color:
+          mode === 'none'
+            ? background.color
+            : normalizeHexColor(background.color, DEFAULT_SIGNATURE_BACKGROUND.color),
+        colorEnd: normalizeHexColor(
+          background.colorEnd ?? background.color,
+          DEFAULT_SIGNATURE_BACKGROUND.colorEnd ?? background.color,
+        ),
+      },
+    });
+  };
+
+  const setBackgroundColor = (color: string) => {
+    onChange({
+      ...document,
+      background: {
+        ...background,
+        color: normalizeHexColor(color, background.color),
+      },
+    });
+  };
+
+  const setBackgroundColorEnd = (colorEnd: string) => {
+    onChange({
+      ...document,
+      background: {
+        ...background,
+        colorEnd: normalizeHexColor(
+          colorEnd,
+          background.colorEnd ?? background.color,
+        ),
+      },
+    });
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) {
@@ -243,9 +290,124 @@ export function SignatureVisualEditor({
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          Drag blocks to reorder. Visual layouts stay dark-mode friendly by
-          default (mid-grey text, underlined links, no solid fills).
+          Drag blocks to reorder. Transparent layouts stay dark-mode friendly
+          (mid-grey text, underlined links). A filled canvas forces colours so
+          light and dark inboxes look the same.
         </p>
+      </div>
+
+      <div className="space-y-3">
+        <div className="space-y-2">
+          <Label>Background</Label>
+          <div className="inline-flex rounded-lg border border-[color:var(--workspace-shell-border)] p-0.5">
+            {(
+              [
+                ['none', 'None'],
+                ['solid', 'Colour'],
+                ['gradient', 'Gradient'],
+              ] as const
+            ).map(([mode, label]) => (
+              <Button
+                key={mode}
+                type="button"
+                size="sm"
+                variant="ghost"
+                className={cn(
+                  'h-8 px-3',
+                  background.mode === mode &&
+                    'bg-[var(--workspace-shell-sidebar-accent)]',
+                )}
+                onClick={() => setBackgroundMode(mode)}
+              >
+                {label}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {background.mode !== 'none' ? (
+          <div className="space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="sig-bg-color" className="text-xs">
+                  {background.mode === 'gradient' ? 'Start colour' : 'Colour'}
+                </Label>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="sig-bg-color"
+                    type="color"
+                    value={normalizeHexColor(
+                      background.color,
+                      DEFAULT_SIGNATURE_BACKGROUND.color,
+                    )}
+                    onChange={(event) => setBackgroundColor(event.target.value)}
+                    className="h-9 w-12 cursor-pointer rounded border border-[color:var(--workspace-shell-border)] bg-transparent p-1"
+                  />
+                  <Input
+                    value={normalizeHexColor(
+                      background.color,
+                      DEFAULT_SIGNATURE_BACKGROUND.color,
+                    )}
+                    onChange={(event) => setBackgroundColor(event.target.value)}
+                    className="h-9 font-mono text-sm uppercase"
+                    maxLength={7}
+                    spellCheck={false}
+                  />
+                </div>
+              </div>
+              {background.mode === 'gradient' ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="sig-bg-color-end" className="text-xs">
+                    End colour
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="sig-bg-color-end"
+                      type="color"
+                      value={normalizeHexColor(
+                        background.colorEnd ?? background.color,
+                        DEFAULT_SIGNATURE_BACKGROUND.colorEnd ??
+                          background.color,
+                      )}
+                      onChange={(event) =>
+                        setBackgroundColorEnd(event.target.value)
+                      }
+                      className="h-9 w-12 cursor-pointer rounded border border-[color:var(--workspace-shell-border)] bg-transparent p-1"
+                    />
+                    <Input
+                      value={normalizeHexColor(
+                        background.colorEnd ?? background.color,
+                        DEFAULT_SIGNATURE_BACKGROUND.colorEnd ??
+                          background.color,
+                      )}
+                      onChange={(event) =>
+                        setBackgroundColorEnd(event.target.value)
+                      }
+                      className="h-9 font-mono text-sm uppercase"
+                      maxLength={7}
+                      spellCheck={false}
+                    />
+                  </div>
+                </div>
+              ) : null}
+            </div>
+            <div
+              className="h-10 rounded-lg border border-[color:var(--workspace-shell-border)]"
+              style={{
+                background:
+                  background.mode === 'gradient'
+                    ? `linear-gradient(135deg, ${normalizeHexColor(background.color, '#FBF6EC')}, ${normalizeHexColor(background.colorEnd ?? background.color, '#E7DECF')})`
+                    : normalizeHexColor(background.color, '#FBF6EC'),
+              }}
+              aria-hidden
+            />
+            <p className="text-xs text-muted-foreground">
+              Text and link colours are chosen automatically for contrast, and
+              marked so clients should not invert them in dark mode. Gradients
+              fall back to the start colour in Outlook desktop.
+            </p>
+          </div>
+        ) : null}
       </div>
 
       <div className="space-y-2">

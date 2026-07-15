@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
+import { cn } from '@kit/ui/utils';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import type { AccountBranch } from '~/lib/brand/account-branches';
@@ -38,6 +39,11 @@ import type {
   SignatureStaff,
   SignatureTemplate,
 } from '../_lib/server/signatures-data';
+
+import {
+  SignaturePreviewFrame,
+  type SignaturePreviewTheme,
+} from './signature-preview-frame';
 
 const NO_TEMPLATE = '__none__';
 const NO_BRANCH = '__none__';
@@ -99,6 +105,8 @@ export function SignatureStaffEditor({
   const [templateId, setTemplateId] = useState(staff.template_id ?? NO_TEMPLATE);
   const [branchId, setBranchId] = useState(staff.branch_id ?? NO_BRANCH);
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
+  const [previewTheme, setPreviewTheme] =
+    useState<SignaturePreviewTheme>('light');
 
   const selectedBranch = useMemo(
     () => branches.find((b) => b.id === branchId) ?? null,
@@ -114,9 +122,10 @@ export function SignatureStaffEditor({
     const params = new URLSearchParams({
       staffId: staff.id,
       templateId: selectedTemplate,
+      theme: previewTheme,
     });
     return `/api/signatures/preview?${params.toString()}`;
-  }, [staff.id, templateId]);
+  }, [previewTheme, staff.id, templateId]);
 
   const photoPreview = photoDataUrl || staff.photo_url;
 
@@ -329,17 +338,31 @@ export function SignatureStaffEditor({
       </Card>
 
       <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-        <CardHeader>
+        <CardHeader className="space-y-1">
           <CardTitle>Live preview</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Preview how this signature reads at mobile, tablet, and desktop
+            widths in light or dark inbox chrome.
+          </p>
         </CardHeader>
         <CardContent>
           {previewUrl ? (
-            <iframe
-              key={previewUrl}
-              src={previewUrl}
-              className="h-[420px] w-full rounded-xl border border-[color:var(--workspace-shell-border)] bg-white"
-              title="Signature preview"
-            />
+            <SignaturePreviewFrame
+              theme={previewTheme}
+              onThemeChange={setPreviewTheme}
+              heightClassName="h-[420px]"
+            >
+              <iframe
+                key={previewUrl}
+                src={previewUrl}
+                sandbox=""
+                className={cn(
+                  'h-full w-full rounded-lg border-0',
+                  previewTheme === 'light' ? 'bg-white' : 'bg-[#1c1c1e]',
+                )}
+                title="Signature preview"
+              />
+            </SignaturePreviewFrame>
           ) : (
             <div className="flex h-[420px] items-center justify-center rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] text-sm text-muted-foreground">
               <Upload className="mr-2 h-4 w-4" />

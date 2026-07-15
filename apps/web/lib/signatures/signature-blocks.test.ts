@@ -5,6 +5,7 @@ import {
   createSignatureBlock,
   htmlToSignatureBlocks,
   isSignatureBuilderHtml,
+  paletteForBackground,
   signatureBlocksToHtml,
 } from './signature-blocks';
 
@@ -18,6 +19,7 @@ describe('signatureBlocksToHtml / htmlToSignatureBlocks', () => {
     const parsed = htmlToSignatureBlocks(html);
     expect(parsed).not.toBeNull();
     expect(parsed?.layout).toBe(doc.layout);
+    expect(parsed?.background?.mode).toBe('none');
     expect(parsed?.blocks.map((block) => block.type)).toEqual(
       doc.blocks.map((block) => block.type),
     );
@@ -50,5 +52,50 @@ describe('signatureBlocksToHtml / htmlToSignatureBlocks', () => {
     expect(html).toContain('color:#333333');
     expect(html).toContain('text-decoration:underline');
     expect(html).not.toMatch(/background-color\s*:\s*#/i);
+  });
+
+  it('round-trips a solid background and forces canvas colours', () => {
+    const doc = {
+      ...createMinimalSignatureDocument(),
+      background: { mode: 'solid' as const, color: '#2A1720' },
+    };
+    const html = signatureBlocksToHtml(doc);
+    const palette = paletteForBackground(doc.background);
+
+    expect(html).toContain('bg="solid:#2A1720"');
+    expect(html).toContain('bgcolor="#2A1720"');
+    expect(html).toContain('background-color:#2A1720');
+    expect(html).toContain('color-scheme:light only');
+    expect(html).toContain(`color:${palette.primary}`);
+
+    const parsed = htmlToSignatureBlocks(html);
+    expect(parsed?.background).toEqual({
+      mode: 'solid',
+      color: '#2A1720',
+    });
+  });
+
+  it('round-trips a gradient background', () => {
+    const doc = {
+      ...createMinimalSignatureDocument(),
+      background: {
+        mode: 'gradient' as const,
+        color: '#FF5C34',
+        colorEnd: '#2A1720',
+      },
+    };
+    const html = signatureBlocksToHtml(doc);
+
+    expect(html).toContain('bg="gradient:#FF5C34:#2A1720"');
+    expect(html).toContain(
+      'background-image:linear-gradient(135deg,#FF5C34,#2A1720)',
+    );
+
+    const parsed = htmlToSignatureBlocks(html);
+    expect(parsed?.background).toEqual({
+      mode: 'gradient',
+      color: '#FF5C34',
+      colorEnd: '#2A1720',
+    });
   });
 });

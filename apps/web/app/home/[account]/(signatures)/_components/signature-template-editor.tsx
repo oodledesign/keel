@@ -9,9 +9,7 @@ import {
   Code2,
   Info,
   LayoutTemplate,
-  Moon,
   Save,
-  Sun,
 } from 'lucide-react';
 
 import { Badge } from '@kit/ui/badge';
@@ -43,6 +41,10 @@ import type {
   SignatureTemplate,
 } from '../_lib/server/signatures-data';
 
+import {
+  SignaturePreviewFrame,
+  type SignaturePreviewTheme,
+} from './signature-preview-frame';
 import { SignatureVisualEditor } from './signature-visual-editor';
 
 type EditorMode = 'visual' | 'html';
@@ -67,7 +69,8 @@ export function SignatureTemplateEditor({
   const [isDefault, setIsDefault] = useState(template.is_default);
   const [previewHtml, setPreviewHtml] = useState(template.html_template);
   const [saving, setSaving] = useState(false);
-  const [previewTheme, setPreviewTheme] = useState<'light' | 'dark'>('light');
+  const [previewTheme, setPreviewTheme] =
+    useState<SignaturePreviewTheme>('light');
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setPreviewHtml(html), 250);
@@ -267,11 +270,13 @@ export function SignatureTemplateEditor({
             </TabsContent>
           </Tabs>
 
-          <div className="space-y-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-black/10 p-4">
+          <div className="space-y-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-sm font-medium">Dark-mode resilience</h3>
-                <p className="mt-1 text-xs text-muted-foreground">
+                <h3 className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                  Dark-mode resilience
+                </h3>
+                <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
                   Soft checks only — saving is never blocked. Fix warnings before
                   publishing to staff inboxes.
                 </p>
@@ -279,7 +284,7 @@ export function SignatureTemplateEditor({
               {lintWarnings.length === 0 ? (
                 <Badge
                   variant="outline"
-                  className="shrink-0 gap-1 border-emerald-500/40 text-emerald-300"
+                  className="shrink-0 gap-1 border-emerald-600/40 text-emerald-700 dark:border-emerald-500/40 dark:text-emerald-300"
                 >
                   <CheckCircle2 className="h-3 w-3" />
                   Looking good
@@ -287,7 +292,7 @@ export function SignatureTemplateEditor({
               ) : (
                 <Badge
                   variant="outline"
-                  className="shrink-0 gap-1 border-amber-500/40 text-amber-200"
+                  className="shrink-0 gap-1 border-amber-600/40 text-amber-800 dark:border-amber-500/40 dark:text-amber-200"
                 >
                   <AlertTriangle className="h-3 w-3" />
                   {lintWarnings.length} warning
@@ -304,21 +309,23 @@ export function SignatureTemplateEditor({
                     className={cn(
                       'rounded-xl border px-3 py-2 text-xs',
                       issue.severity === 'warn'
-                        ? 'border-amber-500/30 bg-amber-500/10 text-amber-50'
-                        : 'border-[color:var(--workspace-shell-border)] bg-black/20 text-muted-foreground',
+                        ? 'border-amber-600/35 bg-amber-500/15'
+                        : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]',
                     )}
                   >
                     <div className="flex items-start gap-2">
                       {issue.severity === 'warn' ? (
-                        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-300" />
+                        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-700 dark:text-amber-300" />
                       ) : (
-                        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text-muted)]" />
                       )}
                       <div className="space-y-0.5">
                         <p className="font-medium text-[var(--workspace-shell-text)]">
                           {issue.title}
                         </p>
-                        <p>{issue.detail}</p>
+                        <p className="text-[var(--workspace-shell-text-muted)]">
+                          {issue.detail}
+                        </p>
                       </div>
                     </div>
                   </li>
@@ -326,10 +333,10 @@ export function SignatureTemplateEditor({
               </ul>
             ) : null}
 
-            <ul className="space-y-1.5 border-t border-[color:var(--workspace-shell-border)] pt-3 text-xs text-muted-foreground">
+            <ul className="space-y-1.5 border-t border-[color:var(--workspace-shell-border)] pt-3 text-xs text-[var(--workspace-shell-text-muted)]">
               {SIGNATURE_DARK_MODE_CHECKLIST.map((item) => (
                 <li key={item} className="flex gap-2">
-                  <span className="text-[#39AEB3]">•</span>
+                  <span className="text-[var(--ozer-info)]">•</span>
                   <span>{item}</span>
                 </li>
               ))}
@@ -350,66 +357,37 @@ export function SignatureTemplateEditor({
       </Card>
 
       <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-        <CardHeader className="flex flex-row items-center justify-between gap-3">
-          <div className="space-y-1">
-            <CardTitle>Live preview</CardTitle>
-            <p className="text-xs text-muted-foreground">
-              Preview against light or dark inbox chrome. Prefer mid-grey text
-              (#333), underlined links, transparent logos, and avoid solid
-              background blocks — clients invert colours inconsistently.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {previewStaff ? (
-              <Badge variant="outline">{previewStaff.email}</Badge>
-            ) : null}
-            <div className="inline-flex rounded-lg border border-[color:var(--workspace-shell-border)] p-0.5">
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                className={cn(
-                  'h-8 px-2',
-                  previewTheme === 'light' &&
-                    'bg-[var(--workspace-shell-sidebar-accent)]',
-                )}
-                onClick={() => setPreviewTheme('light')}
-              >
-                <Sun className="h-3.5 w-3.5" />
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                className={cn(
-                  'h-8 px-2',
-                  previewTheme === 'dark' &&
-                    'bg-[var(--workspace-shell-sidebar-accent)]',
-                )}
-                onClick={() => setPreviewTheme('dark')}
-              >
-                <Moon className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          </div>
+        <CardHeader className="space-y-1">
+          <CardTitle>Live preview</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Check mobile, tablet, and desktop widths against light or dark inbox
+            chrome. Prefer mid-grey text (#333), underlined links, and
+            transparent logos — clients invert colours inconsistently unless you
+            set a signature background.
+          </p>
         </CardHeader>
         <CardContent>
-          <div
-            className={cn(
-              'rounded-xl border border-[color:var(--workspace-shell-border)] p-3',
-              previewTheme === 'light' ? 'bg-white' : 'bg-[#1c1c1e]',
-            )}
+          <SignaturePreviewFrame
+            theme={previewTheme}
+            onThemeChange={setPreviewTheme}
+            heightClassName="h-[680px]"
+            toolbarExtra={
+              previewStaff ? (
+                <Badge variant="outline">{previewStaff.email}</Badge>
+              ) : null
+            }
           >
             <iframe
               key={previewTheme}
               title="Template preview"
               srcDoc={renderedPreview}
+              sandbox=""
               className={cn(
-                'h-[680px] w-full rounded-lg border-0',
+                'h-full w-full rounded-lg border-0',
                 previewTheme === 'light' ? 'bg-white' : 'bg-[#1c1c1e]',
               )}
             />
-          </div>
+          </SignaturePreviewFrame>
         </CardContent>
       </Card>
     </div>

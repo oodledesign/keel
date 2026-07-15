@@ -27,7 +27,7 @@ Domains (manual in Vercel + DNS):
 
 ```bash
 pnpm --filter sites dev
-# http://localhost:3011 with Host header or /_sites/{host}/{slug}
+# http://localhost:3011 with Host header or /tenant/{host}/{slug}
 ```
 
 ## Data / RLS

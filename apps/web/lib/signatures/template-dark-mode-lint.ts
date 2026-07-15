@@ -62,8 +62,12 @@ export function lintSignatureTemplateHtml(
   const onlyTokenBackgrounds =
     hasSolidBackground &&
     solidBackgrounds.every((value) => TEMPLATE_TOKEN.test(value.trim()));
+  /** Visual builder canvas with color-scheme lock — intentional filled design. */
+  const forcedCanvas =
+    /color-scheme\s*:\s*light\s+only/i.test(source) &&
+    /ozer-sig-builder:v\d+[^>]*\sbg="(?:solid|gradient):/i.test(source);
 
-  if (hasSolidBackground) {
+  if (hasSolidBackground && !forcedCanvas) {
     issues.push({
       id: 'solid-background',
       severity: onlyTokenBackgrounds ? 'tip' : 'warn',
@@ -76,7 +80,17 @@ export function lintSignatureTemplateHtml(
     });
   }
 
-  if (PURE_WHITE.test(source)) {
+  if (forcedCanvas) {
+    issues.push({
+      id: 'forced-canvas',
+      severity: 'tip',
+      title: 'Forced canvas colours enabled',
+      detail:
+        'This signature locks a background and contrast text so light and dark inboxes should look the same. Still preview both themes — a few clients ignore color-scheme.',
+    });
+  }
+
+  if (PURE_WHITE.test(source) && !forcedCanvas) {
     issues.push({
       id: 'pure-white-text',
       severity: hasSolidBackground ? 'tip' : 'warn',
@@ -123,7 +137,7 @@ export function lintSignatureTemplateHtml(
     });
   }
 
-  if (!MID_GREY.test(source)) {
+  if (!MID_GREY.test(source) && !forcedCanvas) {
     issues.push({
       id: 'prefer-mid-grey',
       severity: 'tip',
@@ -137,9 +151,9 @@ export function lintSignatureTemplateHtml(
 }
 
 export const SIGNATURE_DARK_MODE_CHECKLIST = [
-  'Body text: mid-grey (#333333), not pure black or white',
+  'Body text: mid-grey (#333333), not pure black or white — unless you use a filled canvas',
   'Links: always underlined',
-  'Backgrounds: transparent — avoid solid table/cell fills',
+  'Backgrounds: transparent by default; visual builder Colour/Gradient forces a locked palette',
   'Logos: PNG/SVG with transparent background',
   'CTAs: prefer text links over solid buttons',
   'Preview both light and dark chrome before publishing',

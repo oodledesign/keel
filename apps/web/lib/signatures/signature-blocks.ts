@@ -2,6 +2,17 @@ export const SIGNATURE_BUILDER_VERSION = 1 as const;
 
 export type SignatureLayout = 'stacked' | 'photo_left';
 
+export type SignatureBackgroundMode = 'none' | 'solid' | 'gradient';
+
+/** Optional filled canvas for the signature (forces colours for light + dark inboxes). */
+export type SignatureBackground = {
+  mode: SignatureBackgroundMode;
+  /** Solid fill, or gradient start. Hex `#RRGGBB`. */
+  color: string;
+  /** Gradient end when `mode === 'gradient'`. Hex `#RRGGBB`. */
+  colorEnd?: string;
+};
+
 export type SignatureBlockType =
   | 'photo'
   | 'name'
@@ -29,7 +40,28 @@ export type SignatureBlock = {
 export type SignatureBuilderDocument = {
   version: typeof SIGNATURE_BUILDER_VERSION;
   layout: SignatureLayout;
+  background?: SignatureBackground;
   blocks: SignatureBlock[];
+};
+
+export const DEFAULT_SIGNATURE_BACKGROUND: SignatureBackground = {
+  mode: 'none',
+  color: '#FBF6EC',
+  colorEnd: '#E7DECF',
+};
+
+type SignatureTextPalette = {
+  primary: string;
+  muted: string;
+  link: string;
+  divider: string;
+};
+
+const TRANSPARENT_PALETTE: SignatureTextPalette = {
+  primary: '#333333',
+  muted: '#555555',
+  link: '#333333',
+  divider: '#DDDDDD',
 };
 
 export type SignatureBlockDefinition = {
@@ -168,6 +200,7 @@ export function createMinimalSignatureDocument(): SignatureBuilderDocument {
   return {
     version: SIGNATURE_BUILDER_VERSION,
     layout: 'photo_left',
+    background: { ...DEFAULT_SIGNATURE_BACKGROUND },
     blocks: [
       createSignatureBlock('photo'),
       createSignatureBlock('name'),
@@ -183,6 +216,7 @@ export function createExecutiveSignatureDocument(): SignatureBuilderDocument {
   return {
     version: SIGNATURE_BUILDER_VERSION,
     layout: 'photo_left',
+    background: { ...DEFAULT_SIGNATURE_BACKGROUND },
     blocks: [
       createSignatureBlock('photo'),
       createSignatureBlock('name'),
@@ -207,38 +241,215 @@ function escapeHtml(value: string): string {
     .replaceAll('"', '&quot;');
 }
 
-function blockInnerHtml(block: SignatureBlock): string {
+export function normalizeHexColor(
+  value: string | null | undefined,
+  fallback: string,
+): string {
+  const raw = (value ?? '').trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(raw)) {
+    return raw.toUpperCase();
+  }
+  if (/^#[0-9a-fA-F]{3}$/.test(raw)) {
+    const [, r, g, b] = raw;
+    return `#${r}${r}${g}${g}${b}${b}`.toUpperCase();
+  }
+  return fallback.toUpperCase();
+}
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const normalized = normalizeHexColor(hex, '');
+  if (!/^#[0-9A-F]{6}$/.test(normalized)) {
+    return null;
+  }
+  return {
+    r: parseInt(normalized.slice(1, 3), 16),
+    g: parseInt(normalized.slice(3, 5), 16),
+    b: parseInt(normalized.slice(5, 7), 16),
+  };
+}
+
+/** Relative luminance 0–1 (sRGB). */
+export function relativeLuminance(hex: string): number {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return 1;
+  const channel = (c: number) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  return (
+    0.2126 * channel(rgb.r) + 0.7152 * channel(rgb.g) + 0.0722 * channel(rgb.b)
+  );
+}
+
+export function resolveSignatureBackground(
+  background?: SignatureBackground | null,
+): SignatureBackground {
+  const mode = background?.mode ?? 'none';
+  const color = normalizeHexColor(
+    background?.color,
+    DEFAULT_SIGNATURE_BACKGROUND.color,
+  );
+  const colorEnd = normalizeHexColor(
+    background?.colorEnd ?? color,
+    DEFAULT_SIGNATURE_BACKGROUND.colorEnd ?? color,
+  );
+  return { mode, color, colorEnd };
+}
+
+/**
+ * When a canvas is set, pick a light or dark text palette so the signature
+ * reads the same in light and dark inboxes (colours are forced on the HTML).
+ */
+export function paletteForBackground(
+  background?: SignatureBackground | null,
+): SignatureTextPalette {
+  const bg = resolveSignatureBackground(background);
+  if (bg.mode === 'none') {
+    return TRANSPARENT_PALETTE;
+  }
+
+  const a = relativeLuminance(bg.color);
+  const b =
+    bg.mode === 'gradient' ? relativeLuminance(bg.colorEnd ?? bg.color) : a;
+  const luminance = (a + b) / 2;
+
+  // Pick the palette with better contrast against the canvas (approx. WCAG).
+  const darkTextL = 0.04; // ~#333333
+  const lightTextL = 0.9; // ~#F3F4F6
+  const darkContrast = (luminance + 0.05) / (darkTextL + 0.05);
+  const lightContrast = (lightTextL + 0.05) / (luminance + 0.05);
+
+  if (lightContrast >= darkContrast) {
+    return {
+      primary: '#F3F4F6',
+      muted: '#D1D5DB',
+      link: '#F3F4F6',
+      divider: '#6B7280',
+    };
+  }
+
+  return {
+    primary: '#333333',
+    muted: '#555555',
+    link: '#333333',
+    divider: '#DDDDDD',
+  };
+}
+
+function serializeBackgroundAttr(background?: SignatureBackground | null): string {
+  const bg = resolveSignatureBackground(background);
+  if (bg.mode === 'none') {
+    return '';
+  }
+  if (bg.mode === 'solid') {
+    return ` bg="solid:${bg.color}"`;
+  }
+  return ` bg="gradient:${bg.color}:${bg.colorEnd ?? bg.color}"`;
+}
+
+export function parseBackgroundAttr(
+  value: string | undefined,
+): SignatureBackground {
+  if (!value || value === 'none') {
+    return { ...DEFAULT_SIGNATURE_BACKGROUND, mode: 'none' };
+  }
+
+  if (value.startsWith('solid:')) {
+    return {
+      mode: 'solid',
+      color: normalizeHexColor(value.slice('solid:'.length), '#FFFFFF'),
+    };
+  }
+
+  if (value.startsWith('gradient:')) {
+    const rest = value.slice('gradient:'.length);
+    const [start, end] = rest.split(':');
+    return {
+      mode: 'gradient',
+      color: normalizeHexColor(start, '#FBF6EC'),
+      colorEnd: normalizeHexColor(end, '#E7DECF'),
+    };
+  }
+
+  return { ...DEFAULT_SIGNATURE_BACKGROUND, mode: 'none' };
+}
+
+function canvasShellStyles(background: SignatureBackground): {
+  bgcolor: string | null;
+  style: string;
+  forceCanvas: boolean;
+} {
+  const bg = resolveSignatureBackground(background);
+  if (bg.mode === 'none') {
+    return {
+      bgcolor: null,
+      style:
+        'border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;color:#333333;max-width:560px;',
+      forceCanvas: false,
+    };
+  }
+
+  const palette = paletteForBackground(bg);
+  const gradient =
+    bg.mode === 'gradient'
+      ? `background-image:linear-gradient(135deg,${bg.color},${bg.colorEnd ?? bg.color})`
+      : 'background-image:none';
+
+  // color-scheme:light only — ask clients not to invert fills/text when a
+  // deliberate canvas is present. bgcolor remains the solid fallback (Outlook).
+  // border-radius is ignored by Outlook desktop (cosmetic elsewhere).
+  return {
+    bgcolor: bg.color,
+    style: [
+      'border-collapse:collapse',
+      'font-family:Arial,Helvetica,sans-serif',
+      `color:${palette.primary}`,
+      'max-width:560px',
+      `background-color:${bg.color}`,
+      gradient,
+      'padding:16px',
+      'border-radius:8px',
+      'color-scheme:light only',
+    ].join(';'),
+    forceCanvas: true,
+  };
+}
+
+function blockInnerHtml(
+  block: SignatureBlock,
+  palette: SignatureTextPalette,
+): string {
   switch (block.type) {
     case 'photo':
       return `<img src="{{photo_url}}" alt="{{full_name}}" width="80" height="80" style="display:block;width:80px;height:80px;border-radius:999px;object-fit:cover;border:0;" />`;
     case 'name':
-      return `<div style="font-size:18px;font-weight:700;line-height:1.25;color:#333333;">{{full_name}}</div>`;
+      return `<div style="font-size:18px;font-weight:700;line-height:1.25;color:${palette.primary};">{{full_name}}</div>`;
     case 'title':
-      return `<div style="font-size:14px;line-height:1.4;color:#555555;">{{job_title}}</div>`;
+      return `<div style="font-size:14px;line-height:1.4;color:${palette.muted};">{{job_title}}</div>`;
     case 'credentials':
-      return `<div style="font-size:13px;line-height:1.4;color:#555555;">{{credentials}}</div>`;
+      return `<div style="font-size:13px;line-height:1.4;color:${palette.muted};">{{credentials}}</div>`;
     case 'email':
-      return `<div style="font-size:13px;line-height:1.5;color:#333333;"><a href="mailto:{{email}}" style="color:#333333;text-decoration:underline;">{{email}}</a></div>`;
+      return `<div style="font-size:13px;line-height:1.5;color:${palette.primary};"><a href="mailto:{{email}}" style="color:${palette.link};text-decoration:underline;">{{email}}</a></div>`;
     case 'phone_direct':
-      return `<div style="font-size:13px;line-height:1.5;color:#333333;">{{phone_direct}}</div>`;
+      return `<div style="font-size:13px;line-height:1.5;color:${palette.primary};">{{phone_direct}}</div>`;
     case 'phone_mobile':
-      return `<div style="font-size:13px;line-height:1.5;color:#333333;">{{phone_mobile}}</div>`;
+      return `<div style="font-size:13px;line-height:1.5;color:${palette.primary};">{{phone_mobile}}</div>`;
     case 'website':
-      return `<div style="font-size:13px;line-height:1.5;color:#333333;"><a href="{{website}}" style="color:#333333;text-decoration:underline;">{{website}}</a></div>`;
+      return `<div style="font-size:13px;line-height:1.5;color:${palette.primary};"><a href="{{website}}" style="color:${palette.link};text-decoration:underline;">{{website}}</a></div>`;
     case 'address':
-      return `<div style="font-size:13px;line-height:1.5;color:#333333;">{{address}}</div>`;
+      return `<div style="font-size:13px;line-height:1.5;color:${palette.primary};">{{address}}</div>`;
     case 'department':
-      return `<div style="font-size:13px;line-height:1.5;color:#555555;">{{department}}</div>`;
+      return `<div style="font-size:13px;line-height:1.5;color:${palette.muted};">{{department}}</div>`;
     case 'branch':
-      return `<div style="font-size:13px;line-height:1.5;color:#555555;">{{branch}}</div>`;
+      return `<div style="font-size:13px;line-height:1.5;color:${palette.muted};">{{branch}}</div>`;
     case 'logo':
       return `<img src="{{brand_logo_url}}" alt="" width="120" style="display:block;max-width:120px;height:auto;border:0;" />`;
     case 'award_badge':
       return `<img src="{{award_badge_url}}" alt="" width="96" style="display:block;max-width:96px;height:auto;border:0;" />`;
     case 'divider':
-      return `<div style="border-top:1px solid #DDDDDD;line-height:0;font-size:0;height:1px;">&nbsp;</div>`;
+      return `<div style="border-top:1px solid ${palette.divider};line-height:0;font-size:0;height:1px;">&nbsp;</div>`;
     case 'custom_text':
-      return `<div style="font-size:13px;line-height:1.5;color:#333333;">${escapeHtml(block.text ?? '')}</div>`;
+      return `<div style="font-size:13px;line-height:1.5;color:${palette.primary};">${escapeHtml(block.text ?? '')}</div>`;
     default: {
       const _exhaustive: never = block.type;
       return _exhaustive;
@@ -246,17 +457,24 @@ function blockInnerHtml(block: SignatureBlock): string {
   }
 }
 
-function wrapBlock(block: SignatureBlock, padding = '0 0 6px 0'): string {
+function wrapBlock(
+  block: SignatureBlock,
+  palette: SignatureTextPalette,
+  padding = '0 0 6px 0',
+): string {
   return [
     `<!-- ozer-block id="${block.id}" type="${block.type}"${block.type === 'custom_text' ? ` text="${escapeHtml(block.text ?? '')}"` : ''} -->`,
     `<tr><td style="padding:${padding};vertical-align:top;">`,
-    blockInnerHtml(block),
+    blockInnerHtml(block, palette),
     `</td></tr>`,
     `<!-- /ozer-block -->`,
   ].join('\n');
 }
 
-function renderBlockTable(blocks: SignatureBlock[]): string {
+function renderBlockTable(
+  blocks: SignatureBlock[],
+  palette: SignatureTextPalette,
+): string {
   if (blocks.length === 0) {
     return '';
   }
@@ -264,7 +482,11 @@ function renderBlockTable(blocks: SignatureBlock[]): string {
   return [
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">`,
     ...blocks.map((block, index) =>
-      wrapBlock(block, index === blocks.length - 1 ? '0' : '0 0 6px 0'),
+      wrapBlock(
+        block,
+        palette,
+        index === blocks.length - 1 ? '0' : '0 0 6px 0',
+      ),
     ),
     `</table>`,
   ].join('\n');
@@ -272,8 +494,17 @@ function renderBlockTable(blocks: SignatureBlock[]): string {
 
 /** Serialize a visual builder document to Outlook-safe HTML. */
 export function signatureBlocksToHtml(doc: SignatureBuilderDocument): string {
-  const header = `<!-- ozer-sig-builder:v${doc.version} layout="${doc.layout}" -->`;
+  const background = resolveSignatureBackground(doc.background);
+  const palette = paletteForBackground(background);
+  const shell = canvasShellStyles(background);
+  const header = `<!-- ozer-sig-builder:v${doc.version} layout="${doc.layout}"${serializeBackgroundAttr(background)} -->`;
   const footer = `<!-- /ozer-sig-builder -->`;
+  const note = shell.forceCanvas
+    ? `<!-- Ozer Signatures — visual builder (forced canvas colours) -->`
+    : `<!-- Ozer Signatures — visual builder (dark-mode resilient) -->`;
+  const tableOpen = shell.bgcolor
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" bgcolor="${shell.bgcolor}" style="${shell.style}">`
+    : `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="${shell.style}">`;
 
   if (doc.layout === 'photo_left') {
     const photo = doc.blocks.find((block) => block.type === 'photo');
@@ -283,7 +514,7 @@ export function signatureBlocksToHtml(doc: SignatureBuilderDocument): string {
       ? [
           `<!-- ozer-block id="${photo.id}" type="photo" -->`,
           `<td style="padding:0 16px 0 0;vertical-align:top;width:80px;">`,
-          blockInnerHtml(photo),
+          blockInnerHtml(photo, palette),
           `</td>`,
           `<!-- /ozer-block -->`,
         ].join('\n')
@@ -291,12 +522,12 @@ export function signatureBlocksToHtml(doc: SignatureBuilderDocument): string {
 
     return [
       header,
-      `<!-- Ozer Signatures — visual builder (dark-mode resilient) -->`,
-      `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;color:#333333;max-width:560px;">`,
+      note,
+      tableOpen,
       `<tr>`,
       photoCell,
-      `<td style="vertical-align:top;color:#333333;">`,
-      renderBlockTable(rest),
+      `<td style="vertical-align:top;color:${palette.primary};">`,
+      renderBlockTable(rest, palette),
       `</td>`,
       `</tr>`,
       `</table>`,
@@ -308,10 +539,10 @@ export function signatureBlocksToHtml(doc: SignatureBuilderDocument): string {
 
   return [
     header,
-    `<!-- Ozer Signatures — visual builder (dark-mode resilient) -->`,
-    `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;color:#333333;max-width:560px;">`,
-    `<tr><td style="vertical-align:top;color:#333333;">`,
-    renderBlockTable(doc.blocks),
+    note,
+    tableOpen,
+    `<tr><td style="vertical-align:top;color:${palette.primary};">`,
+    renderBlockTable(doc.blocks, palette),
     `</td></tr>`,
     `</table>`,
     footer,
@@ -319,7 +550,7 @@ export function signatureBlocksToHtml(doc: SignatureBuilderDocument): string {
 }
 
 const BUILDER_OPEN =
-  /<!--\s*ozer-sig-builder:v(\d+)\s+layout="(stacked|photo_left)"\s*-->/i;
+  /<!--\s*ozer-sig-builder:v(\d+)\s+layout="(stacked|photo_left)"(?:\s+bg="([^"]*)")?\s*-->/i;
 const BUILDER_CLOSE = /<!--\s*\/ozer-sig-builder\s*-->/i;
 const BLOCK_OPEN =
   /<!--\s*ozer-block\s+id="([^"]+)"\s+type="([a-z_]+)"(?:\s+text="([^"]*)")?\s*-->/gi;
@@ -347,6 +578,7 @@ export function htmlToSignatureBlocks(
 
   const version = Number(open[1]);
   const layout = open[2] as SignatureLayout;
+  const background = parseBackgroundAttr(open[3]);
   if (version !== SIGNATURE_BUILDER_VERSION) {
     return null;
   }
@@ -377,6 +609,7 @@ export function htmlToSignatureBlocks(
   return {
     version: SIGNATURE_BUILDER_VERSION,
     layout,
+    background,
     blocks,
   };
 }

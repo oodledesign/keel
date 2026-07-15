@@ -43,4 +43,19 @@ describe('lintSignatureTemplateHtml', () => {
       expect.arrayContaining(['solid-background', 'pure-white-text']),
     );
   });
+
+  it('treats visual-builder forced canvas as a tip, not a warn', () => {
+    const issues = lintSignatureTemplateHtml(
+      `<!-- ozer-sig-builder:v1 layout="photo_left" bg="solid:#2A1720" -->
+       <table bgcolor="#2A1720" style="background-color:#2A1720;color:#F3F4F6;color-scheme:light only;">
+         <tr><td style="color:#F3F4F6"><a href="mailto:a@b.com" style="color:#F3F4F6;text-decoration:underline;">a@b.com</a></td></tr>
+       </table>
+       <!-- /ozer-sig-builder -->`,
+    );
+
+    expect(issues.some((issue) => issue.id === 'solid-background')).toBe(false);
+    expect(issues.some((issue) => issue.id === 'forced-canvas')).toBe(true);
+    expect(issues.filter((issue) => issue.severity === 'warn')).toHaveLength(0);
+  });
 });
+
