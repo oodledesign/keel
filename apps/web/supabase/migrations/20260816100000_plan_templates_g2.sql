@@ -22,14 +22,8 @@ CREATE TABLE IF NOT EXISTS public.plan_templates (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-COMMENT ON TABLE public.plan_templates IS
-  'G2: Workspace recurring offerings (hosting, retainers, care plans). stripe_price_id is on the connected account.';
-COMMENT ON COLUMN public.plan_templates.amount IS
-  'Minor units (pence). Stripe Price unit_amount.';
-COMMENT ON COLUMN public.plan_templates.billing_interval IS
-  'month | year (Stripe recurring.interval).';
-
 -- Legacy remote shape may have business_id / monthly_amount / is_active without G2 cols.
+-- ADD COLUMN must come before COMMENT ON COLUMN (table may already exist).
 ALTER TABLE public.plan_templates
   ADD COLUMN IF NOT EXISTS account_id uuid REFERENCES public.accounts (id) ON DELETE CASCADE,
   ADD COLUMN IF NOT EXISTS kind text,
@@ -42,6 +36,13 @@ ALTER TABLE public.plan_templates
   ADD COLUMN IF NOT EXISTS active boolean,
   ADD COLUMN IF NOT EXISTS created_at timestamptz,
   ADD COLUMN IF NOT EXISTS updated_at timestamptz;
+
+COMMENT ON TABLE public.plan_templates IS
+  'G2: Workspace recurring offerings (hosting, retainers, care plans). stripe_price_id is on the connected account.';
+COMMENT ON COLUMN public.plan_templates.amount IS
+  'Minor units (pence). Stripe Price unit_amount.';
+COMMENT ON COLUMN public.plan_templates.billing_interval IS
+  'month | year (Stripe recurring.interval).';
 
 -- Backfill from legacy columns when present
 DO $$
