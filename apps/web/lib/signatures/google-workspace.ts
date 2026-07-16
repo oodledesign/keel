@@ -14,6 +14,7 @@ import {
   renderTemplate,
   type SignaturesStaffRow,
 } from './render-template';
+import { sendSignatureConnectionCompletedEmail } from './sync-notifications';
 
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const DIRECTORY_BASE = 'https://admin.googleapis.com/admin/directory/v1';
@@ -314,6 +315,8 @@ export async function connectGoogleWorkspace(input: {
     delegatedAdminEmail: input.delegatedAdminEmail,
   });
 
+  const existing = await loadGoogleConnection(input.accountId);
+
   const db = getSignaturesSupabaseClient();
   const row = {
     account_id: input.accountId,
@@ -338,6 +341,15 @@ export async function connectGoogleWorkspace(input: {
       );
     }
     throw new Error(error?.message ?? 'Failed to save Google connection');
+  }
+
+  if (!existing) {
+    void sendSignatureConnectionCompletedEmail({
+      accountId: input.accountId,
+      provider: 'google',
+      googleDomain: input.primaryDomain,
+      googleAdminEmail: input.delegatedAdminEmail,
+    });
   }
 
   return data as GoogleConnection;

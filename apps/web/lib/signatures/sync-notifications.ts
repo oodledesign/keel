@@ -14,7 +14,7 @@ const PROVIDER_LABELS = {
   microsoft: 'Microsoft 365',
 } as const;
 
-type SyncProvider = keyof typeof PROVIDER_LABELS;
+type SignatureMailProvider = keyof typeof PROVIDER_LABELS;
 
 function escapeHtml(value: string): string {
   return value
@@ -71,7 +71,7 @@ async function loadOwnerAdminEmails(accountId: string): Promise<{
  */
 export async function sendSignatureSyncCompletedEmail(params: {
   accountId: string;
-  provider: SyncProvider;
+  provider: SignatureMailProvider;
   synced: number;
   errors: string[];
 }): Promise<void> {
@@ -156,6 +156,120 @@ export async function sendSignatureSyncCompletedEmail(params: {
     logger.warn(
       { accountId: params.accountId, error },
       'Failed to prepare signature sync notification emails',
+    );
+  }
+}
+
+/**
+ * Email workspace owners/admins when Google Workspace or Microsoft 365 is
+ * connected for signatures. Never throws — must not block the connect flow.
+ */
+export async function sendSignatureConnectionCompletedEmail(params: {
+  accountId: string;
+  provider: SignatureMailProvider;
+  googleDomain?: string | null;
+  googleAdminEmail?: string | null;
+  microsoftTenantId?: string | null;
+}): Promise<void> {
+  const logger = await getLogger();
+
+  try {
+    const sender = process.env.EMAIL_SENDER;
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
+
+    if (!sender) return;
+
+    const { emails, accountSlug, accountName } = await loadOwnerAdminEmails(
+      params.accountId,
+    );
+
+    if (emails.length === 0) return;
+
+    const providerLabel = PROVIDER_LABELS[params.provider];
+    const integrationsUrl =
+      siteUrl && accountSlug
+        ? new URL(`/app/${accountSlug}/signatures/integrations`, siteUrl).href
+        : null;
+    const staffUrl =
+      siteUrl && accountSlug
+        ? new URL(`/app/${accountSlug}/signatures/staff`, siteUrl).href
+        : null;
+
+    const detailRows: string[] = [
+      `<p style="margin:0 0 4px"><strong>Provider:</strong> ${providerLabel}</p>`,
+    ];
+
+    if (params.provider === 'google') {
+      if (params.googleDomain) {
+        detailRows.push(
+          `<p style="margin:0 0 4px"><strong>Domain:</strong> ${escapeHtml(params.googleDomain)}</p>`,
+        );
+      }
+      if (params.googleAdminEmail) {
+        detailRows.push(
+          `<p style="margin:0 0 4px"><strong>Delegated admin:</strong> ${escapeHtml(params.googleAdminEmail)}</p>`,
+        );
+      }
+    }
+
+    if (params.provider === 'microsoft' && params.microsoftTenantId) {
+      detailRows.push(
+        `<p style="margin:0 0 4px"><strong>Tenant ID:</strong> ${escapeHtml(params.microsoftTenantId)}</p>`,
+      );
+    }
+
+    detailRows.push(
+      `<p style="margin:0"><strong>Status:</strong> Connected and ready to sync staff</p>`,
+    );
+
+    const innerHtml = `
+      <h2 style="margin:0 0 16px">Email signatures connected</h2>
+      <p>${providerLabel}${accountName ? ` for <strong>${escapeHtml(accountName)}</strong>` : ''} is now connected in Signatures.</p>
+      <div style="margin:24px 0;padding:16px;border:1px solid #e5e7eb;border-radius:12px;background:#f9fafb">
+        ${detailRows.join('\n        ')}
+      </div>
+      <p>Next, sync your staff directory, assign templates, and deploy signatures to mailboxes.</p>
+      ${
+        integrationsUrl
+          ? `<p><a href="${integrationsUrl}">Open integrations</a>${staffUrl ? ` · <a href="${staffUrl}">Sync staff</a>` : ''}</p>`
+          : ''
+      }
+    `;
+
+    const brand = await loadAccountBrandResolved(params.accountId);
+    const subject = `${productName}: ${providerLabel} connected for email signatures`;
+
+    await Promise.allSettled(
+      emails.map(async (email) => {
+        try {
+          await sendPlatformEmail({
+            type: 'signature_connect',
+            accountId: params.accountId,
+            mail: {
+              from: sender,
+              to: email,
+              subject,
+              html: wrapEmailHtmlWithBrand({ brand, innerHtml }),
+            },
+            metadata: {
+              provider: params.provider,
+              google_domain: params.googleDomain ?? null,
+              microsoft_tenant_id: params.microsoftTenantId ?? null,
+            },
+          });
+        } catch (error) {
+          logger.warn(
+            { accountId: params.accountId, email, error },
+            'Failed to send signature connection notification email',
+          );
+        }
+      }),
+    );
+  } catch (error) {
+    logger.warn(
+      { accountId: params.accountId, error },
+      'Failed to prepare signature connection notification emails',
     );
   }
 }

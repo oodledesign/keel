@@ -11,6 +11,7 @@ import {
 } from '~/lib/signatures/integration-invite';
 import { getSignaturesSupabaseClient } from '~/lib/signatures/graph';
 import { decodeMsOAuthState } from '~/lib/signatures/ms-oauth-state';
+import { sendSignatureConnectionCompletedEmail } from '~/lib/signatures/sync-notifications';
 import {
   signSignaturesMsOAuthState,
   verifySignaturesMsOAuthState,
@@ -60,6 +61,21 @@ async function resolveSlug(accountId: string, slug: string | null) {
   const resolved =
     typeof accountRow?.slug === 'string' ? accountRow.slug.trim() : '';
   return resolved.length > 0 ? resolved : null;
+}
+
+async function hasMicrosoftConnection(accountId: string): Promise<boolean> {
+  const db = getSignaturesSupabaseClient();
+  const { data, error } = await db
+    .from('ms_connections')
+    .select('id')
+    .eq('account_id', accountId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return Boolean(data);
 }
 
 async function persistMicrosoftTenant(input: {
@@ -149,6 +165,7 @@ export async function GET(request: NextRequest) {
       }
 
       try {
+        const isNewConnection = !(await hasMicrosoftConnection(accountId));
         await persistMicrosoftTenant({
           accountId,
           msTenantId: adminTenant,
@@ -158,6 +175,13 @@ export async function GET(request: NextRequest) {
           inviteId: invite.id,
           accountId,
         });
+        if (isNewConnection) {
+          void sendSignatureConnectionCompletedEmail({
+            accountId,
+            provider: 'microsoft',
+            microsoftTenantId: adminTenant,
+          });
+        }
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Microsoft connect failed';
         return NextResponse.redirect(
@@ -269,6 +293,8 @@ export async function GET(request: NextRequest) {
       Date.now() + Math.max(60, expiresIn) * 1000,
     ).toISOString();
 
+    const isNewConnection = !(await hasMicrosoftConnection(accountId));
+
     await persistMicrosoftTenant({
       accountId,
       msTenantId,
@@ -277,6 +303,14 @@ export async function GET(request: NextRequest) {
       refreshToken: tokenJson.refresh_token ?? null,
       tokenExpiresAt,
     });
+
+    if (isNewConnection) {
+      void sendSignatureConnectionCompletedEmail({
+        accountId,
+        provider: 'microsoft',
+        microsoftTenantId: msTenantId,
+      });
+    }
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Microsoft connect failed';
     return NextResponse.redirect(
