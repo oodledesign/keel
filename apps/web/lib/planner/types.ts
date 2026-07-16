@@ -22,6 +22,7 @@ export type PlannerTask = {
   clientName: string | null;
   accentColor: string | null;
   workspaceColor: string | null;
+  clientPictureUrl: string | null;
 };
 
 export type PlannerProjectNode = {
@@ -29,6 +30,9 @@ export type PlannerProjectNode = {
   name: string;
   taskCount: number;
   tasks: PlannerTask[];
+  /** Client logo when this folder groups tasks under a client name. */
+  clientPictureUrl: string | null;
+  accentColor: string | null;
 };
 
 export type PlannerWorkspaceNode = {

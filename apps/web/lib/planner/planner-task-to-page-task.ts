@@ -21,6 +21,7 @@ export function plannerTaskToPageTask(task: PlannerTask): TasksPageTask {
     projectId: task.projectId,
     areaId: task.areaId,
     clientName: task.clientName,
+    clientPictureUrl: task.clientPictureUrl,
     workspaceName: task.workspace,
     workspaceSlug: task.workspaceSlug,
     workspaceColor: task.workspaceColor,

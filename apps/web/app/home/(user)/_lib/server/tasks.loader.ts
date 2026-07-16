@@ -16,6 +16,7 @@ const TASK_SELECT =
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import { parseDueDateParts, toIsoDateString } from '../../../_lib/due-date-ymd';
+import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 import { workspaceColorForSpaceType } from '../workspace-accent';
 
 type TaskQueryRow = {
@@ -55,6 +56,7 @@ type ClientEnrichment = {
   first_name?: string | null;
   last_name?: string | null;
   account_id?: string | null;
+  picture_url?: string | null;
 };
 
 type AccountWorkspaceRow = {
@@ -102,6 +104,7 @@ export type TasksPageTask = {
   projectId: string | null;
   areaId: string | null;
   clientName: string | null;
+  clientPictureUrl: string | null;
   /** Team account (workspace) for work tasks — from linked project or client. */
   workspaceName: string | null;
   workspaceSlug: string | null;
@@ -316,6 +319,17 @@ function taskRowToPageTask(
     workspaceSlug = workspaceFallback.slug;
   }
 
+  let clientPictureUrl: string | null = null;
+  const resolvedClientId =
+    row.client_id ?? maps.projects.get(row.project_id ?? '')?.client_id ?? null;
+  if (resolvedClientId) {
+    const client = maps.clients.get(resolvedClientId);
+    if (client?.picture_url?.trim()) {
+      clientPictureUrl =
+        toSupabasePublicStorageUrl(client.picture_url.trim()) || null;
+    }
+  }
+
   return {
     id: row.id,
     title: (row.title as string) ?? 'Untitled',
@@ -331,6 +345,7 @@ function taskRowToPageTask(
     projectId: row.project_id ?? null,
     areaId: row.area_id ?? null,
     clientName,
+    clientPictureUrl,
     workspaceName,
     workspaceSlug,
     workspaceColor,
@@ -440,7 +455,7 @@ async function enrichTaskRows(
     clientIds.length > 0
       ? rowDb
           .from('clients')
-          .select('id, display_name, first_name, last_name, account_id')
+          .select('id, display_name, first_name, last_name, account_id, picture_url')
           .in('id', clientIds)
       : Promise.resolve({ data: [] as ClientEnrichment[] }),
     uniqueAccountIds.length > 0

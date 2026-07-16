@@ -150,6 +150,7 @@ export function toPlannerTask(
     parentTaskId: task.parentTaskId,
     calendarScheduleStatus: task.calendarScheduleStatus,
     clientName: task.clientName,
+    clientPictureUrl: task.clientPictureUrl,
     accentColor: task.accentColor,
     workspaceColor: task.workspaceColor,
   };
@@ -181,6 +182,9 @@ function mergeProjectsInto(
     if (existing) {
       existing.tasks.push(...project.tasks);
       existing.taskCount += project.taskCount;
+      existing.clientPictureUrl =
+        existing.clientPictureUrl ?? project.clientPictureUrl;
+      existing.accentColor = existing.accentColor ?? project.accentColor;
     } else {
       projects.push({
         ...project,
@@ -262,8 +266,19 @@ export function buildTaskTree(
         name: projectKey,
         taskCount: 0,
         tasks: [],
+        clientPictureUrl: null,
+        accentColor: null,
       };
       workspace.projects.push(project);
+    }
+
+    if (
+      plannerTask.clientName?.trim() === projectKey.trim() &&
+      !project.clientPictureUrl &&
+      plannerTask.clientPictureUrl
+    ) {
+      project.clientPictureUrl = plannerTask.clientPictureUrl;
+      project.accentColor = plannerTask.accentColor;
     }
 
     project.tasks.push(plannerTask);

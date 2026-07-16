@@ -15,6 +15,7 @@ import {
   GetInvoiceSummarySchema,
   ListInvoicesSchema,
   ListRecurringSeriesSchema,
+  MarkInvoiceSentManuallySchema,
   ResendInvoiceSchema,
   SavePaymentSettingsSchema,
   SendInvoiceSchema,
@@ -87,6 +88,11 @@ export const setInvoiceStatus = enhanceAction(
 export const sendInvoice = enhanceAction(
   async (input) => getService().sendInvoice(input),
   { schema: SendInvoiceSchema },
+);
+
+export const markInvoiceSentManually = enhanceAction(
+  async (input) => getService().markInvoiceSentManually(input),
+  { schema: MarkInvoiceSentManuallySchema },
 );
 
 export const getInvoiceForPortal = enhanceAction(

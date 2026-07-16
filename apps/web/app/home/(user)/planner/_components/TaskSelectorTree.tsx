@@ -32,7 +32,7 @@ import { updateTask } from '~/home/(user)/_lib/actions/task-actions';
 import { AddTaskDialog } from '~/home/(user)/_components/dashboard/add-task-dialog';
 import { EditTaskDialog } from '~/home/(user)/tasks/_components/edit-task-dialog';
 import { plannerTaskToPageTask } from '~/lib/planner/planner-task-to-page-task';
-import { PlannerClientPill } from './planner-client-pill';
+import { PlannerClientAvatar, PlannerClientPill } from './planner-client-pill';
 import type {
   PlannerProjectNode,
   PlannerScope,
@@ -305,6 +305,9 @@ function ProjectNode({
   const ids = project.tasks.map((task) => task.id);
   const checked = ids.every((id) => selectedTaskIds.has(id));
   const isGeneral = project.name.toLowerCase() === 'general';
+  const isClientFolder = project.tasks.some(
+    (task) => task.clientName?.trim() === project.name.trim(),
+  );
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
@@ -321,8 +324,17 @@ function ProjectNode({
             ) : (
               <ChevronRight className="h-3.5 w-3.5" />
             )}
-            <span className="truncate normal-case tracking-normal text-[var(--workspace-shell-text)]/70">
-              {project.name}
+            <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate normal-case tracking-normal text-[var(--workspace-shell-text)]/70">
+              {isClientFolder ? (
+                <PlannerClientAvatar
+                  name={project.name}
+                  pictureUrl={project.clientPictureUrl}
+                  color={project.accentColor}
+                  className="h-3.5 w-3.5"
+                  fallbackClassName="text-[8px]"
+                />
+              ) : null}
+              <span className="truncate">{project.name}</span>
             </span>
             <span className="ml-auto text-[var(--workspace-shell-text)]/35">{project.taskCount}</span>
           </CollapsibleTrigger>
@@ -390,7 +402,11 @@ function TaskRow({
           <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <span className="leading-snug text-[var(--workspace-shell-text)]/90">{task.title}</span>
             {clientName ? (
-              <PlannerClientPill name={clientName} color={task.accentColor} />
+              <PlannerClientPill
+                name={clientName}
+                pictureUrl={task.clientPictureUrl}
+                color={task.accentColor}
+              />
             ) : null}
           </span>
           <span className="mt-1 flex flex-wrap items-center gap-1.5">

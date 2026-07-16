@@ -44,6 +44,13 @@ type DragState = {
   originEnd: number;
 };
 
+type PositionedBlock = EditablePlanBlock & {
+  renderStartMinutes: number;
+  renderEndMinutes: number;
+  laneIndex: number;
+  laneCount: number;
+};
+
 type Props = {
   document: PlanDocument;
   onDocumentChange: (document: PlanDocument) => void;
@@ -103,6 +110,91 @@ export function DayScheduleEditor({
   );
   const { dayStart, dayEnd } = useMemo(() => getDayBounds(blocks), [blocks]);
   const gridHeight = (dayEnd - dayStart) * PX_PER_MINUTE;
+  const positionedBlocks = useMemo<PositionedBlock[]>(() => {
+    const blocksWithRenderTimes = blocks.map((block) => {
+      const previewing = preview?.blockId === block.id ? preview : null;
+      return {
+        ...block,
+        renderStartMinutes: previewing?.startMinutes ?? block.startMinutes,
+        renderEndMinutes: previewing?.endMinutes ?? block.endMinutes,
+      };
+    });
+
+    const sorted = [...blocksWithRenderTimes].sort((a, b) => {
+      if (a.renderStartMinutes !== b.renderStartMinutes) {
+        return a.renderStartMinutes - b.renderStartMinutes;
+      }
+      return a.renderEndMinutes - b.renderEndMinutes;
+    });
+
+    const groups: typeof sorted[] = [];
+    let currentGroup: typeof sorted = [];
+    let currentGroupEnd = -1;
+
+    for (const block of sorted) {
+      if (
+        currentGroup.length === 0 ||
+        block.renderStartMinutes < currentGroupEnd
+      ) {
+        currentGroup.push(block);
+        currentGroupEnd = Math.max(currentGroupEnd, block.renderEndMinutes);
+      } else {
+        groups.push(currentGroup);
+        currentGroup = [block];
+        currentGroupEnd = block.renderEndMinutes;
+      }
+    }
+
+    if (currentGroup.length > 0) {
+      groups.push(currentGroup);
+    }
+
+    const positioned = new Map<string, PositionedBlock>();
+
+    for (const group of groups) {
+      const active: Array<{ laneIndex: number; endMinutes: number }> = [];
+      let laneCount = 0;
+
+      for (const block of group) {
+        for (let i = active.length - 1; i >= 0; i -= 1) {
+          if (active[i]!.endMinutes <= block.renderStartMinutes) {
+            active.splice(i, 1);
+          }
+        }
+
+        const usedLanes = new Set(active.map((entry) => entry.laneIndex));
+        let laneIndex = 0;
+        while (usedLanes.has(laneIndex)) {
+          laneIndex += 1;
+        }
+
+        active.push({ laneIndex, endMinutes: block.renderEndMinutes });
+        laneCount = Math.max(laneCount, laneIndex + 1);
+
+        positioned.set(block.id, {
+          ...block,
+          laneIndex,
+          laneCount: 1,
+        });
+      }
+
+      for (const block of group) {
+        const existing = positioned.get(block.id);
+        if (!existing) continue;
+        const concurrentCount = group.reduce((count, other) => {
+          const overlaps =
+            other.renderStartMinutes < block.renderEndMinutes &&
+            other.renderEndMinutes > block.renderStartMinutes;
+          return overlaps ? count + 1 : count;
+        }, 0);
+        existing.laneCount = Math.max(1, Math.min(laneCount, concurrentCount));
+      }
+    }
+
+    return blocks
+      .map((block) => positioned.get(block.id))
+      .filter((block): block is PositionedBlock => Boolean(block));
+  }, [blocks, preview]);
 
   const nowLine = useMemo(() => {
     const viewingToday =
@@ -179,6 +271,7 @@ export function DayScheduleEditor({
     if (!dragState) {
       return;
     }
+    const activeDrag = dragState;
 
     function onPointerMove(event: PointerEvent) {
       const grid = gridRef.current;
@@ -192,22 +285,22 @@ export function DayScheduleEditor({
         dayStart,
       );
 
-      if (dragState.kind === 'move') {
-        const duration = dragState.originEnd - dragState.originStart;
+      if (activeDrag.kind === 'move') {
+        const duration = activeDrag.originEnd - activeDrag.originStart;
         const delta = pointerMinutes - minutesFromPointerY(
-          dragState.pointerStartY,
+          activeDrag.pointerStartY,
           rect.top,
           PX_PER_MINUTE,
           dayStart,
         );
-        const proposedStart = snapToQuarterHour(dragState.originStart + delta);
+        const proposedStart = snapToQuarterHour(activeDrag.originStart + delta);
         const validStart = findValidDropStart(
           blocks,
-          dragState.blockId,
+          activeDrag.blockId,
           proposedStart,
         );
         setPreview({
-          blockId: dragState.blockId,
+          blockId: activeDrag.blockId,
           startMinutes: validStart,
           endMinutes: validStart + duration,
         });
@@ -215,20 +308,20 @@ export function DayScheduleEditor({
       }
 
       const proposedEnd = snapToQuarterHour(
-        Math.max(dragState.originStart + MIN_BLOCK_MINUTES, pointerMinutes),
+        Math.max(activeDrag.originStart + MIN_BLOCK_MINUTES, pointerMinutes),
       );
       const validation = canPlaceBlock(
         blocks,
-        dragState.blockId,
-        dragState.originStart,
+        activeDrag.blockId,
+        activeDrag.originStart,
         proposedEnd,
       );
       const validEnd = validation.ok
         ? proposedEnd
-        : dragState.originEnd;
+        : activeDrag.originEnd;
       setPreview({
-        blockId: dragState.blockId,
-        startMinutes: dragState.originStart,
+        blockId: activeDrag.blockId,
+        startMinutes: activeDrag.originStart,
         endMinutes: validEnd,
       });
     }
@@ -344,15 +437,24 @@ export function DayScheduleEditor({
               />
             ))}
 
-            {blocks.map((block) => {
-              const previewing = preview?.blockId === block.id ? preview : null;
-              const startMinutes = previewing?.startMinutes ?? block.startMinutes;
-              const endMinutes = previewing?.endMinutes ?? block.endMinutes;
+            {positionedBlocks.map((block) => {
+              const startMinutes = block.renderStartMinutes;
+              const endMinutes = block.renderEndMinutes;
               const top = (startMinutes - dayStart) * PX_PER_MINUTE;
               const height = Math.max(
                 (endMinutes - startMinutes) * PX_PER_MINUTE,
                 MIN_BLOCK_MINUTES * PX_PER_MINUTE,
               );
+              const laneGapPx = block.laneCount > 1 ? 6 : 0;
+              const laneWidthPct = 100 / block.laneCount;
+              const leftInset =
+                block.laneCount > 1
+                  ? `calc(${laneWidthPct * block.laneIndex}% + ${laneGapPx}px)`
+                  : '0.5rem';
+              const rightInset =
+                block.laneCount > 1
+                  ? `calc(${100 - laneWidthPct * (block.laneIndex + 1)}% + ${laneGapPx}px)`
+                  : '0.5rem';
               const status = blockStatus(
                 { ...block, startMinutes, endMinutes },
                 now,
@@ -367,7 +469,7 @@ export function DayScheduleEditor({
                 <div
                   key={block.id}
                   className={cn(
-                    'absolute inset-x-2 overflow-hidden rounded-lg border px-2 py-1.5 text-left shadow-sm',
+                    'absolute overflow-hidden rounded-lg border px-2 py-1.5 text-left shadow-sm',
                     block.isCalendarEvent
                       ? 'border-[color:var(--workspace-shell-border)] bg-sky-400/15'
                       : block.isBreak
@@ -379,7 +481,7 @@ export function DayScheduleEditor({
                     dragState?.blockId === block.id && 'z-20 opacity-90',
                     !block.movable && 'cursor-default',
                   )}
-                  style={{ top, height }}
+                  style={{ top, height, left: leftInset, right: rightInset }}
                 >
                   <div className="flex h-full min-h-0 flex-col gap-1">
                     <div className="flex min-w-0 items-start gap-1.5">

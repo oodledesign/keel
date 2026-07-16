@@ -8,14 +8,14 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { FileText, PlusCircle, RefreshCw, Repeat, Search } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@kit/ui/dialog';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@kit/ui/sheet';
 import { toast } from '@kit/ui/sonner';
 import { If } from '@kit/ui/if';
 
@@ -111,7 +111,7 @@ export function InvoicesPageContent({
   const [page, setPage] = useState(1);
   const [clientFilter, setClientFilter] = useState('');
   const [creating, setCreating] = useState(false);
-  const [createSheetOpen, setCreateSheetOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [clientOptions, setClientOptions] = useState<
     { id: string; display_name: string | null }[]
   >(initialClients ?? []);
@@ -230,8 +230,8 @@ export function InvoicesPageContent({
     return () => clearTimeout(t);
   }, [search]);
 
-  const openCreateSheet = useCallback(async () => {
-    setCreateSheetOpen(true);
+  const openCreateDialog = useCallback(async () => {
+    setCreateDialogOpen(true);
     setSelectedClientId('');
     setClientsLoading(true);
     try {
@@ -255,13 +255,13 @@ export function InvoicesPageContent({
 
   useEffect(() => {
     if (!canEditInvoices || searchParams.get('create') !== 'invoice') return;
-    void openCreateSheet();
+    void openCreateDialog();
     const nextParams = new URLSearchParams(searchParams.toString());
     nextParams.delete('create');
     router.replace(nextParams.toString() ? `${pathname}?${nextParams}` : pathname, {
       scroll: false,
     });
-  }, [canEditInvoices, openCreateSheet, pathname, router, searchParams]);
+  }, [canEditInvoices, openCreateDialog, pathname, router, searchParams]);
 
   const handleCreateInvoice = async () => {
     if (!canEditInvoices || !selectedClientId) {
@@ -272,7 +272,7 @@ export function InvoicesPageContent({
     try {
       const invoice = await createInvoice({ accountId, client_id: selectedClientId });
       if (invoice?.id) {
-        setCreateSheetOpen(false);
+        setCreateDialogOpen(false);
         router.push(
           pathsConfig.app.accountInvoiceEdit
             .replace('[account]', accountSlug)
@@ -342,7 +342,7 @@ export function InvoicesPageContent({
               <Button
                 size="sm"
                 className="bg-[var(--ozer-accent)] text-[#09111F] hover:bg-[#6BD48F]"
-                onClick={openCreateSheet}
+                onClick={openCreateDialog}
               >
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Create invoice
@@ -547,12 +547,12 @@ export function InvoicesPageContent({
         </div>
       </div>
 
-      <Sheet open={createSheetOpen} onOpenChange={setCreateSheetOpen}>
-        <SheetContent>
-          <SheetHeader>
-            <SheetTitle>Create invoice</SheetTitle>
-          </SheetHeader>
-          <div className="mt-6 space-y-4">
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="max-w-lg border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+          <DialogHeader>
+            <DialogTitle>Create invoice</DialogTitle>
+          </DialogHeader>
+          <div className="mt-2 space-y-4">
             <div>
               <Label>Client</Label>
               <ClientCombobox
@@ -573,8 +573,8 @@ export function InvoicesPageContent({
               {creating ? 'Creating…' : 'Create and edit'}
             </Button>
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

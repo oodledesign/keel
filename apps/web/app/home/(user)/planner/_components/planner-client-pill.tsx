@@ -1,19 +1,53 @@
-import { Avatar, AvatarFallback } from '@kit/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
 import { cn } from '@kit/ui/utils';
+
+export function PlannerClientAvatar({
+  name,
+  pictureUrl,
+  color,
+  className,
+  fallbackClassName,
+}: {
+  name: string;
+  pictureUrl?: string | null;
+  color?: string | null;
+  className?: string;
+  fallbackClassName?: string;
+}) {
+  const trimmed = name.trim();
+  const initial = (trimmed[0] ?? '?').toUpperCase();
+
+  return (
+    <Avatar className={cn('h-4 w-4 shrink-0', className)}>
+      {pictureUrl ? (
+        <AvatarImage src={pictureUrl} alt="" className="object-cover" />
+      ) : null}
+      <AvatarFallback
+        className={cn(
+          'rounded-full text-[9px] font-semibold text-[var(--workspace-shell-text)]',
+          fallbackClassName,
+        )}
+        style={{ backgroundColor: color ?? '#64748B' }}
+      >
+        {initial}
+      </AvatarFallback>
+    </Avatar>
+  );
+}
 
 export function PlannerClientPill({
   name,
+  pictureUrl,
   color,
   className,
 }: {
   name: string;
+  pictureUrl?: string | null;
   color?: string | null;
   className?: string;
 }) {
   const trimmed = name.trim();
   if (!trimmed) return null;
-
-  const initial = (trimmed[0] ?? '?').toUpperCase();
 
   return (
     <span
@@ -23,14 +57,7 @@ export function PlannerClientPill({
       )}
       title={trimmed}
     >
-      <Avatar className="h-4 w-4 shrink-0">
-        <AvatarFallback
-          className="rounded-full text-[9px] font-semibold text-[var(--workspace-shell-text)]"
-          style={{ backgroundColor: color ?? '#64748B' }}
-        >
-          {initial}
-        </AvatarFallback>
-      </Avatar>
+      <PlannerClientAvatar name={trimmed} pictureUrl={pictureUrl} color={color} />
       <span className="truncate">{trimmed}</span>
     </span>
   );

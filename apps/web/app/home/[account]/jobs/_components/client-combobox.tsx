@@ -77,7 +77,10 @@ export function ClientCombobox({
               placeholder="Search clients…"
               className={workspaceComboboxInputClass}
             />
-            <CommandList className={workspaceComboboxListClass}>
+            <CommandList
+              className={workspaceComboboxListClass}
+              onWheel={(event) => event.stopPropagation()}
+            >
               <CommandEmpty>{emptyMessage}</CommandEmpty>
               <CommandGroup>
                 <CommandItem

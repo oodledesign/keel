@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { ArrowLeft, Copy, Download, Link2, Loader2, Send } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { Checkbox } from '@kit/ui/checkbox';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
@@ -18,7 +19,11 @@ import {
 } from '../_lib/invoice-smart-fields';
 import { formatPence } from '../_lib/invoice-totals';
 import { getErrorMessage } from '../_lib/error-message';
-import { getInvoicePortalLink, sendInvoice } from '../_lib/server/server-actions';
+import {
+  getInvoicePortalLink,
+  markInvoiceSentManually,
+  sendInvoice,
+} from '../_lib/server/server-actions';
 
 const SMART_FIELDS = [
   '{{client.firstName}}',
@@ -38,7 +43,9 @@ export function InvoiceSendPanel({
   initialBody,
   initialSignature,
   pdfQuery,
+  isDraft = false,
   onSent,
+  onMarkedSent,
   onClose,
 }: {
   accountId: string;
@@ -50,7 +57,9 @@ export function InvoiceSendPanel({
   initialBody?: string | null;
   initialSignature?: string | null;
   pdfQuery?: string;
+  isDraft?: boolean;
   onSent: () => void;
+  onMarkedSent?: () => void;
   onClose: () => void;
 }) {
   const [email, setEmail] = useState(defaultEmail);
@@ -62,7 +71,10 @@ export function InvoiceSendPanel({
     initialSignature ?? DEFAULT_INVOICE_EMAIL_SIGNATURE,
   );
   const [portalUrl, setPortalUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState<'send' | 'test' | 'link' | null>(null);
+  const [loading, setLoading] = useState<'send' | 'test' | 'link' | 'pdf' | null>(
+    null,
+  );
+  const [markAsSent, setMarkAsSent] = useState(false);
 
   const pdfHref = useMemo(() => {
     const base = `/api/invoices/pdf?invoiceId=${encodeURIComponent(invoiceId)}`;
@@ -81,6 +93,57 @@ export function InvoiceSendPanel({
       const url = `${window.location.origin}/portal/invoices/${encodeURIComponent(token)}`;
       setPortalUrl(url);
       return url;
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const maybeMarkAsSent = async () => {
+    if (!isDraft || !markAsSent) return false;
+    await markInvoiceSentManually({
+      accountId,
+      invoiceId,
+      sent_to_email: email.trim() || null,
+    });
+    onMarkedSent?.();
+    return true;
+  };
+
+  const triggerPdfDownload = () => {
+    const link = document.createElement('a');
+    link.href = pdfHref;
+    link.download = `invoice-${invoiceNumber}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleCopyLink = async () => {
+    setLoading('link');
+    try {
+      const marked = await maybeMarkAsSent();
+      const url = await loadPortalLink();
+      await navigator.clipboard.writeText(url);
+      toast.success(
+        marked ? 'Link copied and invoice marked as sent' : 'Link copied',
+      );
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    setLoading('pdf');
+    try {
+      const marked = await maybeMarkAsSent();
+      triggerPdfDownload();
+      toast.success(
+        marked ? 'PDF downloaded and invoice marked as sent' : 'PDF downloaded',
+      );
+    } catch (error) {
+      toast.error(getErrorMessage(error));
     } finally {
       setLoading(null);
     }
@@ -228,20 +291,28 @@ export function InvoiceSendPanel({
           <p className="text-sm text-muted-foreground">
             Share this link with your client to view and pay the invoice.
           </p>
+          {isDraft ? (
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="mark-sent-link"
+                checked={markAsSent}
+                onCheckedChange={(checked) => setMarkAsSent(checked === true)}
+              />
+              <Label htmlFor="mark-sent-link" className="text-sm font-normal">
+                Mark as sent
+              </Label>
+            </div>
+          ) : null}
           <Button
             variant="outline"
             disabled={loading === 'link'}
-            onClick={async () => {
-              try {
-                const url = await loadPortalLink();
-                await navigator.clipboard.writeText(url);
-                toast.success('Link copied');
-              } catch (error) {
-                toast.error(getErrorMessage(error));
-              }
-            }}
+            onClick={() => void handleCopyLink()}
           >
-            <Link2 className="mr-2 h-4 w-4" />
+            {loading === 'link' ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Link2 className="mr-2 h-4 w-4" />
+            )}
             Copy shareable link
           </Button>
           {portalUrl ? (
@@ -268,11 +339,29 @@ export function InvoiceSendPanel({
             Draft PDFs include the due date, reference, and payment link when
             those fields are enabled in invoice settings.
           </p>
-          <Button asChild variant="outline">
-            <a href={pdfHref} download>
+          {isDraft ? (
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="mark-sent-pdf"
+                checked={markAsSent}
+                onCheckedChange={(checked) => setMarkAsSent(checked === true)}
+              />
+              <Label htmlFor="mark-sent-pdf" className="text-sm font-normal">
+                Mark as sent
+              </Label>
+            </div>
+          ) : null}
+          <Button
+            variant="outline"
+            disabled={loading === 'pdf'}
+            onClick={() => void handleDownloadPdf()}
+          >
+            {loading === 'pdf' ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
               <Download className="mr-2 h-4 w-4" />
-              Download PDF
-            </a>
+            )}
+            {isDraft ? 'Download draft PDF' : 'Download PDF'}
           </Button>
         </TabsContent>
       </Tabs>

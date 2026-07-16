@@ -848,7 +848,11 @@ function TaskRow({
           {clientName || metaLabel ? (
             <div className="mt-1 flex flex-wrap items-center gap-1.5">
               {clientName ? (
-                <PlannerClientPill name={clientName} color={task.accentColor} />
+                <PlannerClientPill
+                  name={clientName}
+                  pictureUrl={task.clientPictureUrl}
+                  color={task.accentColor}
+                />
               ) : null}
               {metaLabel ? (
                 <span className="text-xs text-[var(--workspace-shell-text)]/45">

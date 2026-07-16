@@ -9,16 +9,32 @@ import {
   ArrowLeft,
   ExternalLink,
   Eye,
+  Settings2,
   Loader2,
   PlusCircle,
   Repeat,
   Send,
   Trash2,
+  Download,
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { Checkbox } from '@kit/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@kit/ui/dialog';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import {
+  RadioGroup,
+  RadioGroupItem,
+  RadioGroupItemLabel,
+} from '@kit/ui/radio-group';
 import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
@@ -38,6 +54,7 @@ import {
 } from '../_lib/invoice-totals';
 import {
   getInvoicePortalLink,
+  markInvoiceSentManually,
   setInvoiceStatus,
   updateInvoice,
   upsertInvoiceItems,
@@ -135,6 +152,21 @@ function poundsInputToPence(value: string): number {
   return Number.isFinite(v) ? Math.round(v * 100) : 0;
 }
 
+function addMonths(isoDate: string, months: number): string {
+  const date = new Date(`${isoDate}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return isoDate;
+  const originalDay = date.getDate();
+  date.setDate(1);
+  date.setMonth(date.getMonth() + months);
+  const lastDayOfTargetMonth = new Date(
+    date.getFullYear(),
+    date.getMonth() + 1,
+    0,
+  ).getDate();
+  date.setDate(Math.min(originalDay, lastDayOfTargetMonth));
+  return date.toISOString();
+}
+
 function clientDisplayName(client: ClientInfo | null): string {
   if (!client) return '—';
   return (
@@ -174,6 +206,21 @@ export function InvoiceEditIndyContent({
 
   const [previewMode, setPreviewMode] = useState(false);
   const [showSendPanel, setShowSendPanel] = useState(false);
+  const [displaySettingsOpen, setDisplaySettingsOpen] = useState(false);
+  const [recurringDialogOpen, setRecurringDialogOpen] = useState(false);
+  const [creatingRecurring, setCreatingRecurring] = useState(false);
+  const [recurringFrequency, setRecurringFrequency] = useState<
+    'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'yearly'
+  >('monthly');
+  const [recurringStartDate, setRecurringStartDate] = useState(
+    new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+  );
+  const [recurringDurationMode, setRecurringDurationMode] = useState<
+    'months' | 'until_stopped'
+  >('months');
+  const [recurringMonths, setRecurringMonths] = useState('12');
+  const [markAsSentOnDownload, setMarkAsSentOnDownload] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [saving, setSaving] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
 
@@ -605,24 +652,40 @@ export function InvoiceEditIndyContent({
       toast.error('Save the invoice with a client first');
       return;
     }
-    const frequency = window.prompt(
-      'Frequency: weekly, fortnightly, monthly, quarterly, or yearly',
-      'monthly',
-    );
-    if (!frequency) return;
-    const valid = ['weekly', 'fortnightly', 'monthly', 'quarterly', 'yearly'];
-    if (!valid.includes(frequency)) {
-      toast.error('Invalid frequency');
+
+    if (canModifyInvoice) {
+      const saved = await handleSave();
+      if (!saved) return;
+    }
+
+    if (!recurringStartDate) {
+      toast.error('Choose a start date');
       return;
     }
+
+    const startDate = new Date(`${recurringStartDate}T12:00:00`);
+    if (Number.isNaN(startDate.getTime())) {
+      toast.error('Choose a valid start date');
+      return;
+    }
+
+    const months = Math.max(1, parseInt(recurringMonths, 10) || 1);
+    const endAt =
+      recurringDurationMode === 'months'
+        ? addMonths(recurringStartDate, months)
+        : null;
+
+    setCreatingRecurring(true);
     try {
       await upsertRecurringSeriesAction({
         accountId,
         client_id: clientId,
         title: title.trim() || `Invoice ${invoice.invoice_number}`,
         currency: invoice.currency ?? 'gbp',
-        frequency: frequency as 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'yearly',
-        next_issue_at: new Date(Date.now() + 7 * 86400000).toISOString(),
+        frequency: recurringFrequency,
+        next_issue_at: startDate.toISOString(),
+        end_at: endAt,
+        max_occurrences: null,
         auto_send: false,
         template: {
           title: title.trim() || null,
@@ -630,12 +693,12 @@ export function InvoiceEditIndyContent({
           due_at: dueAt ? new Date(dueAt).toISOString() : null,
           notes: notes.trim() || null,
           footer_message: footerMessage.trim() || null,
-          discount_type: showDiscount ? discountType : null,
+          discount_type: showDiscount && discountType ? discountType : null,
           discount_value: parsedDiscountValue,
           tax_rate_bp: parsedTaxRateBp,
-          deposit_type: showDeposit ? depositType : null,
+          deposit_type: showDeposit && depositType ? depositType : null,
           deposit_value: parsedDepositValue,
-          late_fee_type: showLateFee ? lateFeeType : null,
+          late_fee_type: showLateFee && lateFeeType ? lateFeeType : null,
           late_fee_value: parsedLateFeeValue,
           email_subject: emailSubject,
           email_body: emailBody,
@@ -652,13 +715,22 @@ export function InvoiceEditIndyContent({
         },
       });
       toast.success('Recurring series created');
+      setRecurringDialogOpen(false);
     } catch (err) {
       toast.error(getErrorMessage(err));
+    } finally {
+      setCreatingRecurring(false);
     }
   }, [
     accountId,
     canEditInvoices,
+    canModifyInvoice,
     clientId,
+    handleSave,
+    recurringStartDate,
+    recurringFrequency,
+    recurringDurationMode,
+    recurringMonths,
     dueAt,
     emailBody,
     emailSignature,
@@ -687,6 +759,42 @@ export function InvoiceEditIndyContent({
     invoice.sent_to_email ??
     (invoice.client as ClientInfo | null)?.email ??
     '';
+
+  const handleDownloadPdf = useCallback(async () => {
+    setDownloadingPdf(true);
+    try {
+      if (isDraft && markAsSentOnDownload) {
+        await markInvoiceSentManually({
+          accountId,
+          invoiceId: invoice.id,
+          sent_to_email: defaultSendEmail.trim() || null,
+        });
+        toast.success('Invoice marked as sent');
+        router.refresh();
+      }
+
+      const href = `/api/invoices/pdf?invoiceId=${encodeURIComponent(invoice.id)}&${pdfQuery}`;
+      const link = document.createElement('a');
+      link.href = href;
+      link.download = `invoice-${invoice.invoice_number}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setDownloadingPdf(false);
+    }
+  }, [
+    accountId,
+    defaultSendEmail,
+    invoice.id,
+    invoice.invoice_number,
+    isDraft,
+    markAsSentOnDownload,
+    pdfQuery,
+    router,
+  ]);
 
   const canvasClassName =
     'rounded-xl border border-[color:var(--ozer-border-on-light)] bg-white p-8 text-[var(--ozer-text-on-light)] shadow-sm';
@@ -742,15 +850,24 @@ export function InvoiceEditIndyContent({
                     size="sm"
                     variant="outline"
                     className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel-hover)]"
-                    onClick={() => setShowSendPanel(true)}
+                    onClick={() => {
+                      void (async () => {
+                        const saved = await handleSave();
+                        if (saved) setShowSendPanel(true);
+                      })();
+                    }}
                   >
                     <Send className="mr-2 h-4 w-4" />
-                    Send invoice
+                    Invoice sending
                   </Button>
                 ) : null}
 
-                {canEditInvoices ? (
-                  <Button size="sm" variant="outline" onClick={() => void handleMakeRecurring()}>
+                {isDraft && canEditInvoices ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setRecurringDialogOpen(true)}
+                  >
                     <Repeat className="mr-2 h-4 w-4" />
                     Make recurring
                   </Button>
@@ -832,10 +949,12 @@ export function InvoiceEditIndyContent({
             initialBody={emailBody}
             initialSignature={emailSignature}
             pdfQuery={pdfQuery}
+            isDraft={isDraft}
             onSent={() => {
               setShowSendPanel(false);
               router.refresh();
             }}
+            onMarkedSent={() => router.refresh()}
             onClose={() => setShowSendPanel(false)}
           />
           <aside className="space-y-4">
@@ -1471,43 +1590,19 @@ export function InvoiceEditIndyContent({
           <aside className="space-y-4">
             <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
               <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-                Invoice settings
+                Invoice actions
               </h2>
               <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-                Choose what appears on the invoice, preview, and PDF.
+                Manage visibility options, sending, and downloads.
               </p>
-
-              <div className="mt-4 space-y-3">
-                {(
-                  [
-                    ['Reference', showReferenceField, setShowReferenceField],
-                    ['Issue date', showIssuedField, setShowIssuedField],
-                    ['Due date', showDueField, setShowDueField],
-                    ['Notes', showNotesField, setShowNotesField],
-                    ['Footer', showFooterField, setShowFooterField],
-                    ['Company logo', showLogoField, setShowLogoField],
-                    [
-                      'Payment link',
-                      showPaymentLinkField,
-                      setShowPaymentLinkField,
-                    ],
-                  ] as const
-                ).map(([label, checked, setter]) => (
-                  <div
-                    key={label}
-                    className="flex items-center justify-between gap-3"
-                  >
-                    <Label className="text-sm text-[var(--workspace-shell-text)]">
-                      {label}
-                    </Label>
-                    <Switch
-                      checked={checked}
-                      onCheckedChange={setter}
-                      disabled={previewMode}
-                    />
-                  </div>
-                ))}
-              </div>
+              <Button
+                variant="outline"
+                className="mt-4 w-full border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+                onClick={() => setDisplaySettingsOpen(true)}
+              >
+                <Settings2 className="mr-2 h-4 w-4" />
+                Invoice display settings
+              </Button>
 
               {isDraft && canEditInvoices ? (
                 <Button
@@ -1525,22 +1620,41 @@ export function InvoiceEditIndyContent({
                   ) : (
                     <Send className="mr-2 h-4 w-4" />
                   )}
-                  Send invoice
+                  Invoice sending
                 </Button>
               ) : null}
 
               <Button
-                asChild
                 variant="outline"
                 className="mt-2 w-full border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+                disabled={downloadingPdf}
+                onClick={() => void handleDownloadPdf()}
               >
-                <a
-                  href={`/api/invoices/pdf?invoiceId=${encodeURIComponent(invoice.id)}&${pdfQuery}`}
-                  download
-                >
-                  Download PDF
-                </a>
+                {downloadingPdf ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                {isDraft ? 'Download draft PDF' : 'Download PDF'}
               </Button>
+
+              {isDraft && canEditInvoices ? (
+                <div className="mt-2 flex items-center gap-2 px-1">
+                  <Checkbox
+                    id="mark-sent-download"
+                    checked={markAsSentOnDownload}
+                    onCheckedChange={(checked) =>
+                      setMarkAsSentOnDownload(checked === true)
+                    }
+                  />
+                  <Label
+                    htmlFor="mark-sent-download"
+                    className="text-xs font-normal text-[var(--workspace-shell-text-muted)]"
+                  >
+                    Mark as sent
+                  </Label>
+                </div>
+              ) : null}
 
               {canManageInvoiceStatus &&
               ['sent', 'read'].includes(invoice.status) ? (
@@ -1589,6 +1703,170 @@ export function InvoiceEditIndyContent({
           </aside>
         </div>
       )}
+
+      <Dialog open={recurringDialogOpen} onOpenChange={setRecurringDialogOpen}>
+        <DialogContent className="max-w-xl border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+          <DialogHeader>
+            <DialogTitle>Create recurring series</DialogTitle>
+            <DialogDescription>
+              Turn this invoice into a recurring template with a fixed schedule.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-5">
+            <div className="space-y-2">
+              <Label>Frequency</Label>
+              <RadioGroup
+                value={recurringFrequency}
+                onValueChange={(value) =>
+                  setRecurringFrequency(
+                    value as
+                      | 'weekly'
+                      | 'fortnightly'
+                      | 'monthly'
+                      | 'quarterly'
+                      | 'yearly',
+                  )
+                }
+              >
+                {(
+                  [
+                    ['weekly', 'Weekly'],
+                    ['fortnightly', 'Fortnightly'],
+                    ['monthly', 'Monthly'],
+                    ['quarterly', 'Quarterly'],
+                    ['yearly', 'Yearly'],
+                  ] as const
+                ).map(([value, label]) => (
+                  <RadioGroupItemLabel
+                    key={value}
+                    selected={recurringFrequency === value}
+                    className="items-center gap-3"
+                  >
+                    <RadioGroupItem value={value} />
+                    <span>{label}</span>
+                  </RadioGroupItemLabel>
+                ))}
+              </RadioGroup>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="recurring-start-date">First issue date</Label>
+              <Input
+                id="recurring-start-date"
+                type="date"
+                value={recurringStartDate}
+                onChange={(event) => setRecurringStartDate(event.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Duration</Label>
+              <RadioGroup
+                value={recurringDurationMode}
+                onValueChange={(value) =>
+                  setRecurringDurationMode(value as 'months' | 'until_stopped')
+                }
+              >
+                <RadioGroupItemLabel
+                  selected={recurringDurationMode === 'months'}
+                  className="items-center gap-3"
+                >
+                  <RadioGroupItem value="months" />
+                  <span>For a set number of months</span>
+                </RadioGroupItemLabel>
+                <RadioGroupItemLabel
+                  selected={recurringDurationMode === 'until_stopped'}
+                  className="items-center gap-3"
+                >
+                  <RadioGroupItem value="until_stopped" />
+                  <span>Until stopped manually</span>
+                </RadioGroupItemLabel>
+              </RadioGroup>
+            </div>
+
+            {recurringDurationMode === 'months' ? (
+              <div className="space-y-2">
+                <Label htmlFor="recurring-months">Number of months</Label>
+                <Input
+                  id="recurring-months"
+                  type="number"
+                  min={1}
+                  max={120}
+                  value={recurringMonths}
+                  onChange={(event) => setRecurringMonths(event.target.value)}
+                />
+              </div>
+            ) : null}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRecurringDialogOpen(false)}
+              disabled={creatingRecurring}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => void handleMakeRecurring()}
+              disabled={creatingRecurring || !clientId}
+              className="bg-[var(--ozer-accent)] text-[var(--ozer-text-on-dark)] hover:bg-[var(--ozer-accent-hover)]"
+            >
+              {creatingRecurring ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Repeat className="mr-2 h-4 w-4" />
+              )}
+              Create recurring series
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={displaySettingsOpen} onOpenChange={setDisplaySettingsOpen}>
+        <DialogContent className="max-w-lg border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+          <DialogHeader>
+            <DialogTitle>Invoice display settings</DialogTitle>
+            <DialogDescription>
+              Choose which fields appear on the invoice, preview, and PDF.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {(
+              [
+                ['Reference', showReferenceField, setShowReferenceField],
+                ['Issue date', showIssuedField, setShowIssuedField],
+                ['Due date', showDueField, setShowDueField],
+                ['Notes', showNotesField, setShowNotesField],
+                ['Footer', showFooterField, setShowFooterField],
+                ['Company logo', showLogoField, setShowLogoField],
+                ['Payment link', showPaymentLinkField, setShowPaymentLinkField],
+              ] as const
+            ).map(([label, checked, setter]) => (
+              <div
+                key={label}
+                className="flex items-center justify-between gap-3 rounded-md border border-[color:var(--workspace-shell-border)] px-3 py-2"
+              >
+                <Label className="text-sm text-[var(--workspace-shell-text)]">
+                  {label}
+                </Label>
+                <Switch
+                  checked={checked}
+                  onCheckedChange={setter}
+                  disabled={previewMode}
+                />
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDisplaySettingsOpen(false)}
+            >
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

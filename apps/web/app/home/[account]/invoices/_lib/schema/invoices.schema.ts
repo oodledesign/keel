@@ -123,6 +123,12 @@ export const SendInvoiceSchema = z.object({
   send_test_to_self: z.boolean().optional(),
 });
 
+export const MarkInvoiceSentManuallySchema = z.object({
+  accountId: z.string().uuid(),
+  invoiceId: z.string().uuid(),
+  sent_to_email: optionalNullableString,
+});
+
 export const CreateInvoiceCheckoutSessionByTokenSchema = z.object({
   token: z.string().min(1, 'Token is required'),
   pay_deposit_only: z.boolean().optional(),
@@ -196,6 +202,9 @@ export type UpsertInvoiceItemsInput = z.infer<typeof UpsertInvoiceItemsSchema>;
 export type SetInvoiceStatusInput = z.infer<typeof SetInvoiceStatusSchema>;
 export type GetInvoiceForPortalInput = z.infer<typeof GetInvoiceForPortalSchema>;
 export type SendInvoiceInput = z.infer<typeof SendInvoiceSchema>;
+export type MarkInvoiceSentManuallyInput = z.infer<
+  typeof MarkInvoiceSentManuallySchema
+>;
 export type CreateInvoiceCheckoutSessionByTokenInput = z.infer<
   typeof CreateInvoiceCheckoutSessionByTokenSchema
 >;

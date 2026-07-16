@@ -600,6 +600,69 @@ class InvoicesService {
     return updated;
   }
 
+  /** Mark a draft invoice as sent without sending email (manual delivery). */
+  async markInvoiceSentManually(input: {
+    accountId: string;
+    invoiceId: string;
+    sent_to_email?: string | null;
+  }) {
+    const user = await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+
+    const { data: invoice, error } = await this.db
+      .from('invoices')
+      .select('id, status, public_token, client_id')
+      .eq('id', input.invoiceId)
+      .eq('account_id', input.accountId)
+      .single();
+    if (error || !invoice) this.throwErr(error, 'Invoice not found');
+
+    if (invoice.status !== 'draft') {
+      throw new Error('Only draft invoices can be marked as sent');
+    }
+
+    let public_token = invoice.public_token as string | null;
+    if (!public_token) {
+      const { randomBytes } = await import('crypto');
+      public_token = randomBytes(32).toString('hex');
+    }
+
+    let sent_to_email = input.sent_to_email?.trim() || null;
+    if (!sent_to_email) {
+      const { data: client } = await this.db
+        .from('clients')
+        .select('email')
+        .eq('id', invoice.client_id)
+        .single();
+      sent_to_email = client?.email?.trim() || null;
+    }
+
+    const now = new Date().toISOString();
+    const { data: updated, error: updateError } = await this.db
+      .from('invoices')
+      .update({
+        public_token,
+        status: 'sent',
+        issued_at: now,
+        sent_at: now,
+        sent_to_email,
+      })
+      .eq('id', input.invoiceId)
+      .eq('account_id', input.accountId)
+      .select()
+      .single();
+    if (updateError) this.throwErr(updateError);
+
+    await this.logEvent({
+      accountId: input.accountId,
+      invoiceId: input.invoiceId,
+      eventType: 'sent',
+      payload: { sent_to_email, source: 'manual' },
+      actorId: user.id,
+    });
+
+    return updated;
+  }
+
   /** Load invoice by public_token only; no auth. For portal. */
   async getInvoiceForPortal(params: GetInvoiceForPortalInput) {
     const { data: invoice, error: invError } = await this.db
