@@ -5,13 +5,20 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { ArrowLeft, Check, Loader2, PlusCircle, Save, Trash2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  Check,
+  Loader2,
+  PlusCircle,
+  Save,
+  Trash2,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
-import { Switch } from '@kit/ui/switch';
 import { toast } from '@kit/ui/sonner';
+import { Switch } from '@kit/ui/switch';
 
 import {
   DocumentHtmlPreview,
@@ -19,14 +26,14 @@ import {
 } from '~/components/document-rich-text';
 import {
   SignatureCapture,
-  SignatureDisplay,
   type SignatureCaptureResult,
+  SignatureDisplay,
 } from '~/components/signature-capture';
 import pathsConfig from '~/config/paths.config';
 import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
 
-import type { PaymentPlanItem } from '../_lib/schema/contracts.schema';
 import { getErrorMessage } from '../_lib/error-message';
+import type { PaymentPlanItem } from '../_lib/schema/contracts.schema';
 import { signAuthor, updateContract } from '../_lib/server/server-actions';
 import { ContractSendPanel } from './contract-send-panel';
 import { ContractStatusBadge } from './contract-status-badge';
@@ -69,6 +76,8 @@ type ContractData = {
   email_subject: string | null;
   email_body: string | null;
   email_signature: string | null;
+  preferred_send_email?: string | null;
+  preferred_send_source?: string | null;
   client: ClientInfo | null;
 };
 
@@ -123,7 +132,10 @@ export function ContractEditContent({
   const router = useRouter();
   const searchParams = useSearchParams();
   const contract = initialContract as unknown as ContractData;
-  const contractsPath = pathsConfig.app.accountContracts.replace('[account]', accountSlug);
+  const contractsPath = pathsConfig.app.accountContracts.replace(
+    '[account]',
+    accountSlug,
+  );
 
   const isDraft = contract.status === 'draft';
   const canEditBody = canEditContracts && isDraft;
@@ -137,7 +149,9 @@ export function ContractEditContent({
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
   const [title, setTitle] = useState(contract.title ?? 'Agreement');
   const [contentHtml, setContentHtml] = useState(contract.content_html ?? '');
-  const [totalPence, setTotalPence] = useState(String((contract.total_pence ?? 0) / 100));
+  const [totalPence, setTotalPence] = useState(
+    String((contract.total_pence ?? 0) / 100),
+  );
   const [paymentPlan, setPaymentPlan] = useState<PaymentPlanItem[]>(
     contract.payment_plan?.length ? contract.payment_plan : [],
   );
@@ -145,9 +159,13 @@ export function ContractEditContent({
     contract.auto_send_on_approval ?? false,
   );
 
-  const [authorType, setAuthorType] = useState<PartyType>(contract.author_type ?? 'individual');
+  const [authorType, setAuthorType] = useState<PartyType>(
+    contract.author_type ?? 'individual',
+  );
   const [authorName, setAuthorName] = useState(contract.author_name ?? '');
-  const [authorCompany, setAuthorCompany] = useState(contract.author_company ?? '');
+  const [authorCompany, setAuthorCompany] = useState(
+    contract.author_company ?? '',
+  );
 
   const [recipientType, setRecipientType] = useState<PartyType>(
     contract.recipient_type ?? 'individual',
@@ -155,19 +173,26 @@ export function ContractEditContent({
   const [recipientName, setRecipientName] = useState(
     contract.recipient_name ??
       contract.client?.display_name ??
-      [contract.client?.first_name, contract.client?.last_name].filter(Boolean).join(' ') ??
+      [contract.client?.first_name, contract.client?.last_name]
+        .filter(Boolean)
+        .join(' ') ??
       '',
   );
   const [recipientCompany, setRecipientCompany] = useState(
     contract.recipient_company ?? contract.client?.company_name ?? '',
   );
   const [recipientEmail, setRecipientEmail] = useState(
-    contract.recipient_email ?? contract.client?.email ?? '',
+    contract.recipient_email ??
+      contract.preferred_send_email ??
+      contract.client?.email ??
+      '',
   );
 
   const [saving, setSaving] = useState(false);
   const [signing, setSigning] = useState(false);
-  const [sendPanelOpen, setSendPanelOpen] = useState(searchParams.get('send') === '1');
+  const [sendPanelOpen, setSendPanelOpen] = useState(
+    searchParams.get('send') === '1',
+  );
 
   useEffect(() => {
     if (searchParams.get('send') === '1') setSendPanelOpen(true);
@@ -190,10 +215,12 @@ export function ContractEditContent({
       auto_send_on_approval: autoSendOnApproval,
       author_type: authorType,
       author_name: authorName.trim() || null,
-      author_company: authorType === 'company' ? authorCompany.trim() || null : null,
+      author_company:
+        authorType === 'company' ? authorCompany.trim() || null : null,
       recipient_type: recipientType,
       recipient_name: recipientName.trim() || null,
-      recipient_company: recipientType === 'company' ? recipientCompany.trim() || null : null,
+      recipient_company:
+        recipientType === 'company' ? recipientCompany.trim() || null : null,
       recipient_email: recipientEmail.trim() || null,
     };
   }, [
@@ -269,14 +296,17 @@ export function ContractEditContent({
         contractId: contract.id,
         author_type: authorType,
         author_name: authorName.trim(),
-        author_company: authorType === 'company' ? authorCompany.trim() || null : null,
+        author_company:
+          authorType === 'company' ? authorCompany.trim() || null : null,
         author_signature_type: signature.signature_type,
         author_signature_data: signature.signature_data,
         send_after_sign: autoSendOnApproval,
         sent_to_email: autoSendOnApproval ? recipientEmail.trim() : undefined,
       });
       toast.success(
-        autoSendOnApproval ? 'Signed and sent to recipient' : 'Contract signed — ready to send',
+        autoSendOnApproval
+          ? 'Signed and sent to recipient'
+          : 'Contract signed — ready to send',
       );
       setSendPanelOpen(true);
       router.refresh();
@@ -321,8 +351,17 @@ export function ContractEditContent({
         </div>
         <div className="flex gap-2">
           {canEditBody ? (
-            <Button variant="outline" size="sm" disabled={saving} onClick={() => void handleSaveDraft()}>
-              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={saving}
+              onClick={() => void handleSaveDraft()}
+            >
+              {saving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
               Save draft
             </Button>
           ) : null}
@@ -374,7 +413,10 @@ export function ContractEditContent({
                   placeholder="Write the agreement terms…"
                 />
               ) : (
-                <DocumentHtmlPreview html={contentHtml} className="min-h-[420px]" />
+                <DocumentHtmlPreview
+                  html={contentHtml}
+                  className="min-h-[420px]"
+                />
               )}
             </div>
           </div>
@@ -382,11 +424,20 @@ export function ContractEditContent({
           <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 md:p-6">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
-                <h3 className="font-medium text-[var(--workspace-shell-text)]">Payment plan</h3>
-                <p className="text-sm text-[var(--workspace-shell-text-muted)]">Optional instalments after signing</p>
+                <h3 className="font-medium text-[var(--workspace-shell-text)]">
+                  Payment plan
+                </h3>
+                <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                  Optional instalments after signing
+                </p>
               </div>
               {canEditBody ? (
-                <Button type="button" size="sm" variant="outline" onClick={addPaymentRow}>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={addPaymentRow}
+                >
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Add row
                 </Button>
@@ -394,7 +445,9 @@ export function ContractEditContent({
             </div>
 
             {paymentPlan.length === 0 ? (
-              <p className="text-sm text-[var(--workspace-shell-text-muted)]">No instalments configured.</p>
+              <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                No instalments configured.
+              </p>
             ) : (
               <div className="space-y-2">
                 {paymentPlan.map((row, index) => (
@@ -403,7 +456,9 @@ export function ContractEditContent({
                       <Label className="text-xs">Label</Label>
                       <Input
                         value={row.label}
-                        onChange={(e) => updatePaymentRow(index, { label: e.target.value })}
+                        onChange={(e) =>
+                          updatePaymentRow(index, { label: e.target.value })
+                        }
                         disabled={!canEditBody}
                         placeholder="Deposit"
                       />
@@ -416,7 +471,9 @@ export function ContractEditContent({
                         max={100}
                         value={row.percent}
                         onChange={(e) =>
-                          updatePaymentRow(index, { percent: Number(e.target.value) || 0 })
+                          updatePaymentRow(index, {
+                            percent: Number(e.target.value) || 0,
+                          })
                         }
                         disabled={!canEditBody}
                       />
@@ -442,7 +499,9 @@ export function ContractEditContent({
                   }`}
                 >
                   Total: {paymentPlanTotal}%{' '}
-                  {paymentPlan.length > 0 && paymentPlanTotal !== 100 ? '(must equal 100%)' : ''}
+                  {paymentPlan.length > 0 && paymentPlanTotal !== 100
+                    ? '(must equal 100%)'
+                    : ''}
                 </p>
               </div>
             )}
@@ -451,12 +510,17 @@ export function ContractEditContent({
           {canEditBody ? (
             <div className="flex items-center justify-between rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-3">
               <div>
-                <p className="font-medium text-[var(--workspace-shell-text)]">Auto-send on approval</p>
+                <p className="font-medium text-[var(--workspace-shell-text)]">
+                  Auto-send on approval
+                </p>
                 <p className="text-sm text-[var(--workspace-shell-text-muted)]">
                   Email the recipient automatically when you sign
                 </p>
               </div>
-              <Switch checked={autoSendOnApproval} onCheckedChange={setAutoSendOnApproval} />
+              <Switch
+                checked={autoSendOnApproval}
+                onCheckedChange={setAutoSendOnApproval}
+              />
             </div>
           ) : null}
         </div>
@@ -568,7 +632,11 @@ export function ContractEditContent({
                   />
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" className="flex-1" onClick={() => setWizardStep(1)}>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setWizardStep(1)}
+                  >
                     Back
                   </Button>
                   <Button
@@ -587,26 +655,46 @@ export function ContractEditContent({
               <div className="space-y-4">
                 <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-white/3 p-3 text-sm text-[var(--workspace-shell-text-muted)]">
                   <p>
-                    <span className="text-[var(--workspace-shell-text-muted)]">Author:</span> {authorName || '—'}
-                    {authorType === 'company' && authorCompany ? ` · ${authorCompany}` : ''}
+                    <span className="text-[var(--workspace-shell-text-muted)]">
+                      Author:
+                    </span>{' '}
+                    {authorName || '—'}
+                    {authorType === 'company' && authorCompany
+                      ? ` · ${authorCompany}`
+                      : ''}
                   </p>
                   <p className="mt-1">
-                    <span className="text-[var(--workspace-shell-text-muted)]">Recipient:</span> {recipientName || '—'}
-                    {recipientType === 'company' && recipientCompany ? ` · ${recipientCompany}` : ''}
+                    <span className="text-[var(--workspace-shell-text-muted)]">
+                      Recipient:
+                    </span>{' '}
+                    {recipientName || '—'}
+                    {recipientType === 'company' && recipientCompany
+                      ? ` · ${recipientCompany}`
+                      : ''}
                   </p>
                   <p className="mt-1">
-                    <span className="text-[var(--workspace-shell-text-muted)]">Value:</span>{' '}
-                    {formatPence(parsedTotalPence, contract.currency?.toUpperCase() ?? 'GBP')}
+                    <span className="text-[var(--workspace-shell-text-muted)]">
+                      Value:
+                    </span>{' '}
+                    {formatPence(
+                      parsedTotalPence,
+                      contract.currency?.toUpperCase() ?? 'GBP',
+                    )}
                   </p>
                 </div>
 
                 <div className="max-h-48 overflow-y-auto rounded-xl border border-[color:var(--workspace-shell-border)]">
-                  <DocumentHtmlPreview html={contentHtml} className="border-0" />
+                  <DocumentHtmlPreview
+                    html={contentHtml}
+                    className="border-0"
+                  />
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <p className="mb-2 text-sm font-medium text-[var(--workspace-shell-text-muted)]">Your signature</p>
+                    <p className="mb-2 text-sm font-medium text-[var(--workspace-shell-text-muted)]">
+                      Your signature
+                    </p>
                     {authorSigned ? (
                       <SignatureDisplay
                         type={contract.author_signature_type}
@@ -621,11 +709,15 @@ export function ContractEditContent({
                         onConfirm={(result) => void handleSignAuthor(result)}
                       />
                     ) : (
-                      <p className="text-sm text-[var(--workspace-shell-text-muted)]">Awaiting author signature</p>
+                      <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                        Awaiting author signature
+                      </p>
                     )}
                   </div>
                   <div>
-                    <p className="mb-2 text-sm font-medium text-[var(--workspace-shell-text-muted)]">Recipient signature</p>
+                    <p className="mb-2 text-sm font-medium text-[var(--workspace-shell-text-muted)]">
+                      Recipient signature
+                    </p>
                     <SignatureDisplay
                       type={contract.recipient_signature_type}
                       data={contract.recipient_signature_data}
@@ -636,7 +728,11 @@ export function ContractEditContent({
                 </div>
 
                 {!authorSigned ? (
-                  <Button variant="outline" className="w-full" onClick={() => setWizardStep(2)}>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => setWizardStep(2)}
+                  >
                     Back
                   </Button>
                 ) : null}

@@ -2,7 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { Check, ChevronsUpDown, Mail, MoreHorizontal, Phone, PlusCircle, Trash2 } from 'lucide-react';
+import {
+  Check,
+  ChevronsUpDown,
+  Mail,
+  MoreHorizontal,
+  Phone,
+  PlusCircle,
+  Star,
+  Trash2,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import {
@@ -26,17 +35,28 @@ import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import {
+  CONTACT_ROLE_LABELS,
+  CONTACT_ROLE_PRESETS,
+  type ContactRolePreset,
+  formatContactRoleLabel,
+} from '~/lib/clients/contact-roles';
+
+import {
   createContact,
   deleteContact,
   linkContact,
   listAccountContacts,
   listContacts,
+  setPrimaryContact,
+  updateContactLink,
 } from '../_lib/server/server-actions';
 import { ContactImageUploader } from './contact-image-uploader';
 
 type Contact = {
   id: string;
   full_name: string;
+  first_name?: string | null;
+  last_name?: string | null;
   email: string | null;
   phone: string | null;
   role: string | null;
@@ -53,6 +73,46 @@ type AccountContact = {
 
 type AddMode = 'new' | 'existing';
 
+function RoleSelect({
+  id,
+  value,
+  onChange,
+}: {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const isPreset = CONTACT_ROLE_PRESETS.includes(value as ContactRolePreset);
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id} className="text-xs">
+        Role
+      </Label>
+      <select
+        id={id}
+        value={isPreset || !value ? value : 'other'}
+        onChange={(e) => onChange(e.target.value)}
+        className="border-input bg-background h-8 w-full rounded-md border px-2 text-sm"
+      >
+        <option value="">Select role…</option>
+        {CONTACT_ROLE_PRESETS.map((role) => (
+          <option key={role} value={role}>
+            {CONTACT_ROLE_LABELS[role]}
+          </option>
+        ))}
+      </select>
+      {value === 'other' || (!isPreset && value) ? (
+        <Input
+          value={!isPreset ? value : ''}
+          onChange={(e) => onChange(e.target.value || 'other')}
+          placeholder="Custom role"
+          className="h-8 text-sm"
+        />
+      ) : null}
+    </div>
+  );
+}
+
 function AddContactForm({
   accountId,
   clientId,
@@ -66,10 +126,12 @@ function AddContactForm({
 }) {
   const [mode, setMode] = useState<AddMode>('new');
   const [saving, setSaving] = useState(false);
-  const [fullName, setFullName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState('');
+  const [isPrimary, setIsPrimary] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [accountContacts, setAccountContacts] = useState<AccountContact[]>([]);
@@ -110,8 +172,8 @@ function AddContactForm({
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName.trim()) {
-      toast.error('Name is required');
+    if (!firstName.trim()) {
+      toast.error('First name is required');
       return;
     }
     setSaving(true);
@@ -119,10 +181,12 @@ function AddContactForm({
       await createContact({
         accountId,
         clientId,
-        fullName: fullName.trim(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim() || undefined,
         email: email.trim() || undefined,
         phone: phone.trim() || undefined,
         role: role.trim() || undefined,
+        isPrimary,
       });
       toast.success('Contact added');
       onAdded();
@@ -146,6 +210,7 @@ function AddContactForm({
         clientId,
         contactId: selectedContactId,
         role: role.trim() || undefined,
+        isPrimary,
       });
       toast.success('Contact linked to this client');
       onAdded();
@@ -159,14 +224,18 @@ function AddContactForm({
   return (
     <div className="space-y-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-medium text-[var(--workspace-shell-text)]">Add contact</p>
+        <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+          Add contact
+        </p>
         <div className="flex rounded-md border border-[color:var(--workspace-shell-border)] p-0.5 text-xs">
           <button
             type="button"
             onClick={() => setMode('new')}
             className={cn(
               'rounded px-2 py-1',
-              mode === 'new' ? 'bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text)]' : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+              mode === 'new'
+                ? 'bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text)]'
+                : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
             )}
           >
             New
@@ -176,7 +245,9 @@ function AddContactForm({
             onClick={() => setMode('existing')}
             className={cn(
               'rounded px-2 py-1',
-              mode === 'existing' ? 'bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text)]' : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+              mode === 'existing'
+                ? 'bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text)]'
+                : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
             )}
           >
             Existing
@@ -186,30 +257,39 @@ function AddContactForm({
 
       {mode === 'new' ? (
         <form onSubmit={handleCreate} className="space-y-3">
-          <div className="space-y-2">
-            <Label htmlFor="contact_full_name" className="text-xs">Name *</Label>
-            <Input
-              id="contact_full_name"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="e.g. Jane Smith"
-              className="h-8 text-sm"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="contact_role" className="text-xs">Role</Label>
-            <Input
-              id="contact_role"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              placeholder="e.g. CEO, Account Manager"
-              className="h-8 text-sm"
-            />
-          </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-2">
-              <Label htmlFor="contact_email" className="text-xs">Email</Label>
+              <Label htmlFor="contact_first_name" className="text-xs">
+                First name *
+              </Label>
+              <Input
+                id="contact_first_name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="e.g. Jane"
+                className="h-8 text-sm"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="contact_last_name" className="text-xs">
+                Last name
+              </Label>
+              <Input
+                id="contact_last_name"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="e.g. Smith"
+                className="h-8 text-sm"
+              />
+            </div>
+          </div>
+          <RoleSelect id="contact_role" value={role} onChange={setRole} />
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-2">
+              <Label htmlFor="contact_email" className="text-xs">
+                Email
+              </Label>
               <Input
                 id="contact_email"
                 type="email"
@@ -220,7 +300,9 @@ function AddContactForm({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="contact_phone" className="text-xs">Phone</Label>
+              <Label htmlFor="contact_phone" className="text-xs">
+                Phone
+              </Label>
               <Input
                 id="contact_phone"
                 value={phone}
@@ -230,11 +312,25 @@ function AddContactForm({
               />
             </div>
           </div>
+          <label className="flex items-center gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
+            <input
+              type="checkbox"
+              checked={isPrimary}
+              onChange={(e) => setIsPrimary(e.target.checked)}
+              className="rounded border-[color:var(--workspace-shell-border)]"
+            />
+            Set as primary contact
+          </label>
           <div className="flex gap-2 pt-1">
             <Button type="submit" size="sm" disabled={saving}>
               {saving ? 'Adding…' : 'Add contact'}
             </Button>
-            <Button type="button" size="sm" variant="outline" onClick={onCancel}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={onCancel}
+            >
               Cancel
             </Button>
           </div>
@@ -252,7 +348,8 @@ function AddContactForm({
                   aria-expanded={searchOpen}
                   className={cn(
                     'w-full justify-between border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel-hover)] hover:text-[var(--workspace-shell-text)]',
-                    !selectedContact && 'text-[var(--workspace-shell-text-muted)]',
+                    !selectedContact &&
+                      'text-[var(--workspace-shell-text-muted)]',
                   )}
                 >
                   {selectedContact
@@ -265,7 +362,10 @@ function AddContactForm({
                 className="w-[var(--radix-popover-trigger-width)] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0"
                 align="start"
               >
-                <Command className="bg-[var(--workspace-shell-panel)]" shouldFilter={false}>
+                <Command
+                  className="bg-[var(--workspace-shell-panel)]"
+                  shouldFilter={false}
+                >
                   <CommandInput
                     placeholder="Search by name or email…"
                     value={searchQuery}
@@ -274,7 +374,9 @@ function AddContactForm({
                   />
                   <CommandList>
                     <CommandEmpty>
-                      {loadingContacts ? 'Searching…' : 'No contacts found in this workspace.'}
+                      {loadingContacts
+                        ? 'Searching…'
+                        : 'No contacts found in this workspace.'}
                     </CommandEmpty>
                     <CommandGroup>
                       {accountContacts.map((contact) => {
@@ -292,7 +394,9 @@ function AddContactForm({
                             <Check
                               className={cn(
                                 'mr-2 h-4 w-4',
-                                selectedContactId === contact.id ? 'opacity-100' : 'opacity-0',
+                                selectedContactId === contact.id
+                                  ? 'opacity-100'
+                                  : 'opacity-0',
                               )}
                             />
                             {label}
@@ -305,21 +409,30 @@ function AddContactForm({
               </PopoverContent>
             </Popover>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="link_role" className="text-xs">Role on this client</Label>
-            <Input
-              id="link_role"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              placeholder="e.g. Finance contact"
-              className="h-8 text-sm"
+          <RoleSelect id="link_role" value={role} onChange={setRole} />
+          <label className="flex items-center gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
+            <input
+              type="checkbox"
+              checked={isPrimary}
+              onChange={(e) => setIsPrimary(e.target.checked)}
+              className="rounded border-[color:var(--workspace-shell-border)]"
             />
-          </div>
+            Set as primary contact
+          </label>
           <div className="flex gap-2 pt-1">
-            <Button type="submit" size="sm" disabled={saving || !selectedContactId}>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={saving || !selectedContactId}
+            >
               {saving ? 'Linking…' : 'Link contact'}
             </Button>
-            <Button type="button" size="sm" variant="outline" onClick={onCancel}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={onCancel}
+            >
               Cancel
             </Button>
           </div>
@@ -342,17 +455,24 @@ export function ClientContactsBlock({
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
 
+  const [editingCustomRoleId, setEditingCustomRoleId] = useState<string | null>(
+    null,
+  );
+  const [customRoleDraft, setCustomRoleDraft] = useState('');
+
   const fetchContacts = useCallback(async () => {
     setLoading(true);
     try {
-      const result = (await listContacts({ clientId })) as { data: Contact[] };
+      const result = (await listContacts({ accountId, clientId })) as {
+        data: Contact[];
+      };
       setContacts(Array.isArray(result?.data) ? result.data : []);
     } catch {
       setContacts([]);
     } finally {
       setLoading(false);
     }
-  }, [clientId]);
+  }, [accountId, clientId]);
 
   useEffect(() => {
     fetchContacts();
@@ -361,7 +481,7 @@ export function ClientContactsBlock({
   const handleDelete = async (contactId: string) => {
     if (!confirm('Remove this contact from this client?')) return;
     try {
-      await deleteContact({ clientId, contactId });
+      await deleteContact({ accountId, clientId, contactId });
       toast.success('Contact removed from this client');
       fetchContacts();
     } catch (e) {
@@ -369,15 +489,45 @@ export function ClientContactsBlock({
     }
   };
 
+  const handleSetPrimary = async (contactId: string) => {
+    try {
+      await setPrimaryContact({ accountId, clientId, contactId });
+      toast.success('Primary contact updated');
+      fetchContacts();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to set primary');
+    }
+  };
+
+  const handleRoleChange = async (contactId: string, role: string) => {
+    try {
+      await updateContactLink({
+        accountId,
+        clientId,
+        contactId,
+        role: role || null,
+      });
+      toast.success('Role updated');
+      fetchContacts();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to update role');
+    }
+  };
+
   if (loading) {
-    return <p className="text-xs text-[var(--workspace-shell-text-muted)]">Loading contacts…</p>;
+    return (
+      <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+        Loading contacts…
+      </p>
+    );
   }
 
   return (
     <div className="space-y-3">
       {contacts.length === 0 && !showAddForm && (
         <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-          No contacts yet. Add someone new or link an existing workspace contact.
+          No contacts yet. Add someone new or link an existing workspace
+          contact.
         </p>
       )}
 
@@ -387,16 +537,27 @@ export function ClientContactsBlock({
             <thead>
               <tr className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
                 <th className="w-12 px-2 py-2" />
-                <th className="px-3 py-2 text-left text-xs font-medium text-[var(--workspace-shell-text-muted)]">Name</th>
-                <th className="hidden px-3 py-2 text-left text-xs font-medium text-[var(--workspace-shell-text-muted)] sm:table-cell">Role</th>
-                <th className="hidden px-3 py-2 text-left text-xs font-medium text-[var(--workspace-shell-text-muted)] md:table-cell">Email</th>
-                <th className="hidden px-3 py-2 text-left text-xs font-medium text-[var(--workspace-shell-text-muted)] md:table-cell">Phone</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-[var(--workspace-shell-text-muted)]">
+                  Name
+                </th>
+                <th className="hidden px-3 py-2 text-left text-xs font-medium text-[var(--workspace-shell-text-muted)] sm:table-cell">
+                  Role
+                </th>
+                <th className="hidden px-3 py-2 text-left text-xs font-medium text-[var(--workspace-shell-text-muted)] md:table-cell">
+                  Email
+                </th>
+                <th className="hidden px-3 py-2 text-left text-xs font-medium text-[var(--workspace-shell-text-muted)] md:table-cell">
+                  Phone
+                </th>
                 {canEdit && <th className="w-8 px-2 py-2" />}
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-700">
               {contacts.map((contact) => (
-                <tr key={contact.id} className="bg-[var(--workspace-shell-panel)] hover:bg-[var(--workspace-control-surface)]/50">
+                <tr
+                  key={contact.id}
+                  className="bg-[var(--workspace-shell-panel)] hover:bg-[var(--workspace-control-surface)]/50"
+                >
                   <td className="px-2 py-2.5 align-middle">
                     <ContactImageUploader
                       accountId={accountId}
@@ -409,57 +570,173 @@ export function ClientContactsBlock({
                   </td>
                   <td className="px-3 py-2.5">
                     <div>
-                      <p className="font-medium text-[var(--workspace-shell-text)]">{contact.full_name}</p>
+                      <p className="font-medium text-[var(--workspace-shell-text)]">
+                        {contact.full_name}
+                      </p>
                       {contact.is_primary && (
-                        <span className="text-[10px] text-[var(--ozer-accent-muted)]">Primary</span>
+                        <span className="text-[10px] text-[var(--ozer-accent-muted)]">
+                          Primary
+                        </span>
                       )}
                       <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 sm:hidden">
                         {contact.role && (
-                          <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">{contact.role}</span>
+                          <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+                            {formatContactRoleLabel(contact.role)}
+                          </span>
                         )}
                         {contact.email && (
-                          <a href={`mailto:${contact.email}`} className="flex items-center gap-1 text-[11px] text-[var(--workspace-shell-text-muted)] hover:text-[var(--ozer-accent-muted)]">
-                            <Mail className="h-3 w-3" />{contact.email}
+                          <a
+                            href={`mailto:${contact.email}`}
+                            className="flex items-center gap-1 text-[11px] text-[var(--workspace-shell-text-muted)] hover:text-[var(--ozer-accent-muted)]"
+                          >
+                            <Mail className="h-3 w-3" />
+                            {contact.email}
                           </a>
                         )}
                         {contact.phone && (
-                          <a href={`tel:${contact.phone}`} className="flex items-center gap-1 text-[11px] text-[var(--workspace-shell-text-muted)] hover:text-[var(--ozer-accent-muted)]">
-                            <Phone className="h-3 w-3" />{contact.phone}
+                          <a
+                            href={`tel:${contact.phone}`}
+                            className="flex items-center gap-1 text-[11px] text-[var(--workspace-shell-text-muted)] hover:text-[var(--ozer-accent-muted)]"
+                          >
+                            <Phone className="h-3 w-3" />
+                            {contact.phone}
                           </a>
                         )}
                       </div>
                     </div>
                   </td>
                   <td className="hidden px-3 py-2.5 text-xs text-[var(--workspace-shell-text-muted)] sm:table-cell">
-                    {contact.role ?? '—'}
+                    {canEdit ? (
+                      editingCustomRoleId === contact.id ? (
+                        <div className="flex max-w-[12rem] flex-col gap-1">
+                          <Input
+                            value={customRoleDraft}
+                            onChange={(e) => setCustomRoleDraft(e.target.value)}
+                            placeholder="Custom role"
+                            className="h-8 text-xs"
+                            autoFocus
+                          />
+                          <div className="flex gap-1">
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="h-7 px-2 text-xs"
+                              onClick={() => {
+                                void handleRoleChange(
+                                  contact.id,
+                                  customRoleDraft.trim(),
+                                ).then(() => {
+                                  setEditingCustomRoleId(null);
+                                  setCustomRoleDraft('');
+                                });
+                              }}
+                            >
+                              Save
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 text-xs"
+                              onClick={() => {
+                                setEditingCustomRoleId(null);
+                                setCustomRoleDraft('');
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <select
+                          value={
+                            CONTACT_ROLE_PRESETS.includes(
+                              (contact.role ?? '') as ContactRolePreset,
+                            ) || !contact.role
+                              ? (contact.role ?? '')
+                              : 'other'
+                          }
+                          onChange={(e) => {
+                            const next = e.target.value;
+                            if (next === 'other') {
+                              setEditingCustomRoleId(contact.id);
+                              setCustomRoleDraft(
+                                contact.role &&
+                                  !CONTACT_ROLE_PRESETS.includes(
+                                    contact.role as ContactRolePreset,
+                                  )
+                                  ? contact.role
+                                  : '',
+                              );
+                              return;
+                            }
+                            void handleRoleChange(contact.id, next);
+                          }}
+                          className="border-input bg-background h-8 max-w-[9rem] rounded-md border px-2 text-xs"
+                        >
+                          <option value="">—</option>
+                          {CONTACT_ROLE_PRESETS.map((role) => (
+                            <option key={role} value={role}>
+                              {CONTACT_ROLE_LABELS[role]}
+                            </option>
+                          ))}
+                        </select>
+                      )
+                    ) : (
+                      formatContactRoleLabel(contact.role)
+                    )}
                   </td>
                   <td className="hidden px-3 py-2.5 md:table-cell">
                     {contact.email ? (
-                      <a href={`mailto:${contact.email}`} className="flex items-center gap-1 text-xs text-[var(--workspace-shell-text-muted)] hover:text-[var(--ozer-accent-muted)]">
-                        <Mail className="h-3 w-3" />{contact.email}
+                      <a
+                        href={`mailto:${contact.email}`}
+                        className="flex items-center gap-1 text-xs text-[var(--workspace-shell-text-muted)] hover:text-[var(--ozer-accent-muted)]"
+                      >
+                        <Mail className="h-3 w-3" />
+                        {contact.email}
                       </a>
                     ) : (
-                      <span className="text-xs text-[var(--workspace-shell-text-muted)]">—</span>
+                      <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+                        —
+                      </span>
                     )}
                   </td>
                   <td className="hidden px-3 py-2.5 md:table-cell">
                     {contact.phone ? (
-                      <a href={`tel:${contact.phone}`} className="flex items-center gap-1 text-xs text-[var(--workspace-shell-text-muted)] hover:text-[var(--ozer-accent-muted)]">
-                        <Phone className="h-3 w-3" />{contact.phone}
+                      <a
+                        href={`tel:${contact.phone}`}
+                        className="flex items-center gap-1 text-xs text-[var(--workspace-shell-text-muted)] hover:text-[var(--ozer-accent-muted)]"
+                      >
+                        <Phone className="h-3 w-3" />
+                        {contact.phone}
                       </a>
                     ) : (
-                      <span className="text-xs text-[var(--workspace-shell-text-muted)]">—</span>
+                      <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+                        —
+                      </span>
                     )}
                   </td>
                   {canEdit && (
                     <td className="px-2 py-2.5">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+                          >
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
+                          {!contact.is_primary && (
+                            <DropdownMenuItem
+                              onClick={() => handleSetPrimary(contact.id)}
+                            >
+                              <Star className="mr-2 h-4 w-4" />
+                              Make primary
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem
                             className="text-red-400 focus:text-red-400"
                             onClick={() => handleDelete(contact.id)}

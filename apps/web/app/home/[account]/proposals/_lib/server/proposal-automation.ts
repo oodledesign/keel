@@ -3,6 +3,7 @@ import 'server-only';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { generateContractDraft } from '~/lib/ai/contract-generate';
+import { resolveClientRecipientEmail } from '~/lib/clients/resolve-client-recipient';
 
 export async function createDraftContractForProposal(proposalId: string) {
   const admin = getSupabaseServerAdminClient() as any;
@@ -17,23 +18,28 @@ export async function createDraftContractForProposal(proposalId: string) {
 
   if (!proposal || proposal.contract_id) return null;
 
-  const [{ data: account }, { data: client }, { data: deal }] = await Promise.all([
-    admin.from('accounts').select('name').eq('id', proposal.account_id).maybeSingle(),
-    proposal.client_id
-      ? admin
-          .from('clients')
-          .select('display_name, first_name, last_name, company_name, email')
-          .eq('id', proposal.client_id)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-    proposal.deal_id
-      ? admin
-          .from('pipeline_deals')
-          .select('contact_name, company_name, value')
-          .eq('id', proposal.deal_id)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-  ]);
+  const [{ data: account }, { data: client }, { data: deal }] =
+    await Promise.all([
+      admin
+        .from('accounts')
+        .select('name')
+        .eq('id', proposal.account_id)
+        .maybeSingle(),
+      proposal.client_id
+        ? admin
+            .from('clients')
+            .select('display_name, first_name, last_name, company_name, email')
+            .eq('id', proposal.client_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+      proposal.deal_id
+        ? admin
+            .from('pipeline_deals')
+            .select('contact_name, company_name, value')
+            .eq('id', proposal.deal_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
 
   const recipientName =
     proposal.recipient_name?.trim() ||
@@ -43,7 +49,24 @@ export async function createDraftContractForProposal(proposalId: string) {
   const recipientCompany =
     client?.company_name?.trim() || deal?.company_name?.trim() || null;
   const dealValue =
-    deal?.value != null ? Number(deal.value) : proposal.total_pence != null ? proposal.total_pence / 100 : null;
+    deal?.value != null
+      ? Number(deal.value)
+      : proposal.total_pence != null
+        ? proposal.total_pence / 100
+        : null;
+
+  let recipientEmail = proposal.recipient_email ?? client?.email ?? null;
+  if (proposal.client_id) {
+    const resolved = await resolveClientRecipientEmail(
+      admin,
+      proposal.client_id,
+      {
+        purpose: 'contract',
+        fallbackEmail: proposal.recipient_email ?? client?.email,
+      },
+    );
+    recipientEmail = resolved.email;
+  }
 
   let draft;
   try {
@@ -79,7 +102,7 @@ export async function createDraftContractForProposal(proposalId: string) {
       payment_plan: draft.payment_plan,
       auto_send_on_approval: false,
       recipient_name: recipientName,
-      recipient_email: proposal.recipient_email ?? client?.email ?? null,
+      recipient_email: recipientEmail,
     })
     .select('id')
     .single();
@@ -122,7 +145,9 @@ export async function maybeAutoSendContractAfterApproval(proposalId: string) {
 
   const { data: contract } = await admin
     .from('contracts')
-    .select('id, account_id, status, auto_send_on_approval, author_signed_at, recipient_email, sent_to_email')
+    .select(
+      'id, account_id, status, auto_send_on_approval, author_signed_at, recipient_email, sent_to_email',
+    )
     .eq('id', proposal.contract_id)
     .maybeSingle();
 
@@ -143,9 +168,8 @@ export async function maybeAutoSendContractAfterApproval(proposalId: string) {
     proposal.sent_to_email;
   if (!email) return;
 
-  const { createContractsService } = await import(
-    '../../../contracts/_lib/server/contracts.service'
-  );
+  const { createContractsService } =
+    await import('../../../contracts/_lib/server/contracts.service');
   const service = createContractsService(admin);
   try {
     await service.sendContract({

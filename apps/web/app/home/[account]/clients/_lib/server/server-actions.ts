@@ -6,7 +6,6 @@ import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { createClientsService } from './clients.service';
 import {
   CreateClientSchema,
   CreateContactSchema,
@@ -24,8 +23,11 @@ import {
   ListContactsSchema,
   ListNotesSchema,
   ListWorkspaceContactsSchema,
+  SetPrimaryContactSchema,
   UpdateClientSchema,
+  UpdateContactLinkSchema,
 } from '../schema/clients.schema';
+import { createClientsService } from './clients.service';
 
 function getService() {
   return createClientsService(getSupabaseServerClient());
@@ -163,6 +165,22 @@ export const linkContact = enhanceAction(
   { schema: LinkContactSchema },
 );
 
+export const setPrimaryContact = enhanceAction(
+  async (input) => {
+    const service = getService();
+    return service.setPrimaryContact(input);
+  },
+  { schema: SetPrimaryContactSchema },
+);
+
+export const updateContactLink = enhanceAction(
+  async (input) => {
+    const service = getService();
+    return service.updateContactLink(input);
+  },
+  { schema: UpdateContactLinkSchema },
+);
+
 export const listWorkspaceContacts = enhanceAction(
   async (input) => {
     const service = getService();
@@ -237,8 +255,9 @@ export const getClientPortalStatus = enhanceAction(
 
     try {
       const admin = getSupabaseServerAdminClient();
-      const { data: userResult } =
-        await admin.auth.admin.getUserByEmail(parsed.email);
+      const { data: userResult } = await admin.auth.admin.getUserByEmail(
+        parsed.email,
+      );
 
       lastLogin = ((userResult as any)?.user as any)?.last_sign_in_at ?? null;
     } catch {

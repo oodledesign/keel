@@ -1,7 +1,13 @@
 import { z } from 'zod';
 
+import { composeContactFullName } from '~/lib/clients/contact-roles';
+
 const optionalString = z.string().optional();
 const optionalNullableString = z.string().nullable().optional();
+const optionalEmail = z
+  .union([z.string().email(), z.literal('')])
+  .optional()
+  .transform((value) => (value ? value : undefined));
 
 export const ListClientsSchema = z.object({
   accountId: z.string().uuid(),
@@ -15,20 +21,52 @@ export const GetClientSchema = z.object({
   clientId: z.string().uuid(),
 });
 
-export const CreateClientSchema = z.object({
-  accountId: z.string().uuid(),
-  client_type: z.enum(['individual', 'business']).default('business'),
-  first_name: z.string().min(1, 'First name is required'),
-  last_name: optionalString,
-  company_name: optionalString,
-  email: optionalString,
+const InitialContactSchema = z.object({
+  firstName: z.string().min(1, 'Contact first name is required'),
+  lastName: optionalString,
+  email: optionalEmail,
   phone: optionalString,
-  address_line_1: optionalString,
-  address_line_2: optionalString,
-  city: optionalString,
-  postcode: optionalString,
-  country: optionalString,
+  role: optionalString,
+  isPrimary: z.boolean().optional().default(true),
 });
+
+export const CreateClientSchema = z
+  .object({
+    accountId: z.string().uuid(),
+    client_type: z.enum(['individual', 'business']).default('business'),
+    first_name: optionalString,
+    last_name: optionalString,
+    company_name: optionalString,
+    email: optionalString,
+    phone: optionalString,
+    address_line_1: optionalString,
+    address_line_2: optionalString,
+    city: optionalString,
+    postcode: optionalString,
+    country: optionalString,
+    /** Primary contact created with a new business client. */
+    contact: InitialContactSchema.optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.client_type === 'individual') {
+      if (!data.first_name?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'First name is required',
+          path: ['first_name'],
+        });
+      }
+      return;
+    }
+
+    if (!data.company_name?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Company name is required',
+        path: ['company_name'],
+      });
+    }
+  });
 
 export const UpdateClientSchema = z.object({
   accountId: z.string().uuid(),
@@ -78,6 +116,7 @@ export const ListClientInvoicesSchema = z.object({
 
 // ─── Contact schemas ──────────────────────────────────────────────────────────
 export const ListContactsSchema = z.object({
+  accountId: z.string().uuid(),
   clientId: z.string().uuid(),
 });
 
@@ -87,25 +126,57 @@ export const ListAccountContactsSchema = z.object({
   query: z.string().optional(),
 });
 
-export const CreateContactSchema = z.object({
-  accountId: z.string().uuid(),
-  clientId: z.string().uuid(),
-  fullName: z.string().min(1, 'Name is required'),
-  email: z.string().email().optional(),
-  phone: z.string().optional(),
-  role: z.string().optional(),
-  isPrimary: z.boolean().optional().default(false),
-});
+export const CreateContactSchema = z
+  .object({
+    accountId: z.string().uuid(),
+    clientId: z.string().uuid(),
+    firstName: optionalString,
+    lastName: optionalString,
+    /** Legacy single-field name (meetings / older callers). */
+    fullName: optionalString,
+    email: optionalEmail,
+    phone: optionalString,
+    role: optionalString,
+    isPrimary: z.boolean().optional().default(false),
+  })
+  .superRefine((data, ctx) => {
+    const name = composeContactFullName({
+      firstName: data.firstName,
+      lastName: data.lastName,
+      fullName: data.fullName,
+    });
+    if (!name) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'First name is required',
+        path: ['firstName'],
+      });
+    }
+  });
 
 export const LinkContactSchema = z.object({
   accountId: z.string().uuid(),
   clientId: z.string().uuid(),
   contactId: z.string().uuid(),
-  role: z.string().optional(),
+  role: optionalString,
   isPrimary: z.boolean().optional().default(false),
 });
 
+export const SetPrimaryContactSchema = z.object({
+  accountId: z.string().uuid(),
+  clientId: z.string().uuid(),
+  contactId: z.string().uuid(),
+});
+
+export const UpdateContactLinkSchema = z.object({
+  accountId: z.string().uuid(),
+  clientId: z.string().uuid(),
+  contactId: z.string().uuid(),
+  role: optionalNullableString,
+});
+
 export const DeleteContactSchema = z.object({
+  accountId: z.string().uuid(),
   clientId: z.string().uuid(),
   contactId: z.string().uuid(),
 });
@@ -114,13 +185,30 @@ export const ListWorkspaceContactsSchema = z.object({
   accountId: z.string().uuid(),
 });
 
-export const CreateWorkspaceContactSchema = z.object({
-  accountId: z.string().uuid(),
-  fullName: z.string().min(1, 'Name is required'),
-  email: z.string().email().optional(),
-  phone: z.string().optional(),
-  linkClientId: z.string().uuid().optional(),
-});
+export const CreateWorkspaceContactSchema = z
+  .object({
+    accountId: z.string().uuid(),
+    firstName: optionalString,
+    lastName: optionalString,
+    fullName: optionalString,
+    email: optionalEmail,
+    phone: optionalString,
+    linkClientId: z.string().uuid().optional(),
+  })
+  .superRefine((data, ctx) => {
+    const name = composeContactFullName({
+      firstName: data.firstName,
+      lastName: data.lastName,
+      fullName: data.fullName,
+    });
+    if (!name) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Name is required',
+        path: ['fullName'],
+      });
+    }
+  });
 
 export type ListClientsInput = z.infer<typeof ListClientsSchema>;
 export type GetClientInput = z.infer<typeof GetClientSchema>;
@@ -133,9 +221,17 @@ export type DeleteNoteInput = z.infer<typeof DeleteNoteSchema>;
 export type GetJobHistoryInput = z.infer<typeof GetJobHistorySchema>;
 export type ListClientInvoicesInput = z.infer<typeof ListClientInvoicesSchema>;
 export type ListContactsInput = z.infer<typeof ListContactsSchema>;
-export type ListAccountContactsInput = z.infer<typeof ListAccountContactsSchema>;
+export type ListAccountContactsInput = z.infer<
+  typeof ListAccountContactsSchema
+>;
 export type CreateContactInput = z.infer<typeof CreateContactSchema>;
 export type LinkContactInput = z.infer<typeof LinkContactSchema>;
+export type SetPrimaryContactInput = z.infer<typeof SetPrimaryContactSchema>;
+export type UpdateContactLinkInput = z.infer<typeof UpdateContactLinkSchema>;
 export type DeleteContactInput = z.infer<typeof DeleteContactSchema>;
-export type ListWorkspaceContactsInput = z.infer<typeof ListWorkspaceContactsSchema>;
-export type CreateWorkspaceContactInput = z.infer<typeof CreateWorkspaceContactSchema>;
+export type ListWorkspaceContactsInput = z.infer<
+  typeof ListWorkspaceContactsSchema
+>;
+export type CreateWorkspaceContactInput = z.infer<
+  typeof CreateWorkspaceContactSchema
+>;

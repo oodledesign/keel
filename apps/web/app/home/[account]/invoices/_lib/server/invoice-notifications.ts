@@ -1,13 +1,14 @@
 import 'server-only';
 
-import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import pathsConfig from '~/config/paths.config';
 import {
   loadAccountBrandResolved,
   wrapEmailHtmlWithBrand,
 } from '~/lib/brand/account-brand';
-import pathsConfig from '~/config/paths.config';
+import { resolveClientRecipientEmail } from '~/lib/clients/resolve-client-recipient';
+import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
 import {
   DEFAULT_INVOICE_EMAIL_BODY,
@@ -93,7 +94,9 @@ export async function sendInvoicePaidNotifications(params: {
             Boolean(member.email)
           );
         })
-        .map((member: { email?: string | null }) => member.email!.toLowerCase()),
+        .map((member: { email?: string | null }) =>
+          member.email!.toLowerCase(),
+        ),
     ),
   );
 
@@ -101,7 +104,14 @@ export async function sendInvoicePaidNotifications(params: {
     client?.display_name ??
     [client?.first_name, client?.last_name].filter(Boolean).join(' ') ??
     'Client';
-  const clientEmail = client?.email ?? invoice.sent_to_email ?? null;
+  const recipient = invoice.client_id
+    ? await resolveClientRecipientEmail(admin, invoice.client_id, {
+        purpose: 'invoice',
+        fallbackEmail: invoice.sent_to_email,
+      })
+    : { email: invoice.sent_to_email ?? null };
+  const clientEmail =
+    recipient.email ?? client?.email ?? invoice.sent_to_email ?? null;
   const amount = formatPence(invoice.total_pence ?? 0);
   const paidAt = invoice.paid_at
     ? new Date(invoice.paid_at).toLocaleString('en-GB')

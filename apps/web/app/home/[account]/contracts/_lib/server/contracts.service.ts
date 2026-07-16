@@ -5,8 +5,14 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { requireUser } from '@kit/supabase/require-user';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
+import { resolveClientRecipientEmail } from '~/lib/clients/resolve-client-recipient';
 import { Database } from '~/lib/database.types';
 
+import {
+  DEFAULT_CONTRACT_EMAIL_BODY,
+  DEFAULT_CONTRACT_EMAIL_SIGNATURE,
+  DEFAULT_CONTRACT_EMAIL_SUBJECT,
+} from '../contract-smart-fields';
 import type {
   CreateContractInput,
   DeleteContractInput,
@@ -22,11 +28,6 @@ import type {
   SignRecipientInput,
   UpdateContractInput,
 } from '../schema/contracts.schema';
-import {
-  DEFAULT_CONTRACT_EMAIL_BODY,
-  DEFAULT_CONTRACT_EMAIL_SIGNATURE,
-  DEFAULT_CONTRACT_EMAIL_SUBJECT,
-} from '../contract-smart-fields';
 import {
   sendContractIssuedEmail,
   sendContractSignedNotifications,
@@ -46,7 +47,10 @@ class ContractsService {
   private throwErr(err: unknown, fallback = 'Something went wrong'): never {
     if (err instanceof Error) throw err;
     const msg =
-      err && typeof err === 'object' && 'message' in err && typeof (err as { message: unknown }).message === 'string'
+      err &&
+      typeof err === 'object' &&
+      'message' in err &&
+      typeof (err as { message: unknown }).message === 'string'
         ? (err as { message: string }).message
         : fallback;
     throw new Error(msg);
@@ -205,16 +209,40 @@ class ContractsService {
       dealPromise,
     ]);
 
+    let preferred_send_email: string | null =
+      contract.recipient_email ?? contract.sent_to_email ?? null;
+    let preferred_send_source: string | null = preferred_send_email
+      ? 'document'
+      : null;
+
+    if (contract.client_id) {
+      const recipient = await resolveClientRecipientEmail(
+        this.db,
+        contract.client_id,
+        {
+          purpose: 'contract',
+          fallbackEmail: contract.sent_to_email ?? contract.recipient_email,
+        },
+      );
+      preferred_send_email = recipient.email;
+      preferred_send_source = recipient.source;
+    }
+
     return {
       ...contract,
       payment_plan: this.parsePaymentPlan(contract.payment_plan),
       client,
       deal,
+      preferred_send_email,
+      preferred_send_source,
     };
   }
 
   async createContract(input: CreateContractInput) {
-    const user = await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'invoices.edit',
+    );
 
     const { data: contract, error } = await this.db
       .from('contracts')
@@ -258,7 +286,10 @@ class ContractsService {
   }
 
   async updateContract(input: UpdateContractInput) {
-    const user = await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'invoices.edit',
+    );
 
     const { data: existing, error: existingError } = await this.db
       .from('contracts')
@@ -275,24 +306,37 @@ class ContractsService {
     if (input.client_id !== undefined) payload.client_id = input.client_id;
     if (input.deal_id !== undefined) payload.deal_id = input.deal_id;
     if (input.title !== undefined) payload.title = input.title;
-    if (input.content_html !== undefined) payload.content_html = input.content_html;
-    if (input.total_pence !== undefined) payload.total_pence = input.total_pence;
+    if (input.content_html !== undefined)
+      payload.content_html = input.content_html;
+    if (input.total_pence !== undefined)
+      payload.total_pence = input.total_pence;
     if (input.currency !== undefined) payload.currency = input.currency;
-    if (input.payment_plan !== undefined) payload.payment_plan = input.payment_plan;
+    if (input.payment_plan !== undefined)
+      payload.payment_plan = input.payment_plan;
     if (input.auto_send_on_approval !== undefined) {
       payload.auto_send_on_approval = input.auto_send_on_approval;
     }
-    if (input.author_type !== undefined) payload.author_type = input.author_type;
-    if (input.author_name !== undefined) payload.author_name = input.author_name;
-    if (input.author_company !== undefined) payload.author_company = input.author_company;
-    if (input.recipient_type !== undefined) payload.recipient_type = input.recipient_type;
-    if (input.recipient_name !== undefined) payload.recipient_name = input.recipient_name;
-    if (input.recipient_company !== undefined) payload.recipient_company = input.recipient_company;
-    if (input.recipient_email !== undefined) payload.recipient_email = input.recipient_email;
-    if (input.email_subject !== undefined) payload.email_subject = input.email_subject;
+    if (input.author_type !== undefined)
+      payload.author_type = input.author_type;
+    if (input.author_name !== undefined)
+      payload.author_name = input.author_name;
+    if (input.author_company !== undefined)
+      payload.author_company = input.author_company;
+    if (input.recipient_type !== undefined)
+      payload.recipient_type = input.recipient_type;
+    if (input.recipient_name !== undefined)
+      payload.recipient_name = input.recipient_name;
+    if (input.recipient_company !== undefined)
+      payload.recipient_company = input.recipient_company;
+    if (input.recipient_email !== undefined)
+      payload.recipient_email = input.recipient_email;
+    if (input.email_subject !== undefined)
+      payload.email_subject = input.email_subject;
     if (input.email_body !== undefined) payload.email_body = input.email_body;
-    if (input.email_signature !== undefined) payload.email_signature = input.email_signature;
-    if (input.private_note !== undefined) payload.private_note = input.private_note;
+    if (input.email_signature !== undefined)
+      payload.email_signature = input.email_signature;
+    if (input.private_note !== undefined)
+      payload.private_note = input.private_note;
 
     const { data, error } = await this.db
       .from('contracts')
@@ -338,7 +382,10 @@ class ContractsService {
   }
 
   async setContractStatus(input: SetContractStatusInput) {
-    const user = await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'invoices.edit',
+    );
 
     const { data: existing, error: fetchError } = await this.db
       .from('contracts')
@@ -349,7 +396,9 @@ class ContractsService {
     if (fetchError) this.throwErr(fetchError);
 
     if (input.status === 'cancelled') {
-      if (!['draft', 'ready_to_sign', 'sent'].includes(existing?.status ?? '')) {
+      if (
+        !['draft', 'ready_to_sign', 'sent'].includes(existing?.status ?? '')
+      ) {
         throw new Error('Only unsigned contracts can be cancelled');
       }
     }
@@ -375,7 +424,10 @@ class ContractsService {
   }
 
   async sendContract(input: SendContractInput) {
-    const user = await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'invoices.edit',
+    );
 
     const { data: contract, error: fetchError } = await this.db
       .from('contracts')
@@ -383,12 +435,14 @@ class ContractsService {
       .eq('id', input.contractId)
       .eq('account_id', input.accountId)
       .single();
-    if (fetchError || !contract) this.throwErr(fetchError, 'Contract not found');
+    if (fetchError || !contract)
+      this.throwErr(fetchError, 'Contract not found');
 
     const emailPatch: Record<string, unknown> = {};
     if (input.email_subject) emailPatch.email_subject = input.email_subject;
     if (input.email_body) emailPatch.email_body = input.email_body;
-    if (input.email_signature) emailPatch.email_signature = input.email_signature;
+    if (input.email_signature)
+      emailPatch.email_signature = input.email_signature;
 
     if (Object.keys(emailPatch).length > 0) {
       await this.db
@@ -440,7 +494,9 @@ class ContractsService {
     }
 
     if (!['ready_to_sign', 'sent'].includes(contract.status)) {
-      throw new Error('Only contracts ready to sign or already sent can be emailed');
+      throw new Error(
+        'Only contracts ready to sign or already sent can be emailed',
+      );
     }
 
     let public_token = contract.public_token;
@@ -488,7 +544,10 @@ class ContractsService {
   }
 
   async signAuthor(input: SignAuthorInput) {
-    const user = await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'invoices.edit',
+    );
 
     const { data: contract, error: fetchError } = await this.db
       .from('contracts')
@@ -496,7 +555,8 @@ class ContractsService {
       .eq('id', input.contractId)
       .eq('account_id', input.accountId)
       .single();
-    if (fetchError || !contract) this.throwErr(fetchError, 'Contract not found');
+    if (fetchError || !contract)
+      this.throwErr(fetchError, 'Contract not found');
 
     if (!['draft', 'ready_to_sign', 'sent'].includes(contract.status)) {
       throw new Error('This contract can no longer be signed by the author');
@@ -505,7 +565,10 @@ class ContractsService {
     const now = new Date().toISOString();
     const sendAfterSign = input.send_after_sign ?? false;
     const recipientEmail =
-      input.sent_to_email ?? contract.recipient_email ?? contract.sent_to_email ?? null;
+      input.sent_to_email ??
+      contract.recipient_email ??
+      contract.sent_to_email ??
+      null;
 
     let public_token = contract.public_token as string | null;
     let status: 'ready_to_sign' | 'sent' = 'ready_to_sign';
@@ -580,7 +643,8 @@ class ContractsService {
       }
     }
 
-    const { finalizeContractIfFullySigned } = await import('./contract-v2.server');
+    const { finalizeContractIfFullySigned } =
+      await import('./contract-v2.server');
     const finalized = await finalizeContractIfFullySigned(
       input.contractId,
       input.accountId,
@@ -596,7 +660,8 @@ class ContractsService {
       .select('*')
       .eq('public_token', input.token)
       .single();
-    if (fetchError || !contract) this.throwErr(fetchError, 'Contract not found');
+    if (fetchError || !contract)
+      this.throwErr(fetchError, 'Contract not found');
 
     if (!['sent', 'ready_to_sign'].includes(contract.status)) {
       throw new Error('This contract is not available for signing');
@@ -636,7 +701,8 @@ class ContractsService {
       actorId: null,
     });
 
-    const { finalizeContractIfFullySigned } = await import('./contract-v2.server');
+    const { finalizeContractIfFullySigned } =
+      await import('./contract-v2.server');
     const finalized = await finalizeContractIfFullySigned(
       contract.id,
       contract.account_id,
@@ -656,19 +722,25 @@ class ContractsService {
     return finalized ?? updated;
   }
 
-  async generateInvoicesFromPaymentPlan(input: GenerateInvoicesFromPaymentPlanInput) {
+  async generateInvoicesFromPaymentPlan(
+    input: GenerateInvoicesFromPaymentPlanInput,
+  ) {
     await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
 
     const { data: contract, error } = await this.db
       .from('contracts')
-      .select('id, status, author_signed_at, recipient_signed_at, invoices_generated_at')
+      .select(
+        'id, status, author_signed_at, recipient_signed_at, invoices_generated_at',
+      )
       .eq('id', input.contractId)
       .eq('account_id', input.accountId)
       .single();
     if (error || !contract) this.throwErr(error, 'Contract not found');
 
     if (contract.status !== 'signed' || !this.isFullySigned(contract)) {
-      throw new Error('Invoices can only be generated after both parties have signed');
+      throw new Error(
+        'Invoices can only be generated after both parties have signed',
+      );
     }
 
     if (contract.invoices_generated_at) {
@@ -676,7 +748,10 @@ class ContractsService {
     }
 
     const { generateInstalmentInvoices } = await import('./contract-v2.server');
-    const invoices = await generateInstalmentInvoices(input.contractId, input.accountId);
+    const invoices = await generateInstalmentInvoices(
+      input.contractId,
+      input.accountId,
+    );
     return { already_generated: false, invoices };
   }
 
@@ -718,7 +793,9 @@ class ContractsService {
     };
   }
 
-  async getContractPortalLink(input: GetContractPortalLinkInput): Promise<{ token: string }> {
+  async getContractPortalLink(
+    input: GetContractPortalLinkInput,
+  ): Promise<{ token: string }> {
     await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
 
     const { data: contract, error } = await this.db
@@ -734,7 +811,9 @@ class ContractsService {
     }
 
     if (!['ready_to_sign', 'sent', 'signed'].includes(contract.status)) {
-      throw new Error('Portal link is only available for contracts out for signature');
+      throw new Error(
+        'Portal link is only available for contracts out for signature',
+      );
     }
 
     let public_token = contract.public_token as string | null;

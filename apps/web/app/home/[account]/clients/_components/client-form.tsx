@@ -10,9 +10,15 @@ import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 
 import {
+  CONTACT_ROLE_LABELS,
+  CONTACT_ROLE_PRESETS,
+  type ContactRolePreset,
+} from '~/lib/clients/contact-roles';
+
+import {
   createClient,
-  updateClient,
   deleteClient,
+  updateClient,
 } from '../_lib/server/server-actions';
 
 type Client = {
@@ -83,14 +89,27 @@ export function ClientForm({
   );
   const [email, setEmail] = useState(client?.email ?? '');
   const [phone, setPhone] = useState(client?.phone ?? '');
-  const [address_line_1, setAddressLine1] = useState(client?.address_line_1 ?? '');
-  const [address_line_2, setAddressLine2] = useState(client?.address_line_2 ?? '');
+  const [address_line_1, setAddressLine1] = useState(
+    client?.address_line_1 ?? '',
+  );
+  const [address_line_2, setAddressLine2] = useState(
+    client?.address_line_2 ?? '',
+  );
   const [city, setCity] = useState(client?.city ?? '');
   const [postcode, setPostcode] = useState(client?.postcode ?? '');
   const [country, setCountry] = useState(client?.country ?? '');
 
+  const [contactFirstName, setContactFirstName] = useState('');
+  const [contactLastName, setContactLastName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactRole, setContactRole] = useState<ContactRolePreset | ''>(
+    'founder',
+  );
+
   const isReadOnly = mode === 'edit' && !canEdit;
   const isIndividual = clientType === 'individual';
+  const showCreateContact = mode === 'create' && !isIndividual;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,8 +117,12 @@ export function ClientForm({
       toast.error('First name is required');
       return;
     }
-    if (!isIndividual && !company_name.trim() && !first_name.trim()) {
+    if (!isIndividual && mode === 'create' && !company_name.trim()) {
       toast.error('Company name is required for a business client');
+      return;
+    }
+    if (showCreateContact && !contactFirstName.trim()) {
+      toast.error('Add a primary contact with a first name');
       return;
     }
     setSaving(true);
@@ -108,18 +131,38 @@ export function ClientForm({
         await createClient({
           accountId,
           client_type: clientType,
-          first_name: first_name.trim() || company_name.trim(),
+          first_name: isIndividual
+            ? first_name.trim()
+            : first_name.trim() || undefined,
           last_name: last_name.trim() || undefined,
           company_name: company_name.trim() || undefined,
-          email: email.trim() || undefined,
-          phone: phone.trim() || undefined,
+          email: isIndividual
+            ? email.trim() || undefined
+            : contactEmail.trim() || email.trim() || undefined,
+          phone: isIndividual
+            ? phone.trim() || undefined
+            : contactPhone.trim() || phone.trim() || undefined,
           address_line_1: address_line_1.trim() || undefined,
           address_line_2: address_line_2.trim() || undefined,
           city: city.trim() || undefined,
           postcode: postcode.trim() || undefined,
           country: country.trim() || undefined,
+          contact: showCreateContact
+            ? {
+                firstName: contactFirstName.trim(),
+                lastName: contactLastName.trim() || undefined,
+                email: contactEmail.trim() || undefined,
+                phone: contactPhone.trim() || undefined,
+                role: contactRole || undefined,
+                isPrimary: true,
+              }
+            : undefined,
         });
-        toast.success(isIndividual ? 'Individual client created' : 'Business client created');
+        toast.success(
+          isIndividual
+            ? 'Individual client created'
+            : 'Business client created',
+        );
         onSaved();
       } else if (client) {
         await updateClient({
@@ -153,7 +196,12 @@ export function ClientForm({
   };
 
   const handleDelete = async () => {
-    if (!client || !onDeleted || !confirm('Delete this client? This cannot be undone.')) return;
+    if (
+      !client ||
+      !onDeleted ||
+      !confirm('Delete this client? This cannot be undone.')
+    )
+      return;
     setDeleting(true);
     try {
       await deleteClient({ accountId, clientId: client.id });
@@ -174,11 +222,10 @@ export function ClientForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Individual / Business toggle — only shown on create */}
       {mode === 'create' && (
         <div className="space-y-2">
           <Label>Client type</Label>
-          <div className="flex rounded-lg border border-[color:var(--workspace-shell-border)] overflow-hidden">
+          <div className="flex overflow-hidden rounded-lg border border-[color:var(--workspace-shell-border)]">
             <button
               type="button"
               onClick={() => setClientType('individual')}
@@ -204,20 +251,19 @@ export function ClientForm({
               Business
             </button>
           </div>
-          {isIndividual && (
+          {isIndividual ? (
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              A single person client. A contact record is created automatically.
+              A single person. A contact record is created automatically.
             </p>
-          )}
-          {!isIndividual && (
+          ) : (
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              A company client. Add multiple contacts after creation via the Contacts tab.
+              A company with people linked as contacts (primary, accountant,
+              etc.).
             </p>
           )}
         </div>
       )}
 
-      {/* Business: company name is primary */}
       {!isIndividual && (
         <div className="space-y-2">
           <Label htmlFor="company_name">
@@ -234,7 +280,6 @@ export function ClientForm({
         </div>
       )}
 
-      {/* Individual OR edit mode: show name fields */}
       {(isIndividual || mode === 'edit') && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-2">
@@ -263,30 +308,117 @@ export function ClientForm({
         </div>
       )}
 
-      {/* Contact details — shown for both types */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="email@example.com"
-            readOnly={isReadOnly}
-          />
+      {showCreateContact && (
+        <div className="space-y-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
+          <div>
+            <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+              Primary contact *
+            </p>
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+              Used for proposals, contracts, and notifications. Mark someone as
+              Accountant later for invoice emails.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="contact_first_name" className="text-xs">
+                First name *
+              </Label>
+              <Input
+                id="contact_first_name"
+                value={contactFirstName}
+                onChange={(e) => setContactFirstName(e.target.value)}
+                placeholder="e.g. Jane"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="contact_last_name" className="text-xs">
+                Last name
+              </Label>
+              <Input
+                id="contact_last_name"
+                value={contactLastName}
+                onChange={(e) => setContactLastName(e.target.value)}
+                placeholder="e.g. Smith"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="contact_email" className="text-xs">
+                Email
+              </Label>
+              <Input
+                id="contact_email"
+                type="email"
+                value={contactEmail}
+                onChange={(e) => setContactEmail(e.target.value)}
+                placeholder="jane@acme.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="contact_phone" className="text-xs">
+                Phone
+              </Label>
+              <Input
+                id="contact_phone"
+                value={contactPhone}
+                onChange={(e) => setContactPhone(e.target.value)}
+                placeholder="Phone number"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="contact_role" className="text-xs">
+              Role
+            </Label>
+            <select
+              id="contact_role"
+              value={contactRole}
+              onChange={(e) =>
+                setContactRole(e.target.value as ContactRolePreset | '')
+              }
+              className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+            >
+              <option value="">Select role…</option>
+              {CONTACT_ROLE_PRESETS.map((role) => (
+                <option key={role} value={role}>
+                  {CONTACT_ROLE_LABELS[role]}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="phone">Phone</Label>
-          <Input
-            id="phone"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="Phone number"
-            readOnly={isReadOnly}
-          />
+      )}
+
+      {(isIndividual || mode === 'edit') && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="email">
+              {mode === 'edit' && !isIndividual ? 'Fallback email' : 'Email'}
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="email@example.com"
+              readOnly={isReadOnly}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="phone">Phone</Label>
+            <Input
+              id="phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="Phone number"
+              readOnly={isReadOnly}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="address_line_1">Address line 1</Label>
@@ -341,7 +473,11 @@ export function ClientForm({
       <div className="flex flex-wrap gap-2 pt-2">
         {!isReadOnly && (
           <Button type="submit" disabled={saving}>
-            {saving ? 'Saving...' : mode === 'create' ? 'Create client' : 'Save changes'}
+            {saving
+              ? 'Saving...'
+              : mode === 'create'
+                ? 'Create client'
+                : 'Save changes'}
           </Button>
         )}
         {onCancel && (

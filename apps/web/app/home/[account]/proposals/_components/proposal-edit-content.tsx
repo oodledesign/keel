@@ -10,9 +10,9 @@ import { ArrowLeft, Eye, Loader2, Send } from 'lucide-react';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
-import { toast } from '@kit/ui/sonner';
 
 import { DocumentRichTextEditor } from '~/components/document-rich-text';
 import pathsConfig from '~/config/paths.config';
@@ -59,6 +59,8 @@ type ProposalData = {
   email_body: string | null;
   email_signature: string | null;
   sent_to_email: string | null;
+  preferred_send_email?: string | null;
+  preferred_send_source?: string | null;
   client: ClientInfo | null;
   deal: DealInfo | null;
 };
@@ -115,7 +117,10 @@ export function ProposalEditContent({
 }) {
   const router = useRouter();
   const proposal = initialProposal as unknown as ProposalData;
-  const proposalsPath = pathsConfig.app.accountProposals.replace('[account]', accountSlug);
+  const proposalsPath = pathsConfig.app.accountProposals.replace(
+    '[account]',
+    accountSlug,
+  );
 
   const isDraft = proposal.status === 'draft';
   const isLocked = proposal.status !== 'draft';
@@ -128,14 +133,29 @@ export function ProposalEditContent({
 
   const [title, setTitle] = useState(proposal.title ?? '');
   const [contentHtml, setContentHtml] = useState(proposal.content_html ?? '');
-  const [recipientName, setRecipientName] = useState(proposal.recipient_name ?? '');
-  const [recipientEmail, setRecipientEmail] = useState(proposal.recipient_email ?? '');
-  const [expiresAt, setExpiresAt] = useState(toDateInputValue(proposal.expires_at));
+  const [recipientName, setRecipientName] = useState(
+    proposal.recipient_name ?? '',
+  );
+  const [recipientEmail, setRecipientEmail] = useState(
+    proposal.recipient_email ??
+      proposal.preferred_send_email ??
+      proposal.client?.email ??
+      '',
+  );
+  const [expiresAt, setExpiresAt] = useState(
+    toDateInputValue(proposal.expires_at),
+  );
   const [privateNote, setPrivateNote] = useState(proposal.private_note ?? '');
-  const [totalPenceInput, setTotalPenceInput] = useState(penceToPoundsInput(proposal.total_pence));
-  const [emailSubject, setEmailSubject] = useState(proposal.email_subject ?? '');
+  const [totalPenceInput, setTotalPenceInput] = useState(
+    penceToPoundsInput(proposal.total_pence),
+  );
+  const [emailSubject, setEmailSubject] = useState(
+    proposal.email_subject ?? '',
+  );
   const [emailBody, setEmailBody] = useState(proposal.email_body ?? '');
-  const [emailSignature, setEmailSignature] = useState(proposal.email_signature ?? '');
+  const [emailSignature, setEmailSignature] = useState(
+    proposal.email_signature ?? '',
+  );
 
   const readOnly = previewMode || !canModify;
 
@@ -149,6 +169,7 @@ export function ProposalEditContent({
   const defaultSendEmail =
     proposal.sent_to_email ??
     (recipientEmail.trim() ||
+      proposal.preferred_send_email?.trim() ||
       proposal.client?.email?.trim() ||
       '');
 
@@ -219,7 +240,10 @@ export function ProposalEditContent({
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-1.5">
               <Eye className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
-              <Label htmlFor="preview-mode" className="text-sm text-[var(--workspace-shell-text-muted)]">
+              <Label
+                htmlFor="preview-mode"
+                className="text-sm text-[var(--workspace-shell-text-muted)]"
+              >
                 Preview
               </Label>
               <Switch
@@ -237,7 +261,9 @@ export function ProposalEditContent({
                   disabled={saving || !canModify}
                   className="bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]"
                 >
-                  {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  {saving ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : null}
                   Save
                 </Button>
 
@@ -258,7 +284,11 @@ export function ProposalEditContent({
             <ProposalRowMenu
               accountId={accountId}
               accountSlug={accountSlug}
-              proposal={{ id: proposal.id, status: proposal.status, title: proposal.title }}
+              proposal={{
+                id: proposal.id,
+                status: proposal.status,
+                title: proposal.title,
+              }}
               canEditProposals={canEditProposals}
             />
           </div>
@@ -273,7 +303,9 @@ export function ProposalEditContent({
                 : ''}
             </h1>
             {defaultRecipientName ? (
-              <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">For {defaultRecipientName}</p>
+              <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
+                For {defaultRecipientName}
+              </p>
             ) : null}
           </div>
 
@@ -281,7 +313,8 @@ export function ProposalEditContent({
             {STATUS_STEPS.map((step, index) => {
               const active = index === currentStep;
               const complete = index < currentStep;
-              const declined = proposal.status === 'declined' && step.key === 'approved';
+              const declined =
+                proposal.status === 'declined' && step.key === 'approved';
               return (
                 <li key={step.key} className="flex items-center gap-1 sm:gap-2">
                   <span
@@ -298,7 +331,9 @@ export function ProposalEditContent({
                     {declined ? 'Declined' : step.label}
                   </span>
                   {index < STATUS_STEPS.length - 1 ? (
-                    <span className="hidden text-[var(--workspace-shell-text-muted)] sm:inline">→</span>
+                    <span className="hidden text-[var(--workspace-shell-text-muted)] sm:inline">
+                      →
+                    </span>
                   ) : null}
                 </li>
               );
@@ -322,7 +357,9 @@ export function ProposalEditContent({
           accountId={accountId}
           proposalId={proposal.id}
           proposalTitle={title.trim() || 'Proposal'}
-          totalPence={poundsInputToPence(totalPenceInput) ?? proposal.total_pence}
+          totalPence={
+            poundsInputToPence(totalPenceInput) ?? proposal.total_pence
+          }
           currency={proposal.currency}
           defaultEmail={defaultSendEmail}
           initialSubject={emailSubject}
@@ -338,7 +375,7 @@ export function ProposalEditContent({
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className={canvasClassName}>
             {brandLogoUrl ? (
-              <div className="absolute right-8 top-8">
+              <div className="absolute top-8 right-8">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={brandLogoUrl}
@@ -366,7 +403,9 @@ export function ProposalEditContent({
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label className="text-[var(--workspace-shell-text-muted)]">Recipient name</Label>
+                  <Label className="text-[var(--workspace-shell-text-muted)]">
+                    Recipient name
+                  </Label>
                   <Input
                     value={recipientName}
                     onChange={(e) => setRecipientName(e.target.value)}
@@ -376,7 +415,9 @@ export function ProposalEditContent({
                   />
                 </div>
                 <div>
-                  <Label className="text-[var(--workspace-shell-text-muted)]">Recipient email</Label>
+                  <Label className="text-[var(--workspace-shell-text-muted)]">
+                    Recipient email
+                  </Label>
                   <Input
                     type="email"
                     value={recipientEmail}
@@ -389,7 +430,9 @@ export function ProposalEditContent({
               </div>
 
               <div className="max-w-xs">
-                <Label className="text-[var(--workspace-shell-text-muted)]">Expires</Label>
+                <Label className="text-[var(--workspace-shell-text-muted)]">
+                  Expires
+                </Label>
                 <Input
                   type="date"
                   value={expiresAt}
@@ -400,7 +443,9 @@ export function ProposalEditContent({
               </div>
 
               <div>
-                <Label className="mb-2 block text-[var(--workspace-shell-text-muted)]">Proposal content</Label>
+                <Label className="mb-2 block text-[var(--workspace-shell-text-muted)]">
+                  Proposal content
+                </Label>
                 <DocumentRichTextEditor
                   value={contentHtml}
                   onChange={setContentHtml}
@@ -440,7 +485,9 @@ export function ProposalEditContent({
             ) : null}
 
             <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
-              <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Private note</h2>
+              <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                Private note
+              </h2>
               <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
                 Only visible to your team — not shown to clients.
               </p>
@@ -455,12 +502,16 @@ export function ProposalEditContent({
             </section>
 
             <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
-              <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Total (optional)</h2>
+              <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                Total (optional)
+              </h2>
               <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
                 Shown in emails and on the client portal.
               </p>
               <div className="relative mt-3">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]">£</span>
+                <span className="absolute top-1/2 left-3 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]">
+                  £
+                </span>
                 <Input
                   type="number"
                   min={0}
@@ -476,11 +527,17 @@ export function ProposalEditContent({
 
             {canManageProposalStatus ? (
               <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
-                <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Email templates</h2>
-                <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">Used when sending this proposal.</p>
+                <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                  Email templates
+                </h2>
+                <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+                  Used when sending this proposal.
+                </p>
                 <div className="mt-4 space-y-3">
                   <div>
-                    <Label className="text-[var(--workspace-shell-text-muted)]">Subject</Label>
+                    <Label className="text-[var(--workspace-shell-text-muted)]">
+                      Subject
+                    </Label>
                     <Input
                       value={emailSubject}
                       onChange={(e) => setEmailSubject(e.target.value)}
@@ -489,7 +546,9 @@ export function ProposalEditContent({
                     />
                   </div>
                   <div>
-                    <Label className="text-[var(--workspace-shell-text-muted)]">Body</Label>
+                    <Label className="text-[var(--workspace-shell-text-muted)]">
+                      Body
+                    </Label>
                     <Textarea
                       value={emailBody}
                       onChange={(e) => setEmailBody(e.target.value)}
@@ -499,7 +558,9 @@ export function ProposalEditContent({
                     />
                   </div>
                   <div>
-                    <Label className="text-[var(--workspace-shell-text-muted)]">Signature</Label>
+                    <Label className="text-[var(--workspace-shell-text-muted)]">
+                      Signature
+                    </Label>
                     <Textarea
                       value={emailSignature}
                       onChange={(e) => setEmailSignature(e.target.value)}

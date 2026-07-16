@@ -5,31 +5,32 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { requireUser } from '@kit/supabase/require-user';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
+import { resolveClientRecipientEmail } from '~/lib/clients/resolve-client-recipient';
 import { Database } from '~/lib/database.types';
 
+import {
+  DEFAULT_INVOICE_EMAIL_BODY,
+  DEFAULT_INVOICE_EMAIL_SIGNATURE,
+  DEFAULT_INVOICE_EMAIL_SUBJECT,
+} from '../invoice-smart-fields';
+import { computeInvoiceTotals } from '../invoice-totals';
 import type {
-  GetInvoicePortalLinkInput,
   CreateInvoiceInput,
   DeleteInvoiceInput,
   GetInvoiceForPortalInput,
   GetInvoiceInput,
+  GetInvoicePortalLinkInput,
   ListInvoicesInput,
   SendInvoiceInput,
   SetInvoiceStatusInput,
   UpdateInvoiceInput,
   UpsertInvoiceItemsInput,
 } from '../schema/invoices.schema';
-import { computeInvoiceTotals } from '../invoice-totals';
-import {
-  DEFAULT_INVOICE_EMAIL_BODY,
-  DEFAULT_INVOICE_EMAIL_SIGNATURE,
-  DEFAULT_INVOICE_EMAIL_SUBJECT,
-} from '../invoice-smart-fields';
-import { recordInvoicePayment } from './invoice-v2.server';
 import {
   sendInvoiceIssuedEmail,
   sendInvoicePaidNotifications,
 } from './invoice-notifications';
+import { recordInvoicePayment } from './invoice-v2.server';
 
 export function createInvoicesService(client: SupabaseClient<Database>) {
   return new InvoicesService(client);
@@ -45,7 +46,10 @@ class InvoicesService {
   private throwErr(err: unknown, fallback = 'Something went wrong'): never {
     if (err instanceof Error) throw err;
     const msg =
-      err && typeof err === 'object' && 'message' in err && typeof (err as { message: unknown }).message === 'string'
+      err &&
+      typeof err === 'object' &&
+      'message' in err &&
+      typeof (err as { message: unknown }).message === 'string'
         ? (err as { message: string }).message
         : fallback;
     throw new Error(msg);
@@ -97,7 +101,9 @@ class InvoicesService {
   }
 
   /** Recalculate and update invoice subtotal_pence and total_pence from items. */
-  async computeTotals(invoiceId: string): Promise<{ subtotal_pence: number; total_pence: number }> {
+  async computeTotals(
+    invoiceId: string,
+  ): Promise<{ subtotal_pence: number; total_pence: number }> {
     const { data: invoice, error: invoiceError } = await this.db
       .from('invoices')
       .select('*')
@@ -136,7 +142,10 @@ class InvoicesService {
       })
       .eq('id', invoiceId);
     if (updateError) this.throwErr(updateError);
-    return { subtotal_pence: totals.subtotal_pence, total_pence: totals.total_pence };
+    return {
+      subtotal_pence: totals.subtotal_pence,
+      total_pence: totals.total_pence,
+    };
   }
 
   /** Log an audit event for an invoice. */
@@ -160,7 +169,17 @@ class InvoicesService {
   async listInvoices(params: ListInvoicesInput) {
     await this.ensureUser();
 
-    const { accountId, page = 1, pageSize = 20, query, status, clientId, dateFrom, dateTo, includeArchived } = params;
+    const {
+      accountId,
+      page = 1,
+      pageSize = 20,
+      query,
+      status,
+      clientId,
+      dateFrom,
+      dateTo,
+      includeArchived,
+    } = params;
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
@@ -178,7 +197,9 @@ class InvoicesService {
     if (status === 'unpaid') {
       q = q.in('status', ['sent', 'read']);
     } else if (status === 'overdue') {
-      q = q.in('status', ['sent', 'read']).lt('due_at', new Date().toISOString());
+      q = q
+        .in('status', ['sent', 'read'])
+        .lt('due_at', new Date().toISOString());
     } else if (status && status !== 'all') {
       q = q.eq('status', status);
     }
@@ -194,7 +215,9 @@ class InvoicesService {
     }
     if (query?.trim()) {
       const term = `%${query.trim()}%`;
-      q = q.or(`invoice_number.ilike.${term},clients.display_name.ilike.${term}`);
+      q = q.or(
+        `invoice_number.ilike.${term},clients.display_name.ilike.${term}`,
+      );
     }
 
     const { data, error, count } = await q;
@@ -223,15 +246,35 @@ class InvoicesService {
 
     const { data: client } = await this.db
       .from('clients')
-      .select('id, display_name, first_name, last_name, company_name, email, address_line_1, address_line_2, city, postcode, country')
+      .select(
+        'id, display_name, first_name, last_name, company_name, email, address_line_1, address_line_2, city, postcode, country',
+      )
       .eq('id', invoice.client_id)
       .single();
 
-    return { ...invoice, items: items ?? [], client };
+    const recipient = await resolveClientRecipientEmail(
+      this.db,
+      invoice.client_id,
+      {
+        purpose: 'invoice',
+        fallbackEmail: invoice.sent_to_email,
+      },
+    );
+
+    return {
+      ...invoice,
+      items: items ?? [],
+      client,
+      preferred_send_email: recipient.email,
+      preferred_send_source: recipient.source,
+    };
   }
 
   async createInvoice(input: CreateInvoiceInput) {
-    const user = await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'invoices.edit',
+    );
     const invoice_number = await this.allocateInvoiceNumber(input.accountId);
 
     const { data: invoice, error } = await this.db
@@ -267,7 +310,10 @@ class InvoicesService {
   }
 
   async updateInvoice(input: UpdateInvoiceInput) {
-    const user = await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'invoices.edit',
+    );
 
     const { data: existingInvoice, error: existingInvoiceError } = await this.db
       .from('invoices')
@@ -285,19 +331,31 @@ class InvoicesService {
     if (input.due_at !== undefined) payload.due_at = input.due_at;
     if (input.notes !== undefined) payload.notes = input.notes;
     if (input.title !== undefined) payload.title = input.title;
-    if (input.reference_number !== undefined) payload.reference_number = input.reference_number;
-    if (input.footer_message !== undefined) payload.footer_message = input.footer_message;
-    if (input.private_note !== undefined) payload.private_note = input.private_note;
-    if (input.discount_type !== undefined) payload.discount_type = input.discount_type;
-    if (input.discount_value !== undefined) payload.discount_value = input.discount_value;
-    if (input.tax_rate_bp !== undefined) payload.tax_rate_bp = input.tax_rate_bp;
-    if (input.deposit_type !== undefined) payload.deposit_type = input.deposit_type;
-    if (input.deposit_value !== undefined) payload.deposit_value = input.deposit_value;
-    if (input.late_fee_type !== undefined) payload.late_fee_type = input.late_fee_type;
-    if (input.late_fee_value !== undefined) payload.late_fee_value = input.late_fee_value;
-    if (input.email_subject !== undefined) payload.email_subject = input.email_subject;
+    if (input.reference_number !== undefined)
+      payload.reference_number = input.reference_number;
+    if (input.footer_message !== undefined)
+      payload.footer_message = input.footer_message;
+    if (input.private_note !== undefined)
+      payload.private_note = input.private_note;
+    if (input.discount_type !== undefined)
+      payload.discount_type = input.discount_type;
+    if (input.discount_value !== undefined)
+      payload.discount_value = input.discount_value;
+    if (input.tax_rate_bp !== undefined)
+      payload.tax_rate_bp = input.tax_rate_bp;
+    if (input.deposit_type !== undefined)
+      payload.deposit_type = input.deposit_type;
+    if (input.deposit_value !== undefined)
+      payload.deposit_value = input.deposit_value;
+    if (input.late_fee_type !== undefined)
+      payload.late_fee_type = input.late_fee_type;
+    if (input.late_fee_value !== undefined)
+      payload.late_fee_value = input.late_fee_value;
+    if (input.email_subject !== undefined)
+      payload.email_subject = input.email_subject;
     if (input.email_body !== undefined) payload.email_body = input.email_body;
-    if (input.email_signature !== undefined) payload.email_signature = input.email_signature;
+    if (input.email_signature !== undefined)
+      payload.email_signature = input.email_signature;
 
     const { data, error } = await this.db
       .from('invoices')
@@ -351,7 +409,9 @@ class InvoicesService {
       .single();
     if (existingInvoiceError) this.throwErr(existingInvoiceError);
     if (existingInvoice?.status !== 'draft') {
-      throw new Error('Sent, paid, or cancelled invoices can no longer be edited');
+      throw new Error(
+        'Sent, paid, or cancelled invoices can no longer be edited',
+      );
     }
 
     // Delete existing items and re-insert to keep order (simple approach for V1)
@@ -390,7 +450,10 @@ class InvoicesService {
   }
 
   async setInvoiceStatus(input: SetInvoiceStatusInput) {
-    const user = await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'invoices.edit',
+    );
     await this.ensureOwnerOrAdmin(input.accountId);
 
     const { data: existing, error: fetchError } = await this.db
@@ -411,16 +474,24 @@ class InvoicesService {
       throw new Error('Only sent invoices can be cancelled');
     }
 
-    if (input.status === 'paid' && !['sent', 'read'].includes(oldStatus ?? '')) {
+    if (
+      input.status === 'paid' &&
+      !['sent', 'read'].includes(oldStatus ?? '')
+    ) {
       throw new Error('Only sent invoices can be marked as paid');
     }
 
-    if (input.status === 'void' && !['sent', 'read'].includes(oldStatus ?? '')) {
+    if (
+      input.status === 'void' &&
+      !['sent', 'read'].includes(oldStatus ?? '')
+    ) {
       throw new Error('Only sent invoices can be voided');
     }
 
     if (input.status === 'paid' && !paymentMethod) {
-      throw new Error('Choose a payment method when marking an invoice as paid');
+      throw new Error(
+        'Choose a payment method when marking an invoice as paid',
+      );
     }
 
     const payload: Record<string, unknown> = { status: input.status };
@@ -500,7 +571,10 @@ class InvoicesService {
 
   /** Send invoice: set public_token (if missing), status sent, issued_at, sent_at, sent_to_email; log event; email client (stub). */
   async sendInvoice(input: SendInvoiceInput) {
-    const user = await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'invoices.edit',
+    );
 
     const { data: invoice, error: fetchError } = await this.db
       .from('invoices')
@@ -513,7 +587,8 @@ class InvoicesService {
     const emailPatch: Record<string, unknown> = {};
     if (input.email_subject) emailPatch.email_subject = input.email_subject;
     if (input.email_body) emailPatch.email_body = input.email_body;
-    if (input.email_signature) emailPatch.email_signature = input.email_signature;
+    if (input.email_signature)
+      emailPatch.email_signature = input.email_signature;
 
     if (Object.keys(emailPatch).length > 0) {
       await this.db
@@ -554,7 +629,8 @@ class InvoicesService {
       return { test_sent: true };
     }
 
-    if (invoice.status !== 'draft') throw new Error('Only draft invoices can be sent');
+    if (invoice.status !== 'draft')
+      throw new Error('Only draft invoices can be sent');
 
     let public_token = invoice.public_token;
     if (!public_token) {
@@ -606,7 +682,10 @@ class InvoicesService {
     invoiceId: string;
     sent_to_email?: string | null;
   }) {
-    const user = await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'invoices.edit',
+    );
 
     const { data: invoice, error } = await this.db
       .from('invoices')
@@ -627,13 +706,15 @@ class InvoicesService {
     }
 
     let sent_to_email = input.sent_to_email?.trim() || null;
-    if (!sent_to_email) {
-      const { data: client } = await this.db
-        .from('clients')
-        .select('email')
-        .eq('id', invoice.client_id)
-        .single();
-      sent_to_email = client?.email?.trim() || null;
+    if (!sent_to_email && invoice.client_id) {
+      const recipient = await resolveClientRecipientEmail(
+        this.db,
+        invoice.client_id,
+        {
+          purpose: 'invoice',
+        },
+      );
+      sent_to_email = recipient.email;
     }
 
     const now = new Date().toISOString();
@@ -680,7 +761,9 @@ class InvoicesService {
 
     const { data: client } = await this.db
       .from('clients')
-      .select('id, display_name, first_name, last_name, company_name, email, address_line_1, address_line_2, city, postcode, country')
+      .select(
+        'id, display_name, first_name, last_name, company_name, email, address_line_1, address_line_2, city, postcode, country',
+      )
       .eq('id', invoice.client_id)
       .single();
 
@@ -688,7 +771,9 @@ class InvoicesService {
   }
 
   /** Ensure invoice has a public_token and return it (used for internal payment links). */
-  async getInvoicePortalLink(input: GetInvoicePortalLinkInput): Promise<{ token: string }> {
+  async getInvoicePortalLink(
+    input: GetInvoicePortalLinkInput,
+  ): Promise<{ token: string }> {
     await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
 
     const { data: invoice, error } = await this.db

@@ -7,15 +7,15 @@ import { useRouter } from 'next/navigation';
 
 import {
   ArrowLeft,
+  Download,
   ExternalLink,
   Eye,
-  Settings2,
   Loader2,
   PlusCircle,
   Repeat,
   Send,
+  Settings2,
   Trash2,
-  Download,
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
@@ -35,9 +35,9 @@ import {
   RadioGroupItem,
   RadioGroupItemLabel,
 } from '@kit/ui/radio-group';
+import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
-import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
 import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
@@ -46,11 +46,11 @@ import { listJobs } from '~/home/[account]/jobs/_lib/server/server-actions';
 
 import { getErrorMessage } from '../_lib/error-message';
 import {
-  computeInvoiceTotals,
-  formatPence,
   type DepositType,
   type DiscountType,
   type LateFeeType,
+  computeInvoiceTotals,
+  formatPence,
 } from '../_lib/invoice-totals';
 import {
   getInvoicePortalLink,
@@ -117,6 +117,8 @@ type InvoiceData = {
   sent_to_email: string | null;
   items: InvoiceItem[];
   client: ClientInfo | null;
+  preferred_send_email?: string | null;
+  preferred_send_source?: string | null;
 };
 
 const STATUS_STEPS = [
@@ -171,7 +173,8 @@ function clientDisplayName(client: ClientInfo | null): string {
   if (!client) return '—';
   return (
     client.display_name ??
-    ([client.first_name, client.last_name].filter(Boolean).join(' ') || 'Unnamed')
+    ([client.first_name, client.last_name].filter(Boolean).join(' ') ||
+      'Unnamed')
   );
 }
 
@@ -306,9 +309,9 @@ export function InvoiceEditIndyContent({
     })),
   );
 
-  const [unitPriceDrafts, setUnitPriceDrafts] = useState<Record<string, string>>(
-    {},
-  );
+  const [unitPriceDrafts, setUnitPriceDrafts] = useState<
+    Record<string, string>
+  >({});
 
   const unitPriceRowKey = (row: InvoiceItem, index: number) =>
     row.id ?? `new-${index}`;
@@ -333,7 +336,9 @@ export function InvoiceEditIndyContent({
         ? 0
         : (() => {
             const v = parseFloat(trimmed);
-            return Number.isFinite(v) ? Math.round(v * 100) : row.unit_price_pence;
+            return Number.isFinite(v)
+              ? Math.round(v * 100)
+              : row.unit_price_pence;
           })();
 
     updateItem(index, { unit_price_pence: Math.max(0, pence) });
@@ -363,10 +368,7 @@ export function InvoiceEditIndyContent({
 
   const lineSubtotalPence = useMemo(
     () =>
-      items.reduce(
-        (sum, row) => sum + row.quantity * row.unit_price_pence,
-        0,
-      ),
+      items.reduce((sum, row) => sum + row.quantity * row.unit_price_pence, 0),
     [items],
   );
 
@@ -498,8 +500,7 @@ export function InvoiceEditIndyContent({
     };
   }, [accountId, invoice.id, invoice.status]);
 
-  const resolvedReference =
-    referenceNumber.trim() || invoice.invoice_number;
+  const resolvedReference = referenceNumber.trim() || invoice.invoice_number;
 
   const pdfQuery = useMemo(() => {
     const params = new URLSearchParams({
@@ -580,11 +581,9 @@ export function InvoiceEditIndyContent({
           showDiscount && discountType ? parsedDiscountValue : null,
         tax_rate_bp: showTax ? parsedTaxRateBp : null,
         deposit_type: showDeposit && depositType ? depositType : null,
-        deposit_value:
-          showDeposit && depositType ? parsedDepositValue : null,
+        deposit_value: showDeposit && depositType ? parsedDepositValue : null,
         late_fee_type: showLateFee && lateFeeType ? lateFeeType : null,
-        late_fee_value:
-          showLateFee && lateFeeType ? parsedLateFeeValue : null,
+        late_fee_value: showLateFee && lateFeeType ? parsedLateFeeValue : null,
         email_subject: emailSubject.trim() || null,
         email_body: emailBody.trim() || null,
         email_signature: emailSignature.trim() || null,
@@ -757,6 +756,7 @@ export function InvoiceEditIndyContent({
 
   const defaultSendEmail =
     invoice.sent_to_email ??
+    invoice.preferred_send_email ??
     (invoice.client as ClientInfo | null)?.email ??
     '';
 
@@ -821,7 +821,10 @@ export function InvoiceEditIndyContent({
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-1.5">
               <Eye className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
-              <Label htmlFor="preview-mode" className="text-sm text-[var(--workspace-shell-text-muted)]">
+              <Label
+                htmlFor="preview-mode"
+                className="text-sm text-[var(--workspace-shell-text-muted)]"
+              >
                 Preview
               </Label>
               <Switch
@@ -896,7 +899,9 @@ export function InvoiceEditIndyContent({
               {formatPence(totals.total_pence, invoice.currency ?? 'GBP')}
             </h1>
             {title.trim() ? (
-              <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">{title}</p>
+              <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
+                {title}
+              </p>
             ) : null}
           </div>
 
@@ -918,7 +923,9 @@ export function InvoiceEditIndyContent({
                     {step.label}
                   </span>
                   {index < STATUS_STEPS.length - 1 ? (
-                    <span className="hidden text-[var(--workspace-shell-text-muted)] sm:inline">→</span>
+                    <span className="hidden text-[var(--workspace-shell-text-muted)] sm:inline">
+                      →
+                    </span>
                   ) : null}
                 </li>
               );
@@ -1062,7 +1069,7 @@ export function InvoiceEditIndyContent({
                 ) : null}
 
                 <div
-                  className={`grid gap-3 ${showReferenceField ? 'grid-cols-2' : 'sm:col-span-2 grid-cols-2'}`}
+                  className={`grid gap-3 ${showReferenceField ? 'grid-cols-2' : 'grid-cols-2 sm:col-span-2'}`}
                 >
                   {showIssuedField ? (
                     <div>
@@ -1117,7 +1124,9 @@ export function InvoiceEditIndyContent({
               </div>
 
               <div>
-                <Label className="text-[var(--workspace-shell-text-muted)]">Bill to</Label>
+                <Label className="text-[var(--workspace-shell-text-muted)]">
+                  Bill to
+                </Label>
                 <div className="mt-1">
                   <ClientCombobox
                     clients={clients}
@@ -1133,7 +1142,9 @@ export function InvoiceEditIndyContent({
                   />
                 </div>
                 {clientsError ? (
-                  <p className="mt-1.5 text-sm text-amber-600">{clientsError}</p>
+                  <p className="mt-1.5 text-sm text-amber-600">
+                    {clientsError}
+                  </p>
                 ) : null}
                 {invoice.client && clientId === invoice.client_id ? (
                   <div className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">
@@ -1155,14 +1166,14 @@ export function InvoiceEditIndyContent({
                   <table className="w-full text-left text-sm">
                     <thead>
                       <tr className="border-b border-[color:var(--ozer-border-on-light)] text-[var(--workspace-shell-text-muted)]">
-                        <th className="pb-2 pr-2 font-medium">Description</th>
-                        <th className="w-20 pb-2 pr-2 font-medium text-right">
+                        <th className="pr-2 pb-2 font-medium">Description</th>
+                        <th className="w-20 pr-2 pb-2 text-right font-medium">
                           Qty
                         </th>
-                        <th className="w-28 pb-2 pr-2 font-medium text-right">
+                        <th className="w-28 pr-2 pb-2 text-right font-medium">
                           Unit price
                         </th>
-                        <th className="w-28 pb-2 pr-2 font-medium text-right">
+                        <th className="w-28 pr-2 pb-2 text-right font-medium">
                           Amount
                         </th>
                         {!readOnly ? <th className="w-10 pb-2" /> : null}
@@ -1218,7 +1229,9 @@ export function InvoiceEditIndyContent({
                                   disabled={readOnly || jobsLoading}
                                   className="w-full rounded-md border border-[color:var(--ozer-border-on-light)] bg-white px-2 py-1.5 text-xs text-[var(--ozer-text-on-light)]"
                                 >
-                                  <option value="">Link to job (optional)</option>
+                                  <option value="">
+                                    Link to job (optional)
+                                  </option>
                                   {jobsForClient.map((j) => (
                                     <option key={j.id} value={j.id}>
                                       {j.title}
@@ -1342,7 +1355,9 @@ export function InvoiceEditIndyContent({
                 <div className="grid gap-4 rounded-lg border border-zinc-100 bg-[var(--ozer-cream-50)] p-4 sm:grid-cols-2">
                   {showDiscount ? (
                     <div className="space-y-2">
-                      <Label className="text-[var(--workspace-shell-text-muted)]">Discount</Label>
+                      <Label className="text-[var(--workspace-shell-text-muted)]">
+                        Discount
+                      </Label>
                       <div className="flex gap-2">
                         <select
                           value={discountType}
@@ -1358,9 +1373,7 @@ export function InvoiceEditIndyContent({
                         <Input
                           value={discountValue}
                           onChange={(e) => setDiscountValue(e.target.value)}
-                          placeholder={
-                            discountType === 'fixed' ? '0.00' : '10'
-                          }
+                          placeholder={discountType === 'fixed' ? '0.00' : '10'}
                           className={inputClassName}
                         />
                       </div>
@@ -1369,7 +1382,9 @@ export function InvoiceEditIndyContent({
 
                   {showTax ? (
                     <div className="space-y-2">
-                      <Label className="text-[var(--workspace-shell-text-muted)]">Tax rate (%)</Label>
+                      <Label className="text-[var(--workspace-shell-text-muted)]">
+                        Tax rate (%)
+                      </Label>
                       <Input
                         value={taxRatePercent}
                         onChange={(e) => setTaxRatePercent(e.target.value)}
@@ -1381,7 +1396,9 @@ export function InvoiceEditIndyContent({
 
                   {showDeposit ? (
                     <div className="space-y-2">
-                      <Label className="text-[var(--workspace-shell-text-muted)]">Deposit</Label>
+                      <Label className="text-[var(--workspace-shell-text-muted)]">
+                        Deposit
+                      </Label>
                       <div className="flex gap-2">
                         <select
                           value={depositType}
@@ -1397,9 +1414,7 @@ export function InvoiceEditIndyContent({
                         <Input
                           value={depositValue}
                           onChange={(e) => setDepositValue(e.target.value)}
-                          placeholder={
-                            depositType === 'fixed' ? '0.00' : '50'
-                          }
+                          placeholder={depositType === 'fixed' ? '0.00' : '50'}
                           className={inputClassName}
                         />
                       </div>
@@ -1408,7 +1423,9 @@ export function InvoiceEditIndyContent({
 
                   {showLateFee ? (
                     <div className="space-y-2">
-                      <Label className="text-[var(--workspace-shell-text-muted)]">Late fee</Label>
+                      <Label className="text-[var(--workspace-shell-text-muted)]">
+                        Late fee
+                      </Label>
                       <div className="flex gap-2">
                         <select
                           value={lateFeeType}
@@ -1424,9 +1441,7 @@ export function InvoiceEditIndyContent({
                         <Input
                           value={lateFeeValue}
                           onChange={(e) => setLateFeeValue(e.target.value)}
-                          placeholder={
-                            lateFeeType === 'fixed' ? '0.00' : '5'
-                          }
+                          placeholder={lateFeeType === 'fixed' ? '0.00' : '5'}
                           className={inputClassName}
                         />
                       </div>
@@ -1441,7 +1456,9 @@ export function InvoiceEditIndyContent({
               <div className="border-t border-[color:var(--ozer-border-on-light)] pt-4">
                 <dl className="ml-auto max-w-sm space-y-2 text-sm">
                   <div className="flex justify-between gap-4">
-                    <dt className="text-[var(--workspace-shell-text-muted)]">Subtotal</dt>
+                    <dt className="text-[var(--workspace-shell-text-muted)]">
+                      Subtotal
+                    </dt>
                     <dd className="font-medium text-[var(--ozer-text-on-light)]">
                       {formatPence(
                         totals.subtotal_pence,
@@ -1463,7 +1480,9 @@ export function InvoiceEditIndyContent({
                   ) : null}
                   {totals.tax_pence > 0 ? (
                     <div className="flex justify-between gap-4">
-                      <dt className="text-[var(--workspace-shell-text-muted)]">Tax</dt>
+                      <dt className="text-[var(--workspace-shell-text-muted)]">
+                        Tax
+                      </dt>
                       <dd className="font-medium text-[var(--ozer-text-on-light)]">
                         {formatPence(
                           totals.tax_pence,
@@ -1484,7 +1503,9 @@ export function InvoiceEditIndyContent({
                     </div>
                   ) : null}
                   <div className="flex justify-between gap-4 border-t border-[color:var(--ozer-border-on-light)] pt-2 text-base">
-                    <dt className="font-semibold text-[var(--ozer-text-on-light)]">Total</dt>
+                    <dt className="font-semibold text-[var(--ozer-text-on-light)]">
+                      Total
+                    </dt>
                     <dd className="font-bold text-[var(--ozer-text-on-light)]">
                       {formatPence(
                         totals.total_pence,
@@ -1509,10 +1530,12 @@ export function InvoiceEditIndyContent({
               <div className="grid gap-4 border-t border-[color:var(--ozer-border-on-light)] pt-4">
                 {showNotesField ? (
                   <div>
-                    <Label className="text-[var(--workspace-shell-text-muted)]">Notes</Label>
+                    <Label className="text-[var(--workspace-shell-text-muted)]">
+                      Notes
+                    </Label>
                     {previewMode ? (
                       notes.trim() ? (
-                        <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--ozer-text-on-light)]">
+                        <p className="mt-1 text-sm whitespace-pre-wrap text-[var(--ozer-text-on-light)]">
                           {notes}
                         </p>
                       ) : (
@@ -1539,7 +1562,7 @@ export function InvoiceEditIndyContent({
                     </Label>
                     {previewMode ? (
                       footerMessage.trim() ? (
-                        <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--ozer-text-on-light)]">
+                        <p className="mt-1 text-sm whitespace-pre-wrap text-[var(--ozer-text-on-light)]">
                           {footerMessage}
                         </p>
                       ) : null
@@ -1571,7 +1594,7 @@ export function InvoiceEditIndyContent({
                           Open payment page
                           <ExternalLink className="h-3.5 w-3.5" />
                         </a>
-                        <p className="break-all text-xs text-[var(--workspace-shell-text-muted)]">
+                        <p className="text-xs break-all text-[var(--workspace-shell-text-muted)]">
                           {paymentUrl}
                         </p>
                       </div>
@@ -1687,7 +1710,9 @@ export function InvoiceEditIndyContent({
             </section>
 
             <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
-              <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Private note</h2>
+              <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                Private note
+              </h2>
               <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
                 Only visible to your team — not shown to clients.
               </p>

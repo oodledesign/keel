@@ -6,7 +6,10 @@ function buildClientDisplayName(row: {
   first_name?: string | null;
   last_name?: string | null;
 }) {
-  const fromParts = [row.first_name, row.last_name].filter(Boolean).join(' ').trim();
+  const fromParts = [row.first_name, row.last_name]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
   return (
     row.display_name?.trim() ||
     fromParts ||
@@ -24,7 +27,9 @@ export async function loadPrimaryContactEmailsByClientId(
 
   const { data: rows, error } = await admin
     .from('client_contacts')
-    .select('client_id, is_primary, created_at, contacts ( email )')
+    .select(
+      'client_id, is_primary, role, created_at, contacts ( email, first_name, last_name, full_name )',
+    )
     .in('client_id', clientIds)
     .order('is_primary', { ascending: false })
     .order('created_at', { ascending: true });
@@ -55,11 +60,18 @@ export async function loadMessageClientOptions(admin: any, accountId: string) {
 
   if (error) {
     console.error('[messages] failed to load clients', error);
-    return [] as Array<{ clientId: string; name: string; email: string | null }>;
+    return [] as Array<{
+      clientId: string;
+      name: string;
+      email: string | null;
+    }>;
   }
 
   const clientIds = (clients ?? []).map((c: any) => c.id as string);
-  const emailByClientId = await loadPrimaryContactEmailsByClientId(admin, clientIds);
+  const emailByClientId = await loadPrimaryContactEmailsByClientId(
+    admin,
+    clientIds,
+  );
 
   return (clients ?? []).map((c: any) => ({
     clientId: c.id as string,
@@ -84,7 +96,10 @@ export async function loadClientDisplayByIds(admin: any, clientIds: string[]) {
     return out;
   }
 
-  const emailByClientId = await loadPrimaryContactEmailsByClientId(admin, clientIds);
+  const emailByClientId = await loadPrimaryContactEmailsByClientId(
+    admin,
+    clientIds,
+  );
 
   for (const c of clients ?? []) {
     out.set(c.id as string, {

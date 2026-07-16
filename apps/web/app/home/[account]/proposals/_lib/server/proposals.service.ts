@@ -5,9 +5,12 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { requireUser } from '@kit/supabase/require-user';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
+import {
+  queueBrainDeleteSource,
+  queueBrainIndexSource,
+} from '~/lib/brain/sync';
+import { resolveClientRecipientEmail } from '~/lib/clients/resolve-client-recipient';
 import { Database } from '~/lib/database.types';
-
-import { queueBrainDeleteSource, queueBrainIndexSource } from '~/lib/brain/sync';
 
 import {
   DEFAULT_PROPOSAL_EMAIL_BODY,
@@ -15,6 +18,7 @@ import {
   DEFAULT_PROPOSAL_EMAIL_SUBJECT,
 } from '../doc-smart-fields';
 import type {
+  AddProposalCommentInput,
   CreateProposalInput,
   DeleteProposalInput,
   GetProposalForPortalInput,
@@ -24,7 +28,6 @@ import type {
   SendProposalInput,
   SetProposalStatusInput,
   UpdateProposalInput,
-  AddProposalCommentInput,
 } from '../schema/proposals.schema';
 import { sendProposalIssuedEmail } from './proposal-notifications';
 
@@ -187,11 +190,38 @@ class ProposalsService {
       deal = data;
     }
 
-    return { ...proposal, comments: comments ?? [], client, deal };
+    let preferred_send_email: string | null = proposal.recipient_email ?? null;
+    let preferred_send_source: string | null = proposal.recipient_email
+      ? 'document'
+      : null;
+    if (proposal.client_id) {
+      const recipient = await resolveClientRecipientEmail(
+        this.db,
+        proposal.client_id,
+        {
+          purpose: 'proposal',
+          fallbackEmail: proposal.sent_to_email ?? proposal.recipient_email,
+        },
+      );
+      preferred_send_email = recipient.email;
+      preferred_send_source = recipient.source;
+    }
+
+    return {
+      ...proposal,
+      comments: comments ?? [],
+      client,
+      deal,
+      preferred_send_email,
+      preferred_send_source,
+    };
   }
 
   async createProposal(input: CreateProposalInput) {
-    const user = await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'invoices.edit',
+    );
 
     if (!input.client_id && !input.deal_id) {
       throw new Error('Either client_id or deal_id is required');
@@ -237,7 +267,10 @@ class ProposalsService {
   }
 
   async updateProposal(input: UpdateProposalInput) {
-    const user = await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'invoices.edit',
+    );
 
     const { data: existing, error: existingError } = await this.db
       .from('proposals')
@@ -252,7 +285,8 @@ class ProposalsService {
 
     const nextClientId =
       input.client_id !== undefined ? input.client_id : existing.client_id;
-    const nextDealId = input.deal_id !== undefined ? input.deal_id : existing.deal_id;
+    const nextDealId =
+      input.deal_id !== undefined ? input.deal_id : existing.deal_id;
     if (!nextClientId && !nextDealId) {
       throw new Error('Either client_id or deal_id is required');
     }
@@ -261,17 +295,25 @@ class ProposalsService {
     if (input.client_id !== undefined) payload.client_id = input.client_id;
     if (input.deal_id !== undefined) payload.deal_id = input.deal_id;
     if (input.title !== undefined) payload.title = input.title;
-    if (input.content_html !== undefined) payload.content_html = input.content_html;
-    if (input.recipient_name !== undefined) payload.recipient_name = input.recipient_name;
-    if (input.recipient_email !== undefined) payload.recipient_email = input.recipient_email;
-    if (input.total_pence !== undefined) payload.total_pence = input.total_pence;
+    if (input.content_html !== undefined)
+      payload.content_html = input.content_html;
+    if (input.recipient_name !== undefined)
+      payload.recipient_name = input.recipient_name;
+    if (input.recipient_email !== undefined)
+      payload.recipient_email = input.recipient_email;
+    if (input.total_pence !== undefined)
+      payload.total_pence = input.total_pence;
     if (input.currency !== undefined) payload.currency = input.currency;
     if (input.expires_at !== undefined) payload.expires_at = input.expires_at;
-    if (input.private_note !== undefined) payload.private_note = input.private_note;
-    if (input.email_subject !== undefined) payload.email_subject = input.email_subject;
+    if (input.private_note !== undefined)
+      payload.private_note = input.private_note;
+    if (input.email_subject !== undefined)
+      payload.email_subject = input.email_subject;
     if (input.email_body !== undefined) payload.email_body = input.email_body;
-    if (input.email_signature !== undefined) payload.email_signature = input.email_signature;
-    if (input.context_refs !== undefined) payload.context_refs = input.context_refs;
+    if (input.email_signature !== undefined)
+      payload.email_signature = input.email_signature;
+    if (input.context_refs !== undefined)
+      payload.context_refs = input.context_refs;
 
     const { data, error } = await this.db
       .from('proposals')
@@ -317,7 +359,10 @@ class ProposalsService {
   }
 
   async sendProposal(input: SendProposalInput) {
-    const user = await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'invoices.edit',
+    );
 
     const { data: proposal, error: fetchError } = await this.db
       .from('proposals')
@@ -325,12 +370,14 @@ class ProposalsService {
       .eq('id', input.proposalId)
       .eq('account_id', input.accountId)
       .single();
-    if (fetchError || !proposal) this.throwErr(fetchError, 'Proposal not found');
+    if (fetchError || !proposal)
+      this.throwErr(fetchError, 'Proposal not found');
 
     const emailPatch: Record<string, unknown> = {};
     if (input.email_subject) emailPatch.email_subject = input.email_subject;
     if (input.email_body) emailPatch.email_body = input.email_body;
-    if (input.email_signature) emailPatch.email_signature = input.email_signature;
+    if (input.email_signature)
+      emailPatch.email_signature = input.email_signature;
 
     if (Object.keys(emailPatch).length > 0) {
       await this.db
@@ -422,7 +469,8 @@ class ProposalsService {
     }
 
     try {
-      const { createDraftContractForProposal } = await import('./proposal-automation');
+      const { createDraftContractForProposal } =
+        await import('./proposal-automation');
       await createDraftContractForProposal(input.proposalId);
     } catch (error) {
       console.error('[proposals] draft contract on send failed', error);
@@ -502,7 +550,10 @@ class ProposalsService {
   }
 
   async setProposalStatus(input: SetProposalStatusInput) {
-    const user = await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'invoices.edit',
+    );
 
     const { data: existing, error: fetchError } = await this.db
       .from('proposals')
@@ -514,7 +565,9 @@ class ProposalsService {
 
     const oldStatus = existing?.status;
     if (!['sent', 'read'].includes(oldStatus ?? '')) {
-      throw new Error('Only sent or read proposals can be marked approved or declined');
+      throw new Error(
+        'Only sent or read proposals can be marked approved or declined',
+      );
     }
 
     const now = new Date().toISOString();
@@ -553,7 +606,10 @@ class ProposalsService {
   }
 
   async addProposalComment(input: AddProposalCommentInput) {
-    const user = await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'invoices.edit',
+    );
 
     const { data: proposal, error: proposalError } = await this.db
       .from('proposals')
@@ -561,13 +617,16 @@ class ProposalsService {
       .eq('id', input.proposalId)
       .eq('account_id', input.accountId)
       .single();
-    if (proposalError || !proposal) this.throwErr(proposalError, 'Proposal not found');
+    if (proposalError || !proposal)
+      this.throwErr(proposalError, 'Proposal not found');
 
     const authorName =
       [user.user_metadata?.first_name, user.user_metadata?.last_name]
         .filter(Boolean)
         .join(' ')
-        .trim() || user.email || 'Team member';
+        .trim() ||
+      user.email ||
+      'Team member';
 
     const { data: comment, error } = await this.db
       .from('proposal_comments')

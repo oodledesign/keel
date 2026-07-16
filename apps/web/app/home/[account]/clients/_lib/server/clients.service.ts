@@ -3,9 +3,13 @@ import 'server-only';
 import { SupabaseClient } from '@supabase/supabase-js';
 
 import { requireUser } from '@kit/supabase/require-user';
-import { createTeamAccountsApi } from '@kit/team-accounts/api';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
+import {
+  composeContactFullName,
+  normalizeContactRole,
+} from '~/lib/clients/contact-roles';
 import { Database } from '~/lib/database.types';
 import {
   DELIVERY_PROJECT_FILTER,
@@ -13,6 +17,11 @@ import {
 } from '~/lib/projects/delivery-project-db';
 import { deliveryProjectTitle } from '~/lib/projects/project-types';
 
+import {
+  isMissingColumnError,
+  isMissingRelationError,
+  logMissingRelation,
+} from '../../../_lib/server/supabase-errors';
 import type {
   CreateClientInput,
   CreateContactInput,
@@ -30,21 +39,52 @@ import type {
   ListContactsInput,
   ListNotesInput,
   ListWorkspaceContactsInput,
+  SetPrimaryContactInput,
   UpdateClientInput,
+  UpdateContactLinkInput,
 } from '../schema/clients.schema';
-import {
-  isMissingColumnError,
-  isMissingRelationError,
-  logMissingRelation,
-} from '../../../_lib/server/supabase-errors';
 import { buildClientsOverview } from './clients-overview.builder';
+
+function splitFullName(fullName: string): {
+  firstName: string;
+  lastName: string | null;
+} {
+  const trimmed = fullName.trim();
+  const space = trimmed.indexOf(' ');
+  if (space <= 0) return { firstName: trimmed, lastName: null };
+  return {
+    firstName: trimmed.slice(0, space).trim(),
+    lastName: trimmed.slice(space + 1).trim() || null,
+  };
+}
+
+function resolveContactNameParts(input: {
+  firstName?: string | null;
+  lastName?: string | null;
+  fullName?: string | null;
+}) {
+  const fullName = composeContactFullName(input);
+  if (input.firstName?.trim()) {
+    return {
+      firstName: input.firstName.trim(),
+      lastName: input.lastName?.trim() || null,
+      fullName,
+    };
+  }
+  const split = splitFullName(fullName);
+  return {
+    firstName: split.firstName,
+    lastName: split.lastName,
+    fullName,
+  };
+}
 
 export function createClientsService(client: SupabaseClient<Database>) {
   return new ClientsService(client);
 }
 
 // Database types may not include clients/client_notes/projects until supabase:typegen is run after migrations.
- 
+
 function mapClientWriteError(err: unknown): Error {
   const e = err as {
     message?: string;
@@ -156,7 +196,9 @@ class ClientsService {
       .eq('user_id', userId)
       .maybeSingle();
 
-    return (data as { account_role?: string | null } | null)?.account_role ?? null;
+    return (
+      (data as { account_role?: string | null } | null)?.account_role ?? null
+    );
   }
 
   /**
@@ -232,11 +274,13 @@ class ClientsService {
         const { data } = await this.client.rpc('get_account_members', {
           account_slug: accountSlug,
         });
-        return ((data ?? []) as Array<{
-          user_id: string;
-          name: string | null;
-          picture_url?: string | null;
-        }>).map((row) => ({
+        return (
+          (data ?? []) as Array<{
+            user_id: string;
+            name: string | null;
+            picture_url?: string | null;
+          }>
+        ).map((row) => ({
           user_id: row.user_id,
           name: row.name,
           picture_url: row.picture_url,
@@ -290,24 +334,42 @@ class ClientsService {
   }
 
   async createClient(input: CreateClientInput) {
-    const user = await this.ensureUserAndPermission(input.accountId, 'clients.edit');
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'clients.edit',
+    );
     const clientType = input.client_type ?? 'business';
+    const companyName = input.company_name?.trim() || null;
+    const personFirst = input.first_name?.trim() || null;
+    const personLast = input.last_name?.trim() || null;
     const displayName =
       clientType === 'individual'
-        ? [input.first_name, input.last_name].filter(Boolean).join(' ').trim() || input.first_name
-        : input.company_name?.trim() || [input.first_name, input.last_name].filter(Boolean).join(' ').trim() || input.first_name;
+        ? [personFirst, personLast].filter(Boolean).join(' ').trim() ||
+          personFirst ||
+          'Unnamed'
+        : companyName ||
+          [personFirst, personLast].filter(Boolean).join(' ').trim() ||
+          'Unnamed company';
+
+    const primaryContactEmail =
+      input.contact?.email?.trim() || input.email?.trim() || null;
+    const primaryContactPhone =
+      input.contact?.phone?.trim() || input.phone?.trim() || null;
 
     const { data, error } = await this.adminDb
       .from('clients')
       .insert({
         account_id: input.accountId,
         client_type: clientType,
-        first_name: input.first_name,
-        last_name: input.last_name ?? null,
+        first_name:
+          clientType === 'individual'
+            ? personFirst
+            : (personFirst ?? companyName),
+        last_name: personLast,
         display_name: displayName,
-        company_name: input.company_name ?? null,
-        email: input.email ?? null,
-        phone: input.phone ?? null,
+        company_name: companyName,
+        email: primaryContactEmail ?? input.email ?? null,
+        phone: primaryContactPhone ?? input.phone ?? null,
         address_line_1: input.address_line_1 ?? null,
         address_line_2: input.address_line_2 ?? null,
         city: input.city ?? null,
@@ -319,34 +381,67 @@ class ClientsService {
       .single();
 
     if (error) throw mapClientWriteError(error);
+    if (!data?.id) return data;
 
-    // For individual clients, auto-create the primary contact record
-    if (clientType === 'individual' && data?.id) {
-      const contactName = [input.first_name, input.last_name].filter(Boolean).join(' ').trim();
-      const { data: contact, error: contactError } = await this.adminDb
+    const shouldCreateContact =
+      clientType === 'individual' || Boolean(input.contact?.firstName?.trim());
+
+    if (!shouldCreateContact) return data;
+
+    const names =
+      clientType === 'individual'
+        ? resolveContactNameParts({
+            firstName: personFirst,
+            lastName: personLast,
+          })
+        : resolveContactNameParts({
+            firstName: input.contact?.firstName,
+            lastName: input.contact?.lastName,
+          });
+
+    const contactPayload = {
+      account_id: input.accountId,
+      user_id: user.id,
+      client_id: data.id,
+      first_name: names.firstName,
+      last_name: names.lastName,
+      full_name: names.fullName,
+      email: primaryContactEmail,
+      phone: primaryContactPhone,
+      is_primary: true,
+    };
+
+    let contactInsert = await this.adminDb
+      .from('contacts')
+      .insert(contactPayload)
+      .select('id')
+      .single();
+
+    if (contactInsert.error && isMissingColumnError(contactInsert.error)) {
+      const {
+        first_name: _f,
+        last_name: _l,
+        ...legacyPayload
+      } = contactPayload;
+      contactInsert = await this.adminDb
         .from('contacts')
-        .insert({
-          account_id: input.accountId,
-          user_id: user.id,
-          client_id: data.id,
-          full_name: contactName || input.first_name,
-          email: input.email ?? null,
-          phone: input.phone ?? null,
-          is_primary: true,
-        })
+        .insert(legacyPayload)
         .select('id')
         .single();
+    }
 
-      if (contactError) throw mapClientWriteError(contactError);
+    if (contactInsert.error) throw mapClientWriteError(contactInsert.error);
 
-      if (contact?.id) {
-        const { error: linkError } = await this.adminDb.from('client_contacts').insert({
+    if (contactInsert.data?.id) {
+      const { error: linkError } = await this.adminDb
+        .from('client_contacts')
+        .insert({
           client_id: data.id,
-          contact_id: contact.id,
+          contact_id: contactInsert.data.id,
+          role: normalizeContactRole(input.contact?.role) ?? null,
           is_primary: true,
         });
-        if (linkError) throw mapClientWriteError(linkError);
-      }
+      if (linkError) throw mapClientWriteError(linkError);
     }
 
     return data;
@@ -361,16 +456,23 @@ class ClientsService {
     if (input.first_name !== undefined) payload.first_name = input.first_name;
     if (input.last_name !== undefined) payload.last_name = input.last_name;
     if (input.first_name !== undefined || input.last_name !== undefined) {
-      const current = (await this.getClient({ accountId: input.accountId, clientId: input.clientId })) as { first_name?: string | null; last_name?: string | null } | null;
+      const current = (await this.getClient({
+        accountId: input.accountId,
+        clientId: input.clientId,
+      })) as { first_name?: string | null; last_name?: string | null } | null;
       const first = (input.first_name ?? current?.first_name ?? '').trim();
       const last = (input.last_name ?? current?.last_name ?? '').trim();
-      payload.display_name = [first, last].filter(Boolean).join(' ').trim() || first || 'Unnamed';
+      payload.display_name =
+        [first, last].filter(Boolean).join(' ').trim() || first || 'Unnamed';
     }
-    if (input.company_name !== undefined) payload.company_name = input.company_name;
+    if (input.company_name !== undefined)
+      payload.company_name = input.company_name;
     if (input.email !== undefined) payload.email = input.email;
     if (input.phone !== undefined) payload.phone = input.phone;
-    if (input.address_line_1 !== undefined) payload.address_line_1 = input.address_line_1;
-    if (input.address_line_2 !== undefined) payload.address_line_2 = input.address_line_2;
+    if (input.address_line_1 !== undefined)
+      payload.address_line_1 = input.address_line_1;
+    if (input.address_line_2 !== undefined)
+      payload.address_line_2 = input.address_line_2;
     if (input.city !== undefined) payload.city = input.city;
     if (input.postcode !== undefined) payload.postcode = input.postcode;
     if (input.country !== undefined) payload.country = input.country;
@@ -414,7 +516,10 @@ class ClientsService {
   }
 
   async createNote(input: CreateNoteInput) {
-    const user = await this.ensureUserAndPermission(input.accountId, 'clients.edit');
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'clients.edit',
+    );
 
     const { data, error } = await this.adminDb
       .from('client_notes')
@@ -477,10 +582,14 @@ class ClientsService {
       throw result.error;
     }
 
-    return ((result.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
-      ...row,
-      title: deliveryProjectTitle(row as { title?: string | null; name?: string | null }),
-    }));
+    return ((result.data ?? []) as Array<Record<string, unknown>>).map(
+      (row) => ({
+        ...row,
+        title: deliveryProjectTitle(
+          row as { title?: string | null; name?: string | null },
+        ),
+      }),
+    );
   }
 
   async listClientInvoices(params: ListClientInvoicesInput) {
@@ -516,26 +625,39 @@ class ClientsService {
   }
 
   async listContacts(params: ListContactsInput) {
-    await this.ensureUser();
+    await this.ensureUserAndPermission(params.accountId, 'clients.view');
+    await this.ensureClientInAccount(params.clientId, params.accountId);
 
-    const mapJunctionRows = (rows: Array<{
-      role?: string | null;
-      is_primary?: boolean | null;
-      contacts?: {
-        id?: string;
-        full_name?: string;
-        email?: string | null;
-        phone?: string | null;
-        picture_url?: string | null;
-      } | null;
-    }>) =>
+    const mapJunctionRows = (
+      rows: Array<{
+        role?: string | null;
+        is_primary?: boolean | null;
+        contacts?: {
+          id?: string;
+          full_name?: string;
+          first_name?: string | null;
+          last_name?: string | null;
+          email?: string | null;
+          phone?: string | null;
+          picture_url?: string | null;
+        } | null;
+      }>,
+    ) =>
       rows
         .map((row) => {
           const contact = row.contacts;
           if (!contact?.id) return null;
+          const fullName =
+            composeContactFullName({
+              firstName: contact.first_name,
+              lastName: contact.last_name,
+              fullName: contact.full_name,
+            }) || (contact.full_name as string);
           return {
             id: contact.id as string,
-            full_name: contact.full_name as string,
+            full_name: fullName,
+            first_name: (contact.first_name as string | null) ?? null,
+            last_name: (contact.last_name as string | null) ?? null,
             email: (contact.email as string | null) ?? null,
             phone: (contact.phone as string | null) ?? null,
             role: (row.role as string | null) ?? null,
@@ -548,7 +670,7 @@ class ClientsService {
     const { data, error } = await this.adminDb
       .from('client_contacts')
       .select(
-        'role, is_primary, created_at, contacts ( id, full_name, email, phone, picture_url )',
+        'role, is_primary, created_at, contacts ( id, full_name, first_name, last_name, email, phone, picture_url )',
       )
       .eq('client_id', params.clientId)
       .order('is_primary', { ascending: false })
@@ -562,7 +684,7 @@ class ClientsService {
       const { data: fallbackData, error: fallbackError } = await this.adminDb
         .from('client_contacts')
         .select(
-          'role, is_primary, created_at, contacts ( id, full_name, email, phone )',
+          'role, is_primary, created_at, contacts ( id, full_name, email, phone, picture_url )',
         )
         .eq('client_id', params.clientId)
         .order('is_primary', { ascending: false })
@@ -581,7 +703,9 @@ class ClientsService {
 
     const { data: legacyRows, error: legacyError } = await this.adminDb
       .from('contacts')
-      .select('id, full_name, email, phone, role, is_primary, created_at, picture_url')
+      .select(
+        'id, full_name, email, phone, role, is_primary, created_at, picture_url',
+      )
       .eq('client_id', params.clientId)
       .order('is_primary', { ascending: false })
       .order('created_at', { ascending: true });
@@ -598,45 +722,53 @@ class ClientsService {
       if (legacyWithoutPhotoError) throw legacyWithoutPhotoError;
 
       return {
-        data: (legacyWithoutPhoto ?? []).map((row: {
-          id: string;
-          full_name: string;
-          email: string | null;
-          phone: string | null;
-          role: string | null;
-          is_primary: boolean;
-        }) => ({
-          id: row.id,
-          full_name: row.full_name,
-          email: row.email,
-          phone: row.phone,
-          role: row.role,
-          is_primary: row.is_primary,
-          picture_url: null,
-        })),
+        data: (legacyWithoutPhoto ?? []).map(
+          (row: {
+            id: string;
+            full_name: string;
+            email: string | null;
+            phone: string | null;
+            role: string | null;
+            is_primary: boolean;
+          }) => ({
+            id: row.id,
+            full_name: row.full_name,
+            first_name: null,
+            last_name: null,
+            email: row.email,
+            phone: row.phone,
+            role: row.role,
+            is_primary: row.is_primary,
+            picture_url: null,
+          }),
+        ),
       };
     }
 
     if (legacyError) throw legacyError;
 
     return {
-      data: (legacyRows ?? []).map((row: {
-        id: string;
-        full_name: string;
-        email: string | null;
-        phone: string | null;
-        role: string | null;
-        is_primary: boolean;
-        picture_url?: string | null;
-      }) => ({
-        id: row.id,
-        full_name: row.full_name,
-        email: row.email,
-        phone: row.phone,
-        role: row.role,
-        is_primary: row.is_primary,
-        picture_url: row.picture_url ?? null,
-      })),
+      data: (legacyRows ?? []).map(
+        (row: {
+          id: string;
+          full_name: string;
+          email: string | null;
+          phone: string | null;
+          role: string | null;
+          is_primary: boolean;
+          picture_url?: string | null;
+        }) => ({
+          id: row.id,
+          full_name: row.full_name,
+          first_name: null,
+          last_name: null,
+          email: row.email,
+          phone: row.phone,
+          role: row.role,
+          is_primary: row.is_primary,
+          picture_url: row.picture_url ?? null,
+        }),
+      ),
     };
   }
 
@@ -667,7 +799,7 @@ class ClientsService {
       }
     }
 
-    let query = this.adminDb
+    const query = this.adminDb
       .from('contacts')
       .select('id, full_name, email, phone, picture_url')
       .order('full_name', { ascending: true })
@@ -714,26 +846,40 @@ class ClientsService {
     );
 
     if (search) {
-      contacts = contacts.filter((row: { full_name?: string | null; email?: string | null }) => {
-        const name = row.full_name?.toLowerCase() ?? '';
-        const email = row.email?.toLowerCase() ?? '';
-        return name.includes(search) || email.includes(search);
-      });
+      contacts = contacts.filter(
+        (row: { full_name?: string | null; email?: string | null }) => {
+          const name = row.full_name?.toLowerCase() ?? '';
+          const email = row.email?.toLowerCase() ?? '';
+          return name.includes(search) || email.includes(search);
+        },
+      );
     }
 
     return { data: contacts.slice(0, 50) };
   }
 
   async createContact(input: CreateContactInput) {
-    const user = await this.ensureUserAndPermission(input.accountId, 'clients.edit');
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'clients.edit',
+    );
     await this.ensureClientInAccount(input.clientId, input.accountId);
+
+    const names = resolveContactNameParts({
+      firstName: input.firstName,
+      lastName: input.lastName,
+      fullName: input.fullName,
+    });
+    const role = normalizeContactRole(input.role);
 
     const { data: contact, error } = await this.adminDb
       .from('contacts')
       .insert({
         account_id: input.accountId,
         user_id: user.id,
-        full_name: input.fullName,
+        first_name: names.firstName,
+        last_name: names.lastName,
+        full_name: names.fullName,
         email: input.email ?? null,
         phone: input.phone ?? null,
       })
@@ -749,10 +895,10 @@ class ClientsService {
         .insert({
           user_id: user.id,
           client_id: input.clientId,
-          full_name: input.fullName,
+          full_name: names.fullName,
           email: input.email ?? null,
           phone: input.phone ?? null,
-          role: input.role ?? null,
+          role: role ?? null,
           is_primary: input.isPrimary ?? false,
         })
         .select('id')
@@ -764,12 +910,14 @@ class ClientsService {
     if (contactError) throw contactError;
     if (!contactRow?.id) throw new Error('Failed to create contact');
 
-    const { error: linkError } = await this.adminDb.from('client_contacts').insert({
-      client_id: input.clientId,
-      contact_id: contactRow.id,
-      role: input.role ?? null,
-      is_primary: input.isPrimary ?? false,
-    });
+    const { error: linkError } = await this.adminDb
+      .from('client_contacts')
+      .insert({
+        client_id: input.clientId,
+        contact_id: contactRow.id,
+        role: role ?? null,
+        is_primary: input.isPrimary ?? false,
+      });
 
     if (linkError) {
       if (isMissingRelationError(linkError)) {
@@ -778,7 +926,7 @@ class ClientsService {
           .from('contacts')
           .update({
             client_id: input.clientId,
-            role: input.role ?? null,
+            role: role ?? null,
             is_primary: input.isPrimary ?? false,
           })
           .eq('id', contactRow.id);
@@ -787,6 +935,64 @@ class ClientsService {
       }
     }
     return contactRow;
+  }
+
+  async setPrimaryContact(input: SetPrimaryContactInput) {
+    await this.ensureUserAndPermission(input.accountId, 'clients.edit');
+    await this.ensureClientInAccount(input.clientId, input.accountId);
+
+    const { data: link, error: linkError } = await this.adminDb
+      .from('client_contacts')
+      .select('contact_id')
+      .eq('client_id', input.clientId)
+      .eq('contact_id', input.contactId)
+      .maybeSingle();
+
+    if (linkError) throw linkError;
+    if (!link) {
+      throw new Error('Contact is not linked to this client.');
+    }
+
+    const { error: clearError } = await this.adminDb
+      .from('client_contacts')
+      .update({ is_primary: false, updated_at: new Date().toISOString() })
+      .eq('client_id', input.clientId)
+      .eq('is_primary', true);
+
+    if (clearError && !isMissingColumnError(clearError)) throw clearError;
+
+    const { error: setError } = await this.adminDb
+      .from('client_contacts')
+      .update({ is_primary: true, updated_at: new Date().toISOString() })
+      .eq('client_id', input.clientId)
+      .eq('contact_id', input.contactId);
+
+    if (setError) throw mapClientWriteError(setError);
+    return { ok: true as const };
+  }
+
+  async updateContactLink(input: UpdateContactLinkInput) {
+    await this.ensureUserAndPermission(input.accountId, 'clients.edit');
+    await this.ensureClientInAccount(input.clientId, input.accountId);
+
+    const role =
+      input.role === undefined
+        ? undefined
+        : input.role === null
+          ? null
+          : normalizeContactRole(input.role);
+
+    const { error } = await this.adminDb
+      .from('client_contacts')
+      .update({
+        ...(role !== undefined ? { role } : {}),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('client_id', input.clientId)
+      .eq('contact_id', input.contactId);
+
+    if (error) throw mapClientWriteError(error);
+    return { ok: true as const };
   }
 
   async linkContact(input: LinkContactInput) {
@@ -805,12 +1011,14 @@ class ClientsService {
       throw new Error('Contact not found in this workspace.');
     }
 
-    const { error: linkError } = await this.adminDb.from('client_contacts').insert({
-      client_id: input.clientId,
-      contact_id: input.contactId,
-      role: input.role ?? null,
-      is_primary: input.isPrimary ?? false,
-    });
+    const { error: linkError } = await this.adminDb
+      .from('client_contacts')
+      .insert({
+        client_id: input.clientId,
+        contact_id: input.contactId,
+        role: normalizeContactRole(input.role) ?? null,
+        is_primary: input.isPrimary ?? false,
+      });
 
     if (linkError) {
       if (linkError.code === '23505') {
@@ -826,18 +1034,8 @@ class ClientsService {
   }
 
   async deleteContact(params: DeleteContactInput) {
-    const { data: client, error: clientError } = await this.adminDb
-      .from('clients')
-      .select('account_id')
-      .eq('id', params.clientId)
-      .maybeSingle();
-
-    if (clientError) throw clientError;
-    if (!client?.account_id) {
-      throw new Error('Client not found.');
-    }
-
-    await this.ensureUserAndPermission(client.account_id, 'clients.edit');
+    await this.ensureUserAndPermission(params.accountId, 'clients.edit');
+    await this.ensureClientInAccount(params.clientId, params.accountId);
 
     const { error: unlinkError } = await this.adminDb
       .from('client_contacts')
@@ -876,19 +1074,21 @@ class ClientsService {
 
     if (!error) {
       return {
-        data: (data ?? []).map((row: {
-          id: string;
-          full_name: string;
-          email: string | null;
-          phone: string | null;
-          picture_url?: string | null;
-        }) => ({
-          id: row.id,
-          full_name: row.full_name,
-          email: row.email,
-          phone: row.phone,
-          picture_url: row.picture_url ?? null,
-        })),
+        data: (data ?? []).map(
+          (row: {
+            id: string;
+            full_name: string;
+            email: string | null;
+            phone: string | null;
+            picture_url?: string | null;
+          }) => ({
+            id: row.id,
+            full_name: row.full_name,
+            email: row.email,
+            phone: row.phone,
+            picture_url: row.picture_url ?? null,
+          }),
+        ),
       };
     }
 
@@ -905,18 +1105,20 @@ class ClientsService {
 
     if (!withoutPhotoError) {
       return {
-        data: (withoutPhoto ?? []).map((row: {
-          id: string;
-          full_name: string;
-          email: string | null;
-          phone: string | null;
-        }) => ({
-          id: row.id,
-          full_name: row.full_name,
-          email: row.email,
-          phone: row.phone,
-          picture_url: null,
-        })),
+        data: (withoutPhoto ?? []).map(
+          (row: {
+            id: string;
+            full_name: string;
+            email: string | null;
+            phone: string | null;
+          }) => ({
+            id: row.id,
+            full_name: row.full_name,
+            email: row.email,
+            phone: row.phone,
+            picture_url: null,
+          }),
+        ),
       };
     }
 
@@ -927,33 +1129,44 @@ class ClientsService {
 
     if (clientsError) throw clientsError;
 
-    const clientIds = (accountClients ?? []).map((row: { id: string }) => row.id);
+    const clientIds = (accountClients ?? []).map(
+      (row: { id: string }) => row.id,
+    );
     if (clientIds.length === 0) {
       return { data: [] };
     }
 
     const { data: junctionRows, error: junctionError } = await this.adminDb
       .from('client_contacts')
-      .select('contact_id, contacts ( id, full_name, email, phone, picture_url )')
+      .select(
+        'contact_id, contacts ( id, full_name, email, phone, picture_url )',
+      )
       .in('client_id', clientIds);
 
     if (!junctionError) {
-      const byId = new Map<string, {
-        id: string;
-        full_name: string;
-        email: string | null;
-        phone: string | null;
-        picture_url: string | null;
-      }>();
+      const byId = new Map<
+        string,
+        {
+          id: string;
+          full_name: string;
+          email: string | null;
+          phone: string | null;
+          picture_url: string | null;
+        }
+      >();
 
       for (const row of junctionRows ?? []) {
-        const contact = (row as { contacts?: {
-          id?: string;
-          full_name?: string;
-          email?: string | null;
-          phone?: string | null;
-          picture_url?: string | null;
-        } | null }).contacts;
+        const contact = (
+          row as {
+            contacts?: {
+              id?: string;
+              full_name?: string;
+              email?: string | null;
+              phone?: string | null;
+              picture_url?: string | null;
+            } | null;
+          }
+        ).contacts;
         if (!contact?.id || !contact.full_name) continue;
         byId.set(contact.id, {
           id: contact.id,
@@ -964,7 +1177,11 @@ class ClientsService {
         });
       }
 
-      return { data: [...byId.values()].sort((a, b) => a.full_name.localeCompare(b.full_name)) };
+      return {
+        data: [...byId.values()].sort((a, b) =>
+          a.full_name.localeCompare(b.full_name),
+        ),
+      };
     }
 
     if (!isMissingRelationError(junctionError)) {
@@ -979,13 +1196,16 @@ class ClientsService {
 
     if (legacyError) throw legacyError;
 
-    const byId = new Map<string, {
-      id: string;
-      full_name: string;
-      email: string | null;
-      phone: string | null;
-      picture_url: string | null;
-    }>();
+    const byId = new Map<
+      string,
+      {
+        id: string;
+        full_name: string;
+        email: string | null;
+        phone: string | null;
+        picture_url: string | null;
+      }
+    >();
     for (const row of legacyRows ?? []) {
       const contact = row as {
         id: string;
@@ -1004,18 +1224,29 @@ class ClientsService {
   }
 
   async createWorkspaceContact(input: CreateWorkspaceContactInput) {
-    const user = await this.ensureUserAndPermission(input.accountId, 'clients.edit');
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'clients.edit',
+    );
 
     if (input.linkClientId) {
       await this.ensureClientInAccount(input.linkClientId, input.accountId);
     }
+
+    const names = resolveContactNameParts({
+      firstName: input.firstName,
+      lastName: input.lastName,
+      fullName: input.fullName,
+    });
 
     const { data: contact, error } = await this.adminDb
       .from('contacts')
       .insert({
         account_id: input.accountId,
         user_id: user.id,
-        full_name: input.fullName.trim(),
+        first_name: names.firstName,
+        last_name: names.lastName,
+        full_name: names.fullName,
         email: input.email ?? null,
         phone: input.phone ?? null,
       })
@@ -1031,7 +1262,7 @@ class ClientsService {
         .insert({
           user_id: user.id,
           client_id: input.linkClientId ?? null,
-          full_name: input.fullName.trim(),
+          full_name: names.fullName,
           email: input.email ?? null,
           phone: input.phone ?? null,
         })
@@ -1045,10 +1276,12 @@ class ClientsService {
     if (!contactRow?.id) throw new Error('Failed to create contact');
 
     if (input.linkClientId) {
-      const { error: linkError } = await this.adminDb.from('client_contacts').insert({
-        client_id: input.linkClientId,
-        contact_id: contactRow.id,
-      });
+      const { error: linkError } = await this.adminDb
+        .from('client_contacts')
+        .insert({
+          client_id: input.linkClientId,
+          contact_id: contactRow.id,
+        });
 
       if (linkError && !isMissingRelationError(linkError)) {
         throw mapClientWriteError(linkError);
