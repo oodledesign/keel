@@ -607,6 +607,23 @@ class InvoicesService {
       email: user.email ?? null,
     };
 
+    try {
+      const { data: settings } = await this.db
+        .from('user_settings')
+        .select('first_name, last_name')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (settings?.first_name || settings?.last_name) {
+        senderInfo.first_name =
+          (settings.first_name as string | null)?.trim() ||
+          senderInfo.first_name;
+        senderInfo.last_name =
+          (settings.last_name as string | null)?.trim() || senderInfo.last_name;
+      }
+    } catch {
+      // Fall back to auth metadata only.
+    }
+
     if (input.send_test_to_self) {
       const testEmail = user.email;
       if (!testEmail) throw new Error('No email on your account for test send');

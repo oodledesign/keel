@@ -105,6 +105,7 @@ export const INVOICE_SMART_FIELD_PILLS = [
   { token: '{{invoice.total}}', label: 'Total' },
   { token: '{{invoice.dueDate}}', label: 'Due date' },
   { token: '{{your.firstName}}', label: 'Your first name' },
+  { token: '{{your.lastName}}', label: 'Your last name' },
 ] as const;
 
 export const DEFAULT_INVOICE_EMAIL_SUBJECT =

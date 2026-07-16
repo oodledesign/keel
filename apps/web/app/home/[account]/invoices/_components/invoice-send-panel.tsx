@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   ArrowLeft,
@@ -32,7 +32,6 @@ import {
 } from '@kit/ui/popover';
 import { toast } from '@kit/ui/sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
-import { Textarea } from '@kit/ui/textarea';
 import {
   Tooltip,
   TooltipContent,
@@ -58,6 +57,10 @@ import {
   markInvoiceSentManually,
   sendInvoice,
 } from '../_lib/server/server-actions';
+import {
+  TokenTemplateField,
+  type TokenTemplateFieldHandle,
+} from './token-template-field';
 
 type Recipient = {
   id: string;
@@ -163,6 +166,7 @@ export function InvoiceSendPanel({
   defaultEmail,
   defaultRecipientName,
   client,
+  sender = null,
   initialSubject,
   initialBody,
   initialSignature,
@@ -182,6 +186,11 @@ export function InvoiceSendPanel({
   defaultEmail: string;
   defaultRecipientName?: string | null;
   client?: PreviewClient | null;
+  sender?: {
+    first_name?: string | null;
+    last_name?: string | null;
+    email?: string | null;
+  } | null;
   initialSubject?: string | null;
   initialBody?: string | null;
   initialSignature?: string | null;
@@ -210,6 +219,12 @@ export function InvoiceSendPanel({
   const [signature, setSignature] = useState(
     initialSignature ?? DEFAULT_INVOICE_EMAIL_SIGNATURE,
   );
+  const [activeField, setActiveField] = useState<
+    'subject' | 'body' | 'signature'
+  >('body');
+  const subjectRef = useRef<TokenTemplateFieldHandle>(null);
+  const bodyRef = useRef<TokenTemplateFieldHandle>(null);
+  const signatureRef = useRef<TokenTemplateFieldHandle>(null);
   const [portalUrl, setPortalUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState<
     'send' | 'test' | 'link' | 'pdf' | null
@@ -368,61 +383,42 @@ export function InvoiceSendPanel({
     }
   };
 
-  const insertField = (
-    field: string,
-    target: 'body' | 'subject' | 'signature',
-  ) => {
-    const setter =
-      target === 'body'
-        ? setBody
-        : target === 'subject'
-          ? setSubject
-          : setSignature;
-    setter(
-      (prev) =>
-        `${prev}${prev.endsWith(' ') || prev.length === 0 ? '' : ' '}${field}`,
-    );
+  const insertField = (field: string) => {
+    const target =
+      activeField === 'subject'
+        ? subjectRef
+        : activeField === 'signature'
+          ? signatureRef
+          : bodyRef;
+    target.current?.insertToken(field);
   };
 
   const previewContact = primaryRecipient
     ? {
-        first_name: primaryRecipient.name.split(/\s+/)[0] ?? primaryRecipient.name,
-        last_name: primaryRecipient.name.split(/\s+/).slice(1).join(' ') || null,
+        first_name:
+          primaryRecipient.name.split(/\s+/)[0] ?? primaryRecipient.name,
+        last_name:
+          primaryRecipient.name.split(/\s+/).slice(1).join(' ') || null,
         full_name: primaryRecipient.name,
         email: primaryRecipient.email,
       }
     : null;
 
-  const previewSubject = renderSmartFields(subject, {
+  const smartPreviewCtx = {
     client,
     contact: previewContact,
+    sender,
     invoice: {
       invoice_number: invoiceNumber,
       total_pence: totalPence,
       due_at: dueAt ?? null,
       currency,
     },
-  });
-  const previewBody = renderSmartFields(body, {
-    client,
-    contact: previewContact,
-    invoice: {
-      invoice_number: invoiceNumber,
-      total_pence: totalPence,
-      due_at: dueAt ?? null,
-      currency,
-    },
-  });
-  const previewSignature = renderSmartFields(signature, {
-    client,
-    contact: previewContact,
-    invoice: {
-      invoice_number: invoiceNumber,
-      total_pence: totalPence,
-      due_at: dueAt ?? null,
-      currency,
-    },
-  });
+  };
+
+  const previewSubject = renderSmartFields(subject, smartPreviewCtx);
+  const previewBody = renderSmartFields(body, smartPreviewCtx);
+  const previewSignature = renderSmartFields(signature, smartPreviewCtx);
 
   const availableContacts = contacts.filter(
     (c) =>
@@ -587,32 +583,53 @@ export function InvoiceSendPanel({
 
           <div>
             <Label>Subject</Label>
-            <Input
+            <TokenTemplateField
+              ref={subjectRef}
+              aria-label="Email subject"
               value={subject}
-              onChange={(e) => setSubject(e.target.value)}
+              onChange={setSubject}
+              placeholder="Subject line"
+              onFocusCapture={() => setActiveField('subject')}
+              className="mt-1"
             />
           </div>
           <div>
             <Label>Body</Label>
-            <Textarea
-              rows={6}
+            <TokenTemplateField
+              ref={bodyRef}
+              aria-label="Email body"
               value={body}
-              onChange={(e) => setBody(e.target.value)}
+              onChange={setBody}
+              multiline
+              rows={6}
+              placeholder="Email body"
+              onFocusCapture={() => setActiveField('body')}
+              className="mt-1"
             />
           </div>
           <div>
             <Label>Signature</Label>
-            <Textarea
-              rows={3}
+            <TokenTemplateField
+              ref={signatureRef}
+              aria-label="Email signature"
               value={signature}
-              onChange={(e) => setSignature(e.target.value)}
+              onChange={setSignature}
+              multiline
+              rows={3}
+              placeholder="Signature"
+              onFocusCapture={() => setActiveField('signature')}
+              className="mt-1"
             />
           </div>
           <div className="space-y-2">
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              Insert token into body
+              Insert into{' '}
+              <span className="font-medium text-[var(--workspace-shell-text)]">
+                {activeField}
+              </span>
               <span className="ml-1 text-[10px]">
-                (contact = recipient person · client = CRM record)
+                (contact = recipient · client = CRM record · your = logged-in
+                sender)
               </span>
             </p>
             <div className="flex flex-wrap gap-2">
@@ -621,7 +638,7 @@ export function InvoiceSendPanel({
                   key={field.token}
                   label={field.label}
                   token={field.token}
-                  onInsert={() => insertField(field.token, 'body')}
+                  onInsert={() => insertField(field.token)}
                 />
               ))}
             </div>

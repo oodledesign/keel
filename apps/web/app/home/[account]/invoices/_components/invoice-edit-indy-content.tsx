@@ -188,6 +188,7 @@ export function InvoiceEditIndyContent({
   canManageInvoiceStatus,
   brandLogoUrl = null,
   brandName = null,
+  sender = null,
 }: {
   accountSlug: string;
   accountId: string;
@@ -196,6 +197,11 @@ export function InvoiceEditIndyContent({
   canManageInvoiceStatus: boolean;
   brandLogoUrl?: string | null;
   brandName?: string | null;
+  sender?: {
+    first_name?: string | null;
+    last_name?: string | null;
+    email?: string | null;
+  } | null;
 }) {
   const router = useRouter();
   const invoice = initialInvoice as unknown as InvoiceData;
@@ -966,6 +972,7 @@ export function InvoiceEditIndyContent({
               null
             }
             client={invoice.client}
+            sender={sender}
             initialSubject={emailSubject}
             initialBody={emailBody}
             initialSignature={emailSignature}
