@@ -45,6 +45,7 @@ import { ClientCombobox } from '~/home/[account]/jobs/_components/client-combobo
 import { listJobs } from '~/home/[account]/jobs/_lib/server/server-actions';
 
 import { getErrorMessage } from '../_lib/error-message';
+import { DEFAULT_INVOICE_FOOTER_MESSAGE } from '../_lib/invoice-smart-fields';
 import {
   type DepositType,
   type DiscountType,
@@ -119,6 +120,7 @@ type InvoiceData = {
   client: ClientInfo | null;
   preferred_send_email?: string | null;
   preferred_send_source?: string | null;
+  preferred_send_name?: string | null;
 };
 
 const STATUS_STEPS = [
@@ -239,7 +241,7 @@ export function InvoiceEditIndyContent({
   const [clientId, setClientId] = useState(invoice.client_id ?? '');
   const [notes, setNotes] = useState(invoice.notes ?? '');
   const [footerMessage, setFooterMessage] = useState(
-    invoice.footer_message ?? '',
+    invoice.footer_message ?? DEFAULT_INVOICE_FOOTER_MESSAGE,
   );
   const [privateNote, setPrivateNote] = useState(invoice.private_note ?? '');
 
@@ -949,9 +951,21 @@ export function InvoiceEditIndyContent({
           <InvoiceSendPanel
             accountId={accountId}
             invoiceId={invoice.id}
+            clientId={invoice.client_id}
             invoiceNumber={invoice.invoice_number}
             totalPence={totals.total_pence}
+            dueAt={invoice.due_at}
+            currency={invoice.currency}
             defaultEmail={defaultSendEmail}
+            defaultRecipientName={
+              invoice.preferred_send_name ??
+              invoice.client?.display_name ??
+              [invoice.client?.first_name, invoice.client?.last_name]
+                .filter(Boolean)
+                .join(' ') ??
+              null
+            }
+            client={invoice.client}
             initialSubject={emailSubject}
             initialBody={emailBody}
             initialSignature={emailSignature}

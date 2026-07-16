@@ -257,7 +257,7 @@ export function ClientForm({
             </p>
           ) : (
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              A company with people linked as contacts (primary, accountant,
+              A company with people linked as contacts (primary, finance,
               etc.).
             </p>
           )}
@@ -316,7 +316,7 @@ export function ClientForm({
             </p>
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">
               Used for proposals, contracts, and notifications. Mark someone as
-              Accountant later for invoice emails.
+              Finance later for invoice emails.
             </p>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

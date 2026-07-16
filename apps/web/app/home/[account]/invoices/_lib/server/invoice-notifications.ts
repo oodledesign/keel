@@ -242,6 +242,37 @@ export async function sendInvoiceIssuedEmail(params: {
       .maybeSingle(),
   ]);
 
+  const recipient = invoice.client_id
+    ? await resolveClientRecipientEmail(admin, invoice.client_id, {
+        purpose: 'invoice',
+        fallbackEmail: params.recipientEmail,
+      })
+    : null;
+
+  let contact: {
+    first_name?: string | null;
+    last_name?: string | null;
+    full_name?: string | null;
+    email?: string | null;
+  } | null = null;
+
+  if (recipient?.contactId) {
+    const { data: contactRow } = await admin
+      .from('contacts')
+      .select('first_name, last_name, full_name, email')
+      .eq('id', recipient.contactId)
+      .maybeSingle();
+    contact = contactRow ?? {
+      full_name: recipient.contactName,
+      email: recipient.email,
+    };
+  } else if (recipient?.contactName || recipient?.email) {
+    contact = {
+      full_name: recipient.contactName,
+      email: recipient.email,
+    };
+  }
+
   const portalInvoiceUrl = new URL(
     `/portal/invoices/${invoice.public_token}`,
     siteUrl,
@@ -249,6 +280,7 @@ export async function sendInvoiceIssuedEmail(params: {
 
   const smartCtx = {
     client,
+    contact,
     invoice,
     sender: params.sender ?? null,
     accountName: account?.name ?? productName,

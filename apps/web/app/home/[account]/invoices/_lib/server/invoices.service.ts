@@ -12,6 +12,7 @@ import {
   DEFAULT_INVOICE_EMAIL_BODY,
   DEFAULT_INVOICE_EMAIL_SIGNATURE,
   DEFAULT_INVOICE_EMAIL_SUBJECT,
+  DEFAULT_INVOICE_FOOTER_MESSAGE,
 } from '../invoice-smart-fields';
 import { computeInvoiceTotals } from '../invoice-totals';
 import type {
@@ -267,6 +268,7 @@ class InvoicesService {
       client,
       preferred_send_email: recipient.email,
       preferred_send_source: recipient.source,
+      preferred_send_name: recipient.contactName,
     };
   }
 
@@ -293,6 +295,7 @@ class InvoicesService {
         email_subject: DEFAULT_INVOICE_EMAIL_SUBJECT,
         email_body: DEFAULT_INVOICE_EMAIL_BODY,
         email_signature: DEFAULT_INVOICE_EMAIL_SIGNATURE,
+        footer_message: DEFAULT_INVOICE_FOOTER_MESSAGE,
         created_by: user.id,
       })
       .select()
@@ -632,6 +635,21 @@ class InvoicesService {
     if (invoice.status !== 'draft')
       throw new Error('Only draft invoices can be sent');
 
+    const recipientEmails = Array.from(
+      new Set(
+        [
+          ...(input.sent_to_emails ?? []),
+          ...(input.sent_to_email ? [input.sent_to_email] : []),
+        ]
+          .map((email) => email.trim().toLowerCase())
+          .filter(Boolean),
+      ),
+    );
+    if (recipientEmails.length === 0) {
+      throw new Error('At least one recipient email is required');
+    }
+    const primaryEmail = recipientEmails[0]!;
+
     let public_token = invoice.public_token;
     if (!public_token) {
       const { randomBytes } = await import('crypto');
@@ -646,7 +664,7 @@ class InvoicesService {
         status: 'sent',
         issued_at: now,
         sent_at: now,
-        sent_to_email: input.sent_to_email,
+        sent_to_email: primaryEmail,
       })
       .eq('id', input.invoiceId)
       .eq('account_id', input.accountId)
@@ -658,17 +676,22 @@ class InvoicesService {
       accountId: input.accountId,
       invoiceId: input.invoiceId,
       eventType: 'sent',
-      payload: { sent_to_email: input.sent_to_email },
+      payload: {
+        sent_to_email: primaryEmail,
+        sent_to_emails: recipientEmails,
+      },
       actorId: user.id,
     });
 
     try {
-      await sendInvoiceIssuedEmail({
-        accountId: input.accountId,
-        invoiceId: input.invoiceId,
-        recipientEmail: input.sent_to_email,
-        sender: senderInfo,
-      });
+      for (const recipientEmail of recipientEmails) {
+        await sendInvoiceIssuedEmail({
+          accountId: input.accountId,
+          invoiceId: input.invoiceId,
+          recipientEmail,
+          sender: senderInfo,
+        });
+      }
     } catch {
       // Keep the invoice in sent state even if email delivery fails.
     }

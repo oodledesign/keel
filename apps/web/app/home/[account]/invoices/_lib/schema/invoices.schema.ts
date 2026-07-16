@@ -113,15 +113,31 @@ export const GetInvoiceForPortalSchema = z.object({
   token: z.string().min(1, 'Token is required'),
 });
 
-export const SendInvoiceSchema = z.object({
-  accountId: z.string().uuid(),
-  invoiceId: z.string().uuid(),
-  sent_to_email: z.string().email('Valid email required'),
-  email_subject: optionalNullableString,
-  email_body: optionalNullableString,
-  email_signature: optionalNullableString,
-  send_test_to_self: z.boolean().optional(),
-});
+export const SendInvoiceSchema = z
+  .object({
+    accountId: z.string().uuid(),
+    invoiceId: z.string().uuid(),
+    sent_to_email: z.string().email('Valid email required').optional(),
+    sent_to_emails: z.array(z.string().email()).optional(),
+    email_subject: optionalNullableString,
+    email_body: optionalNullableString,
+    email_signature: optionalNullableString,
+    send_test_to_self: z.boolean().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.send_test_to_self) return;
+    const emails = [
+      ...(data.sent_to_emails ?? []),
+      ...(data.sent_to_email ? [data.sent_to_email] : []),
+    ];
+    if (emails.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'At least one recipient email is required',
+        path: ['sent_to_emails'],
+      });
+    }
+  });
 
 export const MarkInvoiceSentManuallySchema = z.object({
   accountId: z.string().uuid(),
@@ -165,7 +181,13 @@ export const UpsertRecurringSeriesSchema = z.object({
   client_id: z.string().uuid(),
   title: z.string().min(1),
   currency: z.string().default('gbp'),
-  frequency: z.enum(['weekly', 'fortnightly', 'monthly', 'quarterly', 'yearly']),
+  frequency: z.enum([
+    'weekly',
+    'fortnightly',
+    'monthly',
+    'quarterly',
+    'yearly',
+  ]),
   next_issue_at: z.string(),
   end_at: optionalNullableString,
   max_occurrences: z.number().int().min(1).nullable().optional(),
@@ -200,7 +222,9 @@ export type DeleteInvoiceInput = z.infer<typeof DeleteInvoiceSchema>;
 export type InvoiceItemInput = z.infer<typeof InvoiceItemSchema>;
 export type UpsertInvoiceItemsInput = z.infer<typeof UpsertInvoiceItemsSchema>;
 export type SetInvoiceStatusInput = z.infer<typeof SetInvoiceStatusSchema>;
-export type GetInvoiceForPortalInput = z.infer<typeof GetInvoiceForPortalSchema>;
+export type GetInvoiceForPortalInput = z.infer<
+  typeof GetInvoiceForPortalSchema
+>;
 export type SendInvoiceInput = z.infer<typeof SendInvoiceSchema>;
 export type MarkInvoiceSentManuallyInput = z.infer<
   typeof MarkInvoiceSentManuallySchema
@@ -208,4 +232,6 @@ export type MarkInvoiceSentManuallyInput = z.infer<
 export type CreateInvoiceCheckoutSessionByTokenInput = z.infer<
   typeof CreateInvoiceCheckoutSessionByTokenSchema
 >;
-export type GetInvoicePortalLinkInput = z.infer<typeof GetInvoicePortalLinkSchema>;
+export type GetInvoicePortalLinkInput = z.infer<
+  typeof GetInvoicePortalLinkSchema
+>;

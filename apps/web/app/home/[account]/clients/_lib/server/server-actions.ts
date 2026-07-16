@@ -26,6 +26,7 @@ import {
   SetPrimaryContactSchema,
   UpdateClientSchema,
   UpdateContactLinkSchema,
+  UpdateContactSchema,
 } from '../schema/clients.schema';
 import { createClientsService } from './clients.service';
 
@@ -179,6 +180,14 @@ export const updateContactLink = enhanceAction(
     return service.updateContactLink(input);
   },
   { schema: UpdateContactLinkSchema },
+);
+
+export const updateContact = enhanceAction(
+  async (input) => {
+    const service = getService();
+    return service.updateContact(input);
+  },
+  { schema: UpdateContactSchema },
 );
 
 export const listWorkspaceContacts = enhanceAction(

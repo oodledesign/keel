@@ -1,21 +1,23 @@
 /** Canonical contact roles for business clients (stored lowercase on client_contacts.role). */
 export const CONTACT_ROLE_PRESETS = [
-  'accountant',
+  'finance',
   'founder',
   'partner',
   'ops',
   'legal',
+  'marketing',
   'other',
 ] as const;
 
 export type ContactRolePreset = (typeof CONTACT_ROLE_PRESETS)[number];
 
 export const CONTACT_ROLE_LABELS: Record<ContactRolePreset, string> = {
-  accountant: 'Accountant',
+  finance: 'Finance',
   founder: 'Founder',
   partner: 'Partner',
   ops: 'Ops',
   legal: 'Legal',
+  marketing: 'Marketing',
   other: 'Other',
 };
 
@@ -24,19 +26,26 @@ export function normalizeContactRole(
 ): string | null {
   const trimmed = role?.trim();
   if (!trimmed) return null;
-  return trimmed.toLowerCase();
+  const normalized = trimmed.toLowerCase();
+  // Legacy preset renamed to finance.
+  if (normalized === 'accountant') return 'finance';
+  return normalized;
 }
 
-export function isAccountantRole(role: string | null | undefined): boolean {
+/** Prefer finance (and legacy accountant) contacts for invoice emails. */
+export function isFinanceRole(role: string | null | undefined): boolean {
   const normalized = normalizeContactRole(role);
   if (!normalized) return false;
   return (
-    normalized === 'accountant' ||
-    normalized.includes('accountant') ||
+    normalized === 'finance' ||
     normalized.includes('finance') ||
+    normalized.includes('accountant') ||
     normalized.includes('bookkeep')
   );
 }
+
+/** @deprecated Use isFinanceRole */
+export const isAccountantRole = isFinanceRole;
 
 export function formatContactRoleLabel(
   role: string | null | undefined,

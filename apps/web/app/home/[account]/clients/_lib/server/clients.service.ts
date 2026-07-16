@@ -41,6 +41,7 @@ import type {
   ListWorkspaceContactsInput,
   SetPrimaryContactInput,
   UpdateClientInput,
+  UpdateContactInput,
   UpdateContactLinkInput,
 } from '../schema/clients.schema';
 import { buildClientsOverview } from './clients-overview.builder';
@@ -992,6 +993,66 @@ class ClientsService {
       .eq('contact_id', input.contactId);
 
     if (error) throw mapClientWriteError(error);
+    return { ok: true as const };
+  }
+
+  async updateContact(input: UpdateContactInput) {
+    await this.ensureUserAndPermission(input.accountId, 'clients.edit');
+    await this.ensureClientInAccount(input.clientId, input.accountId);
+
+    const { data: link, error: linkLookupError } = await this.adminDb
+      .from('client_contacts')
+      .select('contact_id')
+      .eq('client_id', input.clientId)
+      .eq('contact_id', input.contactId)
+      .maybeSingle();
+
+    if (linkLookupError) throw linkLookupError;
+    if (!link) {
+      throw new Error('Contact is not linked to this client.');
+    }
+
+    const names = resolveContactNameParts({
+      firstName: input.firstName,
+      lastName: input.lastName,
+      fullName: input.fullName,
+    });
+
+    const contactPayload: Record<string, unknown> = {
+      first_name: names.firstName,
+      last_name: names.lastName,
+      full_name: names.fullName,
+      updated_at: new Date().toISOString(),
+    };
+    if (input.email !== undefined) contactPayload.email = input.email;
+    if (input.phone !== undefined) contactPayload.phone = input.phone;
+
+    const { error: contactError } = await this.adminDb
+      .from('contacts')
+      .update(contactPayload)
+      .eq('id', input.contactId)
+      .eq('account_id', input.accountId);
+
+    if (contactError && isMissingColumnError(contactError)) {
+      const { first_name: _f, last_name: _l, ...legacyPayload } = contactPayload;
+      const { error: legacyError } = await this.adminDb
+        .from('contacts')
+        .update(legacyPayload)
+        .eq('id', input.contactId);
+      if (legacyError) throw mapClientWriteError(legacyError);
+    } else if (contactError) {
+      throw mapClientWriteError(contactError);
+    }
+
+    if (input.role !== undefined) {
+      await this.updateContactLink({
+        accountId: input.accountId,
+        clientId: input.clientId,
+        contactId: input.contactId,
+        role: input.role,
+      });
+    }
+
     return { ok: true as const };
   }
 

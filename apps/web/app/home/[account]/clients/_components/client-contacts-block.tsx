@@ -7,6 +7,7 @@ import {
   ChevronsUpDown,
   Mail,
   MoreHorizontal,
+  Pencil,
   Phone,
   PlusCircle,
   Star,
@@ -39,6 +40,7 @@ import {
   CONTACT_ROLE_PRESETS,
   type ContactRolePreset,
   formatContactRoleLabel,
+  normalizeContactRole,
 } from '~/lib/clients/contact-roles';
 
 import {
@@ -48,6 +50,7 @@ import {
   listAccountContacts,
   listContacts,
   setPrimaryContact,
+  updateContact,
   updateContactLink,
 } from '../_lib/server/server-actions';
 import { ContactImageUploader } from './contact-image-uploader';
@@ -82,7 +85,10 @@ function RoleSelect({
   value: string;
   onChange: (value: string) => void;
 }) {
-  const isPreset = CONTACT_ROLE_PRESETS.includes(value as ContactRolePreset);
+  const normalized = normalizeContactRole(value) ?? '';
+  const isPreset = CONTACT_ROLE_PRESETS.includes(
+    normalized as ContactRolePreset,
+  );
   return (
     <div className="space-y-2">
       <Label htmlFor={id} className="text-xs">
@@ -90,7 +96,7 @@ function RoleSelect({
       </Label>
       <select
         id={id}
-        value={isPreset || !value ? value : 'other'}
+        value={isPreset || !normalized ? normalized : 'other'}
         onChange={(e) => onChange(e.target.value)}
         className="border-input bg-background h-8 w-full rounded-md border px-2 text-sm"
       >
@@ -101,7 +107,7 @@ function RoleSelect({
           </option>
         ))}
       </select>
-      {value === 'other' || (!isPreset && value) ? (
+      {normalized === 'other' || (!isPreset && normalized) ? (
         <Input
           value={!isPreset ? value : ''}
           onChange={(e) => onChange(e.target.value || 'other')}
@@ -442,6 +448,132 @@ function AddContactForm({
   );
 }
 
+function EditContactForm({
+  accountId,
+  clientId,
+  contact,
+  onSaved,
+  onCancel,
+}: {
+  accountId: string;
+  clientId: string;
+  contact: Contact;
+  onSaved: () => void;
+  onCancel: () => void;
+}) {
+  const [saving, setSaving] = useState(false);
+  const [firstName, setFirstName] = useState(
+    contact.first_name?.trim() ||
+      contact.full_name.trim().split(/\s+/)[0] ||
+      '',
+  );
+  const [lastName, setLastName] = useState(
+    contact.last_name?.trim() ||
+      contact.full_name.trim().split(/\s+/).slice(1).join(' ') ||
+      '',
+  );
+  const [email, setEmail] = useState(contact.email ?? '');
+  const [phone, setPhone] = useState(contact.phone ?? '');
+  const [role, setRole] = useState(contact.role ?? '');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!firstName.trim()) {
+      toast.error('First name is required');
+      return;
+    }
+    setSaving(true);
+    try {
+      await updateContact({
+        accountId,
+        clientId,
+        contactId: contact.id,
+        firstName: firstName.trim(),
+        lastName: lastName.trim() || null,
+        email: email.trim() || null,
+        phone: phone.trim() || null,
+        role: role.trim() || null,
+      });
+      toast.success('Contact updated');
+      onSaved();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update contact');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4"
+    >
+      <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+        Edit contact
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-2">
+          <Label htmlFor="edit_contact_first_name" className="text-xs">
+            First name *
+          </Label>
+          <Input
+            id="edit_contact_first_name"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            className="h-8 text-sm"
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="edit_contact_last_name" className="text-xs">
+            Last name
+          </Label>
+          <Input
+            id="edit_contact_last_name"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            className="h-8 text-sm"
+          />
+        </div>
+      </div>
+      <RoleSelect id="edit_contact_role" value={role} onChange={setRole} />
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-2">
+          <Label htmlFor="edit_contact_email" className="text-xs">
+            Email
+          </Label>
+          <Input
+            id="edit_contact_email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="h-8 text-sm"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="edit_contact_phone" className="text-xs">
+            Phone
+          </Label>
+          <Input
+            id="edit_contact_phone"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="h-8 text-sm"
+          />
+        </div>
+      </div>
+      <div className="flex gap-2 pt-1">
+        <Button type="submit" size="sm" disabled={saving}>
+          {saving ? 'Saving…' : 'Save changes'}
+        </Button>
+        <Button type="button" size="sm" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 export function ClientContactsBlock({
   accountId,
   clientId,
@@ -454,6 +586,7 @@ export function ClientContactsBlock({
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingContactId, setEditingContactId] = useState<string | null>(null);
 
   const [editingCustomRoleId, setEditingCustomRoleId] = useState<string | null>(
     null,
@@ -649,13 +782,15 @@ export function ClientContactsBlock({
                         </div>
                       ) : (
                         <select
-                          value={
-                            CONTACT_ROLE_PRESETS.includes(
-                              (contact.role ?? '') as ContactRolePreset,
-                            ) || !contact.role
-                              ? (contact.role ?? '')
-                              : 'other'
-                          }
+                          value={(() => {
+                            const normalized =
+                              normalizeContactRole(contact.role) ?? '';
+                            return CONTACT_ROLE_PRESETS.includes(
+                              normalized as ContactRolePreset,
+                            ) || !normalized
+                              ? normalized
+                              : 'other';
+                          })()}
                           onChange={(e) => {
                             const next = e.target.value;
                             if (next === 'other') {
@@ -663,7 +798,8 @@ export function ClientContactsBlock({
                               setCustomRoleDraft(
                                 contact.role &&
                                   !CONTACT_ROLE_PRESETS.includes(
-                                    contact.role as ContactRolePreset,
+                                    (normalizeContactRole(contact.role) ??
+                                      '') as ContactRolePreset,
                                   )
                                   ? contact.role
                                   : '',
@@ -729,6 +865,15 @@ export function ClientContactsBlock({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setShowAddForm(false);
+                              setEditingContactId(contact.id);
+                            }}
+                          >
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
                           {!contact.is_primary && (
                             <DropdownMenuItem
                               onClick={() => handleSetPrimary(contact.id)}
@@ -755,6 +900,25 @@ export function ClientContactsBlock({
         </div>
       )}
 
+      {editingContactId &&
+        (() => {
+          const editing = contacts.find((c) => c.id === editingContactId);
+          if (!editing) return null;
+          return (
+            <EditContactForm
+              key={editing.id}
+              accountId={accountId}
+              clientId={clientId}
+              contact={editing}
+              onSaved={() => {
+                setEditingContactId(null);
+                fetchContacts();
+              }}
+              onCancel={() => setEditingContactId(null)}
+            />
+          );
+        })()}
+
       {showAddForm && (
         <AddContactForm
           accountId={accountId}
@@ -767,14 +931,17 @@ export function ClientContactsBlock({
         />
       )}
 
-      {canEdit && !showAddForm && (
+      {canEdit && !showAddForm && !editingContactId && (
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
             variant="outline"
             size="sm"
             className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-control-surface)] hover:text-[var(--workspace-shell-text)]"
-            onClick={() => setShowAddForm(true)}
+            onClick={() => {
+              setEditingContactId(null);
+              setShowAddForm(true);
+            }}
           >
             <PlusCircle className="mr-2 h-4 w-4" />
             Add contact

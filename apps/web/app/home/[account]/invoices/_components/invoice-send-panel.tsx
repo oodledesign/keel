@@ -1,44 +1,168 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { ArrowLeft, Copy, Download, Link2, Loader2, Send } from 'lucide-react';
+import {
+  ArrowLeft,
+  Copy,
+  Download,
+  Eye,
+  Link2,
+  Loader2,
+  Plus,
+  Send,
+  X,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Checkbox } from '@kit/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@kit/ui/dialog';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@kit/ui/popover';
+import { toast } from '@kit/ui/sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 import { Textarea } from '@kit/ui/textarea';
-import { toast } from '@kit/ui/sonner';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@kit/ui/tooltip';
+import { cn } from '@kit/ui/utils';
 
+import { listContacts } from '~/home/[account]/clients/_lib/server/server-actions';
+import { formatContactRoleLabel } from '~/lib/clients/contact-roles';
+
+import { getErrorMessage } from '../_lib/error-message';
 import {
   DEFAULT_INVOICE_EMAIL_BODY,
   DEFAULT_INVOICE_EMAIL_SIGNATURE,
   DEFAULT_INVOICE_EMAIL_SUBJECT,
+  INVOICE_SMART_FIELD_PILLS,
+  renderSmartFields,
 } from '../_lib/invoice-smart-fields';
 import { formatPence } from '../_lib/invoice-totals';
-import { getErrorMessage } from '../_lib/error-message';
 import {
   getInvoicePortalLink,
   markInvoiceSentManually,
   sendInvoice,
 } from '../_lib/server/server-actions';
 
-const SMART_FIELDS = [
-  '{{client.firstName}}',
-  '{{invoice.number}}',
-  '{{invoice.total}}',
-  '{{invoice.dueDate}}',
-  '{{your.firstName}}',
-];
+type Recipient = {
+  id: string;
+  email: string;
+  name: string;
+  role?: string | null;
+  source: 'contact' | 'custom';
+};
+
+type ClientContactOption = {
+  id: string;
+  full_name: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  email: string | null;
+  role: string | null;
+  is_primary: boolean;
+};
+
+type PreviewClient = {
+  first_name?: string | null;
+  last_name?: string | null;
+  display_name?: string | null;
+  company_name?: string | null;
+  email?: string | null;
+};
+
+function emailLooksValid(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function RecipientPill({
+  recipient,
+  onRemove,
+}: {
+  recipient: Recipient;
+  onRemove: () => void;
+}) {
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex max-w-full items-center gap-1 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] px-2.5 py-1 text-xs text-[var(--workspace-shell-text)]">
+            <span className="truncate font-medium">{recipient.name}</span>
+            <button
+              type="button"
+              onClick={onRemove}
+              className="rounded-full p-0.5 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-panel-hover)] hover:text-[var(--workspace-shell-text)]"
+              aria-label={`Remove ${recipient.name}`}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="text-xs">
+          {recipient.email}
+          {recipient.role
+            ? ` · ${formatContactRoleLabel(recipient.role)}`
+            : ''}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+function TokenPill({
+  label,
+  token,
+  onInsert,
+}: {
+  label: string;
+  token: string;
+  onInsert: () => void;
+}) {
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={onInsert}
+            className="rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] px-2.5 py-1 text-xs text-[var(--workspace-shell-text-muted)] transition-colors hover:border-[color:var(--ozer-accent)] hover:text-[var(--workspace-shell-text)]"
+          >
+            {label}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="font-mono text-xs">
+          {token}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
 
 export function InvoiceSendPanel({
   accountId,
   invoiceId,
+  clientId,
   invoiceNumber,
   totalPence,
+  dueAt,
+  currency = 'gbp',
   defaultEmail,
+  defaultRecipientName,
+  client,
   initialSubject,
   initialBody,
   initialSignature,
@@ -50,9 +174,14 @@ export function InvoiceSendPanel({
 }: {
   accountId: string;
   invoiceId: string;
+  clientId: string;
   invoiceNumber: string;
   totalPence: number;
+  dueAt?: string | null;
+  currency?: string;
   defaultEmail: string;
+  defaultRecipientName?: string | null;
+  client?: PreviewClient | null;
   initialSubject?: string | null;
   initialBody?: string | null;
   initialSignature?: string | null;
@@ -62,7 +191,18 @@ export function InvoiceSendPanel({
   onMarkedSent?: () => void;
   onClose: () => void;
 }) {
-  const [email, setEmail] = useState(defaultEmail);
+  const [recipients, setRecipients] = useState<Recipient[]>(() => {
+    const email = defaultEmail.trim();
+    if (!email) return [];
+    return [
+      {
+        id: `default-${email.toLowerCase()}`,
+        email,
+        name: defaultRecipientName?.trim() || email,
+        source: 'contact',
+      },
+    ];
+  });
   const [subject, setSubject] = useState(
     initialSubject ?? DEFAULT_INVOICE_EMAIL_SUBJECT,
   );
@@ -71,15 +211,65 @@ export function InvoiceSendPanel({
     initialSignature ?? DEFAULT_INVOICE_EMAIL_SIGNATURE,
   );
   const [portalUrl, setPortalUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState<'send' | 'test' | 'link' | 'pdf' | null>(
-    null,
-  );
+  const [loading, setLoading] = useState<
+    'send' | 'test' | 'link' | 'pdf' | null
+  >(null);
   const [markAsSent, setMarkAsSent] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [customEmail, setCustomEmail] = useState('');
+  const [contacts, setContacts] = useState<ClientContactOption[]>([]);
+  const [loadingContacts, setLoadingContacts] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const pdfHref = useMemo(() => {
     const base = `/api/invoices/pdf?invoiceId=${encodeURIComponent(invoiceId)}`;
     return pdfQuery ? `${base}&${pdfQuery}` : base;
   }, [invoiceId, pdfQuery]);
+
+  const recipientEmails = useMemo(
+    () => recipients.map((r) => r.email.trim()).filter(Boolean),
+    [recipients],
+  );
+
+  const primaryRecipient = recipients[0] ?? null;
+
+  const loadContacts = useCallback(async () => {
+    setLoadingContacts(true);
+    try {
+      const result = (await listContacts({ accountId, clientId })) as {
+        data?: ClientContactOption[];
+      };
+      setContacts(Array.isArray(result?.data) ? result.data : []);
+    } catch {
+      setContacts([]);
+    } finally {
+      setLoadingContacts(false);
+    }
+  }, [accountId, clientId]);
+
+  useEffect(() => {
+    if (!addOpen) return;
+    void loadContacts();
+  }, [addOpen, loadContacts]);
+
+  const addRecipient = (next: Recipient) => {
+    const email = next.email.trim().toLowerCase();
+    if (!emailLooksValid(email)) {
+      toast.error('Enter a valid email address');
+      return;
+    }
+    setRecipients((prev) => {
+      if (prev.some((r) => r.email.toLowerCase() === email)) {
+        toast.message('That recipient is already added');
+        return prev;
+      }
+      return [...prev, { ...next, email: next.email.trim(), id: next.id || email }];
+    });
+  };
+
+  const removeRecipient = (id: string) => {
+    setRecipients((prev) => prev.filter((r) => r.id !== id));
+  };
 
   const loadPortalLink = async () => {
     if (portalUrl) return portalUrl;
@@ -103,7 +293,7 @@ export function InvoiceSendPanel({
     await markInvoiceSentManually({
       accountId,
       invoiceId,
-      sent_to_email: email.trim() || null,
+      sent_to_email: recipientEmails[0] ?? null,
     });
     onMarkedSent?.();
     return true;
@@ -150,8 +340,8 @@ export function InvoiceSendPanel({
   };
 
   const handleSend = async (testOnly = false) => {
-    if (!email.trim() && !testOnly) {
-      toast.error('Recipient email is required');
+    if (!testOnly && recipientEmails.length === 0) {
+      toast.error('Add at least one recipient');
       return;
     }
     setLoading(testOnly ? 'test' : 'send');
@@ -159,14 +349,18 @@ export function InvoiceSendPanel({
       await sendInvoice({
         accountId,
         invoiceId,
-        sent_to_email: email.trim() || 'test@example.com',
+        sent_to_email: recipientEmails[0] ?? 'test@example.com',
+        sent_to_emails: testOnly ? undefined : recipientEmails,
         email_subject: subject,
         email_body: body,
         email_signature: signature,
         send_test_to_self: testOnly,
       });
       toast.success(testOnly ? 'Test email sent' : 'Invoice sent');
-      if (!testOnly) onSent();
+      if (!testOnly) {
+        setPreviewOpen(false);
+        onSent();
+      }
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -184,10 +378,59 @@ export function InvoiceSendPanel({
         : target === 'subject'
           ? setSubject
           : setSignature;
-    setter((prev) =>
-      `${prev}${prev.endsWith(' ') || prev.length === 0 ? '' : ' '}${field}`,
+    setter(
+      (prev) =>
+        `${prev}${prev.endsWith(' ') || prev.length === 0 ? '' : ' '}${field}`,
     );
   };
+
+  const previewContact = primaryRecipient
+    ? {
+        first_name: primaryRecipient.name.split(/\s+/)[0] ?? primaryRecipient.name,
+        last_name: primaryRecipient.name.split(/\s+/).slice(1).join(' ') || null,
+        full_name: primaryRecipient.name,
+        email: primaryRecipient.email,
+      }
+    : null;
+
+  const previewSubject = renderSmartFields(subject, {
+    client,
+    contact: previewContact,
+    invoice: {
+      invoice_number: invoiceNumber,
+      total_pence: totalPence,
+      due_at: dueAt ?? null,
+      currency,
+    },
+  });
+  const previewBody = renderSmartFields(body, {
+    client,
+    contact: previewContact,
+    invoice: {
+      invoice_number: invoiceNumber,
+      total_pence: totalPence,
+      due_at: dueAt ?? null,
+      currency,
+    },
+  });
+  const previewSignature = renderSmartFields(signature, {
+    client,
+    contact: previewContact,
+    invoice: {
+      invoice_number: invoiceNumber,
+      total_pence: totalPence,
+      due_at: dueAt ?? null,
+      currency,
+    },
+  });
+
+  const availableContacts = contacts.filter(
+    (c) =>
+      c.email?.trim() &&
+      !recipients.some(
+        (r) => r.email.toLowerCase() === c.email!.trim().toLowerCase(),
+      ),
+  );
 
   return (
     <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6">
@@ -214,14 +457,134 @@ export function InvoiceSendPanel({
         </TabsList>
 
         <TabsContent value="email" className="mt-4 space-y-4">
-          <div>
+          <div className="space-y-2">
             <Label>To</Label>
-            <Input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="client@example.com"
-            />
+            <div className="flex min-h-10 flex-wrap items-center gap-2 rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] px-2 py-1.5">
+              {recipients.map((recipient) => (
+                <RecipientPill
+                  key={recipient.id}
+                  recipient={recipient}
+                  onRemove={() => removeRecipient(recipient.id)}
+                />
+              ))}
+              <Popover open={addOpen} onOpenChange={setAddOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 gap-1 px-2 text-xs text-[var(--workspace-shell-text-muted)]"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  align="start"
+                  className="w-80 space-y-3 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-3"
+                >
+                  <div>
+                    <p className="mb-2 text-xs font-medium text-[var(--workspace-shell-text)]">
+                      Client contacts
+                    </p>
+                    {loadingContacts ? (
+                      <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                        Loading…
+                      </p>
+                    ) : availableContacts.length === 0 ? (
+                      <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                        No more contacts with email on this client.
+                      </p>
+                    ) : (
+                      <div className="max-h-40 space-y-1 overflow-y-auto">
+                        {availableContacts.map((contact) => (
+                          <button
+                            key={contact.id}
+                            type="button"
+                            className="flex w-full flex-col rounded-md px-2 py-1.5 text-left hover:bg-[var(--workspace-shell-panel-hover)]"
+                            onClick={() => {
+                              addRecipient({
+                                id: contact.id,
+                                email: contact.email!.trim(),
+                                name: contact.full_name,
+                                role: contact.role,
+                                source: 'contact',
+                              });
+                              setAddOpen(false);
+                            }}
+                          >
+                            <span className="text-sm text-[var(--workspace-shell-text)]">
+                              {contact.full_name}
+                            </span>
+                            <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+                              {contact.email}
+                              {contact.role
+                                ? ` · ${formatContactRoleLabel(contact.role)}`
+                                : ''}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2 border-t border-[color:var(--workspace-shell-border)] pt-3">
+                    <Label htmlFor="custom-recipient-email" className="text-xs">
+                      Or type an email
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="custom-recipient-email"
+                        type="email"
+                        value={customEmail}
+                        onChange={(e) => setCustomEmail(e.target.value)}
+                        placeholder="name@company.com"
+                        className="h-8 text-sm"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const email = customEmail.trim();
+                            if (!email) return;
+                            addRecipient({
+                              id: `custom-${email.toLowerCase()}`,
+                              email,
+                              name: email,
+                              source: 'custom',
+                            });
+                            setCustomEmail('');
+                            setAddOpen(false);
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="h-8"
+                        onClick={() => {
+                          const email = customEmail.trim();
+                          if (!email) return;
+                          addRecipient({
+                            id: `custom-${email.toLowerCase()}`,
+                            email,
+                            name: email,
+                            source: 'custom',
+                          });
+                          setCustomEmail('');
+                          setAddOpen(false);
+                        }}
+                      >
+                        Add
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+            <p className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+              Hover a recipient to see their email. Invoices go to all recipients
+              listed here.
+            </p>
           </div>
+
           <div>
             <Label>Subject</Label>
             <Input
@@ -245,51 +608,51 @@ export function InvoiceSendPanel({
               onChange={(e) => setSignature(e.target.value)}
             />
           </div>
-          <div className="flex flex-wrap gap-2">
-            {SMART_FIELDS.map((field) => (
-              <Button
-                key={field}
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => insertField(field, 'body')}
-              >
-                {field}
-              </Button>
-            ))}
-          </div>
-          <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-white/3 p-4 text-sm">
-            <p className="font-medium">Preview summary</p>
-            <p className="mt-2 text-muted-foreground">
-              Invoice {invoiceNumber} · {formatPence(totalPence)}
+          <div className="space-y-2">
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+              Insert token into body
+              <span className="ml-1 text-[10px]">
+                (contact = recipient person · client = CRM record)
+              </span>
             </p>
+            <div className="flex flex-wrap gap-2">
+              {INVOICE_SMART_FIELD_PILLS.map((field) => (
+                <TokenPill
+                  key={field.token}
+                  label={field.label}
+                  token={field.token}
+                  onInsert={() => insertField(field.token, 'body')}
+                />
+              ))}
+            </div>
           </div>
+
           <div className="flex flex-wrap gap-2">
             <Button
               className="bg-[var(--ozer-accent)] text-[#09111F]"
-              disabled={loading != null}
-              onClick={() => void handleSend(false)}
+              disabled={loading != null || recipientEmails.length === 0}
+              onClick={() => setPreviewOpen(true)}
             >
-              {loading === 'send' ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="mr-2 h-4 w-4" />
-              )}
-              Send invoice
+              <Eye className="mr-2 h-4 w-4" />
+              Preview and send
             </Button>
             <Button
               variant="outline"
               disabled={loading != null}
               onClick={() => void handleSend(true)}
             >
+              {loading === 'test' ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
               Send yourself a test
             </Button>
           </div>
         </TabsContent>
 
         <TabsContent value="link" className="mt-4 space-y-4">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Share this link with your client to view and pay the invoice.
+            Card payments via Stripe may incur a small processing fee.
           </p>
           {isDraft ? (
             <div className="flex items-center gap-2">
@@ -335,7 +698,7 @@ export function InvoiceSendPanel({
         </TabsContent>
 
         <TabsContent value="pdf" className="mt-4 space-y-3">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Draft PDFs include the due date, reference, and payment link when
             those fields are enabled in invoice settings.
           </p>
@@ -365,6 +728,67 @@ export function InvoiceSendPanel({
           </Button>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+          <DialogHeader>
+            <DialogTitle>Preview email</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+              To:{' '}
+              {recipients.map((r) => r.name).join(', ') || 'No recipients'}
+            </p>
+            <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-white p-4 text-[var(--ozer-text-on-light)] shadow-sm">
+              <p className="mb-3 text-base font-semibold">{previewSubject}</p>
+              <p className="whitespace-pre-wrap leading-relaxed">
+                {previewBody}
+              </p>
+              <div className="my-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm">
+                <p className="font-medium">Invoice {invoiceNumber}</p>
+                <p className="mt-1">Total: {formatPence(totalPence)}</p>
+                <p className="mt-1 text-zinc-600">
+                  Due date:{' '}
+                  {dueAt
+                    ? new Date(dueAt).toLocaleDateString('en-GB')
+                    : '—'}
+                </p>
+                <p className="mt-3 text-[var(--ozer-accent)] underline">
+                  View and pay invoice
+                </p>
+                <p className="mt-2 text-xs text-zinc-500">
+                  Paying online by card may incur a small processing fee.
+                </p>
+              </div>
+              <p className="whitespace-pre-wrap leading-relaxed text-zinc-700">
+                {previewSignature}
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPreviewOpen(false)}
+            >
+              Back to edit
+            </Button>
+            <Button
+              type="button"
+              className={cn('bg-[var(--ozer-accent)] text-[#09111F]')}
+              disabled={loading != null || recipientEmails.length === 0}
+              onClick={() => void handleSend(false)}
+            >
+              {loading === 'send' ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="mr-2 h-4 w-4" />
+              )}
+              Send invoice
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

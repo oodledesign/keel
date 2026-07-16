@@ -175,6 +175,36 @@ export const UpdateContactLinkSchema = z.object({
   role: optionalNullableString,
 });
 
+export const UpdateContactSchema = z
+  .object({
+    accountId: z.string().uuid(),
+    clientId: z.string().uuid(),
+    contactId: z.string().uuid(),
+    firstName: optionalString,
+    lastName: optionalNullableString,
+    fullName: optionalString,
+    email: z
+      .union([z.string().email(), z.literal(''), z.null()])
+      .optional()
+      .transform((value) => (value === '' || value === undefined ? null : value)),
+    phone: optionalNullableString,
+    role: optionalNullableString,
+  })
+  .superRefine((data, ctx) => {
+    const name = composeContactFullName({
+      firstName: data.firstName,
+      lastName: data.lastName,
+      fullName: data.fullName,
+    });
+    if (!name) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'First name is required',
+        path: ['firstName'],
+      });
+    }
+  });
+
 export const DeleteContactSchema = z.object({
   accountId: z.string().uuid(),
   clientId: z.string().uuid(),
@@ -228,6 +258,7 @@ export type CreateContactInput = z.infer<typeof CreateContactSchema>;
 export type LinkContactInput = z.infer<typeof LinkContactSchema>;
 export type SetPrimaryContactInput = z.infer<typeof SetPrimaryContactSchema>;
 export type UpdateContactLinkInput = z.infer<typeof UpdateContactLinkSchema>;
+export type UpdateContactInput = z.infer<typeof UpdateContactSchema>;
 export type DeleteContactInput = z.infer<typeof DeleteContactSchema>;
 export type ListWorkspaceContactsInput = z.infer<
   typeof ListWorkspaceContactsSchema

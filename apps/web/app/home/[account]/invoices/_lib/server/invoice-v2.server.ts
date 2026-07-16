@@ -4,16 +4,14 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import {
-  computeInvoiceTotals,
-  isInvoiceOverdue,
-} from '../invoice-totals';
-import {
   DEFAULT_INVOICE_EMAIL_BODY,
   DEFAULT_INVOICE_EMAIL_SIGNATURE,
   DEFAULT_INVOICE_EMAIL_SUBJECT,
+  DEFAULT_INVOICE_FOOTER_MESSAGE,
 } from '../invoice-smart-fields';
-import { createInvoicesService } from './invoices.service';
+import { computeInvoiceTotals, isInvoiceOverdue } from '../invoice-totals';
 import { sendInvoiceIssuedEmail } from './invoice-notifications';
+import { createInvoicesService } from './invoices.service';
 
 function db() {
   return getSupabaseServerClient() as any;
@@ -82,7 +80,9 @@ export async function getInvoiceSummary(
 
   const { data, error } = await client
     .from('invoices')
-    .select('status, total_pence, amount_paid_pence, issued_at, due_at, archived_at')
+    .select(
+      'status, total_pence, amount_paid_pence, issued_at, due_at, archived_at',
+    )
     .eq('account_id', accountId)
     .is('archived_at', null)
     .gte('issued_at', from.toISOString());
@@ -286,7 +286,9 @@ export async function recordInvoicePayment(input: {
   const admin = adminDb();
   const { data: invoice, error } = await admin
     .from('invoices')
-    .select('id, account_id, status, total_pence, amount_paid_pence, deposit_type, deposit_value')
+    .select(
+      'id, account_id, status, total_pence, amount_paid_pence, deposit_type, deposit_value',
+    )
     .eq('id', input.invoiceId)
     .eq('account_id', input.accountId)
     .single();
@@ -443,10 +445,11 @@ export async function processDueRecurringSeries() {
         deposit_value: template.deposit_value ?? 0,
         late_fee_type: template.late_fee_type ?? null,
         late_fee_value: template.late_fee_value ?? 0,
-        footer_message: template.footer_message ?? null,
+        footer_message: template.footer_message ?? DEFAULT_INVOICE_FOOTER_MESSAGE,
         email_subject: template.email_subject ?? DEFAULT_INVOICE_EMAIL_SUBJECT,
         email_body: template.email_body ?? DEFAULT_INVOICE_EMAIL_BODY,
-        email_signature: template.email_signature ?? DEFAULT_INVOICE_EMAIL_SIGNATURE,
+        email_signature:
+          template.email_signature ?? DEFAULT_INVOICE_EMAIL_SIGNATURE,
       })
       .eq('id', invoice.id);
 
@@ -469,10 +472,14 @@ export async function processDueRecurringSeries() {
       });
     }
 
-    const nextIssue = addFrequency(new Date(series.next_issue_at), series.frequency);
+    const nextIssue = addFrequency(
+      new Date(series.next_issue_at),
+      series.frequency,
+    );
     const occurrences = (series.occurrences_issued ?? 0) + 1;
     const ended =
-      (series.max_occurrences != null && occurrences >= series.max_occurrences) ||
+      (series.max_occurrences != null &&
+        occurrences >= series.max_occurrences) ||
       (series.end_at && nextIssue.toISOString() > series.end_at);
 
     await admin

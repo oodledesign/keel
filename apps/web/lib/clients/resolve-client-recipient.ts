@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { isAccountantRole } from './contact-roles';
+import { isFinanceRole } from './contact-roles';
 
 export type RecipientPurpose =
   | 'invoice'
@@ -13,7 +13,7 @@ export type ResolvedClientRecipient = {
   contactId: string | null;
   contactName: string | null;
   role: string | null;
-  source: 'accountant' | 'primary' | 'contact' | 'client' | 'fallback' | null;
+  source: 'finance' | 'primary' | 'contact' | 'client' | 'fallback' | null;
 };
 
 type ContactLinkRow = {
@@ -51,7 +51,7 @@ function withEmail(row: ContactLinkRow): boolean {
  * for a CRM client.
  *
  * Priority:
- * 1. Accountant contact (invoice purpose only)
+ * 1. Finance contact (invoice purpose only)
  * 2. Primary contact
  * 3. Any linked contact with an email
  * 4. clients.email
@@ -97,14 +97,14 @@ export async function resolveClientRecipientEmail(
   const withEmails = rows.filter(withEmail);
 
   if (purpose === 'invoice') {
-    const accountant = withEmails.find((row) => isAccountantRole(row.role));
-    if (accountant?.contacts?.email) {
+    const finance = withEmails.find((row) => isFinanceRole(row.role));
+    if (finance?.contacts?.email) {
       return {
-        email: accountant.contacts.email.trim(),
-        contactId: accountant.contacts.id ?? null,
-        contactName: contactDisplayName(accountant.contacts),
-        role: accountant.role ?? null,
-        source: 'accountant',
+        email: finance.contacts.email.trim(),
+        contactId: finance.contacts.id ?? null,
+        contactName: contactDisplayName(finance.contacts),
+        role: finance.role ?? null,
+        source: 'finance',
       };
     }
   }
