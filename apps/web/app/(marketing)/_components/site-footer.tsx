@@ -11,8 +11,8 @@ export function SiteFooter() {
       logo={<AppLogo className="w-[85px] md:w-[95px]" />}
       description={
         <p>
-          Ozer is the Workspace OS for freelancers and small agencies — your studio,
-          your life, one home. Flat pricing, data in the EU.
+          Ozer is the Workspace OS for freelancers and small agencies — your
+          studio, your life, one home. Flat pricing, data in the EU.
         </p>
       }
       copyright={
@@ -50,10 +50,16 @@ export function SiteFooter() {
           heading: 'Compare',
           links: [
             { href: '/compare', label: 'All comparisons' },
-            { href: '/compare/hellobonsai', label: 'Hello Bonsai alternatives' },
+            {
+              href: '/compare/hellobonsai',
+              label: 'Hello Bonsai alternatives',
+            },
             { href: '/compare/honeybook', label: 'HoneyBook alternatives' },
             { href: '/compare/withmoxie', label: 'Moxie alternatives' },
-            { href: '/compare/productive-io', label: 'Productive.io alternatives' },
+            {
+              href: '/compare/productive-io',
+              label: 'Productive.io alternatives',
+            },
           ],
         },
         {
@@ -62,6 +68,7 @@ export function SiteFooter() {
             { href: '/trust', label: 'Trust Centre' },
             { href: '/privacy-policy', label: 'Privacy policy' },
             { href: '/terms-of-service', label: 'Terms of service' },
+            { href: '/dpa', label: 'Data Processing Agreement' },
             { href: '/cookie-policy', label: 'Cookie policy' },
           ],
         },

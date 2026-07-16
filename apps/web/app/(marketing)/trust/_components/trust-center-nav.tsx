@@ -1,11 +1,10 @@
-'use client';
-
 import Link from 'next/link';
 
 import { cn } from '@kit/ui/utils';
 
 const SECTIONS = [
   { id: 'compliance', label: 'Compliance' },
+  { id: 'sub-processors', label: 'Sub-processors' },
   { id: 'infrastructure', label: 'Infrastructure' },
   { id: 'data-flow', label: 'Data flow' },
   { id: 'application-security', label: 'Application security' },
@@ -16,7 +15,10 @@ const SECTIONS = [
 
 export function TrustCenterNav({ className }: { className?: string }) {
   return (
-    <nav className={cn('flex flex-col gap-1', className)} aria-label="Trust Centre sections">
+    <nav
+      className={cn('flex flex-col gap-1', className)}
+      aria-label="Trust Centre sections"
+    >
       {SECTIONS.map((section) => (
         <Link
           key={section.id}
@@ -36,7 +38,7 @@ export function TrustCenterNav({ className }: { className?: string }) {
 export function TrustCenterMobileNav() {
   return (
     <nav
-      className="border-border/40 bg-[var(--ozer-cream-50)] dark:bg-[var(--ozer-plum-950)] sticky top-0 z-10 -mx-4 border-b px-4 py-3 lg:hidden"
+      className="border-border/40 sticky top-0 z-10 -mx-4 border-b bg-[var(--ozer-cream-50)] px-4 py-3 lg:hidden dark:bg-[var(--ozer-plum-950)]"
       aria-label="Trust Centre sections"
     >
       <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
