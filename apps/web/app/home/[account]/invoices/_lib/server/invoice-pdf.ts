@@ -2,9 +2,9 @@ import 'server-only';
 
 import {
   PDFDocument,
-  StandardFonts,
   type PDFFont,
   type PDFPage,
+  StandardFonts,
   rgb,
 } from 'pdf-lib';
 
@@ -271,8 +271,9 @@ function drawPayButton(
     width,
     height,
     color: COLORS.link,
+    // pdf-lib accepts borderRadius at runtime; types omit it.
     borderRadius: radius,
-  });
+  } as Parameters<PDFPage['drawRectangle']>[0]);
 
   const textWidth = fontBold.widthOfTextAtSize(label, fontSize);
   const textY = rectBottomY + (height - fontSize) / 2 + 1;
@@ -313,10 +314,8 @@ export async function buildInvoicePdf(
 
   const paymentFeeNote =
     showFooter && showPaymentLink && invoice.payment_url
-      ? (
-          invoice.footer_message?.trim() ||
-          'Paying online by card (Stripe payment link) may incur a small processing fee.'
-        )
+      ? invoice.footer_message?.trim() ||
+        'Paying online by card (Stripe payment link) may incur a small processing fee.'
       : null;
 
   const thankYouMessage = showFooter ? 'Thank you for your business.' : null;
@@ -359,7 +358,9 @@ export async function buildInvoicePdf(
   if (paymentLinkLines.length > 0) {
     paymentBlockHeight = Math.max(
       paymentBlockHeight,
-      42 +
+      // Online payment heading + button + url + optional fee note
+      14 +
+        42 +
         paymentLinkLines.length * 11 +
         (paymentFeeLines.length > 0 ? 6 + paymentFeeLines.length * 10 : 0),
     );
@@ -367,6 +368,7 @@ export async function buildInvoicePdf(
   if (bankDetailLines.length > 0) {
     paymentBlockHeight = Math.max(
       paymentBlockHeight,
+      // Bank transfer heading + detail lines
       14 + bankDetailLines.length * 12,
     );
   }
@@ -681,15 +683,7 @@ export async function buildInvoicePdf(
     y -= 14;
   }
 
-  drawRightText(
-    page,
-    'Total due',
-    totalsX,
-    y,
-    11,
-    fontBold,
-    COLORS.ink,
-  );
+  drawRightText(page, 'Total due', totalsX, y, 11, fontBold, COLORS.ink);
   y -= 18;
   drawRightText(
     page,
@@ -778,12 +772,22 @@ export async function buildInvoicePdf(
 
   if (paymentLinkLines.length > 0 && invoice.payment_url) {
     let payY = paymentTopY;
+    page.drawText('Online payment', {
+      x: MARGIN,
+      y: payY,
+      size: 10,
+      font: fontBold,
+      color: COLORS.ink,
+    });
+    payY -= 14;
+
+    const buttonWidth = Math.min(columnWidth, 180);
     const buttonHeight = drawPayButton(
       page,
       'Pay now online',
       MARGIN,
       payY,
-      Math.min(columnWidth, 180),
+      buttonWidth,
       fontBold,
     );
     payY -= buttonHeight;
@@ -799,16 +803,7 @@ export async function buildInvoicePdf(
     );
     if (paymentFeeLines.length > 0) {
       payY -= 4;
-      drawLines(
-        page,
-        paymentFeeLines,
-        MARGIN,
-        payY,
-        8,
-        font,
-        10,
-        COLORS.muted,
-      );
+      drawLines(page, paymentFeeLines, MARGIN, payY, 8, font, 10, COLORS.muted);
     }
   }
 

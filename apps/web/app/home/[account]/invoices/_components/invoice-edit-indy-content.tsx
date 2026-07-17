@@ -19,7 +19,6 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
-import { Checkbox } from '@kit/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -61,7 +60,6 @@ import {
 } from '../_lib/invoice-totals';
 import {
   getInvoicePortalLink,
-  markInvoiceSentManually,
   setInvoiceStatus,
   updateInvoice,
   upsertInvoiceItems,
@@ -236,7 +234,6 @@ export function InvoiceEditIndyContent({
     'months' | 'until_stopped'
   >('months');
   const [recurringMonths, setRecurringMonths] = useState('12');
-  const [markAsSentOnDownload, setMarkAsSentOnDownload] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [saving, setSaving] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
@@ -783,16 +780,6 @@ export function InvoiceEditIndyContent({
   const handleDownloadPdf = useCallback(async () => {
     setDownloadingPdf(true);
     try {
-      if (isDraft && markAsSentOnDownload) {
-        await markInvoiceSentManually({
-          accountId,
-          invoiceId: invoice.id,
-          sent_to_email: defaultSendEmail.trim() || null,
-        });
-        toast.success('Invoice marked as sent');
-        router.refresh();
-      }
-
       const href = `/api/invoices/pdf?invoiceId=${encodeURIComponent(invoice.id)}&${pdfQuery}`;
       const link = document.createElement('a');
       link.href = href;
@@ -805,16 +792,7 @@ export function InvoiceEditIndyContent({
     } finally {
       setDownloadingPdf(false);
     }
-  }, [
-    accountId,
-    defaultSendEmail,
-    invoice.id,
-    invoice.invoice_number,
-    isDraft,
-    markAsSentOnDownload,
-    pdfQuery,
-    router,
-  ]);
+  }, [invoice.id, invoice.invoice_number, pdfQuery]);
 
   const canvasClassName =
     'rounded-xl border border-[color:var(--ozer-border-on-light)] bg-white p-8 text-[var(--ozer-text-on-light)] shadow-sm';
@@ -867,23 +845,6 @@ export function InvoiceEditIndyContent({
                   ) : null}
                   Save
                 </Button>
-
-                {isDraft && canEditInvoices ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel-hover)]"
-                    onClick={() => {
-                      void (async () => {
-                        const saved = await handleSave();
-                        if (saved) setShowSendPanel(true);
-                      })();
-                    }}
-                  >
-                    <Send className="mr-2 h-4 w-4" />
-                    Invoice sending
-                  </Button>
-                ) : null}
 
                 {isDraft && canEditInvoices ? (
                   <Button
@@ -1713,24 +1674,6 @@ export function InvoiceEditIndyContent({
                 )}
                 {isDraft ? 'Download draft PDF' : 'Download PDF'}
               </Button>
-
-              {isDraft && canEditInvoices ? (
-                <div className="mt-2 flex items-center gap-2 px-1">
-                  <Checkbox
-                    id="mark-sent-download"
-                    checked={markAsSentOnDownload}
-                    onCheckedChange={(checked) =>
-                      setMarkAsSentOnDownload(checked === true)
-                    }
-                  />
-                  <Label
-                    htmlFor="mark-sent-download"
-                    className="text-xs font-normal text-[var(--workspace-shell-text-muted)]"
-                  >
-                    Mark as sent
-                  </Label>
-                </div>
-              ) : null}
 
               {canManageInvoiceStatus &&
               ['sent', 'read'].includes(invoice.status) ? (

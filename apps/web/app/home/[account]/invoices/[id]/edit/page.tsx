@@ -1,12 +1,10 @@
 import { notFound } from 'next/navigation';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
-import { AppBreadcrumbs } from '@kit/ui/app-breadcrumbs';
 import { PageBody } from '@kit/ui/page';
 
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 
-import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
 import { isWorkModuleEnabled } from '../../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard';
@@ -93,35 +91,25 @@ async function InvoiceEditPage({ params }: InvoiceEditPageProps) {
     null;
 
   return (
-    <>
-      <TeamAccountLayoutPageHeader
-        title={`Invoice ${invoice.invoice_number}`}
-        description={
-          <AppBreadcrumbs values={{ [id]: invoice.invoice_number }} />
+    <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
+      <InvoiceEditIndyContent
+        accountSlug={accountSlug}
+        accountId={accountId}
+        invoice={invoice as Record<string, unknown>}
+        canEditInvoices={canEditInvoices}
+        canManageInvoiceStatus={canManageInvoiceStatus}
+        brandLogoUrl={brand?.logo_url ?? null}
+        brandName={
+          (accountResult.data?.name as string | null | undefined)?.trim() ||
+          null
         }
-        account={accountSlug}
+        sender={{
+          first_name: senderFirst,
+          last_name: senderLast,
+          email: auth?.email ?? null,
+        }}
       />
-
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
-        <InvoiceEditIndyContent
-          accountSlug={accountSlug}
-          accountId={accountId}
-          invoice={invoice as Record<string, unknown>}
-          canEditInvoices={canEditInvoices}
-          canManageInvoiceStatus={canManageInvoiceStatus}
-          brandLogoUrl={brand?.logo_url ?? null}
-          brandName={
-            (accountResult.data?.name as string | null | undefined)?.trim() ||
-            null
-          }
-          sender={{
-            first_name: senderFirst,
-            last_name: senderLast,
-            email: auth?.email ?? null,
-          }}
-        />
-      </PageBody>
-    </>
+    </PageBody>
   );
 }
 
