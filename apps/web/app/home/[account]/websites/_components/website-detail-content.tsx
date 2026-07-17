@@ -292,7 +292,7 @@ export function WebsiteDetailContent({
               ) : null}
             </CardContent>
           </Card>
-        ) : null}
+        )}
 
         {showWebsiteMeta ? (
           <Card className="rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
