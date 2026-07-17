@@ -215,6 +215,51 @@ function drawLines(
   return y;
 }
 
+function drawRightLines(
+  page: PDFPage,
+  lines: string[],
+  xRight: number,
+  startY: number,
+  size: number,
+  font: PDFFont,
+  lineHeight: number,
+  color = COLORS.ink,
+) {
+  let y = startY;
+  for (const line of lines) {
+    drawRightText(page, line, xRight, y, size, font, color);
+    y -= lineHeight;
+  }
+  return y;
+}
+
+function drawPayButton(
+  page: PDFPage,
+  label: string,
+  x: number,
+  y: number,
+  width: number,
+  fontBold: PDFFont,
+) {
+  const height = 28;
+  page.drawRectangle({
+    x,
+    y: y - height + 6,
+    width,
+    height,
+    color: COLORS.link,
+  });
+  const textWidth = fontBold.widthOfTextAtSize(label, 10);
+  page.drawText(label, {
+    x: x + (width - textWidth) / 2,
+    y: y - height + 14,
+    size: 10,
+    font: fontBold,
+    color: rgb(1, 1, 1),
+  });
+  return height + 8;
+}
+
 export async function buildInvoicePdf(
   invoice: InvoiceForPdf,
 ): Promise<Uint8Array> {
@@ -227,11 +272,10 @@ export async function buildInvoicePdf(
   const currency = (invoice.currency || 'GBP').toUpperCase();
   const reference = invoice.reference_number?.trim() || invoice.invoice_number;
   const tableWidth = PAGE_WIDTH - MARGIN * 2;
-
-  const footerMessage =
-    showFooter && invoice.footer_message?.trim()
-      ? invoice.footer_message.trim()
-      : 'Thank you for your business.';
+  const columnGap = 24;
+  const columnWidth = (tableWidth - columnGap) / 2;
+  const rightColumnRight = PAGE_WIDTH - MARGIN;
+  const rightColumnX = MARGIN + columnWidth + columnGap;
 
   const businessLines = [
     invoice.brand_name?.trim() || null,
@@ -239,6 +283,16 @@ export async function buildInvoicePdf(
     invoice.business_phone?.trim() || null,
     invoice.business_website?.trim() || null,
   ].filter(Boolean) as string[];
+
+  const paymentFeeNote =
+    showFooter && showPaymentLink && invoice.payment_url
+      ? (
+          invoice.footer_message?.trim() ||
+          'Paying online by card (Stripe payment link) may incur a small processing fee.'
+        )
+      : null;
+
+  const thankYouMessage = showFooter ? 'Thank you for your business.' : null;
 
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
@@ -262,25 +316,39 @@ export async function buildInvoicePdf(
             `Reference: ${reference}`,
             invoice.bank.bank_transfer_instructions,
           ].filter(Boolean) as string[]
-        ).flatMap((line) => wrapText(line, font, 9, tableWidth))
+        ).flatMap((line) => wrapText(line, font, 9, columnWidth))
       : [];
 
   const paymentLinkLines =
     showPaymentLink && invoice.payment_url
-      ? wrapText(invoice.payment_url, font, 9, tableWidth)
+      ? wrapText(invoice.payment_url, font, 8, columnWidth)
       : [];
 
-  let minContentY = 28;
-  minContentY += 18;
-  minContentY += 22;
-  minContentY += businessLines.length * 13 + 16;
+  const paymentFeeLines = paymentFeeNote
+    ? wrapText(paymentFeeNote, font, 8, columnWidth)
+    : [];
+
+  let paymentBlockHeight = 0;
   if (paymentLinkLines.length > 0) {
-    minContentY += 16 + paymentLinkLines.length * 12 + 16;
+    paymentBlockHeight = Math.max(
+      paymentBlockHeight,
+      36 +
+        paymentLinkLines.length * 11 +
+        (paymentFeeLines.length > 0 ? 6 + paymentFeeLines.length * 10 : 0),
+    );
   }
   if (bankDetailLines.length > 0) {
-    minContentY += 14 + bankDetailLines.length * 12 + 16;
+    paymentBlockHeight = Math.max(
+      paymentBlockHeight,
+      14 + bankDetailLines.length * 12,
+    );
   }
-  minContentY += 12;
+
+  let minContentY = 28 + 14;
+  if (thankYouMessage) {
+    minContentY += 18;
+  }
+  minContentY += paymentBlockHeight + 16;
   const page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
 
   const logo = showLogo ? await embedLogo(doc, invoice.logo_url) : null;
@@ -360,16 +428,38 @@ export async function buildInvoicePdf(
   }
 
   const headerBottom = Math.min(headerTop - 58, metaY);
-  let y = headerBottom - 48;
+  const partyRowY = headerBottom - 48;
 
-  page.drawText('Billed to:', {
+  page.drawText('From:', {
     x: MARGIN,
-    y,
+    y: partyRowY,
     size: 10,
     font: fontBold,
     color: COLORS.muted,
   });
-  y -= 18;
+  drawRightText(
+    page,
+    'Billed to:',
+    rightColumnRight,
+    partyRowY,
+    10,
+    fontBold,
+    COLORS.muted,
+  );
+
+  let leftPartyY = partyRowY - 18;
+  if (businessLines.length > 0) {
+    leftPartyY = drawLines(
+      page,
+      businessLines,
+      MARGIN,
+      leftPartyY,
+      10,
+      font,
+      14,
+      COLORS.ink,
+    );
+  }
 
   const clientLines: string[] = [];
   if (invoice.client) {
@@ -402,8 +492,21 @@ export async function buildInvoicePdf(
     }
   }
 
-  y = drawLines(page, clientLines, MARGIN, y, 10, font, 14, COLORS.ink);
-  y -= 28;
+  let rightPartyY = partyRowY - 18;
+  if (clientLines.length > 0) {
+    rightPartyY = drawRightLines(
+      page,
+      clientLines,
+      rightColumnRight,
+      rightPartyY,
+      10,
+      font,
+      14,
+      COLORS.ink,
+    );
+  }
+
+  let y = Math.min(leftPartyY, rightPartyY) - 28;
 
   const tableX = MARGIN;
   const colQty = tableX + tableWidth - 170;
@@ -611,71 +714,75 @@ export async function buildInvoicePdf(
   });
 
   bottomY += 18;
-  const thankYouWidth = font.widthOfTextAtSize(footerMessage, 10);
-  page.drawText(footerMessage, {
-    x: (PAGE_WIDTH - thankYouWidth) / 2,
-    y: bottomY,
-    size: 10,
-    font,
-    color: COLORS.muted,
-  });
 
-  bottomY += 22;
-  if (businessLines.length > 0) {
-    drawLines(
-      page,
-      businessLines,
-      MARGIN,
-      bottomY + (businessLines.length - 1) * 13,
-      10,
+  if (thankYouMessage) {
+    const thankYouWidth = font.widthOfTextAtSize(thankYouMessage, 10);
+    page.drawText(thankYouMessage, {
+      x: (PAGE_WIDTH - thankYouWidth) / 2,
+      y: bottomY,
+      size: 10,
       font,
-      13,
-      COLORS.ink,
-    );
-    bottomY += businessLines.length * 13 + 16;
+      color: COLORS.muted,
+    });
+    bottomY += 22;
   }
+
+  const paymentTopY = bottomY + paymentBlockHeight;
 
   if (bankDetailLines.length > 0) {
     page.drawText('Bank transfer', {
-      x: MARGIN,
-      y: bottomY,
+      x: rightColumnX,
+      y: paymentTopY,
       size: 10,
       font: fontBold,
       color: COLORS.ink,
     });
-    bottomY += 14;
     drawLines(
       page,
       bankDetailLines,
-      MARGIN,
-      bottomY + (bankDetailLines.length - 1) * 12,
+      rightColumnX,
+      paymentTopY - 14,
       9,
       font,
       12,
       COLORS.muted,
     );
-    bottomY += bankDetailLines.length * 12 + 16;
   }
 
-  if (paymentLinkLines.length > 0) {
-    page.drawText('Pay now online', {
-      x: MARGIN,
-      y: bottomY,
-      size: 11,
-      font: fontBold,
-      color: COLORS.ink,
-    });
-    bottomY += 16;
-    drawLines(
+  if (paymentLinkLines.length > 0 && invoice.payment_url) {
+    let payY = paymentTopY;
+    const buttonHeight = drawPayButton(
+      page,
+      'Pay now online',
+      MARGIN,
+      payY,
+      Math.min(columnWidth, 180),
+      fontBold,
+    );
+    payY -= buttonHeight;
+    payY = drawLines(
       page,
       paymentLinkLines,
       MARGIN,
-      bottomY + (paymentLinkLines.length - 1) * 12,
-      9,
+      payY,
+      8,
       font,
-      12,
+      11,
       COLORS.link,
     );
+    if (paymentFeeLines.length > 0) {
+      payY -= 4;
+      drawLines(
+        page,
+        paymentFeeLines,
+        MARGIN,
+        payY,
+        8,
+        font,
+        10,
+        COLORS.muted,
+      );
+    }
   }
 
   return doc.save();
