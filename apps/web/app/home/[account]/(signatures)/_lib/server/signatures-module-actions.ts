@@ -1,56 +1,70 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { isRedirectError } from 'next/dist/client/components/redirect-error';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { z } from 'zod';
+
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
-
-import { isRedirectError } from 'next/dist/client/components/redirect-error';
 
 import pathsConfig from '~/config/paths.config';
 import { isSignaturesModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
 import { loadAccountBranchById } from '~/lib/brand/account-branches';
+import { sendPlatformEmail } from '~/lib/server/send-platform-email';
+import { updateSignatureChangeRequestStatus } from '~/lib/signatures/change-requests';
 import {
-  disconnectGoogleWorkspace,
   connectGoogleWorkspace,
+  disconnectGoogleWorkspace,
 } from '~/lib/signatures/google-workspace';
+import { getSignaturesSupabaseClient } from '~/lib/signatures/graph';
+import { buildSignatureInstallEmail } from '~/lib/signatures/install-instructions';
 import {
   createIntegrationConnectInvite,
   integrationConnectUrl,
   revokeIntegrationConnectInvite,
 } from '~/lib/signatures/integration-invite';
-import { getSignaturesSupabaseClient } from '~/lib/signatures/graph';
-import { buildSignatureInstallEmail } from '~/lib/signatures/install-instructions';
 import { ensureSignaturePreviewShare } from '~/lib/signatures/preview-share';
 import {
   pushAllSignatures,
   pushSignatureToStaff,
   syncStaffForAccount,
 } from '~/lib/signatures/signatures-provider';
-import { sendPlatformEmail } from '~/lib/server/send-platform-email';
+import { findStaffByEmail } from '~/lib/signatures/staff-email';
+import {
+  isManualStaffSource,
+  isSyncedStaffSource,
+  normalizeStaffEmail,
+  staffSourceLabel,
+} from '~/lib/signatures/staff-source';
 
 import {
-  deleteSignatureAssetActionSchema,
-  disconnectM365ActionSchema,
+  bulkUpdateStaffActionSchema,
   connectGoogleWorkspaceActionSchema,
-  disconnectGoogleActionSchema,
   createIntegrationInviteActionSchema,
+  createManualStaffActionSchema,
   createSignaturePreviewShareActionSchema,
-  revokeIntegrationInviteActionSchema,
+  deleteManualStaffActionSchema,
+  deleteSignatureAssetActionSchema,
+  disconnectGoogleActionSchema,
+  disconnectM365ActionSchema,
+  importSignatureStaffActionSchema,
   pushAllActionSchema,
   pushStaffActionSchema,
+  revokeIntegrationInviteActionSchema,
   saveTemplateActionSchema,
   sendSignatureInstallInstructionsActionSchema,
   syncStaffActionSchema,
-  upsertSignatureAssetActionSchema,
-  updateStaffActionSchema,
   updateSignatureChangeRequestStatusActionSchema,
-  bulkUpdateStaffActionSchema,
+  updateStaffActionSchema,
+  upsertSignatureAssetActionSchema,
 } from '../schema/signatures-module.schema';
-import { updateSignatureChangeRequestStatus } from '~/lib/signatures/change-requests';
-import { uploadBadgeFromDataUrl, uploadPhotoFromDataUrl } from './signatures-data';
+import {
+  uploadBadgeFromDataUrl,
+  uploadPhotoFromDataUrl,
+} from './signatures-data';
 
 function workPath(template: string, accountSlug: string) {
   return template.replace('[account]', accountSlug);
@@ -110,11 +124,18 @@ async function assertSignaturesAdmin(accountId: string, userId: string) {
 
 export const syncSignaturesStaff = enhanceAction(
   async (input, user) => {
-    const { accountSlug } = await assertSignaturesAdmin(input.accountId, user.id);
+    const { accountSlug } = await assertSignaturesAdmin(
+      input.accountId,
+      user.id,
+    );
     const result = await syncStaffForAccount(input.accountId);
 
-    revalidatePath(workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug));
-    revalidatePath(workPath(pathsConfig.app.accountSignaturesStaff, accountSlug));
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug),
+    );
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesStaff, accountSlug),
+    );
     return result;
   },
   { schema: syncStaffActionSchema },
@@ -122,11 +143,18 @@ export const syncSignaturesStaff = enhanceAction(
 
 export const pushAllSignaturesAction = enhanceAction(
   async (input, user) => {
-    const { accountSlug } = await assertSignaturesAdmin(input.accountId, user.id);
+    const { accountSlug } = await assertSignaturesAdmin(
+      input.accountId,
+      user.id,
+    );
     const result = await pushAllSignatures(input.accountId, user.id);
 
-    revalidatePath(workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug));
-    revalidatePath(workPath(pathsConfig.app.accountSignaturesStaff, accountSlug));
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug),
+    );
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesStaff, accountSlug),
+    );
     return result;
   },
   { schema: pushAllActionSchema },
@@ -134,7 +162,10 @@ export const pushAllSignaturesAction = enhanceAction(
 
 export const pushStaffSignatureAction = enhanceAction(
   async (input, user) => {
-    const { accountSlug } = await assertSignaturesAdmin(input.accountId, user.id);
+    const { accountSlug } = await assertSignaturesAdmin(
+      input.accountId,
+      user.id,
+    );
     const db = getSignaturesSupabaseClient();
     const { data: staff } = await db
       .from('staff')
@@ -149,8 +180,12 @@ export const pushStaffSignatureAction = enhanceAction(
 
     const result = await pushSignatureToStaff(input.staffId);
 
-    revalidatePath(workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug));
-    revalidatePath(workPath(pathsConfig.app.accountSignaturesStaff, accountSlug));
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug),
+    );
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesStaff, accountSlug),
+    );
     revalidatePath(staffDetailPath(accountSlug, input.staffId));
     return result;
   },
@@ -159,38 +194,73 @@ export const pushStaffSignatureAction = enhanceAction(
 
 export const updateSignatureStaff = enhanceAction(
   async (input, user) => {
-    const { accountSlug } = await assertSignaturesAdmin(input.accountId, user.id);
+    const { accountSlug } = await assertSignaturesAdmin(
+      input.accountId,
+      user.id,
+    );
     const db = getSignaturesSupabaseClient();
 
+    const { data: existingStaff, error: existingError } = await db
+      .from('staff')
+      .select('id, source')
+      .eq('id', input.staffId)
+      .eq('account_id', input.accountId)
+      .maybeSingle();
+
+    if (existingError) {
+      throw new Error(existingError.message);
+    }
+    if (!existingStaff) {
+      throw new Error('Staff member not found');
+    }
+
+    const source = existingStaff.source as string;
+    const manualEntry = isManualStaffSource(source);
+
     let photoUrl: string | null | undefined;
-    if (input.photoDataUrl) {
+    if (input.photoDataUrl && manualEntry) {
       photoUrl = await uploadPhotoFromDataUrl(
         input.accountId,
         input.staffId,
         input.photoDataUrl,
       );
+    } else if (input.photoDataUrl && isSyncedStaffSource(source)) {
+      throw new Error(
+        'Profile photos for synced staff are updated by directory sync.',
+      );
     }
 
     let branchName: string | null = null;
     if (input.branch_id) {
-      const branch = await loadAccountBranchById(input.accountId, input.branch_id);
+      const branch = await loadAccountBranchById(
+        input.accountId,
+        input.branch_id,
+      );
       if (!branch) {
         throw new Error('Branch not found');
       }
       branchName = branch.name;
     }
 
-    const update = {
-      full_name: input.full_name,
-      job_title: input.job_title,
-      department: input.department,
-      phone_direct: input.phone_direct,
-      phone_mobile: input.phone_mobile,
-      branch_id: input.branch_id ?? null,
-      branch: branchName,
-      signature_email: input.signature_email,
-      ...(photoUrl ? { photo_url: photoUrl } : {}),
-    };
+    const update = manualEntry
+      ? {
+          full_name: input.full_name,
+          job_title: input.job_title,
+          department: input.department,
+          phone_direct: input.phone_direct,
+          phone_mobile: input.phone_mobile,
+          branch_id: input.branch_id ?? null,
+          branch: branchName,
+          signature_email: input.signature_email,
+          ...(photoUrl ? { photo_url: photoUrl } : {}),
+        }
+      : {
+          branch_id: input.branch_id ?? null,
+          branch: branchName,
+          signature_email: input.signature_email,
+          phone_direct: input.phone_direct,
+          phone_mobile: input.phone_mobile,
+        };
 
     const { data: staff, error } = await db
       .from('staff')
@@ -231,8 +301,12 @@ export const updateSignatureStaff = enhanceAction(
       }
     }
 
-    revalidatePath(workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug));
-    revalidatePath(workPath(pathsConfig.app.accountSignaturesStaff, accountSlug));
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug),
+    );
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesStaff, accountSlug),
+    );
     revalidatePath(staffDetailPath(accountSlug, input.staffId));
     return { ok: true as const };
   },
@@ -241,13 +315,36 @@ export const updateSignatureStaff = enhanceAction(
 
 export const bulkUpdateSignatureStaff = enhanceAction(
   async (input, user) => {
-    const { accountSlug } = await assertSignaturesAdmin(input.accountId, user.id);
+    const { accountSlug } = await assertSignaturesAdmin(
+      input.accountId,
+      user.id,
+    );
     const db = getSignaturesSupabaseClient();
+    const staffIds = input.rows.map((row) => row.staffId);
+    const { data: existingRows, error: existingError } = await db
+      .from('staff')
+      .select('id, source')
+      .eq('account_id', input.accountId)
+      .in('id', staffIds);
+
+    if (existingError) {
+      throw new Error(existingError.message);
+    }
+
+    const sourceById = new Map(
+      (existingRows ?? []).map((row) => [
+        row.id as string,
+        row.source as string,
+      ]),
+    );
 
     const branchCache = new Map<string, string>();
     for (const row of input.rows) {
       if (row.branch_id && !branchCache.has(row.branch_id)) {
-        const branch = await loadAccountBranchById(input.accountId, row.branch_id);
+        const branch = await loadAccountBranchById(
+          input.accountId,
+          row.branch_id,
+        );
         if (!branch) {
           throw new Error(`Branch not found for staff ${row.staffId}`);
         }
@@ -258,26 +355,49 @@ export const bulkUpdateSignatureStaff = enhanceAction(
     let updated = 0;
 
     for (const row of input.rows) {
+      const source = sourceById.get(row.staffId);
+      if (!source) {
+        throw new Error(`Staff member not found: ${row.staffId}`);
+      }
+
+      const manualEntry = isManualStaffSource(source);
+
       let photoUrl: string | null | undefined;
-      if (row.photoDataUrl) {
+      if (row.photoDataUrl && manualEntry) {
         photoUrl = await uploadPhotoFromDataUrl(
           input.accountId,
           row.staffId,
           row.photoDataUrl,
         );
+      } else if (row.photoDataUrl && isSyncedStaffSource(source)) {
+        throw new Error(
+          `Profile photos for synced staff (${row.staffId}) are updated by directory sync.`,
+        );
       }
 
-      const update = {
-        full_name: row.full_name,
-        job_title: row.job_title,
-        department: row.department,
-        phone_direct: row.phone_direct,
-        phone_mobile: row.phone_mobile,
-        branch_id: row.branch_id,
-        branch: row.branch_id ? (branchCache.get(row.branch_id) ?? null) : null,
-        signature_email: row.signature_email,
-        ...(photoUrl ? { photo_url: photoUrl } : {}),
-      };
+      const update = manualEntry
+        ? {
+            full_name: row.full_name,
+            job_title: row.job_title,
+            department: row.department,
+            phone_direct: row.phone_direct,
+            phone_mobile: row.phone_mobile,
+            branch_id: row.branch_id,
+            branch: row.branch_id
+              ? (branchCache.get(row.branch_id) ?? null)
+              : null,
+            signature_email: row.signature_email,
+            ...(photoUrl ? { photo_url: photoUrl } : {}),
+          }
+        : {
+            branch_id: row.branch_id,
+            branch: row.branch_id
+              ? (branchCache.get(row.branch_id) ?? null)
+              : null,
+            signature_email: row.signature_email,
+            phone_direct: row.phone_direct,
+            phone_mobile: row.phone_mobile,
+          };
 
       const { data: staff, error } = await db
         .from('staff')
@@ -321,8 +441,12 @@ export const bulkUpdateSignatureStaff = enhanceAction(
       updated += 1;
     }
 
-    revalidatePath(workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug));
-    revalidatePath(workPath(pathsConfig.app.accountSignaturesStaff, accountSlug));
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug),
+    );
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesStaff, accountSlug),
+    );
     return { ok: true as const, updated };
   },
   { schema: bulkUpdateStaffActionSchema },
@@ -330,7 +454,10 @@ export const bulkUpdateSignatureStaff = enhanceAction(
 
 export const saveSignatureTemplate = enhanceAction(
   async (input, user) => {
-    const { accountSlug } = await assertSignaturesAdmin(input.accountId, user.id);
+    const { accountSlug } = await assertSignaturesAdmin(
+      input.accountId,
+      user.id,
+    );
     const db = getSignaturesSupabaseClient();
 
     if (input.is_default) {
@@ -354,7 +481,9 @@ export const saveSignatureTemplate = enhanceAction(
       throw new Error(error.message);
     }
 
-    revalidatePath(workPath(pathsConfig.app.accountSignaturesTemplates, accountSlug));
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesTemplates, accountSlug),
+    );
     revalidatePath(templateDetailPath(accountSlug, input.templateId));
     return { ok: true as const };
   },
@@ -363,7 +492,10 @@ export const saveSignatureTemplate = enhanceAction(
 
 export const disconnectMicrosoft365 = enhanceAction(
   async (input, user) => {
-    const { accountSlug } = await assertSignaturesAdmin(input.accountId, user.id);
+    const { accountSlug } = await assertSignaturesAdmin(
+      input.accountId,
+      user.id,
+    );
     const db = getSignaturesSupabaseClient();
     const { error } = await db
       .from('ms_connections')
@@ -374,8 +506,12 @@ export const disconnectMicrosoft365 = enhanceAction(
       throw new Error(error.message);
     }
 
-    revalidatePath(workPath(pathsConfig.app.accountSignaturesSettings, accountSlug));
-    revalidatePath(workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug));
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesSettings, accountSlug),
+    );
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug),
+    );
     return { ok: true as const };
   },
   { schema: disconnectM365ActionSchema },
@@ -396,7 +532,10 @@ export type ConnectGoogleWorkspaceResult =
 const connectGoogleWorkspaceActionImpl = enhanceAction(
   async (input, user) => {
     try {
-      const { accountSlug } = await assertSignaturesAdmin(input.accountId, user.id);
+      const { accountSlug } = await assertSignaturesAdmin(
+        input.accountId,
+        user.id,
+      );
       await connectGoogleWorkspace({
         accountId: input.accountId,
         primaryDomain: input.primaryDomain,
@@ -404,12 +543,18 @@ const connectGoogleWorkspaceActionImpl = enhanceAction(
         connectedBy: user.id,
       });
 
-      revalidatePath(workPath(pathsConfig.app.accountSignaturesSettings, accountSlug));
+      revalidatePath(
+        workPath(pathsConfig.app.accountSignaturesSettings, accountSlug),
+      );
       revalidatePath(
         workPath(pathsConfig.app.accountSignaturesIntegrations, accountSlug),
       );
-      revalidatePath(workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug));
-      revalidatePath(workPath(pathsConfig.app.accountSignaturesStaff, accountSlug));
+      revalidatePath(
+        workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug),
+      );
+      revalidatePath(
+        workPath(pathsConfig.app.accountSignaturesStaff, accountSlug),
+      );
       return { ok: true as const };
     } catch (error) {
       return actionFailure(error, 'Failed to connect Google Workspace');
@@ -433,11 +578,18 @@ export async function connectGoogleWorkspaceAction(
 
 export const disconnectGoogleWorkspaceAction = enhanceAction(
   async (input, user) => {
-    const { accountSlug } = await assertSignaturesAdmin(input.accountId, user.id);
+    const { accountSlug } = await assertSignaturesAdmin(
+      input.accountId,
+      user.id,
+    );
     await disconnectGoogleWorkspace(input.accountId);
 
-    revalidatePath(workPath(pathsConfig.app.accountSignaturesSettings, accountSlug));
-    revalidatePath(workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug));
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesSettings, accountSlug),
+    );
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug),
+    );
     return { ok: true as const };
   },
   { schema: disconnectGoogleActionSchema },
@@ -445,7 +597,10 @@ export const disconnectGoogleWorkspaceAction = enhanceAction(
 
 export const upsertSignatureAssetAction = enhanceAction(
   async (input, user) => {
-    const { accountSlug } = await assertSignaturesAdmin(input.accountId, user.id);
+    const { accountSlug } = await assertSignaturesAdmin(
+      input.accountId,
+      user.id,
+    );
     const db = getSignaturesSupabaseClient();
 
     const scope = input.scope;
@@ -532,7 +687,10 @@ export const upsertSignatureAssetAction = enhanceAction(
 
 export const deleteSignatureAssetAction = enhanceAction(
   async (input, user) => {
-    const { accountSlug } = await assertSignaturesAdmin(input.accountId, user.id);
+    const { accountSlug } = await assertSignaturesAdmin(
+      input.accountId,
+      user.id,
+    );
     const db = getSignaturesSupabaseClient();
     const { error } = await db
       .from('signature_assets')
@@ -581,12 +739,17 @@ export const createSignaturesIntegrationInvite = enhanceAction(
 
 export const revokeSignaturesIntegrationInvite = enhanceAction(
   async (input, user) => {
-    const { accountSlug } = await assertSignaturesAdmin(input.accountId, user.id);
+    const { accountSlug } = await assertSignaturesAdmin(
+      input.accountId,
+      user.id,
+    );
     await revokeIntegrationConnectInvite({
       accountId: input.accountId,
       inviteId: input.inviteId,
     });
-    revalidatePath(workPath(pathsConfig.app.accountSignaturesSettings, accountSlug));
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesSettings, accountSlug),
+    );
     return { ok: true as const };
   },
   { schema: revokeIntegrationInviteActionSchema },
@@ -632,6 +795,7 @@ export const createSignaturePreviewShareAction = enhanceAction(
       templateId: input.templateId,
       staffId: input.staffId ?? null,
       createdBy: user.id,
+      view: input.view,
     });
   },
   { schema: createSignaturePreviewShareActionSchema },
@@ -769,4 +933,263 @@ export const updateSignatureChangeRequestStatusAction = enhanceAction(
     return { ok: true as const };
   },
   { schema: updateSignatureChangeRequestStatusActionSchema },
+);
+
+export const createManualSignatureStaff = enhanceAction(
+  async (input, user) => {
+    const { accountSlug } = await assertSignaturesAdmin(
+      input.accountId,
+      user.id,
+    );
+    const db = getSignaturesSupabaseClient();
+    const email = normalizeStaffEmail(input.email);
+    const existing = await findStaffByEmail(db, input.accountId, email);
+
+    if (existing?.id) {
+      if (isSyncedStaffSource(existing.source as string)) {
+        throw new Error(
+          `${email} already belongs to a ${staffSourceLabel(existing.source as 'microsoft' | 'google')} synced person. Directory sync owns that email.`,
+        );
+      }
+
+      throw new Error(`${email} is already in your staff list.`);
+    }
+
+    const { data: created, error } = await db
+      .from('staff')
+      .insert({
+        account_id: input.accountId,
+        email,
+        full_name: input.full_name,
+        job_title: input.job_title,
+        department: input.department,
+        phone_direct: input.phone_direct,
+        phone_mobile: input.phone_mobile,
+        branch: null,
+        signature_status: 'pending',
+        source: 'manual',
+      })
+      .select('id')
+      .single();
+
+    if (error || !created?.id) {
+      throw new Error(error?.message ?? 'Could not create staff member');
+    }
+
+    if (input.photoDataUrl) {
+      const photoUrl = await uploadPhotoFromDataUrl(
+        input.accountId,
+        created.id as string,
+        input.photoDataUrl,
+      );
+      const { error: photoError } = await db
+        .from('staff')
+        .update({ photo_url: photoUrl })
+        .eq('id', created.id)
+        .eq('account_id', input.accountId);
+
+      if (photoError) {
+        throw new Error(photoError.message);
+      }
+    }
+
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesStaff, accountSlug),
+    );
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug),
+    );
+
+    return { ok: true as const, staffId: created.id as string };
+  },
+  { schema: createManualStaffActionSchema },
+);
+
+export const deleteManualSignatureStaff = enhanceAction(
+  async (input, user) => {
+    const { accountSlug } = await assertSignaturesAdmin(
+      input.accountId,
+      user.id,
+    );
+    const db = getSignaturesSupabaseClient();
+
+    const { data: staff, error: loadError } = await db
+      .from('staff')
+      .select('id, source')
+      .eq('id', input.staffId)
+      .eq('account_id', input.accountId)
+      .maybeSingle();
+
+    if (loadError) {
+      throw new Error(loadError.message);
+    }
+    if (!staff) {
+      throw new Error('Staff member not found');
+    }
+    if (!isManualStaffSource(staff.source as string)) {
+      throw new Error(
+        'Only manually added or CSV-imported staff can be deleted in Ozer.',
+      );
+    }
+
+    const { error } = await db
+      .from('staff')
+      .delete()
+      .eq('id', input.staffId)
+      .eq('account_id', input.accountId);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesStaff, accountSlug),
+    );
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug),
+    );
+    revalidatePath(staffDetailPath(accountSlug, input.staffId));
+
+    return { ok: true as const };
+  },
+  { schema: deleteManualStaffActionSchema },
+);
+
+export type ImportSignatureStaffResult = {
+  imported: number;
+  updated: number;
+  skipped: number;
+  failures: Array<{ rowNumber: number; email: string; message: string }>;
+};
+
+export const importSignatureStaffFromCsv = enhanceAction(
+  async (input, user) => {
+    const { accountSlug } = await assertSignaturesAdmin(
+      input.accountId,
+      user.id,
+    );
+    const db = getSignaturesSupabaseClient();
+
+    const result: ImportSignatureStaffResult = {
+      imported: 0,
+      updated: 0,
+      skipped: 0,
+      failures: [],
+    };
+
+    const { data: existingStaff, error: existingLoadError } = await db
+      .from('staff')
+      .select('id, email, source')
+      .eq('account_id', input.accountId);
+
+    if (existingLoadError) {
+      throw new Error(existingLoadError.message);
+    }
+
+    const existingByEmail = new Map(
+      (existingStaff ?? []).map((row) => [
+        normalizeStaffEmail(row.email as string),
+        row,
+      ]),
+    );
+
+    for (const row of input.rows) {
+      try {
+        if (row.action === 'skip') {
+          result.skipped += 1;
+          continue;
+        }
+
+        const email = normalizeStaffEmail(row.email);
+        const existing = existingByEmail.get(email);
+
+        if (existing?.id) {
+          if (isSyncedStaffSource(existing.source as string)) {
+            result.failures.push({
+              rowNumber: row.rowNumber,
+              email,
+              message:
+                'This email belongs to a directory-synced person and cannot be changed by CSV import.',
+            });
+            continue;
+          }
+
+          if (row.action === 'update' || row.existingStaffId) {
+            const { error } = await db
+              .from('staff')
+              .update({
+                full_name: row.full_name,
+                job_title: row.job_title,
+                department: row.department,
+                phone_direct: row.phone_direct,
+                phone_mobile: row.phone_mobile,
+                source: 'csv',
+              })
+              .eq('id', existing.id as string)
+              .eq('account_id', input.accountId);
+
+            if (error) {
+              result.failures.push({
+                rowNumber: row.rowNumber,
+                email,
+                message: error.message,
+              });
+              continue;
+            }
+
+            result.updated += 1;
+            continue;
+          }
+
+          result.skipped += 1;
+          continue;
+        }
+
+        if (row.action !== 'insert') {
+          result.skipped += 1;
+          continue;
+        }
+
+        const { error } = await db.from('staff').insert({
+          account_id: input.accountId,
+          email,
+          full_name: row.full_name,
+          job_title: row.job_title,
+          department: row.department,
+          phone_direct: row.phone_direct,
+          phone_mobile: row.phone_mobile,
+          branch: null,
+          signature_status: 'pending',
+          source: 'csv',
+        });
+
+        if (error) {
+          result.failures.push({
+            rowNumber: row.rowNumber,
+            email,
+            message: error.message,
+          });
+          continue;
+        }
+
+        result.imported += 1;
+      } catch (error) {
+        result.failures.push({
+          rowNumber: row.rowNumber,
+          email: row.email,
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesStaff, accountSlug),
+    );
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug),
+    );
+
+    return result;
+  },
+  { schema: importSignatureStaffActionSchema },
 );

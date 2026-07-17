@@ -17,12 +17,17 @@ import 'server-only';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
-import { loadSignatureRenderOptions } from './render-context';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
+
+import { loadSignatureRenderOptions } from './render-context';
+import { type SignaturesStaffRow, renderTemplate } from './render-template';
+import { buildSyncConflictMessage, findStaffByEmail } from './staff-email';
 import {
-  renderTemplate,
-  type SignaturesStaffRow,
-} from './render-template';
+  type StaffSource,
+  type StaffSyncConflict,
+  type StaffSyncResult,
+  isManualStaffSource,
+} from './staff-source';
 
 export type { SignaturesStaffRow } from './render-template';
 export { renderTemplate } from './render-template';
@@ -110,7 +115,9 @@ export async function getMsAccessToken(accountId: string): Promise<string> {
 
   if (!res.ok || !json.access_token) {
     throw new Error(
-      json.error_description ?? json.error ?? 'Failed to obtain Microsoft access token',
+      json.error_description ??
+        json.error ??
+        'Failed to obtain Microsoft access token',
     );
   }
 
@@ -149,12 +156,13 @@ type GraphUser = {
  */
 export async function syncStaffFromM365(
   accountId: string,
-): Promise<{ synced: number; errors: string[] }> {
+): Promise<StaffSyncResult> {
   const token = await getMsAccessToken(accountId);
   const db = getSignaturesSupabaseClient();
   const admin = getSupabaseServerAdminClient();
 
   const errors: string[] = [];
+  const conflicts: StaffSyncConflict[] = [];
   let synced = 0;
 
   let nextUrl: string | null =
@@ -217,12 +225,19 @@ export async function syncStaffFromM365(
           }
         }
 
-        const { data: existing } = await db
-          .from('staff')
-          .select('id, signature_status, branch_id, signature_email')
-          .eq('account_id', accountId)
-          .eq('email', email)
-          .maybeSingle();
+        const existing = await findStaffByEmail(db, accountId, email);
+
+        if (existing?.id && isManualStaffSource(existing.source as string)) {
+          conflicts.push({
+            email,
+            existingSource: existing.source as StaffSource,
+            message: buildSyncConflictMessage(
+              email,
+              existing.source as StaffSource,
+            ),
+          });
+          continue;
+        }
 
         const baseRow = {
           account_id: accountId,
@@ -234,6 +249,7 @@ export async function syncStaffFromM365(
           phone_direct: phoneDirect,
           phone_mobile: phoneMobile,
           photo_url: photoUrl,
+          source: 'microsoft' as const,
         };
 
         if (existing?.id) {
@@ -241,10 +257,11 @@ export async function syncStaffFromM365(
             .from('staff')
             .update({
               ...baseRow,
-              branch_id: existing.branch_id ?? null,
-              signature_email: existing.signature_email ?? null,
+              branch_id: (existing.branch_id as string | null) ?? null,
+              signature_email:
+                (existing.signature_email as string | null) ?? null,
             })
-            .eq('id', existing.id);
+            .eq('id', existing.id as string);
 
           if (updErr) {
             errors.push(`${email}: ${updErr.message}`);
@@ -265,14 +282,12 @@ export async function syncStaffFromM365(
           }
         }
       } catch (e) {
-        errors.push(
-          `${email}: ${e instanceof Error ? e.message : String(e)}`,
-        );
+        errors.push(`${email}: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
   }
 
-  return { synced, errors };
+  return { synced, errors, conflicts };
 }
 
 async function fetchStaffTemplateRows(staffId: string): Promise<{

@@ -1,17 +1,18 @@
 import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
-
-import {
-  createMinimalSignatureDocument,
-  signatureBlocksToHtml,
-} from '~/lib/signatures/signature-blocks';
 
 import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '~/home/[account]/_lib/server/workspace-route-guard';
 import { getSignaturesSupabaseClient } from '~/lib/signatures/graph';
+import {
+  createMinimalSignatureDocument,
+  signatureBlocksToHtml,
+} from '~/lib/signatures/signature-blocks';
+import type { StaffSource } from '~/lib/signatures/staff-source';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 /** Simple two-column layout — kept for reference / migration copy-paste.
@@ -110,6 +111,8 @@ export type SignatureStaff = {
   id: string;
   account_id: string;
   ms_user_id: string | null;
+  google_user_id: string | null;
+  source: StaffSource;
   email: string;
   full_name: string | null;
   job_title: string | null;
@@ -241,7 +244,9 @@ export async function loadDepartments(accountId: string) {
     throw new Error(error.message);
   }
 
-  return [...new Set((data ?? []).map((row: any) => String(row.department).trim()))]
+  return [
+    ...new Set((data ?? []).map((row: any) => String(row.department).trim())),
+  ]
     .filter(Boolean)
     .sort((a: string, b: string) => a.localeCompare(b));
 }
@@ -282,8 +287,12 @@ export async function loadStaffRows(
 
   const rows = ((data ?? []) as SignatureStaff[]).map((row) => ({
     ...row,
-    branch_name: row.branch_id ? branchNameById.get(row.branch_id) ?? null : null,
-    branch: row.branch_id ? branchNameById.get(row.branch_id) ?? row.branch : row.branch,
+    branch_name: row.branch_id
+      ? (branchNameById.get(row.branch_id) ?? null)
+      : null,
+    branch: row.branch_id
+      ? (branchNameById.get(row.branch_id) ?? row.branch)
+      : row.branch,
   }));
 
   return decorateStaffWithTemplates(rows);
@@ -372,7 +381,9 @@ export async function loadStaffDetail(accountId: string, staffId: string) {
     return null;
   }
 
-  const [decorated] = await decorateStaffWithTemplates([staff as SignatureStaff]);
+  const [decorated] = await decorateStaffWithTemplates([
+    staff as SignatureStaff,
+  ]);
   if (!decorated) {
     return null;
   }
@@ -383,7 +394,10 @@ export async function loadStaffDetail(accountId: string, staffId: string) {
   return { staff: decorated, templates, branches };
 }
 
-export async function loadTemplateDetail(accountId: string, templateId: string) {
+export async function loadTemplateDetail(
+  accountId: string,
+  templateId: string,
+) {
   const { data, error } = await signaturesClient()
     .from('templates')
     .select('*')
@@ -416,7 +430,9 @@ export async function loadTemplatePreviewStaff(accountId: string) {
 
 export function getFilterOptions(staff: SignatureStaff[]) {
   return {
-    branches: [...new Set(staff.map((row) => row.branch).filter(Boolean))] as string[],
+    branches: [
+      ...new Set(staff.map((row) => row.branch).filter(Boolean)),
+    ] as string[],
     departments: [
       ...new Set(staff.map((row) => row.department).filter(Boolean)),
     ] as string[],
@@ -503,13 +519,14 @@ async function uploadSignaturesImageFromDataUrl(
     );
   }
 
-  const ext = mimeType === 'image/png'
-    ? 'png'
-    : mimeType === 'image/webp'
-      ? 'webp'
-      : mimeType === 'image/gif'
-        ? 'gif'
-        : 'jpg';
+  const ext =
+    mimeType === 'image/png'
+      ? 'png'
+      : mimeType === 'image/webp'
+        ? 'webp'
+        : mimeType === 'image/gif'
+          ? 'gif'
+          : 'jpg';
   const path = `${accountId}/${objectKey}.${ext}`;
   const bytes = Buffer.from(base64, 'base64');
 

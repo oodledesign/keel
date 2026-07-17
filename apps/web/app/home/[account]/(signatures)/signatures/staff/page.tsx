@@ -3,6 +3,7 @@ import { countOpenChangeRequestsByStaff } from '~/lib/signatures/change-requests
 
 import { ModuleDataSection } from '../../../_components/module-data-section';
 import { SignaturesStaffFilters } from '../../_components/signatures-staff-filters';
+import { SignaturesStaffToolbar } from '../../_components/signatures-staff-toolbar';
 import { SignaturesStaffViews } from '../../_components/signatures-staff-views';
 import {
   getFilterOptions,
@@ -43,8 +44,13 @@ export default async function SignaturesStaffPage({
     <div className="space-y-6">
       <ModuleDataSection
         title="Staff"
-        description="Bulk-edit staff like a spreadsheet, or open the list to push individual signatures."
+        description="Bulk-edit staff like a spreadsheet, add people manually, or import from CSV."
       >
+        <SignaturesStaffToolbar
+          accountId={accountId}
+          accountSlug={account}
+          staff={allStaff}
+        />
         <SignaturesStaffFilters
           branches={branches.map((b) => ({ id: b.id, name: b.name }))}
           departments={options.departments}

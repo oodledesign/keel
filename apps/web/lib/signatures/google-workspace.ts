@@ -1,19 +1,24 @@
 import 'server-only';
 
-import { createSign, createPrivateKey } from 'node:crypto';
+import { createPrivateKey, createSign } from 'node:crypto';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
-import { loadSignatureRenderOptions } from './render-context';
-import { getSignaturesSupabaseClient } from './graph';
 import {
   isMissingRelationError,
   logMissingRelation,
 } from '~/home/[account]/_lib/server/supabase-errors';
+
+import { getSignaturesSupabaseClient } from './graph';
+import { loadSignatureRenderOptions } from './render-context';
+import { type SignaturesStaffRow, renderTemplate } from './render-template';
+import { buildSyncConflictMessage, findStaffByEmail } from './staff-email';
 import {
-  renderTemplate,
-  type SignaturesStaffRow,
-} from './render-template';
+  type StaffSource,
+  type StaffSyncConflict,
+  type StaffSyncResult,
+  isManualStaffSource,
+} from './staff-source';
 import { sendSignatureConnectionCompletedEmail } from './sync-notifications';
 
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
@@ -51,7 +56,10 @@ function normalizePrivateKey(raw: string): string {
     key = key.slice(1, -1).trim();
   }
 
-  key = key.replace(/\\n/g, '\n').replace(/\\\\n/g, '\n').replace(/%0A/gi, '\n');
+  key = key
+    .replace(/\\n/g, '\n')
+    .replace(/\\\\n/g, '\n')
+    .replace(/%0A/gi, '\n');
   key = key.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
   if (key.includes('-----BEGIN') && !key.includes('\n')) {
@@ -97,7 +105,9 @@ function isOpenSslKeyError(err: unknown): boolean {
 const INVALID_GOOGLE_KEY_MESSAGE =
   'Google service account private key is invalid or malformed. In Vercel, paste the key with literal \\n between lines (not real line breaks), or set GOOGLE_SERVICE_ACCOUNT_JSON to the full JSON key file instead.';
 
-function loadServiceAccountPrivateKey(raw: string): ReturnType<typeof createPrivateKey> {
+function loadServiceAccountPrivateKey(
+  raw: string,
+): ReturnType<typeof createPrivateKey> {
   const normalized = normalizePrivateKey(raw);
   const candidates = [normalized, repairPem(normalized)];
 
@@ -114,7 +124,9 @@ function loadServiceAccountPrivateKey(raw: string): ReturnType<typeof createPriv
     throw new Error(INVALID_GOOGLE_KEY_MESSAGE);
   }
 
-  throw lastErr instanceof Error ? lastErr : new Error(INVALID_GOOGLE_KEY_MESSAGE);
+  throw lastErr instanceof Error
+    ? lastErr
+    : new Error(INVALID_GOOGLE_KEY_MESSAGE);
 }
 
 function parseServiceAccountCredentials(): ServiceAccountCredentials {
@@ -136,7 +148,10 @@ function parseServiceAccountCredentials(): ServiceAccountCredentials {
         'GOOGLE_SERVICE_ACCOUNT_JSON is missing client_email or private_key. Paste the full service account key file from Google Cloud.',
       );
     } catch (err) {
-      if (err instanceof Error && err.message.startsWith('GOOGLE_SERVICE_ACCOUNT_JSON')) {
+      if (
+        err instanceof Error &&
+        err.message.startsWith('GOOGLE_SERVICE_ACCOUNT_JSON')
+      ) {
         throw err;
       }
       throw new Error(
@@ -275,9 +290,7 @@ export async function testGoogleWorkspaceConnection(input: {
     throw new Error('Enter a valid delegated admin email');
   }
   if (!adminEmail.endsWith(`@${domain}`)) {
-    throw new Error(
-      `Delegated admin email must belong to ${domain}`,
-    );
+    throw new Error(`Delegated admin email must belong to ${domain}`);
   }
 
   const token = await getGoogleAccessToken(adminEmail, [DIRECTORY_SCOPE]);
@@ -355,7 +368,9 @@ export async function connectGoogleWorkspace(input: {
   return data as GoogleConnection;
 }
 
-export async function disconnectGoogleWorkspace(accountId: string): Promise<void> {
+export async function disconnectGoogleWorkspace(
+  accountId: string,
+): Promise<void> {
   const db = getSignaturesSupabaseClient();
   const { error } = await db
     .from('google_connections')
@@ -371,7 +386,11 @@ type DirectoryUser = {
   id?: string;
   primaryEmail?: string;
   name?: { fullName?: string };
-  organizations?: Array<{ title?: string; department?: string; primary?: boolean }>;
+  organizations?: Array<{
+    title?: string;
+    department?: string;
+    primary?: boolean;
+  }>;
   phones?: Array<{ value?: string; type?: string }>;
   thumbnailPhotoUrl?: string;
 };
@@ -390,10 +409,12 @@ function pickPhone(user: DirectoryUser, type: string): string | null {
 
 export async function syncStaffFromGoogleWorkspace(
   accountId: string,
-): Promise<{ synced: number; errors: string[] }> {
+): Promise<StaffSyncResult> {
   const connection = await loadGoogleConnection(accountId);
   if (!connection) {
-    throw new Error('No Google Workspace connection configured for this account');
+    throw new Error(
+      'No Google Workspace connection configured for this account',
+    );
   }
 
   const token = await getGoogleAccessToken(connection.delegated_admin_email, [
@@ -403,6 +424,7 @@ export async function syncStaffFromGoogleWorkspace(
   const admin = getSupabaseServerAdminClient();
 
   const errors: string[] = [];
+  const conflicts: StaffSyncConflict[] = [];
   let synced = 0;
   let pageToken: string | undefined;
 
@@ -468,6 +490,20 @@ export async function syncStaffFromGoogleWorkspace(
           }
         }
 
+        const existing = await findStaffByEmail(db, accountId, email);
+
+        if (existing?.id && isManualStaffSource(existing.source as string)) {
+          conflicts.push({
+            email,
+            existingSource: existing.source as StaffSource,
+            message: buildSyncConflictMessage(
+              email,
+              existing.source as StaffSource,
+            ),
+          });
+          continue;
+        }
+
         const baseRow = {
           account_id: accountId,
           google_user_id: user.id,
@@ -479,24 +515,19 @@ export async function syncStaffFromGoogleWorkspace(
           phone_direct: pickPhone(user, 'work'),
           phone_mobile: pickPhone(user, 'mobile'),
           photo_url: photoUrl,
+          source: 'google' as const,
         };
-
-        const { data: existing } = await db
-          .from('staff')
-          .select('id, branch_id, signature_email')
-          .eq('account_id', accountId)
-          .eq('email', email)
-          .maybeSingle();
 
         if (existing?.id) {
           const { error: updErr } = await db
             .from('staff')
             .update({
               ...baseRow,
-              branch_id: existing.branch_id ?? null,
-              signature_email: existing.signature_email ?? null,
+              branch_id: (existing.branch_id as string | null) ?? null,
+              signature_email:
+                (existing.signature_email as string | null) ?? null,
             })
-            .eq('id', existing.id);
+            .eq('id', existing.id as string);
           if (updErr) {
             errors.push(`${email}: ${updErr.message}`);
           } else {
@@ -522,7 +553,7 @@ export async function syncStaffFromGoogleWorkspace(
     pageToken = payload.nextPageToken;
   } while (pageToken);
 
-  return { synced, errors };
+  return { synced, errors, conflicts };
 }
 
 async function fetchStaffTemplateRows(staffId: string): Promise<{
@@ -627,7 +658,10 @@ export async function pushSignatureToGoogleStaff(
 
   const connection = await loadGoogleConnection(accountId);
   if (!connection) {
-    return { success: false, error: 'No Google Workspace connection configured' };
+    return {
+      success: false,
+      error: 'No Google Workspace connection configured',
+    };
   }
 
   if (!staff.email) {

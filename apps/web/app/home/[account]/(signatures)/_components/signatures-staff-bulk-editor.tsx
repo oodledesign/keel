@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
+
 import { useRouter } from 'next/navigation';
 
 import { Save, Table2 } from 'lucide-react';
@@ -19,12 +20,16 @@ import { cn } from '@kit/ui/utils';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import type { AccountBranch } from '~/lib/brand/account-branches';
+import {
+  isManualStaffSource,
+  staffSourceLabel,
+} from '~/lib/signatures/staff-source';
 
-import { bulkUpdateSignatureStaff } from '../_lib/server/signatures-module-actions';
 import type {
   SignatureStaff,
   SignatureTemplate,
 } from '../_lib/server/signatures-data';
+import { bulkUpdateSignatureStaff } from '../_lib/server/signatures-module-actions';
 
 const NO_TEMPLATE = '__none__';
 const NO_BRANCH = '__none__';
@@ -32,6 +37,7 @@ const MAX_PHOTO_EDGE_PX = 640;
 
 type DraftRow = {
   staffId: string;
+  source: SignatureStaff['source'];
   email: string;
   full_name: string;
   job_title: string;
@@ -82,6 +88,7 @@ async function fileToCompressedDataUrl(file: File): Promise<string> {
 function toDraft(staff: SignatureStaff): DraftRow {
   return {
     staffId: staff.id,
+    source: staff.source,
     email: staff.email,
     full_name: staff.full_name ?? '',
     job_title: staff.job_title ?? '',
@@ -102,16 +109,19 @@ function CellInput({
   onChange,
   className,
   placeholder,
+  disabled = false,
 }: {
   value: string;
   onChange: (value: string) => void;
   className?: string;
   placeholder?: string;
+  disabled?: boolean;
 }) {
   return (
     <Input
       value={value}
       placeholder={placeholder}
+      disabled={disabled}
       onChange={(event) => onChange(event.target.value)}
       className={cn(
         'h-9 min-w-[8rem] border-transparent bg-transparent px-2 shadow-none focus-visible:border-[color:var(--workspace-shell-border)] focus-visible:bg-[var(--ozer-surface-canvas)]',
@@ -184,7 +194,9 @@ export function SignaturesStaffBulkEditor({
           photoDataUrl: row.photoDataUrl,
         })),
       });
-      toast.success(`Saved ${result.updated} staff member${result.updated === 1 ? '' : 's'}`);
+      toast.success(
+        `Saved ${result.updated} staff member${result.updated === 1 ? '' : 's'}`,
+      );
       setRows((prev) =>
         prev.map((row) =>
           row.dirty
@@ -207,9 +219,9 @@ export function SignaturesStaffBulkEditor({
 
   if (!staff.length) {
     return (
-      <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-black/10 p-8 text-sm text-muted-foreground">
-        No staff synced yet. Connect Microsoft 365 or Google Workspace, then sync
-        staff.
+      <div className="text-muted-foreground rounded-2xl border border-[color:var(--workspace-shell-border)] bg-black/10 p-8 text-sm">
+        No staff yet. Sync from Microsoft 365 or Google Workspace, add people
+        manually, or import a CSV.
       </div>
     );
   }
@@ -217,11 +229,16 @@ export function SignaturesStaffBulkEditor({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="text-muted-foreground flex items-center gap-2 text-sm">
           <Table2 className="h-4 w-4 text-[var(--ozer-accent)]" />
-          Click any cell to edit. Photos upload on save with the rest of the row.
+          Profile fields are read-only for synced staff. Branch, template, and
+          phone overrides remain editable.
         </div>
-        <Button type="button" onClick={() => void saveAll()} disabled={saving || dirtyCount === 0}>
+        <Button
+          type="button"
+          onClick={() => void saveAll()}
+          disabled={saving || dirtyCount === 0}
+        >
           <Save className="mr-2 h-4 w-4" />
           {saving
             ? 'Saving…'
@@ -232,7 +249,7 @@ export function SignaturesStaffBulkEditor({
       </div>
 
       <div className="overflow-auto rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
-        <table className="min-w-[1100px] w-full border-collapse text-sm">
+        <table className="w-full min-w-[1100px] border-collapse text-sm">
           <thead className="sticky top-0 z-10 bg-[var(--workspace-shell-sidebar-accent)]">
             <tr className="border-b border-[color:var(--workspace-shell-border)] text-left">
               <th className="px-3 py-3 font-medium">Photo</th>
@@ -250,6 +267,7 @@ export function SignaturesStaffBulkEditor({
           <tbody>
             {rows.map((row) => {
               const photoSrc = row.photoDataUrl || row.photo_url;
+              const editableProfile = isManualStaffSource(row.source);
               return (
                 <tr
                   key={row.staffId}
@@ -259,55 +277,84 @@ export function SignaturesStaffBulkEditor({
                   )}
                 >
                   <td className="px-3 py-2">
-                    <button
-                      type="button"
-                      className="group relative h-12 w-12 overflow-hidden rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10"
-                      onClick={() => fileRefs.current[row.staffId]?.click()}
-                      title="Change photo"
-                    >
-                      {photoSrc ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={photoSrc}
-                          alt=""
-                          className="h-full w-full object-cover"
+                    {editableProfile ? (
+                      <>
+                        <button
+                          type="button"
+                          className="group relative h-12 w-12 overflow-hidden rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10"
+                          onClick={() => fileRefs.current[row.staffId]?.click()}
+                          title="Change photo"
+                        >
+                          {photoSrc ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={photoSrc}
+                              alt=""
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-muted-foreground text-[10px]">
+                              Add
+                            </span>
+                          )}
+                          <span className="absolute inset-0 hidden items-center justify-center bg-black/50 text-[10px] text-white group-hover:flex">
+                            Edit
+                          </span>
+                        </button>
+                        <input
+                          ref={(el) => {
+                            fileRefs.current[row.staffId] = el;
+                          }}
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          className="hidden"
+                          onChange={(event) => {
+                            void onPhoto(
+                              row.staffId,
+                              event.target.files?.[0] ?? null,
+                            );
+                            event.target.value = '';
+                          }}
                         />
-                      ) : (
-                        <span className="text-[10px] text-muted-foreground">Add</span>
-                      )}
-                      <span className="absolute inset-0 hidden items-center justify-center bg-black/50 text-[10px] text-white group-hover:flex">
-                        Edit
+                      </>
+                    ) : photoSrc ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={photoSrc}
+                        alt=""
+                        className="h-12 w-12 rounded-lg border border-[color:var(--workspace-shell-border)] object-cover"
+                      />
+                    ) : (
+                      <span className="text-muted-foreground text-[10px]">
+                        Synced
                       </span>
-                    </button>
-                    <input
-                      ref={(el) => {
-                        fileRefs.current[row.staffId] = el;
-                      }}
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      className="hidden"
-                      onChange={(event) => {
-                        void onPhoto(row.staffId, event.target.files?.[0] ?? null);
-                        event.target.value = '';
-                      }}
-                    />
+                    )}
                   </td>
                   <td className="px-1 py-1">
                     <CellInput
                       value={row.full_name}
-                      onChange={(value) => patchRow(row.staffId, { full_name: value })}
+                      disabled={!editableProfile}
+                      onChange={(value) =>
+                        patchRow(row.staffId, { full_name: value })
+                      }
                     />
                   </td>
                   <td className="px-1 py-1">
                     <CellInput
                       value={row.job_title}
-                      onChange={(value) => patchRow(row.staffId, { job_title: value })}
+                      disabled={!editableProfile}
+                      onChange={(value) =>
+                        patchRow(row.staffId, { job_title: value })
+                      }
                     />
                   </td>
                   <td className="px-1 py-1">
                     <CellInput
                       value={row.department}
-                      onChange={(value) => patchRow(row.staffId, { department: value })}
+                      disabled={!editableProfile}
+                      onChange={(value) =>
+                        patchRow(row.staffId, { department: value })
+                      }
                     />
                   </td>
                   <td className="px-1 py-1">
@@ -376,8 +423,9 @@ export function SignaturesStaffBulkEditor({
                       </SelectContent>
                     </Select>
                   </td>
-                  <td className="px-3 py-2 text-xs text-muted-foreground">
-                    {row.email}
+                  <td className="text-muted-foreground px-3 py-2 text-xs">
+                    <div>{row.email}</div>
+                    <div className="mt-0.5">{staffSourceLabel(row.source)}</div>
                   </td>
                 </tr>
               );

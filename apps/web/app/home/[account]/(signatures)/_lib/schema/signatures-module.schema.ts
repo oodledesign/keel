@@ -261,6 +261,8 @@ export const createSignaturePreviewShareActionSchema = z.object({
   accountId: z.string().uuid(),
   templateId: z.string().uuid(),
   staffId: z.string().uuid().nullable().optional(),
+  /** `preview` hides install instructions; `install` shows the full page. */
+  view: z.enum(['install', 'preview']).optional().default('install'),
 });
 
 export const sendSignatureInstallInstructionsActionSchema = z.object({
@@ -273,4 +275,57 @@ export const updateSignatureChangeRequestStatusActionSchema = z.object({
   accountId: z.string().uuid(),
   requestId: z.string().uuid(),
   status: z.enum(['resolved', 'dismissed']),
+});
+
+export const createManualStaffActionSchema = z.object({
+  accountId: z.string().uuid(),
+  email: z.string().trim().email('Enter a valid email address'),
+  full_name: z.string().trim().min(1, 'Name is required').max(200),
+  job_title: emptyToNull,
+  department: emptyToNull,
+  phone_direct: emptyToNull,
+  phone_mobile: emptyToNull,
+  photoDataUrl: z
+    .string()
+    .max(3_500_000, 'Photo is too large. Try a smaller image.')
+    .optional()
+    .nullable(),
+});
+
+export const deleteManualStaffActionSchema = z.object({
+  accountId: z.string().uuid(),
+  staffId: z.string().uuid(),
+});
+
+export const STAFF_IMPORT_FIELD_KEYS = [
+  'full_name',
+  'first_name',
+  'last_name',
+  'email',
+  'job_title',
+  'department',
+  'phone',
+  'phone_direct',
+  'mobile',
+  'phone_mobile',
+] as const;
+
+export type StaffImportFieldKey = (typeof STAFF_IMPORT_FIELD_KEYS)[number];
+export type StaffImportMappingValue = StaffImportFieldKey | '__skip__';
+
+export const staffImportRowActionSchema = z.object({
+  rowNumber: z.number().int().positive(),
+  email: z.string().trim().email(),
+  full_name: z.string().trim().min(1),
+  job_title: emptyToNull,
+  department: emptyToNull,
+  phone_direct: emptyToNull,
+  phone_mobile: emptyToNull,
+  action: z.enum(['insert', 'update', 'skip']),
+  existingStaffId: z.string().uuid().optional().nullable(),
+});
+
+export const importSignatureStaffActionSchema = z.object({
+  accountId: z.string().uuid(),
+  rows: z.array(staffImportRowActionSchema).min(1).max(1000),
 });

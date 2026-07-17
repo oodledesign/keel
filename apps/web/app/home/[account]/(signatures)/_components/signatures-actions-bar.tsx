@@ -1,7 +1,8 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+
+import { useRouter } from 'next/navigation';
 
 import { RefreshCw, Send } from 'lucide-react';
 
@@ -42,9 +43,18 @@ export function SignaturesActionsBar({
     setPending('sync');
     try {
       const result = await syncSignaturesStaff({ accountId });
-      toast.success(`Synced ${result.synced} staff member${result.synced === 1 ? '' : 's'}`);
+      toast.success(
+        `Synced ${result.synced} staff member${result.synced === 1 ? '' : 's'}`,
+      );
       if (result.errors.length) {
-        toast.warning(`${result.errors.length} sync issue${result.errors.length === 1 ? '' : 's'} recorded`);
+        toast.warning(
+          `${result.errors.length} sync issue${result.errors.length === 1 ? '' : 's'} recorded`,
+        );
+      }
+      if (result.conflicts?.length) {
+        toast.warning(
+          `${result.conflicts.length} manual or CSV ${result.conflicts.length === 1 ? 'person was' : 'people were'} left unchanged because directory sync must not overwrite them.`,
+        );
       }
       router.refresh();
     } catch (e) {
@@ -83,7 +93,7 @@ export function SignaturesActionsBar({
       }
     >
       {!compact && blocked ? (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           Connect Microsoft 365 or Google Workspace to sync staff and push
           signatures.
         </p>

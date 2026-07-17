@@ -35,6 +35,7 @@ export default async function SignatureStaffDetailPage({
     >
       <SignatureStaffEditor
         accountId={accountId}
+        accountSlug={account}
         staff={detail.staff}
         templates={detail.templates}
         branches={detail.branches}

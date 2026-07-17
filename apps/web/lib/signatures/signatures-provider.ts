@@ -15,6 +15,7 @@ import {
   pushSignatureToStaff as pushMicrosoftSignature,
   syncStaffFromM365,
 } from './graph';
+import type { StaffSyncResult } from './staff-source';
 import { sendSignatureSyncCompletedEmail } from './sync-notifications';
 
 export type SignaturesMailProvider = 'google' | 'microsoft' | null;
@@ -49,7 +50,7 @@ export async function isSignaturesMailConnected(
 
 export async function syncStaffForAccount(
   accountId: string,
-): Promise<{ synced: number; errors: string[] }> {
+): Promise<StaffSyncResult> {
   const provider = await getSignaturesMailProvider(accountId);
 
   if (provider !== 'google' && provider !== 'microsoft') {

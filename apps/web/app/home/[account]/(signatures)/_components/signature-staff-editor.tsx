@@ -33,12 +33,17 @@ import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import type { AccountBranch } from '~/lib/brand/account-branches';
 import type { SignatureChangeRequest } from '~/lib/signatures/change-request-fields';
 import { labelForChangeRequestField } from '~/lib/signatures/change-request-fields';
+import {
+  isManualStaffSource,
+  staffSourceLabel,
+} from '~/lib/signatures/staff-source';
 
 import type {
   SignatureStaff,
   SignatureTemplate,
 } from '../_lib/server/signatures-data';
 import {
+  deleteManualSignatureStaff,
   pushStaffSignatureAction,
   updateSignatureStaff,
 } from '../_lib/server/signatures-module-actions';
@@ -92,12 +97,14 @@ async function fileToCompressedDataUrl(file: File): Promise<string> {
 
 export function SignatureStaffEditor({
   accountId,
+  accountSlug,
   staff,
   templates,
   branches,
   openRequests = [],
 }: {
   accountId: string;
+  accountSlug: string;
   staff: SignatureStaff;
   templates: SignatureTemplate[];
   branches: AccountBranch[];
@@ -111,7 +118,9 @@ export function SignatureStaffEditor({
     return keys;
   }, [openRequests]);
   const router = useRouter();
+  const manualEntry = isManualStaffSource(staff.source);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [pushing, setPushing] = useState(false);
   const [processingPhoto, setProcessingPhoto] = useState(false);
   const [templateId, setTemplateId] = useState(
@@ -207,11 +216,69 @@ export function SignatureStaffEditor({
     }
   };
 
+  const remove = async () => {
+    setDeleting(true);
+    try {
+      await deleteManualSignatureStaff({
+        accountId,
+        staffId: staff.id,
+      });
+      toast.success('Person removed');
+      router.push(`/home/${accountSlug}/signatures/staff`);
+      router.refresh();
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
       <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-        <CardHeader>
-          <CardTitle>Edit staff member</CardTitle>
+        <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <div>
+            <CardTitle>Edit staff member</CardTitle>
+            <p className="text-muted-foreground mt-1 text-xs">
+              Source: {staffSourceLabel(staff.source)}
+              {!manualEntry
+                ? ' · profile fields sync from your directory; branch, template, and overrides remain editable here.'
+                : ' · fully editable in Ozer.'}
+            </p>
+          </div>
+          {manualEntry ? (
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={deleting || saving}
+                >
+                  {deleting ? 'Removing…' : 'Remove person'}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Remove this person?</DialogTitle>
+                  <DialogDescription>
+                    {staff.full_name ?? staff.email} will be removed from
+                    signatures. Their Outlook signature will not be changed
+                    automatically.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    disabled={deleting}
+                    onClick={() => void remove()}
+                  >
+                    {deleting ? 'Removing…' : 'Remove person'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          ) : null}
         </CardHeader>
         <CardContent>
           <form action={save} className="space-y-5">
@@ -247,18 +314,21 @@ export function SignatureStaffEditor({
                 label="Full name"
                 defaultValue={staff.full_name}
                 hasRequest={requestedFields.has('full_name')}
+                disabled={!manualEntry}
               />
               <Field
                 name="job_title"
                 label="Job title"
                 defaultValue={staff.job_title}
                 hasRequest={requestedFields.has('job_title')}
+                disabled={!manualEntry}
               />
               <Field
                 name="department"
                 label="Department"
                 defaultValue={staff.department}
                 hasRequest={requestedFields.has('department')}
+                disabled={!manualEntry}
               />
               <div className="space-y-2">
                 <Label>Branch</Label>
@@ -312,54 +382,60 @@ export function SignatureStaffEditor({
             </div>
 
             <p className="text-muted-foreground text-xs">
-              Synced login email: {staff.email}
+              Login email: {staff.email}
             </p>
 
-            <div
-              className={cn(
-                'space-y-2 rounded-lg p-1',
-                requestedFields.has('photo') &&
-                  'border border-amber-500/35 bg-amber-500/5 p-3',
-              )}
-            >
-              <Label className="inline-flex items-center gap-1.5">
-                Photo upload
-                {requestedFields.has('photo') ? (
-                  <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
-                ) : null}
-              </Label>
-              <div className="flex flex-wrap items-center gap-4">
-                {photoPreview ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={photoPreview}
-                    alt={staff.full_name ?? 'Staff photo'}
-                    className="h-20 w-20 rounded-lg border border-[color:var(--workspace-shell-border)] object-cover"
-                  />
-                ) : (
-                  <div className="text-muted-foreground flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-[color:var(--workspace-shell-border)] text-xs">
-                    No photo
-                  </div>
+            {manualEntry ? (
+              <div
+                className={cn(
+                  'space-y-2 rounded-lg p-1',
+                  requestedFields.has('photo') &&
+                    'border border-amber-500/35 bg-amber-500/5 p-3',
                 )}
-                <div className="min-w-0 flex-1 space-y-2">
-                  <Input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    disabled={processingPhoto || saving}
-                    onChange={(event) =>
-                      void onPhoto(event.target.files?.[0] ?? null)
-                    }
-                  />
-                  <p className="text-muted-foreground text-xs">
-                    {processingPhoto
-                      ? 'Preparing photo…'
-                      : photoDataUrl
-                        ? 'New photo ready — click Save changes to upload.'
-                        : 'Uploading replaces the synced photo for this staff profile.'}
-                  </p>
+              >
+                <Label className="inline-flex items-center gap-1.5">
+                  Photo upload
+                  {requestedFields.has('photo') ? (
+                    <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                  ) : null}
+                </Label>
+                <div className="flex flex-wrap items-center gap-4">
+                  {photoPreview ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={photoPreview}
+                      alt={staff.full_name ?? 'Staff photo'}
+                      className="h-20 w-20 rounded-lg border border-[color:var(--workspace-shell-border)] object-cover"
+                    />
+                  ) : (
+                    <div className="text-muted-foreground flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-[color:var(--workspace-shell-border)] text-xs">
+                      No photo
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <Input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      disabled={processingPhoto || saving}
+                      onChange={(event) =>
+                        void onPhoto(event.target.files?.[0] ?? null)
+                      }
+                    />
+                    <p className="text-muted-foreground text-xs">
+                      {processingPhoto
+                        ? 'Preparing photo…'
+                        : photoDataUrl
+                          ? 'New photo ready — click Save changes to upload.'
+                          : 'Upload a profile photo for this person.'}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <p className="text-muted-foreground text-xs">
+                Profile photos for synced staff are refreshed by directory sync.
+              </p>
+            )}
 
             <div className="space-y-2">
               <Label>Template</Label>
@@ -462,12 +538,14 @@ function Field({
   defaultValue,
   hint,
   hasRequest = false,
+  disabled = false,
 }: {
   name: string;
   label: string;
   defaultValue: string | null;
   hint?: string;
   hasRequest?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <div
@@ -486,6 +564,7 @@ function Field({
         id={name}
         name={name}
         defaultValue={defaultValue ?? ''}
+        disabled={disabled}
         className={
           hasRequest
             ? 'border-amber-500/40 focus-visible:ring-amber-500/30'

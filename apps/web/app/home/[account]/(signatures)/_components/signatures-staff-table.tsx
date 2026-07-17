@@ -19,6 +19,7 @@ import {
 
 import pathsConfig from '~/config/paths.config';
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
+import { staffSourceLabel } from '~/lib/signatures/staff-source';
 
 import type { SignatureStaff } from '../_lib/server/signatures-data';
 import { sendSignatureInstallInstructionsAction } from '../_lib/server/signatures-module-actions';
@@ -54,7 +55,8 @@ export function SignaturesStaffTable({
   if (!staff.length) {
     return (
       <div className="text-muted-foreground rounded-2xl border border-[color:var(--workspace-shell-border)] bg-black/10 p-8 text-sm">
-        No staff synced yet. Connect Microsoft 365, then sync staff from M365.
+        No staff yet. Sync from Microsoft 365 or Google Workspace, add people
+        manually, or import a CSV from the toolbar above.
       </div>
     );
   }
@@ -116,6 +118,9 @@ export function SignaturesStaffTable({
                   </div>
                   <div className="text-muted-foreground text-xs">
                     {row.email}
+                  </div>
+                  <div className="text-muted-foreground mt-0.5 text-[11px]">
+                    {staffSourceLabel(row.source)}
                   </div>
                 </TableCell>
                 <TableCell className="text-muted-foreground px-4 py-3">
