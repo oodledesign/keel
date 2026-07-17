@@ -11,6 +11,8 @@ export type BlockManifestFieldType =
   | 'textarea'
   | 'number'
   | 'select'
+  | 'boolean'
+  | 'color'
   | 'image'
   | 'link'
   | 'array';

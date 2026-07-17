@@ -8,10 +8,53 @@
     { "key": "videoUrl", "type": "text", "label": "Hero video URL" },
     { "key": "videoAlt", "type": "text", "label": "Video accessibility label" },
     { "key": "textureUrl", "type": "image", "label": "Background texture" },
+    {
+      "key": "backgroundToken",
+      "type": "select",
+      "label": "Background colour",
+      "options": [
+        { "label": "Atmosphere (N2 / hero pink)", "value": "atmosphere" },
+        { "label": "Surface (N1)", "value": "surface" },
+        { "label": "Canvas (N0)", "value": "canvas" },
+        { "label": "Primary brand", "value": "primary" },
+        { "label": "Secondary brand", "value": "secondary" },
+        { "label": "Accent", "value": "accent" },
+        { "label": "Custom colour", "value": "custom" }
+      ]
+    },
+    {
+      "key": "backgroundColor",
+      "type": "color",
+      "label": "Custom background (when Background = Custom)"
+    },
+    { "key": "showPrimaryCta", "type": "boolean", "label": "Show primary CTA" },
     { "key": "primaryCtaLabel", "type": "text", "label": "Primary CTA label" },
     { "key": "primaryCtaHref", "type": "link", "label": "Primary CTA link" },
+    {
+      "key": "primaryCtaVariant",
+      "type": "select",
+      "label": "Primary CTA style",
+      "options": [
+        { "label": "Primary (filled)", "value": "primary" },
+        { "label": "Secondary (outline)", "value": "secondary" },
+        { "label": "Tertiary (accent fill)", "value": "tertiary" },
+        { "label": "Text link", "value": "text" }
+      ]
+    },
+    { "key": "showSecondaryCta", "type": "boolean", "label": "Show secondary CTA" },
     { "key": "secondaryCtaLabel", "type": "text", "label": "Secondary CTA label" },
-    { "key": "secondaryCtaHref", "type": "link", "label": "Secondary CTA link" }
+    { "key": "secondaryCtaHref", "type": "link", "label": "Secondary CTA link" },
+    {
+      "key": "secondaryCtaVariant",
+      "type": "select",
+      "label": "Secondary CTA style",
+      "options": [
+        { "label": "Primary (filled)", "value": "primary" },
+        { "label": "Secondary (outline)", "value": "secondary" },
+        { "label": "Tertiary (accent fill)", "value": "tertiary" },
+        { "label": "Text link", "value": "text" }
+      ]
+    }
   ],
   "defaults": {
     "logoUrl": "/workspace-assets/ybb/hero-logo.svg",
@@ -19,9 +62,15 @@
     "videoUrl": "https://vz-e8a4ebea-688.b-cdn.net/d3fca904-7a68-421f-9341-e6e7541d75d1/play_720p.mp4",
     "videoAlt": "Your Bridal Besties wedding morning video",
     "textureUrl": "",
+    "backgroundToken": "atmosphere",
+    "backgroundColor": "",
+    "showPrimaryCta": true,
     "primaryCtaLabel": "Enquire now",
     "primaryCtaHref": "mailto:BOOKINGS@YOURBRIDALBESTIES.CO.UK",
+    "primaryCtaVariant": "primary",
+    "showSecondaryCta": true,
     "secondaryCtaLabel": "Meet the Besties",
-    "secondaryCtaHref": "#team"
+    "secondaryCtaHref": "#team",
+    "secondaryCtaVariant": "secondary"
   }
 }

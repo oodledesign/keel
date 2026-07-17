@@ -3,7 +3,9 @@
 import { useEffect, useRef, type CSSProperties } from 'react';
 
 import { YBB_DEFAULTS } from '../defaults';
+import { resolveYbbBackgroundStyle, ybbCtaClassName } from '../ybb-styles';
 
+import '../ybb-buttons.css';
 import './ybb-hero.css';
 
 export type YbbHeroProps = {
@@ -12,10 +14,16 @@ export type YbbHeroProps = {
   videoUrl?: string;
   videoAlt?: string;
   textureUrl?: string;
+  backgroundToken?: string;
+  backgroundColor?: string;
+  showPrimaryCta?: boolean;
   primaryCtaLabel?: string;
   primaryCtaHref?: string;
+  primaryCtaVariant?: string;
+  showSecondaryCta?: boolean;
   secondaryCtaLabel?: string;
   secondaryCtaHref?: string;
+  secondaryCtaVariant?: string;
 };
 
 export function YbbHero(props: YbbHeroProps) {
@@ -24,16 +32,27 @@ export function YbbHero(props: YbbHeroProps) {
   const videoUrl = props.videoUrl ?? YBB_DEFAULTS.heroVideoUrl;
   const videoAlt = props.videoAlt ?? YBB_DEFAULTS.heroVideoAlt;
   const textureUrl = props.textureUrl ?? YBB_DEFAULTS.heroTextureUrl;
+  const backgroundToken = props.backgroundToken ?? 'atmosphere';
+  const backgroundColor = props.backgroundColor ?? '';
+  const showPrimaryCta = props.showPrimaryCta ?? true;
+  const showSecondaryCta = props.showSecondaryCta ?? true;
   const primaryCtaLabel = props.primaryCtaLabel ?? YBB_DEFAULTS.primaryCtaLabel;
   const primaryCtaHref = props.primaryCtaHref ?? YBB_DEFAULTS.primaryCtaHref;
+  const primaryCtaVariant = props.primaryCtaVariant ?? 'primary';
   const secondaryCtaLabel =
     props.secondaryCtaLabel ?? YBB_DEFAULTS.secondaryCtaLabel;
   const secondaryCtaHref =
     props.secondaryCtaHref ?? YBB_DEFAULTS.secondaryCtaHref;
+  const secondaryCtaVariant = props.secondaryCtaVariant ?? 'secondary';
 
   const pinRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  const heroBackgroundStyle = resolveYbbBackgroundStyle({
+    backgroundToken,
+    backgroundColor,
+  });
 
   useEffect(() => {
     const pin = pinRef.current;
@@ -86,6 +105,7 @@ export function YbbHero(props: YbbHeroProps) {
       <section
         ref={heroRef}
         className="ybbHero"
+        style={heroBackgroundStyle}
         aria-labelledby="ybb-hero-heading"
       >
         <div className="ybbHeroGrid">
@@ -130,24 +150,26 @@ export function YbbHero(props: YbbHeroProps) {
             <p className="ybbHeroTagline" id="ybb-hero-heading">
               {tagline}
             </p>
-            <div className="ybbHeroActions">
-              {primaryCtaLabel ? (
-                <a
-                  className="ybbHeroBtnPrimary"
-                  href={primaryCtaHref || '#'}
-                >
-                  {primaryCtaLabel}
-                </a>
-              ) : null}
-              {secondaryCtaLabel ? (
-                <a
-                  className="ybbHeroBtnSecondary"
-                  href={secondaryCtaHref || '#'}
-                >
-                  {secondaryCtaLabel}
-                </a>
-              ) : null}
-            </div>
+            {showPrimaryCta || showSecondaryCta ? (
+              <div className="ybbHeroActions">
+                {showPrimaryCta && primaryCtaLabel ? (
+                  <a
+                    className={ybbCtaClassName(primaryCtaVariant)}
+                    href={primaryCtaHref || '#'}
+                  >
+                    {primaryCtaLabel}
+                  </a>
+                ) : null}
+                {showSecondaryCta && secondaryCtaLabel ? (
+                  <a
+                    className={ybbCtaClassName(secondaryCtaVariant)}
+                    href={secondaryCtaHref || '#'}
+                  >
+                    {secondaryCtaLabel}
+                  </a>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </div>
       </section>

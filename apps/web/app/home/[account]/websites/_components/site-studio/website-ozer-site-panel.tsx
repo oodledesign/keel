@@ -20,6 +20,7 @@ import {
   coerceResolvableStyleTokens,
   type ResolvableStyleTokens,
   resolveTokensStyle,
+  withSiteStudioRootConfig,
 } from '@kit/site-blocks-core';
 import '@kit/site-blocks-core/tokens.css';
 import { resolveSiteBlocksConfig } from '@kit/site-blocks-workspaces';
@@ -119,8 +120,12 @@ function OzerSitePuckEditor({
   }, [data]);
 
   const config = useMemo(
-    () => resolveSiteBlocksConfig(accountSlug),
-    [accountSlug],
+    () =>
+      withSiteStudioRootConfig(
+        resolveSiteBlocksConfig(accountSlug),
+        themeTokens,
+      ),
+    [accountSlug, themeTokens],
   );
   const tokenStyle = useMemo(
     () => resolveTokensStyle(themeTokens),

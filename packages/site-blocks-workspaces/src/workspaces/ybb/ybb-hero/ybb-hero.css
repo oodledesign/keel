@@ -15,8 +15,9 @@
   box-sizing: border-box;
   display: flex;
   align-items: center;
+  /* background from inline style / design token — fallback only */
   background: var(--sb-atmosphere);
-  padding-top: calc(var(--ybb-nav-height) + var(--sb-space-8));
+  padding-top: calc(var(--ybb-banner-offset, 0px) + var(--ybb-nav-height) + var(--sb-space-8));
   padding-bottom: var(--sb-space-6);
   overflow-x: clip;
   overflow-y: visible;
@@ -62,7 +63,7 @@
     right: 0;
     width: 100%;
     align-items: flex-start;
-    padding-top: calc(var(--ybb-nav-height) + var(--sb-space-4));
+    padding-top: calc(var(--ybb-banner-offset, 0px) + var(--ybb-nav-height) + var(--sb-space-4));
     padding-bottom: calc(var(--ybb-scallop-r) + 1.25em);
   }
 
@@ -294,44 +295,6 @@
   }
 }
 
-.ybbHeroBtnPrimary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.65em 1.35em;
-  font-family: var(--sb-font-body);
-  font-size: 0.95em;
-  font-weight: var(--sb-font-weight-medium);
-  text-decoration: none;
-  border-radius: var(--sb-button-radius);
-  background: var(--sb-color-primary);
-  color: var(--sb-color-primary-contrast);
-  transition: opacity 200ms ease;
-}
-
-.ybbHeroBtnSecondary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.65em 1.35em;
-  font-family: var(--sb-font-body);
-  font-size: 0.95em;
-  font-weight: var(--sb-font-weight-medium);
-  text-decoration: none;
-  border-radius: var(--sb-button-radius);
-  border: 1px solid var(--sb-border);
-  background: var(--sb-canvas);
-  color: var(--sb-ink);
-  transition: opacity 200ms ease;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .ybbHeroBtnPrimary:hover,
-  .ybbHeroBtnSecondary:hover {
-    opacity: 0.88;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .ybbHeroLogo,
   .ybbHeroTagline,
@@ -363,7 +326,7 @@
     height: auto;
     max-height: none;
     display: block;
-    padding-top: calc(var(--ybb-nav-height) + var(--sb-space-4));
+    padding-top: calc(var(--ybb-banner-offset, 0px) + var(--ybb-nav-height) + var(--sb-space-4));
     padding-bottom: var(--sb-space-8);
     overflow-y: visible;
   }

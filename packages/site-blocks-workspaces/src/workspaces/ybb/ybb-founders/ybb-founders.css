@@ -1,0 +1,225 @@
+/* YBB founders / team section — ported from Founders.astro */
+
+.ybbFounders {
+  margin-inline: 0.75em;
+  border-radius: 1.25em;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+.ybbFoundersInner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  max-width: var(--sb-container-max, 72rem);
+  margin-inline: auto;
+  min-height: 45em;
+}
+
+.ybbFoundersContent {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2em;
+  padding: clamp(3rem, 8vw, 5rem) var(--sb-container-padding, 1.25rem);
+  padding-right: 5em;
+  max-width: 35em;
+  margin-left: auto;
+  position: relative;
+  z-index: 2;
+}
+
+.ybbFoundersTitle {
+  font-family: var(--sb-font-display, var(--sb-font-heading));
+  font-size: clamp(2.5em, 4vw, 3.5em);
+  font-weight: var(--sb-font-weight-bold, 700);
+  color: var(--ybb-founders-text, #2c4f35);
+  line-height: 1;
+  margin: 0;
+}
+
+.ybbFoundersBody {
+  font-size: 1.125em;
+  line-height: 1.5;
+  color: var(--ybb-founders-text, #2c4f35);
+  max-width: 32.8em;
+  margin: 0;
+}
+
+.ybbFoundersCta {
+  width: fit-content;
+}
+
+.ybbFoundersVisual {
+  position: relative;
+  height: 45em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ybbFoundersStack {
+  position: relative;
+  width: min(36em, 92%);
+  aspect-ratio: 1;
+  flex-shrink: 0;
+}
+
+.ybbFoundersRing,
+.ybbFoundersPhoto {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  max-width: none;
+  max-height: none;
+}
+
+.ybbFoundersRing {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+}
+
+.ybbFoundersRingOuter {
+  z-index: 1;
+  width: 200%;
+  height: 200%;
+  inset: -50%;
+  opacity: 0.18;
+  animation: ybbFoundersSpin 280s linear infinite;
+}
+
+.ybbFoundersRingInner {
+  width: 125.1%;
+  height: 125.1%;
+  inset: -12.55%;
+  z-index: 2;
+  opacity: 0.5;
+  animation: ybbFoundersSpin 200s linear infinite reverse;
+}
+
+.ybbFoundersPhoto {
+  width: 87%;
+  height: 87%;
+  inset: 6.5%;
+  z-index: 3;
+  overflow: visible;
+}
+
+.ybbFoundersPhotoMask {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  transform-origin: center center;
+  animation: ybbFoundersMaskSpin 120s linear infinite;
+}
+
+.ybbFoundersPhotoMask::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: var(--ybb-founders-mask-fill, #800000);
+  transform: scale(1.018);
+  transform-origin: center center;
+  -webkit-mask-image: var(--ybb-founders-star-mask);
+  mask-image: var(--ybb-founders-star-mask);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+.ybbFoundersPhotoClip {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  -webkit-mask-image: var(--ybb-founders-star-mask);
+  mask-image: var(--ybb-founders-star-mask);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+.ybbFoundersPhotoClip img,
+.ybbFoundersPhotoPlaceholder {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  object-fit: cover;
+  object-position: 50% 0%;
+  display: block;
+  transform-origin: center center;
+  animation: ybbFoundersMaskCounter 120s linear infinite;
+}
+
+.ybbFoundersPhotoPlaceholder {
+  background: var(--ybb-founders-mask-fill, #800000);
+  opacity: 0.35;
+}
+
+@keyframes ybbFoundersMaskSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ybbFoundersMaskCounter {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+@keyframes ybbFoundersSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ybbFoundersRingOuter,
+  .ybbFoundersRingInner,
+  .ybbFoundersPhotoMask,
+  .ybbFoundersPhotoClip img,
+  .ybbFoundersPhotoPlaceholder {
+    animation: none;
+  }
+}
+
+@media (max-width: 991px) {
+  .ybbFoundersInner {
+    grid-template-columns: 1fr;
+  }
+
+  .ybbFoundersContent {
+    margin-inline: auto;
+    text-align: center;
+    align-items: center;
+    padding-right: var(--sb-container-padding, 1.25rem);
+  }
+
+  .ybbFoundersVisual {
+    height: 28em;
+  }
+
+  .ybbFoundersStack {
+    width: min(26em, 88vw);
+  }
+}

@@ -1,0 +1,66 @@
+/* Shared YBB CTA buttons — design tokens + pill radius from Site Studio */
+
+.ybbBtnPrimary,
+.ybbBtnSecondary,
+.ybbBtnTertiary,
+.ybbBtnText {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65em 1.35em;
+  font-family: var(--sb-font-body);
+  font-size: 0.95em;
+  font-weight: var(--sb-font-weight-medium);
+  text-decoration: none;
+  border-radius: var(--sb-button-radius);
+  transition: opacity 200ms ease;
+}
+
+.ybbBtnPrimary {
+  background: var(--sb-color-primary);
+  color: var(--sb-color-primary-contrast);
+  border: 1px solid transparent;
+}
+
+.ybbBtnSecondary {
+  border: 1px solid var(--sb-border);
+  background: var(--sb-canvas);
+  color: var(--sb-ink);
+}
+
+.ybbBtnTertiary {
+  border: 1px solid transparent;
+  background: var(--sb-color-accent);
+  color: var(--sb-accent-contrast);
+}
+
+.ybbBtnText {
+  padding: 0.35em 0.15em;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  border: none;
+  background: transparent;
+  color: var(--sb-ink);
+}
+
+.ybbBtnPrimary.ybbBtnOnDark,
+.ybbBtnSecondary.ybbBtnOnDark,
+.ybbBtnTertiary.ybbBtnOnDark,
+.ybbBtnText.ybbBtnOnDark {
+  color: var(--sb-canvas);
+}
+
+.ybbBtnSecondary.ybbBtnOnDark {
+  border-color: rgba(255, 255, 255, 0.45);
+  background: transparent;
+  color: var(--sb-canvas);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ybbBtnPrimary:hover,
+  .ybbBtnSecondary:hover,
+  .ybbBtnTertiary:hover,
+  .ybbBtnText:hover {
+    opacity: 0.88;
+  }
+}

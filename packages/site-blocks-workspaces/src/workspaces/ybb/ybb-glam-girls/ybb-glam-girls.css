@@ -1,0 +1,433 @@
+/* YBB glam girls / services mosaic — ported from Services.astro */
+
+.ybbGlamGirls {
+  --ybb-scallop-r: 3.977em;
+  position: relative;
+  padding-block: clamp(4rem, 8vw, 6rem);
+  padding-top: calc(clamp(4rem, 8vw, 6rem) + 5.5em);
+  padding-bottom: calc(clamp(4rem, 8vw, 6rem) + 2em);
+  overflow: visible;
+}
+
+.ybbGlamGirlsOverlap {
+  margin-top: calc(var(--ybb-scallop-r) * -1);
+}
+
+.ybbGlamInner {
+  display: flex;
+  flex-direction: column;
+  gap: 3em;
+  position: relative;
+  z-index: 1;
+  max-width: var(--sb-container-max, 72rem);
+  margin-inline: auto;
+  padding-inline: var(--sb-container-padding, 1.25rem);
+}
+
+.ybbGlamHeader {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  margin-bottom: 0.5em;
+}
+
+.ybbGlamTitle {
+  font-family: var(--sb-font-display, var(--sb-font-heading));
+  font-size: clamp(2em, 4vw, 3em);
+  font-weight: var(--sb-font-weight-bold, 700);
+  line-height: 1.1;
+  margin-bottom: 0.35em;
+  max-width: 52em;
+  color: var(--sb-ink);
+}
+
+.ybbGlamKicker {
+  position: relative;
+  display: block;
+  align-self: flex-start;
+  max-width: min(28em, 94%);
+  margin-top: 0.15em;
+  padding-bottom: 2.75em;
+  transform: rotate(-2deg);
+}
+
+.ybbGlamKickerText {
+  font-family: var(--sb-font-script, cursive);
+  font-size: clamp(1.85em, 3.2vw, 2.85em);
+  color: var(--ybb-glam-kicker, #550100);
+  line-height: 1.05;
+  max-width: 18em;
+  text-align: left;
+  margin: 0;
+}
+
+.ybbGlamKickerArrow {
+  position: absolute;
+  left: 58%;
+  top: 58%;
+  width: clamp(5.5em, 12vw, 8.5em);
+  height: auto;
+  color: var(--ybb-glam-kicker, #550100);
+  transform: rotate(-8deg);
+  pointer-events: none;
+}
+
+.ybbGlamLayout {
+  display: flex;
+  flex-direction: column;
+}
+
+.ybbGlamMosaic {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr) minmax(0, 1fr);
+  gap: 1.5em;
+  align-items: start;
+}
+
+.ybbGlamMosaicCol {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25em;
+  min-width: 0;
+}
+
+.ybbGlamMosaicColCenter {
+  padding-top: 1.5em;
+}
+
+.ybbGlamMosaicColRight {
+  align-items: flex-end;
+}
+
+.ybbGlamMosaicColRight .ybbGlamCellBubble {
+  width: 100%;
+  max-width: 24em;
+}
+
+.ybbGlamMosaicLove {
+  width: 100%;
+  max-width: 20em;
+  margin-top: 0.35em;
+}
+
+.ybbGlamCell {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.ybbGlamCellPolaroid {
+  background: transparent;
+  border: none;
+  overflow: visible;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 0.25em 0.25em 1.75em;
+}
+
+.ybbGlamPolaroid {
+  position: relative;
+  width: 100%;
+  max-width: 20em;
+  margin-inline: auto;
+  background: var(--sb-canvas, #fffff3);
+  border: none;
+  box-shadow:
+    0 0.2em 0.45em rgba(0, 0, 0, 0.05),
+    0 0.75em 1.35em rgba(0, 0, 0, 0.1),
+    0 1.35em 2.25em rgba(0, 0, 0, 0.09);
+  transform: rotate(var(--ybb-glam-tilt, 0deg));
+  display: flex;
+  flex-direction: column;
+  padding: 0.85em 0.85em 1.35em;
+  gap: 1.15em;
+}
+
+.ybbGlamPolaroidFeatured {
+  max-width: 23.5em;
+}
+
+.ybbGlamPolaroidMedia {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.ybbGlamPolaroidCta {
+  position: absolute;
+  z-index: 3;
+  right: -0.35em;
+  bottom: -0.85em;
+  transform: rotate(var(--ybb-glam-cta-offset, 6deg));
+  font-size: 0.88em;
+  white-space: nowrap;
+  box-shadow: 0 0.35em 1em rgba(0, 0, 0, 0.14);
+  border: none;
+}
+
+.ybbGlamPolaroidFeatured .ybbGlamPolaroidCta {
+  right: auto;
+  left: -0.3em;
+}
+
+.ybbPolaroidCtaGreen {
+  background: var(--sb-color-secondary, #2c4f35);
+  color: var(--sb-canvas, #fffff3);
+}
+
+.ybbPolaroidCtaRose {
+  background: var(--sb-color-primary, #cc848a);
+  color: var(--sb-canvas, #fffff3);
+}
+
+.ybbPolaroidCtaCress {
+  background: var(--sb-color-accent, #b9a949);
+  color: var(--sb-color-secondary, #2c4f35);
+}
+
+.ybbGlamPolaroidCaption {
+  flex-shrink: 0;
+  padding-inline: 0.2em;
+  padding-top: 1.35em;
+}
+
+.ybbGlamPolaroidPhoto {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  flex-shrink: 0;
+  margin: 0;
+  overflow: hidden;
+  background: var(--sb-atmosphere, #f9dada);
+  border: none;
+}
+
+.ybbGlamPolaroidPhotoSquare {
+  aspect-ratio: 1 / 1;
+}
+
+.ybbGlamPolaroidPhotoEmpty {
+  min-height: 12em;
+}
+
+.ybbGlamPolaroidPhoto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.ybbGlamPolaroidCaption h3 {
+  font-family: var(--sb-font-display, var(--sb-font-heading));
+  font-size: clamp(1.55em, 2vw, 2.15em);
+  font-weight: 700;
+  line-height: 1.15;
+  margin: 0 0 0.4em;
+  color: var(--ybb-glam-maroon, #550100);
+}
+
+.ybbGlamCellTitle {
+  font-size: clamp(1.95em, 2.65vw, 2.65em);
+}
+
+.ybbGlamPolaroidCaption p {
+  font-size: 1em;
+  line-height: 1.45;
+  margin: 0;
+  color: var(--sb-ink);
+}
+
+.ybbGlamCellBubble {
+  background: transparent;
+  border: none;
+  overflow: visible;
+  display: flex;
+  align-items: stretch;
+  padding: 0.15em;
+}
+
+.ybbGlamSpeech {
+  display: grid;
+  align-items: end;
+  gap: 0.65em;
+  width: 100%;
+  height: 100%;
+}
+
+.ybbGlamSpeechLeft {
+  grid-template-columns: auto 1fr;
+}
+
+.ybbGlamSpeechRight {
+  grid-template-columns: 1fr auto;
+}
+
+.ybbGlamAvatar {
+  width: 4.25em;
+  height: 4.25em;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center 20%;
+  border: none;
+  box-shadow:
+    0 0.25em 0.65em rgba(0, 0, 0, 0.1),
+    0 0.1em 0.25em rgba(0, 0, 0, 0.05);
+  flex-shrink: 0;
+  align-self: end;
+}
+
+.ybbGlamSpeechBody {
+  position: relative;
+  background: var(--ybb-glam-maroon, #550100);
+  border: none;
+  color: var(--sb-canvas, #fffff3);
+  padding: 1.35em 1.45em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55em;
+  min-height: 100%;
+  transition: transform 350ms ease;
+}
+
+.ybbGlamSpeechLeft .ybbGlamSpeechBody {
+  border-radius: 1.15em 1.15em 1.15em 0.35em;
+}
+
+.ybbGlamSpeechLeft .ybbGlamSpeechBody::before {
+  content: '';
+  position: absolute;
+  left: -0.45em;
+  bottom: 1.1em;
+  width: 0.7em;
+  height: 0.7em;
+  background: var(--ybb-glam-maroon, #550100);
+  transform: rotate(45deg);
+}
+
+.ybbGlamSpeechRight .ybbGlamSpeechBody {
+  border-radius: 1.15em 1.15em 0.35em 1.15em;
+}
+
+.ybbGlamSpeechRight .ybbGlamSpeechBody::before {
+  content: '';
+  position: absolute;
+  right: -0.45em;
+  bottom: 1.1em;
+  width: 0.7em;
+  height: 0.7em;
+  background: var(--ybb-glam-maroon, #550100);
+  transform: rotate(-45deg);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ybbGlamCellBubble:hover .ybbGlamSpeechBody {
+    transform: translateY(-0.2em);
+  }
+}
+
+.ybbGlamSpeechBody h3 {
+  font-family: var(--sb-font-display, var(--sb-font-heading));
+  font-size: clamp(1.15em, 1.45vw, 1.45em);
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 0;
+  color: var(--sb-canvas, #fffff3);
+}
+
+.ybbGlamSpeechBody p {
+  font-size: 0.98em;
+  line-height: 1.5;
+  margin: 0;
+  color: rgba(255, 255, 243, 0.92);
+}
+
+.ybbGlamSpeechLink {
+  margin-top: auto;
+  font-family: var(--sb-font-display, var(--sb-font-heading));
+  font-size: 1.02em;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  color: var(--sb-atmosphere, #f9dada);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ybbGlamSpeechLink:hover {
+    color: var(--sb-canvas, #fffff3);
+  }
+}
+
+@media (max-width: 991px) {
+  .ybbGlamKicker {
+    align-self: center;
+    transform: none;
+    padding-bottom: 3em;
+    max-width: 22em;
+  }
+
+  .ybbGlamKickerText {
+    text-align: center;
+    max-width: 20em;
+    margin-inline: auto;
+  }
+
+  .ybbGlamKickerArrow {
+    left: 50%;
+    top: 72%;
+    transform: translateX(-10%) rotate(68deg);
+  }
+
+  .ybbGlamMosaic {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1.25em;
+  }
+
+  .ybbGlamMosaicColCenter {
+    padding-top: 0;
+    grid-column: 1 / -1;
+  }
+
+  .ybbGlamMosaicColRight {
+    align-items: stretch;
+  }
+
+  .ybbGlamMosaicColRight .ybbGlamCellBubble {
+    max-width: none;
+  }
+
+  .ybbGlamMosaicLove {
+    max-width: none;
+    margin-inline: auto;
+  }
+
+  .ybbGlamPolaroid {
+    max-width: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .ybbGlamMosaic {
+    grid-template-columns: 1fr;
+  }
+
+  .ybbGlamMosaicLove {
+    max-width: 22em;
+  }
+
+  .ybbGlamPolaroid {
+    max-width: 22em;
+    transform: rotate(calc(var(--ybb-glam-tilt, 0deg) * 0.6));
+  }
+
+  .ybbGlamPolaroidFeatured {
+    max-width: 24em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ybbGlamPolaroid,
+  .ybbGlamSpeechBody {
+    transition: none;
+  }
+}

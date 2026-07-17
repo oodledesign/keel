@@ -1,0 +1,59 @@
+{
+  "type": "YbbNavbar",
+  "label": "YBB Navbar",
+  "category": "ybb",
+  "fields": [
+    { "key": "logoUrl", "type": "image", "label": "Logo" },
+    { "key": "homeHref", "type": "link", "label": "Logo link" },
+    {
+      "key": "navLinks",
+      "type": "array",
+      "label": "Navigation links",
+      "itemLabel": "Link",
+      "itemFields": [
+        { "key": "label", "type": "text", "label": "Label" },
+        { "key": "href", "type": "link", "label": "URL" },
+        { "key": "hasDropdown", "type": "boolean", "label": "Show dropdown chevron" }
+      ]
+    },
+    { "key": "ctaLabel", "type": "text", "label": "CTA label" },
+    { "key": "ctaHref", "type": "link", "label": "CTA link" },
+    {
+      "key": "ctaVariant",
+      "type": "select",
+      "label": "CTA style",
+      "options": [
+        { "label": "Primary (filled)", "value": "primary" },
+        { "label": "Secondary (outline)", "value": "secondary" },
+        { "label": "Tertiary (accent fill)", "value": "tertiary" },
+        { "label": "Text link", "value": "text" }
+      ]
+    },
+    {
+      "key": "textTone",
+      "type": "select",
+      "label": "Nav text tone",
+      "options": [
+        { "label": "Auto (adapt to background)", "value": "auto" },
+        { "label": "Light text (for dark sections)", "value": "dark" },
+        { "label": "Dark text (for light sections)", "value": "light" }
+      ]
+    }
+  ],
+  "defaults": {
+    "logoUrl": "/workspace-assets/ybb/logo-nav.svg",
+    "homeHref": "/",
+    "navLinks": [
+      { "label": "About us", "href": "#about", "hasDropdown": false },
+      { "label": "Your wedding", "href": "#services", "hasDropdown": true },
+      { "label": "Investment", "href": "#faq", "hasDropdown": true },
+      { "label": "Portfolio", "href": "#portfolio", "hasDropdown": false },
+      { "label": "Kind words", "href": "#testimonials", "hasDropdown": false },
+      { "label": "Blog", "href": "#blog", "hasDropdown": false }
+    ],
+    "ctaLabel": "Enquire",
+    "ctaHref": "mailto:BOOKINGS@YOURBRIDALBESTIES.CO.UK",
+    "ctaVariant": "primary",
+    "textTone": "auto"
+  }
+}

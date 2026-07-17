@@ -1,0 +1,152 @@
+{
+  "type": "YbbGlamGirls",
+  "label": "YBB Glam girls section",
+  "category": "ybb",
+  "fields": [
+    { "key": "sectionId", "type": "text", "label": "Section ID (anchor)" },
+    { "key": "overlapScallop", "type": "boolean", "label": "Overlap scallop section above" },
+    { "key": "title", "type": "textarea", "label": "Heading (line breaks allowed)" },
+    { "key": "kicker", "type": "text", "label": "Script kicker" },
+    {
+      "key": "backgroundToken",
+      "type": "select",
+      "label": "Background colour",
+      "options": [
+        { "label": "Atmosphere (N2 / pink)", "value": "atmosphere" },
+        { "label": "Surface (N1)", "value": "surface" },
+        { "label": "Canvas (N0)", "value": "canvas" },
+        { "label": "Primary brand", "value": "primary" },
+        { "label": "Custom colour", "value": "custom" }
+      ]
+    },
+    { "key": "backgroundColor", "type": "color", "label": "Custom background" },
+    { "key": "kickerColor", "type": "color", "label": "Kicker & heading accent colour" },
+    {
+      "key": "cards",
+      "type": "array",
+      "label": "Mosaic cards",
+      "itemLabel": "Card",
+      "itemFields": [
+        {
+          "key": "slot",
+          "type": "select",
+          "label": "Grid slot",
+          "options": [
+            { "label": "Left polaroid", "value": "leftPolaroid" },
+            { "label": "Left speech bubble", "value": "leftSpeech" },
+            { "label": "Center polaroid", "value": "centerPolaroid" },
+            { "label": "Right speech bubble", "value": "rightSpeech" },
+            { "label": "Right polaroid", "value": "rightPolaroid" }
+          ]
+        },
+        { "key": "title", "type": "text", "label": "Title" },
+        { "key": "body", "type": "textarea", "label": "Body" },
+        { "key": "imageUrl", "type": "image", "label": "Photo / avatar" },
+        { "key": "imageAlt", "type": "text", "label": "Image alt text" },
+        { "key": "ctaLabel", "type": "text", "label": "Polaroid CTA label" },
+        { "key": "ctaHref", "type": "link", "label": "Polaroid CTA link" },
+        {
+          "key": "ctaColor",
+          "type": "select",
+          "label": "Polaroid CTA colour",
+          "options": [
+            { "label": "Green (mossy)", "value": "green" },
+            { "label": "Rose", "value": "rose" },
+            { "label": "Cress", "value": "cress" }
+          ]
+        },
+        { "key": "tilt", "type": "text", "label": "Polaroid tilt (degrees, e.g. -2.5)" },
+        { "key": "featured", "type": "boolean", "label": "Featured (taller center polaroid)" },
+        { "key": "squarePhoto", "type": "boolean", "label": "Square photo crop" },
+        { "key": "linkLabel", "type": "text", "label": "Speech link label" },
+        { "key": "linkHref", "type": "link", "label": "Speech link URL" }
+      ]
+    }
+  ],
+  "defaults": {
+    "sectionId": "services",
+    "overlapScallop": true,
+    "title": "We're not just your glam squad.\nWe're your girls.",
+    "kicker": "Here's why brides choose us as their besties",
+    "backgroundToken": "atmosphere",
+    "backgroundColor": "#F9DADA",
+    "kickerColor": "#550100",
+    "cards": [
+      {
+        "slot": "leftPolaroid",
+        "title": "A Room Full of Besties",
+        "body": "We're real-life besties whose effortless teamwork turns bridal prep into a relaxed, morning pre drink— no stress-o just prosecco!",
+        "imageUrl": "",
+        "imageAlt": "Bridal party getting ready together",
+        "ctaLabel": "Meet the Besties",
+        "ctaHref": "#team",
+        "ctaColor": "green",
+        "tilt": "-2.5",
+        "featured": false,
+        "squarePhoto": true,
+        "linkLabel": "",
+        "linkHref": ""
+      },
+      {
+        "slot": "leftSpeech",
+        "title": "We're your Wedding Day Sidekicks",
+        "body": "From helping you into your dress to calming your 'OMG is this really happening' nerves—we've got your back (and your veil).",
+        "imageUrl": "",
+        "imageAlt": "Zoe",
+        "ctaLabel": "",
+        "ctaHref": "",
+        "ctaColor": "green",
+        "tilt": "",
+        "featured": false,
+        "squarePhoto": false,
+        "linkLabel": "Learn more →",
+        "linkHref": "#about"
+      },
+      {
+        "slot": "centerPolaroid",
+        "title": "Pampered Bride from prep to last dance",
+        "body": "A well-oiled schedule, touch-ups on tap, and social-media-ready moments—because 'Insta-Bride' status is non-negotiable",
+        "imageUrl": "",
+        "imageAlt": "Bride with soft glam makeup",
+        "ctaLabel": "Learn more",
+        "ctaHref": "#about",
+        "ctaColor": "rose",
+        "tilt": "3.2",
+        "featured": true,
+        "squarePhoto": false,
+        "linkLabel": "",
+        "linkHref": ""
+      },
+      {
+        "slot": "rightSpeech",
+        "title": "Babes, We Know What You Need Before You Do",
+        "body": "Music on, temperature just right, quiet when it counts—we read the room so you can breathe easy and glow effortlessly.",
+        "imageUrl": "",
+        "imageAlt": "Eloise",
+        "ctaLabel": "",
+        "ctaHref": "",
+        "ctaColor": "green",
+        "tilt": "",
+        "featured": false,
+        "squarePhoto": false,
+        "linkLabel": "Learn more →",
+        "linkHref": "#about"
+      },
+      {
+        "slot": "rightPolaroid",
+        "title": "We love, love!",
+        "body": "We bring your unique romance to life in every look, making sure your makeup and hair feel as personal as your vows.",
+        "imageUrl": "",
+        "imageAlt": "Bride on her wedding day",
+        "ctaLabel": "Enquire now",
+        "ctaHref": "mailto:BOOKINGS@YOURBRIDALBESTIES.CO.UK",
+        "ctaColor": "cress",
+        "tilt": "-1.8",
+        "featured": false,
+        "squarePhoto": true,
+        "linkLabel": "",
+        "linkHref": ""
+      }
+    ]
+  }
+}

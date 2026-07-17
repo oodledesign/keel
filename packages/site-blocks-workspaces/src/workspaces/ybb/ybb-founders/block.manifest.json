@@ -1,0 +1,60 @@
+{
+  "type": "YbbFounders",
+  "label": "YBB Founders section",
+  "category": "ybb",
+  "fields": [
+    { "key": "sectionId", "type": "text", "label": "Section ID (anchor)" },
+    { "key": "title", "type": "text", "label": "Heading" },
+    { "key": "body", "type": "textarea", "label": "Body copy" },
+    { "key": "showCta", "type": "boolean", "label": "Show CTA" },
+    { "key": "ctaLabel", "type": "text", "label": "CTA label" },
+    { "key": "ctaHref", "type": "link", "label": "CTA link" },
+    {
+      "key": "ctaVariant",
+      "type": "select",
+      "label": "CTA style",
+      "options": [
+        { "label": "Primary (filled)", "value": "primary" },
+        { "label": "Secondary (outline)", "value": "secondary" },
+        { "label": "Tertiary (accent fill)", "value": "tertiary" },
+        { "label": "Text link", "value": "text" }
+      ]
+    },
+    { "key": "photoUrl", "type": "image", "label": "Founders photo" },
+    { "key": "photoAlt", "type": "text", "label": "Photo alt text" },
+    { "key": "starOuterUrl", "type": "image", "label": "Outer star ring SVG" },
+    { "key": "starInnerUrl", "type": "image", "label": "Inner star ring SVG" },
+    { "key": "starMaskUrl", "type": "image", "label": "Star mask SVG" },
+    {
+      "key": "backgroundToken",
+      "type": "select",
+      "label": "Card background",
+      "options": [
+        { "label": "Accent", "value": "accent" },
+        { "label": "Secondary brand", "value": "secondary" },
+        { "label": "Custom colour", "value": "custom" }
+      ]
+    },
+    { "key": "backgroundColor", "type": "color", "label": "Custom background" },
+    { "key": "textColor", "type": "color", "label": "Text colour" },
+    { "key": "maskFillColor", "type": "color", "label": "Star mask fill (behind photo)" }
+  ],
+  "defaults": {
+    "sectionId": "team",
+    "title": "Meet Zoe and Eloise",
+    "body": "Two best friends, one shared obsession with making brides feel incredible. We've been inseparable since the day we met — and your wedding morning is better for it.",
+    "showCta": true,
+    "ctaLabel": "Meet the Besties",
+    "ctaHref": "#about",
+    "ctaVariant": "primary",
+    "photoUrl": "",
+    "photoAlt": "Zoe and Eloise — Your Bridal Besties founders",
+    "starOuterUrl": "/workspace-assets/ybb/founders/star-outer.svg",
+    "starInnerUrl": "/workspace-assets/ybb/founders/star-inner.svg",
+    "starMaskUrl": "/workspace-assets/ybb/founders/star-mask.svg",
+    "backgroundToken": "custom",
+    "backgroundColor": "#B9A949",
+    "textColor": "#2C4F35",
+    "maskFillColor": "#800000"
+  }
+}

@@ -1,0 +1,237 @@
+/* YBB postage-scallop band — ported from Intro.astro */
+
+.ybbScallopSection {
+  --ybb-scallop-r: 3.977em;
+  --ybb-scallop-period: 7.466em;
+  position: relative;
+  z-index: 2;
+  background: transparent;
+  overflow: visible;
+}
+
+.ybbScallopSectionOverlap {
+  margin-top: calc(var(--ybb-scallop-r) * -1.25);
+}
+
+.ybbScallopBand {
+  position: relative;
+  background: var(--ybb-scallop-band, var(--sb-color-primary));
+  padding-block: calc(5.5em + var(--ybb-scallop-r)) calc(4em + var(--ybb-scallop-r));
+  overflow: visible;
+}
+
+.ybbScallopBand::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -1px;
+  height: 2px;
+  background: var(--ybb-scallop-band, var(--sb-color-primary));
+  z-index: 3;
+  pointer-events: none;
+}
+
+.ybbScallopEdge {
+  position: absolute;
+  left: calc(var(--ybb-scallop-period) * -2);
+  width: calc(100% + var(--ybb-scallop-period) * 4);
+  height: var(--ybb-scallop-r);
+  pointer-events: none;
+  z-index: 4;
+  background-repeat: repeat-x;
+  background-size: var(--ybb-scallop-period) 100%;
+  will-change: background-position;
+}
+
+.ybbScallopEdgeTop {
+  top: calc(var(--ybb-scallop-r) * -1);
+  background-color: transparent;
+  background-image: radial-gradient(
+    circle var(--ybb-scallop-r) at 50% 100%,
+    var(--ybb-scallop-band, var(--sb-color-primary)) 0,
+    var(--ybb-scallop-band, var(--sb-color-primary)) 100%,
+    transparent 100%
+  );
+  animation: ybbScallopDriftLeft 30s linear infinite;
+}
+
+.ybbScallopEdgeBottom {
+  bottom: calc(var(--ybb-scallop-r) * -1);
+  background-color: var(--ybb-scallop-fill, var(--sb-atmosphere));
+  background-image: radial-gradient(
+    circle var(--ybb-scallop-r) at 50% 0%,
+    var(--ybb-scallop-band, var(--sb-color-primary)) 0,
+    var(--ybb-scallop-band, var(--sb-color-primary)) 99.5%,
+    transparent 99.5%
+  );
+  animation: ybbScallopDriftRight 30s linear infinite;
+}
+
+.ybbScallopEdgeBottom::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 4px;
+  background: var(--ybb-scallop-fill, var(--sb-atmosphere));
+  z-index: 1;
+  pointer-events: none;
+}
+
+@keyframes ybbScallopDriftLeft {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: calc(var(--ybb-scallop-period) * -1) 0;
+  }
+}
+
+@keyframes ybbScallopDriftRight {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: var(--ybb-scallop-period) 0;
+  }
+}
+
+.ybbScallopScript {
+  position: absolute;
+  top: 36%;
+  left: 50%;
+  transform: translate(-50%, -55%) rotate(-3.5deg);
+  font-family: var(--sb-font-display);
+  font-size: clamp(5em, 14vw, 10.875em);
+  color: color-mix(in srgb, var(--ybb-scallop-fill, var(--sb-atmosphere)) 22%, transparent);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 0;
+  line-height: 1.05;
+  max-width: 100%;
+  overflow: hidden;
+  margin: 0;
+}
+
+.ybbScallopInner {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ybbScallopContent {
+  position: relative;
+  z-index: 2;
+  max-width: 33em;
+  margin-inline: auto;
+  padding-inline: var(--sb-space-6);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5em;
+}
+
+.ybbScallopHeading {
+  font-family: var(--sb-font-display);
+  font-size: clamp(2em, 4.5vw, 3.5em);
+  line-height: 1.1;
+  font-weight: var(--sb-font-weight-medium);
+  margin: 0;
+}
+
+.ybbScallopHeadingLight {
+  color: var(--sb-canvas);
+}
+
+.ybbScallopHeadingAccent {
+  color: var(--ybb-scallop-fill, var(--sb-atmosphere));
+  font-style: italic;
+}
+
+.ybbScallopBody {
+  font-size: 1.125em;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.82);
+  max-width: 28em;
+  margin: 0;
+}
+
+.ybbScallopActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1em;
+  justify-content: center;
+}
+
+.ybbScallopPhoto {
+  position: absolute;
+  border: none;
+  overflow: hidden;
+  border-radius: 0.75em;
+  background: var(--sb-canvas);
+  box-shadow:
+    0 0.55em 1.4em rgba(0, 0, 0, 0.18),
+    0 0.22em 0.6em rgba(0, 0, 0, 0.1);
+  z-index: 3;
+  display: none;
+  margin: 0;
+}
+
+.ybbScallopPhoto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+@media (min-width: 992px) {
+  .ybbScallopPhoto {
+    display: block;
+  }
+
+  .ybbScallopPhotoLeft {
+    left: max(2%, calc(50% - 38em));
+    top: 22%;
+    width: 9.125em;
+    height: 18em;
+    transform: rotate(-7.9deg);
+  }
+
+  .ybbScallopPhotoRight {
+    right: max(2%, calc(50% - 38em));
+    top: 8%;
+    width: 11em;
+    height: 19em;
+    transform: rotate(6.26deg);
+  }
+
+  .ybbScallopPhotoAccent {
+    left: max(0%, calc(50% - 44em));
+    top: 4%;
+    width: 5.4em;
+    height: 10em;
+    transform: rotate(7.55deg);
+  }
+}
+
+@media (max-width: 991px) {
+  .ybbScallopSectionOverlap {
+    margin-top: calc(var(--ybb-scallop-r) * -0.35);
+  }
+
+  .ybbScallopBand {
+    padding-block: calc(4em + var(--ybb-scallop-r)) calc(3em + var(--ybb-scallop-r));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ybbScallopEdgeTop,
+  .ybbScallopEdgeBottom {
+    animation: none;
+  }
+}

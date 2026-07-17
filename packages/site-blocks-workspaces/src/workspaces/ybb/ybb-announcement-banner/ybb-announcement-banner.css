@@ -1,0 +1,135 @@
+.ybbBanner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 300;
+  color: var(--sb-canvas);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ybbBannerInner {
+  display: flex;
+  align-items: center;
+  gap: 0.75em;
+  min-height: 0;
+  padding: 0.3em var(--sb-space-6);
+  max-width: var(--sb-max);
+  margin-inline: auto;
+}
+
+.ybbBannerMessage {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  flex: 1;
+  min-width: 0;
+}
+
+.ybbBannerIcon {
+  width: 1.25em;
+  height: 1.25em;
+  flex-shrink: 0;
+  filter: brightness(0) invert(1);
+}
+
+.ybbBannerHeading {
+  font-weight: 600;
+  font-size: 0.875em;
+  white-space: nowrap;
+}
+
+.ybbBannerSubtext {
+  font-size: 0.8125em;
+  opacity: 0.9;
+  white-space: nowrap;
+}
+
+.ybbBannerForm {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5em;
+  flex-shrink: 0;
+}
+
+.ybbBannerForm input {
+  width: 13em;
+  padding: 0.25em 0.5em;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--sb-canvas);
+  font-size: 0.875em;
+  border-radius: var(--sb-radius-sm);
+}
+
+.ybbBannerForm input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.ybbBannerForm button {
+  padding: 0.25em 0.75em;
+  border: 1px solid var(--sb-canvas);
+  background: var(--sb-canvas);
+  color: var(--sb-ink);
+  font-size: 0.875em;
+  cursor: pointer;
+  white-space: nowrap;
+  border-radius: var(--sb-button-radius);
+}
+
+.ybbBannerClose {
+  background: none;
+  border: none;
+  color: var(--sb-canvas);
+  font-size: 1.125em;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.125em;
+  flex-shrink: 0;
+}
+
+.ybbBannerSrOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+:global(html.ybbHasBanner) {
+  --ybb-banner-offset: 2em;
+}
+
+@media (max-width: 991px) {
+  .ybbBannerInner {
+    flex-wrap: nowrap;
+    gap: 0.5em;
+  }
+
+  .ybbBannerIcon,
+  .ybbBannerSubtext {
+    display: none;
+  }
+
+  .ybbBannerForm {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .ybbBannerForm input {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 767px) {
+  .ybbBannerHeading {
+    white-space: normal;
+    font-size: 0.8125em;
+  }
+}

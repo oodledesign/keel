@@ -1,8 +1,8 @@
-import { createElement, type ReactNode } from 'react';
+import { createElement, type ChangeEvent, type ReactNode } from 'react';
 
 import type { ComponentConfig, Field } from '@puckeditor/core';
 
-import { SiteImageField } from '@kit/site-blocks-core';
+import { SiteColorField, SiteImageField } from '@kit/site-blocks-core';
 
 import type { BlockManifest, BlockManifestField } from './types';
 
@@ -19,6 +19,37 @@ function fieldToPuckField(field: BlockManifestField): Field {
         type: 'select',
         label: field.label,
         options: field.options ?? [],
+      };
+    case 'boolean':
+      return {
+        type: 'custom',
+        label: field.label,
+        render: ({ value, onChange }) =>
+          createElement(
+            'label',
+            {
+              className:
+                'flex cursor-pointer items-center gap-2 text-sm leading-none',
+            },
+            createElement('input', {
+              type: 'checkbox',
+              checked: value !== false,
+              onChange: (event: ChangeEvent<HTMLInputElement>) =>
+                onChange(event.target.checked),
+            }),
+            field.label,
+          ),
+      };
+    case 'color':
+      return {
+        type: 'custom',
+        label: field.label,
+        render: ({ value, onChange }) =>
+          createElement(SiteColorField, {
+            value: String(value ?? ''),
+            onChange,
+            label: field.label,
+          }),
       };
     case 'image':
       return {

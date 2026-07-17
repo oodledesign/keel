@@ -1,0 +1,65 @@
+{
+  "type": "YbbPortfolio",
+  "label": "YBB Previous brides carousel",
+  "category": "ybb",
+  "fields": [
+    { "key": "sectionId", "type": "text", "label": "Section ID (anchor)" },
+    { "key": "title", "type": "text", "label": "Heading" },
+    {
+      "key": "backgroundToken",
+      "type": "select",
+      "label": "Background colour",
+      "options": [
+        { "label": "Atmosphere (N2 / pink)", "value": "atmosphere" },
+        { "label": "Surface (N1)", "value": "surface" },
+        { "label": "Canvas (N0)", "value": "canvas" },
+        { "label": "Custom colour", "value": "custom" }
+      ]
+    },
+    { "key": "backgroundColor", "type": "color", "label": "Custom background" },
+    {
+      "key": "slides",
+      "type": "array",
+      "label": "Client photos",
+      "itemLabel": "Photo",
+      "itemFields": [
+        { "key": "imageUrl", "type": "image", "label": "Photo" },
+        { "key": "imageAlt", "type": "text", "label": "Alt text" },
+        { "key": "tilt", "type": "text", "label": "Tilt (degrees, e.g. 3.9)" }
+      ]
+    },
+    { "key": "showArrows", "type": "boolean", "label": "Show prev/next arrows" },
+    { "key": "showDots", "type": "boolean", "label": "Show dot navigation" },
+    { "key": "autoplay", "type": "boolean", "label": "Autoplay carousel" },
+    { "key": "autoplayMs", "type": "number", "label": "Autoplay interval (ms)" },
+    { "key": "showFooterCta", "type": "boolean", "label": "Show footer CTA" },
+    { "key": "footerCtaLabel", "type": "text", "label": "Footer CTA label" },
+    { "key": "footerCtaHref", "type": "link", "label": "Footer CTA link" },
+    {
+      "key": "footerCtaVariant",
+      "type": "select",
+      "label": "Footer CTA style",
+      "options": [
+        { "label": "Primary (filled)", "value": "primary" },
+        { "label": "Secondary (outline)", "value": "secondary" },
+        { "label": "Tertiary (accent fill)", "value": "tertiary" },
+        { "label": "Text link", "value": "text" }
+      ]
+    }
+  ],
+  "defaults": {
+    "sectionId": "portfolio",
+    "title": "Some of our previous beautiful clients",
+    "backgroundToken": "atmosphere",
+    "backgroundColor": "#F9DADA",
+    "slides": [],
+    "showArrows": true,
+    "showDots": true,
+    "autoplay": true,
+    "autoplayMs": 3200,
+    "showFooterCta": true,
+    "footerCtaLabel": "Enquire now",
+    "footerCtaHref": "mailto:BOOKINGS@YOURBRIDALBESTIES.CO.UK",
+    "footerCtaVariant": "primary"
+  }
+}

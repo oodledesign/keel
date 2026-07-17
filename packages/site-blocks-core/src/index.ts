@@ -4,6 +4,8 @@ export { resolveTokens, resolveTokensStyle, coerceResolvableStyleTokens, DEFAULT
 export type { ResolvableStyleTokens } from './tokens/resolve-tokens';
 export { siteStudioFontStylesheetUrls } from './tokens/font-links';
 export { SiteStudioFontFaces } from './tokens/site-studio-font-faces';
+export { SiteStudioTokenRoot } from './tokens/site-studio-token-root';
+export { withSiteStudioRootConfig } from './tokens/with-site-studio-root';
 
 export { buildConfig, defaultSiteBlocksConfig } from './config';
 export type {
@@ -35,6 +37,7 @@ export {
   useSiteMediaUploader,
   SiteImageField,
 } from './context/site-media';
+export { SiteColorField } from './context/site-color-field';
 export type { SiteMediaUploader } from './context/site-media';
 
 export { Render } from '@puckeditor/core';

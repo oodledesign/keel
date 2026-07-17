@@ -1,0 +1,41 @@
+{
+  "type": "YbbAnnouncementBanner",
+  "label": "YBB Announcement banner",
+  "category": "ybb",
+  "fields": [
+    { "key": "enabled", "type": "boolean", "label": "Show banner" },
+    { "key": "iconUrl", "type": "image", "label": "Icon" },
+    { "key": "heading", "type": "text", "label": "Heading" },
+    { "key": "subtext", "type": "text", "label": "Subtext" },
+    { "key": "showForm", "type": "boolean", "label": "Show email form" },
+    { "key": "emailPlaceholder", "type": "text", "label": "Email placeholder" },
+    { "key": "buttonLabel", "type": "text", "label": "Submit button label" },
+    { "key": "formAction", "type": "link", "label": "Form action URL" },
+    { "key": "dismissible", "type": "boolean", "label": "Allow dismiss" },
+    {
+      "key": "backgroundToken",
+      "type": "select",
+      "label": "Background colour",
+      "options": [
+        { "label": "Primary brand", "value": "primary" },
+        { "label": "Secondary brand", "value": "secondary" },
+        { "label": "Accent", "value": "accent" },
+        { "label": "Custom colour", "value": "custom" }
+      ]
+    },
+    { "key": "backgroundColor", "type": "color", "label": "Custom background" }
+  ],
+  "defaults": {
+    "enabled": true,
+    "iconUrl": "/workspace-assets/ybb/monogram.svg",
+    "heading": "2028 bookings open in October",
+    "subtext": "Join our waitlist now",
+    "showForm": true,
+    "emailPlaceholder": "Your email address",
+    "buttonLabel": "Waitlist me",
+    "formAction": "mailto:BOOKINGS@YOURBRIDALBESTIES.CO.UK",
+    "dismissible": true,
+    "backgroundToken": "custom",
+    "backgroundColor": "#5a0404"
+  }
+}
