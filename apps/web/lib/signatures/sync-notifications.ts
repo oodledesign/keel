@@ -7,6 +7,7 @@ import {
   loadAccountBrandResolved,
   wrapEmailHtmlWithBrand,
 } from '~/lib/brand/account-brand';
+import { resolveTransactionalEmailFrom } from '~/lib/email/zeptomail-client';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
 const PROVIDER_LABELS = {
@@ -21,6 +22,31 @@ function escapeHtml(value: string): string {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+}
+
+async function loadAuthUserEmails(userIds: string[]): Promise<string[]> {
+  const uniqueIds = Array.from(
+    new Set(userIds.filter((id) => id?.match(/^[0-9a-f-]{36}$/i))),
+  );
+
+  if (uniqueIds.length === 0) {
+    return [];
+  }
+
+  const admin = getSupabaseServerAdminClient();
+  const { data } = await admin
+    .from('accounts')
+    .select('email')
+    .in('id', uniqueIds)
+    .eq('is_personal_account', true);
+
+  return Array.from(
+    new Set(
+      (data ?? [])
+        .map((row) => row.email?.trim().toLowerCase())
+        .filter(Boolean) as string[],
+    ),
+  );
 }
 
 async function loadOwnerAdminEmails(accountId: string): Promise<{
@@ -78,17 +104,29 @@ export async function sendSignatureSyncCompletedEmail(params: {
   const logger = await getLogger();
 
   try {
-    const sender = process.env.EMAIL_SENDER;
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
     const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
-
-    if (!sender) return;
 
     const { emails, accountSlug, accountName } = await loadOwnerAdminEmails(
       params.accountId,
     );
 
-    if (emails.length === 0) return;
+    const from = resolveTransactionalEmailFrom(accountName ?? productName);
+    if (!from) {
+      logger.warn(
+        { accountId: params.accountId },
+        'Skipping signature sync notification — no transactional email sender configured',
+      );
+      return;
+    }
+
+    if (emails.length === 0) {
+      logger.warn(
+        { accountId: params.accountId },
+        'Skipping signature sync notification — no owner/admin recipients',
+      );
+      return;
+    }
 
     const providerLabel = PROVIDER_LABELS[params.provider];
     const staffUrl =
@@ -133,7 +171,7 @@ export async function sendSignatureSyncCompletedEmail(params: {
             type: 'signature_sync',
             accountId: params.accountId,
             mail: {
-              from: sender,
+              from,
               to: email,
               subject,
               html: wrapEmailHtmlWithBrand({ brand, innerHtml }),
@@ -170,21 +208,39 @@ export async function sendSignatureConnectionCompletedEmail(params: {
   googleDomain?: string | null;
   googleAdminEmail?: string | null;
   microsoftTenantId?: string | null;
+  /** Ozer user ids to notify in addition to workspace owners/admins (e.g. invite creator). */
+  notifyUserIds?: string[];
 }): Promise<void> {
   const logger = await getLogger();
 
   try {
-    const sender = process.env.EMAIL_SENDER;
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
     const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
 
-    if (!sender) return;
+    const [{ emails, accountSlug, accountName }, extraEmails] =
+      await Promise.all([
+        loadOwnerAdminEmails(params.accountId),
+        loadAuthUserEmails(params.notifyUserIds ?? []),
+      ]);
 
-    const { emails, accountSlug, accountName } = await loadOwnerAdminEmails(
-      params.accountId,
-    );
+    const recipients = Array.from(new Set([...emails, ...extraEmails]));
 
-    if (emails.length === 0) return;
+    const from = resolveTransactionalEmailFrom(accountName ?? productName);
+    if (!from) {
+      logger.warn(
+        { accountId: params.accountId },
+        'Skipping signature connection notification — no transactional email sender configured',
+      );
+      return;
+    }
+
+    if (recipients.length === 0) {
+      logger.warn(
+        { accountId: params.accountId },
+        'Skipping signature connection notification — no recipients',
+      );
+      return;
+    }
 
     const providerLabel = PROVIDER_LABELS[params.provider];
     const integrationsUrl =
@@ -241,13 +297,13 @@ export async function sendSignatureConnectionCompletedEmail(params: {
     const subject = `${productName}: ${providerLabel} connected for email signatures`;
 
     await Promise.allSettled(
-      emails.map(async (email) => {
+      recipients.map(async (email) => {
         try {
           await sendPlatformEmail({
             type: 'signature_connect',
             accountId: params.accountId,
             mail: {
-              from: sender,
+              from,
               to: email,
               subject,
               html: wrapEmailHtmlWithBrand({ brand, innerHtml }),

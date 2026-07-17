@@ -8,6 +8,7 @@ import {
   wrapEmailHtmlWithBrand,
 } from '~/lib/brand/account-brand';
 import { resolveClientRecipientEmail } from '~/lib/clients/resolve-client-recipient';
+import { resolveTransactionalEmailFrom } from '~/lib/email/zeptomail-client';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
 import {
@@ -37,16 +38,19 @@ function getMethodLabel(method: PaymentMethod) {
   }
 }
 
+function buildInvoiceEmailFrom(accountName: string | null | undefined) {
+  return resolveTransactionalEmailFrom(accountName);
+}
+
 export async function sendInvoicePaidNotifications(params: {
   accountId: string;
   invoiceId: string;
   paymentMethod: PaymentMethod;
 }) {
-  const sender = process.env.EMAIL_SENDER;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
   const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
 
-  if (!sender || !siteUrl) {
+  if (!siteUrl) {
     return;
   }
 
@@ -78,6 +82,11 @@ export async function sendInvoicePaidNotifications(params: {
   ]);
 
   if (!account?.slug) {
+    return;
+  }
+
+  const from = buildInvoiceEmailFrom(account.name);
+  if (!from) {
     return;
   }
 
@@ -165,7 +174,7 @@ export async function sendInvoicePaidNotifications(params: {
         type: 'invoice',
         accountId: params.accountId,
         mail: {
-          from: sender,
+          from,
           to: clientEmail,
           subject: customerSubject,
           html: customerHtml,
@@ -181,7 +190,7 @@ export async function sendInvoicePaidNotifications(params: {
         type: 'invoice',
         accountId: params.accountId,
         mail: {
-          from: sender,
+          from,
           to: email,
           subject: ownerSubject,
           html: ownerHtml,
@@ -207,11 +216,10 @@ export async function sendInvoiceIssuedEmail(params: {
     email?: string | null;
   } | null;
 }) {
-  const sender = process.env.EMAIL_SENDER;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
   const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
 
-  if (!sender || !siteUrl) {
+  if (!siteUrl) {
     return;
   }
 
@@ -241,6 +249,11 @@ export async function sendInvoiceIssuedEmail(params: {
       .eq('id', invoice.client_id)
       .maybeSingle(),
   ]);
+
+  const from = buildInvoiceEmailFrom(account?.name);
+  if (!from) {
+    return;
+  }
 
   const recipient = invoice.client_id
     ? await resolveClientRecipientEmail(admin, invoice.client_id, {
@@ -317,7 +330,7 @@ export async function sendInvoiceIssuedEmail(params: {
     type: 'invoice',
     accountId: params.accountId,
     mail: {
-      from: sender,
+      from,
       to: params.recipientEmail,
       subject: params.testOnly ? `[Test] ${subject}` : subject,
       html: wrapEmailHtmlWithBrand({

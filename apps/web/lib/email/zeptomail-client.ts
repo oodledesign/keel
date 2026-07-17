@@ -56,6 +56,31 @@ export function getTransactionalEmailSender(displayName?: string) {
   return `${(displayName?.trim() || name).slice(0, 120)} <${address}>`;
 }
 
+/** Resolve a From header using ZeptoMail or EMAIL_SENDER (Resend fallback). */
+export function resolveTransactionalEmailFrom(
+  displayName?: string,
+): string | null {
+  const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
+  const name = (displayName?.trim() || productName).slice(0, 120);
+
+  if (process.env.ZEPTOMAIL_FROM_ADDRESS?.trim()) {
+    try {
+      return getTransactionalEmailSender(name);
+    } catch {
+      return null;
+    }
+  }
+
+  const envSender = process.env.EMAIL_SENDER?.trim();
+  if (!envSender) {
+    return null;
+  }
+
+  const match = envSender.match(/^([^<]+)<([^>]+)>$/);
+  const address = match?.[2]?.trim() ?? envSender;
+  return `${name} <${address}>`;
+}
+
 export function getZeptomailDiagnostics() {
   return {
     provider: 'zeptomail',

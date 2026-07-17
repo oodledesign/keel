@@ -176,10 +176,11 @@ export async function GET(request: NextRequest) {
           accountId,
         });
         if (isNewConnection) {
-          void sendSignatureConnectionCompletedEmail({
+          await sendSignatureConnectionCompletedEmail({
             accountId,
             provider: 'microsoft',
             microsoftTenantId: adminTenant,
+            notifyUserIds: invite.created_by ? [invite.created_by] : [],
           });
         }
       } catch (e) {
@@ -305,10 +306,11 @@ export async function GET(request: NextRequest) {
     });
 
     if (isNewConnection) {
-      void sendSignatureConnectionCompletedEmail({
+      await sendSignatureConnectionCompletedEmail({
         accountId,
         provider: 'microsoft',
         microsoftTenantId: msTenantId,
+        notifyUserIds: [user.id],
       });
     }
   } catch (e) {

@@ -357,11 +357,12 @@ export async function connectGoogleWorkspace(input: {
   }
 
   if (!existing) {
-    void sendSignatureConnectionCompletedEmail({
+    await sendSignatureConnectionCompletedEmail({
       accountId: input.accountId,
       provider: 'google',
       googleDomain: input.primaryDomain,
       googleAdminEmail: input.delegatedAdminEmail,
+      notifyUserIds: input.connectedBy ? [input.connectedBy] : [],
     });
   }
 
