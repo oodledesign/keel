@@ -17,6 +17,8 @@ import {
   DEFAULT_INVOICE_EMAIL_SUBJECT,
   renderSmartFields,
 } from '../invoice-smart-fields';
+import { buildInvoicePdf } from './invoice-pdf';
+import { buildInvoicePdfPayload } from './invoice-pdf-payload';
 
 type PaymentMethod = 'stripe' | 'cash' | 'bank_transfer';
 
@@ -40,6 +42,20 @@ function getMethodLabel(method: PaymentMethod) {
 
 function buildInvoiceEmailFrom(accountName: string | null | undefined) {
   return resolveTransactionalEmailFrom(accountName);
+}
+
+function invoicePdfFilename(input: {
+  invoiceNumber: string;
+  clientCompany?: string | null;
+  brandName?: string | null;
+}) {
+  const party =
+    input.clientCompany?.trim() ||
+    input.brandName?.trim() ||
+    'Invoice';
+  const safeParty = party.replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, ' ');
+  const safeNumber = input.invoiceNumber.replace(/[^\w-]/g, '');
+  return `Invoice_${safeParty}_${safeNumber}.pdf`.replace(/\s+/g, '_');
 }
 
 export async function sendInvoicePaidNotifications(params: {
@@ -226,9 +242,7 @@ export async function sendInvoiceIssuedEmail(params: {
   const admin = getSupabaseServerAdminClient();
   const { data: invoice, error: invoiceError } = await admin
     .from('invoices')
-    .select(
-      'id, account_id, client_id, invoice_number, total_pence, due_at, public_token, currency, email_subject, email_body, email_signature',
-    )
+    .select('*')
     .eq('id', params.invoiceId)
     .eq('account_id', params.accountId)
     .maybeSingle();
@@ -237,18 +251,21 @@ export async function sendInvoiceIssuedEmail(params: {
     return;
   }
 
-  const [{ data: account }, { data: client }] = await Promise.all([
+  const [{ data: account }, clientResult] = await Promise.all([
     admin
       .from('accounts')
       .select('name')
       .eq('id', params.accountId)
       .maybeSingle(),
-    admin
-      .from('clients')
-      .select('display_name, first_name, last_name, company_name, email')
-      .eq('id', invoice.client_id)
-      .maybeSingle(),
+    invoice.client_id
+      ? admin
+          .from('clients')
+          .select('display_name, first_name, last_name, company_name, email')
+          .eq('id', invoice.client_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
+  const client = clientResult.data;
 
   const from = buildInvoiceEmailFrom(account?.name);
   if (!from) {
@@ -313,6 +330,23 @@ export async function sendInvoiceIssuedEmail(params: {
     : '—';
   const amount = formatPence(invoice.total_pence ?? 0);
 
+  const pdfPayload = await buildInvoicePdfPayload(
+    invoice as Record<string, unknown>,
+    params.accountId,
+    {},
+    params.sender ?? null,
+  );
+  const pdfBytes = await buildInvoicePdf(pdfPayload);
+  const pdfAttachment = {
+    name: invoicePdfFilename({
+      invoiceNumber: invoice.invoice_number,
+      clientCompany: client?.company_name,
+      brandName: account?.name,
+    }),
+    content: Buffer.from(pdfBytes).toString('base64'),
+    mimeType: 'application/pdf',
+  };
+
   const brand = await loadAccountBrandResolved(params.accountId);
   const issuedInner = `
       <h2 style="margin:0 0 16px">${subject}</h2>
@@ -323,6 +357,7 @@ export async function sendInvoiceIssuedEmail(params: {
         <p style="margin:0"><strong>Due date:</strong> ${dueDate}</p>
         <p style="margin:16px 0 0"><a href="${portalInvoiceUrl}">View and pay invoice</a></p>
       </div>
+      <p>A PDF copy of this invoice is attached for your records.</p>
       <p>${signature.replace(/\n/g, '<br />')}</p>
   `;
 
@@ -337,6 +372,7 @@ export async function sendInvoiceIssuedEmail(params: {
         brand,
         innerHtml: issuedInner,
       }),
+      attachments: [pdfAttachment],
     },
     metadata: { invoice_id: params.invoiceId, event: 'issued' },
   });
