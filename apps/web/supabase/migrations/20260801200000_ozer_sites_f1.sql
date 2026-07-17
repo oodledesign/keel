@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS public.site_pages (
   published_data jsonb,
   source_hash text,
   human_edited_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   published_at timestamptz,
   CONSTRAINT site_pages_site_slug_unique UNIQUE (site_id, slug)

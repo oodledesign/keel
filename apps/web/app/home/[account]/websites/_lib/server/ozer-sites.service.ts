@@ -350,8 +350,14 @@ export function createOzerSitesService(client: Db) {
             })
             .select('id')
             .single();
-          if (error) throw error;
-          createdPageIds.push(String(inserted.id));
+          if (error) {
+            throw new Error(
+              `Failed to create site page "${page.slug}": ${error.message}`,
+            );
+          }
+          const mapped = mapPage(inserted as Record<string, unknown>);
+          createdPageIds.push(mapped.id);
+          bySlug.set(page.slug, mapped);
         }
       }
 

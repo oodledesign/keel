@@ -69,6 +69,25 @@ describe('generateOzerSitesPack', () => {
       pack.pages[0]?.sourceHash,
     );
   });
+
+  it('dedupes index and home to a single home page', () => {
+    const exp = seeded();
+    exp.sitemap = [
+      ...exp.sitemap,
+      {
+        slug: 'index',
+        title: 'Index duplicate',
+        description: '',
+        pageType: 'home',
+        parentId: null,
+        status: 'approved',
+        sectionIds: [],
+      },
+    ];
+    const pack = generateOzerSitesPack(exp);
+    expect(pack.pages).toHaveLength(1);
+    expect(pack.pages[0]?.slug).toBe('home');
+  });
 });
 
 describe('resolveOzerSitePuckPermissions', () => {

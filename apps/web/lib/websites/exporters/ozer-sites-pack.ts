@@ -28,6 +28,10 @@ export type OzerSitesPack = {
   pages: OzerSitesPackPage[];
 };
 
+function normalizeOzerPageSlug(slug: string): string {
+  return slug === 'index' ? 'home' : slug;
+}
+
 function pageToWireframeSections(
   exp: SiteStudioExport,
   page: ExportPage,
@@ -101,19 +105,24 @@ export function generateOzerSitesPack(exp: SiteStudioExport): OzerSitesPack {
           },
         ] satisfies ExportPage[]);
 
-  const packPages: OzerSitesPackPage[] = pages.map((page) => {
+  const packPagesBySlug = new Map<string, OzerSitesPackPage>();
+
+  for (const page of pages) {
+    const slug = normalizeOzerPageSlug(page.slug);
     const sections = pageToWireframeSections(exp, page);
     const puckData =
       sections.length > 0
         ? sectionsToPuckData(sections)
         : ({ content: [], root: { props: { title: page.title } } } as Data);
-    return {
-      slug: page.slug === 'index' ? 'home' : page.slug,
+    packPagesBySlug.set(slug, {
+      slug,
       title: page.title,
       puckData,
       sourceHash: hashPuckSource(puckData),
-    };
-  });
+    });
+  }
+
+  const packPages = Array.from(packPagesBySlug.values());
 
   return {
     name: exp.website.name || exp.brief?.org.name || 'Site',
