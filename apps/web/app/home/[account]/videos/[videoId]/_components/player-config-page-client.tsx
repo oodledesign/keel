@@ -11,6 +11,7 @@ import { toast } from '@kit/ui/sonner';
 import pathsConfig from '~/config/paths.config';
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import {
+  type AspectRatio,
   type CaptionTrack,
   DEFAULT_PLAYER_CONFIG,
   type VideoPlayerConfigValues,
@@ -20,10 +21,6 @@ import { EmbedCode } from './embed-code';
 import { PlayerConfigEditor } from './player-config-editor';
 import { PlayerPreview } from './player-preview';
 import { PublicSharePanel } from './public-share-panel';
-
-function createPath(path: string, account: string, videoId: string) {
-  return path.replace('[account]', account).replace('[videoId]', videoId);
-}
 
 export function PlayerConfigPageClient(props: {
   accountSlug: string;
@@ -44,6 +41,7 @@ export function PlayerConfigPageClient(props: {
     values: VideoPlayerConfigValues;
   }>;
   initialCaptions: CaptionTrack[];
+  detectedAspectRatio: AspectRatio;
   cdnHostname: string;
 }) {
   const [config, setConfig] = useState(props.initialConfig);
@@ -83,7 +81,10 @@ export function PlayerConfigPageClient(props: {
   const handleBlurSave = () => void persistConfig(config);
 
   const handleReset = () => {
-    setConfig({ ...DEFAULT_PLAYER_CONFIG });
+    setConfig({
+      ...DEFAULT_PLAYER_CONFIG,
+      aspect_ratio: props.detectedAspectRatio,
+    });
     toast.message('Reset to defaults — save to apply');
   };
 
@@ -159,6 +160,7 @@ export function PlayerConfigPageClient(props: {
         <div className="min-w-0 space-y-6">
           <PlayerConfigEditor
             config={config}
+            detectedAspectRatio={props.detectedAspectRatio}
             captions={captions}
             presets={presets}
             saving={saving}

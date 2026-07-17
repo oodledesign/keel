@@ -120,7 +120,7 @@ export function PortalInvoiceView({
         : displayStatus === 'overdue'
           ? 'border-[#E85D75]/25 bg-[#E85D75]/12 text-[#F6A7B5]'
           : displayStatus === 'read'
-            ? 'border-amber-500/25 bg-amber-500/10 text-amber-200'
+            ? 'border-amber-500/60 bg-amber-200/80 text-amber-950 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100'
             : displayStatus === 'sent'
               ? 'border-[#39AEB3]/25 bg-[#39AEB3]/12 text-[#B8D3D7]'
               : 'border-[color:var(--workspace-shell-border)] bg-white/6 text-[#D7DEEE]';
@@ -132,7 +132,7 @@ export function PortalInvoiceView({
   };
 
   return (
-    <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/80 p-6 shadow-lg sm:p-8">
+    <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-lg sm:p-8">
       <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-3">

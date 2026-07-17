@@ -4,11 +4,13 @@ import { notFound, redirect } from 'next/navigation';
 
 import { createBunnyStreamClient } from '@kit/bunny';
 
-import { isVideosModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
 import { getDefaultAccountPath } from '~/home/[account]/_lib/role-access';
+import { isVideosModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
 import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '~/home/[account]/_lib/server/workspace-route-guard';
 
+import { detectAspectRatio } from '../player-config-types';
+import { buildPublicVideoWatchUrl } from '../public-share';
 import {
   configValuesFromRow,
   loadAccountPresets,
@@ -17,7 +19,6 @@ import {
 } from './player-config-data';
 import { requireVideoById } from './videos-access';
 import { getBunnyCdnHostname } from './videos-data';
-import { buildPublicVideoWatchUrl } from '../public-share';
 
 export async function loadVideoPlayerConfigPage(
   accountSlug: string,
@@ -63,10 +64,30 @@ export async function loadVideoPlayerConfigPage(
   ]);
 
   const bunny = createBunnyStreamClient();
-  const captions = await bunny.listCaptions(
-    String(video.bunny_library_id),
-    String(video.bunny_video_id),
-  );
+  const [captionsResult, bunnyVideoResult] = await Promise.allSettled([
+    bunny.listCaptions(
+      String(video.bunny_library_id),
+      String(video.bunny_video_id),
+    ),
+    bunny.getVideo(
+      String(video.bunny_library_id),
+      String(video.bunny_video_id),
+    ),
+  ]);
+  const captions =
+    captionsResult.status === 'fulfilled' ? captionsResult.value : [];
+  const detectedAspectRatio =
+    bunnyVideoResult.status === 'fulfilled'
+      ? detectAspectRatio(
+          bunnyVideoResult.value.width,
+          bunnyVideoResult.value.height,
+        )
+      : '16:9';
+  const config = configRow
+    ? configValuesFromRow(configRow)
+    : resolved.source === 'default'
+      ? { ...resolved.config, aspect_ratio: detectedAspectRatio }
+      : resolved.config;
 
   return {
     accountSlug,
@@ -84,7 +105,8 @@ export async function loadVideoPlayerConfigPage(
           ? buildPublicVideoWatchUrl(String(video.public_share_token))
           : null,
     },
-    config: configRow ? configValuesFromRow(configRow) : resolved.config,
+    config,
+    detectedAspectRatio,
     configSource: configRow ? 'video' : resolved.source,
     configId: configRow?.id ?? null,
     presets: presets.map((preset) => ({

@@ -112,47 +112,49 @@ export default async function PortalInvoicePage({
   const isVoid = ['cancelled', 'void'].includes(invoiceStatus);
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-6">
-        <Link
-          href="/"
-          className="text-sm text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
-        >
-          ← Back to home
-        </Link>
+    <div className="min-h-screen bg-gradient-to-b from-[var(--ozer-coral-500)] to-[var(--ozer-coral-600)]">
+      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-6">
+          <Link
+            href="/"
+            className="text-sm text-[var(--ozer-cream-50)]/90 hover:text-[var(--ozer-cream-50)]"
+          >
+            ← Back to home
+          </Link>
+        </div>
+        {paid === '1' && isPaid ? (
+          <div className="mb-6 rounded-lg border border-[var(--ozer-cream-50)]/40 bg-[var(--ozer-cream-50)]/95 px-4 py-3 text-[var(--ozer-plum-900)]">
+            Payment successful. Thank you.
+          </div>
+        ) : null}
+        {paid === '1' && !isPaid ? (
+          <div className="mb-6 rounded-lg border border-amber-700/30 bg-[var(--ozer-cream-50)]/95 px-4 py-3 text-amber-950">
+            {paymentReconciled
+              ? 'Payment was received and is still syncing.'
+              : 'Payment return detected, but the invoice has not been marked paid yet.'}
+          </div>
+        ) : null}
+        {cancelled === '1' ? (
+          <div className="mb-6 rounded-lg border border-[var(--ozer-cream-50)]/40 bg-[var(--ozer-cream-50)]/95 px-4 py-3 text-[var(--ozer-plum-900)]">
+            Payment was cancelled.
+          </div>
+        ) : null}
+        {checkout_error ? (
+          <div className="mb-6 rounded-lg border border-red-700/30 bg-[var(--ozer-cream-50)]/95 px-4 py-3 text-red-900">
+            {checkout_error}
+          </div>
+        ) : null}
+        {isVoid ? (
+          <div className="mb-6 rounded-lg border border-red-700/30 bg-[var(--ozer-cream-50)]/95 px-4 py-3 text-red-900">
+            This invoice is no longer payable.
+          </div>
+        ) : null}
+        <PortalInvoiceView
+          invoice={invoice}
+          token={token}
+          paymentSettings={paymentSettings}
+        />
       </div>
-      {paid === '1' && isPaid ? (
-        <div className="mb-6 rounded-lg border border-emerald-700 bg-[var(--ozer-accent-subtle)] px-4 py-3 text-[var(--ozer-accent-muted)]">
-          Payment successful. Thank you.
-        </div>
-      ) : null}
-      {paid === '1' && !isPaid ? (
-        <div className="mb-6 rounded-lg border border-amber-600/60 bg-amber-500/10 px-4 py-3 text-amber-300">
-          {paymentReconciled
-            ? 'Payment was received and is still syncing.'
-            : 'Payment return detected, but the invoice has not been marked paid yet.'}
-        </div>
-      ) : null}
-      {cancelled === '1' ? (
-        <div className="mb-6 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/50 px-4 py-3 text-[var(--workspace-shell-text-muted)]">
-          Payment was cancelled.
-        </div>
-      ) : null}
-      {checkout_error ? (
-        <div className="mb-6 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-red-200">
-          {checkout_error}
-        </div>
-      ) : null}
-      {isVoid ? (
-        <div className="mb-6 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-red-200">
-          This invoice is no longer payable.
-        </div>
-      ) : null}
-      <PortalInvoiceView
-        invoice={invoice}
-        token={token}
-        paymentSettings={paymentSettings}
-      />
     </div>
   );
 }

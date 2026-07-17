@@ -916,7 +916,10 @@ export function InvoiceEditIndyContent({
       </header>
 
       {isLocked ? (
-        <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+        <div
+          role="status"
+          className="rounded-lg border border-amber-500/60 bg-amber-200/80 px-4 py-3 text-sm text-amber-950 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100"
+        >
           {invoice.status === 'paid'
             ? 'This invoice has been paid and is locked.'
             : invoice.status === 'cancelled' || invoice.status === 'void'

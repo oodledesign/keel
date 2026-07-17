@@ -17,15 +17,6 @@ import {
 
 const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY;
 
-/**
- * Stripe Checkout only supports solid branding colours (no CSS gradients).
- * Hex values match `--ozer-coral-500` / `--ozer-coral-600` in ozer-tokens.css.
- */
-const INVOICE_CHECKOUT_BRANDING = {
-  background_color: '#FF5C34',
-  button_color: '#C2452A',
-} as const;
-
 function getStripeClient() {
   if (!STRIPE_SECRET?.startsWith('sk_')) {
     throw new Error('Stripe is not configured');
@@ -197,7 +188,6 @@ export async function createInvoiceCheckoutSessionByToken(
           quantity: 1,
         },
       ],
-      branding_settings: INVOICE_CHECKOUT_BRANDING,
       success_url: successUrl,
       cancel_url: cancelUrl,
       client_reference_id: invoice.id,

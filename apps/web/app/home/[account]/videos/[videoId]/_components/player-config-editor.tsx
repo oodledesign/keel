@@ -28,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 
 import {
   ASPECT_RATIO_OPTIONS,
+  type AspectRatio,
   type CaptionTrack,
   DEFAULT_PLAYER_CONFIG,
   type LogoPosition,
@@ -124,6 +125,7 @@ function LogoPositionControl(props: {
 
 export function PlayerConfigEditor(props: {
   config: VideoPlayerConfigValues;
+  detectedAspectRatio: AspectRatio;
   captions: CaptionTrack[];
   presets: Array<{ id: string; name: string; values: VideoPlayerConfigValues }>;
   saving: boolean;
@@ -316,6 +318,32 @@ export function PlayerConfigEditor(props: {
                 {PLAYBACK_SPEED_OPTIONS.map((speed) => (
                   <SelectItem key={speed} value={String(speed)}>
                     {speed}x
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </ConfigRow>
+          <ConfigRow
+            label="Aspect ratio"
+            description={`Detected source: ${props.detectedAspectRatio}. Choose an override for previews and embed code.`}
+          >
+            <Select
+              value={config.aspect_ratio}
+              onValueChange={(value) =>
+                props.onChange({
+                  aspect_ratio:
+                    value as VideoPlayerConfigValues['aspect_ratio'],
+                })
+              }
+            >
+              <SelectTrigger className="w-[9rem]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ASPECT_RATIO_OPTIONS.map((ratio) => (
+                  <SelectItem key={ratio} value={ratio}>
+                    {ratio}
+                    {ratio === props.detectedAspectRatio ? ' (detected)' : ''}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -528,28 +556,6 @@ export function PlayerConfigEditor(props: {
                 props.onChange({ responsive: checked })
               }
             />
-          </ConfigRow>
-          <ConfigRow label="Aspect ratio">
-            <Select
-              value={config.aspect_ratio}
-              onValueChange={(value) =>
-                props.onChange({
-                  aspect_ratio:
-                    value as VideoPlayerConfigValues['aspect_ratio'],
-                })
-              }
-            >
-              <SelectTrigger className="w-[9rem]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ASPECT_RATIO_OPTIONS.map((ratio) => (
-                  <SelectItem key={ratio} value={ratio}>
-                    {ratio}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </ConfigRow>
           <ConfigRow
             label="Max width (px)"

@@ -30,6 +30,7 @@ async function VideoPlayerConfigPage({ params }: VideoPlayerConfigPageProps) {
           initialConfig={data.config}
           initialPresets={data.presets}
           initialCaptions={data.captions}
+          detectedAspectRatio={data.detectedAspectRatio}
           cdnHostname={data.cdnHostname}
         />
       </PageBody>

@@ -54,6 +54,28 @@ export const ASPECT_RATIO_OPTIONS: AspectRatio[] = [
   '9:16',
 ];
 
+export function detectAspectRatio(
+  width: number | null | undefined,
+  height: number | null | undefined,
+): AspectRatio {
+  if (!width || !height || width <= 0 || height <= 0) return '16:9';
+
+  const sourceRatio = width / height;
+  const ratios: Array<{ value: AspectRatio; ratio: number }> = [
+    { value: '16:9', ratio: 16 / 9 },
+    { value: '4:3', ratio: 4 / 3 },
+    { value: '1:1', ratio: 1 },
+    { value: '9:16', ratio: 9 / 16 },
+  ];
+
+  return ratios.reduce((closest, candidate) =>
+    Math.abs(candidate.ratio - sourceRatio) <
+    Math.abs(closest.ratio - sourceRatio)
+      ? candidate
+      : closest,
+  ).value;
+}
+
 export const DEFAULT_PLAYER_CONFIG: VideoPlayerConfigValues = {
   name: 'Default',
   autoplay: false,
